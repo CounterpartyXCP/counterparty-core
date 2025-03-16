@@ -190,6 +190,41 @@ def test_compose(ledger_db, defaults):
     )
 
 
+def test_compose_with_oracle(ledger_db, defaults, monkeypatch):
+    monkeypatch.setattr(dispenser, "calculate_oracle_fee", lambda *args: 0)
+
+    assert dispenser.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        "PARENT",
+        100,
+        1000000000,
+        0,
+        0,
+        None,
+        defaults["addresses"][1],
+        True,
+    ) == (
+        defaults["addresses"][0],
+        [],
+        b"\x0c\x00\x00\x00\x00\n\xa4\t}\x00\x00\x00\x00\x00\x00\x00d\x00\x00\x00\x00;\x9a\xca\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00o\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec",
+    )
+
+    with pytest.raises(exceptions.ComposeError, match="Oracle address not supported by dispenser"):
+        dispenser.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            "PARENT",
+            100,
+            1000000000,
+            0,
+            0,
+            None,
+            defaults["p2tr_addresses"][1],
+            True,
+        )
+
+
 def test_parse_open_dispenser(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):

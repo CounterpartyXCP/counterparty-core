@@ -8,7 +8,7 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
-from counterpartycore.lib.utils import address
+from counterpartycore.lib.utils import address, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -70,28 +70,61 @@ def compose(
     db, source: str, destination: str, flags: int, memo: str, skip_validation: bool = False
 ):
     if memo is None:
-        memo = b""
+        memo_bytes = b""
     elif flags & FLAG_BINARY_MEMO:
-        memo = bytes.fromhex(memo)
+        memo_bytes = bytes.fromhex(memo)
     else:
-        memo = memo.encode("utf-8")
-        memo = struct.pack(f">{len(memo)}s", memo)
+        memo_bytes = memo.encode("utf-8")
+        memo_bytes = struct.pack(f">{len(memo_bytes)}s", memo_bytes)
 
     block_index = CurrentState().current_block_index()
-    problems, _total_fee = validate(db, source, destination, flags, memo, block_index)
+    problems, _total_fee = validate(db, source, destination, flags, memo_bytes, block_index)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     short_address_bytes = address.pack(destination)
 
-    data = messagetype.pack(ID)
-    data += struct.pack(FORMAT, short_address_bytes, flags)
-    data += memo
+    if protocol.enabled("taproot_support"):
+        data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
+        data += helpers.encode_data(
+            short_address_bytes,
+            flags,
+            memo_bytes,
+        )
+    else:
+        data = messagetype.pack(ID)
+        data += struct.pack(FORMAT, short_address_bytes, flags)
+        data += memo_bytes
 
     return (source, [], data)
 
 
+def new_unpack(message):
+    try:
+        (short_address_bytes, flags_bytes, memo_bytes) = helpers.decode_data(message)  # pylint: disable=unbalanced-tuple-unpacking
+
+        flags = helpers.bytes_to_int(flags_bytes)
+
+        if len(memo_bytes) == 0:
+            memo_bytes = None
+        elif not flags & FLAG_BINARY_MEMO:
+            memo_bytes = memo_bytes.decode("utf-8")
+
+        full_address = address.unpack(short_address_bytes)
+
+        return {
+            "destination": full_address,
+            "flags": flags,
+            "memo": memo_bytes,
+        }
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        raise exceptions.UnpackError("could not unpack") from e
+
+
 def unpack(message):
+    if protocol.enabled("taproot_support"):
+        return new_unpack(message)
+
     try:
         memo_bytes_length = len(message) - LENGTH
         if memo_bytes_length < 0:
@@ -105,11 +138,9 @@ def unpack(message):
             memo_bytes = None
         elif not flags & FLAG_BINARY_MEMO:
             memo_bytes = memo_bytes.decode("utf-8")
-
         # unpack address
         full_address = address.unpack(short_address_bytes)
     except struct.error as e:
-        logger.warning("sweep send unpack error: %s", e)
         raise exceptions.UnpackError("could not unpack") from e
 
     unpacked = {
