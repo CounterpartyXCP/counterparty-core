@@ -270,9 +270,7 @@ def test_edge_cases_and_errors(ledger_db, current_block_index, monkeypatch):
 
     assert issuances.value_output(1200000000, "foobar", True) == "12.0"
 
-    monkeypatch.setattr(
-        "counterpartycore.lib.parser.protocol.after_block_or_test_network", lambda x, y: False
-    )
+    monkeypatch.setattr("counterpartycore.lib.parser.protocol.enabled", lambda x, y=None: False)
     assert issuances.price(10, 3) == D(D(10) / D(3))
 
     with pytest.raises(exceptions.AssetError, match="No such asset: foobaz"):

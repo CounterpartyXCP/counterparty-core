@@ -8,7 +8,6 @@ from decimal import Decimal as D
 
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger.caches import AssetCache
-from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.ledger.events import insert_update
 from counterpartycore.lib.ledger.supplies import asset_supply
 from counterpartycore.lib.parser import protocol
@@ -237,9 +236,7 @@ def value_in(db, quantity, asset, divisible=None):
 
 def price(numerator, denominator):
     """Return price as Fraction or Decimal."""
-    if protocol.after_block_or_test_network(
-        CurrentState().current_block_index(), 294500
-    ):  # Protocol change.
+    if protocol.enabled("price_as_fraction"):  # Protocol change.
         return fractions.Fraction(numerator, denominator)
 
     numerator = D(numerator)
