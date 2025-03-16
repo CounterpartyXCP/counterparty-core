@@ -123,7 +123,6 @@ def test_pool_size_limit(mock_environment, caplog, test_helpers):
                     # At this point, we have 3 active connections, but the pool can only hold 2
                     # When conn3 is released, it should be closed instead of being returned to the pool
 
-    # Vérifier que close a été appelé au moins une fois
     assert mock_db.close.called, (
         "Expected db.close() to be called at least once when exceeding pool size"
     )
