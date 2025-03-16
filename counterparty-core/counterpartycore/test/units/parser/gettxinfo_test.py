@@ -111,7 +111,7 @@ def test_get_tx_info(ledger_db, current_block_index, blockchain_mock):
         "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
         "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
         5430,
-        1706582400,
+        706582400,
         b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
         [],
         [
@@ -135,7 +135,7 @@ def test_get_tx_info(ledger_db, current_block_index, blockchain_mock):
         "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
         "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
         5430,
-        1706582400,
+        706582400,
         b"\x00\x00\x00(\x00\x00R\xbb3d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
         [],
         [
