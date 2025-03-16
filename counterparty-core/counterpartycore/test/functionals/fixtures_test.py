@@ -47,8 +47,9 @@ def test_state_db(state_db):
         {"asset": "PAYTOSCRIPT", "quantity": 1000},
         {"asset": "QAIDFAIRMIN", "quantity": 20},
         {"asset": "RAIDFAIRMIN", "quantity": 20},
+        {"asset": "TAIDFAIRMIN", "quantity": 1},
         {"asset": "TESTDISP", "quantity": 900},
-        {"asset": "XCP", "quantity": 603414652282},
+        {"asset": "XCP", "quantity": 603314652282},
     ]
 
 
@@ -57,7 +58,7 @@ def test_state_db_2(state_db):
     balances = cursor.execute(
         "SELECT asset, SUM(quantity) AS quantity FROM balances GROUP BY asset"
     ).fetchall()
-    assert len(balances) == 16
+    assert len(balances) == 17
 
 
 def test_protocol_changes_disabled():

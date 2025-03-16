@@ -319,6 +319,7 @@ SCENARIO = [
                             "transfer": False,
                             "tx_hash": "$CREATE_CHAINING_TX_HASH",
                             "tx_index": "$TX_INDEX - 3",
+                            "msg_index": 0,
                         },
                         "tx_hash": "$CREATE_CHAINING_TX_HASH",
                     },
