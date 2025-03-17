@@ -394,6 +394,29 @@ def check_detach(node, source_private_key, utxo):
     return new_utxo
 
 
+def check_issuance(node, source_private_key, utxo):
+    new_utxo = send_taproot_transaction(
+        node,
+        utxo,
+        source_private_key,
+        "issuance",
+        {
+            "asset": "A95428959745315388",
+            "quantity": 100000,
+            "description": "lore ipsum",
+        },
+    )
+
+    source_address = source_private_key.get_public_key().get_taproot_address().to_string()
+    result = node.api_call(f"addresses/{source_address}/issuances")
+    print(result)
+    assert len(result["result"]) == 1
+    assert result["result"][0]["asset"] == "A95428959745315388"
+    assert result["result"][0]["quantity"] == 100000
+
+    return new_utxo
+
+
 def test_p2ptr_inscription():
     setup("regtest")
 
@@ -416,6 +439,7 @@ def test_p2ptr_inscription():
         utxo = check_dispensers(node, source_private_key, utxo)
         attached_utxo = send_funds_to_utxo(node, source_private_key)
         utxo = check_detach(node, source_private_key, attached_utxo)
+        utxo_2 = check_issuance(node, source_private_key_2, utxo_2)
 
     finally:
         print(regtest_node_thread.node.server_out.getvalue())
