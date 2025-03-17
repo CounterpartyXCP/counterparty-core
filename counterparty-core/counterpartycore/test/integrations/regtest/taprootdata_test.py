@@ -386,8 +386,7 @@ def check_detach(node, source_private_key, utxo):
         },
         inputs_set=f"{utxo['txid']}:{utxo['n']}",
     )
-    result = node.api_call(f"addresses/{node.addresses[1]}/send_type?type=detach")
-
+    result = node.api_call(f"addresses/{node.addresses[1]}/sends?send_type=detach")
     assert len(result["result"]) == 1
     assert result["result"][0]["asset"] == "XCP"
     assert result["result"][0]["quantity"] == 2
