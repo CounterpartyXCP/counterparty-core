@@ -557,66 +557,54 @@ pub fn parse_transaction(
         }
 
         if let Some(batch_client) = BATCH_CLIENT.lock().unwrap().as_ref() {
-            if config.p2sh_address_supported(height) && !tx.input.is_empty() {
-                // we get only one input
-                let input_txid = tx.input[0].previous_output.txid;
-                if let Ok(fetched_txs) =  batch_client.get_transactions(&[input_txid]) {
-                    if !fetched_txs.is_empty() {
-                        prev_txs[0] = fetched_txs[0].clone();
-                    }
-                }
-                if is_reveal_tx && !prev_txs.is_empty() {
-                    if let Some(prev_tx) = &prev_txs[0] {
-                        if !prev_tx.input.is_empty() {
-                            commit_parent_txid = prev_tx.input[0].previous_output.txid;
-                            commit_parent_vout = prev_tx.input[0].previous_output.vout as usize;
-                            if let Ok(fetched_txs) = batch_client.get_transactions(&[commit_parent_txid]) {
-                                if !fetched_txs.is_empty() {
-                                    prev_txs[0] = fetched_txs[0].clone();
-                                }
+
+            let input_txids: Vec<_> = tx
+                .input
+                .iter()
+                .map(|vin| vin.previous_output.txid)
+                .collect();
+            prev_txs = batch_client
+                .get_transactions(&input_txids)
+                .unwrap_or_default();
+
+            if is_reveal_tx && !prev_txs.is_empty() {
+                if let Some(prev_tx) = &prev_txs[0] {
+                    if !prev_tx.input.is_empty() {
+                        commit_parent_txid = prev_tx.input[0].previous_output.txid;
+                        commit_parent_vout = prev_tx.input[0].previous_output.vout as usize;
+                        if let Ok(fetched_txs) = batch_client.get_transactions(&[commit_parent_txid]) {
+                            if !fetched_txs.is_empty() {
+                                prev_txs[0] = fetched_txs[0].clone();
                             }
                         }
                     }
                 }
-            } else {
-                let input_txids: Vec<_> = tx
-                    .input
-                    .iter()
-                    .map(|vin| vin.previous_output.txid)
-                    .collect();
-                prev_txs = batch_client
-                    .get_transactions(&input_txids)
-                    .unwrap_or_default();
             }
         }
     }
 
     for (i, vin) in tx.input.iter().enumerate() {
         let hash = vin.previous_output.txid.to_string();
-        let vin_info = if config.p2sh_address_supported(height) && i > 0 {
-            None
-        } else {
-            prev_txs.get(i).and_then(|prev_tx| {
-                prev_tx.as_ref().and_then(|tx| {
-                    let vout_idx;
-                    if tx.compute_txid() == commit_parent_txid {
-                        vout_idx = commit_parent_vout
-                    } else {
-                        vout_idx = vin.previous_output.vout as usize;
-                    }
+        let vin_info = prev_txs.get(i).and_then(|prev_tx| {
+            prev_tx.as_ref().and_then(|tx| {
+                let vout_idx;
+                if tx.compute_txid() == commit_parent_txid {
+                    vout_idx = commit_parent_vout
+                } else {
+                    vout_idx = vin.previous_output.vout as usize;
+                }
 
-                    let is_segwit = prev_tx.as_ref().map_or(false, |tx| {
-                        tx.compute_txid().to_string() != tx.compute_wtxid().to_string()
-                    });
+                let is_segwit = prev_tx.as_ref().map_or(false, |tx| {
+                    tx.compute_txid().to_string() != tx.compute_wtxid().to_string()
+                });
 
-                    tx.output.get(vout_idx).map(|output| VinOutput {
-                        value: output.value.to_sat(),
-                        script_pub_key: output.script_pubkey.to_bytes(),
-                        is_segwit: is_segwit,
-                    })
+                tx.output.get(vout_idx).map(|output| VinOutput {
+                    value: output.value.to_sat(),
+                    script_pub_key: output.script_pubkey.to_bytes(),
+                    is_segwit: is_segwit,
                 })
             })
-        };
+        });
 
         vins.push(Vin {
             hash,
