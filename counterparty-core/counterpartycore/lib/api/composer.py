@@ -956,14 +956,19 @@ def construct(db, tx_info, construct_params):
     # prepare unspent list
     unspent_list = prepare_unspent_list(db, source, construct_params)
 
+    print("unspent_list", unspent_list)
+
     # prepare outputs
     outputs = prepare_outputs(source, destinations, data, unspent_list, construct_params)
+    print("outputs", outputs)
 
     # prepare inputs and change
     selected_utxos, btc_in, change_outputs = prepare_inputs_and_change(
         db, source, outputs, unspent_list, construct_params
     )
+    print("selected_utxos", selected_utxos)
     inputs = utxos_to_txins(selected_utxos)
+    print("inputs", inputs)
 
     if not construct_params.get("disable_utxo_locks", False):
         UTXOLocks().lock_inputs(inputs)

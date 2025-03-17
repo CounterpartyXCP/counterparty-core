@@ -32,18 +32,21 @@ def rpc_call(method, params):
     return result
 
 
-def send_taproot_transaction(node, utxo, source_private_key, tx_name, params):
+def send_taproot_transaction(node, utxo, source_private_key, tx_name, params, inputs_set=None):
     print(utxo)
     source_pubkey = source_private_key.get_public_key()
     source_address = source_pubkey.get_taproot_address()
 
     # send XCP from the source address
+    source = source_address.to_string()
+    if tx_name == "detach":
+        source = f"{utxo['txid']}:{utxo['n']}"
     result = node.send_transaction(
-        source_address.to_string(),
+        source,
         tx_name,
         params
         | {
-            "inputs_set": f"{utxo['txid']}:{utxo['n']}",
+            "inputs_set": inputs_set or f"{utxo['txid']}:{utxo['n']}",
             "encoding": "taproot",
             "multisig_pubkey": source_pubkey.to_hex(),
         },
@@ -57,6 +60,7 @@ def send_taproot_transaction(node, utxo, source_private_key, tx_name, params):
     sig = source_private_key.sign_taproot_input(
         commit_tx, 0, [source_address.to_script_pub_key()], [utxo["value"]]
     )
+    print("unsigned commit tx", commit_tx.serialize())
     # add the witness to the transaction
     commit_tx.witnesses.append(TxWitnessInput([sig]))
     node.broadcast_transaction(commit_tx.serialize())
@@ -325,6 +329,72 @@ def check_dispense(node, source_private_key, utxo, dispenser):
     return new_utxo
 
 
+def send_funds_to_utxo(node, source_private_key):
+    global SENDS_COUNT  # pylint: disable=global-statement # noqa PLW0603
+
+    tx_hash, _block_hash, _block_time, _data = node.send_transaction(
+        node.addresses[0],
+        "attach",
+        {
+            "asset": "XCP",
+            "quantity": 2,
+            "utxo_value": 20000,
+            "exact_fee": 0,
+        },
+    )
+    result = node.api_call(f"addresses/{node.addresses[0]}/balances?type=utxo")
+    assert len(result["result"]) == 1
+    assert result["result"][0]["asset"] == "XCP"
+    assert result["result"][0]["quantity"] == 2
+    assert result["result"][0]["utxo"] == f"{tx_hash}:0"
+
+    source_address = source_private_key.get_public_key().get_taproot_address().to_string()
+    tx_hash, _block_hash, _block_time, _data = node.send_transaction(
+        f"{tx_hash}:0",
+        "movetoutxo",
+        {
+            "destination": source_address,
+            "utxo_value": 20000,
+            "exact_fee": 0,
+        },
+    )
+    result = node.api_call(f"addresses/{source_address}/balances?type=utxo")
+    assert len(result["result"]) == 1
+    assert result["result"][0]["asset"] == "XCP"
+    assert result["result"][0]["quantity"] == 2
+    assert result["result"][0]["utxo"] == f"{tx_hash}:0"
+
+    SENDS_COUNT[source_address] = SENDS_COUNT.get(source_address, 0) + 1
+
+    return {
+        "txid": tx_hash,
+        "n": 0,
+        "value": 20000,
+    }
+
+
+def check_detach(node, source_private_key, utxo):
+    global SENDS_COUNT  # pylint: disable=global-statement # noqa PLW0603
+
+    new_utxo = send_taproot_transaction(
+        node,
+        utxo,
+        source_private_key,
+        "detach",
+        {
+            "destination": node.addresses[1],
+        },
+        inputs_set=f"{utxo['txid']}:{utxo['n']}",
+    )
+    result = node.api_call(f"addresses/{node.addresses[1]}/send_type?type=detach")
+
+    assert len(result["result"]) == 1
+    assert result["result"][0]["asset"] == "XCP"
+    assert result["result"][0]["quantity"] == 2
+
+    return new_utxo
+
+
 def test_p2ptr_inscription():
     setup("regtest")
 
@@ -343,12 +413,10 @@ def test_p2ptr_inscription():
         utxo = check_mpma_send(node, source_private_key, utxo, 10)
         utxo = check_broadcast(node, source_private_key, utxo, "a" * 10000)
         utxo = check_fairminter(node, source_private_key, utxo)
-        utxo_2 = check_fairmint(node, source_private_key_2, utxo_2)
-        utxo_2 = check_dispensers(node, source_private_key_2, utxo_2)
-
-        dispenser_address = source_private_key_2.get_public_key().get_taproot_address().to_string()
-
-        utxo = check_dispense(node, source_private_key, utxo, dispenser_address)
+        utxo = check_fairmint(node, source_private_key, utxo)
+        utxo = check_dispensers(node, source_private_key, utxo)
+        attached_utxo = send_funds_to_utxo(node, source_private_key)
+        utxo = check_detach(node, source_private_key, attached_utxo)
 
     finally:
         print(regtest_node_thread.node.server_out.getvalue())
