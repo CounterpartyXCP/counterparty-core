@@ -240,6 +240,9 @@ def get_transaction_sources(decoded_tx):
 
         outputs_value += vout_value
 
+        if protocol.enabled("first_input_is_source") and len(sources) > 0:
+            continue
+
         asm = script.script_to_asm(script_pubkey)
 
         if asm[-1] == opcodes.OP_CHECKSIG:  # noqa: F405
@@ -268,9 +271,6 @@ def get_transaction_sources(decoded_tx):
             # Collect unique sources.
             if new_source not in sources:
                 sources.append(new_source)
-
-        if protocol.enabled("first_input_is_source") and len(sources) > 0:
-            break
 
     return "-".join(sources), outputs_value
 

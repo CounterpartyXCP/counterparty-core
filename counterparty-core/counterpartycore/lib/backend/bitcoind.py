@@ -550,7 +550,7 @@ def list_unspent(source, allow_unconfirmed_inputs):
 def get_vin_info(vin, no_retry=False):
     vin_info = vin.get("info")
     if vin_info is None:
-        logger.error("vin_info not found for vin %s", vin)
+        # logger.error("vin_info not found for vin %s", vin)
         try:
             vin_ctx = get_decoded_transaction(vin["hash"], no_retry=no_retry)
             is_segwit = vin_ctx["segwit"]
