@@ -140,7 +140,7 @@ def test_prepare_taproot_output(defaults):
         },
     )
     assert len(outputs) == 1
-    assert outputs[0].amount == 200
+    assert outputs[0].amount == 330
     assert outputs[0].script_pubkey == Script(
         ["OP_1", "f5f05f105fff2aa11354afd243beeb8a45ce37becc0dd52da01b6612bfb0bc36"]
     )
@@ -154,20 +154,21 @@ def test_prepare_taproot_output(defaults):
         },
     )
     assert len(outputs) == 1
-    assert outputs[0].amount == 200
+    assert outputs[0].amount == 330
     assert outputs[0].script_pubkey == Script(
         ["OP_1", "a08105b2c25dfe0d5b3ef9471ae2bf886a81206f9e972bc2855d53048ec9a611"]
     )
 
     outputs = composer.prepare_taproot_output(defaults["p2tr_addresses"][0], b"Hello world", [], {})
     assert len(outputs) == 1
-    assert outputs[0].amount == 200
+    assert outputs[0].amount == 330
     assert outputs[0].script_pubkey == Script(
         ["OP_1", "dbf963209b9d74c19b2ddadac83fbd16f427f4266369a999feefdc32ab5466f7"]
     )
 
     outputs = composer.prepare_data_outputs(
         defaults["p2tr_addresses"][0],
+        [],
         b"Hello world",
         [
             {
@@ -177,7 +178,7 @@ def test_prepare_taproot_output(defaults):
         {"encoding": "taproot"},
     )
     assert len(outputs) == 1
-    assert outputs[0].amount == 200
+    assert outputs[0].amount == 330
     assert outputs[0].script_pubkey == Script(
         ["OP_1", "dbf963209b9d74c19b2ddadac83fbd16f427f4266369a999feefdc32ab5466f7"]
     )

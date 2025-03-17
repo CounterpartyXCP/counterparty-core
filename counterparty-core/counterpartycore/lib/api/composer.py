@@ -163,7 +163,7 @@ def perpare_non_data_outputs(destinations, unspent_list, construct_params):
     return outputs
 
 
-def determine_encoding(data, construct_params):
+def determine_encoding(data, destinations, construct_params):
     desired_encoding = construct_params.get("encoding", "auto")
     if desired_encoding == "auto":
         if len(data) + len(config.PREFIX) <= config.OP_RETURN_MAX_SIZE:
@@ -172,6 +172,10 @@ def determine_encoding(data, construct_params):
             encoding = "multisig"
     else:
         encoding = desired_encoding
+    if len(destinations) > 0 and encoding == "taproot":
+        raise exceptions.ComposeError(
+            "Cannot use `taproot` encoding for transactions with destinations"
+        )
     if encoding not in ("multisig", "opreturn", "taproot"):
         raise exceptions.ComposeError(f"Not supported encoding: {encoding}")
     return encoding
@@ -343,6 +347,7 @@ def generate_envelope_script(data):
     datas = helpers.chunkify(data, 520)
     datas = [binascii.hexlify(data).decode("utf-8") for data in datas]
     # Build inscription envelope script
+    print(["OP_FALSE", "OP_IF"] + datas + ["OP_ENDIF"])
     return Script(["OP_FALSE", "OP_IF"] + datas + ["OP_ENDIF"])
 
 
@@ -356,12 +361,14 @@ def prepare_taproot_output(source, data, unspent_list, construct_params):
     reveal_tx_vsize = get_reveal_transaction_vsize(data)
     # commit value must pay fees for the reveal tx
     commit_value = math.ceil(reveal_tx_vsize * get_sat_per_vbyte(construct_params))
+    if commit_value < config.DEFAULT_SEGWIT_DUST_SIZE:
+        commit_value = config.DEFAULT_SEGWIT_DUST_SIZE
     tx_out = TxOutput(commit_value, commit_address.to_script_pub_key())
     return [tx_out]
 
 
-def prepare_data_outputs(source, data, unspent_list, construct_params):
-    encoding = determine_encoding(data, construct_params)
+def prepare_data_outputs(source, destinations, data, unspent_list, construct_params):
+    encoding = determine_encoding(data, destinations, construct_params)
     arc4_key = unspent_list[0]["txid"]
     if encoding == "multisig":
         return prepare_multisig_output(source, data, arc4_key, unspent_list, construct_params)
@@ -395,7 +402,7 @@ def prepare_outputs(source, destinations, data, unspent_list, construct_params):
     outputs = perpare_non_data_outputs(destinations, unspent_list, construct_params)
     # prepare data outputs
     if data:
-        outputs += prepare_data_outputs(source, data, unspent_list, construct_params)
+        outputs += prepare_data_outputs(source, destinations, data, unspent_list, construct_params)
     # Add more outputs if needed
     more_outputs = construct_params.get("more_outputs")
     if more_outputs:
@@ -840,9 +847,6 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
         else:
             change_address = source
 
-    print("Source: ", source)
-    print("Change Address: ", change_address)
-
     outputs_total = sum(output.amount for output in outputs)
 
     change_outputs = []
@@ -989,7 +993,7 @@ def construct(db, tx_info, construct_params):
         },
     }
     if data:
-        encoding = determine_encoding(data, construct_params)
+        encoding = determine_encoding(data, destinations, construct_params)
         if encoding == "taproot":
             result["envelope_script"] = generate_envelope_script(data).to_hex()
             result["reveal_rawtransaction"] = generate_raw_reveal_tx(tx.get_txid(), 0)

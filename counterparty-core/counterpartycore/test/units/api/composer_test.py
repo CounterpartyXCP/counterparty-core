@@ -150,14 +150,20 @@ def test_prepare_non_data_outputs(defaults):
 
 
 def test_determine_encoding():
-    assert composer.determine_encoding(b"Hello, World!", {}) == "opreturn"
-    assert composer.determine_encoding(b"Hello, World!" * 100, {}) == "multisig"
+    assert composer.determine_encoding(b"Hello, World!", [], {}) == "opreturn"
+    assert composer.determine_encoding(b"Hello, World!" * 100, [], {}) == "multisig"
 
     with pytest.raises(exceptions.ComposeError, match="Not supported encoding: p2sh"):
-        composer.determine_encoding(b"Hello, World!", {"encoding": "p2sh"})
+        composer.determine_encoding(b"Hello, World!", [], {"encoding": "p2sh"})
 
     with pytest.raises(exceptions.ComposeError, match="Not supported encoding: toto"):
-        composer.determine_encoding(b"Hello, World!", {"encoding": "toto"})
+        composer.determine_encoding(b"Hello, World!", [], {"encoding": "toto"})
+
+    with pytest.raises(
+        exceptions.ComposeError,
+        match="Cannot use `taproot` encoding for transactions with destinations",
+    ):
+        composer.determine_encoding(b"Hello, World!", ["destination_1"], {"encoding": "taproot"})
 
 
 def test_encrypt_data():
@@ -269,7 +275,7 @@ def test_prepare_data_outputs(defaults):
     # Test case 1: Simple OP_RETURN output
     assert str(
         composer.prepare_data_outputs(
-            defaults["addresses"][0], b"Hello, World!", [{"txid": ARC4_KEY}], {}
+            defaults["addresses"][0], [], b"Hello, World!", [{"txid": ARC4_KEY}], {}
         )
     ) == str([TxOutput(0, Script(["OP_RETURN", OPRETURN_DATA]))])
 
@@ -277,6 +283,7 @@ def test_prepare_data_outputs(defaults):
     with pytest.raises(exceptions.ComposeError, match="One `OP_RETURN` output per transaction"):
         composer.prepare_data_outputs(
             defaults["addresses"][0],
+            [],
             b"Hello, World!" * 10,
             [{"txid": ARC4_KEY}],
             {"pubkeys": PROVIDED_PUBKEYS, "encoding": "opreturn"},
@@ -286,6 +293,7 @@ def test_prepare_data_outputs(defaults):
     assert str(
         composer.prepare_data_outputs(
             defaults["addresses"][0],
+            [],
             b"Hello, World!" * 10,
             [{"txid": ARC4_KEY}],
             {"pubkeys": PROVIDED_PUBKEYS, "encoding": "multisig"},
@@ -338,6 +346,7 @@ def test_prepare_data_outputs(defaults):
     with pytest.raises(exceptions.ComposeError, match="Not supported encoding: p2sh"):
         composer.prepare_data_outputs(
             defaults["addresses"][0],
+            [],
             b"Hello, World!" * 10,
             [],
             {"pubkeys": PROVIDED_PUBKEYS, "encoding": "p2sh"},

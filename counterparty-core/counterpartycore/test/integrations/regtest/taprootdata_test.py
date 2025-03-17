@@ -10,7 +10,7 @@ from bitcoinutils.transactions import Transaction, TxWitnessInput
 from bitcoinutils.utils import ControlBlock
 from regtestnode import RegtestNodeThread
 
-SENDS_COUNT = 0
+SENDS_COUNT = {}
 
 
 def rpc_call(method, params):
@@ -135,7 +135,8 @@ def generate_taproot_funded_address(node):
             "asset": "XCP",
         },
     )
-    SENDS_COUNT += 1
+    SENDS_COUNT[source_address.to_string()] = SENDS_COUNT.get(source_address.to_string(), 0) + 1
+    print("SEND COUNT", SENDS_COUNT)
     return source_private_key, {
         "txid": txid,
         "n": n,
@@ -157,11 +158,13 @@ def check_send(node, source_private_key, utxo, quantity):
             "asset": "XCP",
         },
     )
-    SENDS_COUNT += 1
 
     source_address = source_private_key.get_public_key().get_taproot_address().to_string()
+    SENDS_COUNT[source_address] = SENDS_COUNT.get(source_address, 0) + 1
+    print("SEND COUNT", SENDS_COUNT)
+
     result = node.api_call(f"addresses/{source_address}/sends")
-    assert len(result["result"]) == SENDS_COUNT
+    assert len(result["result"]) == SENDS_COUNT[source_address]
     assert result["result"][0]["asset"] == "XCP"
     assert result["result"][0]["quantity"] == quantity
     assert result["result"][0]["source"] == source_address
@@ -190,12 +193,14 @@ def check_mpma_send(node, source_private_key, utxo, quantity):
             "memo": "lore ipsum, lore ipsum, lore ipsum, lore ipsum, lorem ipsum",
         },
     )
-    SENDS_COUNT += destination_count
 
     source_address = source_private_key.get_public_key().get_taproot_address().to_string()
+    SENDS_COUNT[source_address] = SENDS_COUNT.get(source_address, 0) + destination_count
+    print("SEND COUNT", SENDS_COUNT)
+
     result = node.api_call(f"addresses/{source_address}/sends")
 
-    assert len(result["result"]) == SENDS_COUNT
+    assert len(result["result"]) == SENDS_COUNT[source_address]
     for i in reversed(range(destination_count)):
         assert result["result"][i]["asset"] == "XCP"
         assert result["result"][i]["quantity"] == quantity
@@ -282,7 +287,7 @@ def check_dispensers(node, source_private_key, utxo):
         {
             "asset": "FAIRMINT",
             "give_quantity": 1,
-            "escrow_quantity": 10,
+            "escrow_quantity": 1,
             "mainchainrate": 1,  # 1 BTC for 1 XCP
             "status": 0,
             "validate": False,
@@ -331,19 +336,19 @@ def test_p2ptr_inscription():
         node = regtest_node_thread.node
 
         source_private_key, utxo = generate_taproot_funded_address(node)
+        source_private_key_2, utxo_2 = generate_taproot_funded_address(node)
 
         utxo = check_send(node, source_private_key, utxo, 10)
         utxo = check_send(node, source_private_key, utxo, 20)
         utxo = check_mpma_send(node, source_private_key, utxo, 10)
         utxo = check_broadcast(node, source_private_key, utxo, "a" * 10000)
         utxo = check_fairminter(node, source_private_key, utxo)
-        utxo = check_fairmint(node, source_private_key, utxo)
-        utxo = check_dispensers(node, source_private_key, utxo)
+        utxo_2 = check_fairmint(node, source_private_key_2, utxo_2)
+        utxo_2 = check_dispensers(node, source_private_key_2, utxo_2)
 
-        # source_private_key_2, utxo_2 = generate_taproot_funded_address(node)
-        # dispenser_address = source_private_key.get_public_key().get_taproot_address().to_string()
+        dispenser_address = source_private_key_2.get_public_key().get_taproot_address().to_string()
 
-        # utxo = check_dispense(node, source_private_key_2, utxo_2, dispenser_address)
+        utxo = check_dispense(node, source_private_key, utxo, dispenser_address)
 
     finally:
         print(regtest_node_thread.node.server_out.getvalue())
