@@ -19,19 +19,30 @@ class Profiler:
         self.profiler = None
         self.active_profiling = False
         self.last_report_time = None
-        logger.info(
-            "Profiler initialized with configured interval of %s minutes",
-            config.PROFILE_INTERVAL_MINUTES,
-        )
+
+        # Check Python version - disable for 3.12+
+        if sys.version_info >= (3, 12):
+            logger.warning(
+                "Profiler is not supported on Python 3.12 and above - functionality disabled"
+            )
+            self._is_supported = False
+        else:
+            self._is_supported = True
+            logger.info(
+                "Profiler initialized with configured interval of %s minutes",
+                config.PROFILE_INTERVAL_MINUTES,
+            )
 
     def start(self):
         """Starts a profiling session"""
+        if not self._is_supported:
+            return
+
         if self.active_profiling:
             return
 
-        # Reset any active profiler in Python 3.12+
+        # Reset any active profiler
         try:
-            # This disables any active system-wide profiler
             sys.setprofile(None)
         except Exception:  # pylint: disable=broad-exception-caught
             logger.warning("Failed to reset profiler state before starting new profiler")
@@ -48,6 +59,9 @@ class Profiler:
 
     def stop_and_save(self):
         """Stops the profiling session and generates a report"""
+        if not self._is_supported:
+            return
+
         if not self.active_profiling or self.profiler is None:
             return
 
@@ -61,19 +75,10 @@ class Profiler:
 
         try:
             # Ensure the directory exists
-            os.makedirs(os.path.dirname(profile_path), exist_ok=True)
+            os.makedirs(config.CACHE_DIR, exist_ok=True)
 
             # Save profiling data
             self.profiler.dump_stats(profile_path)
-
-            # Ensure a file exists even if dump_stats didn't create one (Python 3.12+ compatibility)
-            if not os.path.exists(profile_path):
-                logger.warning(
-                    "No profile file was created by dump_stats, creating a dummy file for compatibility"
-                )
-                with open(profile_path, "wb") as f:
-                    f.write(b"# Empty profile file\n")
-
             logger.info("Profiling report saved to %s", profile_path)
 
         except Exception as e:  # pylint: disable=broad-exception-caught
@@ -93,6 +98,9 @@ class Profiler:
         Checks if it's time to generate a profile report based on the configured interval.
         If the interval has elapsed, generates a report and restarts profiling.
         """
+        if not self._is_supported:
+            return
+
         if not self.active_profiling or self.last_report_time is None:
             return
 
@@ -107,24 +115,10 @@ class Profiler:
 
     def stop(self):
         """Stops profiling completely"""
+        if not self._is_supported:
+            return
+
         logger.info("Stopping profiler...")
         if self.active_profiling:
             self.stop_and_save()
         logger.info("Profiler stopped.")
-
-
-# Example usage:
-"""
-def my_function():
-    profiler = Profiler()
-    profiler.start()
-    
-    while some_condition:
-        # Your code here
-        
-        # Check if we need to generate a profile report
-        profiler.gen_profile_if_needed()
-    
-    # Final cleanup
-    profiler.stop()
-"""
