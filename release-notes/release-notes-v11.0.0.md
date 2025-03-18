@@ -50,10 +50,12 @@ counterparty-server start
 - Allow `soft_cap` to be equal to `hard_cap` in Fairminter
 - Add `max_mint_per_address` parameter
 - Clean up hard-coded protocol changes distributed throughout codebase
+- Add Taproot envelope data encoding support
 
 ## API
 
 - Adds `asset` as optional param to Get Balances by Addresses endpoint
+- The `encoding` parameter now accepts the `taproot` value
 
 ## CLI
 
