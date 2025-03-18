@@ -1,3 +1,4 @@
+import binascii
 import json
 import os
 import time
@@ -417,6 +418,132 @@ def check_issuance(node, source_private_key, utxo):
     return new_utxo
 
 
+def check_order(node, source_private_key, utxo):
+    new_utxo = send_taproot_transaction(
+        node,
+        utxo,
+        source_private_key,
+        "order",
+        {
+            "give_asset": "XCP",
+            "give_quantity": 1000,
+            "get_asset": "BTC",
+            "get_quantity": 1000,
+            "expiration": 21,
+            "fee_required": 0,
+        },
+    )
+
+    source_address = source_private_key.get_public_key().get_taproot_address().to_string()
+    result = node.api_call(f"addresses/{source_address}/orders")
+    print(result)
+    assert len(result["result"]) == 1
+    assert result["result"][0]["give_asset"] == "XCP"
+    assert result["result"][0]["get_asset"] == "BTC"
+    assert result["result"][0]["status"] == "open"
+
+    return new_utxo, result["result"][0]["tx_hash"]
+
+
+def check_cancel(node, source_private_key, utxo, order_hash):
+    new_utxo = send_taproot_transaction(
+        node,
+        utxo,
+        source_private_key,
+        "cancel",
+        {
+            "offer_hash": order_hash,
+        },
+    )
+
+    source_address = source_private_key.get_public_key().get_taproot_address().to_string()
+    result = node.api_call(f"addresses/{source_address}/orders")
+    print(result)
+    assert len(result["result"]) == 1
+    assert result["result"][0]["give_asset"] == "XCP"
+    assert result["result"][0]["get_asset"] == "BTC"
+    assert result["result"][0]["status"] == "cancelled"
+
+    return new_utxo
+
+
+def check_destroy(node, source_private_key, utxo):
+    new_utxo = send_taproot_transaction(
+        node,
+        utxo,
+        source_private_key,
+        "destroy",
+        {
+            "asset": "XCP",
+            "quantity": 1,
+            "tag": "destroy",
+        },
+    )
+
+    source_address = source_private_key.get_public_key().get_taproot_address().to_string()
+    result = node.api_call(f"addresses/{source_address}/destructions")
+    print(result)
+    assert len(result["result"]) == 1
+    assert result["result"][0]["asset"] == "XCP"
+    assert result["result"][0]["quantity"] == 1
+    assert result["result"][0]["tag"] == binascii.hexlify(b"destroy").decode("utf-8")
+
+    return new_utxo
+
+
+def check_send2(node, source_private_key, utxo):
+    global SENDS_COUNT  # pylint: disable=global-statement # noqa PLW0603
+
+    new_utxo = send_taproot_transaction(
+        node,
+        utxo,
+        source_private_key,
+        "send",
+        {
+            "destination": node.addresses[1],
+            "quantity": 2,
+            "asset": "A95428959745315388",
+        },
+    )
+
+    source_address = source_private_key.get_public_key().get_taproot_address().to_string()
+    SENDS_COUNT[source_address] = SENDS_COUNT.get(source_address, 0) + 1
+    print("SEND COUNT", SENDS_COUNT)
+
+    result = node.api_call(f"addresses/{source_address}/sends")
+    assert len(result["result"]) == SENDS_COUNT[source_address]
+    assert result["result"][0]["asset"] == "A95428959745315388"
+    assert result["result"][0]["quantity"] == 2
+    assert result["result"][0]["source"] == source_address
+    assert result["result"][0]["destination"] == node.addresses[1]
+
+    return new_utxo
+
+
+def check_dividend(node, source_private_key, utxo):
+    new_utxo = send_taproot_transaction(
+        node,
+        utxo,
+        source_private_key,
+        "dividend",
+        {
+            "asset": "A95428959745315388",
+            "quantity_per_unit": 1,
+            "dividend_asset": "XCP",
+        },
+    )
+
+    source_address = source_private_key.get_public_key().get_taproot_address().to_string()
+    result = node.api_call(f"addresses/{source_address}/dividends")
+    print(result)
+    assert len(result["result"]) == 1
+    assert result["result"][0]["asset"] == "A95428959745315388"
+    assert result["result"][0]["quantity_per_unit"] == 1
+    assert result["result"][0]["dividend_asset"] == "XCP"
+
+    return new_utxo
+
+
 def test_p2ptr_inscription():
     setup("regtest")
 
@@ -440,6 +567,11 @@ def test_p2ptr_inscription():
         attached_utxo = send_funds_to_utxo(node, source_private_key)
         utxo = check_detach(node, source_private_key, attached_utxo)
         utxo_2 = check_issuance(node, source_private_key_2, utxo_2)
+        utxo_2, order_hash = check_order(node, source_private_key_2, utxo_2)
+        utxo_2 = check_cancel(node, source_private_key_2, utxo_2, order_hash)
+        utxo_2 = check_destroy(node, source_private_key_2, utxo_2)
+        utxo_2 = check_send2(node, source_private_key_2, utxo_2)
+        # utxo_2 = check_dividend(node, source_private_key_2, utxo_2)
 
     finally:
         print(regtest_node_thread.node.server_out.getvalue())
