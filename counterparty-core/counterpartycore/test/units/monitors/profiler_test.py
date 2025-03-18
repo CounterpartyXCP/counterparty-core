@@ -1,247 +1,273 @@
+import cProfile
 import os
 import shutil
 import sys
 import tempfile
 import time
 
-import pytest
+# Import the module to test
 from counterpartycore.lib import config
-from counterpartycore.lib.monitors.profiler import PeriodicProfilerThread
+from counterpartycore.lib.monitors.profiler import Profiler
 
 
-def skip_on_py312_plus(func):
-    def wrapper(*args, **kwargs):
-        if sys.version_info >= (3, 12):
-            pytest.skip("Test ignored on Python 3.12+")
-        return func(*args, **kwargs)
+class TestProfiler:
+    """
+    Test suite for the Profiler class
+    """
 
-    return wrapper
-
-
-class TestPeriodicProfilerThread:
     @classmethod
     def setup_class(cls):
-        """Prepare the test environment with a temporary folder."""
-        # Create a temporary directory for tests
-        cls.temp_dir = tempfile.mkdtemp()
-        # Save the old CACHE_DIR
-        if hasattr(config, "CACHE_DIR"):
-            cls.original_cache_dir = config.CACHE_DIR
-        else:
-            cls.original_cache_dir = None
-            config.CACHE_DIR = cls.temp_dir
+        """Set up test environment once for all test methods"""
+        # Save original values
+        cls._original_cache_dir = getattr(config, "CACHE_DIR", None)
+        cls._original_profile_interval = getattr(config, "PROFILE_INTERVAL_MINUTES", None)
 
-        # Replace CACHE_DIR with our temporary directory
-        config.CACHE_DIR = cls.temp_dir
+        # Set up test environment
+        cls._temp_dir = tempfile.mkdtemp()
+        config.CACHE_DIR = cls._temp_dir
+        config.PROFILE_INTERVAL_MINUTES = 0.001  # Very small value for testing
 
     @classmethod
     def teardown_class(cls):
-        """Clean up the environment after all tests."""
-        # Restore the old CACHE_DIR
-        if cls.original_cache_dir is not None:
-            config.CACHE_DIR = cls.original_cache_dir
-        else:
-            delattr(config, "CACHE_DIR")
+        """Clean up after all test methods"""
+        # Clean up
+        try:
+            shutil.rmtree(cls._temp_dir)
+        except Exception:  # pylint: disable=broad-exception-caught
+            print("Error cleaning up temporary directory")
+            pass
 
-        # Delete the temporary directory
-        shutil.rmtree(cls.temp_dir)
+        # Restore original values
+        if cls._original_cache_dir is not None:
+            config.CACHE_DIR = cls._original_cache_dir
+        if cls._original_profile_interval is not None:
+            config.PROFILE_INTERVAL_MINUTES = cls._original_profile_interval
 
-    def setup_method(self):
-        """Prepare a new instance for each test."""
-        # Create a new profiling thread instance for each test
-        # Use a very short interval to speed up tests
-        self.profiler_thread = PeriodicProfilerThread(
-            interval_minutes=0.02
-        )  # 0.02 minutes = 1.2 seconds
+    def test_profiler_init(self):
+        """Test Profiler initialization"""
+        profiler = Profiler()
+        assert profiler.profiler is None
+        assert not profiler.active_profiling
+        assert profiler.last_report_time is None
 
-        # Ensure the cache directory exists
-        os.makedirs(config.CACHE_DIR, exist_ok=True)
+    def test_profiler_start(self):
+        """Test starting the profiler"""
+        profiler = Profiler()
+        profiler.start()
+        assert profiler.profiler is not None
+        assert profiler.active_profiling
+        assert profiler.last_report_time is not None
 
-    def teardown_method(self):
-        """Clean up after each test."""
-        # Make sure the thread is stopped after each test
-        if hasattr(self, "profiler_thread") and self.profiler_thread.is_alive():
-            self.profiler_thread.stop()
-            self.profiler_thread.join(timeout=1)
+    def test_profiler_start_already_active(self):
+        """Test starting the profiler when it's already active"""
+        profiler = Profiler()
+        profiler.start()
+        initial_time = profiler.last_report_time
+        time.sleep(0.1)  # Small delay
+        profiler.start()  # Call start again
+        # Should remain the same since we're already profiling
+        assert profiler.last_report_time == initial_time
 
-        # Clean up created files
-        for file in os.listdir(config.CACHE_DIR):
-            os.remove(os.path.join(config.CACHE_DIR, file))
+    def test_profiler_stop_and_save(self):
+        """Test stopping and saving the profiler data"""
+        profiler = Profiler()
+        profiler.start()
+        time.sleep(0.1)  # Small delay to ensure we capture something
+        profiler.stop_and_save()
+        assert not profiler.active_profiling
+        assert profiler.profiler is None
 
-    def test_init(self):
-        """Test the initialization of the class with a custom interval."""
-        assert self.profiler_thread.interval_minutes == 0.02
-        assert self.profiler_thread.daemon is True
-        assert self.profiler_thread.stop_event.is_set() is False
-        assert self.profiler_thread.profiler is None
-        assert self.profiler_thread.active_profiling is False
+        # Check if a profile file was created
+        files = [
+            f
+            for f in os.listdir(config.CACHE_DIR)
+            if f.startswith("profile_") and f.endswith(".prof")
+        ]
+        assert len(files) > 0
 
-    def test_init_default_interval(self):
-        """Test initialization with the default interval."""
-        profiler = PeriodicProfilerThread()
-        assert profiler.interval_minutes == 15
+    def test_profiler_stop_and_save_inactive(self):
+        """Test stopping and saving when profiler is not active"""
+        profiler = Profiler()
+        profiler.stop_and_save()  # Should not raise any exception
+        assert not profiler.active_profiling
+        assert profiler.profiler is None
 
-    def test_start_profiling(self):
-        """Test starting profiling."""
-        self.profiler_thread.start_profiling()
-        assert self.profiler_thread.active_profiling is True
-        assert self.profiler_thread.profiler is not None
+    def test_profiler_gen_profile_if_needed_inactive(self):
+        """Test generating profile when profiler is not active"""
+        profiler = Profiler()
+        profiler.gen_profile_if_needed()  # Should not do anything
+        assert not profiler.active_profiling
 
-        # Calling start_profiling again should not change anything
-        profiler = self.profiler_thread.profiler
-        self.profiler_thread.start_profiling()
-        assert self.profiler_thread.profiler is profiler  # same instance
+    def test_profiler_gen_profile_if_needed_not_elapsed(self):
+        """Test generating profile when interval hasn't elapsed"""
+        profiler = Profiler()
+        profiler.start()
+        old_interval = config.PROFILE_INTERVAL_MINUTES
+        config.PROFILE_INTERVAL_MINUTES = 60  # Set to a large value
+        initial_time = profiler.last_report_time
+        profiler.gen_profile_if_needed()
+        # Nothing should change
+        assert profiler.last_report_time == initial_time
+        assert profiler.active_profiling
+        config.PROFILE_INTERVAL_MINUTES = old_interval  # Restore original value
 
-    @skip_on_py312_plus
-    def test_stop_profiling_and_save(self):
-        """Test stopping profiling and generating a report."""
-        self.profiler_thread.start_profiling()
+    def test_profiler_gen_profile_if_needed_elapsed(self):
+        """Test generating profile when interval has elapsed"""
+        profiler = Profiler()
+        profiler.start()
+        time.sleep(0.1)  # Ensure we exceed the interval
+        initial_time = profiler.last_report_time
+        profiler.gen_profile_if_needed()
+        # Should have restarted profiling
+        assert profiler.last_report_time > initial_time
+        assert profiler.active_profiling
 
-        for i in range(1000):
-            _ = i * i
+        # Check if a profile file was created
+        files = [
+            f
+            for f in os.listdir(config.CACHE_DIR)
+            if f.startswith("profile_") and f.endswith(".prof")
+        ]
+        assert len(files) > 0
 
-        self.profiler_thread.stop_profiling_and_save()
+    def test_profiler_stop(self):
+        """Test completely stopping the profiler"""
+        profiler = Profiler()
+        profiler.start()
+        profiler.stop()
+        assert not profiler.active_profiling
+        assert profiler.profiler is None
 
-        # Check that a file was created in the cache directory
-        files = os.listdir(config.CACHE_DIR)
-        assert len(files) == 1
-        assert files[0].startswith("profile_") and files[0].endswith(".prof")
+        # Check if a profile file was created
+        files = [
+            f
+            for f in os.listdir(config.CACHE_DIR)
+            if f.startswith("profile_") and f.endswith(".prof")
+        ]
+        assert len(files) > 0
 
-    def test_stop_profiling_and_save_not_active(self):
-        """Test stopping profiling when no profiling is active."""
-        self.profiler_thread.active_profiling = False
-        self.profiler_thread.stop_profiling_and_save()
+    def test_profiler_stop_inactive(self):
+        """Test stopping when profiler is not active"""
+        profiler = Profiler()
+        profiler.stop()  # Should not raise any exception
+        assert not profiler.active_profiling
+        assert profiler.profiler is None
 
-        # Check that no file was created
-        files = os.listdir(config.CACHE_DIR)
-        assert len(files) == 0
+    # Tests for error handling scenarios
+    def test_setprofile_error_handling(self):
+        """Test error handling when sys.setprofile raises an exception"""
+        profiler = Profiler()
+        original_setprofile = sys.setprofile
 
-    def test_stop_profiling_and_save_profiler_none(self):
-        """Test stopping profiling when the profiler is None."""
-        self.profiler_thread.active_profiling = True
-        self.profiler_thread.profiler = None
-        self.profiler_thread.stop_profiling_and_save()
+        # Replace with function that raises exception
+        def raising_setprofile(_):
+            raise Exception("Test exception")
 
-        # Check that no file was created
-        files = os.listdir(config.CACHE_DIR)
-        assert len(files) == 0
+        sys.setprofile = raising_setprofile
+        try:
+            # Should handle the exception gracefully
+            profiler.start()
+            assert profiler.active_profiling
+        finally:
+            # Restore original function
+            sys.setprofile = original_setprofile
 
-    def test_stop_profiling_and_save_with_error(self):
-        """Test stopping profiling with an error when writing the file."""
-        self.profiler_thread.start_profiling()
+    def test_profile_creation_error(self):
+        """Test error handling when cProfile.Profile raises ValueError"""
+        profiler = Profiler()
 
-        # Save the current directory
-        original_cache_dir = config.CACHE_DIR
+        # Save original cProfile.Profile to restore later
+        original_profile = cProfile.Profile
+
+        # Replace cProfile.Profile with a function that raises ValueError
+        def mock_profile_error(*args, **kwargs):
+            raise ValueError("Test error")
+
+        cProfile.Profile = mock_profile_error
 
         try:
-            # Replace with a directory that doesn't exist to cause an error
-            config.CACHE_DIR = "/path/that/does/not/exist"
-
-            # This should raise an exception but the method is designed to catch it
-            self.profiler_thread.stop_profiling_and_save()
-
-            # Check that the state was reset despite the error
-            assert self.profiler_thread.active_profiling is False
-            assert self.profiler_thread.profiler is None
+            # This should not raise an exception - error should be caught
+            profiler.start()
+            # Verify error was handled properly
+            assert not profiler.active_profiling
+            assert profiler.profiler is None
         finally:
-            # Restore the original directory
-            config.CACHE_DIR = original_cache_dir
+            # Restore original Profile
+            cProfile.Profile = original_profile
 
-    @skip_on_py312_plus
-    def test_run_cycle(self):
-        """Test the execution cycle of the thread with periodic report generation."""
-        # Start the thread
-        self.profiler_thread.start()
+    def test_disable_error_handling(self):
+        """Test error handling when profiler.disable() raises an exception"""
+        profiler = Profiler()
+        profiler.start()
 
-        # Wait for the thread to start running
-        time.sleep(0.1)
-        assert self.profiler_thread.is_alive()
-        assert self.profiler_thread.active_profiling is True
+        def raising_disable():
+            raise Exception("Test exception")
 
-        # Wait until the interval is well exceeded for a report to be generated
-        time.sleep(5)
+        profiler.profiler.disable = raising_disable
+        try:
+            # Should handle the exception gracefully
+            profiler.stop_and_save()
+            assert not profiler.active_profiling
+            assert profiler.profiler is None
+        finally:
+            # No need to restore as profiler is reset
+            pass
 
-        # Check that a report file was created
-        # If no file is found, display useful diagnostics
-        files = os.listdir(config.CACHE_DIR)
-        if len(files) == 0:
-            print(f"No file found in {config.CACHE_DIR}")
-            print(f"Profiler interval: {self.profiler_thread.interval_minutes} minutes")
-            print(f"Active profiling: {self.profiler_thread.active_profiling}")
-        assert len(files) >= 1, f"No profiling file found in {config.CACHE_DIR}"
+    def test_dump_stats_error_handling(self):
+        """Test error handling when profiler.dump_stats() raises an exception"""
+        profiler = Profiler()
+        profiler.start()
 
-        # Remember the files we've seen so far
-        seen_files = set(files)
+        def raising_dump_stats(_):
+            raise Exception("Test exception")
 
-        # Wait for another complete cycle to verify the creation of a new report
-        time.sleep(2)  # Wait longer to ensure a new report
-        new_files = os.listdir(config.CACHE_DIR)
+        profiler.profiler.dump_stats = raising_dump_stats
+        try:
+            # Should handle the exception gracefully
+            profiler.stop_and_save()
+            assert not profiler.active_profiling
+            assert profiler.profiler is None
+        finally:
+            # No need to restore as profiler is reset
+            pass
 
-        # Check if there are any new files
-        assert any(f not in seen_files for f in new_files), (
-            f"No new files created. Before: {sorted(seen_files)}, After: {sorted(new_files)}"
-        )
+    def test_file_creation_fallback(self):
+        """Test that a dummy file is created if dump_stats doesn't create one"""
+        profiler = Profiler()
+        profiler.start()
 
-        # Stop the thread
-        self.profiler_thread.stop()
+        # Save original os.path.exists to make files appear non-existent
+        original_exists = os.path.exists
 
-        # Check that the thread is properly stopped
-        assert self.profiler_thread.stop_event.is_set() is True
-        self.profiler_thread.join(timeout=2)  # Increased timeout
-        assert not self.profiler_thread.is_alive()
+        def mock_exists(path):
+            if path.endswith(".prof"):
+                return False  # Force creation of dummy file
+            return original_exists(path)
 
-    @skip_on_py312_plus
-    def test_stop(self):
-        """Test stopping the thread with generation of a final report."""
-        # Start the thread
-        self.profiler_thread.start()
+        # Patch os.path.exists to simulate missing file
+        os.path.exists = mock_exists
 
-        # Wait for the thread to start running
-        time.sleep(0.1)
-        assert self.profiler_thread.is_alive()
-        assert self.profiler_thread.active_profiling is True
+        try:
+            profiler.stop_and_save()
 
-        # Stop the thread
-        self.profiler_thread.stop()
+            # Restore original exists function before checking files
+            os.path.exists = original_exists
 
-        # Check that the thread is properly stopped
-        assert self.profiler_thread.stop_event.is_set() is True
-        self.profiler_thread.join(timeout=2)  # Increased timeout
-        assert not self.profiler_thread.is_alive()
+            # Check that a dummy file was created
+            files = [
+                f
+                for f in os.listdir(config.CACHE_DIR)
+                if f.startswith("profile_") and f.endswith(".prof")
+            ]
+            assert len(files) > 0
 
-        # Check that a final report was generated
-        files = os.listdir(config.CACHE_DIR)
-        if len(files) == 0:
-            print(f"No file found in {config.CACHE_DIR} after stop()")
-        assert len(files) >= 1, f"No profiling file found in {config.CACHE_DIR} after stop()"
+            # Check content of the file to ensure it's the dummy
+            file_path = os.path.join(config.CACHE_DIR, files[0])
+            with open(file_path, "rb") as f:
+                content = f.read()
+                assert content  # Just make sure it's not empty
 
-    def test_stop_without_active_profiling(self):
-        """Test stopping the thread when no profiling is active."""
-        # Ensure the cache directory is empty at the start of the test
-        for file in os.listdir(config.CACHE_DIR):
-            os.remove(os.path.join(config.CACHE_DIR, file))
-
-        # Start the thread
-        self.profiler_thread.start()
-
-        # Wait for the thread to start running
-        time.sleep(0.1)
-        assert self.profiler_thread.is_alive()
-
-        # Modify the state to simulate inactive profiling
-        self.profiler_thread.active_profiling = False
-
-        # Wait a bit to ensure the thread has taken the change into account
-        time.sleep(0.1)
-
-        # Stop the thread
-        self.profiler_thread.stop()
-
-        # Check that the thread is properly stopped
-        assert self.profiler_thread.stop_event.is_set() is True
-        self.profiler_thread.join(timeout=2)
-        assert not self.profiler_thread.is_alive()
-
-        # Check that no final report was generated
-        files = os.listdir(config.CACHE_DIR)
-        assert len(files) == 0, f"Files were found when none were expected: {files}"
+            # Since the actual content might be different in implementation, we won't check for exact string
+        finally:
+            # Restore original exists function if not already done
+            os.path.exists = original_exists
