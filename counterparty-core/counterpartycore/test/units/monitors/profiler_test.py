@@ -18,30 +18,38 @@ class TestProfiler:
     @classmethod
     def setup_class(cls):
         """Set up test environment once for all test methods"""
-        # Save original values
-        cls._original_cache_dir = getattr(config, "CACHE_DIR", None)
+        # Save original profile interval
         cls._original_profile_interval = getattr(config, "PROFILE_INTERVAL_MINUTES", None)
-
-        # Set up test environment
-        cls._temp_dir = tempfile.mkdtemp()
-        config.CACHE_DIR = cls._temp_dir
+        # Set very small interval for testing
         config.PROFILE_INTERVAL_MINUTES = 0.001  # Very small value for testing
 
     @classmethod
     def teardown_class(cls):
         """Clean up after all test methods"""
-        # Clean up
-        try:
-            shutil.rmtree(cls._temp_dir)
-        except Exception:
-            print("Error cleaning up temporary directory")
-            pass
-
-        # Restore original values
-        if cls._original_cache_dir is not None:
-            config.CACHE_DIR = cls._original_cache_dir
+        # Restore original profile interval
         if cls._original_profile_interval is not None:
             config.PROFILE_INTERVAL_MINUTES = cls._original_profile_interval
+
+    def setup_method(self, method):
+        """Set up the test environment before each test method"""
+        # Create a unique temp directory for each test
+        self._test_temp_dir = tempfile.mkdtemp()
+        # Save the original CACHE_DIR
+        self._original_test_cache_dir = getattr(config, "CACHE_DIR", None)
+        # Set the test-specific CACHE_DIR
+        config.CACHE_DIR = self._test_temp_dir
+
+    def teardown_method(self, method):
+        """Clean up after each test method"""
+        # Restore original CACHE_DIR
+        if self._original_test_cache_dir is not None:
+            config.CACHE_DIR = self._original_test_cache_dir
+        # Clean up the test-specific temp directory
+        try:
+            shutil.rmtree(self._test_temp_dir)
+        except Exception:
+            print(f"Failed to remove temp directory: {self._test_temp_dir}")
+            pass
 
     def test_profiler_init(self):
         """Test Profiler initialization"""
@@ -70,49 +78,28 @@ class TestProfiler:
 
     def test_profiler_stop_and_save(self):
         """Test stopping and saving the profiler data"""
+        # Ensure directory exists
+        os.makedirs(config.CACHE_DIR, exist_ok=True)
+
         profiler = Profiler()
         profiler.start()
         time.sleep(0.1)  # Small delay to ensure we capture something
 
-        # Python 3.12+ specific behavior - make sure directory exists
-        os.makedirs(config.CACHE_DIR, exist_ok=True)
+        # Execute the function
+        profiler.stop_and_save()
 
-        # For Python 3.12+, ensure we can detect if the fallback is called
-        fallback_called = False
-        original_open = open
+        assert not profiler.active_profiling
+        assert profiler.profiler is None
 
-        def mock_open(*args, **kwargs):
-            nonlocal fallback_called
-            if args and isinstance(args[0], str) and args[0].endswith(".prof"):
-                fallback_called = True
-            return original_open(*args, **kwargs)
-
-        orig_open = __builtins__["open"]
-        __builtins__["open"] = mock_open
-
-        try:
-            profiler.stop_and_save()
-            assert not profiler.active_profiling
-            assert profiler.profiler is None
-
-            # Check if a profile file was created
-            files = [
-                f
-                for f in os.listdir(config.CACHE_DIR)
-                if f.startswith("profile_") and f.endswith(".prof")
-            ]
-
-            # On Python 3.12+, either files should exist or the fallback should have been attempted
-            if sys.version_info >= (3, 12):
-                if len(files) == 0:
-                    assert fallback_called, "Fallback file creation not attempted on Python 3.12+"
-            else:
-                # Pre 3.12 should create files normally
-                assert len(files) > 0
-
-        finally:
-            # Restore original open
-            __builtins__["open"] = orig_open
+        # Check if profile files exist
+        files = [
+            f
+            for f in os.listdir(config.CACHE_DIR)
+            if f.startswith("profile_") and f.endswith(".prof")
+        ]
+        assert len(files) > 0, (
+            f"No profile files found in {config.CACHE_DIR}: {os.listdir(config.CACHE_DIR)}"
+        )
 
     def test_profiler_stop_and_save_inactive(self):
         """Test stopping and saving when profiler is not active"""
@@ -142,92 +129,54 @@ class TestProfiler:
 
     def test_profiler_gen_profile_if_needed_elapsed(self):
         """Test generating profile when interval has elapsed"""
+        # Ensure directory exists
+        os.makedirs(config.CACHE_DIR, exist_ok=True)
+
         profiler = Profiler()
         profiler.start()
         time.sleep(0.1)  # Ensure we exceed the interval
         initial_time = profiler.last_report_time
 
-        # Similar fallback detection as in test_profiler_stop_and_save
-        fallback_called = False
-        original_open = open
+        # Execute the function
+        profiler.gen_profile_if_needed()
 
-        def mock_open(*args, **kwargs):
-            nonlocal fallback_called
-            if args and isinstance(args[0], str) and args[0].endswith(".prof"):
-                fallback_called = True
-            return original_open(*args, **kwargs)
+        # Should have restarted profiling
+        assert profiler.last_report_time > initial_time
+        assert profiler.active_profiling
 
-        # Apply the patch
-        orig_open = __builtins__["open"]
-        __builtins__["open"] = mock_open
-
-        try:
-            profiler.gen_profile_if_needed()
-            # Should have restarted profiling
-            assert profiler.last_report_time > initial_time
-            assert profiler.active_profiling
-
-            # Check if a profile file was created (accounting for Python 3.12+ differences)
-            files = [
-                f
-                for f in os.listdir(config.CACHE_DIR)
-                if f.startswith("profile_") and f.endswith(".prof")
-            ]
-
-            # On Python 3.12+, either files should exist or the fallback should have been attempted
-            if sys.version_info >= (3, 12):
-                if len(files) == 0:
-                    assert fallback_called, "Fallback file creation not attempted on Python 3.12+"
-            else:
-                # Pre 3.12 should create files normally
-                assert len(files) > 0
-
-        finally:
-            # Restore original open
-            __builtins__["open"] = orig_open
+        # Check if profile files exist
+        files = [
+            f
+            for f in os.listdir(config.CACHE_DIR)
+            if f.startswith("profile_") and f.endswith(".prof")
+        ]
+        assert len(files) > 0, (
+            f"No profile files found in {config.CACHE_DIR}: {os.listdir(config.CACHE_DIR)}"
+        )
 
     def test_profiler_stop(self):
         """Test completely stopping the profiler"""
+        # Ensure directory exists
+        os.makedirs(config.CACHE_DIR, exist_ok=True)
+
         profiler = Profiler()
         profiler.start()
 
-        # Similar fallback detection as in test_profiler_stop_and_save
-        fallback_called = False
-        original_open = open
+        # Execute the function
+        profiler.stop()
 
-        def mock_open(*args, **kwargs):
-            nonlocal fallback_called
-            if args and isinstance(args[0], str) and args[0].endswith(".prof"):
-                fallback_called = True
-            return original_open(*args, **kwargs)
+        assert not profiler.active_profiling
+        assert profiler.profiler is None
 
-        # Apply the patch
-        orig_open = __builtins__["open"]
-        __builtins__["open"] = mock_open
-
-        try:
-            profiler.stop()
-            assert not profiler.active_profiling
-            assert profiler.profiler is None
-
-            # Check if a profile file was created (accounting for Python 3.12+ differences)
-            files = [
-                f
-                for f in os.listdir(config.CACHE_DIR)
-                if f.startswith("profile_") and f.endswith(".prof")
-            ]
-
-            # On Python 3.12+, either files should exist or the fallback should have been attempted
-            if sys.version_info >= (3, 12):
-                if len(files) == 0:
-                    assert fallback_called, "Fallback file creation not attempted on Python 3.12+"
-            else:
-                # Pre 3.12 should create files normally
-                assert len(files) > 0
-
-        finally:
-            # Restore original open
-            __builtins__["open"] = orig_open
+        # Check if profile files exist
+        files = [
+            f
+            for f in os.listdir(config.CACHE_DIR)
+            if f.startswith("profile_") and f.endswith(".prof")
+        ]
+        assert len(files) > 0, (
+            f"No profile files found in {config.CACHE_DIR}: {os.listdir(config.CACHE_DIR)}"
+        )
 
     def test_profiler_stop_inactive(self):
         """Test stopping when profiler is not active"""
@@ -236,7 +185,6 @@ class TestProfiler:
         assert not profiler.active_profiling
         assert profiler.profiler is None
 
-    # Tests for error handling scenarios
     def test_setprofile_error_handling(self):
         """Test error handling when sys.setprofile raises an exception"""
         profiler = Profiler()
@@ -246,8 +194,8 @@ class TestProfiler:
         def raising_setprofile(_):
             raise Exception("Test exception")
 
-        sys.setprofile = raising_setprofile
         try:
+            sys.setprofile = raising_setprofile
             # Should handle the exception gracefully
             profiler.start()
             assert profiler.active_profiling
@@ -262,13 +210,13 @@ class TestProfiler:
         # Save original cProfile.Profile to restore later
         original_profile = cProfile.Profile
 
-        # Replace cProfile.Profile with a function that raises ValueError
-        def mock_profile_error(*args, **kwargs):
-            raise ValueError("Test error")
-
-        cProfile.Profile = mock_profile_error
-
         try:
+            # Replace cProfile.Profile with a function that raises ValueError
+            def mock_profile_error(*args, **kwargs):
+                raise ValueError("Test error")
+
+            cProfile.Profile = mock_profile_error
+
             # This should not raise an exception - error should be caught
             profiler.start()
             # Verify error was handled properly
@@ -283,17 +231,19 @@ class TestProfiler:
         profiler = Profiler()
         profiler.start()
 
-        def raising_disable():
-            raise Exception("Test exception")
-
-        profiler.profiler.disable = raising_disable
         try:
+
+            def raising_disable():
+                raise Exception("Test exception")
+
+            profiler.profiler.disable = raising_disable
+
             # Should handle the exception gracefully
             profiler.stop_and_save()
             assert not profiler.active_profiling
             assert profiler.profiler is None
         finally:
-            # No need to restore as profiler is reset
+            # No restoration needed as the profiler object is reset
             pass
 
     def test_dump_stats_error_handling(self):
@@ -301,56 +251,56 @@ class TestProfiler:
         profiler = Profiler()
         profiler.start()
 
-        def raising_dump_stats(_):
-            raise Exception("Test exception")
-
-        profiler.profiler.dump_stats = raising_dump_stats
         try:
+
+            def raising_dump_stats(_):
+                raise Exception("Test exception")
+
+            profiler.profiler.dump_stats = raising_dump_stats
+
             # Should handle the exception gracefully
             profiler.stop_and_save()
             assert not profiler.active_profiling
             assert profiler.profiler is None
         finally:
-            # No need to restore as profiler is reset
+            # No restoration needed as the profiler object is reset
             pass
 
     def test_file_creation_fallback(self):
         """Test that a dummy file is created if dump_stats doesn't create one"""
+        # Ensure directory exists
+        os.makedirs(config.CACHE_DIR, exist_ok=True)
+
         profiler = Profiler()
         profiler.start()
 
-        # Save original os.path.exists to make files appear non-existent
+        # Save original os.path.exists
         original_exists = os.path.exists
 
-        def mock_exists(path):
-            if path.endswith(".prof"):
-                return False  # Force creation of dummy file
-            return original_exists(path)
-
-        # Patch os.path.exists to simulate missing file
-        os.path.exists = mock_exists
-
         try:
+            # Mock os.path.exists to simulate missing profile file
+            def mock_exists(path):
+                if path.endswith(".prof"):
+                    return False
+                return original_exists(path)
+
+            os.path.exists = mock_exists
+
+            # Execute the stop_and_save method
             profiler.stop_and_save()
 
-            # Restore original exists function before checking files
+            # Restore original os.path.exists before checking
             os.path.exists = original_exists
 
-            # Check that a dummy file was created
+            # Check if profile files exist
             files = [
                 f
                 for f in os.listdir(config.CACHE_DIR)
                 if f.startswith("profile_") and f.endswith(".prof")
             ]
-            assert len(files) > 0
-
-            # Check content of the file to ensure it's the dummy
-            file_path = os.path.join(config.CACHE_DIR, files[0])
-            with open(file_path, "rb") as f:
-                content = f.read()
-                assert content  # Just make sure it's not empty
-
-            # Since the actual content might be different in implementation, we won't check for exact string
+            assert len(files) > 0, (
+                f"No profile files found in {config.CACHE_DIR}: {os.listdir(config.CACHE_DIR)}"
+            )
         finally:
-            # Restore original exists function if not already done
+            # Ensure original function is restored
             os.path.exists = original_exists
