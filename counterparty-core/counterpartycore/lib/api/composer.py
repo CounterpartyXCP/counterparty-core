@@ -360,8 +360,7 @@ def prepare_taproot_output(source, data, unspent_list, construct_params):
     reveal_tx_vsize = get_reveal_transaction_vsize(data)
     # commit value must pay fees for the reveal tx
     commit_value = math.ceil(reveal_tx_vsize * get_sat_per_vbyte(construct_params))
-    if commit_value < config.DEFAULT_SEGWIT_DUST_SIZE:
-        commit_value = config.DEFAULT_SEGWIT_DUST_SIZE
+    commit_value = max(commit_value, config.DEFAULT_SEGWIT_DUST_SIZE)
     tx_out = TxOutput(commit_value, commit_address.to_script_pub_key())
     return [tx_out]
 

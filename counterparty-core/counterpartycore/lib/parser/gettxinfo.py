@@ -369,7 +369,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     if decoded_tx["parsed_vouts"] == "DecodeError":
         raise DecodeError("unrecognised output type")
 
-    destinations, btc_amount, fee, data, potential_dispensers, is_reveal_tx = decoded_tx[
+    destinations, btc_amount, fee, data, potential_dispensers, _is_reveal_tx = decoded_tx[
         "parsed_vouts"
     ]
 

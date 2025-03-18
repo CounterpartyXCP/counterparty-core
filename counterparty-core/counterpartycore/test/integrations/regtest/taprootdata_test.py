@@ -517,6 +517,9 @@ def check_send2(node, source_private_key, utxo):
     assert result["result"][0]["source"] == source_address
     assert result["result"][0]["destination"] == node.addresses[1]
 
+    result = node.api_call("assets/A95428959745315388/balances")
+    print(result)
+
     return new_utxo
 
 
@@ -528,7 +531,7 @@ def check_dividend(node, source_private_key, utxo):
         "dividend",
         {
             "asset": "A95428959745315388",
-            "quantity_per_unit": 1,
+            "quantity_per_unit": 1000000000,
             "dividend_asset": "XCP",
         },
     )
@@ -538,8 +541,31 @@ def check_dividend(node, source_private_key, utxo):
     print(result)
     assert len(result["result"]) == 1
     assert result["result"][0]["asset"] == "A95428959745315388"
-    assert result["result"][0]["quantity_per_unit"] == 1
+    assert result["result"][0]["quantity_per_unit"] == 1000000000
     assert result["result"][0]["dividend_asset"] == "XCP"
+
+    return new_utxo
+
+
+def check_sweep(node, source_private_key, utxo):
+    new_utxo = send_taproot_transaction(
+        node,
+        utxo,
+        source_private_key,
+        "sweep",
+        {
+            "destination": node.addresses[2],
+            "flags": 3,
+            "memo": "sweep sweep",
+        },
+    )
+
+    source_address = source_private_key.get_public_key().get_taproot_address().to_string()
+    result = node.api_call(f"addresses/{source_address}/sweeps")
+    print(result)
+    assert len(result["result"]) == 1
+    assert result["result"][0]["destination"] == node.addresses[2]
+    assert result["result"][0]["memo"] == "sweep sweep"
 
     return new_utxo
 
@@ -571,8 +597,11 @@ def test_p2ptr_inscription():
         utxo_2 = check_cancel(node, source_private_key_2, utxo_2, order_hash)
         utxo_2 = check_destroy(node, source_private_key_2, utxo_2)
         utxo_2 = check_send2(node, source_private_key_2, utxo_2)
-        # utxo_2 = check_dividend(node, source_private_key_2, utxo_2)
+        utxo_2 = check_dividend(node, source_private_key_2, utxo_2)
+        utxo_2 = check_sweep(node, source_private_key_2, utxo_2)
 
-    finally:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         print(regtest_node_thread.node.server_out.getvalue())
+        raise e
+    finally:
         regtest_node_thread.stop()
