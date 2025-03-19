@@ -178,7 +178,7 @@ def cancel_order_match(db, order_match, status, block_index, tx_index):
         }
         ledger.markets.update_order(db, order_match["tx1_hash"], set_data)
 
-    if protocol.enabled("no_backwards_compatibility"):  # Protocol change.
+    if not protocol.enabled("no_backwards_compatibility"):  # Protocol change.
         # Sanity check: one of the two must have expired.
         tx0_order_time_left = tx0_order["expire_index"] - block_index
         tx1_order_time_left = tx1_order["expire_index"] - block_index
@@ -576,7 +576,7 @@ def match(db, tx, block_index=None):
         tx1_inverse_price = ledger.issuances.price(tx1["give_quantity"], tx1["get_quantity"])
 
         # Protocol change.
-        if protocol.enabled("issuance_fee_update_2"):
+        if not protocol.enabled("issuance_fee_update_2"):
             tx1_inverse_price = ledger.issuances.price(1, tx1_price)
 
         logger.trace(

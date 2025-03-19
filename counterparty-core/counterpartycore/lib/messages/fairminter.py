@@ -3,6 +3,7 @@ import logging
 import struct
 
 from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.utils import assetnames, helpers
 
@@ -213,6 +214,16 @@ def compose(
     )
     if len(problems) > 0 and not skip_validation:
         raise exceptions.ComposeError(problems)
+
+    if not skip_validation:
+        if 0 < end_block <= CurrentState().current_block_index():
+            raise exceptions.ComposeError(
+                ["end block must be greater than the current block index"]
+            )
+        if 0 < start_block <= CurrentState().current_block_index():
+            raise exceptions.ComposeError(
+                ["start block must be greater than the current block index"]
+            )
 
     minted_asset_commission_int = int(minted_asset_commission * 1e8)
 

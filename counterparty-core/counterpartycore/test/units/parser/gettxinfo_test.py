@@ -1077,31 +1077,23 @@ def test_get_tx_info_new_3(ledger_db, current_block_index, defaults, monkeypatch
             ledger_db, {"coinbase": False, "parsed_vouts": "DecodeError"}, current_block_index
         )
 
-    source = defaults["addresses"][1]
-    destinations = [defaults["addresses"][0]]
-    btc_amount = 100
-    fee = 0
-    data = b"P2SH"
-    potential_dispensers = [
-        (defaults["addresses"][0], None),
-        (defaults["addresses"][0], 5),
-        (defaults["addresses"][0], 10),
-    ]
-    monkeypatch.setattr(
-        gettxinfo, "get_transaction_source_from_p2sh", lambda *args: (source, b"", btc_amount)
-    )
 
-    with pytest.raises(exceptions.BTCOnlyError, match="no data and not unspendable"):
-        gettxinfo.get_tx_info_new(
-            ledger_db,
-            {
-                "coinbase": False,
-                "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers, False),
-            },
-            current_block_index,
+def test_get_tx_info_new_4(ledger_db, current_block_index, defaults, monkeypatch):
+    with ProtocolChangesDisabled(["p2sh_disabled"]):
+        source = defaults["addresses"][1]
+        destinations = [defaults["addresses"][0]]
+        btc_amount = 100
+        fee = 0
+        data = b"P2SH"
+        potential_dispensers = [
+            (defaults["addresses"][0], None),
+            (defaults["addresses"][0], 5),
+            (defaults["addresses"][0], 10),
+        ]
+        monkeypatch.setattr(
+            gettxinfo, "get_transaction_source_from_p2sh", lambda *args: (source, b"", btc_amount)
         )
 
-    with ProtocolChangesDisabled(["disable_vanilla_btc_dispense"]):
         with pytest.raises(exceptions.BTCOnlyError, match="no data and not unspendable"):
             gettxinfo.get_tx_info_new(
                 ledger_db,
@@ -1119,7 +1111,18 @@ def test_get_tx_info_new_3(ledger_db, current_block_index, defaults, monkeypatch
                 current_block_index,
             )
 
-    with ProtocolChangesDisabled(["disable_vanilla_btc_dispense"]):
+    with ProtocolChangesDisabled(["disable_vanilla_btc_dispense", "p2sh_disabled"]):
+        with pytest.raises(exceptions.BTCOnlyError, match="no data and not unspendable"):
+            gettxinfo.get_tx_info_new(
+                ledger_db,
+                {
+                    "coinbase": False,
+                    "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+                },
+                current_block_index,
+            )
+
+    with ProtocolChangesDisabled(["disable_vanilla_btc_dispense", "p2sh_disabled"]):
         with pytest.raises(exceptions.BTCOnlyError, match="no data and not unspendable"):
             gettxinfo.get_tx_info_new(
                 ledger_db,
@@ -1138,22 +1141,16 @@ def test_get_tx_info_new_3(ledger_db, current_block_index, defaults, monkeypatch
                 composing=True,
             )
 
-    assert gettxinfo.get_tx_info_new(
-        ledger_db,
-        {
-            "coinbase": False,
-            "parsed_vouts": (
-                [config.UNSPENDABLE],
-                btc_amount,
-                fee,
-                data,
-                potential_dispensers,
-                False,
-            ),
-        },
-        current_block_index,
-        composing=True,
-    ) == (defaults["addresses"][1], config.UNSPENDABLE, 100, 100, b"", [])
+    with ProtocolChangesDisabled(["p2sh_disabled"]):
+        assert gettxinfo.get_tx_info_new(
+            ledger_db,
+            {
+                "coinbase": False,
+                "parsed_vouts": ([config.UNSPENDABLE], btc_amount, fee, data, potential_dispensers),
+            },
+            current_block_index,
+            composing=True,
+        ) == (defaults["addresses"][1], config.UNSPENDABLE, 100, 100, b"", [])
 
     monkeypatch.setattr(
         gettxinfo,
@@ -1163,7 +1160,7 @@ def test_get_tx_info_new_3(ledger_db, current_block_index, defaults, monkeypatch
             (defaults["addresses"][0], 10),
         ],
     )
-    with ProtocolChangesDisabled(["disable_vanilla_btc_dispense"]):
+    with ProtocolChangesDisabled(["disable_vanilla_btc_dispense", "p2sh_disabled"]):
         assert gettxinfo.get_tx_info_new(
             ledger_db,
             {
@@ -1183,24 +1180,24 @@ def test_get_tx_info_new_3(ledger_db, current_block_index, defaults, monkeypatch
             ],
         )
 
-    monkeypatch.setattr(
-        gettxinfo, "get_transaction_sources", lambda *args: (defaults["addresses"][1], 10000)
-    )
-    monkeypatch.setattr(gettxinfo, "check_signatures_sighash_flag", lambda *args: None)
+        monkeypatch.setattr(
+            gettxinfo, "get_transaction_sources", lambda *args: (defaults["addresses"][1], 10000)
+        )
+        monkeypatch.setattr(gettxinfo, "check_signatures_sighash_flag", lambda *args: None)
 
-    def unpack_mock(*args):
-        raise struct.error("error")
+        def unpack_mock(*args):
+            raise struct.error("error")
 
-    monkeypatch.setattr("counterpartycore.lib.parser.messagetype.unpack", unpack_mock)
+        monkeypatch.setattr("counterpartycore.lib.parser.messagetype.unpack", unpack_mock)
 
-    assert gettxinfo.get_tx_info_new(
-        ledger_db,
-        {
-            "coinbase": False,
-            "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers, False),
-        },
-        current_block_index,
-    ) == (defaults["addresses"][1], defaults["addresses"][0], 100, 10000, b"z", [])
+        assert gettxinfo.get_tx_info_new(
+            ledger_db,
+            {
+                "coinbase": False,
+                "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers),
+            },
+            current_block_index,
+        ) == (defaults["addresses"][1], defaults["addresses"][0], 100, 10000, b"z", [])
 
 
 def test_get_tx_info_new_3b(ledger_db, current_block_index, defaults, monkeypatch):
@@ -1551,7 +1548,7 @@ def test_get_tx_info_5(ledger_db, defaults, monkeypatch, current_block_index):
     ).fetchone()["utxo"]
     txid, vout = utxo.split(":")
 
-    with ProtocolChangesDisabled(["disable_vanilla_btc_dispense"]):
+    with ProtocolChangesDisabled(["disable_vanilla_btc_dispense", "p2sh_disabled"]):
         result = gettxinfo.get_tx_info(
             ledger_db,
             {
@@ -1591,3 +1588,29 @@ def test_get_tx_info_taproot(ledger_db, current_block_index, blockchain_mock):
         [],
         ["", "", "1", "0"],
     )
+
+
+def test_get_tx_info_new_p2sh_disabled(ledger_db, current_block_index, defaults, monkeypatch):
+    source = defaults["addresses"][1]
+    destinations = [defaults["addresses"][0]]
+    btc_amount = 100
+    fee = 0
+    data = b"P2SH"
+    potential_dispensers = [
+        (defaults["addresses"][0], None),
+        (defaults["addresses"][0], 5),
+        (defaults["addresses"][0], 10),
+    ]
+
+    gettxinfo.SIGHASH_FLAG_TRANSACTION_WHITELIST = ["tx_id"]
+    monkeypatch.setattr(gettxinfo, "get_transaction_sources", lambda *args: (source, btc_amount))
+
+    assert gettxinfo.get_tx_info_new(
+        ledger_db,
+        {
+            "tx_id": "tx_id",
+            "coinbase": False,
+            "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+        },
+        current_block_index,
+    ) == (source, destinations[0], btc_amount, btc_amount, data, [])
