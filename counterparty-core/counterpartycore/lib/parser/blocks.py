@@ -46,6 +46,7 @@ from counterpartycore.lib.messages import (
     utxo,
 )
 from counterpartycore.lib.messages.versions import enhancedsend, mpma
+from counterpartycore.lib.monitors.profiler import Profiler
 from counterpartycore.lib.parser import check, deserialize, messagetype, protocol
 from counterpartycore.lib.parser.gettxinfo import get_tx_info
 from counterpartycore.lib.utils import database, helpers
@@ -915,6 +916,11 @@ def catch_up(db):
         start_time = time.time()
         parsed_blocks = 0
 
+        profiler = None
+        if config.PROFILE:
+            profiler = Profiler()
+            profiler.start()
+
         while CurrentState().current_block_index() < block_count:
             if CurrentState().stopping():
                 return
@@ -981,9 +987,14 @@ def catch_up(db):
                 if backend.bitcoind.get_blocks_behind() > 0:
                     backend.bitcoind.wait_for_block(CurrentState().current_block_index() + 1)
                 block_count = backend.bitcoind.getblockcount()
+
+            if profiler is not None:
+                profiler.gen_profile_if_needed()
     finally:
         if fetcher is not None:
             fetcher.stop()
+        if profiler is not None:
+            profiler.stop()
 
     create_events_indexes(db)
 

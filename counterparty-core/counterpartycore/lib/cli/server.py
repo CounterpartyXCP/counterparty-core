@@ -22,7 +22,7 @@ from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.cli import bootstrap, log
 from counterpartycore.lib.ledger.backendheight import BackendHeight
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.monitors import profiler, slack
+from counterpartycore.lib.monitors import slack
 from counterpartycore.lib.parser import blocks, check, follow
 from counterpartycore.lib.utils import database, helpers
 
@@ -172,12 +172,6 @@ class CounterpartyServer(threading.Thread):
         blocks.reset_rust_fetcher_database()
 
         # Catch Up
-        if config.PROFILE:
-            self.periodic_profiler = profiler.PeriodicProfilerThread(
-                interval_minutes=config.PROFILE_INTERVAL_MINUTES
-            )
-            self.periodic_profiler.start()
-
         blocks.catch_up(self.db)
 
         if self.stop_when_ready:
