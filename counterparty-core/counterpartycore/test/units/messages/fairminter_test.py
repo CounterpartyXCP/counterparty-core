@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+import pytest
+from counterpartycore.lib import exceptions
 from counterpartycore.lib.api import apiwatcher
 from counterpartycore.lib.messages import fairminter
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
@@ -590,3 +592,80 @@ def test_normalized_price(ledger_db, state_db, apiv2_client, defaults, blockchai
     result = apiv2_client.get(url).json["result"]
     assert len(result) == 1
     assert result[0]["price_normalized"] == "10.0000000000000000"
+
+
+def test_compose_2(ledger_db, defaults, current_block_index):
+    with pytest.raises(
+        exceptions.ComposeError,
+        match="['start block must be greater than the current block index']",
+    ):
+        fairminter.compose(
+            ledger_db,
+            defaults["addresses"][1],  # source
+            "FAIRMINTED",  # asset
+            "",  # asset_parent,
+            1,  # price,
+            3,  # quantity_by_price,
+            10,  # max_mint_per_tx,
+            0,  # max_mint_per_address,
+            0,  # hard_cap,
+            0,  # premint_quantity,
+            current_block_index,  # start_block,
+            0,  # end_block,
+        )
+
+    with pytest.raises(
+        exceptions.ComposeError, match="['end block must be greater than the current block index']"
+    ):
+        fairminter.compose(
+            ledger_db,
+            defaults["addresses"][1],  # source
+            "FAIRMINTED",  # asset
+            "",  # asset_parent,
+            1,  # price,
+            3,  # quantity_by_price,
+            10,  # max_mint_per_tx,
+            0,  # max_mint_per_address,
+            0,  # hard_cap,
+            0,  # premint_quantity,
+            0,  # start_block,
+            current_block_index,  # end_block,
+        )
+
+    assert fairminter.compose(
+        ledger_db,
+        defaults["addresses"][1],  # source
+        "FAIRMINTED",  # asset
+        "",  # asset_parent,
+        1,  # price,
+        3,  # quantity_by_price,
+        10,  # max_mint_per_tx,
+        0,  # max_mint_per_address,
+        0,  # hard_cap,
+        0,  # premint_quantity,
+        0,  # start_block,
+        current_block_index + 1,  # end_block,
+    ) == (
+        defaults["addresses"][1],
+        [],
+        b"Z\x06_\xeb\xcd\xfd\xc0\x18\x00\x01\x01\x01\x03\x01\n\x00\x00\x00\x00\x02\x8b\x07\x00\x00\x00\x00\x00\x00\x01\x01\x00",
+    )
+
+    assert fairminter.compose(
+        ledger_db,
+        defaults["addresses"][1],  # source
+        "FAIRMINTED",  # asset
+        "",  # asset_parent,
+        1,  # price,
+        3,  # quantity_by_price,
+        10,  # max_mint_per_tx,
+        0,  # max_mint_per_address,
+        0,  # hard_cap,
+        0,  # premint_quantity,
+        current_block_index + 1,  # start_block,
+        0,  # end_block,
+    ) == (
+        defaults["addresses"][1],
+        [],
+        b"Z\x06_\xeb\xcd\xfd\xc0\x18\x00\x01\x01\x01\x03\x01\n\x00\x00\x00\x02\x8b\x07\x00\x00\x00\x00\x00\x00\x00\x01\x01\x00",
+    )
