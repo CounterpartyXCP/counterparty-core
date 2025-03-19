@@ -1117,7 +1117,14 @@ def test_get_tx_info_new_4(ledger_db, current_block_index, defaults, monkeypatch
                 ledger_db,
                 {
                     "coinbase": False,
-                    "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+                    "parsed_vouts": (
+                        destinations,
+                        btc_amount,
+                        fee,
+                        data,
+                        potential_dispensers,
+                        False,
+                    ),
                 },
                 current_block_index,
             )
@@ -1146,7 +1153,14 @@ def test_get_tx_info_new_4(ledger_db, current_block_index, defaults, monkeypatch
             ledger_db,
             {
                 "coinbase": False,
-                "parsed_vouts": ([config.UNSPENDABLE], btc_amount, fee, data, potential_dispensers),
+                "parsed_vouts": (
+                    [config.UNSPENDABLE],
+                    btc_amount,
+                    fee,
+                    data,
+                    potential_dispensers,
+                    False,
+                ),
             },
             current_block_index,
             composing=True,
@@ -1194,7 +1208,7 @@ def test_get_tx_info_new_4(ledger_db, current_block_index, defaults, monkeypatch
             ledger_db,
             {
                 "coinbase": False,
-                "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers),
+                "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers, False),
             },
             current_block_index,
         ) == (defaults["addresses"][1], defaults["addresses"][0], 100, 10000, b"z", [])
@@ -1610,7 +1624,7 @@ def test_get_tx_info_new_p2sh_disabled(ledger_db, current_block_index, defaults,
         {
             "tx_id": "tx_id",
             "coinbase": False,
-            "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+            "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers, False),
         },
         current_block_index,
     ) == (source, destinations[0], btc_amount, btc_amount, data, [])
