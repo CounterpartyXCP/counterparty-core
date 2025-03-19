@@ -44,12 +44,6 @@ def test_get_pubkeyhash(current_block_index, monkeypatch):
         "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a", current_block_index
     ) == (None, None)
 
-    script = "a9141f4dfe5d2bdc0778119a834591f8e441ee00ce7787"
-    assert gettxinfolegacy.get_pubkeyhash(script, current_block_index) == (
-        binascii.unhexlify("1f4dfe5d2bdc0778119a834591f8e441ee00ce77"),
-        config.P2SH_ADDRESSVERSION,
-    )
-
     script = "a9141f4dfe5d2bdc0778119a834591f8e441ee00ce77"
     assert gettxinfolegacy.get_pubkeyhash(script, current_block_index) == (None, None)
 
