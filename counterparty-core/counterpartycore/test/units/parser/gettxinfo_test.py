@@ -1539,3 +1539,29 @@ def test_get_tx_info_5(ledger_db, defaults, monkeypatch, current_block_index):
             current_block_index,
         )
         assert result == (b"", None, None, None, None, None, [utxo, "", "1", "0"])
+
+
+def test_get_tx_info_new_p2sh_disabled(ledger_db, current_block_index, defaults, monkeypatch):
+    source = defaults["addresses"][1]
+    destinations = [defaults["addresses"][0]]
+    btc_amount = 100
+    fee = 0
+    data = b"P2SH"
+    potential_dispensers = [
+        (defaults["addresses"][0], None),
+        (defaults["addresses"][0], 5),
+        (defaults["addresses"][0], 10),
+    ]
+
+    gettxinfo.SIGHASH_FLAG_TRANSACTION_WHITELIST = ["tx_id"]
+    monkeypatch.setattr(gettxinfo, "get_transaction_sources", lambda *args: (source, btc_amount))
+
+    assert gettxinfo.get_tx_info_new(
+        ledger_db,
+        {
+            "tx_id": "tx_id",
+            "coinbase": False,
+            "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+        },
+        current_block_index,
+    ) == (source, destinations[0], btc_amount, btc_amount, data, [])
