@@ -50,6 +50,7 @@ counterparty-server start
 - Allow `soft_cap` to be equal to `hard_cap` in Fairminter
 - Add `max_mint_per_address` parameter
 - Clean up hard-coded protocol changes distributed throughout codebase
+- Remove P2SH data encoding support
 
 ## API
 
