@@ -378,7 +378,7 @@ def parse(db, tx, message):
                     "fee": fee,
                 }
                 ledger.events.insert_record(
-                    db, "bet_match_resolutions", bindings, "BET_MATCH_RESOLUTON"
+                    db, "bet_match_resolutions", bindings, "BET_MATCH_RESOLUTION"
                 )
                 logger.debug("Bet Match %(bet_match_id)s resolved", bindings)
 
@@ -429,7 +429,7 @@ def parse(db, tx, message):
                     "fee": fee,
                 }
                 ledger.events.insert_record(
-                    db, "bet_match_resolutions", bindings, "BET_MATCH_RESOLUTON"
+                    db, "bet_match_resolutions", bindings, "BET_MATCH_RESOLUTION"
                 )
                 logger.debug("Bet Match %(bet_match_id)s resolved", bindings)
 
@@ -493,7 +493,7 @@ def parse(db, tx, message):
                 "fee": fee,
             }
             ledger.events.insert_record(
-                db, "bet_match_resolutions", bindings, "BET_MATCH_RESOLUTON"
+                db, "bet_match_resolutions", bindings, "BET_MATCH_RESOLUTION"
             )
             logger.debug("Bet Match %(bet_match_id)s resolved", bindings)
 
