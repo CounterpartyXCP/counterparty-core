@@ -103,6 +103,7 @@ impl Heights {
                 correct_segwit_txids: 662000,
                 multisig_addresses: 333500,
                 taproot_support: 900000,
+                p2sh_disabled: 900000,
             },
             Network::Testnet3 => Heights {
                 segwit: 1440200,
@@ -111,6 +112,7 @@ impl Heights {
                 correct_segwit_txids: 1666625,
                 multisig_addresses: 0,
                 taproot_support: 5000000,
+                p2sh_disabled: 5000000,
             },
             Network::Testnet4 => Heights {
                 segwit: 0,
@@ -119,6 +121,7 @@ impl Heights {
                 correct_segwit_txids: 0,
                 multisig_addresses: 0,
                 taproot_support: 80000,
+                p2sh_disabled: 80000,
             },
             Network::Regtest => Heights {
                 segwit: 0,
@@ -127,6 +130,7 @@ impl Heights {
                 correct_segwit_txids: 0,
                 multisig_addresses: 0,
                 taproot_support: 0,
+                p2sh_disabled: 0,
             },
         }
     }
@@ -175,6 +179,10 @@ impl Config {
 
     pub fn taproot_support_enabled(&self, height: u32) -> bool {
         height >= self.heights.taproot_support
+    }
+
+    pub fn p2sh_disabled(&self, height: u32) -> bool {
+        height >= self.heights.p2sh_disabled
     }
 
     pub fn unspendable(&self) -> String {

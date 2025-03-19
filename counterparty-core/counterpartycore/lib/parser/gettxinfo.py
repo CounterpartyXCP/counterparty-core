@@ -374,7 +374,11 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     fee_added = False
     # P2SH encoding signalling
     p2sh_encoding_source = None
-    if protocol.enabled("p2sh_encoding") and data == b"P2SH":
+    if (
+        protocol.enabled("p2sh_encoding")
+        and not protocol.enabled("p2sh_disabled")
+        and data == b"P2SH"
+    ):
         p2sh_encoding_source, data, outputs_value = get_transaction_source_from_p2sh(
             decoded_tx, p2sh_is_segwit
         )
