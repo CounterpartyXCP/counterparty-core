@@ -40,6 +40,7 @@ counterparty-server start
 - Fix Composer for taproot address
 - Fix `address.pack` and `address.unpack` functions, handle correctly taproot addresses
 - Make `APSWConnectionPool` thread safe
+- Fix `price_normalized` in Fairminters endpoints
 
 
 ## Codebase
