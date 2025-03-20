@@ -171,11 +171,12 @@ fn parse_vout(
                     }),
                 ));
             }
-        }
-        Err(Error::ParseVout(format!(
+        } 
+        return Err(Error::ParseVout(format!(
             "Encountered invalid OP_RETURN script | tx: {}, vout: {}",
             txid, vi
-        )))
+        )));
+
     } else if vout.script_pubkey.instructions().last() == Some(Ok(Op(OP_CHECKSIG))) {
         let instructions: Vec<_> = vout.script_pubkey.instructions().collect();
         if instructions.len() < 3 {
@@ -456,6 +457,7 @@ pub fn parse_transaction(
         vouts.push(Vout {
             value: vout.value.to_sat(),
             script_pub_key: vout.script_pubkey.to_bytes(),
+            //is_segwit: vout.script_pubkey.is_witness_program(),
         });
     }
     let mut parsed_vouts: Result<ParsedVouts, String> = Err("Not Parsed".to_string());
@@ -472,7 +474,7 @@ pub fn parse_transaction(
                 height,
                 tx.compute_txid().to_string(),
                 vi,
-                vout,
+                &vout.clone(),
             );
             match result {
                 Err(e) => {
@@ -587,21 +589,23 @@ pub fn parse_transaction(
         let hash = vin.previous_output.txid.to_string();
         let vin_info = prev_txs.get(i).and_then(|prev_tx| {
             prev_tx.as_ref().and_then(|tx| {
-                let vout_idx;
-                if tx.compute_txid() == commit_parent_txid {
-                    vout_idx = commit_parent_vout
+                let tx_id = tx.compute_txid();
+                let vout_idx = if tx_id == commit_parent_txid {
+                    commit_parent_vout
                 } else {
-                    vout_idx = vin.previous_output.vout as usize;
-                }
+                    vin.previous_output.vout as usize
+                };
 
-                let is_segwit = prev_tx.as_ref().map_or(false, |tx| {
-                    tx.compute_txid().to_string() != tx.compute_wtxid().to_string()
-                });
+                let is_segwit = tx_id.to_string() != tx.compute_wtxid().to_string();
 
                 tx.output.get(vout_idx).map(|output| VinOutput {
                     value: output.value.to_sat(),
                     script_pub_key: output.script_pubkey.to_bytes(),
-                    is_segwit: is_segwit,
+                    is_segwit: if config.fix_is_segwit_enabled(height) { 
+                        output.script_pubkey.is_witness_program()
+                    } else {
+                        is_segwit
+                    },
                 })
             })
         });

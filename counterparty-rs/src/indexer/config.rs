@@ -91,6 +91,7 @@ pub struct Heights {
     pub correct_segwit_txids: u32,
     pub multisig_addresses: u32,
     pub taproot_support: u32,
+    pub fix_is_segwit: u32,
 }
 
 impl Heights {
@@ -103,6 +104,7 @@ impl Heights {
                 correct_segwit_txids: 662000,
                 multisig_addresses: 333500,
                 taproot_support: 900000,
+                fix_is_segwit: 900000,
             },
             Network::Testnet3 => Heights {
                 segwit: 1440200,
@@ -111,6 +113,7 @@ impl Heights {
                 correct_segwit_txids: 1666625,
                 multisig_addresses: 0,
                 taproot_support: 5000000,
+                fix_is_segwit: 5000000,
             },
             Network::Testnet4 => Heights {
                 segwit: 0,
@@ -119,6 +122,7 @@ impl Heights {
                 correct_segwit_txids: 0,
                 multisig_addresses: 0,
                 taproot_support: 80000,
+                fix_is_segwit: 80000,
             },
             Network::Regtest => Heights {
                 segwit: 0,
@@ -127,6 +131,7 @@ impl Heights {
                 correct_segwit_txids: 0,
                 multisig_addresses: 0,
                 taproot_support: 0,
+                fix_is_segwit: 0,
             },
         }
     }
@@ -175,6 +180,10 @@ impl Config {
 
     pub fn taproot_support_enabled(&self, height: u32) -> bool {
         height >= self.heights.taproot_support
+    }
+
+    pub fn fix_is_segwit_enabled(&self, height: u32) -> bool {
+        height >= self.heights.fix_is_segwit
     }
 
     pub fn unspendable(&self) -> String {

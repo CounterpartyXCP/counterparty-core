@@ -54,6 +54,7 @@ impl IntoPy<PyObject> for Vin {
 pub struct Vout {
     pub value: u64,
     pub script_pub_key: Vec<u8>,
+    //pub is_segwit: bool,
 }
 
 impl IntoPy<PyObject> for Vout {
@@ -66,6 +67,7 @@ impl IntoPy<PyObject> for Vout {
             PyBytes::new_bound(py, &self.script_pub_key),
         )
         .unwrap();
+        //dict.set_item("is_segwit", self.is_segwit).unwrap();
         dict.unbind().into()
     }
 }
