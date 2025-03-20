@@ -222,6 +222,46 @@ def test_validate(ledger_db, defaults):
         9,  # max_mint_per_address,
     ) == ["max_mint_per_tx must be <= max_mint_per_address."]
 
+    assert fairminter.validate(
+        ledger_db,
+        defaults["addresses"][1],  # source
+        "FAIRMINTED",  # asset
+        "",  # asset_parent,
+        0,  # price=0,
+        1,  # quantity_by_price,
+        1,  # max_mint_per_tx,
+        0,  # max_mint_per_address,
+        40,  # hard_cap=0,
+        30,  # premint_quantity=0,
+        0,  # start_block=0,
+        0,  # end_block=0,
+        11,  # soft_cap=0,
+        500,  # soft_cap_deadline_block=0,
+    ) == [
+        "Premint quantity + soft cap must be <= hard cap.",
+    ]
+
+    with ProtocolChangesDisabled(["fairminter_v2"]):
+        assert (
+            fairminter.validate(
+                ledger_db,
+                defaults["addresses"][1],  # source
+                "FAIRMINTED",  # asset
+                "",  # asset_parent,
+                0,  # price=0,
+                1,  # quantity_by_price,
+                1,  # max_mint_per_tx,
+                0,  # max_mint_per_address,
+                40,  # hard_cap=0,
+                30,  # premint_quantity=0,
+                0,  # start_block=0,
+                0,  # end_block=0,
+                11,  # soft_cap=0,
+                500,  # soft_cap_deadline_block=0,
+            )
+            == []
+        )
+
 
 def test_compose(ledger_db, defaults):
     assert fairminter.compose(
