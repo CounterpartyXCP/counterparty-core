@@ -7,6 +7,7 @@ from counterpartycore.lib import exceptions
 from counterpartycore.lib.backend import bitcoind
 from counterpartycore.lib.utils import helpers
 from counterpartycore.test.fixtures import decodedtxs
+from counterpartycore.test.mocks.bitcoind import original_get_vin_info
 
 
 class MockResponse:
@@ -402,3 +403,8 @@ def test_search_pubkey_in_transactions_p2pk(monkeypatch):
         is None
     )
     helpers.setup_bitcoinutils("regtest")
+
+
+def test_get_vin_info():
+    with pytest.raises(exceptions.RSFetchError, match="No vin info found"):
+        original_get_vin_info({})
