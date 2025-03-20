@@ -57,6 +57,7 @@ counterparty-server start
 
 - Adds `asset` as optional param to Get Balances by Addresses endpoint
 - Ensure that Fairminter's `start_block` and `end_block` are greater than the current block
+- Ensure that Fairminter's `hard_cap` is greater than the sum of `premint_quantity` and `soft_cap`
 
 ## CLI
 
