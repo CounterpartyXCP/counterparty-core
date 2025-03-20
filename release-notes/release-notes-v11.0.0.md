@@ -57,6 +57,8 @@ counterparty-server start
 
 - Adds `asset` as optional param to Get Balances by Addresses endpoint
 - Ensure that Fairminter's `start_block` and `end_block` are greater than the current block
+- In Compose Fairminter, rename `price` to `lot_price` and `quantity_by_price` to `lot_size`
+- In Composer Fairmint, ensure that `quantity` is a multiple of `lot_size`
 
 ## CLI
 

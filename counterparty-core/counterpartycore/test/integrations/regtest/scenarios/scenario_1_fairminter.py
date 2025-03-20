@@ -6,7 +6,7 @@ SCENARIO = [
         "source": "$ADDRESS_1",
         "params": {
             "asset": "FAIRMINTA",
-            "price": 1,
+            "lot_price": 1,
             "hard_cap": 100 * 10**8,
             "soft_cap": 10 * 10**8,
             "soft_cap_deadline_block": "$CURRENT_BLOCK + 3",

@@ -351,6 +351,7 @@ SCENARIO = [
         "params": {
             "asset": "BURNER",
             "quantity": 1 * 10**8,
+            "validate": False,
         },
         "controls": [
             {
