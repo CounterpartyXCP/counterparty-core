@@ -19,7 +19,7 @@ from requests.exceptions import (  # pylint: disable=redefined-builtin
 
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.parser import deserialize, protocol, utxosinfo
+from counterpartycore.lib.parser import deserialize, utxosinfo
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -550,52 +550,9 @@ def list_unspent(source, allow_unconfirmed_inputs):
 def get_vin_info(vin, no_retry=False):
     vin_info = vin.get("info")
     if vin_info is None:
-        # logger.error("vin_info not found for vin %s", vin)
-        try:
-            vin_ctx = get_decoded_transaction(vin["hash"], no_retry=no_retry)
-            is_segwit = vin_ctx["segwit"]
-            vout = vin_ctx["vout"][vin["n"]]
-            return vout["value"], vout["script_pub_key"], is_segwit
-        except exceptions.BitcoindRPCError as e:
-            raise exceptions.DecodeError("vin not found") from e
+        raise exceptions.RSFetchError("No vin info found")
     else:
         return vin_info["value"], vin_info["script_pub_key"], vin_info["is_segwit"]
-
-
-def get_vins_info(vins, no_retry=False):
-    hashes = [vin["hash"] for vin in vins]
-    inputs_txs = getrawtransaction_batch(hashes, verbose=False, return_dict=True, no_retry=no_retry)
-
-    vins_info = []
-    for vin in vins:
-        raw_input_tx = inputs_txs[vin["hash"]]
-        input_tx = deserialize.deserialize_tx(raw_input_tx)
-        vout = input_tx["vout"][vin["n"]]
-        is_segwit = input_tx["segwit"]
-        vins_info.append((vout["value"], vout["script_pub_key"], is_segwit))
-
-    return vins_info
-
-
-def complete_vins_info(decoded_tx, no_retry=False):
-    missing_vins = []
-    for vin in decoded_tx["vin"]:
-        if "info" not in vin or vin["info"] is None:
-            missing_vins.append(vin)
-        if protocol.enabled("first_input_is_source"):
-            break
-
-    if len(missing_vins) > 0:
-        missing_vins_info = get_vins_info(missing_vins, no_retry=no_retry)
-        for i, vin in enumerate(missing_vins):
-            vin_info = missing_vins_info[i]
-            vin["info"] = {
-                "value": vin_info[0],
-                "script_pub_key": vin_info[1],
-                "is_segwit": vin_info[2],
-            }
-
-    return decoded_tx
 
 
 def get_transaction(tx_hash: str, result_format: str = "json"):

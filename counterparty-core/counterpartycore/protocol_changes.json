@@ -1024,5 +1024,13 @@
         "block_index": 900000,
         "testnet3_block_index": 5000000,
         "testnet4_block_index": 80000
+    },
+    "fix_is_segwit": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 0,
+        "minimum_version_revision": 0,
+        "block_index": 900000,
+        "testnet3_block_index": 5000000,
+        "testnet4_block_index": 80000
     }
 }

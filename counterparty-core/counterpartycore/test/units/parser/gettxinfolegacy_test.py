@@ -93,15 +93,10 @@ def test_get_tx_info_legacy_1(current_block_index, monkeypatch):
         op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
         return (10000, binascii.unhexlify(op_checksig_script), False)
 
-    def get_vins_info_mock_2(*args, **lwargs):
-        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
-        return [(10000, binascii.unhexlify(op_checksig_script), False)]
-
     data = binascii.hexlify(config.PREFIX + b"hello world").decode("utf-8")
     script_pub_key = Script(["OP_RETURN", data]).to_hex()
 
     monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
-    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vins_info", get_vins_info_mock_2)
 
     assert gettxinfolegacy.get_tx_info_legacy(
         {
@@ -217,12 +212,7 @@ def test_get_tx_info_legacy_2(current_block_index, monkeypatch):
         op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
         return (10000, binascii.unhexlify(op_checksig_script), False)
 
-    def get_vins_info_mock_2(vins, **kwargs):
-        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
-        return [(10000, binascii.unhexlify(op_checksig_script), False)] * len(vins)
-
     monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
-    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vins_info", get_vins_info_mock_2)
 
     assert gettxinfolegacy.get_tx_info_legacy(
         {
