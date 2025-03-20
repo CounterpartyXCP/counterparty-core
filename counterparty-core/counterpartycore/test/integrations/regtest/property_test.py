@@ -433,10 +433,10 @@ class UTXOSupportPropertyTest(PropertyTestNode):
         price, quantity_by_price, soft_caped, minted_asset_commission = self.fairminters[
             fairminter_source
         ]
-
-        total_price = (D(quantity) / D(quantity_by_price)) * D(price)
+        fixed_quantity = (quantity // quantity_by_price) * quantity_by_price
+        total_price = (D(fixed_quantity) / D(quantity_by_price)) * D(price)
         total_price = int(math.ceil(total_price))
-        earn_quantity = quantity
+        earn_quantity = fixed_quantity
         commission = 0
         if minted_asset_commission > 0:
             commission = int(D(minted_asset_commission) * D(earn_quantity))
@@ -452,7 +452,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                     "fairmint",
                     {
                         "asset": fairminer_asset,
-                        "quantity": quantity,
+                        "quantity": fixed_quantity,
                     },
                 )
             except ComposeError as e:
@@ -465,10 +465,10 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "fairmint",
                 {
                     "asset": fairminer_asset,
-                    "quantity": quantity,
+                    "quantity": fixed_quantity,
                 },
             )
-            print(f"Fairminted {quantity} {fairminer_asset} for {total_price} XCP")
+            print(f"Fairminted {fixed_quantity} {fairminer_asset} for {total_price} XCP")
             self.upsert_balance(source, "XCP", -total_price)
             if soft_caped:
                 self.upsert_balance(config.UNSPENDABLE_REGTEST, "XCP", total_price)

@@ -5,8 +5,9 @@ SCENARIO = [
         "source": "$ADDRESS_1",
         "params": {
             "asset": "FAIRMINTC",
-            "price": 1,
-            "quantity_by_price": 5,
+            "lot_price": 1,
+            "lot_size": 5,
+            "validate": False,
         },
         "set_variables": {
             "FAIRMINTC_TX_HASH": "$TX_HASH",
@@ -112,6 +113,7 @@ SCENARIO = [
         "params": {
             "asset": "FAIRMINTC",
             "quantity": 5,
+            "validate": False,
         },
         "controls": [
             {
@@ -222,6 +224,7 @@ SCENARIO = [
         "params": {
             "asset": "FAIRMINTC",
             "quantity": 3,
+            "validate": False,
         },
         "controls": [
             {
@@ -332,6 +335,7 @@ SCENARIO = [
         "params": {
             "asset": "FAIRMINTC",
             "quantity": 11,
+            "validate": False,
         },
         "controls": [
             {
@@ -548,6 +552,7 @@ SCENARIO = [
         "params": {
             "asset": "FAIRMINTD",
             "quantity": 40,
+            "validate": False,
         },
         "controls": [
             {
