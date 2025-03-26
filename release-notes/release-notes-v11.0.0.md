@@ -52,6 +52,7 @@ counterparty-server start
 - Add `max_mint_per_address` parameter
 - Clean up hard-coded protocol changes distributed throughout codebase
 - Remove P2SH data encoding support
+- Ensure fairminters' hard cap is a multiple of lot size
 
 ## API
 
