@@ -262,6 +262,33 @@ def test_validate(ledger_db, defaults):
             == []
         )
 
+        assert (
+            fairminter.validate(
+                ledger_db,
+                defaults["addresses"][1],  # source
+                "FAIRMINTED",  # asset
+                "",  # asset_parent,
+                1,  # price,
+                3,  # quantity_by_price,
+                0,  # max_mint_per_tx,
+                0,  # max_mint_per_address,
+                1000,  # hard_cap,
+            )
+            == []
+        )
+
+    assert fairminter.validate(
+        ledger_db,
+        defaults["addresses"][1],  # source
+        "FAIRMINTED",  # asset
+        "",  # asset_parent,
+        1,  # price,
+        3,  # quantity_by_price,
+        0,  # max_mint_per_tx,
+        0,  # max_mint_per_address,
+        1000,  # hard_cap,
+    ) == ["hard cap must be a multiple of lot size"]
+
 
 def test_compose(ledger_db, defaults):
     assert fairminter.compose(

@@ -152,6 +152,8 @@ def validate(
     if protocol.enabled("fairminter_v2"):
         if soft_cap > hard_cap > 0:
             problems.append("Soft cap must be <= hard cap.")
+        if hard_cap > 0 and price > 0 and hard_cap % quantity_by_price != 0:
+            problems.append("hard cap must be a multiple of lot size")
     else:
         if soft_cap >= hard_cap > 0:
             problems.append("Soft cap must be < hard cap.")
