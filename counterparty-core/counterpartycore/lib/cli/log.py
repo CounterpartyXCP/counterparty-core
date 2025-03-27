@@ -89,7 +89,7 @@ class CustomFilter(logging.Filter):
         if (
             config.QUIET
             and record.levelno < logging.WARNING
-            and CurrentState().ledger_state() == "Catching Up"
+            and CurrentState().state["CATCHING_UP"]
         ):
             return False
 
@@ -236,7 +236,6 @@ def set_up(
         )
         fileh.setLevel(logging.TRACE)
         fileh.setFormatter(CustomisedJSONFormatter())
-        fileh.addFilter(CustomFilter())
 
         # Wrap the emit method to use the lock
         original_emit = fileh.emit
