@@ -86,6 +86,13 @@ def get_full_topic(record):
 
 class CustomFilter(logging.Filter):
     def filter(self, record):
+        if (
+            config.QUIET
+            and record.levelno < logging.WARNING
+            and CurrentState().state["CATCHING_UP"]
+        ):
+            return False
+
         full_topic = get_full_topic(record)
 
         if isinstance(config.LOG_EXCLUDE_FILTERS, list):
@@ -209,12 +216,8 @@ def set_up(
     sqlite_filter = SQLiteFilter()
     logger.addFilter(sqlite_filter)
 
-    log_level = logging.ERROR
-    if quiet:
-        log_level = logging.ERROR
-    elif verbose == 0:
-        log_level = logging.INFO
-    elif verbose == 1:
+    log_level = logging.INFO
+    if verbose == 1:
         log_level = logging.DEBUG
     elif verbose == 2:
         log_level = logging.EVENT
