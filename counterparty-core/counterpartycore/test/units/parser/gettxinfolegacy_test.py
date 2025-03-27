@@ -8,7 +8,7 @@ from counterpartycore.lib.parser import deserialize, gettxinfolegacy
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
-def test_get_tx_info(current_block_index, blockchain_mock):
+def test_get_tx_info(current_block_index, blockchain_mock, monkeypatch):
     original_prefix = config.PREFIX
     config.PREFIX = b"TESTXXXX"
     config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET3
@@ -16,6 +16,14 @@ def test_get_tx_info(current_block_index, blockchain_mock):
     blockchain_mock.source_by_txid[
         "e43c357b78baf473fd21cbc1481ac450746b60cf1d2702ce3a73a8811811e3eb"
     ] = "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns"
+
+    def get_vin_info_mock_2(*args, **lwargs):
+        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
+        return (10000, binascii.unhexlify(op_checksig_script))
+
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.get_vin_info_legacy", get_vin_info_mock_2
+    )
 
     assert gettxinfolegacy.get_tx_info_legacy(
         deserialize.deserialize_tx(
@@ -25,10 +33,10 @@ def test_get_tx_info(current_block_index, blockchain_mock):
         ),
         current_block_index,
     ) == (
-        "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
+        "mvThcDEbeqog2aJ7JNj1FefUPaNdYYGqHt",
         "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         5430,
-        900010000,
+        -99980000,
         b"\x00\x00\x00(\x00\x00R\xbb3d\x00TESTXXXX\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00TESTXXXX\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00TESTXXXX\x00\x00\x00;\x10\x00\x00\x00\n\x9b\xb3Q\x92(6\xc8\x86\x81i\x87\xe1\x0b\x03\xb8_8v\x8b",
         [],
     )
@@ -91,12 +99,14 @@ def test_get_tx_info_legacy_1(current_block_index, monkeypatch):
 
     def get_vin_info_mock_2(*args, **lwargs):
         op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
-        return (10000, binascii.unhexlify(op_checksig_script), False)
+        return (10000, binascii.unhexlify(op_checksig_script))
 
     data = binascii.hexlify(config.PREFIX + b"hello world").decode("utf-8")
     script_pub_key = Script(["OP_RETURN", data]).to_hex()
 
-    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.get_vin_info_legacy", get_vin_info_mock_2
+    )
 
     assert gettxinfolegacy.get_tx_info_legacy(
         {
@@ -210,9 +220,11 @@ def test_get_tx_info_legacy_1(current_block_index, monkeypatch):
 def test_get_tx_info_legacy_2(current_block_index, monkeypatch):
     def get_vin_info_mock_2(vins, **kwargs):
         op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
-        return (10000, binascii.unhexlify(op_checksig_script), False)
+        return (10000, binascii.unhexlify(op_checksig_script))
 
-    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.get_vin_info_legacy", get_vin_info_mock_2
+    )
 
     assert gettxinfolegacy.get_tx_info_legacy(
         {

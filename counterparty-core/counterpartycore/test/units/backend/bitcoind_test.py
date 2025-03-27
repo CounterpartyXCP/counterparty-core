@@ -408,3 +408,22 @@ def test_search_pubkey_in_transactions_p2pk(monkeypatch):
 def test_get_vin_info():
     with pytest.raises(exceptions.RSFetchError, match="No vin info found"):
         original_get_vin_info({})
+
+
+def test_get_vin_info_legacy(monkeypatch):
+    monkeypatch.setattr(
+        bitcoind,
+        "get_decoded_transaction",
+        lambda *args, **kwargs: {"vout": [{"value": 1, "script_pub_key": "script_pub_key"}]},
+    )
+    assert bitcoind.get_vin_info_legacy({"hash": "hash", "n": 0}) == (1, "script_pub_key")
+
+
+def test_get_vin_info_legacy_error(monkeypatch):
+    def raise_error(*args, **kwargs):
+        raise exceptions.BitcoindRPCError
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+
+    with pytest.raises(exceptions.DecodeError, match="vin not found"):
+        bitcoind.get_vin_info_legacy({"hash": "hash", "n": 0})
