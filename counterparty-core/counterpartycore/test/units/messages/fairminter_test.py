@@ -247,6 +247,73 @@ def test_validate(ledger_db, defaults):
         defaults["addresses"][1],  # source
         "FAIRMINTED",  # asset
         "",  # asset_parent,
+        0,  # price=0,
+        1,  # quantity_by_price,
+        1,  # max_mint_per_tx,
+        0,  # max_mint_per_address,
+        40,  # hard_cap=0,
+        30,  # premint_quantity=0,
+        0,  # start_block=0,
+        0,  # end_block=0,
+        11,  # soft_cap=0,
+        500,  # soft_cap_deadline_block=0,
+    ) == [
+        "Premint quantity + soft cap must be <= hard cap.",
+    ]
+
+    with ProtocolChangesDisabled(["fairminter_v2"]):
+        assert (
+            fairminter.validate(
+                ledger_db,
+                defaults["addresses"][1],  # source
+                "FAIRMINTED",  # asset
+                "",  # asset_parent,
+                0,  # price=0,
+                1,  # quantity_by_price,
+                1,  # max_mint_per_tx,
+                0,  # max_mint_per_address,
+                40,  # hard_cap=0,
+                30,  # premint_quantity=0,
+                0,  # start_block=0,
+                0,  # end_block=0,
+                11,  # soft_cap=0,
+                500,  # soft_cap_deadline_block=0,
+            )
+            == []
+        )
+
+        assert (
+            fairminter.validate(
+                ledger_db,
+                defaults["addresses"][1],  # source
+                "FAIRMINTED",  # asset
+                "",  # asset_parent,
+                1,  # price,
+                3,  # quantity_by_price,
+                0,  # max_mint_per_tx,
+                0,  # max_mint_per_address,
+                1000,  # hard_cap,
+            )
+            == []
+        )
+
+    assert fairminter.validate(
+        ledger_db,
+        defaults["addresses"][1],  # source
+        "FAIRMINTED",  # asset
+        "",  # asset_parent,
+        1,  # price,
+        3,  # quantity_by_price,
+        0,  # max_mint_per_tx,
+        0,  # max_mint_per_address,
+        1000,  # hard_cap,
+    ) == ["hard cap must be a multiple of lot size"]
+
+    assert fairminter.validate(
+        ledger_db,
+        defaults["addresses"][1],  # source
+        "FAIRMINTED",  # asset
+        "",  # asset_parent,
         1000,  # price=0,
         1,  # quantity_by_price,
         0,  # max_mint_per_tx,
@@ -646,6 +713,17 @@ def test_normalized_price(ledger_db, state_db, apiv2_client, defaults, blockchai
     result = apiv2_client.get(url).json["result"]
     assert len(result) == 1
     assert result[0]["price_normalized"] == "10.0000000000000000"
+
+    url = f"/v2/addresses/{defaults['addresses'][0]}/compose/fairmint?asset=FAIRMINTEE&quantity=4"
+    result = apiv2_client.get(url).json
+    assert result["error"] == "quantity is not a multiple of lot_size"
+
+    url = f"/v2/addresses/{defaults['addresses'][0]}/compose/fairmint?asset=FAIRMINTEE&quantity=3"
+    result = apiv2_client.get(url).json
+    assert (
+        result["result"]["rawtransaction"]
+        == "0200000001772cb58382f7d1f15093dc8e7a2cf1ee114890e1a3d26552213a9faabd4960010000000000ffffffff020000000000000000146a12c1ea99c71125e4116401b813e3636b1818a346c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+    )
 
 
 def test_compose_2(ledger_db, defaults, current_block_index):

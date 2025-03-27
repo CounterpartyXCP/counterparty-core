@@ -85,10 +85,12 @@ def compose(db, source: str, asset: str, quantity: int = 0, skip_validation: boo
     if len(problems) > 0 and not skip_validation:
         raise exceptions.ComposeError(problems)
 
-    if quantity != 0:
+    if quantity != 0 and not skip_validation:
         fairminter = ledger.issuances.get_fairminter_by_asset(db, asset)
         if fairminter["price"] == 0:
             raise exceptions.ComposeError("quantity is not allowed for free fairminters")
+        elif quantity % fairminter["quantity_by_price"] != 0:
+            raise exceptions.ComposeError("quantity is not a multiple of lot_size")
 
     # create message
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)

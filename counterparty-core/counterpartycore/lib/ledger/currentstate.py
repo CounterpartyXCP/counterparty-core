@@ -17,7 +17,9 @@ class CurrentState(metaclass=helpers.SingletonMeta):
         self.init()
 
     def init(self):
-        self.state = {}
+        self.state = {
+            "CATCHING_UP": False,
+        }
         self.last_update = 0
 
     def set(self, key, value):
@@ -44,6 +46,7 @@ class CurrentState(metaclass=helpers.SingletonMeta):
 
     def set_ledger_state(self, ledger_db, status):
         # use db to share Ledger state with other processes
+        self.state["CATCHING_UP"] = status == "Catching Up"
         set_config_value(ledger_db, "LEDGER_STATE", status)
 
     def current_block_index(self):
