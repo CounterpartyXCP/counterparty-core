@@ -240,6 +240,9 @@ def get_transaction_sources(decoded_tx):
 
         outputs_value += vout_value
 
+        if protocol.enabled("first_input_is_source") and len(sources) > 0:
+            continue
+
         asm = script.script_to_asm(script_pubkey)
 
         if asm[-1] == opcodes.OP_CHECKSIG:  # noqa: F405
@@ -366,7 +369,9 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     if decoded_tx["parsed_vouts"] == "DecodeError":
         raise DecodeError("unrecognised output type")
 
-    destinations, btc_amount, fee, data, potential_dispensers = decoded_tx["parsed_vouts"]
+    destinations, btc_amount, fee, data, potential_dispensers, _is_reveal_tx = decoded_tx[
+        "parsed_vouts"
+    ]
 
     # source can be determined by parsing the p2sh_data transaction
     #   or from the first spent output

@@ -40,6 +40,7 @@ counterparty-server start
 - Fix Composer for taproot address
 - Fix `address.pack` and `address.unpack` functions, handle correctly taproot addresses
 - Make `APSWConnectionPool` thread safe
+- Fix typo in composer paramerters: `mutlisig_pubkey` -> `multisig_pubkey`
 - Fix `price_normalized` in Fairminters endpoints
 - Fix event name: `BET_MATCH_RESOLUTON` => `BET_MATCH_RESOLUTION`
 
@@ -51,12 +52,14 @@ counterparty-server start
 - Allow `soft_cap` to be equal to `hard_cap` in Fairminter
 - Add `max_mint_per_address` parameter
 - Clean up hard-coded protocol changes distributed throughout codebase
+- Add Taproot envelope data encoding support
 - Remove P2SH data encoding support
 - Ensure fairminters' hard cap is a multiple of lot size
 
 ## API
 
 - Adds `asset` as optional param to Get Balances by Addresses endpoint
+- The `encoding` parameter now accepts the `taproot` value
 - Ensure that Fairminter's `start_block` and `end_block` are greater than the current block
 - In Compose Fairminter, rename `price` to `lot_price` and `quantity_by_price` to `lot_size`
 - In Composer Fairmint, ensure that `quantity` is a multiple of `lot_size`

@@ -158,6 +158,7 @@ BURN_END_REGTEST = 150000000
 # NOTE: If the DUST_SIZE constants are changed, they MUST also be changed in counterblockd/lib/config.py as well
 DEFAULT_REGULAR_DUST_SIZE = 546
 DEFAULT_MULTISIG_DUST_SIZE = 1000  # OMFG: We been overpaying by 10x for years (7800!=780) <https://bitcointalk.org/index.php?topic=528023.msg7469941#msg7469941>
+DEFAULT_SEGWIT_DUST_SIZE = 330
 DEFAULT_OP_RETURN_VALUE = 0
 DEFAULT_FEE_PER_KB_ESTIMATE_SMART = 1024
 DEFAULT_FEE_PER_KB = 25000  # sane/low default, also used as minimum when estimated fee is used

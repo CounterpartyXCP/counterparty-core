@@ -19,7 +19,7 @@ from requests.exceptions import (  # pylint: disable=redefined-builtin
 
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.parser import deserialize, utxosinfo
+from counterpartycore.lib.parser import deserialize, protocol, utxosinfo
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -550,7 +550,7 @@ def list_unspent(source, allow_unconfirmed_inputs):
 def get_vin_info(vin, no_retry=False):
     vin_info = vin.get("info")
     if vin_info is None:
-        logger.error("vin_info not found for vin %s", vin)
+        # logger.error("vin_info not found for vin %s", vin)
         try:
             vin_ctx = get_decoded_transaction(vin["hash"], no_retry=no_retry)
             is_segwit = vin_ctx["segwit"]
@@ -582,6 +582,8 @@ def complete_vins_info(decoded_tx, no_retry=False):
     for vin in decoded_tx["vin"]:
         if "info" not in vin or vin["info"] is None:
             missing_vins.append(vin)
+        if protocol.enabled("first_input_is_source"):
+            break
 
     if len(missing_vins) > 0:
         missing_vins_info = get_vins_info(missing_vins, no_retry=no_retry)

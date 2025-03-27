@@ -222,6 +222,26 @@ def test_validate(ledger_db, defaults):
         9,  # max_mint_per_address,
     ) == ["max_mint_per_tx must be <= max_mint_per_address."]
 
+    assert (
+        fairminter.validate(
+            ledger_db,
+            defaults["addresses"][1],  # source
+            "FAIRMINTED",  # asset
+            "",  # asset_parent,
+            1000,  # price=0,
+            1,  # quantity_by_price,
+            0,  # max_mint_per_tx,
+            0,  # max_mint_per_address,
+            0,  # hard_cap=0,
+            0,  # premint_quantity=0,
+            50,  # start_block=0,
+            60,  # end_block=0,
+            100,  # soft_cap=0,
+            55,  # soft_cap_deadline_block=0,
+        )
+        == []
+    )
+
     assert fairminter.validate(
         ledger_db,
         defaults["addresses"][1],  # source
@@ -288,6 +308,40 @@ def test_validate(ledger_db, defaults):
         0,  # max_mint_per_address,
         1000,  # hard_cap,
     ) == ["hard cap must be a multiple of lot size"]
+
+    assert fairminter.validate(
+        ledger_db,
+        defaults["addresses"][1],  # source
+        "FAIRMINTED",  # asset
+        "",  # asset_parent,
+        1000,  # price=0,
+        1,  # quantity_by_price,
+        0,  # max_mint_per_tx,
+        0,  # max_mint_per_address,
+        0,  # hard_cap=0,
+        0,  # premint_quantity=0,
+        50,  # start_block=0,
+        60,  # end_block=0,
+        100,  # soft_cap=0,
+        61,  # soft_cap_deadline_block=0,
+    ) == ["Soft cap deadline block must be < end block."]
+
+    assert fairminter.validate(
+        ledger_db,
+        defaults["addresses"][1],  # source
+        "FAIRMINTED",  # asset
+        "",  # asset_parent,
+        1000,  # price=0,
+        1,  # quantity_by_price,
+        0,  # max_mint_per_tx,
+        0,  # max_mint_per_address,
+        0,  # hard_cap=0,
+        0,  # premint_quantity=0,
+        50,  # start_block=0,
+        60,  # end_block=0,
+        100,  # soft_cap=0,
+        49,  # soft_cap_deadline_block=0,
+    ) == ["Soft cap deadline block must be > start block."]
 
 
 def test_compose(ledger_db, defaults):

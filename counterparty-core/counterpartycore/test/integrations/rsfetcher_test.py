@@ -66,7 +66,7 @@ def test_fetcher_singleton():
 
         assert found_tx is not None
 
-        assert found_tx["parsed_vouts"] == ([], 0, 0, b"P2SH", [(None, None)])
+        assert found_tx["parsed_vouts"] == ([], 0, 0, b"P2SH", [(None, None)], False)
         assert found_tx["vin"] == [
             {
                 "hash": "13685986077c9c458bab13553ea3fc6533d013cdb225947b109aff92e73a7d42",
