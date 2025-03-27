@@ -11,6 +11,8 @@ def test_quiet_mode(test_helpers, caplog, monkeypatch):
     monkeypatch.setattr(config, "QUIET", True)
     monkeypatch.setattr(CurrentState, "ledger_state", lambda self: "Catching Up")
 
+    CurrentState().state["CATCHING_UP"] = True
+
     with test_helpers.capture_log(caplog, "test urgent message"):
         logger.urgent("test urgent message")
 
@@ -35,3 +37,5 @@ def test_quiet_mode(test_helpers, caplog, monkeypatch):
 
     logger.error("test error message")
     assert CustomFilter().filter(caplog.records[-1])
+
+    CurrentState().state["CATCHING_UP"] = False
