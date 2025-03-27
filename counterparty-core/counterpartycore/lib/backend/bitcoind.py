@@ -555,6 +555,15 @@ def get_vin_info(vin, no_retry=False):
         return vin_info["value"], vin_info["script_pub_key"], vin_info["is_segwit"]
 
 
+def get_vin_info_legacy(vin, no_retry=False):
+    try:
+        vin_ctx = get_decoded_transaction(vin["hash"], no_retry=no_retry)
+        vout = vin_ctx["vout"][vin["n"]]
+        return vout["value"], vout["script_pub_key"]
+    except exceptions.BitcoindRPCError as e:
+        raise exceptions.DecodeError("vin not found") from e
+
+
 def get_transaction(tx_hash: str, result_format: str = "json"):
     """
     Get a transaction from the blockchain

@@ -547,8 +547,7 @@ pub fn parse_transaction(
     // Try to get previous transactions info if RPC is available and data is not empty
     let mut prev_txs = vec![None; tx.input.len()];
     if !data.is_empty() || 
-        parsed_vouts.as_ref().map_or(false, |p| p.destinations == vec![config.unspendable()]) || 
-        !config.multisig_addresses_enabled(height) {
+        parsed_vouts.as_ref().map_or(false, |p| p.destinations == vec![config.unspendable()]) {
 
         if BATCH_CLIENT.lock().unwrap().is_none() {
             *BATCH_CLIENT.lock().unwrap() = Some(
