@@ -313,7 +313,7 @@ if __name__ == "__main__":
     run_locust(
         os.path.expanduser("~/.local/share/counterparty/counterparty.db"),
         duration=None,
-        wait_time=locust.between(0.1, 0.3),
-        user_count=5,
+        wait_time=locust.between(0.3, 0.6),
+        user_count=3,
         stats_printer=False,
     )
