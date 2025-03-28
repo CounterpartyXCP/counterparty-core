@@ -1,5 +1,4 @@
 import json
-import os
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -22,15 +21,12 @@ def mock_response():
     return mock
 
 
-@pytest.fixture
-def mock_env():
-    """Mock environment variable for webhook URL"""
-    with patch.dict(os.environ, {"SLACK_HOOK": TEST_WEBHOOK_URL}):
-        yield
-
-
-def test_send_slack_message_success(mock_response, mock_env):
+def test_send_slack_message_success(mock_response, monkeypatch):
     """Test successful message sending"""
+    # Set the environment variable for the webhook URL
+    monkeypatch.setenv("SLACK_HOOK", TEST_WEBHOOK_URL)
+    monkeypatch.setattr("counterpartycore.lib.utils.helpers.get_current_commit_hash", lambda: None)
+
     with patch("counterpartycore.lib.monitors.slack.requests.post") as mock_post:
         # Configure the mock
         mock_post.return_value = mock_response
@@ -56,18 +52,24 @@ def test_send_slack_message_success(mock_response, mock_env):
         assert result == {"ok": True}
 
 
-def test_send_slack_message_no_webhook():
+def test_send_slack_message_no_webhook(monkeypatch):
     """Test behavior when webhook URL is not set"""
-    with patch.dict(os.environ, {}, clear=True):  # Clear environment variables
-        # Call the function
-        result = slack.send_slack_message(TEST_MESSAGE)
+    # Ensure the environment variable is not set
+    monkeypatch.setattr("counterpartycore.lib.utils.helpers.get_current_commit_hash", lambda: None)
+    monkeypatch.delenv("SLACK_HOOK", raising=False)
 
-        # Function should return False if webhook is not set
-        assert result is False
+    # Call the function
+    result = slack.send_slack_message(TEST_MESSAGE)
+
+    # Function should return False if webhook is not set
+    assert result is False
 
 
-def test_send_slack_message_error(mock_env):
+def test_send_slack_message_error(monkeypatch):
     """Test error handling when Slack returns an error"""
+    monkeypatch.setenv("SLACK_HOOK", TEST_WEBHOOK_URL)
+    monkeypatch.setattr("counterpartycore.lib.utils.helpers.get_current_commit_hash", lambda: None)
+
     with patch("counterpartycore.lib.monitors.slack.requests.post") as mock_post:
         # Configure the mock for a failed response
         error_response = MagicMock()
@@ -83,8 +85,11 @@ def test_send_slack_message_error(mock_env):
         assert "Error sending message: 400, invalid_payload" in str(excinfo.value)
 
 
-def test_send_slack_message_network_error(mock_env):
+def test_send_slack_message_network_error(monkeypatch):
     """Test handling of network errors"""
+    monkeypatch.setenv("SLACK_HOOK", TEST_WEBHOOK_URL)
+    monkeypatch.setattr("counterpartycore.lib.utils.helpers.get_current_commit_hash", lambda: None)
+
     with patch("counterpartycore.lib.monitors.slack.requests.post") as mock_post:
         # Configure the mock to raise an exception
         mock_post.side_effect = Exception("Connection error")
@@ -97,8 +102,11 @@ def test_send_slack_message_network_error(mock_env):
         assert "Connection error" in str(excinfo.value)
 
 
-def test_send_slack_message_empty_message(mock_env):
+def test_send_slack_message_empty_message(monkeypatch):
     """Test sending an empty message"""
+    monkeypatch.setenv("SLACK_HOOK", TEST_WEBHOOK_URL)
+    monkeypatch.setattr("counterpartycore.lib.utils.helpers.get_current_commit_hash", lambda: None)
+
     with patch("counterpartycore.lib.monitors.slack.requests.post") as mock_post:
         # Configure the mock
         mock_response = MagicMock()
@@ -118,8 +126,11 @@ def test_send_slack_message_empty_message(mock_env):
         assert result == {"ok": True}
 
 
-def test_send_slack_message_special_characters(mock_env):
+def test_send_slack_message_special_characters(monkeypatch):
     """Test sending a message with special characters"""
+    monkeypatch.setenv("SLACK_HOOK", TEST_WEBHOOK_URL)
+    monkeypatch.setattr("counterpartycore.lib.utils.helpers.get_current_commit_hash", lambda: None)
+
     special_message = "Test with special chars: å®çñö!@#$%^&*()"
     expected_special_payload = {"message": special_message}
 
@@ -134,6 +145,6 @@ def test_send_slack_message_special_characters(mock_env):
         slack.send_slack_message(special_message)
 
         # Verify the payload has the correct special characters
-        _args, kwargs = mock_post.call_args
+        args, kwargs = mock_post.call_args
         sent_payload = json.loads(kwargs["data"])
         assert sent_payload == expected_special_payload

@@ -5,6 +5,7 @@ import itertools
 import json
 import os
 import string
+import subprocess
 from operator import itemgetter
 from urllib.parse import urlparse
 
@@ -218,3 +219,38 @@ def decode_data(data):
         offset = new_offset + length
 
     return result
+
+
+def get_current_commit_hash():
+    try:
+        # Check if we're in a git repository
+        subprocess.check_output(  # noqa
+            ["git", "rev-parse", "--is-inside-work-tree"],  # noqa
+            stderr=subprocess.STDOUT,
+        )
+
+        # Get the current commit hash
+        commit_hash = (
+            subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.STDOUT)  # noqa
+            .decode("utf-8")
+            .strip()
+        )
+
+        # Get the current branch name
+        try:
+            branch = (
+                subprocess.check_output(  # noqa
+                    ["git", "symbolic-ref", "--short", "HEAD"],  # noqa
+                    stderr=subprocess.STDOUT,
+                )
+                .decode("utf-8")
+                .strip()
+            )
+        except subprocess.CalledProcessError:
+            # We might be in a detached HEAD state
+            branch = "HEAD detached"
+
+        return f"{branch} - {commit_hash}"
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # Either not in a git repository or git command not available
+        return None
