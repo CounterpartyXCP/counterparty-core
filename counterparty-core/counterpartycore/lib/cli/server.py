@@ -175,7 +175,7 @@ class CounterpartyServer(threading.Thread):
         blocks.catch_up(self.db)
 
         if self.stop_when_ready:
-            slack.trigger_webhook()
+            slack.send_slack_message("Rebuild successful.")
             self.stop()  # stop here
             return
 
@@ -241,6 +241,7 @@ def start_all(args, log_stream=None, stop_when_ready=False):
 
 
 def rebuild(args):
+    slack.send_slack_message("Starting new rebuild.")
     bootstrap.clean_data_dir(config.DATA_DIR)
     start_all(args, stop_when_ready=True)
 

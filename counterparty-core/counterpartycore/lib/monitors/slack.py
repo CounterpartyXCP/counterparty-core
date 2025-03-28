@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 
@@ -8,15 +9,24 @@ from counterpartycore.lib import config
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
-def trigger_webhook():
+def send_slack_message(message):
     webhook_url = os.environ.get("SLACK_HOOK")
     if not webhook_url:
         return False
-    try:
-        response = requests.get(webhook_url, timeout=10)
-        response.raise_for_status()
-        logging.info("Message sent to slack")
-        return True
-    except requests.exceptions.RequestException as e:
-        logging.error("Error sending message to slack: %s", e)
-        return False
+
+    # Prepare the data to send
+    payload = {"message": message}
+
+    # Send the POST request to the webhook
+    response = requests.post(
+        webhook_url,
+        data=json.dumps(payload),
+        headers={"Content-Type": "application/json"},
+        timeout=10,
+    )
+
+    # Check if the request was successful
+    if response.status_code != 200:
+        raise ValueError(f"Error sending message: {response.status_code}, {response.text}")
+
+    return response.json()
