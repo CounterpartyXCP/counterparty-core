@@ -405,18 +405,38 @@ def test_search_pubkey_in_transactions_p2pk(monkeypatch):
     helpers.setup_bitcoinutils("regtest")
 
 
-def test_get_vin_info():
-    with pytest.raises(exceptions.RSFetchError, match="No vin info found"):
-        original_get_vin_info({})
+def test_get_vin_info(monkeypatch):
+    monkeypatch.setattr(
+        bitcoind,
+        "get_decoded_transaction",
+        lambda *args, **kwargs: {
+            "vout": [
+                {"value": 1, "script_pub_key": "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac"}
+            ]
+        },
+    )
+    assert original_get_vin_info({"hash": "hash", "n": 0}) == (
+        1,
+        "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac",
+        False,
+    )
 
 
 def test_get_vin_info_legacy(monkeypatch):
     monkeypatch.setattr(
         bitcoind,
         "get_decoded_transaction",
-        lambda *args, **kwargs: {"vout": [{"value": 1, "script_pub_key": "script_pub_key"}]},
+        lambda *args, **kwargs: {
+            "vout": [
+                {"value": 1, "script_pub_key": "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac"}
+            ]
+        },
     )
-    assert bitcoind.get_vin_info_legacy({"hash": "hash", "n": 0}) == (1, "script_pub_key")
+    assert bitcoind.get_vin_info_legacy({"hash": "hash", "n": 0}) == (
+        1,
+        "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac",
+        False,
+    )
 
 
 def test_get_vin_info_legacy_error(monkeypatch):
