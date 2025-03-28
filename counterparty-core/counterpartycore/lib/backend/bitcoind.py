@@ -18,6 +18,7 @@ from requests.exceptions import (  # pylint: disable=redefined-builtin
 )
 
 from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import deserialize, utxosinfo
 
@@ -550,7 +551,7 @@ def list_unspent(source, allow_unconfirmed_inputs):
 def get_vin_info(vin, no_retry=False):
     vin_info = vin.get("info")
     if vin_info is None:
-        raise exceptions.RSFetchError("No vin info found")
+        return get_vin_info_legacy(vin, no_retry=no_retry)
     else:
         return vin_info["value"], vin_info["script_pub_key"], vin_info["is_segwit"]
 
@@ -559,7 +560,11 @@ def get_vin_info_legacy(vin, no_retry=False):
     try:
         vin_ctx = get_decoded_transaction(vin["hash"], no_retry=no_retry)
         vout = vin_ctx["vout"][vin["n"]]
-        return vout["value"], vout["script_pub_key"]
+        return (
+            vout["value"],
+            vout["script_pub_key"],
+            composer.is_segwit_output(vout["script_pub_key"]),
+        )
     except exceptions.BitcoindRPCError as e:
         raise exceptions.DecodeError("vin not found") from e
 
