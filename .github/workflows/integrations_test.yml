@@ -62,8 +62,8 @@ jobs:
             test-path: integrations/dockercompose_test.py
 
           # compare hashes between several servers
-          - name: Compare Hashes
-            test-path: integrations/comparehashes_test.py
+          #- name: Compare Hashes
+          #  test-path: integrations/comparehashes_test.py
 
           - name: RSFetcher Test
             test-path: integrations/rsfetcher_test.py

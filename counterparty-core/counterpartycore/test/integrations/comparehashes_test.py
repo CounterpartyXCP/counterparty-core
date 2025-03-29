@@ -8,7 +8,7 @@ LOCAL_API_URL = "http://localhost:4000"
 CHECK_SERVERS = [
     # ["http://rpc:rpc@api1.counterparty.io:4000", "v1", "v9.61.1"],
     ["https://api.counterparty.io:4000", "v2", "v10.10.1"],
-    ["https://api.unspendablelabs.com:4000", "v2", "v10.10.1"],
+    ["https://api.unspendablelabs.com:4000", "v2", "v11.0.0-alpha.1"],
     # ["https://api.counterparty.info", "v2", "v10.6.0"],
     # ["http://rpc:1234@public.coindaddy.io:4000", "v1", "v9.61.3"],
     # ["https://memepool.wtf/api/", "wtf", "v10.6.0"],
