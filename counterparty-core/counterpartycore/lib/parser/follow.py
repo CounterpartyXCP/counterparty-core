@@ -355,11 +355,13 @@ class RawMempoolParser(threading.Thread):
         self.db = db
         self.daemon = True
         self.stop_event = threading.Event()
-        self.tx_hashes_chunks, self.timestamps = get_raw_mempool(self.db)
+        self.tx_hashes_chunks, self.timestamps = None, None
 
     def run(self):
         logger.debug("Starting RawMempoolParser...")
         start = time.time()
+
+        self.tx_hashes_chunks, self.timestamps = get_raw_mempool(self.db)
 
         counter = 0
         while len(self.tx_hashes_chunks) > 0 and not self.stop_event.is_set():

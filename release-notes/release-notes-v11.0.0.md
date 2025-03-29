@@ -53,6 +53,7 @@ counterparty-server start
 - Clean up hard-coded protocol changes distributed throughout codebase
 - Remove P2SH data encoding support
 - Ensure fairminters' hard cap is a multiple of lot size
+- Optimize RawMempoolParser initialization
 
 ## API
 
