@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 
@@ -23,14 +22,13 @@ def send_slack_message(message):
         final_message = f"{message}\n{current_commit}"
 
     # Prepare the data to send
-    payload = {"message": final_message}
+    payload = {"text": final_message}
 
     try:
         # Send the POST request to the webhook
         response = requests.post(
             webhook_url,
-            data=json.dumps(payload),
-            headers={"Content-Type": "application/json"},
+            json=payload,
             timeout=10,
         )
 
@@ -38,7 +36,6 @@ def send_slack_message(message):
         if response.status_code != 200:
             raise ValueError(f"Error sending message: {response.status_code}, {response.text}")
 
-        return response.json()
     except Exception:
         # Re-raise any exceptions that occur
         raise
