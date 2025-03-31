@@ -28,6 +28,12 @@ perform_rebuild_cycle() {
     # Run rebuild
     log_message "Running rebuild..."
     counterparty-server rebuild
+
+    # Check if the rebuild command failed
+    if [ $? -ne 0 ]; then
+        log_message "Error: Rebuild command failed. Stopping script."
+        exit 1
+    fi
     
     log_message "Rebuild cycle completed."
 }
