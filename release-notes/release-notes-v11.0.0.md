@@ -42,6 +42,7 @@ counterparty-server start
 - Make `APSWConnectionPool` thread safe
 - Fix `price_normalized` in Fairminters endpoints
 - Fix event name: `BET_MATCH_RESOLUTON` => `BET_MATCH_RESOLUTION`
+- Fix `apsw.ThreadingViolationError` with `APSWConnectionPool`
 
 ## Codebase
 

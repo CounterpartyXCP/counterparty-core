@@ -132,6 +132,14 @@ class APSWConnectionPool:
         if self.thread_local.connections:
             # Reuse an existing connection for this thread
             db = self.thread_local.connections.pop(0)
+            try:
+                # Check if the connection is usable
+                db.execute("SELECT 1").fetchone()
+            except (apsw.ThreadingViolationError, apsw.BusyError):
+                # If not usable, create a new one
+                db = get_db_connection(self.db_file, read_only=True, check_wal=False)
+                with self.lock:
+                    self.all_connections.add(db)
         else:
             # Create a new connection for this thread
             db = get_db_connection(self.db_file, read_only=True, check_wal=False)
