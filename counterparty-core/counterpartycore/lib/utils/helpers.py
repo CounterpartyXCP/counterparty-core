@@ -221,7 +221,12 @@ def decode_data(data):
     return result
 
 
-def get_current_commit_hash():
+def get_current_commit_hash(not_from_env=False):
+    if not not_from_env:
+        current_commit = os.environ.get("CURRENT_COMMIT")
+        if current_commit:
+            return current_commit
+
     try:
         repo = pygit2.Repository(pygit2.discover_repository("."))  # pylint: disable=E1101
 

@@ -24,10 +24,13 @@ perform_rebuild_cycle() {
         pip install -e .
         cd "$repo_dir"
     fi
-    
+
+    LAST_COMMIT=$(python3 -c "from counterpartycore.lib.utils import helpers; print(helpers.get_current_commit_hash(not_from_env=True))")
+    log_message "Last commit hash: $LAST_COMMIT"
+
     # Run rebuild
     log_message "Running rebuild..."
-    counterparty-server rebuild
+    CURRENT_COMMIT="$LAST_COMMIT" counterparty-server rebuild
 
     # Check if the rebuild command failed
     if [ $? -ne 0 ]; then
@@ -39,7 +42,7 @@ perform_rebuild_cycle() {
 }
 
 # Get the repository root directory (script will be in counterparty-core/tools)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Set default branch value
