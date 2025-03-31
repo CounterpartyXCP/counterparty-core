@@ -8,6 +8,7 @@ import string
 from operator import itemgetter
 from urllib.parse import urlparse
 
+import pygit2
 from bitcoinutils.setup import setup
 from counterpartycore.lib import config
 
@@ -218,3 +219,23 @@ def decode_data(data):
         offset = new_offset + length
 
     return result
+
+
+def get_current_commit_hash(not_from_env=False):
+    if not not_from_env:
+        current_commit = os.environ.get("CURRENT_COMMIT")
+        if current_commit:
+            return current_commit
+
+    try:
+        repo = pygit2.Repository(pygit2.discover_repository("."))  # pylint: disable=E1101
+
+        commit_hash = str(repo.head.target)
+
+        branch_name = repo.head.shorthand
+        if repo.head_is_detached:
+            branch_name = "HEAD detached"
+
+        return f"{branch_name} - {commit_hash}"
+    except pygit2.GitError:  # pylint: disable=E1101
+        return None

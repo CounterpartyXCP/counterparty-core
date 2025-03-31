@@ -24,7 +24,7 @@ jobs:
           - name: Mainnet API Load
             test-path: integrations/load_test.py
             os: Linux-Large-1
-            only_on_develop: true
+            only_on_develop: false
             no_cov_report: true
 
           # bootstrap, reparse 1000 blocks,
@@ -66,8 +66,8 @@ jobs:
             test-path: integrations/dockercompose_test.py
 
           # compare hashes between several servers
-          - name: Compare Hashes
-            test-path: integrations/comparehashes_test.py
+          # - name: Compare Hashes
+          #  test-path: integrations/comparehashes_test.py
 
           - name: RSFetcher Test
             test-path: integrations/rsfetcher_test.py

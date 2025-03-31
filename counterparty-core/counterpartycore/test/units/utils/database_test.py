@@ -256,3 +256,35 @@ def test_error_handling(mock_environment):
     # The connection should still be returned to the pool despite the error
     assert len(pool.thread_local.connections) == 1
     assert pool.all_connections == {mock_db}
+
+
+@pytest.mark.parametrize("error_type", [apsw.ThreadingViolationError, apsw.BusyError])
+def test_connection_error_recovery(mock_environment, error_type):
+    """Test recovery when a connection from the pool raises an error."""
+    from counterpartycore.lib.utils import database
+
+    # Get the mock objects
+    mock_get_db = mock_environment["get_db_connection"]
+    mock_db = mock_environment["db"]
+
+    # Create a mock for an unusable connection that raises the specified error
+    unusable_db = MagicMock()
+    unusable_db.execute.side_effect = error_type("Test error")
+
+    # Create a pool and add the unusable connection to it
+    pool = database.APSWConnectionPool("test.db", "test_pool")
+    pool.thread_local.connections = [unusable_db]
+
+    # Use the pool - it should detect the unusable connection and create a new one
+    with pool.connection() as conn:
+        # The returned connection should be the new one from get_db_connection
+        assert conn is mock_db
+        # The unusable connection should have been tested
+        unusable_db.execute.assert_called_once_with("SELECT 1")
+        # And get_db_connection should have been called to get a new one
+        mock_get_db.assert_called_once_with("test.db", read_only=True, check_wal=False)
+
+    # The new connection should be added to all_connections
+    assert mock_db in pool.all_connections
+    # And the unusable connection should not be returned to the thread-local pool
+    assert unusable_db not in pool.thread_local.connections
