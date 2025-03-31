@@ -314,6 +314,6 @@ if __name__ == "__main__":
         os.path.expanduser("~/.local/share/counterparty/counterparty.db"),
         duration=None,
         wait_time=locust.between(0.3, 0.6),
-        user_count=3,
+        user_count=1,
         stats_printer=False,
     )
