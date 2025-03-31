@@ -39,3 +39,5 @@ def send_slack_message(message):
     except Exception:
         # Re-raise any exceptions that occur
         raise
+
+    return True

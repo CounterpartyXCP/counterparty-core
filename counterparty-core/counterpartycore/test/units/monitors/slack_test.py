@@ -1,4 +1,3 @@
-import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -9,7 +8,7 @@ from counterpartycore.lib.monitors import slack
 # Test data
 TEST_MESSAGE = "This is a test message"
 TEST_WEBHOOK_URL = "https://webhook.example.com"
-EXPECTED_PAYLOAD = {"message": TEST_MESSAGE}
+EXPECTED_PAYLOAD = {"text": TEST_MESSAGE}
 
 
 @pytest.fixture
@@ -41,15 +40,12 @@ def test_send_slack_message_success(mock_response, monkeypatch):
         # Check the URL
         assert args[0] == TEST_WEBHOOK_URL
 
-        # Check the headers
-        assert kwargs["headers"] == {"Content-Type": "application/json"}
-
         # Check the payload
-        sent_payload = json.loads(kwargs["data"])
+        sent_payload = kwargs["json"]
         assert sent_payload == EXPECTED_PAYLOAD
 
         # Check the return value
-        assert result == {"ok": True}
+        assert result is True
 
 
 def test_send_slack_message_no_webhook(monkeypatch):
@@ -119,11 +115,11 @@ def test_send_slack_message_empty_message(monkeypatch):
 
         # Verify the payload has an empty message
         args, kwargs = mock_post.call_args
-        sent_payload = json.loads(kwargs["data"])
-        assert sent_payload == {"message": ""}
+        sent_payload = kwargs["json"]
+        assert sent_payload == {"text": ""}
 
         # Function should still return successfully
-        assert result == {"ok": True}
+        assert result
 
 
 def test_send_slack_message_special_characters(monkeypatch):
@@ -132,7 +128,7 @@ def test_send_slack_message_special_characters(monkeypatch):
     monkeypatch.setattr("counterpartycore.lib.utils.helpers.get_current_commit_hash", lambda: None)
 
     special_message = "Test with special chars: å®çñö!@#$%^&*()"
-    expected_special_payload = {"message": special_message}
+    expected_special_payload = {"text": special_message}
 
     with patch("counterpartycore.lib.monitors.slack.requests.post") as mock_post:
         # Configure the mock
@@ -145,6 +141,6 @@ def test_send_slack_message_special_characters(monkeypatch):
         slack.send_slack_message(special_message)
 
         # Verify the payload has the correct special characters
-        args, kwargs = mock_post.call_args
-        sent_payload = json.loads(kwargs["data"])
+        _args, kwargs = mock_post.call_args
+        sent_payload = kwargs["json"]
         assert sent_payload == expected_special_payload
