@@ -48,6 +48,37 @@ def test_send_slack_message_success(mock_response, monkeypatch):
         assert result is True
 
 
+def test_send_slack_message_success_with_hash(mock_response, monkeypatch):
+    """Test successful message sending"""
+    # Set the environment variable for the webhook URL
+    monkeypatch.setenv("SLACK_HOOK", TEST_WEBHOOK_URL)
+    monkeypatch.setattr(
+        "counterpartycore.lib.utils.helpers.get_current_commit_hash",
+        lambda: "branch - abcdef1234567890",
+    )
+
+    with patch("counterpartycore.lib.monitors.slack.requests.post") as mock_post:
+        # Configure the mock
+        mock_post.return_value = mock_response
+
+        # Call the function
+        result = slack.send_slack_message(TEST_MESSAGE)
+
+        # Verify the function called requests.post with the correct arguments
+        mock_post.assert_called_once()
+        args, kwargs = mock_post.call_args
+
+        # Check the URL
+        assert args[0] == TEST_WEBHOOK_URL
+
+        # Check the payload
+        sent_payload = kwargs["json"]
+        assert sent_payload == {"text": f"{TEST_MESSAGE}\nbranch - abcdef1234567890"}
+
+        # Check the return value
+        assert result is True
+
+
 def test_send_slack_message_no_webhook(monkeypatch):
     """Test behavior when webhook URL is not set"""
     # Ensure the environment variable is not set
