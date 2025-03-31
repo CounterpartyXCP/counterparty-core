@@ -43,6 +43,7 @@ counterparty-server start
 - Fix typo in composer paramerters: `mutlisig_pubkey` -> `multisig_pubkey`
 - Fix `price_normalized` in Fairminters endpoints
 - Fix event name: `BET_MATCH_RESOLUTON` => `BET_MATCH_RESOLUTION`
+- Fix `is_segwit` value in `get_vin_info`
 
 ## Codebase
 
