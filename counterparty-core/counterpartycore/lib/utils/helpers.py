@@ -5,10 +5,10 @@ import itertools
 import json
 import os
 import string
-import subprocess
 from operator import itemgetter
 from urllib.parse import urlparse
 
+import pygit2
 from bitcoinutils.setup import setup
 from counterpartycore.lib import config
 
@@ -223,34 +223,14 @@ def decode_data(data):
 
 def get_current_commit_hash():
     try:
-        # Check if we're in a git repository
-        subprocess.check_output(  # noqa
-            ["git", "rev-parse", "--is-inside-work-tree"],  # noqa
-            stderr=subprocess.STDOUT,
-        )
+        repo = pygit2.Repository(pygit2.discover_repository("."))
 
-        # Get the current commit hash
-        commit_hash = (
-            subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.STDOUT)  # noqa
-            .decode("utf-8")
-            .strip()
-        )
+        commit_hash = str(repo.head.target)
 
-        # Get the current branch name
-        try:
-            branch = (
-                subprocess.check_output(  # noqa
-                    ["git", "symbolic-ref", "--short", "HEAD"],  # noqa
-                    stderr=subprocess.STDOUT,
-                )
-                .decode("utf-8")
-                .strip()
-            )
-        except subprocess.CalledProcessError:
-            # We might be in a detached HEAD state
-            branch = "HEAD detached"
+        branch_name = repo.head.shorthand
+        if repo.head_is_detached:
+            branch_name = "HEAD detached"
 
-        return f"{branch} - {commit_hash}"
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        # Either not in a git repository or git command not available
+        return f"{branch_name} - {commit_hash}"
+    except pygit2.GitError:
         return None
