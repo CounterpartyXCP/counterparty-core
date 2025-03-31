@@ -1,3 +1,4 @@
+import os
 import string
 from unittest.mock import Mock, patch
 
@@ -269,3 +270,9 @@ def test_get_commit_hash_git_error():
 
             # Result verification
             assert result is None
+
+
+def test_get_commit_hash_from_env():
+    os.environ["CURRENT_COMMIT"] = "abcdef1234567890"
+    result = helpers.get_current_commit_hash()
+    assert result == "abcdef1234567890"
