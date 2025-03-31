@@ -24,20 +24,16 @@ def send_slack_message(message):
     # Prepare the data to send
     payload = {"text": final_message}
 
-    try:
-        # Send the POST request to the webhook
-        response = requests.post(
-            webhook_url,
-            json=payload,
-            timeout=10,
-        )
+    # Send the POST request to the webhook
+    response = requests.post(
+        webhook_url,
+        json=payload,
+        timeout=10,
+    )
 
-        # Check if the request was successful
-        if response.status_code != 200:
-            raise ValueError(f"Error sending message: {response.status_code}, {response.text}")
-
-    except Exception:
-        # Re-raise any exceptions that occur
-        raise
+    # Check if the request was successful
+    if response.status_code != 200:
+        logger.error("Error sending message: %s, %s", response.status_code, response.text)
+        return False
 
     return True

@@ -74,11 +74,7 @@ def test_send_slack_message_error(monkeypatch):
         mock_post.return_value = error_response
 
         # Call the function and expect a ValueError
-        with pytest.raises(ValueError) as excinfo:
-            slack.send_slack_message(TEST_MESSAGE)
-
-        # Check the error message
-        assert "Error sending message: 400, invalid_payload" in str(excinfo.value)
+        assert not slack.send_slack_message(TEST_MESSAGE)
 
 
 def test_send_slack_message_network_error(monkeypatch):

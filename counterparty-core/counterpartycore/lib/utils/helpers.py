@@ -223,7 +223,7 @@ def decode_data(data):
 
 def get_current_commit_hash():
     try:
-        repo = pygit2.Repository(pygit2.discover_repository("."))
+        repo = pygit2.Repository(pygit2.discover_repository("."))  # pylint: disable=E1101
 
         commit_hash = str(repo.head.target)
 
@@ -232,5 +232,5 @@ def get_current_commit_hash():
             branch_name = "HEAD detached"
 
         return f"{branch_name} - {commit_hash}"
-    except pygit2.GitError:
+    except pygit2.GitError:  # pylint: disable=E1101
         return None
