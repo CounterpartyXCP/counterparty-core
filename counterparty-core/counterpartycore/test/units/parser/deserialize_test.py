@@ -154,6 +154,7 @@ def test_deserialize_mpma(blockchain_mock, monkeypatch):
     original_address_version = config.ADDRESSVERSION
     config.NETWORK_NAME = "mainnet"
     config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+    config.BACKEND_SSL = True
 
     blockchain_mock.source_by_txid[
         "094246c10d8b95f39662b92971588a205db77d89ffe0f21816733019a703cff9"
@@ -174,6 +175,7 @@ def test_deserialize_mpma(blockchain_mock, monkeypatch):
 
     config.NETWORK_NAME = original_network_name
     config.ADDRESSVERSION = original_address_version
+    config.BACKEND_SSL = False
     helpers.setup_bitcoinutils("regtest")
 
 

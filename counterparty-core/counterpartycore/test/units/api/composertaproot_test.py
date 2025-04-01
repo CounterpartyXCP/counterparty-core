@@ -1,9 +1,10 @@
 import binascii
 import math
 
+import pytest
 from bitcoinutils.script import Script
 from bitcoinutils.transactions import Transaction
-from counterpartycore.lib import config
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import composer
 from counterpartycore.test.fixtures.defaults import DEFAULT_PARAMS as DEFAULTS
 
@@ -210,12 +211,42 @@ def test_compose_transaction(ledger_db, defaults):
     )
 
 
-def test_get_sat_per_vbyte():
+def test_check_transaction_sanity(ledger_db, defaults):
+    params = {
+        "memo": "0102030405",
+        "memo_is_hex": True,
+        "source": defaults["addresses"][0],
+        "destination": defaults["addresses"][1],
+        "asset": "XCP",
+        "quantity": defaults["small"],
+    }
+    construct_params = {
+        "encoding": "taproot",
+        "verbose": True,
+    }
+    tx_info = (
+        defaults["addresses"][0],
+        [],
+        b"\x02\x01\x01\x04\x80\xf0\xfa\x02\x15\x01\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec\x05\x01\x02\x03\x04\x05",
+    )
+
+    result = composer.compose_transaction(ledger_db, "send", params, construct_params)
+
+    result["envelope_script"] = "aaaaaa"
+
+    with pytest.raises(
+        exceptions.ComposeError, match="Sanity check error: envelope script does not match the data"
+    ):
+        composer.check_transaction_sanity(tx_info, result, construct_params)
+
+
+def test_get_sat_per_vbyte(monkeypatch):
+    monkeypatch.setattr(composer, "prepare_fee_parameters", lambda x: (None, None, None))
     sat_per_vbyte = composer.get_sat_per_vbyte({})
     assert sat_per_vbyte == 2
 
     sat_per_vbyte = composer.get_sat_per_vbyte({"sat_per_vbyte": 10})
-    assert sat_per_vbyte == 10
+    assert sat_per_vbyte == 2
 
     sat_per_vbyte = composer.get_sat_per_vbyte({"confirmation_target": 10})
     assert sat_per_vbyte == 2

@@ -9,6 +9,7 @@ from bitcoinutils.script import Script
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import composer
+from counterpartycore.lib.parser import deserialize
 from counterpartycore.test.fixtures.defaults import DEFAULT_PARAMS as DEFAULTS
 
 PROVIDED_PUBKEYS = ",".join(
@@ -1431,6 +1432,37 @@ def test_check_transaction_sanity(defaults):
                 "data": b"CNTRPRTYHello, World!",
                 "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
                 "rawtransaction": "020000000162cfa1417799553e305c053c5c92a8bdcccfcf5ee01d2aeabf0450e06fcabd070000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a15d59bb23339e70a3709c14a8db5ae9927cb1140b78f7ec39a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+                "inputs_values": [1000000000],
+            },
+            {"exact_fee": 1000},
+        )
+
+
+def test_check_transaction_sanity_error(defaults, monkeypatch):
+    rawtransaction = "020000000162cfa1417799553e305c053c5c92a8bdcccfcf5ee01d2aeabf0450e06fcabd070000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a15d59bb23339e70a3709c14a8db5ae9927cb1140b78f7ec39a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+    decoded_tx = deserialize.deserialize_tx(rawtransaction, parse_vouts=True)
+    decoded_tx["parsed_vouts"] = Exception("Error")
+
+    monkeypatch.setattr(
+        "counterpartycore.lib.parser.deserialize.deserialize_tx", lambda *args, **kwargs: decoded_tx
+    )
+
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(
+            "Sanity check error: cannot parse the output data from the transaction (Error)"
+        ),
+    ):
+        composer.check_transaction_sanity(
+            (defaults["addresses"][0], [(defaults["addresses"][1], 666)], b"Hello, World!"),
+            {
+                "btc_change": 1000000000 - 666 - 1000,
+                "btc_fee": 1000,
+                "btc_in": 1000000000,
+                "btc_out": 666,
+                "data": b"CNTRPRTYHello, World!",
+                "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                "rawtransaction": rawtransaction,
                 "inputs_values": [1000000000],
             },
             {"exact_fee": 1000},
