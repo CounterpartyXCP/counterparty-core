@@ -1,31 +1,41 @@
-# docker build -t counterparty .
-# docker run --rm counterparty counterparty-server -h
+FROM alpine:3.18
 
-FROM ubuntu:22.04
+# Install runtime dependencies (rarely change)
+RUN apk add --no-cache python3 py3-pip leveldb libstdc++
 
-RUN apt update
-# install dependencies
-RUN apt install -y python3 python3-dev python3-pip libleveldb-dev curl gnupg libclang-dev pkg-config libssl-dev
+# Install build dependencies (will be removed later)
+RUN apk add --no-cache --virtual .build-deps \
+    python3-dev \
+    musl-dev \
+    openssl-dev \
+    leveldb-dev \
+    pkgconfig \
+    curl \
+    build-base \
+    libffi-dev \
+    clang-dev \
+    llvm-dev
 
-# install rust
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# install maturin
+# Install maturin
 RUN pip3 install maturin
 
-# copy README
-COPY README.md /README.md
+# Copy README
+COPY . counterparty-core
 
-# install counterparty-rs
-COPY ./counterparty-rs /counterparty-rs
-WORKDIR /counterparty-rs
+WORKDIR /counterparty-core/counterparty-rs
 RUN pip3 install .
 
-# install counterparty-core
-COPY ./counterparty-core /counterparty-core
-WORKDIR /counterparty-core
+WORKDIR /counterparty-core/counterparty-core
 RUN pip3 install .
 
-ENTRYPOINT [ "counterparty-server"]
-CMD [ "start" ]
+# Cleanup to reduce image size
+RUN apk del .build-deps && \
+    rm -rf /root/.cargo /root/.cache && \
+    pip3 cache purge
+
+ENTRYPOINT ["counterparty-server"]
+CMD ["start"]
