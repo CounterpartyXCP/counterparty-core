@@ -136,6 +136,7 @@ class BlockchainWatcher:
                 # catch up with rpc if previous block is missing
                 logger.debug("Previous block is missing. Catching up...")
                 blocks.catch_up(self.db)
+                CurrentState().set_ledger_state(self.db, "Following")
             else:
                 blocks.parse_new_block(self.db, decoded_block)
             if not config.NO_MEMPOOL:
@@ -287,6 +288,7 @@ class BlockchainWatcher:
                     if late_since is not None and time.time() - late_since > 60:
                         logger.warning("ZMQ is late. Catching up...")
                         blocks.catch_up(self.db)
+                        CurrentState().set_ledger_state(self.db, "Following")
                         late_since = None
 
                 # Yield control to the event loop to allow other tasks to run
