@@ -1,0 +1,3 @@
+api_url = "https://api.unspendablelabs.com:4000"
+endpoints_url = "https://api.unspendablelabs.com:4000/v2/routes"
+cache_file = ".cache/counterparty-endpoints.json"
