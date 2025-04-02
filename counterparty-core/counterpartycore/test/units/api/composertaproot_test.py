@@ -1,5 +1,5 @@
 import binascii
-import math
+import random
 
 import pytest
 from bitcoinutils.script import Script
@@ -59,76 +59,125 @@ def test_generate_envelope_script():
     )
 
 
-# TODO: fix it and use it if possible
-def calculate_vsize(data_size):
-    # Base size of a minimal transaction
-    base_size = 97
+def calculate_reveal_transaction_vsize(data):
+    # Calculate the envelope script size
+    envelope_script = composer.generate_envelope_script(data)
+    envelope_script_serialized = envelope_script.to_hex()
+    envelope_script_size = len(envelope_script_serialized) // 2
 
-    # Special case for empty data or a single byte
-    if data_size <= 1:
-        return base_size
-
-    # Number of chunks of 520 bytes
-    chunks = math.ceil(data_size / 520)
-
-    # Base cost per byte (after hex conversion and witness weighting)
-    byte_cost = 0.5 / 4  # hex (×2) then witness weight (÷4)
-
-    # Initialization of the total vsize
-    vsize = base_size + (data_size * byte_cost)
-
-    # Overhead for each chunk according to Bitcoin's varint encoding rules
-    varint_overhead = 0
-    for i in range(chunks):
-        # Size of this chunk (last chunk may be partial)
-        chunk_size = min(520, data_size - i * 520)
-        # Size after conversion to hexadecimal
-        hex_size = chunk_size * 2
-
-        # Application of varint encoding rules
-        if hex_size <= 252:
-            # 1 byte for the varint
-            varint_overhead += 1 / 4  # witness factor
-        elif hex_size <= 65535:
-            # 3 bytes for the varint (1 marker + 2 value)
-            varint_overhead += 3 / 4
+    # Utility function to calculate varint size
+    def varint_size(n):
+        if n < 0xFD:
+            return 1
+        elif n <= 0xFFFF:
+            return 3
+        elif n <= 0xFFFFFFFF:
+            return 5
         else:
-            # 5 bytes for the varint (1 marker + 4 value)
-            varint_overhead += 5 / 4
+            return 9
 
-    vsize += varint_overhead
+    # 1. Calculate base size (non-witness data)
 
-    return math.ceil(vsize)
+    # Transaction header: version(4) + input count(1) + output count(1) + locktime(4)
+    tx_header_size = 10
+
+    # Input: txid(32) + vout(4) + script length(1) + empty script(0) + sequence(4)
+    tx_input_size = 41
+
+    # Output: amount(8) + script length(1) + OP_RETURN script
+    prefix_hex = binascii.hexlify(config.PREFIX).decode("ascii")
+    op_return_script_size = 1 + 1 + len(prefix_hex) // 2  # OP_RETURN + data length + data
+    tx_output_size = 8 + 1 + op_return_script_size
+
+    # Total base size
+    base_size = tx_header_size + tx_input_size + tx_output_size
+
+    # 2. Calculate witness data size
+
+    # Segwit marker and flag (not included in base size for weight calculation)
+    segwit_marker_flag_size = 2
+
+    # Witness item count (3 elements: signature, script, control block)
+    witness_count_size = 1
+
+    # Signature (estimation for a Schnorr signature in Taproot)
+    signature_size = 65
+    signature_length_size = varint_size(signature_size)
+
+    # Envelope script
+    envelope_script_length_size = varint_size(envelope_script_size)
+
+    # Control block (estimation for a single script path)
+    control_block_size = 33  # Leaf version + internal key
+    control_block_length_size = varint_size(control_block_size)
+
+    # Total witness size
+    witness_size = (
+        witness_count_size
+        + signature_length_size
+        + signature_size
+        + envelope_script_length_size
+        + envelope_script_size
+        + control_block_length_size
+        + control_block_size
+    )
+
+    # 3. Calculate total size
+    total_size = base_size + segwit_marker_flag_size + witness_size
+
+    # 4. Calculate weight: (base size * 3) + total size
+    weight = (base_size * 3) + total_size
+
+    # 5. Calculate vsize: (weight + 3) // 4 (integer division to round down)
+    vsize = (weight + 3) // 4
+
+    return vsize
 
 
 def test_get_reveal_transaction_vsize():
     data = b""
     vsize = composer.get_reveal_transaction_vsize(data)
     assert vsize == 97
+    assert calculate_reveal_transaction_vsize(data) == 97
 
     data = b"a"
     vsize = composer.get_reveal_transaction_vsize(data)
     assert vsize == 97
+    assert calculate_reveal_transaction_vsize(data) == 98
 
     data = b"a" * 1000
     vsize = composer.get_reveal_transaction_vsize(data)
     assert vsize == 349
+    assert calculate_reveal_transaction_vsize(data) == 349
 
     data = b"a" * 2000
     vsize = composer.get_reveal_transaction_vsize(data)
     assert vsize == 600
+    assert calculate_reveal_transaction_vsize(data) == 601
 
     data = b"a" * 10000
     vsize = composer.get_reveal_transaction_vsize(data)
     assert vsize == 2612
+    assert calculate_reveal_transaction_vsize(data) == 2612
 
     data = b"a" * 20000
     vsize = composer.get_reveal_transaction_vsize(data)
     assert vsize == 5126
+    assert calculate_reveal_transaction_vsize(data) == 5127
 
     data = b"a" * 400 * 1024
     vsize = composer.get_reveal_transaction_vsize(data)
     assert vsize == 103089
+    assert calculate_reveal_transaction_vsize(data) == 103089
+
+    for _i in range(10):
+        data = b"a" * random.randint(1, 400000)  # noqa
+        vsize = composer.get_reveal_transaction_vsize(data)
+        assert (
+            calculate_reveal_transaction_vsize(data) - 1
+            <= vsize
+            <= calculate_reveal_transaction_vsize(data) + 1
+        )
 
 
 def test_prepare_taproot_output(defaults):
