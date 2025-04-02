@@ -92,50 +92,149 @@ fn build_cli_app(endpoints: &HashMap<String, ApiEndpoint>) -> Command {
                 .action(ArgAction::SetTrue),
         );
 
-    // Collect unique function names to avoid duplicate subcommands
+    // Collect and sort unique function names to avoid duplicate subcommands
+    let mut compose_commands = Vec::new();
+    let mut get_commands = Vec::new();
+    let mut other_commands = Vec::new();
+    
     let mut functions = HashMap::new();
     for (path, endpoint) in endpoints {
         functions.insert(endpoint.function.clone(), (path.clone(), endpoint.clone()));
     }
     
-    // Add each unique function as a subcommand
-    for (func_name, (_path, endpoint)) in functions {
-        // Convert String to &'static str using Box::leak to satisfy clap's static lifetime requirements
-        // We need to specifically cast to &str since Box::leak returns &mut str
-        let static_func_name: &str = Box::leak(func_name.clone().into_boxed_str());
-        let static_description: &str = Box::leak(endpoint.description.clone().into_boxed_str());
-        
-        let mut cmd = Command::new(static_func_name)
-            .about(static_description);
-            
-        // Add arguments for this endpoint
-        for arg in &endpoint.args {
-            // Create static references for arg names and descriptions
-            let static_arg_name: &str = Box::leak(arg.name.clone().into_boxed_str());
-            let static_help: &str = Box::leak(arg.description
-                .as_deref()
-                .unwrap_or("")
-                .to_string()
-                .into_boxed_str());
-                
-            let mut cmd_arg = Arg::new(static_arg_name)
-                .long(static_arg_name)
-                .help(static_help);
-                
-            if arg.required {
-                cmd_arg = cmd_arg.required(true);
-            }
-            
-            if arg.arg_type == "bool" {
-                cmd_arg = cmd_arg.action(ArgAction::SetTrue);
-            } else {
-                cmd_arg = cmd_arg.value_name("VALUE");
-            }
-            
-            cmd = cmd.arg(cmd_arg);
+    // Sort functions into groups
+    for (func_name, (path, endpoint)) in functions {
+        if func_name.starts_with("compose_") {
+            compose_commands.push((func_name, (path, endpoint)));
+        } else if func_name.starts_with("get_") {
+            get_commands.push((func_name, (path, endpoint)));
+        } else {
+            other_commands.push((func_name, (path, endpoint)));
         }
-        
-        app = app.subcommand(cmd);
+    }
+
+    compose_commands.sort_by(|a, b| a.0.cmp(&b.0));
+    get_commands.sort_by(|a, b| a.0.cmp(&b.0));
+    other_commands.sort_by(|a, b| a.0.cmp(&b.0));
+    
+    // Add compose commands
+    if !compose_commands.is_empty() {
+        app = app.next_help_heading("COMPOSE COMMANDS");
+        for (func_name, (path, endpoint)) in compose_commands {
+            let static_func_name: &str = Box::leak(func_name.clone().into_boxed_str());
+            let static_description: &str = Box::leak(endpoint.description.clone().into_boxed_str());
+            
+            let mut cmd = Command::new(static_func_name)
+                .about(static_description);
+                
+            // Add arguments for this endpoint
+            for arg in &endpoint.args {
+                let static_arg_name: &str = Box::leak(arg.name.clone().into_boxed_str());
+                let static_help: &str = Box::leak(arg.description
+                    .as_deref()
+                    .unwrap_or("")
+                    .to_string()
+                    .into_boxed_str());
+                    
+                let mut cmd_arg = Arg::new(static_arg_name)
+                    .long(static_arg_name)
+                    .help(static_help);
+                    
+                if arg.required {
+                    cmd_arg = cmd_arg.required(true);
+                }
+                
+                if arg.arg_type == "bool" {
+                    cmd_arg = cmd_arg.action(ArgAction::SetTrue);
+                } else {
+                    cmd_arg = cmd_arg.value_name("VALUE");
+                }
+                
+                cmd = cmd.arg(cmd_arg);
+            }
+            
+            app = app.subcommand(cmd);
+        }
+    }
+    
+    // Add get commands
+    if !get_commands.is_empty() {
+        app = app.next_help_heading("GET COMMANDS");
+        for (func_name, (path, endpoint)) in get_commands {
+            let static_func_name: &str = Box::leak(func_name.clone().into_boxed_str());
+            let static_description: &str = Box::leak(endpoint.description.clone().into_boxed_str());
+            
+            let mut cmd = Command::new(static_func_name)
+                .about(static_description);
+                
+            // Add arguments for this endpoint
+            for arg in &endpoint.args {
+                let static_arg_name: &str = Box::leak(arg.name.clone().into_boxed_str());
+                let static_help: &str = Box::leak(arg.description
+                    .as_deref()
+                    .unwrap_or("")
+                    .to_string()
+                    .into_boxed_str());
+                    
+                let mut cmd_arg = Arg::new(static_arg_name)
+                    .long(static_arg_name)
+                    .help(static_help);
+                    
+                if arg.required {
+                    cmd_arg = cmd_arg.required(true);
+                }
+                
+                if arg.arg_type == "bool" {
+                    cmd_arg = cmd_arg.action(ArgAction::SetTrue);
+                } else {
+                    cmd_arg = cmd_arg.value_name("VALUE");
+                }
+                
+                cmd = cmd.arg(cmd_arg);
+            }
+            
+            app = app.subcommand(cmd);
+        }
+    }
+    
+    // Add other commands
+    if !other_commands.is_empty() {
+        app = app.next_help_heading("OTHER COMMANDS");
+        for (func_name, (path, endpoint)) in other_commands {
+            let static_func_name: &str = Box::leak(func_name.clone().into_boxed_str());
+            let static_description: &str = Box::leak(endpoint.description.clone().into_boxed_str());
+            
+            let mut cmd = Command::new(static_func_name)
+                .about(static_description);
+                
+            // Add arguments for this endpoint
+            for arg in &endpoint.args {
+                let static_arg_name: &str = Box::leak(arg.name.clone().into_boxed_str());
+                let static_help: &str = Box::leak(arg.description
+                    .as_deref()
+                    .unwrap_or("")
+                    .to_string()
+                    .into_boxed_str());
+                    
+                let mut cmd_arg = Arg::new(static_arg_name)
+                    .long(static_arg_name)
+                    .help(static_help);
+                    
+                if arg.required {
+                    cmd_arg = cmd_arg.required(true);
+                }
+                
+                if arg.arg_type == "bool" {
+                    cmd_arg = cmd_arg.action(ArgAction::SetTrue);
+                } else {
+                    cmd_arg = cmd_arg.value_name("VALUE");
+                }
+                
+                cmd = cmd.arg(cmd_arg);
+            }
+            
+            app = app.subcommand(cmd);
+        }
     }
     
     app
