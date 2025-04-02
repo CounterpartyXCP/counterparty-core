@@ -11,6 +11,7 @@ import time
 import urllib.parse
 from io import StringIO
 
+import requests
 import sh
 from arc4 import ARC4
 from bitcoinutils.keys import P2wpkhAddress
@@ -23,6 +24,25 @@ from counterpartycore.lib.utils import database
 setup("regtest")
 
 WALLET_NAME = "xcpwallet"
+
+
+def rpc_call(method, params):
+    headers = {"content-type": "application/json"}
+    payload = {
+        "method": method,
+        "params": params,
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+    response = requests.post(
+        "http://localhost:18443/",
+        data=json.dumps(payload),
+        headers=headers,
+        auth=("rpc", "rpc"),
+        timeout=20,
+    )
+    result = response.json()
+    return result
 
 
 class RegtestNode:
@@ -74,9 +94,8 @@ class RegtestNode:
         self.second_node_started = False
 
     def api_call(self, url):
-        result = sh.curl(f"http://localhost:24000/v2/{url}").strip()
-        # print(result)
-        return json.loads(result)
+        result = requests.get(f"http://localhost:24000/v2/{url}", timeout=20)
+        return result.json()
 
     def get_mempool_event_count(self):
         result = self.api_call("mempool/events")
@@ -105,10 +124,18 @@ class RegtestNode:
             os.remove(regtest_protocole_file)
 
     def broadcast_transaction(
-        self, signed_transaction, no_confirmation=False, dont_wait_mempool=False, retry=0
+        self,
+        signed_transaction,
+        no_confirmation=False,
+        dont_wait_mempool=False,
+        retry=0,
+        use_rpc=False,
     ):
         mempool_event_count_before = self.get_mempool_event_count()
-        tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction, 0).strip()
+        if not use_rpc:
+            tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction, 0).strip()
+        else:
+            tx_hash = rpc_call("sendrawtransaction", [signed_transaction])["result"]
         if not no_confirmation:
             block_hash, block_time = self.mine_blocks(1)
         else:
@@ -191,6 +218,7 @@ class RegtestNode:
         dont_wait_mempool=False,
         return_result=False,
         retry=0,
+        use_rpc=False,
     ):
         self.wait_for_counterparty_server()
 
@@ -224,13 +252,20 @@ class RegtestNode:
             return result["result"]
         raw_transaction = result["result"]["rawtransaction"]
         # print(f"Raw transaction: {raw_transaction}")
-        signed_transaction_json = self.bitcoin_wallet(
-            "signrawtransactionwithwallet", raw_transaction
-        ).strip()
-        signed_transaction = json.loads(signed_transaction_json)["hex"]
+        # signed_transaction_json = self.bitcoin_wallet(
+        #    "signrawtransactionwithwallet", raw_transaction
+        # ).strip()
+        signed_transaction_json = rpc_call("signrawtransactionwithwallet", [raw_transaction])[
+            "result"
+        ]
+        # print(f"Signed transaction: {signed_transaction_json}")
+        signed_transaction = signed_transaction_json["hex"]
         try:
             tx_hash, block_hash, block_time = self.broadcast_transaction(
-                signed_transaction, no_confirmation, dont_wait_mempool=dont_wait_mempool
+                signed_transaction,
+                no_confirmation,
+                dont_wait_mempool=dont_wait_mempool,
+                use_rpc=use_rpc,
             )
         except sh.ErrorReturnCode_25 as e:
             if retry < 6:

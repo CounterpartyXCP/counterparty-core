@@ -1,36 +1,15 @@
 import binascii
-import json
 import os
 import time
 
-import requests
 from bitcoinutils.keys import PrivateKey
 from bitcoinutils.script import Script
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxWitnessInput
 from bitcoinutils.utils import ControlBlock
-from regtestnode import RegtestNodeThread
+from regtestnode import RegtestNodeThread, rpc_call
 
 SENDS_COUNT = {}
-
-
-def rpc_call(method, params):
-    headers = {"content-type": "application/json"}
-    payload = {
-        "method": method,
-        "params": params,
-        "jsonrpc": "2.0",
-        "id": 0,
-    }
-    response = requests.post(
-        "http://localhost:18443/",
-        data=json.dumps(payload),
-        headers=headers,
-        auth=("rpc", "rpc"),
-        timeout=20,
-    )
-    result = response.json()
-    return result
 
 
 def send_taproot_transaction(node, utxo, source_private_key, tx_name, params, inputs_set=None):
@@ -52,6 +31,7 @@ def send_taproot_transaction(node, utxo, source_private_key, tx_name, params, in
             "multisig_pubkey": source_pubkey.to_hex(),
         },
         return_result=True,
+        use_rpc=True,
     )
 
     # sign commit tx
@@ -98,7 +78,7 @@ def send_taproot_transaction(node, utxo, source_private_key, tx_name, params, in
         TxWitnessInput([sig, inscription_script.to_hex(), control_block.to_hex()])
     )
 
-    node.broadcast_transaction(reveal_tx.serialize())
+    node.broadcast_transaction(reveal_tx.serialize(), use_rpc=True)
 
     return {
         "txid": commit_tx.get_txid(),
@@ -136,7 +116,7 @@ def generate_taproot_funded_address(node):
         "send",
         {
             "destination": source_address.to_string(),
-            "quantity": 1 * 10**8,
+            "quantity": 10 * 10**8,
             "asset": "XCP",
         },
     )
@@ -581,7 +561,7 @@ def check_fairminter2(node, source_private_key, utxo):
             "asset": "A95428959745315389",
             "price": 1,
             "hard_cap": 100 * 10**8,
-            "description": "lore ipsum, lore ipsum, lore ipsum, lore ipsum, lorem ipsum",
+            "description": "a" * 255000,
             "premint_quantity": 100,
             "start_block": last_block + 1,
             "soft_cap": 90 * 10**8,
