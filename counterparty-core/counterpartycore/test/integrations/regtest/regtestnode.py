@@ -217,7 +217,7 @@ class RegtestNode:
             compose_url = f"utxos/{source}/compose/{tx_name}?{query_string}"
         else:
             compose_url = f"addresses/{source}/compose/{tx_name}?{query_string}"
-        print("Compose URL:", compose_url)
+        print("Compose URL:", compose_url, data)
         return self.api_call(compose_url, data=data)
 
     def send_transaction(

@@ -287,6 +287,8 @@ def get_transaction_name(rule):
 
 def query_params():
     params = request.args.to_dict(flat=False)
+    if request.method == "POST":
+        params = params | request.form.to_dict(flat=False)
     return {key: value[0] if len(value) == 1 else value for key, value in params.items()}
 
 
@@ -298,9 +300,6 @@ def handle_route(**kwargs):
 
         start_time = time.time()
         query_args = query_params() | kwargs
-
-        if request.method == "POST":
-            query_args = query_args | request.form.to_dict()
 
         logger.trace(f"API Request - {request.remote_addr} {request.method} {request.url}")
         logger.debug(get_log_prefix(query_args))
