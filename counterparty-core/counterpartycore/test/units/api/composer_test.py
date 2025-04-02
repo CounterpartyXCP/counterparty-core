@@ -9,6 +9,7 @@ from bitcoinutils.script import Script
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import composer
+from counterpartycore.lib.parser import deserialize
 from counterpartycore.test.fixtures.defaults import DEFAULT_PARAMS as DEFAULTS
 
 PROVIDED_PUBKEYS = ",".join(
@@ -150,14 +151,20 @@ def test_prepare_non_data_outputs(defaults):
 
 
 def test_determine_encoding():
-    assert composer.determine_encoding(b"Hello, World!", {}) == "opreturn"
-    assert composer.determine_encoding(b"Hello, World!" * 100, {}) == "multisig"
+    assert composer.determine_encoding(b"Hello, World!", [], {}) == "opreturn"
+    assert composer.determine_encoding(b"Hello, World!" * 100, [], {}) == "multisig"
 
     with pytest.raises(exceptions.ComposeError, match="Not supported encoding: p2sh"):
-        composer.determine_encoding(b"Hello, World!", {"encoding": "p2sh"})
+        composer.determine_encoding(b"Hello, World!", [], {"encoding": "p2sh"})
 
     with pytest.raises(exceptions.ComposeError, match="Not supported encoding: toto"):
-        composer.determine_encoding(b"Hello, World!", {"encoding": "toto"})
+        composer.determine_encoding(b"Hello, World!", [], {"encoding": "toto"})
+
+    with pytest.raises(
+        exceptions.ComposeError,
+        match="Cannot use `taproot` encoding for transactions with destinations",
+    ):
+        composer.determine_encoding(b"Hello, World!", ["destination_1"], {"encoding": "taproot"})
 
 
 def test_encrypt_data():
@@ -269,7 +276,7 @@ def test_prepare_data_outputs(defaults):
     # Test case 1: Simple OP_RETURN output
     assert str(
         composer.prepare_data_outputs(
-            defaults["addresses"][0], b"Hello, World!", [{"txid": ARC4_KEY}], {}
+            defaults["addresses"][0], [], b"Hello, World!", [{"txid": ARC4_KEY}], {}
         )
     ) == str([TxOutput(0, Script(["OP_RETURN", OPRETURN_DATA]))])
 
@@ -277,6 +284,7 @@ def test_prepare_data_outputs(defaults):
     with pytest.raises(exceptions.ComposeError, match="One `OP_RETURN` output per transaction"):
         composer.prepare_data_outputs(
             defaults["addresses"][0],
+            [],
             b"Hello, World!" * 10,
             [{"txid": ARC4_KEY}],
             {"pubkeys": PROVIDED_PUBKEYS, "encoding": "opreturn"},
@@ -286,6 +294,7 @@ def test_prepare_data_outputs(defaults):
     assert str(
         composer.prepare_data_outputs(
             defaults["addresses"][0],
+            [],
             b"Hello, World!" * 10,
             [{"txid": ARC4_KEY}],
             {"pubkeys": PROVIDED_PUBKEYS, "encoding": "multisig"},
@@ -338,6 +347,7 @@ def test_prepare_data_outputs(defaults):
     with pytest.raises(exceptions.ComposeError, match="Not supported encoding: p2sh"):
         composer.prepare_data_outputs(
             defaults["addresses"][0],
+            [],
             b"Hello, World!" * 10,
             [],
             {"pubkeys": PROVIDED_PUBKEYS, "encoding": "p2sh"},
@@ -1428,6 +1438,37 @@ def test_check_transaction_sanity(defaults):
         )
 
 
+def test_check_transaction_sanity_error(defaults, monkeypatch):
+    rawtransaction = "020000000162cfa1417799553e305c053c5c92a8bdcccfcf5ee01d2aeabf0450e06fcabd070000000000ffffffff039a020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ac0000000000000000176a15d59bb23339e70a3709c14a8db5ae9927cb1140b78f7ec39a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+    decoded_tx = deserialize.deserialize_tx(rawtransaction, parse_vouts=True)
+    decoded_tx["parsed_vouts"] = Exception("Error")
+
+    monkeypatch.setattr(
+        "counterpartycore.lib.parser.deserialize.deserialize_tx", lambda *args, **kwargs: decoded_tx
+    )
+
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(
+            "Sanity check error: cannot parse the output data from the transaction (Error)"
+        ),
+    ):
+        composer.check_transaction_sanity(
+            (defaults["addresses"][0], [(defaults["addresses"][1], 666)], b"Hello, World!"),
+            {
+                "btc_change": 1000000000 - 666 - 1000,
+                "btc_fee": 1000,
+                "btc_in": 1000000000,
+                "btc_out": 666,
+                "data": b"CNTRPRTYHello, World!",
+                "lock_scripts": ["76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"],
+                "rawtransaction": rawtransaction,
+                "inputs_values": [1000000000],
+            },
+            {"exact_fee": 1000},
+        )
+
+
 def test_prepare_construct_params(defaults):
     # Test case 1: Basic parameter conversion
     params = {
@@ -1447,7 +1488,7 @@ def test_prepare_construct_params(defaults):
     expected_params = {
         "sat_per_vbyte": 1,
         "max_fee": 666,
-        "mutlisig_pubkey": defaults["pubkey"][defaults["addresses"][0]],
+        "multisig_pubkey": defaults["pubkey"][defaults["addresses"][0]],
         "verbose": True,
         "regular_dust_size": 357,
         "multisig_dust_size": 1200,
@@ -1461,7 +1502,7 @@ def test_prepare_construct_params(defaults):
     expected_warnings = [
         "The `fee_per_kb` parameter is deprecated, use `sat_per_vbyte` instead",
         "The `fee_provided` parameter is deprecated, use `max_fee` instead",
-        "The `dust_return_pubkey` parameter is deprecated, use `mutlisig_pubkey` instead",
+        "The `dust_return_pubkey` parameter is deprecated, use `multisig_pubkey` instead",
         "The `return_psbt` parameter is deprecated, use `verbose` instead",
         "The `regular_dust_size` parameter is deprecated, automatically calculated",
         "The `multisig_dust_size` parameter is deprecated, automatically calculated",
@@ -1494,7 +1535,7 @@ def test_prepare_construct_params(defaults):
     expected_params = {
         "sat_per_vbyte": 1023 / 1024,
         "max_fee": 666,
-        "mutlisig_pubkey": defaults["pubkey"][defaults["addresses"][0]],
+        "multisig_pubkey": defaults["pubkey"][defaults["addresses"][0]],
         "verbose": True,
         "regular_dust_size": 357,
         "multisig_dust_size": 1200,

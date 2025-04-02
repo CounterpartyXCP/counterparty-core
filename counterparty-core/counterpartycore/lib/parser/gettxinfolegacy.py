@@ -130,11 +130,8 @@ def get_tx_info_legacy(decoded_tx, block_index):
 
     # Collect all possible source addresses; ignore coinbase transactions and anything but the simplest Pay‐to‐PubkeyHash inputs.
     source_list = []
-    decoded_tx = backend.bitcoind.complete_vins_info(
-        decoded_tx, no_retry=CurrentState().parsing_mempool()
-    )
     for vin in decoded_tx["vin"]:  # Loop through input transactions.
-        vout_value, script_pubkey, _is_segwit = backend.bitcoind.get_vin_info(
+        vout_value, script_pubkey, _is_segwit = backend.bitcoind.get_vin_info_legacy(
             vin, no_retry=CurrentState().parsing_mempool()
         )
         fee += vout_value

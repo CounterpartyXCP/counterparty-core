@@ -6,6 +6,7 @@ import bitcoin as bitcoinlib
 import pytest
 from counterparty_rs import utils as pycoin_rs_utils
 from counterpartycore.lib import config
+from counterpartycore.lib.api import composer
 from counterpartycore.lib.parser import deserialize, gettxinfo
 from counterpartycore.lib.utils import helpers
 
@@ -36,6 +37,7 @@ def create_block_hex(transactions_hex):
 
 
 def test_deserialize():
+    deserialize.Deserializer.reset_instance()
     original_network_name = config.NETWORK_NAME
     config.NETWORK_NAME = "testnet3"
 
@@ -152,6 +154,7 @@ def test_deserialize_mpma(blockchain_mock, monkeypatch):
     original_address_version = config.ADDRESSVERSION
     config.NETWORK_NAME = "mainnet"
     config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+    config.BACKEND_SSL = True
 
     blockchain_mock.source_by_txid[
         "094246c10d8b95f39662b92971588a205db77d89ffe0f21816733019a703cff9"
@@ -172,6 +175,7 @@ def test_deserialize_mpma(blockchain_mock, monkeypatch):
 
     config.NETWORK_NAME = original_network_name
     config.ADDRESSVERSION = original_address_version
+    config.BACKEND_SSL = False
     helpers.setup_bitcoinutils("regtest")
 
 
@@ -185,3 +189,28 @@ def test_deserialize_error():
             parse_vouts=True,
             block_index=900000,
         )
+
+
+def test_desrialize_reveal_tx():
+    deserialize.Deserializer.reset_instance()
+
+    for data in [
+        b"Hello, World!",
+        b"a" * 1024 * 400,
+    ]:
+        reveal_tx = composer.get_dummy_signed_reveal_tx(data)
+        reveal_tx_hex = reveal_tx.serialize()
+        decoded_tx = deserialize_rust(reveal_tx_hex)
+        assert decoded_tx["parsed_vouts"] == (
+            [],
+            0,
+            0,
+            data,
+            [(None, None)],
+            True,
+        )
+
+    reveal_tx = composer.get_dummy_signed_reveal_tx(b"")
+    reveal_tx_hex = reveal_tx.serialize()
+    decoded_tx = deserialize_rust(reveal_tx_hex)
+    assert decoded_tx["parsed_vouts"] == ([], 0, 0, b"", [(None, None)], False)

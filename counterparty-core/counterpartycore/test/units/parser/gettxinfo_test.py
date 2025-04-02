@@ -4,6 +4,7 @@ import struct
 import pytest
 from arc4 import ARC4
 from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger import markets
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.parser import deserialize, gettxinfo
@@ -15,6 +16,7 @@ from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_get_tx_info(ledger_db, current_block_index, blockchain_mock):
+    deserialize.Deserializer.reset_instance()
     original_prefix = config.PREFIX
     config.PREFIX = b"TESTXXXX"
     blockchain_mock.source_by_txid[
@@ -809,12 +811,7 @@ def test_get_transaction_sources_checksig(monkeypatch, monkeymodule):
         op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
         return (10000, binascii.unhexlify(op_checksig_script), False)
 
-    def get_vins_info_mock_2(*args, **lwargs):
-        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
-        return [(10000, binascii.unhexlify(op_checksig_script), False)]
-
     monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
-    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vins_info", get_vins_info_mock_2)
     assert gettxinfo.get_transaction_sources({"vin": [{"hash": "abcdef"}]}) == (
         "1FwkKA9cqpNRFTpVaokdRjT9Xamvebrwcu",
         10000,
@@ -842,12 +839,7 @@ def test_get_transaction_sources_multisig(monkeypatch):
         op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
         return (10000, binascii.unhexlify(op_checksig_script), False)
 
-    def get_vins_info_mock_2(*args, **lwargs):
-        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
-        return [(10000, binascii.unhexlify(op_checksig_script), False)]
-
     monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
-    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vins_info", get_vins_info_mock_2)
 
     data = ARC4(binascii.unhexlify("abcdef")).encrypt(b"0" + config.PREFIX + b"pubkeyhash")
     monkeypatch.setattr(
@@ -870,12 +862,7 @@ def test_get_transaction_sources_unknown_type(monkeypatch):
         op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
         return (10000, binascii.unhexlify(op_checksig_script), False)
 
-    def get_vins_info_mock_2(*args, **lwargs):
-        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
-        return [(10000, binascii.unhexlify(op_checksig_script), False)] * len(args[0])
-
     monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
-    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vins_info", get_vins_info_mock_2)
 
     monkeypatch.setattr(
         "counterpartycore.lib.utils.script.script_to_asm",
@@ -988,12 +975,7 @@ def test_get_transaction_source_from_p2sh(monkeypatch):
         op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
         return (10000, binascii.unhexlify(op_checksig_script), False)
 
-    def get_vins_info_mock_2(*args, **lwargs):
-        op_checksig_script = "76a914a3ec60fb522fdf62c90eec1981577813d8f8a58a88ac"
-        return [(10000, binascii.unhexlify(op_checksig_script), False)]
-
     monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vin_info", get_vin_info_mock_2)
-    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_vins_info", get_vins_info_mock_2)
 
     with ProtocolChangesDisabled(["prevout_segwit_fix"]):
         assert gettxinfo.get_transaction_source_from_p2sh(
@@ -1097,7 +1079,14 @@ def test_get_tx_info_new_4(ledger_db, current_block_index, defaults, monkeypatch
                 ledger_db,
                 {
                     "coinbase": False,
-                    "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+                    "parsed_vouts": (
+                        destinations,
+                        btc_amount,
+                        fee,
+                        data,
+                        potential_dispensers,
+                        False,
+                    ),
                 },
                 current_block_index,
             )
@@ -1108,7 +1097,14 @@ def test_get_tx_info_new_4(ledger_db, current_block_index, defaults, monkeypatch
                 ledger_db,
                 {
                     "coinbase": False,
-                    "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+                    "parsed_vouts": (
+                        destinations,
+                        btc_amount,
+                        fee,
+                        data,
+                        potential_dispensers,
+                        False,
+                    ),
                 },
                 current_block_index,
             )
@@ -1119,7 +1115,14 @@ def test_get_tx_info_new_4(ledger_db, current_block_index, defaults, monkeypatch
                 ledger_db,
                 {
                     "coinbase": False,
-                    "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+                    "parsed_vouts": (
+                        destinations,
+                        btc_amount,
+                        fee,
+                        data,
+                        potential_dispensers,
+                        False,
+                    ),
                 },
                 current_block_index,
                 composing=True,
@@ -1130,7 +1133,14 @@ def test_get_tx_info_new_4(ledger_db, current_block_index, defaults, monkeypatch
             ledger_db,
             {
                 "coinbase": False,
-                "parsed_vouts": ([config.UNSPENDABLE], btc_amount, fee, data, potential_dispensers),
+                "parsed_vouts": (
+                    [config.UNSPENDABLE],
+                    btc_amount,
+                    fee,
+                    data,
+                    potential_dispensers,
+                    False,
+                ),
             },
             current_block_index,
             composing=True,
@@ -1149,7 +1159,7 @@ def test_get_tx_info_new_4(ledger_db, current_block_index, defaults, monkeypatch
             ledger_db,
             {
                 "coinbase": False,
-                "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+                "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers, False),
             },
             current_block_index,
         ) == (
@@ -1178,7 +1188,7 @@ def test_get_tx_info_new_4(ledger_db, current_block_index, defaults, monkeypatch
             ledger_db,
             {
                 "coinbase": False,
-                "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers),
+                "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers, False),
             },
             current_block_index,
         ) == (defaults["addresses"][1], defaults["addresses"][0], 100, 10000, b"z", [])
@@ -1207,7 +1217,7 @@ def test_get_tx_info_new_3b(ledger_db, current_block_index, defaults, monkeypatc
         ledger_db,
         {
             "coinbase": False,
-            "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers),
+            "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers, False),
         },
         current_block_index,
     ) == (
@@ -1246,7 +1256,7 @@ def test_get_tx_info_4(ledger_db, defaults, monkeypatch):
         ledger_db,
         {
             "coinbase": False,
-            "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers),
+            "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers, False),
         },
         block_index=None,
     ) == (
@@ -1266,7 +1276,7 @@ def test_get_tx_info_4(ledger_db, defaults, monkeypatch):
             ledger_db,
             {
                 "coinbase": False,
-                "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers),
+                "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers, False),
             },
             block_index=None,
         ) == (
@@ -1287,7 +1297,14 @@ def test_get_tx_info_4(ledger_db, defaults, monkeypatch):
                 ledger_db,
                 {
                     "coinbase": False,
-                    "parsed_vouts": (destinations, btc_amount, fee, b"z", potential_dispensers),
+                    "parsed_vouts": (
+                        destinations,
+                        btc_amount,
+                        fee,
+                        b"z",
+                        potential_dispensers,
+                        False,
+                    ),
                 },
                 block_index=None,
             ) == (
@@ -1530,7 +1547,7 @@ def test_get_tx_info_5(ledger_db, defaults, monkeypatch, current_block_index):
             ledger_db,
             {
                 "coinbase": False,
-                "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+                "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers, False),
                 "tx_id": "tx_id",
                 "tx_hash": "tx_hash",
                 "vin": [{"hash": txid, "n": vout}],
@@ -1539,6 +1556,32 @@ def test_get_tx_info_5(ledger_db, defaults, monkeypatch, current_block_index):
             current_block_index,
         )
         assert result == (b"", None, None, None, None, None, [utxo, "", "1", "0"])
+
+
+def test_get_tx_info_taproot(ledger_db, current_block_index, blockchain_mock):
+    data = b"Hello world"
+    reveal_tx = composer.get_dummy_signed_reveal_tx(data)
+    reveal_tx_hex = reveal_tx.serialize()
+    decoded_tx = deserialize.deserialize_tx(
+        reveal_tx_hex,
+        parse_vouts=True,
+        block_index=current_block_index,
+    )
+
+    assert gettxinfo.get_tx_info(
+        ledger_db,
+        decoded_tx,
+        current_block_index,
+        True,
+    ) == (
+        "17askaM3RknEAw8AFwdiP9ffSNtZyfzFBw",
+        "",
+        0,
+        1000000000,
+        b"Hello world",
+        [],
+        ["", "", "1", "0"],
+    )
 
 
 def test_get_tx_info_new_p2sh_disabled(ledger_db, current_block_index, defaults, monkeypatch):
@@ -1561,7 +1604,7 @@ def test_get_tx_info_new_p2sh_disabled(ledger_db, current_block_index, defaults,
         {
             "tx_id": "tx_id",
             "coinbase": False,
-            "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers),
+            "parsed_vouts": (destinations, btc_amount, fee, data, potential_dispensers, False),
         },
         current_block_index,
     ) == (source, destinations[0], btc_amount, btc_amount, data, [])

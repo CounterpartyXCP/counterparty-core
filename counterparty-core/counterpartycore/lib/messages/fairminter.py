@@ -294,7 +294,7 @@ def unpack(message, return_dict=False):
     try:
         if protocol.enabled("fairminter_v2"):
             decoded_data = helpers.decode_data(message)
-            description = decoded_data.pop().decode("utf-8")
+            description = helpers.bytes_to_string(decoded_data.pop())
             (
                 asset_id,
                 asset_parent_id,
@@ -439,7 +439,11 @@ def parse(db, tx, message):
         description,
     )
 
-    if soft_cap > 0 and soft_cap_deadline_block <= tx["block_index"]:
+    if (
+        soft_cap > 0
+        and soft_cap_deadline_block <= tx["block_index"]
+        and tx["block_index"] != config.MEMPOOL_BLOCK_INDEX
+    ):
         problems.append("Soft cap deadline block must be > start block.")
 
     # if problems, insert into fairminters table with status invalid and return

@@ -154,6 +154,13 @@ def bytes_to_int(bytes_in: bytes) -> int:
     return int.from_bytes(bytes_in, "little")
 
 
+def bytes_to_string(bytes_in: bytes) -> str:
+    try:
+        return bytes_in.decode("utf-8")
+    except UnicodeDecodeError:
+        return binascii.hexlify(bytes_in).decode("utf-8")
+
+
 def varint(number):
     """Pack `number` into varint bytes"""
     buf = b""

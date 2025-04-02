@@ -287,6 +287,8 @@ def get_transaction_name(rule):
 
 def query_params():
     params = request.args.to_dict(flat=False)
+    if request.method == "POST":
+        params = params | request.form.to_dict(flat=False)
     return {key: value[0] if len(value) == 1 else value for key, value in params.items()}
 
 
@@ -463,7 +465,7 @@ def init_flask_app():
             methods = ["OPTIONS", "GET"]
             if path == "/v2/bitcoin/transactions":
                 methods = ["OPTIONS", "POST"]
-            if not path.startswith("/v2/"):
+            if not path.startswith("/v2/") or "/compose/" in path:
                 methods = ["OPTIONS", "GET", "POST"]
             app.add_url_rule(
                 path,
