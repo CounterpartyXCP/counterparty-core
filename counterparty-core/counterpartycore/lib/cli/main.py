@@ -402,6 +402,14 @@ CONFIG_ARGS = [
             "help": "Enable cProfile profiling for catchup; dumps output to a file in the cache dir",
         },
     ],
+    [
+        ("--enable-all-protocol-changes",),
+        {
+            "action": "store_true",
+            "default": False,
+            "help": "Enable all protocol changes. For testing only.",
+        },
+    ],
 ]
 
 

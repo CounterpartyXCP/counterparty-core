@@ -45,6 +45,7 @@ counterparty-server start
 - Fix event name: `BET_MATCH_RESOLUTON` => `BET_MATCH_RESOLUTION`
 - Fix `is_segwit` value in `get_vin_info`
 - Fix `apsw.ThreadingViolationError` with `APSWConnectionPool`
+- Fix `ledger_state` field in API root endpoint
 
 ## Codebase
 
@@ -73,6 +74,7 @@ counterparty-server start
 - Adds support for the `SLACK_HOOK` environment variable containing a webhook URL called after a rebuild
 - The `--profile` flag now generates a report every 15 minutes instead of just one at shutdown
 - Add `URGENT` log level displayed even with `--quiet` flag
+- Add `--enable-all-protocol-changes` flag for testing purposes
 
 # Credits
 

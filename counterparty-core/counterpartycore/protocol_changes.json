@@ -1005,32 +1005,32 @@
         "minimum_version_major": 11,
         "minimum_version_minor": 0,
         "minimum_version_revision": 0,
-        "block_index": 900000,
-        "testnet3_block_index": 5000000,
-        "testnet4_block_index": 80000
+        "block_index": 910000,
+        "testnet3_block_index": 4147000,
+        "testnet4_block_index": 76000
     },
     "fairminter_v2": {
         "minimum_version_major": 11,
         "minimum_version_minor": 0,
         "minimum_version_revision": 0,
-        "block_index": 900000,
-        "testnet3_block_index": 5000000,
-        "testnet4_block_index": 80000
+        "block_index": 910000,
+        "testnet3_block_index": 4147000,
+        "testnet4_block_index": 76000
     },
     "p2sh_disabled": {
         "minimum_version_major": 11,
         "minimum_version_minor": 0,
         "minimum_version_revision": 0,
-        "block_index": 900000,
-        "testnet3_block_index": 5000000,
-        "testnet4_block_index": 80000
+        "block_index": 910000,
+        "testnet3_block_index": 4147000,
+        "testnet4_block_index": 76000
     },
     "fix_is_segwit": {
         "minimum_version_major": 11,
         "minimum_version_minor": 0,
         "minimum_version_revision": 0,
-        "block_index": 900000,
-        "testnet3_block_index": 5000000,
-        "testnet4_block_index": 80000
+        "block_index": 910000,
+        "testnet3_block_index": 4147000,
+        "testnet4_block_index": 76000
     }
 }

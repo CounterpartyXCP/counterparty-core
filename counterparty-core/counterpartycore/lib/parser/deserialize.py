@@ -23,6 +23,7 @@ class Deserializer(metaclass=SingletonMeta):
                 "only_write_in_reorg_window": True,
                 "network": config.NETWORK_NAME,
                 "prefix": config.PREFIX,
+                "enable_all_protocol_changes": config.ENABLE_ALL_PROTOCOL_CHANGES,
             }
         )
 

@@ -14,6 +14,10 @@ with open(CURR_DIR + "/../../protocol_changes.json", encoding="utf-8") as protoc
 
 def enabled(change_name, block_index=None):
     """Return True if protocol change is enabled."""
+
+    if config.ENABLE_ALL_PROTOCOL_CHANGES:
+        return True
+
     if config.REGTEST:
         regtest_protocole_file = os.path.join(
             os.path.dirname(config.DATABASE), "regtest_disabled_changes.json"

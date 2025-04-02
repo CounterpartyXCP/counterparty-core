@@ -41,4 +41,4 @@ PyYAML==6.0.2
 multiprocessing-logging==0.3.4
 locust==2.32.8
 pygit2==1.17.0
-counterparty-rs==11.0.0-alpha.1
+counterparty-rs==11.0.0-rc.1
