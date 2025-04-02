@@ -66,6 +66,7 @@ counterparty-server start
 - In Compose Fairminter, rename `price` to `lot_price` and `quantity_by_price` to `lot_size`
 - In Composer Fairmint, ensure that `quantity` is a multiple of `lot_size`
 - Ensure that Fairminter's `hard_cap` is greater than the sum of `premint_quantity` and `soft_cap`
+- The POST URL encoded parameters are now accepted to compose a transaction
 
 ## CLI
 
