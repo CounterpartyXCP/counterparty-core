@@ -93,8 +93,16 @@ class RegtestNode:
         self.electrs_process_2_pid = None
         self.second_node_started = False
 
-    def api_call(self, url):
-        result = requests.get(f"http://localhost:24000/v2/{url}", timeout=20)
+    def api_call(self, url, data=None):
+        if data is not None:
+            result = requests.post(
+                f"http://localhost:24000/v2/{url}",
+                data=data,
+                timeout=20,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+        else:
+            result = requests.get(f"http://localhost:24000/v2/{url}", timeout=20)
         return result.json()
 
     def get_mempool_event_count(self):
@@ -193,7 +201,11 @@ class RegtestNode:
 
     def compose(self, source, tx_name, params):
         query_string = []
+        data = None
         for key, value in params.items():
+            if key == "description":
+                data = {key: value}
+                continue
             if not isinstance(value, list):
                 query_string.append(urllib.parse.urlencode({key: value}))
             else:
@@ -206,7 +218,7 @@ class RegtestNode:
         else:
             compose_url = f"addresses/{source}/compose/{tx_name}?{query_string}"
         print("Compose URL:", compose_url)
-        return self.api_call(compose_url)
+        return self.api_call(compose_url, data=data)
 
     def send_transaction(
         self,

@@ -561,7 +561,7 @@ def check_fairminter2(node, source_private_key, utxo):
             "asset": "A95428959745315389",
             "price": 1,
             "hard_cap": 100 * 10**8,
-            "description": "a" * 255000,
+            "description": "a" * 400000,
             "premint_quantity": 100,
             "start_block": last_block + 1,
             "soft_cap": 90 * 10**8,
@@ -571,7 +571,6 @@ def check_fairminter2(node, source_private_key, utxo):
 
     source_address = source_private_key.get_public_key().get_taproot_address().to_string()
     result = node.api_call(f"addresses/{source_address}/fairminters")
-    print(result)
     assert len(result["result"]) == 1
     assert result["result"][0]["asset"] == "A95428959745315389"
 

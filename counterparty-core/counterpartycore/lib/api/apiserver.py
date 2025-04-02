@@ -299,6 +299,9 @@ def handle_route(**kwargs):
         start_time = time.time()
         query_args = query_params() | kwargs
 
+        if request.method == "POST":
+            query_args = query_args | request.form.to_dict()
+
         logger.trace(f"API Request - {request.remote_addr} {request.method} {request.url}")
         logger.debug(get_log_prefix(query_args))
 
@@ -463,7 +466,7 @@ def init_flask_app():
             methods = ["OPTIONS", "GET"]
             if path == "/v2/bitcoin/transactions":
                 methods = ["OPTIONS", "POST"]
-            if not path.startswith("/v2/"):
+            if not path.startswith("/v2/") or "/compose/" in path:
                 methods = ["OPTIONS", "GET", "POST"]
             app.add_url_rule(
                 path,
