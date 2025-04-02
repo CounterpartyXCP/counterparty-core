@@ -45,6 +45,7 @@ counterparty-server start
 - Fix event name: `BET_MATCH_RESOLUTON` => `BET_MATCH_RESOLUTION`
 - Fix `is_segwit` value in `get_vin_info`
 - Fix `apsw.ThreadingViolationError` with `APSWConnectionPool`
+- Fix `ledger_state` field in API root endpoint
 
 ## Codebase
 
