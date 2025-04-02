@@ -429,6 +429,67 @@ def test_compose(ledger_db, defaults):
         )
 
 
+def test_compose_long_description(ledger_db, defaults):
+    result = (
+        defaults["addresses"][1],
+        [],
+        b"Z\x06_\xeb\xcd\xfd\xc0\x18\x00\x00\x01\x01\x01\n\x00\x02\xe8\x03\x01d\x03\x005\x0c\x03\xa0\xbb\r\x012\x03P\xf8\x0c\x03\x80\x96\x98\x00\x00\x01\x01\x01\x01\x0f\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa",
+    )
+    assert (
+        fairminter.compose(
+            ledger_db,
+            defaults["addresses"][1],  # source
+            "FAIRMINTED",  # asset
+            "",  # asset_parent,
+            0,  # price,
+            1,  # quantity_by_price,
+            10,  # max_mint_per_tx,
+            0,  # max_mint_per_address,
+            1000,  # hard_cap,
+            100,  # premint_quantity,
+            800000,  # start_block,
+            900000,  # end_block,
+            50,  # soft_cap,
+            850000,  # soft_cap_deadline_block,
+            0.1,  # minted_asset_commission,
+            False,  # burn_payment,
+            False,  # lock_description,
+            True,  # lock_quantity,
+            True,  # divisible,
+            "a" * 30,  # description
+        )
+        == result
+    )
+
+    data = result[2][1:]
+    print("DATA", data)
+
+    upacked = (
+        "FAIRMINTED",  # asset
+        "",  # asset_parent,
+        0,  # price,
+        1,  # quantity_by_price,
+        10,  # max_mint_per_tx,
+        0,  # max_mint_per_address,
+        1000,  # hard_cap,
+        100,  # premint_quantity,
+        800000,  # start_block,
+        900000,  # end_block,
+        50,  # soft_cap,
+        850000,  # soft_cap_deadline_block,
+        Decimal("0.1"),  # minted_asset_commission,
+        False,  # burn_payment,
+        False,  # lock_description,
+        True,  # lock_quantity,
+        True,  # divisible,
+        "a" * 30,  # description
+    )
+
+    result = fairminter.unpack(data)
+    print(result)
+    assert result == upacked
+
+
 def test_unpack():
     assert fairminter.unpack(
         b"\x06_\xeb\xcd\xfd\xc0\x18\x00\x00\x01\x01\x01\n\x00\x02\xe8\x03\x01d\x03\x005\x0c\x03\xa0\xbb\r\x012\x03P\xf8\x0c\x03\x80\x96\x98\x00\x00\x01\x01\x01\x01\x13une asset super top",

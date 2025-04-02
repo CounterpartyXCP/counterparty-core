@@ -294,7 +294,7 @@ def unpack(message, return_dict=False):
     try:
         if protocol.enabled("fairminter_v2"):
             decoded_data = helpers.decode_data(message)
-            description = decoded_data.pop().decode("utf-8")
+            description = helpers.bytes_to_string(decoded_data.pop())
             (
                 asset_id,
                 asset_parent_id,
