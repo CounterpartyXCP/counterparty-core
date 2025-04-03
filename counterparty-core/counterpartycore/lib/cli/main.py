@@ -105,6 +105,13 @@ CONFIG_ARGS = [
         {"default": "rpc", "help": "the password used to communicate with backend"},
     ],
     [
+        ("--backend-cookie-file",),
+        {
+            "default": os.path.expanduser("~/.bitcoin/.cookie"),
+            "help": "the cookie file used to communicate with backend",
+        },
+    ],
+    [
         ("--backend-ssl",),
         {
             "action": "store_true",

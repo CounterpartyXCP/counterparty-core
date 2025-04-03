@@ -43,6 +43,7 @@ counterparty-server start
 
 - New Docker image based on Alpine Linux and using multi stage building 
 - Cleaner error on unknown CLI argument
+- Add `--backend-cookie-file` flag to connect to Bitcoin Core with cookie
 
 # Credits
 
