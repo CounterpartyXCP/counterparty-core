@@ -51,8 +51,13 @@ RUN CURRENT_COMMIT=$(python3 -c "from counterpartycore.lib.utils import helpers;
 # Runtime stage
 FROM alpine:3.18
 
-# Install only runtime dependencies
-RUN apk add --no-cache python3 leveldb libstdc++
+# Install runtime dependencies and debugging utilities
+RUN apk add --no-cache python3 leveldb libstdc++ \
+    sqlite \
+    httpie \
+    busybox-extras \
+    netcat-openbsd \
+    htop
 
 # Copy virtual environment from builder stage
 COPY --from=builder /venv /venv
