@@ -534,8 +534,11 @@ def main():
     # Post installation tasks
     server_configfile = setup.generate_server_config_file(CONFIG_ARGS)
 
-    parser = arg_parser()
-    args = parser.parse_args()
+    try:
+        parser = arg_parser()
+        args = parser.parse_args()
+    except argparse.ArgumentError as e:
+        parser.error(e.message)
 
     # Help message
     if args.help:

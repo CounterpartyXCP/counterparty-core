@@ -42,6 +42,7 @@ counterparty-server start
 ## CLI
 
 - New Docker image based on Alpine Linux and using multi stage building 
+- Cleaner error on unknown CLI argument
 
 # Credits
 
