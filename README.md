@@ -45,6 +45,13 @@
         <img alt="GitHub Release Date" src="https://img.shields.io/github/release-date/CounterpartyXCP/counterparty-core">
     </td>
 </tr>
+<tr>
+    <td>Other</td>
+    <td>
+        <img alt="GitHub License" src="https://img.shields.io/github/license/CounterpartyXCP/counterparty-core">
+        <img alt="Python Versions" src="https://img.shields.io/badge/python-3.10_%7C_3.11_%7C_3.12_%7C_3.13-green">
+    </td>
+</tr>
 </table>
 </div>
 
