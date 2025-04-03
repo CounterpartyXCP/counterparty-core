@@ -7,7 +7,7 @@ UNIT = 100000000  # The same across assets.
 
 
 # Semantic Version
-__version__ = "11.0.0-alpha.1"  # for hatch
+__version__ = "11.0.0-rc.1"  # for hatch
 VERSION_STRING = __version__
 version = VERSION_STRING.split("-", maxsplit=1)[0].split(".")
 VERSION_MAJOR = int(version[0])
@@ -29,7 +29,7 @@ UPGRADE_ACTIONS = {
         "10.8.0": [("rollback", 871780)],
         "10.9.0-rc.1": [("rollback", 871780)],
         "10.9.0": [("rollback", 871780)],
-        "11.0.0-alpha.1": [("reparse", 0)],
+        "11.0.0-rc.1": [("reparse", 0)],
     },
     "testnet3": {
         "10.3.0": [("reparse", 0)],
@@ -40,11 +40,11 @@ UPGRADE_ACTIONS = {
         "10.9.0-rc.1": [("rollback", 3522632)],
         "10.9.0": [("rollback", 3522632)],
         "10.10.0": [("rollback", 3522632)],
-        "11.0.0-alpha.1": [("reparse", 0)],
+        "11.0.0-rc.1": [("reparse", 0)],
     },
     "testnet4": {
         "10.10.0": [("rollback", 64492)],
-        "11.0.0-alpha.1": [("reparse", 0)],
+        "11.0.0-rc.1": [("reparse", 0)],
     },
 }
 
@@ -158,6 +158,7 @@ BURN_END_REGTEST = 150000000
 # NOTE: If the DUST_SIZE constants are changed, they MUST also be changed in counterblockd/lib/config.py as well
 DEFAULT_REGULAR_DUST_SIZE = 546
 DEFAULT_MULTISIG_DUST_SIZE = 1000  # OMFG: We been overpaying by 10x for years (7800!=780) <https://bitcointalk.org/index.php?topic=528023.msg7469941#msg7469941>
+DEFAULT_SEGWIT_DUST_SIZE = 330
 DEFAULT_OP_RETURN_VALUE = 0
 DEFAULT_FEE_PER_KB_ESTIMATE_SMART = 1024
 DEFAULT_FEE_PER_KB = 25000  # sane/low default, also used as minimum when estimated fee is used
@@ -257,3 +258,4 @@ STATE_DB_MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "api", "migrations")
 PROFILE_INTERVAL_MINUTES = 15
 
 CURRENT_COMMIT = "N/A"
+ENABLE_ALL_PROTOCOL_CHANGES = False

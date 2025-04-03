@@ -229,16 +229,15 @@ def get_transaction_sources(decoded_tx):
     sources = []
     outputs_value = 0
 
-    decoded_tx = backend.bitcoind.complete_vins_info(
-        decoded_tx, no_retry=CurrentState().parsing_mempool()
-    )
-
     for vin in decoded_tx["vin"]:  # Loop through inputs.
         vout_value, script_pubkey, _is_segwit = backend.bitcoind.get_vin_info(
             vin, no_retry=CurrentState().parsing_mempool()
         )
 
         outputs_value += vout_value
+
+        if protocol.enabled("first_input_is_source") and len(sources) > 0:
+            continue
 
         asm = script.script_to_asm(script_pubkey)
 
@@ -276,10 +275,6 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit):
     p2sh_encoding_source = None
     data = b""
     outputs_value = 0
-
-    decoded_tx = backend.bitcoind.complete_vins_info(
-        decoded_tx, no_retry=CurrentState().parsing_mempool()
-    )
 
     for vin in decoded_tx["vin"]:
         vout_value, _script_pubkey, is_segwit = backend.bitcoind.get_vin_info(
@@ -366,7 +361,9 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     if decoded_tx["parsed_vouts"] == "DecodeError":
         raise DecodeError("unrecognised output type")
 
-    destinations, btc_amount, fee, data, potential_dispensers = decoded_tx["parsed_vouts"]
+    destinations, btc_amount, fee, data, potential_dispensers, _is_reveal_tx = decoded_tx[
+        "parsed_vouts"
+    ]
 
     # source can be determined by parsing the p2sh_data transaction
     #   or from the first spent output

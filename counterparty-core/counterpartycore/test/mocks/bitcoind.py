@@ -53,7 +53,10 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
         ]
 
     def get_vin_info(self, vin):
-        source = self.source_by_txid[vin["hash"]]
+        if vin["hash"] == "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff":
+            source = self.source_by_txid[list(self.source_by_txid.keys())[0]]
+        else:
+            source = self.source_by_txid[vin["hash"]]
         value = int(10 * config.UNIT)
         script_pub_key = composer.address_to_script_pub_key(
             source, network=config.NETWORK_NAME
@@ -139,13 +142,6 @@ def list_unspent(source, allow_unconfirmed_inputs=True):
     return BlockchainMock().list_unspent(source, allow_unconfirmed_inputs)
 
 
-def get_vins_info(vins, no_retry=False):
-    try:
-        return [BlockchainMock().get_vin_info(vin) for vin in vins]
-    except KeyError as e:
-        raise exceptions.DecodeError("vin not found") from e
-
-
 def get_vin_info(vin, no_retry=False):
     try:
         return BlockchainMock().get_vin_info(vin)
@@ -216,7 +212,6 @@ def monkeymodule():
 
 original_is_valid_der = parser.gettxinfo.is_valid_der
 original_get_vin_info = backend.bitcoind.get_vin_info
-original_get_vins_info = backend.bitcoind.get_vins_info
 
 
 @pytest.fixture(scope="session")
@@ -226,7 +221,6 @@ def bitcoind_mock(monkeymodule):
     backend_module = "counterpartycore.lib.backend"
     monkeymodule.setattr(f"{bitcoind_module}.list_unspent", list_unspent)
     monkeymodule.setattr(f"{bitcoind_module}.satoshis_per_vbyte", satoshis_per_vbyte)
-    monkeymodule.setattr(f"{bitcoind_module}.get_vins_info", get_vins_info)
     monkeymodule.setattr(f"{bitcoind_module}.get_vin_info", get_vin_info)
     monkeymodule.setattr(f"{bitcoind_module}.convert_to_psbt", lambda x: x)
     monkeymodule.setattr(

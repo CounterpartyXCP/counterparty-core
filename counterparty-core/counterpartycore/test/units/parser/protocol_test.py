@@ -14,3 +14,7 @@ def test_enabled():
 
     with ProtocolChangesDisabled(["numeric_asset_names"]):
         assert not protocol.enabled("numeric_asset_names")
+
+    config.ENABLE_ALL_PROTOCOL_CHANGES = True
+    assert protocol.enabled("barbaz")
+    config.ENABLE_ALL_PROTOCOL_CHANGES = False

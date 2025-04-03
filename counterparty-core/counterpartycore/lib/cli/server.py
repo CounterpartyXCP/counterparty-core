@@ -179,6 +179,7 @@ class CounterpartyServer(threading.Thread):
             return
 
         # Blockchain Watcher
+        rsfetcher.RSFetcher()
         logger.info("Watching for new blocks...")
         self.follower_daemon = follow.start_blockchain_watcher(self.db)
         self.follower_daemon.start()

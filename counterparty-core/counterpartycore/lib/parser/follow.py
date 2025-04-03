@@ -139,6 +139,7 @@ class BlockchainWatcher:
                 CurrentState().set_ledger_state(self.db, "Following")
             else:
                 blocks.parse_new_block(self.db, decoded_block)
+            CurrentState().set_ledger_state(self.db, "Following")
             if not config.NO_MEMPOOL:
                 mempool.clean_mempool(self.db)
             if not config.NO_TELEMETRY:

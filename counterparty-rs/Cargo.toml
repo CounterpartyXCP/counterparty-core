@@ -1,6 +1,6 @@
 [package]
 name = "counterparty-rs"
-version = "11.0.0-alpha.1"
+version = "11.0.0-rc.1"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -9,6 +9,7 @@ name = "counterparty_rs"
 crate-type = ["cdylib"]
 
 [dependencies]
+ring = "0.17.13"
 pyo3 = { version = "0.21.2", features = ["extension-module", "abi3-py37"] }
 bs58 = { version = "0.5.0", features = ["check"] }
 # secp256k1 = "0.25.0"
