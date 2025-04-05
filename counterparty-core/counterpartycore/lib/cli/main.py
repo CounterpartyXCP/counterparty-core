@@ -98,11 +98,17 @@ CONFIG_ARGS = [
     [("--backend-port",), {"type": int, "help": "the backend port to connect to"}],
     [
         ("--backend-user",),
-        {"default": "rpc", "help": "the username used to communicate with backend"},
+        {
+            "default": "rpc",
+            "help": "the username used to communicate with backend (DEPRECATED, use --backend-cookie-file)",
+        },
     ],
     [
         ("--backend-password",),
-        {"default": "rpc", "help": "the password used to communicate with backend"},
+        {
+            "default": "rpc",
+            "help": "the password used to communicate with backend (DEPRECATED, use --backend-cookie-file)",
+        },
     ],
     [
         ("--backend-cookie-file",),
