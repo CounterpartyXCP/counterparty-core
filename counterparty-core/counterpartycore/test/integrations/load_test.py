@@ -38,8 +38,8 @@ def test_load():
 
         print(env.stats.serialize_errors())
         assert env.stats.total.num_failures == 0
-        assert env.stats.total.avg_response_time < 2500  # ms
-        assert env.stats.total.get_response_time_percentile(0.95) < 3000  # ms
+        assert env.stats.total.avg_response_time < 1500  # ms
+        assert env.stats.total.get_response_time_percentile(0.95) < 2000  # ms
     finally:
         print(out.getvalue())
         server_process.terminate()
