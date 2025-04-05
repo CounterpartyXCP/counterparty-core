@@ -291,7 +291,7 @@ def initialise_config(
 
     # Construct backend URL.
     if backend_cookie_file is not None and os.path.exists(backend_cookie_file):
-        with open(backend_cookie_file, "r") as f:
+        with open(backend_cookie_file, "r", encoding="utf-8") as f:
             config.BACKEND_COOKIE = f.read().strip().split(":").pop()
 
         if config.BACKEND_COOKIE is not None:
