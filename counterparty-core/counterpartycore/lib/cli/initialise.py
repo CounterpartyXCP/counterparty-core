@@ -82,7 +82,7 @@ def initialise_log_config(
     config.LOG_EXCLUDE_FILTERS = log_exclude_filters
     config.LOG_INCLUDE_FILTERS = log_include_filters
 
-    config.CURRENT_COMMIT = helpers.get_current_commit_hash() or "N/A"
+    config.CURRENT_COMMIT = helpers.get_current_commit_hash() or config.CURRENT_COMMIT
 
 
 def initialise_config(
