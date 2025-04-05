@@ -98,11 +98,24 @@ CONFIG_ARGS = [
     [("--backend-port",), {"type": int, "help": "the backend port to connect to"}],
     [
         ("--backend-user",),
-        {"default": "rpc", "help": "the username used to communicate with backend"},
+        {
+            "default": "rpc",
+            "help": "the username used to communicate with backend (DEPRECATED, use --backend-cookie-file)",
+        },
     ],
     [
         ("--backend-password",),
-        {"default": "rpc", "help": "the password used to communicate with backend"},
+        {
+            "default": "rpc",
+            "help": "the password used to communicate with backend (DEPRECATED, use --backend-cookie-file)",
+        },
+    ],
+    [
+        ("--backend-cookie-file",),
+        {
+            "default": os.path.expanduser("~/.bitcoin/.cookie"),
+            "help": "the cookie file used to communicate with backend",
+        },
     ],
     [
         ("--backend-ssl",),
@@ -534,8 +547,11 @@ def main():
     # Post installation tasks
     server_configfile = setup.generate_server_config_file(CONFIG_ARGS)
 
-    parser = arg_parser()
-    args = parser.parse_args()
+    try:
+        parser = arg_parser()
+        args = parser.parse_args()
+    except argparse.ArgumentError as e:
+        parser.error(e.message)
 
     # Help message
     if args.help:

@@ -86,6 +86,7 @@ def rpc_call(payload, retry=0):
                 headers={"content-type": "application/json"},
                 verify=(not config.BACKEND_SSL_NO_VERIFY),
                 timeout=config.REQUESTS_TIMEOUT,
+                auth=("__cookie__", config.BACKEND_COOKIE) if config.BACKEND_COOKIE else None,
             )
 
             if response is None:  # noqa: E711
@@ -191,6 +192,7 @@ def safe_rpc_payload(payload):
             headers={"content-type": "application/json"},
             verify=(not config.BACKEND_SSL_NO_VERIFY),
             timeout=config.REQUESTS_TIMEOUT,
+            auth=("__cookie__", config.BACKEND_COOKIE) if config.BACKEND_COOKIE else None,
         )
         if response is None:
             raise exceptions.BitcoindRPCError(

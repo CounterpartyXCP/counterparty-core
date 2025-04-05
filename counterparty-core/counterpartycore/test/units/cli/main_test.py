@@ -1,3 +1,5 @@
+import os
+
 from counterpartycore.lib import cli
 
 
@@ -29,6 +31,7 @@ def test_argparser():
         "backend_port": None,
         "backend_user": "rpc",
         "backend_password": "rpc",
+        "backend_cookie_file": os.path.expanduser("~/.bitcoin/.cookie"),
         "backend_ssl": False,
         "backend_ssl_no_verify": False,
         "backend_poll_interval": 3.0,

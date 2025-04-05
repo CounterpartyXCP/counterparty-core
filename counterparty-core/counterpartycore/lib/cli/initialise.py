@@ -82,6 +82,8 @@ def initialise_log_config(
     config.LOG_EXCLUDE_FILTERS = log_exclude_filters
     config.LOG_INCLUDE_FILTERS = log_include_filters
 
+    config.CURRENT_COMMIT = helpers.get_current_commit_hash() or config.CURRENT_COMMIT
+
 
 def initialise_config(
     data_dir=None,
@@ -94,6 +96,7 @@ def initialise_config(
     backend_port=None,
     backend_user=None,
     backend_password=None,
+    backend_cookie_file=None,
     backend_ssl=False,
     backend_ssl_no_verify=False,
     backend_poll_interval=None,
@@ -287,15 +290,27 @@ def initialise_config(
         config.BACKEND_POLL_INTERVAL = 3.0
 
     # Construct backend URL.
-    config.BACKEND_URL = (
-        config.BACKEND_USER
-        + ":"
-        + config.BACKEND_PASSWORD
-        + "@"
-        + config.BACKEND_CONNECT
-        + ":"
-        + str(config.BACKEND_PORT)
-    )
+    if backend_cookie_file is not None and os.path.exists(backend_cookie_file):
+        with open(backend_cookie_file, "r", encoding="utf-8") as f:
+            config.BACKEND_COOKIE = f.read().strip().split(":").pop()
+
+        if config.BACKEND_COOKIE is not None:
+            config.BACKEND_USER = "__cookie__"
+            config.BACKEND_PASSWORD = config.BACKEND_COOKIE
+
+        config.BACKEND_URL = config.BACKEND_CONNECT + ":" + str(config.BACKEND_PORT)
+    else:
+        config.BACKEND_COOKIE = None
+        config.BACKEND_URL = (
+            config.BACKEND_USER
+            + ":"
+            + config.BACKEND_PASSWORD
+            + "@"
+            + config.BACKEND_CONNECT
+            + ":"
+            + str(config.BACKEND_PORT)
+        )
+
     if config.BACKEND_SSL:
         config.BACKEND_URL = "https://" + config.BACKEND_URL
     else:
@@ -517,6 +532,7 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "backend_port": args.backend_port,
         "backend_user": args.backend_user,
         "backend_password": args.backend_password,
+        "backend_cookie_file": args.backend_cookie_file,
         "backend_ssl": args.backend_ssl,
         "backend_ssl_no_verify": args.backend_ssl_no_verify,
         "backend_poll_interval": args.backend_poll_interval,
