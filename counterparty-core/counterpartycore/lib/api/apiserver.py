@@ -88,14 +88,11 @@ def api_root():
 
 
 def is_cachable(rule):
-    if config.DISABLE_API_CACHE:
+    if config.DISABLE_API_CACHE or request.method == "POST":
         return False
-    if "/compose/" in rule:
-        return False
-    if "/mempool/" in rule:
-        return False
-    if "healthz" in rule:
-        return False
+    for no_cachable in ["/compose/", "/mempool/", "healthz"]:
+        if no_cachable in rule:
+            return False
     return True
 
 
