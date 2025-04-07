@@ -64,7 +64,7 @@ pub struct AddressInfo {
     pub mnemonic: Option<String>,
     pub path: Option<String>,
     pub label: String,
-    pub address_type: String, // Ajout du type d'adresse (p2pkh, p2wpkh/bech32)
+    pub address_type: String, // Address type (p2pkh, p2wpkh/bech32)
 }
 
 // Main wallet structure
@@ -120,7 +120,7 @@ impl BitcoinWallet {
 
         // Initialize or load addresses
         let addresses = if wallet_file.exists() {
-            // Vérifier si le fichier de préfixe existe
+            // Check if prefix file exists
             let prefix_file = wallet_file.with_extension("prefix");
             if !prefix_file.exists() {
                 return Err(WalletError::BitcoinError(
@@ -128,17 +128,17 @@ impl BitcoinWallet {
                 ));
             }
 
-            // Lire le préfixe et les données chiffrées
+            // Read prefix and encrypted data
             let prefix = fs::read(&prefix_file)?;
             let mut encrypted_data = fs::read(&wallet_file)?;
 
-            // Créer un nouveau Cocoon et déchiffrer
+            // Create a new Cocoon and decrypt
             let cocoon = Cocoon::new(password.as_bytes());
             cocoon.decrypt(&mut encrypted_data, &prefix).map_err(|e| {
                 WalletError::CocoonError(format!("Failed to decrypt wallet: {:?}", e))
             })?;
 
-            // Convertir en chaîne UTF-8 et parser le JSON
+            // Convert to UTF-8 string and parse JSON
             let json_data = String::from_utf8(encrypted_data).map_err(|_| {
                 WalletError::BitcoinError("Invalid UTF-8 in wallet file".to_string())
             })?;
@@ -160,18 +160,18 @@ impl BitcoinWallet {
         let json_data = serde_json::to_string(&self.addresses)?;
         let mut cocoon = Cocoon::new(self.password.as_bytes());
 
-        // Convertir les données en vecteur mutable
+        // Convert data to mutable vector
         let mut data = json_data.into_bytes();
 
-        // Chiffrer les données en place et obtenir le préfixe
+        // Encrypt data in place and get the prefix
         let prefix = cocoon
             .encrypt(&mut data)
             .map_err(|e| WalletError::CocoonError(format!("Failed to encrypt wallet: {:?}", e)))?;
 
-        // Sauvegarder les données chiffrées
+        // Save encrypted data
         fs::write(&self.wallet_file, &data)?;
 
-        // Sauvegarder le préfixe dans un fichier séparé
+        // Save prefix in a separate file
         let prefix_file = self.wallet_file.with_extension("prefix");
         fs::write(&prefix_file, prefix)?;
 
@@ -204,7 +204,7 @@ impl BitcoinWallet {
         // Determine address type (bech32/p2wpkh by default)
         let addr_type = match address_type {
             Some("p2pkh") => "p2pkh",
-            _ => "bech32", // par défaut, on utilise bech32
+            _ => "bech32", // By default, we use bech32
         };
 
         // Generate keys based on provided parameters
@@ -221,15 +221,15 @@ impl BitcoinWallet {
                 .map_err(|e| WalletError::Bip39Error(format!("Invalid mnemonic: {}", e)))?;
 
             let seed = mnemonic.to_seed("");
-            // Utiliser le chemin de dérivation spécifique à l'adresse type
+            // Use the derivation path specific to the address type
             let derivation_path = match path {
                 Some(p) => p,
                 None => {
                     if addr_type == "bech32" {
-                        // BIP84 pour Bech32/SegWit natif
+                        // BIP84 for native Bech32/SegWit
                         "m/84'/0'/0'/0/0"
                     } else {
-                        // BIP44 pour P2PKH
+                        // BIP44 for P2PKH
                         "m/44'/0'/0'/0/0"
                     }
                 }
@@ -272,12 +272,12 @@ impl BitcoinWallet {
 
             let seed = mnemonic.to_seed("");
 
-            // Utiliser le chemin de dérivation approprié en fonction du type d'adresse
+            // Use the appropriate derivation path based on the address type
             let derivation_path = if addr_type == "bech32" {
-                // BIP84 pour Bech32/SegWit natif
+                // BIP84 for native Bech32/SegWit
                 "m/84'/0'/0'/0/0"
             } else {
-                // BIP44 pour P2PKH
+                // BIP44 for P2PKH
                 "m/44'/0'/0'/0/0"
             };
 
@@ -309,10 +309,10 @@ impl BitcoinWallet {
             )
         };
 
-        // Générer l'adresse Bitcoin selon le type d'adresse demandé
+        // Generate Bitcoin address according to requested address type
         let address = if addr_type == "bech32" {
-            // Créer une adresse Bech32 (P2WPKH)
-            // Créer un CompressedPublicKey directement à partir des données brutes
+            // Create a Bech32 address (P2WPKH)
+            // Create a CompressedPublicKey directly from raw data
             let compressed_pubkey =
                 CompressedPublicKey::from_slice(&pub_key.to_bytes()).map_err(|e| {
                     WalletError::BitcoinError(format!(
@@ -321,10 +321,10 @@ impl BitcoinWallet {
                     ))
                 })?;
 
-            // Remarque: p2wpkh ne renvoie plus un Result mais directement une Address
+            // Note: p2wpkh no longer returns a Result but directly an Address
             Address::p2wpkh(&compressed_pubkey, Network::Bitcoin)
         } else {
-            // Créer une adresse P2PKH traditionnelle
+            // Create a traditional P2PKH address
             Address::p2pkh(&pub_key, Network::Bitcoin)
         };
 
@@ -343,7 +343,7 @@ impl BitcoinWallet {
             mnemonic: final_mnemonic,
             path: final_path,
             label: final_label,
-            address_type: addr_type.to_string(), // Stocker le type d'adresse
+            address_type: addr_type.to_string(), // Store the address type
         };
 
         self.addresses.insert(address_str.clone(), address_info);
