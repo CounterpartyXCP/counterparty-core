@@ -653,89 +653,6 @@ impl BitcoinWallet {
             }
         }
 
-        // Handle P2PK inputs separately (if needed)
-        for (i, input) in psbt.inputs.iter_mut().enumerate() {
-            if signed_inputs[i] {
-                continue; // Skip already signed inputs
-            }
-
-            if let Some(witness_utxo) = &input.witness_utxo {
-                let script = &witness_utxo.script_pubkey;
-
-                // Check if it's a P2PK script
-                if let Some(pubkey_bytes) = self.extract_p2pk_pubkey(script) {
-                    if let Ok(pubkey) = PublicKey::from_slice(pubkey_bytes) {
-                        // Find matching private key
-                        for (_, info) in &self.addresses {
-                            let private_key = match PrivateKey::from_str(&info.private_key) {
-                                Ok(pk) => pk,
-                                Err(_) => continue,
-                            };
-
-                            let key_pubkey = PublicKey::from_private_key(&secp, &private_key);
-
-                            if key_pubkey == pubkey {
-                                // Found matching key for P2PK input
-                                let secret_key = match bitcoin::secp256k1::SecretKey::from_slice(
-                                    &private_key.inner[..],
-                                ) {
-                                    Ok(sk) => sk,
-                                    Err(_) => continue,
-                                };
-
-                                // Get sighash type
-                                let sighash_type = EcdsaSighashType::All;
-
-                                // Compute signature hash
-                                let sighash = sighash_cache
-                                    .legacy_signature_hash(i, script, sighash_type.to_u32())
-                                    .map_err(|e| {
-                                        WalletError::BitcoinError(format!(
-                                            "Failed to compute P2PK signature hash: {}",
-                                            e
-                                        ))
-                                    })?;
-
-                                // Create message from sighash
-                                let message =
-                                    Message::from_digest_slice(&sighash[..]).map_err(|e| {
-                                        WalletError::BitcoinError(format!(
-                                            "Failed to create message: {}",
-                                            e
-                                        ))
-                                    })?;
-
-                                // Sign message
-                                let signature = secp.sign_ecdsa(&message, &secret_key);
-
-                                // Serialize signature and add sighash type
-                                let mut sig_bytes = signature.serialize_der().to_vec();
-                                sig_bytes.push(sighash_type as u8);
-
-                                // Convert to PushBytesBuf
-                                let sig_push_bytes =
-                                    PushBytesBuf::try_from(sig_bytes).map_err(|e| {
-                                        WalletError::BitcoinError(format!(
-                                            "Failed to convert signature to PushBytesBuf: {:?}",
-                                            e
-                                        ))
-                                    })?;
-
-                                // Create P2PK scriptSig: <signature>
-                                let script_sig =
-                                    Builder::new().push_slice(&sig_push_bytes[..]).into_script();
-
-                                input.final_script_sig = Some(script_sig);
-
-                                signed_inputs[i] = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         // Check if any inputs were signed
         if !signed_inputs.iter().any(|&signed| signed) {
             return Err(WalletError::BitcoinError(
@@ -774,25 +691,5 @@ impl BitcoinWallet {
         let signed_tx_hex = hex::encode(signed_tx_bytes);
 
         Ok(signed_tx_hex)
-    }
-
-    /// Extract public key from P2PK script
-    fn extract_p2pk_pubkey<'a>(&self, script: &'a ScriptBuf) -> Option<&'a [u8]> {
-        use bitcoin::blockdata::opcodes::all;
-
-        let bytes = script.as_bytes();
-
-        // Check for P2PK format
-        if bytes.len() >= 2 && bytes[bytes.len() - 1] == all::OP_CHECKSIG.to_u8() {
-            if bytes[0] == 0x21 && bytes.len() == 35 {
-                // Compressed key (33 bytes)
-                return Some(&bytes[1..34]);
-            } else if bytes[0] == 0x41 && bytes.len() == 67 {
-                // Uncompressed key (65 bytes)
-                return Some(&bytes[1..66]);
-            }
-        }
-
-        None
     }
 }
