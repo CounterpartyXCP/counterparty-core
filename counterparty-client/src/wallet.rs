@@ -6,13 +6,8 @@ use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 
-use bip39::Mnemonic;
-use bitcoin::bip32::{DerivationPath, Xpriv};
-use bitcoin::key::CompressedPublicKey;
 use bitcoin::secp256k1::Secp256k1;
-use bitcoin::{Address, Network, PrivateKey, PublicKey};
 use cocoon::Cocoon;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
@@ -21,6 +16,7 @@ use serde_json::{self, json, Value};
 use thiserror::Error;
 
 use crate::signer;
+use crate::keys;
 
 // Error types that can occur in wallet operations
 #[derive(Error, Debug)]
@@ -199,126 +195,14 @@ impl BitcoinWallet {
         };
 
         // Generate keys based on provided parameters
-        let (secret_key, pub_key, final_mnemonic, final_path) = if let Some(pk_str) = private_key {
-            // Use provided private key
-            let pk = PrivateKey::from_str(pk_str)
-                .map_err(|e| WalletError::BitcoinError(format!("Invalid private key: {}", e)))?;
-
-            let public_key = PublicKey::from_private_key(&secp, &pk);
-            (pk, public_key, None, None)
-        } else if let Some(mnemonic_str) = mnemonic {
-            // Use provided mnemonic
-            let mnemonic = Mnemonic::parse_normalized(mnemonic_str)
-                .map_err(|e| WalletError::Bip39Error(format!("Invalid mnemonic: {}", e)))?;
-
-            let seed = mnemonic.to_seed("");
-            // Use the derivation path specific to the address type
-            let derivation_path = match path {
-                Some(p) => p,
-                None => {
-                    if addr_type == "bech32" {
-                        // BIP84 for native Bech32/SegWit
-                        "m/84'/0'/0'/0/0"
-                    } else {
-                        // BIP44 for P2PKH
-                        "m/44'/0'/0'/0/0"
-                    }
-                }
-            };
-
-            let path = DerivationPath::from_str(derivation_path).map_err(|e| {
-                WalletError::BitcoinError(format!("Invalid derivation path: {}", e))
-            })?;
-
-            let master_key = Xpriv::new_master(Network::Bitcoin, &seed).map_err(|e| {
-                WalletError::BitcoinError(format!("Failed to generate master key: {}", e))
-            })?;
-
-            let derived_key = master_key.derive_priv(&secp, &path).map_err(|e| {
-                WalletError::BitcoinError(format!("Failed to derive private key: {}", e))
-            })?;
-
-            let private_key = PrivateKey {
-                compressed: true,
-                network: Network::Bitcoin.into(),
-                inner: derived_key.to_priv().inner,
-            };
-
-            let public_key = PublicKey::from_private_key(&secp, &private_key);
-
-            (
-                private_key,
-                public_key,
-                Some(mnemonic_str.to_string()),
-                Some(derivation_path.to_string()),
-            )
-        } else {
-            // Generate new mnemonic and keys
-            let mut entropy = [0u8; 16];
-            thread_rng().fill(&mut entropy);
-
-            let mnemonic = Mnemonic::from_entropy(&entropy).map_err(|e| {
-                WalletError::Bip39Error(format!("Failed to generate mnemonic: {}", e))
-            })?;
-
-            let seed = mnemonic.to_seed("");
-
-            // Use the appropriate derivation path based on the address type
-            let derivation_path = if addr_type == "bech32" {
-                // BIP84 for native Bech32/SegWit
-                "m/84'/0'/0'/0/0"
-            } else {
-                // BIP44 for P2PKH
-                "m/44'/0'/0'/0/0"
-            };
-
-            let path = DerivationPath::from_str(derivation_path).map_err(|e| {
-                WalletError::BitcoinError(format!("Invalid derivation path: {}", e))
-            })?;
-
-            let master_key = Xpriv::new_master(Network::Bitcoin, &seed).map_err(|e| {
-                WalletError::BitcoinError(format!("Failed to generate master key: {}", e))
-            })?;
-
-            let derived_key = master_key.derive_priv(&secp, &path).map_err(|e| {
-                WalletError::BitcoinError(format!("Failed to derive private key: {}", e))
-            })?;
-
-            let private_key = PrivateKey {
-                compressed: true,
-                network: Network::Bitcoin.into(),
-                inner: derived_key.to_priv().inner,
-            };
-
-            let public_key = PublicKey::from_private_key(&secp, &private_key);
-
-            (
-                private_key,
-                public_key,
-                Some(mnemonic.to_string()),
-                Some(derivation_path.to_string()),
-            )
+        let key_data = match (private_key, mnemonic) {
+            (Some(pk_str), _) => keys::generate_keys_from_private_key(pk_str, &secp)?,
+            (None, Some(mnemonic_str)) => keys::generate_keys_from_mnemonic(mnemonic_str, path, addr_type, &secp)?,
+            (None, None) => keys::generate_new_keys(addr_type, &secp)?,
         };
 
-        // Generate Bitcoin address according to requested address type
-        let address = if addr_type == "bech32" {
-            // Create a Bech32 address (P2WPKH)
-            // Create a CompressedPublicKey directly from raw data
-            let compressed_pubkey =
-                CompressedPublicKey::from_slice(&pub_key.to_bytes()).map_err(|e| {
-                    WalletError::BitcoinError(format!(
-                        "Failed to create compressed public key: {}",
-                        e
-                    ))
-                })?;
-
-            // Note: p2wpkh no longer returns a Result but directly an Address
-            Address::p2wpkh(&compressed_pubkey, Network::Bitcoin)
-        } else {
-            // Create a traditional P2PKH address
-            Address::p2pkh(&pub_key, Network::Bitcoin)
-        };
-
+        // Generate Bitcoin address
+        let address = keys::create_bitcoin_address(&key_data.public_key, addr_type)?;
         let address_str = address.to_string();
 
         // Create the label
@@ -329,12 +213,12 @@ impl BitcoinWallet {
 
         // Store the address information
         let address_info = AddressInfo {
-            public_key: pub_key.to_string(),
-            private_key: secret_key.to_string(),
-            mnemonic: final_mnemonic,
-            path: final_path,
+            public_key: key_data.public_key.to_string(),
+            private_key: key_data.private_key.to_string(),
+            mnemonic: key_data.mnemonic,
+            path: key_data.path,
             label: final_label,
-            address_type: addr_type.to_string(), // Store the address type
+            address_type: addr_type.to_string(),
         };
 
         self.addresses.insert(address_str.clone(), address_info);
