@@ -4,8 +4,11 @@ use ::config::{Config, File};
 
 mod commands;
 mod config;
+mod wallet; // Module avec BitcoinWallet
 
-use crate::commands::{api, wallet};
+// Utiliser des alias pour éviter les conflits
+use crate::commands::api;
+use crate::commands::wallet as wallet_commands;
 use crate::config::AppConfig;
 
 #[tokio::main]
@@ -35,7 +38,7 @@ async fn main() -> Result<()> {
                 .action(ArgAction::SetTrue),
         )
         .subcommand(api::build_command(&endpoints))
-        .subcommand(wallet::build_command());
+        .subcommand(wallet_commands::build_command());
     
     // Parse command line arguments
     let matches = app.get_matches();
@@ -54,7 +57,7 @@ async fn main() -> Result<()> {
             api::execute_command(&config, sub_matches).await?;
         }
         Some(("wallet", sub_matches)) => {
-            wallet::execute_command(sub_matches)?;
+            wallet_commands::execute_command(sub_matches)?;
         }
         _ => {
             // No subcommand provided, print help
@@ -62,7 +65,7 @@ async fn main() -> Result<()> {
                 .version("0.1.0")
                 .about("A command-line client for the Counterparty API and wallet")
                 .subcommand(api::build_command(&endpoints))
-                .subcommand(wallet::build_command());
+                .subcommand(wallet_commands::build_command());
             app.print_help()?;
             println!();
         }
