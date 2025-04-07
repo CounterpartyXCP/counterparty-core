@@ -4,12 +4,13 @@ use clap::{Arg, ArgAction, Command};
 
 mod commands;
 mod config;
-mod wallet; // Module avec BitcoinWallet
+mod wallet;
+mod signer;
 
-// Utiliser des alias pour éviter les conflits
 use crate::commands::api;
 use crate::commands::wallet as wallet_commands;
 use crate::config::AppConfig;
+
 
 #[tokio::main]
 async fn main() -> Result<()> {
