@@ -136,6 +136,7 @@ class BlockchainWatcher:
                 # catch up with rpc if previous block is missing
                 logger.debug("Previous block is missing. Catching up...")
                 blocks.catch_up(self.db)
+                CurrentState().set_ledger_state(self.db, "Following")
             else:
                 blocks.parse_new_block(self.db, decoded_block)
             CurrentState().set_ledger_state(self.db, "Following")
