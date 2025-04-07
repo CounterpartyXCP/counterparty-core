@@ -47,6 +47,7 @@ counterparty-server start
 - Fix `apsw.ThreadingViolationError` with `APSWConnectionPool`
 - Optimize `APSWConnectionPool`
 - Fix `ledger_state` field in API root endpoint
+- Fix `is_cachable()` function in API v2 
 
 ## Codebase
 
