@@ -81,54 +81,62 @@ fn get_wallet_data_dir() -> PathBuf {
     if let Ok(dir) = std::env::var("COUNTERPARTY_WALLET_DIR") {
         return PathBuf::from(dir);
     }
-    
+
     // Otherwise use a default path in the user's home directory
     let home = std::env::var("HOME")
         .or_else(|_| std::env::var("USERPROFILE"))
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("."));
-    
+
     home.join(".counterparty").join("wallet")
 }
 
 // Executes a wallet command
 pub fn execute_command(matches: &ArgMatches) -> Result<()> {
     let data_dir = get_wallet_data_dir();
-    
+
     // Ensure the directory exists
     std::fs::create_dir_all(&data_dir).context("Failed to create wallet directory")?;
-    
-    let mut wallet = BitcoinWallet::init(&data_dir)
-        .context("Failed to initialize wallet")?;
-    
+
+    let mut wallet = BitcoinWallet::init(&data_dir).context("Failed to initialize wallet")?;
+
     match matches.subcommand() {
         Some(("addaddress", sub_matches)) => {
             // Extract parameters
-            let private_key = sub_matches.get_one::<String>("private_key").map(|s| s.as_str());
-            let mnemonic = sub_matches.get_one::<String>("mnemonic").map(|s| s.as_str());
+            let private_key = sub_matches
+                .get_one::<String>("private_key")
+                .map(|s| s.as_str());
+            let mnemonic = sub_matches
+                .get_one::<String>("mnemonic")
+                .map(|s| s.as_str());
             let path = sub_matches.get_one::<String>("path").map(|s| s.as_str());
             let label = sub_matches.get_one::<String>("label").map(|s| s.as_str());
-            let address_type = sub_matches.get_one::<String>("address_type").map(|s| s.as_str());
-            
+            let address_type = sub_matches
+                .get_one::<String>("address_type")
+                .map(|s| s.as_str());
+
             // Call the wallet function with the new address_type parameter
-            let address = wallet.add_address(private_key, mnemonic, path, label, address_type)
+            let address = wallet
+                .add_address(private_key, mnemonic, path, label, address_type)
                 .map_err(|e| anyhow::anyhow!("Failed to add address: {}", e))?;
-            
+
             println!("Address added successfully: {}", address);
         }
         Some(("showaddress", sub_matches)) => {
             let address = sub_matches.get_one::<String>("address").unwrap();
             let show_private_key = Some(sub_matches.get_flag("private_key"));
-            
-            let details = wallet.show_address(address, show_private_key)
+
+            let details = wallet
+                .show_address(address, show_private_key)
                 .map_err(|e| anyhow::anyhow!("Failed to show address details: {}", e))?;
-            
+
             println!("{}", serde_json::to_string_pretty(&details)?);
         }
         Some(("addresses", _)) => {
-            let addresses = wallet.list_addresses()
+            let addresses = wallet
+                .list_addresses()
                 .map_err(|e| anyhow::anyhow!("Failed to list addresses: {}", e))?;
-            
+
             println!("{}", serde_json::to_string_pretty(&addresses)?);
         }
         _ => {
@@ -138,6 +146,6 @@ pub fn execute_command(matches: &ArgMatches) -> Result<()> {
             println!();
         }
     }
-    
+
     Ok(())
 }

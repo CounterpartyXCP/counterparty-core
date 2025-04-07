@@ -1,6 +1,6 @@
-use anyhow::{Context, Result};
-use clap::{Command, ArgAction, Arg};
 use ::config::{Config, File};
+use anyhow::{Context, Result};
+use clap::{Arg, ArgAction, Command};
 
 mod commands;
 mod config;
@@ -20,10 +20,11 @@ async fn main() -> Result<()> {
         .add_source(File::with_name("config.json").required(false))
         .build()
         .context("Failed to load configuration")?;
-    
-    let config: AppConfig = settings.try_deserialize()
+
+    let config: AppConfig = settings
+        .try_deserialize()
         .context("Failed to parse configuration")?;
-    
+
     // Load endpoints during startup to build the complete command structure
     let endpoints = api::load_or_fetch_endpoints(&config).await?;
 
@@ -39,10 +40,10 @@ async fn main() -> Result<()> {
         )
         .subcommand(api::build_command(&endpoints))
         .subcommand(wallet_commands::build_command());
-    
+
     // Parse command line arguments
     let matches = app.get_matches();
-    
+
     // Handle update-cache flag
     if matches.get_flag("update-cache") {
         println!("Updating API endpoints cache...");
@@ -50,7 +51,7 @@ async fn main() -> Result<()> {
         println!("Cache updated successfully.");
         return Ok(());
     }
-    
+
     // Execute the requested subcommand
     match matches.subcommand() {
         Some(("api", sub_matches)) => {
@@ -70,6 +71,6 @@ async fn main() -> Result<()> {
             println!();
         }
     }
-    
+
     Ok(())
 }
