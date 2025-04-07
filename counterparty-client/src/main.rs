@@ -22,13 +22,7 @@ async fn main() -> Result<()> {
         .context("Failed to parse configuration")?;
     
     // Load endpoints during startup to build the complete command structure
-    let endpoints = match config.cache_file.exists() {
-        true => match api::load_cached_api_endpoints(&config) {
-            Ok(endpoints) => endpoints,
-            Err(_) => api::fetch_api_endpoints(&config).await?,
-        },
-        false => api::fetch_api_endpoints(&config).await?,
-    };
+    let endpoints = api::load_or_fetch_endpoints(&config).await?;
 
     // Build main CLI app with all top-level commands (including dynamic API subcommands)
     let app = Command::new("counterparty-client")
@@ -67,7 +61,7 @@ async fn main() -> Result<()> {
             let mut app = Command::new("counterparty-client")
                 .version("0.1.0")
                 .about("A command-line client for the Counterparty API and wallet")
-                .subcommand(api::build_command())
+                .subcommand(api::build_command(&endpoints))
                 .subcommand(wallet::build_command());
             app.print_help()?;
             println!();

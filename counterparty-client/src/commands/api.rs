@@ -59,7 +59,7 @@ pub async fn update_cache(config: &AppConfig) -> Result<()> {
 }
 
 // Loads endpoints from cache or fetches them if needed
-async fn load_or_fetch_endpoints(config: &AppConfig) -> Result<HashMap<String, ApiEndpoint>> {
+pub async fn load_or_fetch_endpoints(config: &AppConfig) -> Result<HashMap<String, ApiEndpoint>> {
     if config.cache_file.exists() {
         match load_cached_api_endpoints(config) {
             Ok(endpoints) => Ok(endpoints),
@@ -70,11 +70,6 @@ async fn load_or_fetch_endpoints(config: &AppConfig) -> Result<HashMap<String, A
     }
 }
 
-// Builds the API command without dynamic subcommands
-pub fn build_command() -> Command {
-    Command::new("api")
-        .about("Interact with the Counterparty API")
-}
 
 // Builds the API command structure with all subcommands
 pub fn build_command(endpoints: &HashMap<String, ApiEndpoint>) -> Command {
