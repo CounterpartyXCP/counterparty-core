@@ -88,23 +88,16 @@ def api_root():
 
 
 def is_cachable(rule):
-    if rule.startswith("/v2/blocks"):
-        return True
-    if rule.startswith("/v2/transactions"):
-        return True
-    if rule.startswith("/v2/bitcoin"):
-        return True
-    return False
+    if config.DISABLE_API_CACHE or request.method == "POST":
+        return False
+    for no_cachable in ["/compose/", "/mempool/", "healthz"]:
+        if no_cachable in rule:
+            return False
+    return True
 
 
 def return_result_if_not_ready(rule):
-    return (
-        is_cachable(rule)
-        or rule == "/v2/"
-        or rule == "/"
-        or rule.startswith("/v1")
-        or rule.startswith("/rpc")
-    )
+    return rule == "/v2/" or rule == "/" or rule.startswith("/v1") or rule.startswith("/rpc")
 
 
 def get_log_prefix(query_args=None):
@@ -233,10 +226,8 @@ def execute_api_function(rule, route, function_args):
     with StateDBConnectionPool().connection() as state_db:
         current_block_index = apiwatcher.get_last_block_parsed(state_db)
     cache_key = f"{current_block_index}:{request.url}"
-    # except for blocks and transactions cached forever
-    if (
-        request.path.startswith("/v2/blocks/") or request.path.startswith("/v2/transactions/")
-    ) and not request.path.startswith("/v2/blocks/last"):
+    # except for blocks
+    if request.path.startswith("/v2/blocks/") and not request.path.startswith("/v2/blocks/last"):
         cache_key = request.url
 
     with start_sentry_span(op="cache.get") as sentry_get_span:
