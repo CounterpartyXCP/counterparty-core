@@ -395,20 +395,30 @@ async fn handle_broadcast_command(
     // Call API and get the result
     let api_path = api::build_api_path(path, endpoint, &params);
     let result = api::perform_api_request(config, &api_path, &params).await?;
-
-    // Print the compose result
-    println!(
-        "Composed transaction: {}",
-        serde_json::to_string_pretty(&result)?
-    );
+    
+    // Check if we have a 'result' field in the response
+    let api_result = if let Some(api_result) = result.get("result") {
+        // Print the compose result
+        println!(
+            "Composed transaction: {}",
+            serde_json::to_string_pretty(&api_result)?
+        );
+        api_result
+    } else if let Some(error) = result.get("error") {
+        // Handle API error
+        return Err(anyhow::anyhow!("API error: {}", error));
+    } else {
+        // Generic error if neither 'result' nor 'error' is present
+        return Err(anyhow::anyhow!("Unexpected API response format"));
+    };
 
     // Extract required fields from result
-    let raw_tx_hex = result
+    let raw_tx_hex = api_result
         .get("rawtransaction")
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("Missing rawtransaction in API response"))?;
 
-    let inputs_values = result
+    let inputs_values = api_result
         .get("inputs_values")
         .and_then(|v| v.as_array())
         .ok_or_else(|| anyhow::anyhow!("Missing inputs_values in API response"))?
@@ -416,7 +426,7 @@ async fn handle_broadcast_command(
         .filter_map(|v| v.as_u64())
         .collect::<Vec<_>>();
 
-    let lock_scripts = result
+    let lock_scripts = api_result
         .get("lock_scripts")
         .and_then(|v| v.as_array())
         .ok_or_else(|| anyhow::anyhow!("Missing lock_scripts in API response"))?
@@ -431,7 +441,7 @@ async fn handle_broadcast_command(
         ));
     }
 
-    // Construct utxos vector - FIX: removed .as_str() call that was causing the error
+    // Construct utxos vector
     let utxos = lock_scripts
         .iter()
         .zip(inputs_values.iter())
