@@ -45,7 +45,7 @@ impl AddressType {
         }
     }
     
-    /// Converts an AddressType to string
+    /* /// Converts an AddressType to string
     fn to_str(&self) -> &'static str {
         match self {
             Self::P2PKH => "p2pkh",
@@ -60,7 +60,7 @@ impl AddressType {
     /// Indicates if the type is segwit
     fn is_segwit(&self) -> bool {
         matches!(self, Self::P2WPKH | Self::P2SHP2WPKH | Self::P2WSH | Self::P2TR)
-    }
+    } */
 }
 
 //

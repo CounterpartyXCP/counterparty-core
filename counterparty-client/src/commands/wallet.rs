@@ -357,31 +357,13 @@ fn extract_parameters_from_matches(
     params
 }
 
-// Call API and print the result
-async fn call_api_and_print_result(
-    config: &AppConfig,
-    path: &str,
-    endpoint: &ApiEndpoint,
-    params: &HashMap<String, String>
-) -> Result<()> {
-    // Construct API path with parameters
-    let api_path = api::build_api_path(path, endpoint, params);
-    
-    // Call the API endpoint and get the result
-    let result = api::perform_api_request(config, &api_path, params).await?;
-    
-    // Print the result
-    println!("{}", serde_json::to_string_pretty(&result)?);
-    
-    Ok(())
-}
-
 // Handle broadcast commands by calling the corresponding compose API function
 async fn handle_broadcast_command(
     config: &AppConfig,
     endpoints: &HashMap<String, ApiEndpoint>,
     command_name: &str,
-    sub_matches: &ArgMatches
+    sub_matches: &ArgMatches,
+    wallet: &BitcoinWallet,
 ) -> Result<()> {
     // Find the corresponding compose endpoint
     let (path, endpoint) = find_compose_endpoint(endpoints, command_name)?;
@@ -389,8 +371,62 @@ async fn handle_broadcast_command(
     // Extract parameters from command line arguments
     let params = extract_parameters_from_matches(endpoint, command_name, sub_matches);
     
-    // Call API and print result
-    call_api_and_print_result(config, path, endpoint, &params).await
+    // Try to find the address parameter (commonly named 'source' or 'address')
+    let address = params.get("source")
+        .or_else(|| params.get("address"))
+        .ok_or_else(|| anyhow::anyhow!("Address parameter not found"))?;
+    
+    // Verify that the address exists in the wallet
+    wallet.show_address(address, None)
+        .map_err(|_| anyhow::anyhow!("Address {} not found in wallet", address))?;
+    
+    // Call API and get the result
+    let api_path = api::build_api_path(path, endpoint, &params);
+    let result = api::perform_api_request(config, &api_path, &params).await?;
+    
+    // Print the compose result
+    println!("Composed transaction: {}", serde_json::to_string_pretty(&result)?);
+    
+    // Extract required fields from result
+    let raw_tx_hex = result.get("rawtransaction")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow::anyhow!("Missing rawtransaction in API response"))?;
+    
+    let inputs_values = result.get("inputs_values")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| anyhow::anyhow!("Missing inputs_values in API response"))?
+        .iter()
+        .filter_map(|v| v.as_u64())
+        .collect::<Vec<_>>();
+    
+    let lock_scripts = result.get("lock_scripts")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| anyhow::anyhow!("Missing lock_scripts in API response"))?
+        .iter()
+        .filter_map(|v| v.as_str())
+        .collect::<Vec<_>>();
+    
+    // Check that inputs_values and lock_scripts have the same length
+    if inputs_values.len() != lock_scripts.len() {
+        return Err(anyhow::anyhow!("inputs_values and lock_scripts have different lengths"));
+    }
+    
+    // Construct utxos vector - FIX: removed .as_str() call that was causing the error
+    let utxos = lock_scripts.iter()
+        .zip(inputs_values.iter())
+        .map(|(script, value)| (*script, *value))
+        .collect::<Vec<_>>();
+    
+    // Sign the transaction
+    let signed_tx = wallet.sign_transaction(raw_tx_hex, utxos)
+        .map_err(|e| anyhow::anyhow!("Failed to sign transaction: {}", e))?;
+    
+    // Print the signed transaction
+    println!("Signed transaction: {}", signed_tx);
+    
+    // TODO: Add code to broadcast the signed transaction
+    
+    Ok(())
 }
 
 // Executes a wallet command
@@ -412,7 +448,7 @@ pub async fn execute_command(
         Some(("addresses", sub_matches)) => handle_addresses(&wallet, sub_matches),
         Some((cmd_name, sub_matches)) if cmd_name.starts_with("broadcast_") => {
             // Handle broadcast commands asynchronously
-            handle_broadcast_command(config, endpoints, cmd_name, sub_matches).await
+            handle_broadcast_command(config, endpoints, cmd_name, sub_matches, &wallet).await
         }
         _ => {
             // No subcommand provided, display help
