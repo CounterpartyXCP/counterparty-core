@@ -469,43 +469,6 @@ fn can_sign_input(
     }
 }
 
-//
-// SIGNING SCRIPT GENERATION
-//
-
-/// Generate a P2PKH signing script
-fn get_p2pkh_signing_script(public_key: &PublicKey) -> Result<ScriptBuf> {
-    let compressed_pubkey = get_compressed_pubkey(public_key)?;
-    let pubkey_hash = compressed_pubkey.pubkey_hash();
-    Ok(ScriptBuf::new_p2pkh(&pubkey_hash))
-}
-
-/// Generate a signing script based on address type
-fn get_signing_script(
-    public_key: &PublicKey,
-    script_pubkey: &ScriptBuf,
-    address_type: &str,
-    witness_script: Option<&ScriptBuf>,
-) -> Result<ScriptBuf> {
-    let addr_type = AddressType::from_str(standardize_address_type(address_type));
-
-    match addr_type {
-        AddressType::P2WPKH | AddressType::P2SHP2WPKH => {
-            // For P2WPKH and P2SH-P2WPKH, we need to use a P2PKH script for the signature hash
-            get_p2pkh_signing_script(public_key)
-        }
-
-        AddressType::P2WSH => {
-            // For P2WSH, the signing script is the witness script itself
-            witness_script.map(|script| script.clone()).ok_or_else(|| {
-                WalletError::BitcoinError(format!("Missing witness script for P2WSH"))
-            })
-        }
-
-        // By default, use the script_pubkey directly
-        _ => Ok(script_pubkey.clone()),
-    }
-}
 
 //
 // SIGNATURE COMPUTATION
@@ -571,7 +534,7 @@ fn compute_segwit_signature(
     sighash_cache: &mut SighashCache<&Transaction>,
     input_index: usize,
     input: &bitcoin::psbt::Input,
-    signing_script: &ScriptBuf,
+    script_pubkey: &ScriptBuf,
     secret_key: &bitcoin::secp256k1::SecretKey,
     public_key: &PublicKey,
 ) -> Result<Vec<u8>> {
@@ -589,7 +552,7 @@ fn compute_segwit_signature(
     let sighash = sighash_cache
         .p2wpkh_signature_hash(
             input_index,
-            &signing_script,
+            &script_pubkey,
             witness_utxo.value,
             sighash_type,
         )
@@ -608,7 +571,7 @@ fn compute_p2wsh_signature(
     sighash_cache: &mut SighashCache<&Transaction>,
     input_index: usize,
     input: &bitcoin::psbt::Input,
-    signing_script: &ScriptBuf,
+    script_pubkey: &ScriptBuf,
     secret_key: &bitcoin::secp256k1::SecretKey,
     public_key: &PublicKey,
 ) -> Result<Vec<u8>> {
@@ -629,7 +592,7 @@ fn compute_p2wsh_signature(
     let sighash = sighash_cache
         .p2wsh_signature_hash(
             input_index,
-            signing_script,
+            script_pubkey,
             witness_utxo.value,
             sighash_type,
         )
@@ -647,7 +610,7 @@ fn compute_legacy_signature(
     secp: &Secp256k1<bitcoin::secp256k1::All>,
     sighash_cache: &mut SighashCache<&Transaction>,
     input_index: usize,
-    signing_script: &ScriptBuf,
+    script_pubkey: &ScriptBuf,
     secret_key: &bitcoin::secp256k1::SecretKey,
     public_key: &PublicKey,
 ) -> Result<Vec<u8>> {
@@ -655,7 +618,7 @@ fn compute_legacy_signature(
     let sighash_type = EcdsaSighashType::All;
 
     let sighash = sighash_cache
-        .legacy_signature_hash(input_index, &signing_script, sighash_type as u32)
+        .legacy_signature_hash(input_index, &script_pubkey, sighash_type as u32)
         .map_err(|e| {
             WalletError::BitcoinError(format!("Failed to compute legacy signature hash: {}", e))
         })?;
@@ -671,7 +634,7 @@ fn compute_signature(
     sighash_cache: &mut SighashCache<&Transaction>,
     input_index: usize,
     input: &bitcoin::psbt::Input,
-    signing_script: &ScriptBuf,
+    script_pubkey: &ScriptBuf,
     secret_key: &bitcoin::secp256k1::SecretKey,
     public_key: &PublicKey,
     address_type: &str,
@@ -693,7 +656,7 @@ fn compute_signature(
             sighash_cache,
             input_index,
             input,
-            signing_script,
+            script_pubkey,
             secret_key,
             public_key,
         ),
@@ -703,7 +666,7 @@ fn compute_signature(
             sighash_cache,
             input_index,
             input,
-            signing_script,
+            script_pubkey,
             secret_key,
             public_key,
         ),
@@ -712,7 +675,7 @@ fn compute_signature(
             secp,
             sighash_cache,
             input_index,
-            signing_script,
+            script_pubkey,
             secret_key,
             public_key,
         ),
@@ -908,14 +871,6 @@ fn try_sign_input(
         None
     };
 
-    // Get the signing script
-    let signing_script = get_signing_script(
-        public_key,
-        script_pubkey,
-        address_type,
-        witness_script_clone.as_ref(),
-    )?;
-
     // Get secret key from private key
     let secret_key = bitcoin::secp256k1::SecretKey::from_slice(&private_key.inner[..])
         .map_err(|e| WalletError::BitcoinError(format!("Failed to create secret key: {:?}", e)))?;
@@ -926,7 +881,7 @@ fn try_sign_input(
         sighash_cache,
         input_index,
         input,
-        &signing_script,
+        script_pubkey,
         &secret_key,
         public_key,
         address_type,
