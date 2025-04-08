@@ -8,7 +8,7 @@ use lazy_static::lazy_static;
 
 // Import BitcoinWallet from src/wallet.rs
 use crate::wallet::BitcoinWallet;
-use crate::config::{self, ApiEndpoint, Network, AppConfig};
+use crate::config::{self, ApiEndpoint, ApiEndpointArg, AppConfig};
 use crate::commands::api;
 
 // Global static mapping between internal argument IDs and their original names
@@ -22,7 +22,7 @@ pub fn build_command() -> Command {
     let command = Command::new("wallet").about("Manage your Counterparty wallet");
     
     // Default subcommands (statically defined)
-    let mut command_with_subcommands = command
+    let command_with_subcommands = command
         .subcommand(build_addaddress_command())
         .subcommand(build_showaddress_command())
         .subcommand(build_addresses_command());
@@ -33,10 +33,8 @@ pub fn build_command() -> Command {
     command_with_subcommands
 }
 
-// Build broadcast commands based on compose API endpoints
-pub fn add_broadcast_commands(cmd: Command, endpoints: &HashMap<String, ApiEndpoint>) -> Command {
-    let mut wallet_cmd = cmd;
-    
+// Filter and sort compose endpoints
+fn filter_compose_endpoints(endpoints: &HashMap<String, ApiEndpoint>) -> Vec<(String, &ApiEndpoint)> {
     // Filter endpoints for compose_* functions
     let compose_commands: Vec<(String, &ApiEndpoint)> = endpoints
         .iter()
@@ -48,69 +46,103 @@ pub fn add_broadcast_commands(cmd: Command, endpoints: &HashMap<String, ApiEndpo
     let mut sorted_commands = compose_commands;
     sorted_commands.sort_by(|a, b| a.0.cmp(&b.0));
     
+    sorted_commands
+}
+
+// Create a broadcast command from a compose endpoint
+fn create_broadcast_command(func_name: &str, endpoint: &ApiEndpoint) -> (String, Command) {
+    // Convert compose_X to broadcast_X
+    let broadcast_name = func_name.replace("compose_", "broadcast_");
+    let static_broadcast_name: &'static str = Box::leak(broadcast_name.into_boxed_str());
+    
+    // Create description for broadcast command
+    let description = format!("Compose, sign and broadcast a {}", 
+        &endpoint.description.replace("Composes a ", ""));
+    let static_description: &'static str = Box::leak(description.into_boxed_str());
+    
+    // Create the command
+    let cmd = Command::new(static_broadcast_name).about(static_description);
+    
+    (static_broadcast_name.to_string(), cmd)
+}
+
+// Add an argument to a command
+fn add_argument_to_command(
+    cmd: Command, 
+    arg: &ApiEndpointArg, 
+    idx: usize, 
+    command_name: &str,
+    used_long_names: &mut std::collections::HashSet<String>
+) -> Command {
+    // Skip this argument if the long name is already used
+    if used_long_names.contains(&arg.name) {
+        return cmd;
+    }
+    
+    // Mark this argument name as used
+    used_long_names.insert(arg.name.clone());
+    
+    // Create unique internal ID
+    let internal_id = format!("__broadcast_{}_arg_{}", command_name, idx);
+    let static_internal_id: &'static str = Box::leak(internal_id.into_boxed_str());
+    
+    // Use original argument name as long flag
+    let static_long_flag: &'static str = Box::leak(arg.name.clone().into_boxed_str());
+    
+    // Store mapping for later
+    let id_map_key = format!("{}:{}", command_name, static_internal_id);
+    ID_ARG_MAP.lock().unwrap().insert(id_map_key, arg.name.clone());
+    
+    let static_help: &'static str = Box::leak(
+        arg.description
+            .as_deref()
+            .unwrap_or("")
+            .to_string()
+            .into_boxed_str(),
+    );
+
+    let mut cmd_arg = Arg::new(static_internal_id)
+        .long(static_long_flag)
+        .help(static_help);
+
+    if arg.required {
+        cmd_arg = cmd_arg.required(true);
+    }
+
+    if arg.arg_type == "bool" {
+        cmd_arg = cmd_arg.action(ArgAction::SetTrue);
+    } else {
+        cmd_arg = cmd_arg.value_name("VALUE");
+    }
+
+    cmd.arg(cmd_arg)
+}
+
+// Build broadcast commands based on compose API endpoints
+pub fn add_broadcast_commands(cmd: Command, endpoints: &HashMap<String, ApiEndpoint>) -> Command {
+    let mut wallet_cmd = cmd;
+    
+    // Get filtered and sorted compose endpoints
+    let sorted_commands = filter_compose_endpoints(endpoints);
+    
     // Add each broadcast command
     for (func_name, endpoint) in sorted_commands {
-        // Convert compose_X to broadcast_X
-        let broadcast_name = func_name.replace("compose_", "broadcast_");
-        let static_broadcast_name: &'static str = Box::leak(broadcast_name.into_boxed_str());
-        
-        // Create description for broadcast command
-        let description = format!("Compose, sign and broadcast a {}", 
-            &endpoint.description.replace("Composes a ", ""));
-        let static_description: &'static str = Box::leak(description.into_boxed_str());
-        
-        // Create the command
-        let mut cmd = Command::new(static_broadcast_name).about(static_description);
+        let (broadcast_name, mut broadcast_cmd) = create_broadcast_command(&func_name, endpoint);
         
         // Add arguments, skipping any duplicates
         let mut used_long_names = std::collections::HashSet::new();
         
         for (idx, arg) in endpoint.args.iter().enumerate() {
-            // Skip this argument if the long name is already used
-            if used_long_names.contains(&arg.name) {
-                continue;
-            }
-            
-            // Mark this argument name as used
-            used_long_names.insert(arg.name.clone());
-            
-            // Create unique internal ID
-            let internal_id = format!("__broadcast_{}_arg_{}", static_broadcast_name, idx);
-            let static_internal_id: &'static str = Box::leak(internal_id.into_boxed_str());
-            
-            // Use original argument name as long flag
-            let static_long_flag: &'static str = Box::leak(arg.name.clone().into_boxed_str());
-            
-            // Store mapping for later
-            let id_map_key = format!("{}:{}", static_broadcast_name, static_internal_id);
-            ID_ARG_MAP.lock().unwrap().insert(id_map_key, arg.name.clone());
-            
-            let static_help: &'static str = Box::leak(
-                arg.description
-                    .as_deref()
-                    .unwrap_or("")
-                    .to_string()
-                    .into_boxed_str(),
+            broadcast_cmd = add_argument_to_command(
+                broadcast_cmd, 
+                arg, 
+                idx, 
+                &broadcast_name,
+                &mut used_long_names
             );
-
-            let mut cmd_arg = Arg::new(static_internal_id)
-                .long(static_long_flag)
-                .help(static_help);
-
-            if arg.required {
-                cmd_arg = cmd_arg.required(true);
-            }
-
-            if arg.arg_type == "bool" {
-                cmd_arg = cmd_arg.action(ArgAction::SetTrue);
-            } else {
-                cmd_arg = cmd_arg.value_name("VALUE");
-            }
-
-            cmd = cmd.arg(cmd_arg);
         }
         
-        wallet_cmd = wallet_cmd.subcommand(cmd);
+        wallet_cmd = wallet_cmd.subcommand(broadcast_cmd);
     }
     
     wallet_cmd
@@ -266,27 +298,28 @@ fn handle_addresses(wallet: &BitcoinWallet, _sub_matches: &ArgMatches) -> Result
     Ok(())
 }
 
-// Handle broadcast commands by calling the corresponding compose API function
-async fn handle_broadcast_command(
-    config: &AppConfig,
-    endpoints: &HashMap<String, ApiEndpoint>,
-    command_name: &str,
-    sub_matches: &ArgMatches
-) -> Result<()> {
+// Find the corresponding compose endpoint for a broadcast command
+fn find_compose_endpoint<'a>(
+    endpoints: &'a HashMap<String, ApiEndpoint>,
+    command_name: &str
+) -> Result<(&'a String, &'a ApiEndpoint)> {
     // Convert broadcast_X to compose_X to find the matching endpoint
     let compose_name = command_name.replace("broadcast_", "compose_");
     
     // Find matching endpoint for the compose function
-    let (path, endpoint) = api::find_matching_endpoint(endpoints, &compose_name)?;
-    
-    // We'll build our parameters by looking at all possible arguments in the matches
+    api::find_matching_endpoint(endpoints, &compose_name)
+}
+
+// Extract parameters from command line arguments
+fn extract_parameters_from_matches(
+    endpoint: &ApiEndpoint,
+    command_name: &str,
+    sub_matches: &ArgMatches
+) -> HashMap<String, String> {
     let mut params = HashMap::new();
     
     // For each argument in the endpoint, look up the corresponding value from matches
     let id_map = ID_ARG_MAP.lock().unwrap();
-    
-    // Debug for argument matching
-    let mut debug_args = vec![];
     
     for arg in &endpoint.args {
         // Try to find the argument by iterating through the id_map
@@ -297,8 +330,6 @@ async fn handle_broadcast_command(
             if key.starts_with(&format!("{}:", command_name)) && original_name == &arg.name {
                 // Extract the internal ID from the key
                 let internal_id = key.split(':').nth(1).unwrap_or("");
-                
-                debug_args.push(format!("Trying ID: {} for arg {}", internal_id, arg.name));
                 
                 if arg.arg_type == "bool" {
                     if sub_matches.get_flag(internal_id) {
@@ -320,16 +351,46 @@ async fn handle_broadcast_command(
         }
     }
     
+    // Always add verbose=true
+    params.insert("verbose".to_string(), "true".to_string());
+    
+    params
+}
+
+// Call API and print the result
+async fn call_api_and_print_result(
+    config: &AppConfig,
+    path: &str,
+    endpoint: &ApiEndpoint,
+    params: &HashMap<String, String>
+) -> Result<()> {
     // Construct API path with parameters
-    let api_path = api::build_api_path(path, endpoint, &params);
+    let api_path = api::build_api_path(path, endpoint, params);
     
     // Call the API endpoint and get the result
-    let result = api::perform_api_request(config, &api_path, &params).await?;
+    let result = api::perform_api_request(config, &api_path, params).await?;
     
-    // For now, just print the result (will be extended in the future)
+    // Print the result
     println!("{}", serde_json::to_string_pretty(&result)?);
     
     Ok(())
+}
+
+// Handle broadcast commands by calling the corresponding compose API function
+async fn handle_broadcast_command(
+    config: &AppConfig,
+    endpoints: &HashMap<String, ApiEndpoint>,
+    command_name: &str,
+    sub_matches: &ArgMatches
+) -> Result<()> {
+    // Find the corresponding compose endpoint
+    let (path, endpoint) = find_compose_endpoint(endpoints, command_name)?;
+    
+    // Extract parameters from command line arguments
+    let params = extract_parameters_from_matches(endpoint, command_name, sub_matches);
+    
+    // Call API and print result
+    call_api_and_print_result(config, path, endpoint, &params).await
 }
 
 // Executes a wallet command
