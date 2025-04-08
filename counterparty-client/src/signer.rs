@@ -7,7 +7,7 @@ use bitcoin::secp256k1::Message;
 use bitcoin::ScriptBuf;
 use bitcoin::{Address, Network, PrivateKey, PublicKey};
 
-use bitcoin::blockdata::script::{Builder, PushBytesBuf};
+use bitcoin::blockdata::script::{Builder, PushBytesBuf, Instruction};
 use bitcoin::blockdata::transaction::TxOut;
 use bitcoin::consensus::{deserialize, serialize};
 use bitcoin::psbt::Psbt;
@@ -21,6 +21,9 @@ use crate::wallet::AddressInfo;
 
 type Result<T> = std::result::Result<T, WalletError>;
 
+//
+// UTILITY FUNCTIONS
+//
 
 /// Creates a Message from a signature hash
 fn create_message_from_hash(sighash: &[u8]) -> Result<Message> {
@@ -39,7 +42,7 @@ fn verify_ecdsa_signature(
 ) -> Result<()> {
     if secp.verify_ecdsa(message, signature, &public_key.inner).is_err() {
         return Err(WalletError::BitcoinError(
-            format!("Generated signature failed verification")
+            format!("Generated ECDSA signature failed verification")
         ));
     }
     Ok(())
@@ -54,7 +57,7 @@ fn verify_schnorr_signature(
 ) -> Result<()> {
     if secp.verify_schnorr(signature, message, xonly_pubkey).is_err() {
         return Err(WalletError::BitcoinError(
-            format!("Generated Taproot signature failed verification")
+            format!("Generated Schnorr signature failed verification")
         ));
     }
     Ok(())
@@ -118,7 +121,6 @@ fn create_empty_script_sig() -> ScriptBuf {
 
 /// Parse a raw transaction from hexadecimal format
 fn parse_transaction(raw_tx_hex: &str) -> Result<Transaction> {
-    // Parse the raw transaction
     let tx_bytes = hex::decode(raw_tx_hex)
         .map_err(|e| WalletError::BitcoinError(format!("Invalid transaction hex: {}", e)))?;
 
@@ -151,7 +153,13 @@ fn determine_address_type(script_pubkey: &ScriptBuf) -> String {
     } else if script_pubkey.is_p2wpkh() {
         "p2wpkh".to_string()
     } else if script_pubkey.is_p2sh() {
-        "p2sh".to_string()
+        // Heuristic detection for P2SH-P2WPKH
+        // Standard P2SH-P2WPKH script is 23 bytes
+        if script_pubkey.len() == 23 {
+            "p2sh-p2wpkh".to_string()
+        } else {
+            "p2sh".to_string()
+        }
     } else if script_pubkey.is_p2wsh() {
         "p2wsh".to_string()
     } else if script_pubkey.is_p2tr() {
@@ -198,54 +206,80 @@ fn add_utxos_to_psbt(psbt: &mut Psbt, utxos: &[(&str, u64)]) -> Result<()> {
     Ok(())
 }
 
+/// Standardize address type string to ensure consistency
+/// Converts legacy names like "bech32" to standard names like "p2wpkh"
+fn standardize_address_type(address_type: &str) -> &str {
+    match address_type {
+        "bech32" => "p2wpkh",
+        _ => address_type,
+    }
+}
+
+/// Helper function to check if a script matches an expected script
+fn script_matches(script_pubkey: &ScriptBuf, expected_script: &ScriptBuf) -> bool {
+    script_pubkey == expected_script
+}
+
 /// Check if a private key can sign a P2WPKH input
 fn can_sign_p2wpkh(script_pubkey: &ScriptBuf, public_key: &PublicKey) -> Result<bool> {
-    // Check if the script matches a P2WPKH for this key
     let compressed_pubkey = get_compressed_pubkey(public_key)?;
-    
-    // Address::p2wpkh does not return a Result, so no need for map_err
-    let expected_script = Address::p2wpkh(&compressed_pubkey, Network::Bitcoin)
-        .script_pubkey();
-    
-    Ok(script_pubkey == &expected_script)
+    let expected_script = Address::p2wpkh(&compressed_pubkey, Network::Bitcoin).script_pubkey();
+    Ok(script_matches(script_pubkey, &expected_script))
 }
 
 /// Check if a private key can sign a P2PKH input
 fn can_sign_p2pkh(script_pubkey: &ScriptBuf, public_key: &PublicKey) -> Result<bool> {
-    // Check if the script matches a P2PKH for this key
-    let expected_script = Address::p2pkh(public_key, Network::Bitcoin)
-        .script_pubkey();
-    Ok(script_pubkey == &expected_script)
+    let expected_script = Address::p2pkh(public_key, Network::Bitcoin).script_pubkey();
+    Ok(script_matches(script_pubkey, &expected_script))
 }
 
 /// Check if a private key can sign a P2SH-P2WPKH input
 fn can_sign_p2sh_p2wpkh(script_pubkey: &ScriptBuf, public_key: &PublicKey) -> Result<bool> {
-    // For P2SH-P2WPKH, we need to check if it's a P2SH wrapping a P2WPKH for this key
     let compressed_pubkey = get_compressed_pubkey(public_key)?;
-    
-    // Remove map_err, Address::p2wpkh returns an Address directly
     let p2wpkh = Address::p2wpkh(&compressed_pubkey, Network::Bitcoin);
-    
-    // Address::p2sh takes a script as input
     let expected_script = Address::p2sh(&p2wpkh.script_pubkey(), Network::Bitcoin)
         .map_err(|e| WalletError::BitcoinError(format!("Failed to create P2SH-P2WPKH address: {}", e)))?
         .script_pubkey();
     
-    Ok(script_pubkey == &expected_script)
+    Ok(script_matches(script_pubkey, &expected_script))
 }
 
 /// Check if a private key can sign a P2TR input
 fn can_sign_p2tr(script_pubkey: &ScriptBuf, public_key: &PublicKey) -> Result<bool> {
-    // For P2TR, we need to check if it's a Taproot output for this key
-    // Convert ECDSA public key to x-only public key
     let secp = Secp256k1::verification_only();
     let xonly_pubkey = get_xonly_pubkey(public_key)?;
-    
-    // Create expected P2TR script
     let p2tr_address = Address::p2tr(&secp, xonly_pubkey, None, Network::Bitcoin);
     let expected_script = p2tr_address.script_pubkey();
     
-    Ok(script_pubkey == &expected_script)
+    Ok(script_matches(script_pubkey, &expected_script))
+}
+
+/// Check if a public key is used in a witness script
+fn is_pubkey_in_witness_script(witness_script: &ScriptBuf, public_key: &PublicKey) -> Result<bool> {
+    // Convert the public key to serialized format that we're looking for
+    let pubkey_bytes = public_key.to_bytes();
+    
+    // Parse the script into instructions
+    let mut iter = witness_script.instructions_minimal();
+    
+    // Iterate through all elements in the script
+    while let Some(result) = iter.next() {
+        // Only process successfully parsed instructions
+        if let Ok(instruction) = result {
+            match instruction {
+                Instruction::PushBytes(bytes) => {
+                    // Check if this pushed data is a public key
+                    if bytes.len() == pubkey_bytes.len() && bytes.as_bytes() == pubkey_bytes.as_slice() {
+                        return Ok(true);
+                    }
+                },
+                // You could add more cases for opcodes that manipulate public keys
+                _ => {}
+            }
+        }
+    }
+    
+    Ok(false)
 }
 
 /// Check if a private key can sign a P2WSH input
@@ -256,19 +290,14 @@ fn can_sign_p2wsh(script_pubkey: &ScriptBuf, public_key: &PublicKey, witness_scr
     };
     
     // Verify that the script_pubkey corresponds to the hash of the witness_script
-    let expected_script = Address::p2wsh(witness_script, Network::Bitcoin)
-        .script_pubkey();
+    let expected_script = Address::p2wsh(witness_script, Network::Bitcoin).script_pubkey();
     
-    if script_pubkey != &expected_script {
+    if !script_matches(script_pubkey, &expected_script) {
         return Ok(false);
     }
     
-    // Simple check: see if the public key appears in the witness script
-    let script_bytes = witness_script.as_bytes();
-    let pubkey_bytes = public_key.to_bytes();
-    
-    // Search for the public key in the script
-    Ok(script_bytes.windows(pubkey_bytes.len()).any(|window| window == pubkey_bytes))
+    // Check if the public key appears in the witness script using the improved function
+    is_pubkey_in_witness_script(witness_script, public_key)
 }
 
 /// Check if a private key can sign a specific input
@@ -278,8 +307,11 @@ fn can_sign_input(
     address_type: &str,
     psbt_input: Option<&bitcoin::psbt::Input>
 ) -> Result<bool> {
-    match address_type {
-        "p2wpkh" | "bech32" => can_sign_p2wpkh(script_pubkey, public_key),
+    // Standardize address type for consistent handling
+    let std_address_type = standardize_address_type(address_type);
+    
+    match std_address_type {
+        "p2wpkh" => can_sign_p2wpkh(script_pubkey, public_key),
         "p2pkh" => can_sign_p2pkh(script_pubkey, public_key),
         "p2sh-p2wpkh" => can_sign_p2sh_p2wpkh(script_pubkey, public_key),
         "p2tr" => can_sign_p2tr(script_pubkey, public_key),
@@ -332,8 +364,11 @@ fn get_signing_script(
     address_type: &str,
     witness_script: Option<&ScriptBuf>
 ) -> Result<ScriptBuf> {
-    match address_type {
-        "p2wpkh" | "bech32" => get_p2wpkh_signing_script(public_key),
+    // Standardize address type for consistent handling
+    let std_address_type = standardize_address_type(address_type);
+    
+    match std_address_type {
+        "p2wpkh" => get_p2wpkh_signing_script(public_key),
         "p2sh-p2wpkh" => get_p2sh_p2wpkh_signing_script(public_key),
         "p2wsh" => {
             if let Some(script) = witness_script {
@@ -476,8 +511,11 @@ fn add_signature_to_input(
     address_type: &str,
     witness_script: Option<&ScriptBuf>
 ) -> Result<()> {
-    match address_type {
-        "p2wpkh" | "bech32" => add_p2wpkh_signature(input, signature_bytes, pubkey_bytes),
+    // Standardize address type for consistent handling
+    let std_address_type = standardize_address_type(address_type);
+    
+    match std_address_type {
+        "p2wpkh" => add_p2wpkh_signature(input, signature_bytes, pubkey_bytes),
         "p2pkh" => add_p2pkh_signature(input, signature_bytes, pubkey_bytes),
         "p2sh-p2wpkh" => add_p2sh_p2wpkh_signature(input, signature_bytes, pubkey_bytes),
         "p2tr" => add_p2tr_signature(input, signature_bytes),
@@ -510,11 +548,14 @@ fn compute_taproot_signature(
     // For Taproot, use the appropriate sighash algorithm
     let sighash_type = bitcoin::sighash::TapSighashType::All;
     
+    // Get witness UTXO safely with error handling
+    let witness_utxo = input.witness_utxo.as_ref()
+        .ok_or_else(|| WalletError::BitcoinError(
+            format!("Missing witness UTXO for Taproot input at index {}", input_index)
+        ))?;
+    
     // Create the Prevouts structure
-    let prevouts = bitcoin::sighash::Prevouts::One(
-        input_index, 
-        input.witness_utxo.as_ref().unwrap()
-    );
+    let prevouts = bitcoin::sighash::Prevouts::One(input_index, witness_utxo);
     
     let sighash = sighash_cache
         .taproot_key_spend_signature_hash(input_index, &prevouts, sighash_type)
@@ -555,11 +596,17 @@ fn compute_segwit_signature(
     // For SegWit, use the correct method for segwit signatures
     let sighash_type = EcdsaSighashType::All;
     
+    // Get witness UTXO safely with error handling
+    let witness_utxo = input.witness_utxo.as_ref()
+        .ok_or_else(|| WalletError::BitcoinError(
+            format!("Missing witness UTXO for SegWit input at index {}", input_index)
+        ))?;
+    
     let sighash = sighash_cache
         .p2wpkh_signature_hash(
             input_index,
             &signing_script,
-            input.witness_utxo.as_ref().unwrap().value,
+            witness_utxo.value,
             sighash_type
         )
         .map_err(|e| WalletError::BitcoinError(
@@ -610,11 +657,17 @@ fn compute_p2wsh_signature(
         None => EcdsaSighashType::All,
     };
     
+    // Get witness UTXO safely with error handling
+    let witness_utxo = input.witness_utxo.as_ref()
+        .ok_or_else(|| WalletError::BitcoinError(
+            format!("Missing witness UTXO for P2WSH input at index {}", input_index)
+        ))?;
+    
     let sighash = sighash_cache
         .p2wsh_signature_hash(
             input_index,
             signing_script,
-            input.witness_utxo.as_ref().unwrap().value,
+            witness_utxo.value,
             sighash_type
         )
         .map_err(|e| WalletError::BitcoinError(
@@ -637,13 +690,16 @@ fn try_sign_input(
     address_type: &str,
     script_pubkey: &ScriptBuf
 ) -> Result<bool> {
+    // Standardize address type for consistent handling
+    let std_address_type = standardize_address_type(address_type);
+    
     // Check if this key can sign this input
-    if !can_sign_input(script_pubkey, public_key, address_type, Some(input))? {
+    if !can_sign_input(script_pubkey, public_key, std_address_type, Some(input))? {
         return Ok(false);
     }
 
     // Clone the witness script if needed, to avoid borrowing issues
-    let witness_script_clone = if address_type == "p2wsh" {
+    let witness_script_clone = if std_address_type == "p2wsh" {
         match &input.witness_script {
             Some(script) => Some(script.clone()),
             None => None
@@ -653,7 +709,7 @@ fn try_sign_input(
     };
 
     // Get the signing script
-    let signing_script = get_signing_script(public_key, script_pubkey, address_type, witness_script_clone.as_ref())?;
+    let signing_script = get_signing_script(public_key, script_pubkey, std_address_type, witness_script_clone.as_ref())?;
 
     // Get secret key from private key
     let secret_key = bitcoin::secp256k1::SecretKey::from_slice(&private_key.inner[..])
@@ -662,10 +718,10 @@ fn try_sign_input(
         ))?;
 
     // Compute signature based on address type
-    let signature_bytes = match address_type {
+    let signature_bytes = match std_address_type {
         "p2tr" => compute_taproot_signature(secp, sighash_cache, input_index, input, &secret_key, public_key)?,
         "p2wsh" => compute_p2wsh_signature(secp, sighash_cache, input_index, input, &signing_script, &secret_key, public_key)?,
-        "p2wpkh" | "bech32" | "p2sh-p2wpkh" => 
+        "p2wpkh" | "p2sh-p2wpkh" => 
             compute_segwit_signature(secp, sighash_cache, input_index, input, &signing_script, &secret_key, public_key)?,
         _ => compute_legacy_signature(secp, sighash_cache, input_index, &signing_script, &secret_key, public_key)?,
     };
@@ -675,7 +731,7 @@ fn try_sign_input(
         input,
         signature_bytes,
         public_key.to_bytes(),
-        address_type,
+        std_address_type,
         witness_script_clone.as_ref()
     )?;
 
@@ -704,6 +760,9 @@ fn process_key_for_inputs(
     public_key: &PublicKey,
     address_type: &str
 ) -> Result<()> {
+    // Standardize address type for consistent handling
+    let std_address_type = standardize_address_type(address_type);
+    
     // Sign each input one by one
     for i in 0..psbt.inputs.len() {
         if signed_inputs[i] {
@@ -726,7 +785,7 @@ fn process_key_for_inputs(
             i,
             private_key,
             public_key,
-            address_type,
+            std_address_type,
             &script_pubkey
         ) {
             Ok(true) => signed_inputs[i] = true,
@@ -765,12 +824,6 @@ fn sign_psbt_inputs(
         // Get the public key
         let public_key = PublicKey::from_private_key(&secp, &private_key);
 
-        // Map old address_type names to new standardized ones
-        let address_type = match info.address_type.as_str() {
-            "bech32" => "p2wpkh", // Standardize on p2wpkh instead of bech32
-            other => other,
-        };
-
         // Process this key for all inputs
         process_key_for_inputs(
             &secp,
@@ -779,7 +832,7 @@ fn sign_psbt_inputs(
             &mut signed_inputs,
             &private_key,
             &public_key,
-            &address_type
+            &info.address_type
         )?;
     }
 
