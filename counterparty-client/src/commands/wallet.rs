@@ -367,6 +367,52 @@ fn extract_parameters_from_matches(
     params
 }
 
+// New function to broadcast a signed transaction
+async fn broadcast_transaction(config: &AppConfig, signed_tx: &str) -> Result<String> {
+    let client = reqwest::Client::new();
+    let api_url = config.get_api_url();
+    
+    // Prepare the URL for transaction broadcast
+    // NOTE: Including signedhex in both URL and POST body due to an API bug
+    // TODO: Remove the URL parameter once the API bug is fixed
+    let broadcast_url = format!("{}/v2/bitcoin/transactions?signedhex={}", api_url, signed_tx);
+    
+    // Create URL-encoded form data
+    let params = [("signedhex", signed_tx)];
+    
+    // Send POST request with URL-encoded form
+    let response = client
+        .post(&broadcast_url)
+        .form(&params)
+        .send()
+        .await
+        .context("Failed to broadcast transaction")?;
+    
+    // Parse the response
+    let result: serde_json::Value = response
+        .json()
+        .await
+        .context("Failed to parse API response")?;
+    
+    // Extract transaction ID from the response
+    if let Some(tx_id) = result.get("result").and_then(|r| r.as_str()) {
+        Ok(tx_id.to_string())
+    } else if let Some(error) = result.get("error") {
+        Err(anyhow::anyhow!("Broadcast failed: {}", error))
+    } else {
+        Err(anyhow::anyhow!("Unexpected response format"))
+    }
+}
+
+// Function to get the blockchain explorer URL
+fn get_explorer_url(network: config::Network, tx_id: &str) -> String {
+    match network {
+        config::Network::Mainnet => format!("https://mempool.space/tx/{}", tx_id),
+        config::Network::Testnet4 => format!("https://mempool.space/testnet4/tx/{}", tx_id),
+        config::Network::Regtest => format!("Transaction ID: {}", tx_id), // No explorer for regtest
+    }
+}
+
 // Handle broadcast commands by calling the corresponding compose API function
 async fn handle_broadcast_command(
     config: &AppConfig,
@@ -456,7 +502,15 @@ async fn handle_broadcast_command(
     // Print the signed transaction
     println!("Signed transaction: {}", signed_tx);
 
-    // TODO: Add code to broadcast the signed transaction
+    // Broadcast the signed transaction
+    println!("Broadcasting transaction...");
+    let tx_id = broadcast_transaction(config, &signed_tx).await?;
+    
+    // Create and display explorer URL
+    let explorer_url = get_explorer_url(config.network, &tx_id);
+    println!("Transaction broadcast successfully!");
+    println!("Transaction ID: {}", tx_id);
+    println!("Explorer URL: {}", explorer_url);
 
     Ok(())
 }
