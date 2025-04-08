@@ -21,8 +21,50 @@ use crate::wallet::AddressInfo;
 
 type Result<T> = std::result::Result<T, WalletError>;
 
+/// Represents the different types of Bitcoin addresses supported
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum AddressType {
+    P2PKH,
+    P2WPKH,
+    P2SHP2WPKH,
+    P2TR,
+    P2WSH,
+    Unknown,
+}
+
+impl AddressType {
+    /// Converts a string to AddressType
+    fn from_str(address_type: &str) -> Self {
+        match address_type {
+            "p2pkh" => Self::P2PKH,
+            "p2wpkh" | "bech32" => Self::P2WPKH,
+            "p2sh-p2wpkh" => Self::P2SHP2WPKH,
+            "p2tr" => Self::P2TR,
+            "p2wsh" => Self::P2WSH,
+            _ => Self::Unknown,
+        }
+    }
+    
+    /// Converts an AddressType to string
+    fn to_str(&self) -> &'static str {
+        match self {
+            Self::P2PKH => "p2pkh",
+            Self::P2WPKH => "p2wpkh",
+            Self::P2SHP2WPKH => "p2sh-p2wpkh",
+            Self::P2TR => "p2tr",
+            Self::P2WSH => "p2wsh",
+            Self::Unknown => "unknown",
+        }
+    }
+    
+    /// Indicates if the type is segwit
+    fn is_segwit(&self) -> bool {
+        matches!(self, Self::P2WPKH | Self::P2SHP2WPKH | Self::P2WSH | Self::P2TR)
+    }
+}
+
 //
-// UTILITY FUNCTIONS
+// MESSAGE AND SIGNATURE UTILITIES
 //
 
 /// Creates a Message from a signature hash
@@ -91,6 +133,10 @@ fn sign_and_verify_ecdsa(
     Ok(encode_ecdsa_signature(&signature, sighash_type))
 }
 
+//
+// KEY CONVERSION UTILITIES
+//
+
 /// Converts a PublicKey to CompressedPublicKey
 fn get_compressed_pubkey(public_key: &PublicKey) -> Result<bitcoin::key::CompressedPublicKey> {
     bitcoin::key::CompressedPublicKey::from_slice(&public_key.to_bytes())
@@ -119,6 +165,10 @@ fn create_empty_script_sig() -> ScriptBuf {
     ScriptBuf::new()
 }
 
+//
+// TRANSACTION PARSING UTILITIES
+//
+
 /// Parse a raw transaction from hexadecimal format
 fn parse_transaction(raw_tx_hex: &str) -> Result<Transaction> {
     let tx_bytes = hex::decode(raw_tx_hex)
@@ -146,16 +196,49 @@ fn decode_script(script_hex: &str, index: usize) -> Result<ScriptBuf> {
     Ok(ScriptBuf::from_bytes(script_bytes))
 }
 
-/// Determine the address type from script_pubkey
+/// Check if a script is a P2SH-P2WPKH script
+fn is_p2sh_p2wpkh_script(script_pubkey: &ScriptBuf) -> bool {
+    if !script_pubkey.is_p2sh() {
+        return false;
+    }
+    
+    // Check for P2SH-P2WPKH pattern using safe iteration
+    let mut iter = script_pubkey.instructions_minimal();
+    
+    // First instruction should be OP_HASH160
+    if let Some(Ok(Instruction::Op(op1))) = iter.next() {
+        if op1 == bitcoin::blockdata::opcodes::all::OP_HASH160 {
+            // Second instruction should be a 20-byte push
+            if let Some(Ok(Instruction::PushBytes(bytes))) = iter.next() {
+                if bytes.len() == 20 {
+                    // Third instruction should be OP_EQUAL
+                    if let Some(Ok(Instruction::Op(op2))) = iter.next() {
+                        if op2 == bitcoin::blockdata::opcodes::all::OP_EQUAL {
+                            // No more instructions
+                            if iter.next().is_none() {
+                                // This confirms it's a P2SH, but we can't fully verify it's specifically P2SH-P2WPKH
+                                // without the redeem script. We rely on can_sign_input to verify using the address matching.
+                                // The 20-byte hash length is consistent with P2SH-P2WPKH, which is a good hint.
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    false
+}
+
+/// Determine the address type from script_pubkey with a more robust approach
 fn determine_address_type(script_pubkey: &ScriptBuf) -> String {
     if script_pubkey.is_p2pkh() {
         "p2pkh".to_string()
     } else if script_pubkey.is_p2wpkh() {
         "p2wpkh".to_string()
     } else if script_pubkey.is_p2sh() {
-        // Heuristic detection for P2SH-P2WPKH
-        // Standard P2SH-P2WPKH script is 23 bytes
-        if script_pubkey.len() == 23 {
+        if is_p2sh_p2wpkh_script(script_pubkey) {
             "p2sh-p2wpkh".to_string()
         } else {
             "p2sh".to_string()
@@ -168,6 +251,10 @@ fn determine_address_type(script_pubkey: &ScriptBuf) -> String {
         "unknown".to_string()
     }
 }
+
+//
+// PSBT INPUT PREPARATION
+//
 
 /// Prepare a single UTXO and add it to the PSBT input at a specific index
 fn prepare_utxo_for_input(
@@ -206,6 +293,10 @@ fn add_utxos_to_psbt(psbt: &mut Psbt, utxos: &[(&str, u64)]) -> Result<()> {
     Ok(())
 }
 
+//
+// ADDRESS UTILITIES
+//
+
 /// Standardize address type string to ensure consistency
 /// Converts legacy names like "bech32" to standard names like "p2wpkh"
 fn standardize_address_type(address_type: &str) -> &str {
@@ -220,37 +311,17 @@ fn script_matches(script_pubkey: &ScriptBuf, expected_script: &ScriptBuf) -> boo
     script_pubkey == expected_script
 }
 
-/// Check if a private key can sign a P2WPKH input
-fn can_sign_p2wpkh(script_pubkey: &ScriptBuf, public_key: &PublicKey) -> Result<bool> {
-    let compressed_pubkey = get_compressed_pubkey(public_key)?;
-    let expected_script = Address::p2wpkh(&compressed_pubkey, Network::Bitcoin).script_pubkey();
-    Ok(script_matches(script_pubkey, &expected_script))
-}
-
-/// Check if a private key can sign a P2PKH input
-fn can_sign_p2pkh(script_pubkey: &ScriptBuf, public_key: &PublicKey) -> Result<bool> {
-    let expected_script = Address::p2pkh(public_key, Network::Bitcoin).script_pubkey();
-    Ok(script_matches(script_pubkey, &expected_script))
-}
-
-/// Check if a private key can sign a P2SH-P2WPKH input
-fn can_sign_p2sh_p2wpkh(script_pubkey: &ScriptBuf, public_key: &PublicKey) -> Result<bool> {
-    let compressed_pubkey = get_compressed_pubkey(public_key)?;
-    let p2wpkh = Address::p2wpkh(&compressed_pubkey, Network::Bitcoin);
-    let expected_script = Address::p2sh(&p2wpkh.script_pubkey(), Network::Bitcoin)
-        .map_err(|e| WalletError::BitcoinError(format!("Failed to create P2SH-P2WPKH address: {}", e)))?
-        .script_pubkey();
-    
-    Ok(script_matches(script_pubkey, &expected_script))
-}
-
-/// Check if a private key can sign a P2TR input
-fn can_sign_p2tr(script_pubkey: &ScriptBuf, public_key: &PublicKey) -> Result<bool> {
-    let secp = Secp256k1::verification_only();
-    let xonly_pubkey = get_xonly_pubkey(public_key)?;
-    let p2tr_address = Address::p2tr(&secp, xonly_pubkey, None, Network::Bitcoin);
-    let expected_script = p2tr_address.script_pubkey();
-    
+/// Utility function to check if a key can sign an input by first creating the corresponding address
+fn can_sign_with_address_creation<F>(
+    script_pubkey: &ScriptBuf, 
+    public_key: &PublicKey,
+    create_address: F
+) -> Result<bool>
+where
+    F: FnOnce(&PublicKey) -> Result<Address>
+{
+    let expected_address = create_address(public_key)?;
+    let expected_script = expected_address.script_pubkey();
     Ok(script_matches(script_pubkey, &expected_script))
 }
 
@@ -282,22 +353,91 @@ fn is_pubkey_in_witness_script(witness_script: &ScriptBuf, public_key: &PublicKe
     Ok(false)
 }
 
-/// Check if a private key can sign a P2WSH input
-fn can_sign_p2wsh(script_pubkey: &ScriptBuf, public_key: &PublicKey, witness_script: Option<&ScriptBuf>) -> Result<bool> {
-    // We need the witness script to verify
-    let Some(witness_script) = witness_script else {
-        return Ok(false);
-    };
-    
-    // Verify that the script_pubkey corresponds to the hash of the witness_script
-    let expected_script = Address::p2wsh(witness_script, Network::Bitcoin).script_pubkey();
-    
-    if !script_matches(script_pubkey, &expected_script) {
-        return Ok(false);
+//
+// INPUT SIGNING CAPABILITY CHECKS
+//
+
+/// Check if a key can sign a P2WPKH input
+fn can_sign_p2wpkh_input(
+    script_pubkey: &ScriptBuf,
+    public_key: &PublicKey,
+    network: Network
+) -> Result<bool> {
+    can_sign_with_address_creation(
+        script_pubkey, public_key, 
+        |pubkey| -> Result<Address> {
+            let compressed_pubkey = get_compressed_pubkey(pubkey)?;
+            Ok(Address::p2wpkh(&compressed_pubkey, network))
+        }
+    )
+}
+
+/// Check if a key can sign a P2PKH input
+fn can_sign_p2pkh_input(
+    script_pubkey: &ScriptBuf,
+    public_key: &PublicKey,
+    network: Network
+) -> Result<bool> {
+    can_sign_with_address_creation(
+        script_pubkey, public_key,
+        |pubkey| Ok(Address::p2pkh(pubkey, network))
+    )
+}
+
+/// Check if a key can sign a P2SH-P2WPKH input
+fn can_sign_p2sh_p2wpkh_input(
+    script_pubkey: &ScriptBuf,
+    public_key: &PublicKey,
+    network: Network
+) -> Result<bool> {
+    can_sign_with_address_creation(
+        script_pubkey, public_key,
+        |pubkey| -> Result<Address> {
+            let compressed_pubkey = get_compressed_pubkey(pubkey)?;
+            let p2wpkh = Address::p2wpkh(&compressed_pubkey, network);
+            Address::p2sh(&p2wpkh.script_pubkey(), network)
+                .map_err(|e| WalletError::BitcoinError(format!("Failed to create P2SH-P2WPKH address: {}", e)))
+        }
+    )
+}
+
+/// Check if a key can sign a P2TR input
+fn can_sign_p2tr_input(
+    script_pubkey: &ScriptBuf,
+    public_key: &PublicKey,
+    network: Network
+) -> Result<bool> {
+    can_sign_with_address_creation(
+        script_pubkey, public_key,
+        |pubkey| -> Result<Address> {
+            let secp = Secp256k1::verification_only();
+            let xonly_pubkey = get_xonly_pubkey(pubkey)?;
+            Ok(Address::p2tr(&secp, xonly_pubkey, None, network))
+        }
+    )
+}
+
+/// Check if a key can sign a P2WSH input
+fn can_sign_p2wsh_input(
+    script_pubkey: &ScriptBuf,
+    public_key: &PublicKey,
+    witness_script: Option<&ScriptBuf>,
+    network: Network
+) -> Result<bool> {
+    if let Some(script) = witness_script {
+        can_sign_with_address_creation(
+            script_pubkey, public_key,
+            |_| Ok(Address::p2wsh(script, network))
+        ).and_then(|matches| {
+            if matches {
+                is_pubkey_in_witness_script(script, public_key)
+            } else {
+                Ok(false)
+            }
+        })
+    } else {
+        Ok(false)
     }
-    
-    // Check if the public key appears in the witness script using the improved function
-    is_pubkey_in_witness_script(witness_script, public_key)
 }
 
 /// Check if a private key can sign a specific input
@@ -305,56 +445,36 @@ fn can_sign_input(
     script_pubkey: &ScriptBuf,
     public_key: &PublicKey,
     address_type: &str,
-    psbt_input: Option<&bitcoin::psbt::Input>
+    psbt_input: Option<&bitcoin::psbt::Input>,
+    network: Network
 ) -> Result<bool> {
-    // Standardize address type for consistent handling
-    let std_address_type = standardize_address_type(address_type);
+    let addr_type = AddressType::from_str(standardize_address_type(address_type));
     
-    match std_address_type {
-        "p2wpkh" => can_sign_p2wpkh(script_pubkey, public_key),
-        "p2pkh" => can_sign_p2pkh(script_pubkey, public_key),
-        "p2sh-p2wpkh" => can_sign_p2sh_p2wpkh(script_pubkey, public_key),
-        "p2tr" => can_sign_p2tr(script_pubkey, public_key),
-        "p2wsh" => {
-            // For P2WSH, we need the witness script from the PSBT
+    match addr_type {
+        AddressType::P2WPKH => can_sign_p2wpkh_input(script_pubkey, public_key, network),
+        AddressType::P2PKH => can_sign_p2pkh_input(script_pubkey, public_key, network),
+        AddressType::P2SHP2WPKH => can_sign_p2sh_p2wpkh_input(script_pubkey, public_key, network),
+        AddressType::P2TR => can_sign_p2tr_input(script_pubkey, public_key, network),
+        AddressType::P2WSH => {
             if let Some(input) = psbt_input {
-                if let Some(witness_script) = &input.witness_script {
-                    can_sign_p2wsh(script_pubkey, public_key, Some(witness_script))
-                } else {
-                    Ok(false)
-                }
+                can_sign_p2wsh_input(script_pubkey, public_key, input.witness_script.as_ref(), network)
             } else {
                 Ok(false)
             }
         },
-        _ => Ok(false), // Unknown address type
+        AddressType::Unknown => Ok(false),
     }
 }
 
-/// Get P2WPKH signing script for a public key
-fn get_p2wpkh_signing_script(public_key: &PublicKey) -> Result<ScriptBuf> {
-    // For P2WPKH, we need to use a P2PKH script for the signature hash
+//
+// SIGNING SCRIPT GENERATION
+//
+
+/// Generate a P2PKH signing script
+fn get_p2pkh_signing_script(public_key: &PublicKey) -> Result<ScriptBuf> {
     let compressed_pubkey = get_compressed_pubkey(public_key)?;
-    
     let pubkey_hash = compressed_pubkey.pubkey_hash();
     Ok(ScriptBuf::new_p2pkh(&pubkey_hash))
-}
-
-/// Get P2SH-P2WPKH signing script for a public key
-fn get_p2sh_p2wpkh_signing_script(public_key: &PublicKey) -> Result<ScriptBuf> {
-    // Same as P2WPKH for signing purposes
-    get_p2wpkh_signing_script(public_key)
-}
-
-/// Get P2WSH signing script
-fn get_p2wsh_signing_script(witness_script: &ScriptBuf) -> Result<ScriptBuf> {
-    // For P2WSH, the signing script is the witness script itself
-    Ok(witness_script.clone())
-}
-
-/// Get default signing script (uses script_pubkey directly)
-fn get_default_signing_script(script_pubkey: &ScriptBuf) -> Result<ScriptBuf> {
-    Ok(script_pubkey.clone())
 }
 
 /// Generate a signing script based on address type
@@ -364,180 +484,34 @@ fn get_signing_script(
     address_type: &str,
     witness_script: Option<&ScriptBuf>
 ) -> Result<ScriptBuf> {
-    // Standardize address type for consistent handling
-    let std_address_type = standardize_address_type(address_type);
+    let addr_type = AddressType::from_str(standardize_address_type(address_type));
     
-    match std_address_type {
-        "p2wpkh" => get_p2wpkh_signing_script(public_key),
-        "p2sh-p2wpkh" => get_p2sh_p2wpkh_signing_script(public_key),
-        "p2wsh" => {
-            if let Some(script) = witness_script {
-                get_p2wsh_signing_script(script)
-            } else {
-                Err(WalletError::BitcoinError(
+    match addr_type {
+        AddressType::P2WPKH | AddressType::P2SHP2WPKH => {
+            // For P2WPKH and P2SH-P2WPKH, we need to use a P2PKH script for the signature hash
+            get_p2pkh_signing_script(public_key)
+        },
+        
+        AddressType::P2WSH => {
+            // For P2WSH, the signing script is the witness script itself
+            witness_script
+                .map(|script| script.clone())
+                .ok_or_else(|| WalletError::BitcoinError(
                     format!("Missing witness script for P2WSH")
                 ))
-            }
         },
-        "p2tr" | _ => get_default_signing_script(script_pubkey),
+        
+        // By default, use the script_pubkey directly
+        _ => Ok(script_pubkey.clone()),
     }
 }
 
-/// Add P2WPKH signature to input
-fn add_p2wpkh_signature(
-    input: &mut bitcoin::psbt::Input,
-    signature_bytes: Vec<u8>,
-    pubkey_bytes: Vec<u8>
-) -> Result<()> {
-    // For P2WPKH, set witness data
-    input.final_script_witness = Some(create_witness_with_sig_and_pubkey(signature_bytes, pubkey_bytes));
-    
-    // Empty script_sig for segwit
-    input.final_script_sig = Some(create_empty_script_sig());
-    
-    Ok(())
-}
-
-/// Add P2PKH signature to input
-fn add_p2pkh_signature(
-    input: &mut bitcoin::psbt::Input,
-    signature_bytes: Vec<u8>,
-    pubkey_bytes: Vec<u8>
-) -> Result<()> {
-    // For P2PKH, create scriptSig: <signature> <pubkey>
-    let sig_push_bytes = PushBytesBuf::try_from(signature_bytes)
-        .map_err(|e| WalletError::BitcoinError(
-            format!("Failed to convert signature to PushBytesBuf: {:?}", e)
-        ))?;
-
-    let pubkey_push_bytes = PushBytesBuf::try_from(pubkey_bytes)
-        .map_err(|e| WalletError::BitcoinError(
-            format!("Failed to convert pubkey to PushBytesBuf: {:?}", e)
-        ))?;
-
-    let script_sig = Builder::new()
-        .push_slice(&sig_push_bytes[..])
-        .push_slice(&pubkey_push_bytes[..])
-        .into_script();
-
-    input.final_script_sig = Some(script_sig);
-    
-    Ok(())
-}
-
-/// Add P2SH-P2WPKH signature to input
-fn add_p2sh_p2wpkh_signature(
-    input: &mut bitcoin::psbt::Input,
-    signature_bytes: Vec<u8>,
-    pubkey_bytes: Vec<u8>
-) -> Result<()> {
-    // For P2SH-P2WPKH, set both script_sig and witness data
-    
-    // 1. Create redeem script (P2WPKH)
-    let compressed_pubkey = bitcoin::key::CompressedPublicKey::from_slice(
-        &pubkey_bytes,
-    ).map_err(|e| WalletError::BitcoinError(format!("Invalid public key: {}", e)))?;
-    
-    // Use wpubkey_hash for P2WPKH
-    let pubkey_hash = compressed_pubkey.wpubkey_hash();
-    let redeem_script = ScriptBuf::new_p2wpkh(&pubkey_hash);
-    
-    // 2. Set script_sig to push redeem script
-    let redeem_script_bytes = PushBytesBuf::try_from(redeem_script.to_bytes())
-        .map_err(|e| WalletError::BitcoinError(
-            format!("Failed to convert redeem script to PushBytesBuf: {:?}", e)
-        ))?;
-    
-    let script_sig = Builder::new()
-        .push_slice(&redeem_script_bytes[..])
-        .into_script();
-    
-    input.final_script_sig = Some(script_sig);
-    
-    // 3. Set witness data (same as P2WPKH)
-    input.final_script_witness = Some(create_witness_with_sig_and_pubkey(signature_bytes, pubkey_bytes));
-    
-    Ok(())
-}
-
-/// Add P2TR signature to input
-fn add_p2tr_signature(
-    input: &mut bitcoin::psbt::Input,
-    signature_bytes: Vec<u8>
-) -> Result<()> {
-    // For P2TR, add as BIP 341 Taproot signature
-    let mut witness = bitcoin::blockdata::witness::Witness::new();
-    witness.push(signature_bytes);
-    input.final_script_witness = Some(witness);
-    
-    // Empty script_sig for segwit
-    input.final_script_sig = Some(create_empty_script_sig());
-    
-    Ok(())
-}
-
-/// Add P2WSH signature to input
-fn add_p2wsh_signature(
-    input: &mut bitcoin::psbt::Input,
-    signature_bytes: Vec<u8>,
-    pubkey_bytes: Vec<u8>,
-    witness_script: &ScriptBuf
-) -> Result<()> {
-    // For P2WSH, create witness structure
-    let mut witness = bitcoin::blockdata::witness::Witness::new();
-    
-    // Add signature
-    witness.push(signature_bytes);
-    
-    // Add public key
-    witness.push(pubkey_bytes);
-    
-    // Add the witness script
-    witness.push(witness_script.as_bytes());
-    
-    input.final_script_witness = Some(witness);
-    
-    // Empty script_sig for segwit
-    input.final_script_sig = Some(create_empty_script_sig());
-    
-    Ok(())
-}
-
-/// Add signature to PSBT input based on address type
-fn add_signature_to_input(
-    input: &mut bitcoin::psbt::Input,
-    signature_bytes: Vec<u8>,
-    pubkey_bytes: Vec<u8>,
-    address_type: &str,
-    witness_script: Option<&ScriptBuf>
-) -> Result<()> {
-    // Standardize address type for consistent handling
-    let std_address_type = standardize_address_type(address_type);
-    
-    match std_address_type {
-        "p2wpkh" => add_p2wpkh_signature(input, signature_bytes, pubkey_bytes),
-        "p2pkh" => add_p2pkh_signature(input, signature_bytes, pubkey_bytes),
-        "p2sh-p2wpkh" => add_p2sh_p2wpkh_signature(input, signature_bytes, pubkey_bytes),
-        "p2tr" => add_p2tr_signature(input, signature_bytes),
-        "p2wsh" => {
-            if let Some(script) = witness_script {
-                add_p2wsh_signature(input, signature_bytes, pubkey_bytes, script)
-            } else {
-                Err(WalletError::BitcoinError(
-                    format!("Missing witness script for P2WSH")
-                ))
-            }
-        },
-        _ => {
-            Err(WalletError::BitcoinError(
-                format!("Unsupported address type: {}", address_type)
-            ))
-        }
-    }
-}
+//
+// SIGNATURE COMPUTATION
+//
 
 /// Compute Taproot (P2TR) signature
-fn compute_taproot_signature(
+fn compute_p2tr_signature(
     secp: &Secp256k1<bitcoin::secp256k1::All>,
     sighash_cache: &mut SighashCache<&Transaction>,
     input_index: usize,
@@ -545,8 +519,11 @@ fn compute_taproot_signature(
     secret_key: &bitcoin::secp256k1::SecretKey,
     public_key: &PublicKey
 ) -> Result<Vec<u8>> {
-    // For Taproot, use the appropriate sighash algorithm
-    let sighash_type = bitcoin::sighash::TapSighashType::All;
+    // For Taproot, use the appropriate sighash algorithm from input or default to All
+    let sighash_type = match input.sighash_type {
+        Some(s) => s.taproot_hash_ty().unwrap_or(bitcoin::sighash::TapSighashType::All),
+        None => bitcoin::sighash::TapSighashType::All,
+    };
     
     // Get witness UTXO safely with error handling
     let witness_utxo = input.witness_utxo.as_ref()
@@ -583,7 +560,7 @@ fn compute_taproot_signature(
     Ok(sig_bytes)
 }
 
-/// Compute SegWit (P2WPKH, P2SH-P2WPKH) signature
+/// Compute SegWit (P2WPKH/P2SH-P2WPKH) signature
 fn compute_segwit_signature(
     secp: &Secp256k1<bitcoin::secp256k1::All>,
     sighash_cache: &mut SighashCache<&Transaction>,
@@ -611,29 +588,6 @@ fn compute_segwit_signature(
         )
         .map_err(|e| WalletError::BitcoinError(
             format!("Failed to compute SegWit signature hash: {}", e)
-        ))?;
-
-    // Create a message from the sighash and sign it
-    let message = create_message_from_hash(&sighash[..])?;
-    sign_and_verify_ecdsa(secp, &message, secret_key, public_key, sighash_type)
-}
-
-/// Compute Legacy (P2PKH) signature
-fn compute_legacy_signature(
-    secp: &Secp256k1<bitcoin::secp256k1::All>,
-    sighash_cache: &mut SighashCache<&Transaction>,
-    input_index: usize,
-    signing_script: &ScriptBuf,
-    secret_key: &bitcoin::secp256k1::SecretKey,
-    public_key: &PublicKey
-) -> Result<Vec<u8>> {
-    // For legacy, use legacy_signature_hash
-    let sighash_type = EcdsaSighashType::All;
-    
-    let sighash = sighash_cache
-        .legacy_signature_hash(input_index, &signing_script, sighash_type as u32)
-        .map_err(|e| WalletError::BitcoinError(
-            format!("Failed to compute legacy signature hash: {}", e)
         ))?;
 
     // Create a message from the sighash and sign it
@@ -679,6 +633,216 @@ fn compute_p2wsh_signature(
     sign_and_verify_ecdsa(secp, &message, secret_key, public_key, sighash_type)
 }
 
+/// Compute Legacy (P2PKH) signature
+fn compute_legacy_signature(
+    secp: &Secp256k1<bitcoin::secp256k1::All>,
+    sighash_cache: &mut SighashCache<&Transaction>,
+    input_index: usize,
+    signing_script: &ScriptBuf,
+    secret_key: &bitcoin::secp256k1::SecretKey,
+    public_key: &PublicKey
+) -> Result<Vec<u8>> {
+    // For legacy, use legacy_signature_hash
+    let sighash_type = EcdsaSighashType::All;
+    
+    let sighash = sighash_cache
+        .legacy_signature_hash(input_index, &signing_script, sighash_type as u32)
+        .map_err(|e| WalletError::BitcoinError(
+            format!("Failed to compute legacy signature hash: {}", e)
+        ))?;
+
+    // Create a message from the sighash and sign it
+    let message = create_message_from_hash(&sighash[..])?;
+    sign_and_verify_ecdsa(secp, &message, secret_key, public_key, sighash_type)
+}
+
+/// Compute signature for an input based on its address type
+fn compute_signature(
+    secp: &Secp256k1<bitcoin::secp256k1::All>,
+    sighash_cache: &mut SighashCache<&Transaction>,
+    input_index: usize,
+    input: &bitcoin::psbt::Input,
+    signing_script: &ScriptBuf,
+    secret_key: &bitcoin::secp256k1::SecretKey,
+    public_key: &PublicKey,
+    address_type: &str
+) -> Result<Vec<u8>> {
+    let addr_type = AddressType::from_str(standardize_address_type(address_type));
+    
+    match addr_type {
+        AddressType::P2TR => compute_p2tr_signature(
+            secp, sighash_cache, input_index, input, secret_key, public_key
+        ),
+        
+        AddressType::P2WPKH | AddressType::P2SHP2WPKH => compute_segwit_signature(
+            secp, sighash_cache, input_index, input, signing_script, secret_key, public_key
+        ),
+        
+        AddressType::P2WSH => compute_p2wsh_signature(
+            secp, sighash_cache, input_index, input, signing_script, secret_key, public_key
+        ),
+        
+        _ => compute_legacy_signature(
+            secp, sighash_cache, input_index, signing_script, secret_key, public_key
+        )
+    }
+}
+
+//
+// SIGNATURE ADDITION TO INPUTS
+//
+
+/// Add signature to P2WPKH input
+fn add_p2wpkh_signature(
+    input: &mut bitcoin::psbt::Input,
+    signature_bytes: Vec<u8>,
+    pubkey_bytes: Vec<u8>
+) -> Result<()> {
+    input.final_script_witness = Some(create_witness_with_sig_and_pubkey(signature_bytes, pubkey_bytes));
+    input.final_script_sig = Some(create_empty_script_sig());
+    Ok(())
+}
+
+/// Add signature to P2PKH input
+fn add_p2pkh_signature(
+    input: &mut bitcoin::psbt::Input,
+    signature_bytes: Vec<u8>,
+    pubkey_bytes: Vec<u8>
+) -> Result<()> {
+    let sig_push_bytes = PushBytesBuf::try_from(signature_bytes)
+        .map_err(|e| WalletError::BitcoinError(
+            format!("Failed to convert signature to PushBytesBuf: {:?}", e)
+        ))?;
+
+    let pubkey_push_bytes = PushBytesBuf::try_from(pubkey_bytes)
+        .map_err(|e| WalletError::BitcoinError(
+            format!("Failed to convert pubkey to PushBytesBuf: {:?}", e)
+        ))?;
+
+    let script_sig = Builder::new()
+        .push_slice(&sig_push_bytes[..])
+        .push_slice(&pubkey_push_bytes[..])
+        .into_script();
+
+    input.final_script_sig = Some(script_sig);
+    Ok(())
+}
+
+/// Add signature to P2SH-P2WPKH input
+fn add_p2sh_p2wpkh_signature(
+    input: &mut bitcoin::psbt::Input,
+    signature_bytes: Vec<u8>,
+    pubkey_bytes: Vec<u8>
+) -> Result<()> {
+    // 1. Create redeem script (P2WPKH)
+    let compressed_pubkey = bitcoin::key::CompressedPublicKey::from_slice(
+        &pubkey_bytes,
+    ).map_err(|e| WalletError::BitcoinError(format!("Invalid public key: {}", e)))?;
+    
+    // Use wpubkey_hash for P2WPKH
+    let pubkey_hash = compressed_pubkey.wpubkey_hash();
+    let redeem_script = ScriptBuf::new_p2wpkh(&pubkey_hash);
+    
+    // 2. Set script_sig to push redeem script
+    let redeem_script_bytes = PushBytesBuf::try_from(redeem_script.to_bytes())
+        .map_err(|e| WalletError::BitcoinError(
+            format!("Failed to convert redeem script to PushBytesBuf: {:?}", e)
+        ))?;
+    
+    let script_sig = Builder::new()
+        .push_slice(&redeem_script_bytes[..])
+        .into_script();
+    
+    input.final_script_sig = Some(script_sig);
+    
+    // 3. Set witness data (same as P2WPKH)
+    input.final_script_witness = Some(create_witness_with_sig_and_pubkey(signature_bytes, pubkey_bytes));
+    
+    Ok(())
+}
+
+/// Add signature to P2TR input
+fn add_p2tr_signature(
+    input: &mut bitcoin::psbt::Input,
+    signature_bytes: Vec<u8>
+) -> Result<()> {
+    let mut witness = bitcoin::blockdata::witness::Witness::new();
+    witness.push(signature_bytes);
+    input.final_script_witness = Some(witness);
+    
+    // Empty script_sig for segwit
+    input.final_script_sig = Some(create_empty_script_sig());
+    
+    Ok(())
+}
+
+/// Add signature to P2WSH input
+fn add_p2wsh_signature(
+    input: &mut bitcoin::psbt::Input,
+    signature_bytes: Vec<u8>,
+    pubkey_bytes: Vec<u8>,
+    witness_script: &ScriptBuf
+) -> Result<()> {
+    let mut witness = bitcoin::blockdata::witness::Witness::new();
+    
+    // Add signature
+    witness.push(signature_bytes);
+    
+    // Add public key
+    witness.push(pubkey_bytes);
+    
+    // Add the witness script
+    witness.push(witness_script.as_bytes());
+    
+    input.final_script_witness = Some(witness);
+    
+    // Empty script_sig for segwit
+    input.final_script_sig = Some(create_empty_script_sig());
+    
+    Ok(())
+}
+
+/// Add signature to PSBT input based on address type
+fn add_signature_to_input(
+    input: &mut bitcoin::psbt::Input,
+    signature_bytes: Vec<u8>,
+    pubkey_bytes: Vec<u8>,
+    address_type: &str,
+    witness_script: Option<&ScriptBuf>
+) -> Result<()> {
+    let addr_type = AddressType::from_str(standardize_address_type(address_type));
+    
+    match addr_type {
+        AddressType::P2WPKH => add_p2wpkh_signature(input, signature_bytes, pubkey_bytes),
+        
+        AddressType::P2PKH => add_p2pkh_signature(input, signature_bytes, pubkey_bytes),
+        
+        AddressType::P2SHP2WPKH => add_p2sh_p2wpkh_signature(input, signature_bytes, pubkey_bytes),
+        
+        AddressType::P2TR => add_p2tr_signature(input, signature_bytes),
+        
+        AddressType::P2WSH => {
+            if let Some(script) = witness_script {
+                add_p2wsh_signature(input, signature_bytes, pubkey_bytes, script)
+            } else {
+                Err(WalletError::BitcoinError(
+                    format!("Missing witness script for P2WSH")
+                ))
+            }
+        },
+        
+        AddressType::Unknown => {
+            Err(WalletError::BitcoinError(
+                format!("Unsupported address type: {}", address_type)
+            ))
+        }
+    }
+}
+
+//
+// PSBT PROCESSING
+//
+
 /// Try sign a PSBT input with a private key if possible
 fn try_sign_input(
     secp: &Secp256k1<bitcoin::secp256k1::All>,
@@ -688,28 +852,28 @@ fn try_sign_input(
     private_key: &PrivateKey,
     public_key: &PublicKey,
     address_type: &str,
-    script_pubkey: &ScriptBuf
+    script_pubkey: &ScriptBuf,
+    network: Network
 ) -> Result<bool> {
-    // Standardize address type for consistent handling
-    let std_address_type = standardize_address_type(address_type);
-    
     // Check if this key can sign this input
-    if !can_sign_input(script_pubkey, public_key, std_address_type, Some(input))? {
+    if !can_sign_input(script_pubkey, public_key, address_type, Some(input), network)? {
         return Ok(false);
     }
 
     // Clone the witness script if needed, to avoid borrowing issues
-    let witness_script_clone = if std_address_type == "p2wsh" {
-        match &input.witness_script {
-            Some(script) => Some(script.clone()),
-            None => None
-        }
+    let witness_script_clone = if address_type == "p2wsh" {
+        input.witness_script.clone()
     } else {
         None
     };
 
     // Get the signing script
-    let signing_script = get_signing_script(public_key, script_pubkey, std_address_type, witness_script_clone.as_ref())?;
+    let signing_script = get_signing_script(
+        public_key, 
+        script_pubkey, 
+        address_type, 
+        witness_script_clone.as_ref()
+    )?;
 
     // Get secret key from private key
     let secret_key = bitcoin::secp256k1::SecretKey::from_slice(&private_key.inner[..])
@@ -718,20 +882,23 @@ fn try_sign_input(
         ))?;
 
     // Compute signature based on address type
-    let signature_bytes = match std_address_type {
-        "p2tr" => compute_taproot_signature(secp, sighash_cache, input_index, input, &secret_key, public_key)?,
-        "p2wsh" => compute_p2wsh_signature(secp, sighash_cache, input_index, input, &signing_script, &secret_key, public_key)?,
-        "p2wpkh" | "p2sh-p2wpkh" => 
-            compute_segwit_signature(secp, sighash_cache, input_index, input, &signing_script, &secret_key, public_key)?,
-        _ => compute_legacy_signature(secp, sighash_cache, input_index, &signing_script, &secret_key, public_key)?,
-    };
+    let signature_bytes = compute_signature(
+        secp, 
+        sighash_cache, 
+        input_index, 
+        input, 
+        &signing_script, 
+        &secret_key, 
+        public_key, 
+        address_type
+    )?;
 
     // Add the signature to the input
     add_signature_to_input(
         input,
         signature_bytes,
         public_key.to_bytes(),
-        std_address_type,
+        address_type,
         witness_script_clone.as_ref()
     )?;
 
@@ -750,6 +917,63 @@ fn init_signing_context(
     (secp, signed_inputs)
 }
 
+/// Get the script_pubkey for an input
+fn get_input_script_pubkey(psbt: &Psbt, input_index: usize) -> Option<ScriptBuf> {
+    psbt.inputs
+        .get(input_index)
+        .and_then(|input| input.witness_utxo.as_ref())
+        .map(|utxo| utxo.script_pubkey.clone())
+}
+
+/// Try to sign a specific input with a key
+fn sign_input_with_key(
+    secp: &Secp256k1<bitcoin::secp256k1::All>,
+    sighash_cache: &mut SighashCache<&Transaction>,
+    psbt: &mut Psbt,
+    input_index: usize,
+    signed_inputs: &mut [bool],
+    private_key: &PrivateKey,
+    public_key: &PublicKey,
+    address_type: &str,
+    network: Network
+) -> Result<()> {
+    // Skip already signed inputs
+    if signed_inputs[input_index] {
+        return Ok(());
+    }
+    
+    // Get script_pubkey for this input
+    let script_pubkey = match get_input_script_pubkey(psbt, input_index) {
+        Some(script) => script,
+        None => {
+            // Log warning for missing witness_utxo
+            eprintln!("Warning: Input at index {} missing witness_utxo, required for signing", input_index);
+            return Ok(());
+        }
+    };
+    
+    // Try to sign the input
+    let input = &mut psbt.inputs[input_index];
+    match try_sign_input(
+        secp,
+        sighash_cache,
+        input,
+        input_index,
+        private_key,
+        public_key,
+        address_type,
+        &script_pubkey,
+        network
+    ) {
+        Ok(true) => {
+            signed_inputs[input_index] = true;
+            Ok(())
+        },
+        Ok(false) => Ok(()), // Could not sign this input with this key
+        Err(e) => Err(e),    // Propagate error
+    }
+}
+
 /// Process a private key for all inputs in the PSBT
 fn process_key_for_inputs(
     secp: &Secp256k1<bitcoin::secp256k1::All>,
@@ -758,40 +982,22 @@ fn process_key_for_inputs(
     signed_inputs: &mut Vec<bool>,
     private_key: &PrivateKey,
     public_key: &PublicKey,
-    address_type: &str
+    address_type: &str,
+    network: Network
 ) -> Result<()> {
-    // Standardize address type for consistent handling
-    let std_address_type = standardize_address_type(address_type);
-    
     // Sign each input one by one
     for i in 0..psbt.inputs.len() {
-        if signed_inputs[i] {
-            continue; // Skip already signed inputs
-        }
-
-        // First get script_pubkey for this input
-        let script_pubkey = match &psbt.inputs[i].witness_utxo {
-            Some(utxo) => utxo.script_pubkey.clone(),
-            None => continue, // Skip inputs without witness UTXO
-        };
-
-        // Now we can mutably borrow the input
-        let input = &mut psbt.inputs[i];
-        
-        match try_sign_input(
+        sign_input_with_key(
             secp,
             sighash_cache,
-            input,
+            psbt,
             i,
+            signed_inputs,
             private_key,
             public_key,
-            std_address_type,
-            &script_pubkey
-        ) {
-            Ok(true) => signed_inputs[i] = true,
-            Ok(false) => {}, // Could not sign this input with this key
-            Err(e) => return Err(e), // Propagate error
-        }
+            address_type,
+            network
+        )?;
     }
     
     Ok(())
@@ -800,7 +1006,8 @@ fn process_key_for_inputs(
 /// Sign PSBT inputs with wallet private keys
 fn sign_psbt_inputs(
     psbt: &mut Psbt,
-    addresses: &HashMap<String, AddressInfo>
+    addresses: &HashMap<String, AddressInfo>,
+    network: Network
 ) -> Result<Vec<bool>> {
     // Initialize signing context
     let (secp, mut signed_inputs) = init_signing_context(psbt.inputs.len());
@@ -832,7 +1039,8 @@ fn sign_psbt_inputs(
             &mut signed_inputs,
             &private_key,
             &public_key,
-            &info.address_type
+            &info.address_type,
+            network
         )?;
     }
 
@@ -853,7 +1061,11 @@ fn extract_and_serialize_transaction(psbt: Psbt) -> Result<String> {
     Ok(signed_tx_hex)
 }
 
-/// Sign a raw Bitcoin transaction
+//
+// PUBLIC API
+//
+
+/// Sign a raw Bitcoin transaction with a specific network
 ///
 /// This function signs an unsigned transaction with private keys from the wallet.
 /// It supports P2PKH, P2WPKH (bech32), P2SH-P2WPKH, P2WSH, and P2TR inputs.
@@ -863,6 +1075,7 @@ fn extract_and_serialize_transaction(psbt: Psbt) -> Result<String> {
 /// * `addresses` - HashMap of addresses and their information
 /// * `raw_tx_hex` - Unsigned transaction in hexadecimal format
 /// * `utxos` - Vector of (script_pubkey_hex, amount_in_satoshis) pairs for each input
+/// * `network` - Bitcoin network to use
 ///
 /// # Returns
 ///
@@ -871,6 +1084,7 @@ pub fn sign_transaction(
     addresses: &HashMap<String, AddressInfo>,
     raw_tx_hex: &str,
     utxos: Vec<(&str, u64)>,
+    network: Network,
 ) -> Result<String> {
     // Parse the raw transaction
     let tx = parse_transaction(raw_tx_hex)?;
@@ -891,7 +1105,7 @@ pub fn sign_transaction(
     add_utxos_to_psbt(&mut psbt, &utxos)?;
 
     // Sign PSBT inputs with wallet keys
-    let signed_inputs = sign_psbt_inputs(&mut psbt, addresses)?;
+    let signed_inputs = sign_psbt_inputs(&mut psbt, addresses, network)?;
 
     // Check if any inputs were signed
     if !signed_inputs.iter().any(|&signed| signed) {
@@ -900,7 +1114,7 @@ pub fn sign_transaction(
         ));
     }
 
-    // Check for unsigned inputs
+    // Check for unsigned inputs - now return an error if any input remains unsigned
     let unsigned_indices: Vec<usize> = signed_inputs
         .iter()
         .enumerate()
@@ -909,10 +1123,9 @@ pub fn sign_transaction(
         .collect();
 
     if !unsigned_indices.is_empty() {
-        eprintln!(
-            "Warning: Could not sign inputs at indices: {:?}",
-            unsigned_indices
-        );
+        return Err(WalletError::BitcoinError(
+            format!("Could not sign inputs at indices: {:?}", unsigned_indices)
+        ));
     }
 
     // Extract and serialize the final transaction

@@ -8,6 +8,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use bitcoin::secp256k1::Secp256k1;
+use bitcoin::Network;
 use cocoon::Cocoon;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
@@ -297,6 +298,6 @@ impl BitcoinWallet {
     ///
     /// * `Result<String>` - Signed transaction in hexadecimal format or error
     pub fn sign_transaction(&self, raw_tx_hex: &str, utxos: Vec<(&str, u64)>) -> Result<String> {
-        signer::sign_transaction(&self.addresses, raw_tx_hex, utxos)
+        signer::sign_transaction(&self.addresses, raw_tx_hex, utxos, Network::Bitcoin)
     }
 }
