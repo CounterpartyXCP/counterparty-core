@@ -14,14 +14,107 @@ use bitcoin::psbt::Psbt;
 use bitcoin::sighash::{EcdsaSighashType, SighashCache};
 use bitcoin::Transaction;
 use bitcoin::XOnlyPublicKey;
-// Removed unused import
-// use bitcoin::taproot::TapLeafHash;
 
 use crate::wallet::WalletError;
 use crate::wallet::AddressInfo;
 
 
 type Result<T> = std::result::Result<T, WalletError>;
+
+
+/// Creates a Message from a signature hash
+fn create_message_from_hash(sighash: &[u8]) -> Result<Message> {
+    Message::from_digest_slice(sighash)
+        .map_err(|e| WalletError::BitcoinError(
+            format!("Failed to create message: {}", e)
+        ))
+}
+
+/// Verifies an ECDSA signature
+fn verify_ecdsa_signature(
+    secp: &Secp256k1<bitcoin::secp256k1::All>,
+    message: &Message,
+    signature: &bitcoin::secp256k1::ecdsa::Signature,
+    public_key: &PublicKey
+) -> Result<()> {
+    if secp.verify_ecdsa(message, signature, &public_key.inner).is_err() {
+        return Err(WalletError::BitcoinError(
+            format!("Generated signature failed verification")
+        ));
+    }
+    Ok(())
+}
+
+/// Verifies a Schnorr signature
+fn verify_schnorr_signature(
+    secp: &Secp256k1<bitcoin::secp256k1::All>,
+    message: &Message,
+    signature: &bitcoin::secp256k1::schnorr::Signature,
+    xonly_pubkey: &XOnlyPublicKey
+) -> Result<()> {
+    if secp.verify_schnorr(signature, message, xonly_pubkey).is_err() {
+        return Err(WalletError::BitcoinError(
+            format!("Generated Taproot signature failed verification")
+        ));
+    }
+    Ok(())
+}
+
+/// Encodes an ECDSA signature with sighash type
+fn encode_ecdsa_signature(
+    signature: &bitcoin::secp256k1::ecdsa::Signature,
+    sighash_type: EcdsaSighashType
+) -> Vec<u8> {
+    let mut sig_bytes = signature.serialize_der().to_vec();
+    sig_bytes.push(sighash_type as u8);
+    sig_bytes
+}
+
+/// Signs a message with ECDSA and verifies the signature
+fn sign_and_verify_ecdsa(
+    secp: &Secp256k1<bitcoin::secp256k1::All>,
+    message: &Message,
+    secret_key: &bitcoin::secp256k1::SecretKey,
+    public_key: &PublicKey,
+    sighash_type: EcdsaSighashType
+) -> Result<Vec<u8>> {
+    // Sign with ECDSA
+    let signature = secp.sign_ecdsa(message, secret_key);
+    
+    // Verify the signature
+    verify_ecdsa_signature(secp, message, &signature, public_key)?;
+    
+    // Encode with sighash type
+    Ok(encode_ecdsa_signature(&signature, sighash_type))
+}
+
+/// Converts a PublicKey to CompressedPublicKey
+fn get_compressed_pubkey(public_key: &PublicKey) -> Result<bitcoin::key::CompressedPublicKey> {
+    bitcoin::key::CompressedPublicKey::from_slice(&public_key.to_bytes())
+        .map_err(|e| WalletError::BitcoinError(format!("Invalid public key: {}", e)))
+}
+
+/// Converts a PublicKey to XOnlyPublicKey
+fn get_xonly_pubkey(public_key: &PublicKey) -> Result<XOnlyPublicKey> {
+    XOnlyPublicKey::from_slice(&public_key.to_bytes()[1..33])
+        .map_err(|e| WalletError::BitcoinError(format!("Failed to convert to xonly pubkey: {}", e)))
+}
+
+/// Creates a standard witness with signature and public key
+fn create_witness_with_sig_and_pubkey(
+    signature_bytes: Vec<u8>,
+    pubkey_bytes: Vec<u8>
+) -> bitcoin::blockdata::witness::Witness {
+    let mut witness = bitcoin::blockdata::witness::Witness::new();
+    witness.push(signature_bytes);
+    witness.push(pubkey_bytes);
+    witness
+}
+
+/// Creates an empty script_sig for SegWit inputs
+fn create_empty_script_sig() -> ScriptBuf {
+    ScriptBuf::new()
+}
 
 /// Parse a raw transaction from hexadecimal format
 fn parse_transaction(raw_tx_hex: &str) -> Result<Transaction> {
@@ -108,9 +201,7 @@ fn add_utxos_to_psbt(psbt: &mut Psbt, utxos: &[(&str, u64)]) -> Result<()> {
 /// Check if a private key can sign a P2WPKH input
 fn can_sign_p2wpkh(script_pubkey: &ScriptBuf, public_key: &PublicKey) -> Result<bool> {
     // Check if the script matches a P2WPKH for this key
-    let compressed_pubkey = bitcoin::key::CompressedPublicKey::from_slice(
-        &public_key.to_bytes(),
-    ).map_err(|e| WalletError::BitcoinError(format!("Invalid public key: {}", e)))?;
+    let compressed_pubkey = get_compressed_pubkey(public_key)?;
     
     // Address::p2wpkh does not return a Result, so no need for map_err
     let expected_script = Address::p2wpkh(&compressed_pubkey, Network::Bitcoin)
@@ -130,9 +221,7 @@ fn can_sign_p2pkh(script_pubkey: &ScriptBuf, public_key: &PublicKey) -> Result<b
 /// Check if a private key can sign a P2SH-P2WPKH input
 fn can_sign_p2sh_p2wpkh(script_pubkey: &ScriptBuf, public_key: &PublicKey) -> Result<bool> {
     // For P2SH-P2WPKH, we need to check if it's a P2SH wrapping a P2WPKH for this key
-    let compressed_pubkey = bitcoin::key::CompressedPublicKey::from_slice(
-        &public_key.to_bytes(),
-    ).map_err(|e| WalletError::BitcoinError(format!("Invalid public key: {}", e)))?;
+    let compressed_pubkey = get_compressed_pubkey(public_key)?;
     
     // Remove map_err, Address::p2wpkh returns an Address directly
     let p2wpkh = Address::p2wpkh(&compressed_pubkey, Network::Bitcoin);
@@ -150,8 +239,7 @@ fn can_sign_p2tr(script_pubkey: &ScriptBuf, public_key: &PublicKey) -> Result<bo
     // For P2TR, we need to check if it's a Taproot output for this key
     // Convert ECDSA public key to x-only public key
     let secp = Secp256k1::verification_only();
-    let xonly_pubkey = XOnlyPublicKey::from_slice(&public_key.to_bytes()[1..33])
-        .map_err(|e| WalletError::BitcoinError(format!("Failed to convert to xonly pubkey: {}", e)))?;
+    let xonly_pubkey = get_xonly_pubkey(public_key)?;
     
     // Create expected P2TR script
     let p2tr_address = Address::p2tr(&secp, xonly_pubkey, None, Network::Bitcoin);
@@ -214,9 +302,7 @@ fn can_sign_input(
 /// Get P2WPKH signing script for a public key
 fn get_p2wpkh_signing_script(public_key: &PublicKey) -> Result<ScriptBuf> {
     // For P2WPKH, we need to use a P2PKH script for the signature hash
-    let compressed_pubkey = bitcoin::key::CompressedPublicKey::from_slice(
-        &public_key.to_bytes(),
-    ).map_err(|e| WalletError::BitcoinError(format!("Invalid public key: {}", e)))?;
+    let compressed_pubkey = get_compressed_pubkey(public_key)?;
     
     let pubkey_hash = compressed_pubkey.pubkey_hash();
     Ok(ScriptBuf::new_p2pkh(&pubkey_hash))
@@ -269,13 +355,10 @@ fn add_p2wpkh_signature(
     pubkey_bytes: Vec<u8>
 ) -> Result<()> {
     // For P2WPKH, set witness data
-    let mut witness = bitcoin::blockdata::witness::Witness::new();
-    witness.push(signature_bytes);
-    witness.push(pubkey_bytes);
-    input.final_script_witness = Some(witness);
-
+    input.final_script_witness = Some(create_witness_with_sig_and_pubkey(signature_bytes, pubkey_bytes));
+    
     // Empty script_sig for segwit
-    input.final_script_sig = Some(ScriptBuf::new());
+    input.final_script_sig = Some(create_empty_script_sig());
     
     Ok(())
 }
@@ -337,10 +420,7 @@ fn add_p2sh_p2wpkh_signature(
     input.final_script_sig = Some(script_sig);
     
     // 3. Set witness data (same as P2WPKH)
-    let mut witness = bitcoin::blockdata::witness::Witness::new();
-    witness.push(signature_bytes);
-    witness.push(pubkey_bytes);
-    input.final_script_witness = Some(witness);
+    input.final_script_witness = Some(create_witness_with_sig_and_pubkey(signature_bytes, pubkey_bytes));
     
     Ok(())
 }
@@ -356,7 +436,7 @@ fn add_p2tr_signature(
     input.final_script_witness = Some(witness);
     
     // Empty script_sig for segwit
-    input.final_script_sig = Some(ScriptBuf::new());
+    input.final_script_sig = Some(create_empty_script_sig());
     
     Ok(())
 }
@@ -383,7 +463,7 @@ fn add_p2wsh_signature(
     input.final_script_witness = Some(witness);
     
     // Empty script_sig for segwit
-    input.final_script_sig = Some(ScriptBuf::new());
+    input.final_script_sig = Some(create_empty_script_sig());
     
     Ok(())
 }
@@ -443,10 +523,7 @@ fn compute_taproot_signature(
         ))?;
 
     // Create a message from the sighash
-    let message = Message::from_digest_slice(&sighash[..])
-        .map_err(|e| WalletError::BitcoinError(
-            format!("Failed to create message: {}", e)
-        ))?;
+    let message = create_message_from_hash(&sighash[..])?;
 
     // Convert SecretKey to Keypair
     let keypair = bitcoin::secp256k1::Keypair::from_secret_key(&secp, &secret_key);
@@ -459,14 +536,8 @@ fn compute_taproot_signature(
     }
     
     // Verify the signature
-    let xonly_pubkey = XOnlyPublicKey::from_slice(&public_key.to_bytes()[1..33])
-        .map_err(|e| WalletError::BitcoinError(format!("Failed to convert to xonly pubkey: {}", e)))?;
-        
-    if secp.verify_schnorr(&schnorr_sig, &message, &xonly_pubkey).is_err() {
-        return Err(WalletError::BitcoinError(
-            format!("Generated Taproot signature failed verification")
-        ));
-    }
+    let xonly_pubkey = get_xonly_pubkey(public_key)?;
+    verify_schnorr_signature(secp, &message, &schnorr_sig, &xonly_pubkey)?;
     
     Ok(sig_bytes)
 }
@@ -495,27 +566,9 @@ fn compute_segwit_signature(
             format!("Failed to compute SegWit signature hash: {}", e)
         ))?;
 
-    // Create a message from the sighash
-    let message = Message::from_digest_slice(&sighash[..])
-        .map_err(|e| WalletError::BitcoinError(
-            format!("Failed to create message: {}", e)
-        ))?;
-
-    // Sign with ECDSA
-    let signature = secp.sign_ecdsa(&message, &secret_key);
-    
-    // Serialize the signature and add sighash type
-    let mut sig_bytes = signature.serialize_der().to_vec();
-    sig_bytes.push(sighash_type as u8);
-    
-    // Verify the signature
-    if secp.verify_ecdsa(&message, &signature, &public_key.inner).is_err() {
-        return Err(WalletError::BitcoinError(
-            format!("Generated SegWit signature failed verification")
-        ));
-    }
-    
-    Ok(sig_bytes)
+    // Create a message from the sighash and sign it
+    let message = create_message_from_hash(&sighash[..])?;
+    sign_and_verify_ecdsa(secp, &message, secret_key, public_key, sighash_type)
 }
 
 /// Compute Legacy (P2PKH) signature
@@ -536,27 +589,9 @@ fn compute_legacy_signature(
             format!("Failed to compute legacy signature hash: {}", e)
         ))?;
 
-    // Create a message from the sighash
-    let message = Message::from_digest_slice(&sighash[..])
-        .map_err(|e| WalletError::BitcoinError(
-            format!("Failed to create message: {}", e)
-        ))?;
-
-    // Sign with ECDSA
-    let signature = secp.sign_ecdsa(&message, &secret_key);
-    
-    // Serialize the signature and add sighash type
-    let mut sig_bytes = signature.serialize_der().to_vec();
-    sig_bytes.push(sighash_type as u8);
-    
-    // Verify the signature
-    if secp.verify_ecdsa(&message, &signature, &public_key.inner).is_err() {
-        return Err(WalletError::BitcoinError(
-            format!("Generated legacy signature failed verification")
-        ));
-    }
-    
-    Ok(sig_bytes)
+    // Create a message from the sighash and sign it
+    let message = create_message_from_hash(&sighash[..])?;
+    sign_and_verify_ecdsa(secp, &message, secret_key, public_key, sighash_type)
 }
 
 /// Compute P2WSH signature
@@ -586,27 +621,9 @@ fn compute_p2wsh_signature(
             format!("Failed to compute P2WSH signature hash: {}", e)
         ))?;
 
-    // Create a message from the sighash
-    let message = Message::from_digest_slice(&sighash[..])
-        .map_err(|e| WalletError::BitcoinError(
-            format!("Failed to create message: {}", e)
-        ))?;
-
-    // Sign with ECDSA
-    let signature = secp.sign_ecdsa(&message, &secret_key);
-    
-    // Serialize the signature and add sighash type
-    let mut sig_bytes = signature.serialize_der().to_vec();
-    sig_bytes.push(sighash_type as u8);
-    
-    // Verify the signature
-    if secp.verify_ecdsa(&message, &signature, &public_key.inner).is_err() {
-        return Err(WalletError::BitcoinError(
-            format!("Generated P2WSH signature failed verification")
-        ));
-    }
-    
-    Ok(sig_bytes)
+    // Create a message from the sighash and sign it
+    let message = create_message_from_hash(&sighash[..])?;
+    sign_and_verify_ecdsa(secp, &message, secret_key, public_key, sighash_type)
 }
 
 /// Try sign a PSBT input with a private key if possible
@@ -663,62 +680,6 @@ fn try_sign_input(
     )?;
 
     Ok(true)
-}
-
-/// Verify Schnorr signature for Taproot
-fn verify_schnorr_signature(
-    secp: &Secp256k1<bitcoin::secp256k1::All>,
-    message: &Message,
-    signature_bytes: &[u8],
-    public_key: &PublicKey
-) -> Result<bool> {
-    if signature_bytes.len() < 64 {
-        return Err(WalletError::BitcoinError(
-            format!("Schnorr signature too short")
-        ));
-    }
-    
-    let schnorr_sig = bitcoin::secp256k1::schnorr::Signature::from_slice(&signature_bytes[0..64])
-        .map_err(|e| WalletError::BitcoinError(
-            format!("Invalid Schnorr signature: {:?}", e)
-        ))?;
-        
-    let xonly_pubkey = XOnlyPublicKey::from_slice(&public_key.to_bytes()[1..33])
-        .map_err(|e| WalletError::BitcoinError(format!("Failed to convert to xonly pubkey: {}", e)))?;
-        
-    Ok(secp.verify_schnorr(&schnorr_sig, message, &xonly_pubkey).is_ok())
-}
-
-/// Verify ECDSA signature for P2PKH and P2WPKH
-fn verify_ecdsa_signature(
-    secp: &Secp256k1<bitcoin::secp256k1::All>,
-    message: &Message,
-    signature_bytes: &[u8],
-    public_key: &PublicKey
-) -> Result<bool> {
-    // Strip sighash byte and parse DER signature
-    let sig_len = signature_bytes.len() - 1; // Last byte is sighash type
-    let signature = bitcoin::secp256k1::ecdsa::Signature::from_der(&signature_bytes[0..sig_len])
-        .map_err(|e| WalletError::BitcoinError(
-            format!("Invalid DER signature: {:?}", e)
-        ))?;
-        
-    Ok(secp.verify_ecdsa(message, &signature, &public_key.inner).is_ok())
-}
-
-/// Verify a signature is valid
-fn verify_signature(
-    secp: &Secp256k1<bitcoin::secp256k1::All>,
-    message: &Message,
-    signature_bytes: &[u8],
-    public_key: &PublicKey,
-    address_type: &str
-) -> Result<bool> {
-    if address_type == "p2tr" {
-        verify_schnorr_signature(secp, message, signature_bytes, public_key)
-    } else {
-        verify_ecdsa_signature(secp, message, signature_bytes, public_key)
-    }
 }
 
 /// Initialize signing context and signed_inputs vector
