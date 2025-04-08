@@ -9,70 +9,82 @@ use crate::config;
 
 // Builds the wallet command with its subcommands
 pub fn build_command() -> Command {
-    Command::new("wallet")
-        .about("Manage your Counterparty wallet")
-        .subcommand(
-            Command::new("addaddress")
-                .about("Generate or import a new Bitcoin address")
-                .arg(
-                    Arg::new("private_key")
-                        .long("private-key")
-                        .help("Existing private key to import")
-                        .value_name("PRIVATE_KEY"),
-                )
-                .arg(
-                    Arg::new("mnemonic")
-                        .long("mnemonic")
-                        .help("BIP39 mnemonic phrase")
-                        .value_name("MNEMONIC"),
-                )
-                .arg(
-                    Arg::new("path")
-                        .long("path")
-                        .help("Derivation path (default: m/84'/0'/0'/0/0 for bech32)")
-                        .value_name("PATH"),
-                )
-                .arg(
-                    Arg::new("label")
-                        .long("label")
-                        .help("A label for the address")
-                        .value_name("LABEL"),
-                )
-                .arg(
-                    Arg::new("address_type")
-                        .long("address-type")
-                        .help("Type of address to generate (bech32 or p2pkh, default: bech32)")
-                        .value_name("TYPE")
-                        .value_parser(["bech32", "p2pkh"])
-                        .default_value("bech32"),
-                ),
+    let command = Command::new("wallet").about("Manage your Counterparty wallet");
+    
+    let command_with_subcommands = command
+        .subcommand(build_addaddress_command())
+        .subcommand(build_showaddress_command())
+        .subcommand(build_addresses_command());
+    
+    command_with_subcommands
+}
+
+// Build the addaddress subcommand
+fn build_addaddress_command() -> Command {
+    Command::new("addaddress")
+        .about("Generate or import a new Bitcoin address")
+        .arg(
+            Arg::new("private_key")
+                .long("private-key")
+                .help("Existing private key to import")
+                .value_name("PRIVATE_KEY"),
         )
-        .subcommand(
-            Command::new("showaddress")
-                .about("Show details for a specific address")
-                .arg(
-                    Arg::new("address")
-                        .long("address")
-                        .help("The blockchain address to show")
-                        .required(true)
-                        .value_name("ADDRESS"),
-                )
-                .arg(
-                    Arg::new("private_key")
-                        .long("private-key")
-                        .help("Show private key and other sensitive information")
-                        .action(ArgAction::SetTrue),
-                ),
+        .arg(
+            Arg::new("mnemonic")
+                .long("mnemonic")
+                .help("BIP39 mnemonic phrase")
+                .value_name("MNEMONIC"),
         )
-        .subcommand(
-            Command::new("addresses")
-                .about("List all addresses in the wallet")
-                .arg(
-                    Arg::new("verbose")
-                        .long("verbose")
-                        .help("Show detailed information")
-                        .action(ArgAction::SetTrue),
-                ),
+        .arg(
+            Arg::new("path")
+                .long("path")
+                .help("Derivation path (default: m/84'/0'/0'/0/0 for bech32)")
+                .value_name("PATH"),
+        )
+        .arg(
+            Arg::new("label")
+                .long("label")
+                .help("A label for the address")
+                .value_name("LABEL"),
+        )
+        .arg(
+            Arg::new("address_type")
+                .long("address-type")
+                .help("Type of address to generate (bech32 or p2pkh, default: bech32)")
+                .value_name("TYPE")
+                .value_parser(["bech32", "p2pkh"])
+                .default_value("bech32"),
+        )
+}
+
+// Build the showaddress subcommand
+fn build_showaddress_command() -> Command {
+    Command::new("showaddress")
+        .about("Show details for a specific address")
+        .arg(
+            Arg::new("address")
+                .long("address")
+                .help("The blockchain address to show")
+                .required(true)
+                .value_name("ADDRESS"),
+        )
+        .arg(
+            Arg::new("private_key")
+                .long("private-key")
+                .help("Show private key and other sensitive information")
+                .action(ArgAction::SetTrue),
+        )
+}
+
+// Build the addresses subcommand
+fn build_addresses_command() -> Command {
+    Command::new("addresses")
+        .about("List all addresses in the wallet")
+        .arg(
+            Arg::new("verbose")
+                .long("verbose")
+                .help("Show detailed information")
+                .action(ArgAction::SetTrue),
         )
 }
 
@@ -92,70 +104,90 @@ fn get_wallet_data_dir() -> PathBuf {
     home.join(".counterparty").join("wallet")
 }
 
-// Executes a wallet command
-pub fn execute_command(matches: &ArgMatches, network: config::Network) -> Result<()> {
-    let data_dir = get_wallet_data_dir();
-
-    // Ensure the directory exists
-    std::fs::create_dir_all(&data_dir).context("Failed to create wallet directory")?;
-
-    // Initialize wallet with the specified network
-    let mut wallet = BitcoinWallet::init(&data_dir, network).context("Failed to initialize wallet")?;
-
-    // Print current network information
-    let network_name = match network {
+// Get network name as string
+fn get_network_name(network: config::Network) -> &'static str {
+    match network {
         config::Network::Mainnet => "mainnet",
         config::Network::Testnet4 => "testnet4",
         config::Network::Regtest => "regtest",
-    };
+    }
+}
+
+// Initialize the wallet
+fn init_wallet(data_dir: &PathBuf, network: config::Network) -> Result<BitcoinWallet> {
+    // Ensure the directory exists
+    std::fs::create_dir_all(data_dir).context("Failed to create wallet directory")?;
+    
+    // Initialize wallet with the specified network
+    BitcoinWallet::init(data_dir, network).context("Failed to initialize wallet")
+}
+
+// Handle the addaddress subcommand
+fn handle_addaddress(wallet: &mut BitcoinWallet, sub_matches: &ArgMatches) -> Result<()> {
+    // Extract parameters
+    let private_key = sub_matches
+        .get_one::<String>("private_key")
+        .map(|s| s.as_str());
+    let mnemonic = sub_matches
+        .get_one::<String>("mnemonic")
+        .map(|s| s.as_str());
+    let path = sub_matches.get_one::<String>("path").map(|s| s.as_str());
+    let label = sub_matches.get_one::<String>("label").map(|s| s.as_str());
+    let address_type = sub_matches
+        .get_one::<String>("address_type")
+        .map(|s| s.as_str());
+
+    // Call the wallet function with the address_type parameter
+    let address = wallet
+        .add_address(private_key, mnemonic, path, label, address_type)
+        .map_err(|e| anyhow::anyhow!("Failed to add address: {}", e))?;
+
+    println!("Address added successfully: {}", address);
+    Ok(())
+}
+
+// Handle the showaddress subcommand
+fn handle_showaddress(wallet: &BitcoinWallet, sub_matches: &ArgMatches) -> Result<()> {
+    let address = sub_matches.get_one::<String>("address").unwrap();
+    let show_private_key = Some(sub_matches.get_flag("private_key"));
+
+    let details = wallet
+        .show_address(address, show_private_key)
+        .map_err(|e| anyhow::anyhow!("Failed to show address details: {}", e))?;
+
+    println!("{}", serde_json::to_string_pretty(&details)?);
+    Ok(())
+}
+
+// Handle the addresses subcommand
+fn handle_addresses(wallet: &BitcoinWallet, _sub_matches: &ArgMatches) -> Result<()> {
+    let addresses = wallet
+        .list_addresses()
+        .map_err(|e| anyhow::anyhow!("Failed to list addresses: {}", e))?;
+
+    println!("{}", serde_json::to_string_pretty(&addresses)?);
+    Ok(())
+}
+
+// Executes a wallet command
+pub fn execute_command(matches: &ArgMatches, network: config::Network) -> Result<()> {
+    let data_dir = get_wallet_data_dir();
+    let mut wallet = init_wallet(&data_dir, network)?;
+
+    // Print current network information
+    let network_name = get_network_name(network);
     println!("Using network: {}", network_name);
 
     match matches.subcommand() {
-        Some(("addaddress", sub_matches)) => {
-            // Extract parameters
-            let private_key = sub_matches
-                .get_one::<String>("private_key")
-                .map(|s| s.as_str());
-            let mnemonic = sub_matches
-                .get_one::<String>("mnemonic")
-                .map(|s| s.as_str());
-            let path = sub_matches.get_one::<String>("path").map(|s| s.as_str());
-            let label = sub_matches.get_one::<String>("label").map(|s| s.as_str());
-            let address_type = sub_matches
-                .get_one::<String>("address_type")
-                .map(|s| s.as_str());
-
-            // Call the wallet function with the new address_type parameter
-            let address = wallet
-                .add_address(private_key, mnemonic, path, label, address_type)
-                .map_err(|e| anyhow::anyhow!("Failed to add address: {}", e))?;
-
-            println!("Address added successfully: {}", address);
-        }
-        Some(("showaddress", sub_matches)) => {
-            let address = sub_matches.get_one::<String>("address").unwrap();
-            let show_private_key = Some(sub_matches.get_flag("private_key"));
-
-            let details = wallet
-                .show_address(address, show_private_key)
-                .map_err(|e| anyhow::anyhow!("Failed to show address details: {}", e))?;
-
-            println!("{}", serde_json::to_string_pretty(&details)?);
-        }
-        Some(("addresses", _)) => {
-            let addresses = wallet
-                .list_addresses()
-                .map_err(|e| anyhow::anyhow!("Failed to list addresses: {}", e))?;
-
-            println!("{}", serde_json::to_string_pretty(&addresses)?);
-        }
+        Some(("addaddress", sub_matches)) => handle_addaddress(&mut wallet, sub_matches),
+        Some(("showaddress", sub_matches)) => handle_showaddress(&wallet, sub_matches),
+        Some(("addresses", sub_matches)) => handle_addresses(&wallet, sub_matches),
         _ => {
             // No subcommand provided, display help
             let mut wallet_cmd = build_command();
             wallet_cmd.print_help()?;
             println!();
+            Ok(())
         }
     }
-
-    Ok(())
 }

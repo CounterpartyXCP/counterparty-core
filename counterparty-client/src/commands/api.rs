@@ -4,14 +4,23 @@ use reqwest::Client;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fs;
+use std::path::Path;
 
 use crate::config::{ApiEndpoint, AppConfig};
 
+// ---- API Endpoint Management ----
+
 // Fetches endpoint definitions from the API
 pub async fn fetch_api_endpoints(config: &AppConfig) -> Result<HashMap<String, ApiEndpoint>> {
+    let endpoints = fetch_endpoints_from_api(config).await?;
+    cache_endpoints(config, &endpoints)?;
+    Ok(endpoints)
+}
+
+// Retrieves endpoints from the API
+async fn fetch_endpoints_from_api(config: &AppConfig) -> Result<HashMap<String, ApiEndpoint>> {
     let client = Client::new();
     let endpoints_url = config.get_endpoints_url();
-    let cache_file = config.get_cache_file();
 
     let endpoints_response = client
         .get(&endpoints_url)
@@ -35,18 +44,32 @@ pub async fn fetch_api_endpoints(config: &AppConfig) -> Result<HashMap<String, A
         serde_json::from_value(endpoints_value.clone())
             .context("Failed to parse API endpoints from result field")?;
 
-    // Cache the endpoints for future use
-    if let Some(parent) = cache_file.parent() {
-        fs::create_dir_all(parent).context("Failed to create cache directory")?;
-    }
+    Ok(endpoints)
+}
 
+// Saves endpoints to cache file
+fn cache_endpoints(config: &AppConfig, endpoints: &HashMap<String, ApiEndpoint>) -> Result<()> {
+    let cache_file = config.get_cache_file();
+    
+    // Ensure cache directory exists
+    ensure_cache_directory(&cache_file)?;
+    
+    // Write the cache file
     fs::write(
         &cache_file,
         serde_json::to_string_pretty(&endpoints)?,
     )
     .context("Failed to cache API endpoints")?;
+    
+    Ok(())
+}
 
-    Ok(endpoints)
+// Ensures cache directory exists
+fn ensure_cache_directory(cache_file: &Path) -> Result<()> {
+    if let Some(parent) = cache_file.parent() {
+        fs::create_dir_all(parent).context("Failed to create cache directory")?;
+    }
+    Ok(())
 }
 
 // Loads endpoints from cache
@@ -76,6 +99,8 @@ pub async fn load_or_fetch_endpoints(config: &AppConfig) -> Result<HashMap<Strin
         fetch_api_endpoints(config).await
     }
 }
+
+// ---- Command Building ----
 
 // Builds the API command structure with all subcommands
 pub fn build_command(endpoints: &HashMap<String, ApiEndpoint>) -> Command {
@@ -114,15 +139,15 @@ pub fn build_command(endpoints: &HashMap<String, ApiEndpoint>) -> Command {
 
     // Process all commands in a single loop
     for (func_name, endpoint) in all_commands {
-        let static_func_name: &str = Box::leak(func_name.clone().into_boxed_str());
-        let static_description: &str = Box::leak(endpoint.description.clone().into_boxed_str());
+        let static_func_name: &'static str = Box::leak(func_name.clone().into_boxed_str());
+        let static_description: &'static str = Box::leak(endpoint.description.clone().into_boxed_str());
 
         let mut cmd = Command::new(static_func_name).about(static_description);
 
         // Add arguments for this endpoint
         for arg in &endpoint.args {
-            let static_arg_name: &str = Box::leak(arg.name.clone().into_boxed_str());
-            let static_help: &str = Box::leak(
+            let static_arg_name: &'static str = Box::leak(arg.name.clone().into_boxed_str());
+            let static_help: &'static str = Box::leak(
                 arg.description
                     .as_deref()
                     .unwrap_or("")
@@ -153,6 +178,24 @@ pub fn build_command(endpoints: &HashMap<String, ApiEndpoint>) -> Command {
     api_cmd
 }
 
+// ---- Command Execution ----
+
+// Executes the API command
+pub async fn execute_command(config: &AppConfig, matches: &ArgMatches) -> Result<()> {
+    // Load endpoints from cache or API
+    let endpoints = load_or_fetch_endpoints(config).await?;
+
+    // Get the subcommand and its matches
+    if let Some((cmd_name, cmd_matches)) = matches.subcommand() {
+        execute_api_command(config, &endpoints, cmd_name, cmd_matches).await?;
+    } else {
+        // No subcommand provided, print API command help
+        println!("Please specify an API command. Use 'api --help' to see available commands.");
+    }
+
+    Ok(())
+}
+
 // Executes a specific API command
 async fn execute_api_command(
     config: &AppConfig,
@@ -160,6 +203,29 @@ async fn execute_api_command(
     command: &str,
     matches: &ArgMatches,
 ) -> Result<()> {
+    // Find matching endpoint
+    let (path, endpoint) = find_matching_endpoint(endpoints, command)?;
+    
+    // Build parameters for the API request
+    let params = build_request_parameters(endpoint, matches);
+    
+    // Construct API path with parameters
+    let api_path = build_api_path(path, endpoint, &params);
+    
+    // Execute API request
+    let result = perform_api_request(config, &api_path, &params).await?;
+    
+    // Output result
+    println!("{}", serde_json::to_string_pretty(&result)?);
+    
+    Ok(())
+}
+
+// Finds a matching endpoint for the given command
+fn find_matching_endpoint<'a>(
+    endpoints: &'a HashMap<String, ApiEndpoint>, 
+    command: &str
+) -> Result<(&'a String, &'a ApiEndpoint)> {
     // Find all endpoints that match this command (could be multiple paths with same function)
     let matching_endpoints: Vec<(&String, &ApiEndpoint)> = endpoints
         .iter()
@@ -171,15 +237,20 @@ async fn execute_api_command(
     }
 
     // Use the first matching endpoint for simplicity
-    let (path, endpoint) = matching_endpoints[0];
+    Ok(matching_endpoints[0])
+}
 
-    // Build query parameters
+// Builds request parameters from command arguments
+fn build_request_parameters(
+    endpoint: &ApiEndpoint,
+    matches: &ArgMatches
+) -> HashMap<String, String> {
     let mut params = HashMap::new();
-
+    
     // Create a HashMap to store static references to argument names
     let mut static_arg_names = HashMap::new();
     for arg in &endpoint.args {
-        let static_name: &str = Box::leak(arg.name.clone().into_boxed_str());
+        let static_name: &'static str = Box::leak(arg.name.clone().into_boxed_str());
         static_arg_names.insert(arg.name.clone(), static_name);
     }
 
@@ -194,9 +265,18 @@ async fn execute_api_command(
             params.insert(arg.name.clone(), value.clone());
         }
     }
+    
+    params
+}
 
-    // Construct API path, replacing path parameters
-    let mut api_path = path.clone();
+// Builds the API path with path parameters replaced
+fn build_api_path(
+    path: &str, 
+    endpoint: &ApiEndpoint,
+    params: &HashMap<String, String>
+) -> String {
+    let mut api_path = path.to_string();
+    let mut updated_params = params.clone();
 
     // Try both placeholder formats in the path: <int:name> and <name>
     for arg in &endpoint.args {
@@ -206,14 +286,23 @@ async fn execute_api_command(
         if let Some(value) = params.get(&arg.name) {
             if api_path.contains(&int_placeholder) {
                 api_path = api_path.replace(&int_placeholder, value);
-                params.remove(&arg.name);
+                updated_params.remove(&arg.name);
             } else if api_path.contains(&simple_placeholder) {
                 api_path = api_path.replace(&simple_placeholder, value);
-                params.remove(&arg.name);
+                updated_params.remove(&arg.name);
             }
         }
     }
+    
+    api_path
+}
 
+// Performs the API request and returns the result
+async fn perform_api_request(
+    config: &AppConfig,
+    api_path: &str,
+    params: &HashMap<String, String>
+) -> Result<Value> {
     // Get active network API URL
     let api_url = config.get_api_url();
 
@@ -232,27 +321,9 @@ async fn execute_api_command(
         .await
         .context("Failed to parse API response")?;
 
-    println!("{}", serde_json::to_string_pretty(&result)?);
-
     if !status.is_success() {
         eprintln!("API request failed with status: {}", status);
     }
-
-    Ok(())
-}
-
-// Executes the API command
-pub async fn execute_command(config: &AppConfig, matches: &ArgMatches) -> Result<()> {
-    // Load endpoints from cache or API
-    let endpoints = load_or_fetch_endpoints(config).await?;
-
-    // Get the subcommand and its matches
-    if let Some((cmd_name, cmd_matches)) = matches.subcommand() {
-        execute_api_command(config, &endpoints, cmd_name, cmd_matches).await?;
-    } else {
-        // No subcommand provided, print API command help
-        println!("Please specify an API command. Use 'api --help' to see available commands.");
-    }
-
-    Ok(())
+    
+    Ok(result)
 }
