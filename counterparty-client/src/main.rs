@@ -2,6 +2,10 @@ use ::config::{Config, File};
 use anyhow::{Context, Result};
 use clap::{Arg, ArgAction, Command};
 
+// Make sure to add the following to Cargo.toml:
+// [dependencies]
+// lazy_static = "1.4.0"
+
 mod commands;
 mod config;
 mod wallet;
@@ -58,8 +62,12 @@ async fn main() -> Result<()> {
         )
         .arg(testnet_arg)
         .arg(regtest_arg)
-        .subcommand(api::build_command(&endpoints))
-        .subcommand(wallet_commands::build_command());
+        .subcommand(api::build_command(&endpoints));
+        
+    // Add wallet command with broadcast subcommands dynamically added
+    let wallet_cmd = wallet_commands::build_command();
+    let wallet_cmd_with_broadcast = wallet_commands::add_broadcast_commands(wallet_cmd, &endpoints);
+    app = app.subcommand(wallet_cmd_with_broadcast);
 
     // Parse command line arguments - clone app so we can use it later
     let matches = app.clone().get_matches();
@@ -85,7 +93,7 @@ async fn main() -> Result<()> {
             api::execute_command(&config, sub_matches).await?;
         }
         Some(("wallet", sub_matches)) => {
-            wallet_commands::execute_command(sub_matches, config.network)?;
+            wallet_commands::execute_command(&config, sub_matches, &endpoints).await?;
         }
         _ => {
             // No subcommand provided, print help

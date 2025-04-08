@@ -459,6 +459,7 @@ dependencies = [
  "cocoon",
  "config",
  "hex",
+ "lazy_static",
  "rand",
  "reqwest",
  "serde",

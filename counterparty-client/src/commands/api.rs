@@ -222,7 +222,7 @@ async fn execute_api_command(
 }
 
 // Finds a matching endpoint for the given command
-fn find_matching_endpoint<'a>(
+pub fn find_matching_endpoint<'a>(
     endpoints: &'a HashMap<String, ApiEndpoint>, 
     command: &str
 ) -> Result<(&'a String, &'a ApiEndpoint)> {
@@ -241,7 +241,7 @@ fn find_matching_endpoint<'a>(
 }
 
 // Builds request parameters from command arguments
-fn build_request_parameters(
+pub fn build_request_parameters(
     endpoint: &ApiEndpoint,
     matches: &ArgMatches
 ) -> HashMap<String, String> {
@@ -270,7 +270,7 @@ fn build_request_parameters(
 }
 
 // Builds the API path with path parameters replaced
-fn build_api_path(
+pub fn build_api_path(
     path: &str, 
     endpoint: &ApiEndpoint,
     params: &HashMap<String, String>
@@ -298,7 +298,7 @@ fn build_api_path(
 }
 
 // Performs the API request and returns the result
-async fn perform_api_request(
+pub async fn perform_api_request(
     config: &AppConfig,
     api_path: &str,
     params: &HashMap<String, String>
