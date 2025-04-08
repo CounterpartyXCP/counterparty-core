@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 // Import BitcoinWallet from src/wallet.rs
 use crate::wallet::BitcoinWallet;
+use crate::config;
 
 // Builds the wallet command with its subcommands
 pub fn build_command() -> Command {
@@ -92,13 +93,22 @@ fn get_wallet_data_dir() -> PathBuf {
 }
 
 // Executes a wallet command
-pub fn execute_command(matches: &ArgMatches) -> Result<()> {
+pub fn execute_command(matches: &ArgMatches, network: config::Network) -> Result<()> {
     let data_dir = get_wallet_data_dir();
 
     // Ensure the directory exists
     std::fs::create_dir_all(&data_dir).context("Failed to create wallet directory")?;
 
-    let mut wallet = BitcoinWallet::init(&data_dir).context("Failed to initialize wallet")?;
+    // Initialize wallet with the specified network
+    let mut wallet = BitcoinWallet::init(&data_dir, network).context("Failed to initialize wallet")?;
+
+    // Print current network information
+    let network_name = match network {
+        config::Network::Mainnet => "mainnet",
+        config::Network::Testnet4 => "testnet4",
+        config::Network::Regtest => "regtest",
+    };
+    println!("Using network: {}", network_name);
 
     match matches.subcommand() {
         Some(("addaddress", sub_matches)) => {

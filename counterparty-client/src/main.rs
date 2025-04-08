@@ -10,7 +10,7 @@ mod keys;
 
 use crate::commands::api;
 use crate::commands::wallet as wallet_commands;
-use crate::config::AppConfig;
+use crate::config::{AppConfig, Network};
 
 
 #[tokio::main]
@@ -23,15 +23,31 @@ async fn main() -> Result<()> {
         .build()
         .context("Failed to load configuration")?;
 
-    let config: AppConfig = settings
+    // Parse the configuration
+    let mut config: AppConfig = settings
         .try_deserialize()
         .context("Failed to parse configuration")?;
 
     // Load endpoints during startup to build the complete command structure
     let endpoints = api::load_or_fetch_endpoints(&config).await?;
 
-    // Build main CLI app with all top-level commands (including dynamic API subcommands)
-    let app = Command::new("counterparty-client")
+    // Define network arguments that apply to all commands
+    let testnet_arg = Arg::new("testnet4")
+        .long("testnet4")
+        .help("Use Testnet4 network")
+        .action(ArgAction::SetTrue)
+        .global(true) // Make this argument available to all subcommands
+        .conflicts_with("regtest");
+        
+    let regtest_arg = Arg::new("regtest")
+        .long("regtest")
+        .help("Use Regtest network")
+        .action(ArgAction::SetTrue)
+        .global(true) // Make this argument available to all subcommands
+        .conflicts_with("testnet4");
+
+    // Build main CLI app with all top-level commands
+    let mut app = Command::new("counterparty-client")
         .version("0.1.0")
         .about("A command-line client for the Counterparty API and wallet")
         .arg(
@@ -40,11 +56,20 @@ async fn main() -> Result<()> {
                 .help("Update the API endpoints cache")
                 .action(ArgAction::SetTrue),
         )
+        .arg(testnet_arg)
+        .arg(regtest_arg)
         .subcommand(api::build_command(&endpoints))
         .subcommand(wallet_commands::build_command());
 
-    // Parse command line arguments
-    let matches = app.get_matches();
+    // Parse command line arguments - clone app so we can use it later
+    let matches = app.clone().get_matches();
+
+    // Set network based on command line flags
+    if matches.get_flag("testnet4") {
+        config.set_network(Network::Testnet4);
+    } else if matches.get_flag("regtest") {
+        config.set_network(Network::Regtest);
+    }
 
     // Handle update-cache flag
     if matches.get_flag("update-cache") {
@@ -60,15 +85,10 @@ async fn main() -> Result<()> {
             api::execute_command(&config, sub_matches).await?;
         }
         Some(("wallet", sub_matches)) => {
-            wallet_commands::execute_command(sub_matches)?;
+            wallet_commands::execute_command(sub_matches, config.network)?;
         }
         _ => {
             // No subcommand provided, print help
-            let mut app = Command::new("counterparty-client")
-                .version("0.1.0")
-                .about("A command-line client for the Counterparty API and wallet")
-                .subcommand(api::build_command(&endpoints))
-                .subcommand(wallet_commands::build_command());
             app.print_help()?;
             println!();
         }

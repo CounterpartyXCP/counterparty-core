@@ -18,6 +18,7 @@ use thiserror::Error;
 
 use crate::signer;
 use crate::keys;
+use crate::config;
 
 // Error types that can occur in wallet operations
 #[derive(Error, Debug)]
@@ -61,6 +62,7 @@ pub struct BitcoinWallet {
     wallet_file: PathBuf,
     password: String,
     addresses: HashMap<String, AddressInfo>,
+    network: bitcoin::Network, // Bitcoin network type
 }
 
 impl BitcoinWallet {
@@ -72,18 +74,33 @@ impl BitcoinWallet {
     /// # Arguments
     ///
     /// * `data_dir` - Directory where wallet data will be stored
+    /// * `network` - Bitcoin network to use (mainnet, testnet, regtest)
     ///
     /// # Returns
     ///
     /// * `Result<BitcoinWallet>` - New wallet instance or error
-    pub fn init<P: AsRef<Path>>(data_dir: P) -> Result<Self> {
+    pub fn init<P: AsRef<Path>>(data_dir: P, network: config::Network) -> Result<Self> {
         let data_dir = data_dir.as_ref().to_path_buf();
 
-        // Create the data directory if it doesn't exist
-        fs::create_dir_all(&data_dir)?;
+        // Create network-specific subdirectory
+        let network_dir = match network {
+            config::Network::Mainnet => data_dir.join("mainnet"),
+            config::Network::Testnet4 => data_dir.join("testnet4"),
+            config::Network::Regtest => data_dir.join("regtest"),
+        };
 
-        let wallet_file = data_dir.join("wallet.db");
-        let cookie_file = data_dir.join(".cookie");
+        // Convert config::Network to bitcoin::Network
+        let bitcoin_network = match network {
+            config::Network::Mainnet => bitcoin::Network::Bitcoin,
+            config::Network::Testnet4 => bitcoin::Network::Testnet,
+            config::Network::Regtest => bitcoin::Network::Regtest,
+        };
+
+        // Create the data directory if it doesn't exist
+        fs::create_dir_all(&network_dir)?;
+
+        let wallet_file = network_dir.join("wallet.db");
+        let cookie_file = network_dir.join(".cookie");
 
         // Get or create password
         let password = if cookie_file.exists() {
@@ -140,6 +157,7 @@ impl BitcoinWallet {
             wallet_file,
             password,
             addresses,
+            network: bitcoin_network,
         })
     }
 
@@ -197,13 +215,13 @@ impl BitcoinWallet {
 
         // Generate keys based on provided parameters
         let key_data = match (private_key, mnemonic) {
-            (Some(pk_str), _) => keys::generate_keys_from_private_key(pk_str, &secp)?,
-            (None, Some(mnemonic_str)) => keys::generate_keys_from_mnemonic(mnemonic_str, path, addr_type, &secp)?,
-            (None, None) => keys::generate_new_keys(addr_type, &secp)?,
+            (Some(pk_str), _) => keys::generate_keys_from_private_key(pk_str, self.network, &secp)?,
+            (None, Some(mnemonic_str)) => keys::generate_keys_from_mnemonic(mnemonic_str, path, addr_type, self.network, &secp)?,
+            (None, None) => keys::generate_new_keys(addr_type, self.network, &secp)?,
         };
 
         // Generate Bitcoin address
-        let address = keys::create_bitcoin_address(&key_data.public_key, addr_type)?;
+        let address = keys::create_bitcoin_address(&key_data.public_key, addr_type, self.network)?;
         let address_str = address.to_string();
 
         // Create the label
@@ -250,6 +268,12 @@ impl BitcoinWallet {
             "public_key": address_info.public_key,
             "label": address_info.label,
             "address_type": address_info.address_type,
+            "network": match self.network {
+                Network::Bitcoin => "mainnet",
+                Network::Testnet => "testnet4",
+                Network::Regtest => "regtest",
+                _ => "unknown",
+            },
         });
 
         if show_private_key {
@@ -278,6 +302,12 @@ impl BitcoinWallet {
                 "address": address,
                 "label": info.label,
                 "address_type": info.address_type,
+                "network": match self.network {
+                    Network::Bitcoin => "mainnet",
+                    Network::Testnet => "testnet4",
+                    Network::Regtest => "regtest",
+                    _ => "unknown",
+                },
             }));
         }
 
@@ -298,6 +328,6 @@ impl BitcoinWallet {
     ///
     /// * `Result<String>` - Signed transaction in hexadecimal format or error
     pub fn sign_transaction(&self, raw_tx_hex: &str, utxos: Vec<(&str, u64)>) -> Result<String> {
-        signer::sign_transaction(&self.addresses, raw_tx_hex, utxos, Network::Bitcoin)
+        signer::sign_transaction(&self.addresses, raw_tx_hex, utxos, self.network)
     }
 }

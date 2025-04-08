@@ -1,3 +1,18 @@
+# Default network
+network = "mainnet"
+
+# Network-specific configurations
+[network_configs.mainnet]
 api_url = "https://api.unspendablelabs.com:4000"
 endpoints_url = "https://api.unspendablelabs.com:4000/v2/routes"
-cache_file = ".cache/counterparty-endpoints.json"
+cache_file = ".cache/mainnet/counterparty-endpoints.json"
+
+[network_configs.testnet4]
+api_url = "https://testnet4.counterparty.io:44000/"
+endpoints_url = "https://testnet4.counterparty.io:44000/v2/routes"
+cache_file = ".cache/testnet4/counterparty-endpoints.json"
+
+[network_configs.regtest]
+api_url = "http://localhost:24000/"
+endpoints_url = "http://localhost:24000/v2/routes"
+cache_file = ".cache/regtest/counterparty-endpoints.json"

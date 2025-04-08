@@ -10,8 +10,11 @@ use crate::config::{ApiEndpoint, AppConfig};
 // Fetches endpoint definitions from the API
 pub async fn fetch_api_endpoints(config: &AppConfig) -> Result<HashMap<String, ApiEndpoint>> {
     let client = Client::new();
+    let endpoints_url = config.get_endpoints_url();
+    let cache_file = config.get_cache_file();
+
     let endpoints_response = client
-        .get(&config.endpoints_url)
+        .get(&endpoints_url)
         .send()
         .await
         .context("Failed to fetch API endpoints")?;
@@ -33,12 +36,12 @@ pub async fn fetch_api_endpoints(config: &AppConfig) -> Result<HashMap<String, A
             .context("Failed to parse API endpoints from result field")?;
 
     // Cache the endpoints for future use
-    if let Some(parent) = config.cache_file.parent() {
+    if let Some(parent) = cache_file.parent() {
         fs::create_dir_all(parent).context("Failed to create cache directory")?;
     }
 
     fs::write(
-        &config.cache_file,
+        &cache_file,
         serde_json::to_string_pretty(&endpoints)?,
     )
     .context("Failed to cache API endpoints")?;
@@ -48,7 +51,8 @@ pub async fn fetch_api_endpoints(config: &AppConfig) -> Result<HashMap<String, A
 
 // Loads endpoints from cache
 pub fn load_cached_api_endpoints(config: &AppConfig) -> Result<HashMap<String, ApiEndpoint>> {
-    let cache = fs::read_to_string(&config.cache_file).context("Failed to read cache file")?;
+    let cache_file = config.get_cache_file();
+    let cache = fs::read_to_string(&cache_file).context("Failed to read cache file")?;
     let endpoints: HashMap<String, ApiEndpoint> =
         serde_json::from_str(&cache).context("Failed to parse cached API endpoints")?;
     Ok(endpoints)
@@ -62,7 +66,8 @@ pub async fn update_cache(config: &AppConfig) -> Result<()> {
 
 // Loads endpoints from cache or fetches them if needed
 pub async fn load_or_fetch_endpoints(config: &AppConfig) -> Result<HashMap<String, ApiEndpoint>> {
-    if config.cache_file.exists() {
+    let cache_file = config.get_cache_file();
+    if cache_file.exists() {
         match load_cached_api_endpoints(config) {
             Ok(endpoints) => Ok(endpoints),
             Err(_) => fetch_api_endpoints(config).await,
@@ -209,10 +214,13 @@ async fn execute_api_command(
         }
     }
 
+    // Get active network API URL
+    let api_url = config.get_api_url();
+
     // Make the API request
     let client = Client::new();
     let response = client
-        .get(format!("{}{}", config.api_url, api_path))
+        .get(format!("{}{}", api_url, api_path))
         .query(&params)
         .send()
         .await
