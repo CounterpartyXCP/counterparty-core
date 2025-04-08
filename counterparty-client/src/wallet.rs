@@ -16,9 +16,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{self, json, Value};
 use thiserror::Error;
 
-use crate::signer;
-use crate::keys;
 use crate::config;
+use crate::keys;
+use crate::signer;
 
 // Error types that can occur in wallet operations
 #[derive(Error, Debug)]
@@ -216,7 +216,13 @@ impl BitcoinWallet {
         // Generate keys based on provided parameters
         let key_data = match (private_key, mnemonic) {
             (Some(pk_str), _) => keys::generate_keys_from_private_key(pk_str, self.network, &secp)?,
-            (None, Some(mnemonic_str)) => keys::generate_keys_from_mnemonic(mnemonic_str, path, addr_type, self.network, &secp)?,
+            (None, Some(mnemonic_str)) => keys::generate_keys_from_mnemonic(
+                mnemonic_str,
+                path,
+                addr_type,
+                self.network,
+                &secp,
+            )?,
             (None, None) => keys::generate_new_keys(addr_type, self.network, &secp)?,
         };
 

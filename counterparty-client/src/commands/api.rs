@@ -50,17 +50,14 @@ async fn fetch_endpoints_from_api(config: &AppConfig) -> Result<HashMap<String, 
 // Saves endpoints to cache file
 fn cache_endpoints(config: &AppConfig, endpoints: &HashMap<String, ApiEndpoint>) -> Result<()> {
     let cache_file = config.get_cache_file();
-    
+
     // Ensure cache directory exists
     ensure_cache_directory(&cache_file)?;
-    
+
     // Write the cache file
-    fs::write(
-        &cache_file,
-        serde_json::to_string_pretty(&endpoints)?,
-    )
-    .context("Failed to cache API endpoints")?;
-    
+    fs::write(&cache_file, serde_json::to_string_pretty(&endpoints)?)
+        .context("Failed to cache API endpoints")?;
+
     Ok(())
 }
 
@@ -140,7 +137,8 @@ pub fn build_command(endpoints: &HashMap<String, ApiEndpoint>) -> Command {
     // Process all commands in a single loop
     for (func_name, endpoint) in all_commands {
         let static_func_name: &'static str = Box::leak(func_name.clone().into_boxed_str());
-        let static_description: &'static str = Box::leak(endpoint.description.clone().into_boxed_str());
+        let static_description: &'static str =
+            Box::leak(endpoint.description.clone().into_boxed_str());
 
         let mut cmd = Command::new(static_func_name).about(static_description);
 
@@ -205,26 +203,26 @@ async fn execute_api_command(
 ) -> Result<()> {
     // Find matching endpoint
     let (path, endpoint) = find_matching_endpoint(endpoints, command)?;
-    
+
     // Build parameters for the API request
     let params = build_request_parameters(endpoint, matches);
-    
+
     // Construct API path with parameters
     let api_path = build_api_path(path, endpoint, &params);
-    
+
     // Execute API request
     let result = perform_api_request(config, &api_path, &params).await?;
-    
+
     // Output result
     println!("{}", serde_json::to_string_pretty(&result)?);
-    
+
     Ok(())
 }
 
 // Finds a matching endpoint for the given command
 pub fn find_matching_endpoint<'a>(
-    endpoints: &'a HashMap<String, ApiEndpoint>, 
-    command: &str
+    endpoints: &'a HashMap<String, ApiEndpoint>,
+    command: &str,
 ) -> Result<(&'a String, &'a ApiEndpoint)> {
     // Find all endpoints that match this command (could be multiple paths with same function)
     let matching_endpoints: Vec<(&String, &ApiEndpoint)> = endpoints
@@ -243,10 +241,10 @@ pub fn find_matching_endpoint<'a>(
 // Builds request parameters from command arguments
 pub fn build_request_parameters(
     endpoint: &ApiEndpoint,
-    matches: &ArgMatches
+    matches: &ArgMatches,
 ) -> HashMap<String, String> {
     let mut params = HashMap::new();
-    
+
     // Create a HashMap to store static references to argument names
     let mut static_arg_names = HashMap::new();
     for arg in &endpoint.args {
@@ -265,15 +263,15 @@ pub fn build_request_parameters(
             params.insert(arg.name.clone(), value.clone());
         }
     }
-    
+
     params
 }
 
 // Builds the API path with path parameters replaced
 pub fn build_api_path(
-    path: &str, 
+    path: &str,
     endpoint: &ApiEndpoint,
-    params: &HashMap<String, String>
+    params: &HashMap<String, String>,
 ) -> String {
     let mut api_path = path.to_string();
     let mut updated_params = params.clone();
@@ -293,7 +291,7 @@ pub fn build_api_path(
             }
         }
     }
-    
+
     api_path
 }
 
@@ -301,7 +299,7 @@ pub fn build_api_path(
 pub async fn perform_api_request(
     config: &AppConfig,
     api_path: &str,
-    params: &HashMap<String, String>
+    params: &HashMap<String, String>,
 ) -> Result<Value> {
     // Get active network API URL
     let api_url = config.get_api_url();
@@ -324,6 +322,6 @@ pub async fn perform_api_request(
     if !status.is_success() {
         eprintln!("API request failed with status: {}", status);
     }
-    
+
     Ok(result)
 }

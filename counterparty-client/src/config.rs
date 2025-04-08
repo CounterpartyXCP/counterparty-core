@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 // Define supported Bitcoin networks
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq, Hash)]
@@ -35,11 +35,11 @@ pub struct AppConfig {
     pub endpoints_url: String,
     #[serde(default)]
     pub cache_file: PathBuf,
-    
+
     // Network-specific configurations
     #[serde(default)]
     pub network_configs: HashMap<Network, NetworkConfig>,
-    
+
     // Active network, defaults to Mainnet
     #[serde(default)]
     pub network: Network,
@@ -52,7 +52,7 @@ impl AppConfig {
         if let Some(config) = self.network_configs.get(&self.network) {
             return config.clone();
         }
-        
+
         // Fallback to default values
         NetworkConfig {
             api_url: self.api_url.clone(),
@@ -60,24 +60,24 @@ impl AppConfig {
             cache_file: self.cache_file.clone(),
         }
     }
-    
+
     // Set the active network
     pub fn set_network(&mut self, network: Network) {
         self.network = network;
     }
-    
+
     // Get current network's API URL
     pub fn get_api_url(&self) -> String {
         let config = self.get_active_network_config();
         config.api_url
     }
-    
+
     // Get current network's endpoints URL
     pub fn get_endpoints_url(&self) -> String {
         let config = self.get_active_network_config();
         config.endpoints_url
     }
-    
+
     // Get current network's cache file
     pub fn get_cache_file(&self) -> PathBuf {
         let config = self.get_active_network_config();

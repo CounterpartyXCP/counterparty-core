@@ -8,14 +8,13 @@ use clap::{Arg, ArgAction, Command};
 
 mod commands;
 mod config;
-mod wallet;
-mod signer;
 mod keys;
+mod signer;
+mod wallet;
 
 use crate::commands::api;
 use crate::commands::wallet as wallet_commands;
 use crate::config::{AppConfig, Network};
-
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -42,7 +41,7 @@ async fn main() -> Result<()> {
         .action(ArgAction::SetTrue)
         .global(true) // Make this argument available to all subcommands
         .conflicts_with("regtest");
-        
+
     let regtest_arg = Arg::new("regtest")
         .long("regtest")
         .help("Use Regtest network")
@@ -63,7 +62,7 @@ async fn main() -> Result<()> {
         .arg(testnet_arg)
         .arg(regtest_arg)
         .subcommand(api::build_command(&endpoints));
-        
+
     // Add wallet command with broadcast subcommands dynamically added
     let wallet_cmd = wallet_commands::build_command();
     let wallet_cmd_with_broadcast = wallet_commands::add_broadcast_commands(wallet_cmd, &endpoints);

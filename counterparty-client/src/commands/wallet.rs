@@ -1,15 +1,15 @@
 use anyhow::{Context, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use serde_json;
-use std::path::PathBuf;
-use std::collections::HashMap;
-use std::sync::Mutex;
 use lazy_static::lazy_static;
+use serde_json;
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::Mutex;
 
 // Import BitcoinWallet from src/wallet.rs
-use crate::wallet::BitcoinWallet;
-use crate::config::{self, ApiEndpoint, ApiEndpointArg, AppConfig};
 use crate::commands::api;
+use crate::config::{self, ApiEndpoint, ApiEndpointArg, AppConfig};
+use crate::wallet::BitcoinWallet;
 
 // Global static mapping between internal argument IDs and their original names
 lazy_static! {
@@ -20,32 +20,34 @@ lazy_static! {
 // Builds the wallet command with its subcommands
 pub fn build_command() -> Command {
     let command = Command::new("wallet").about("Manage your Counterparty wallet");
-    
+
     // Default subcommands (statically defined)
     let command_with_subcommands = command
         .subcommand(build_addaddress_command())
         .subcommand(build_showaddress_command())
         .subcommand(build_addresses_command());
-    
+
     // We'll add broadcast commands dynamically during runtime initialization
     // (This happens in main.rs when app.get_matches() is called)
-    
+
     command_with_subcommands
 }
 
 // Filter and sort compose endpoints
-fn filter_compose_endpoints(endpoints: &HashMap<String, ApiEndpoint>) -> Vec<(String, &ApiEndpoint)> {
+fn filter_compose_endpoints(
+    endpoints: &HashMap<String, ApiEndpoint>,
+) -> Vec<(String, &ApiEndpoint)> {
     // Filter endpoints for compose_* functions
     let compose_commands: Vec<(String, &ApiEndpoint)> = endpoints
         .iter()
         .filter(|(_, endpoint)| endpoint.function.starts_with("compose_"))
         .map(|(_, endpoint)| (endpoint.function.clone(), endpoint))
         .collect();
-    
+
     // Sort commands by name for consistent ordering
     let mut sorted_commands = compose_commands;
     sorted_commands.sort_by(|a, b| a.0.cmp(&b.0));
-    
+
     sorted_commands
 }
 
@@ -54,45 +56,50 @@ fn create_broadcast_command(func_name: &str, endpoint: &ApiEndpoint) -> (String,
     // Convert compose_X to broadcast_X
     let broadcast_name = func_name.replace("compose_", "broadcast_");
     let static_broadcast_name: &'static str = Box::leak(broadcast_name.into_boxed_str());
-    
+
     // Create description for broadcast command
-    let description = format!("Compose, sign and broadcast a {}", 
-        &endpoint.description.replace("Composes a ", ""));
+    let description = format!(
+        "Compose, sign and broadcast a {}",
+        &endpoint.description.replace("Composes a ", "")
+    );
     let static_description: &'static str = Box::leak(description.into_boxed_str());
-    
+
     // Create the command
     let cmd = Command::new(static_broadcast_name).about(static_description);
-    
+
     (static_broadcast_name.to_string(), cmd)
 }
 
 // Add an argument to a command
 fn add_argument_to_command(
-    cmd: Command, 
-    arg: &ApiEndpointArg, 
-    idx: usize, 
+    cmd: Command,
+    arg: &ApiEndpointArg,
+    idx: usize,
     command_name: &str,
-    used_long_names: &mut std::collections::HashSet<String>
+    used_long_names: &mut std::collections::HashSet<String>,
 ) -> Command {
     // Skip this argument if the long name is already used
     if used_long_names.contains(&arg.name) {
         return cmd;
     }
-    
+
     // Mark this argument name as used
     used_long_names.insert(arg.name.clone());
-    
+
     // Create unique internal ID
     let internal_id = format!("__broadcast_{}_arg_{}", command_name, idx);
     let static_internal_id: &'static str = Box::leak(internal_id.into_boxed_str());
-    
+
     // Use original argument name as long flag
     let static_long_flag: &'static str = Box::leak(arg.name.clone().into_boxed_str());
-    
+
     // Store mapping for later
     let id_map_key = format!("{}:{}", command_name, static_internal_id);
-    ID_ARG_MAP.lock().unwrap().insert(id_map_key, arg.name.clone());
-    
+    ID_ARG_MAP
+        .lock()
+        .unwrap()
+        .insert(id_map_key, arg.name.clone());
+
     let static_help: &'static str = Box::leak(
         arg.description
             .as_deref()
@@ -121,30 +128,30 @@ fn add_argument_to_command(
 // Build broadcast commands based on compose API endpoints
 pub fn add_broadcast_commands(cmd: Command, endpoints: &HashMap<String, ApiEndpoint>) -> Command {
     let mut wallet_cmd = cmd;
-    
+
     // Get filtered and sorted compose endpoints
     let sorted_commands = filter_compose_endpoints(endpoints);
-    
+
     // Add each broadcast command
     for (func_name, endpoint) in sorted_commands {
         let (broadcast_name, mut broadcast_cmd) = create_broadcast_command(&func_name, endpoint);
-        
+
         // Add arguments, skipping any duplicates
         let mut used_long_names = std::collections::HashSet::new();
-        
+
         for (idx, arg) in endpoint.args.iter().enumerate() {
             broadcast_cmd = add_argument_to_command(
-                broadcast_cmd, 
-                arg, 
-                idx, 
+                broadcast_cmd,
+                arg,
+                idx,
                 &broadcast_name,
-                &mut used_long_names
+                &mut used_long_names,
             );
         }
-        
+
         wallet_cmd = wallet_cmd.subcommand(broadcast_cmd);
     }
-    
+
     wallet_cmd
 }
 
@@ -246,7 +253,7 @@ fn get_network_name(network: config::Network) -> &'static str {
 fn init_wallet(data_dir: &PathBuf, network: config::Network) -> Result<BitcoinWallet> {
     // Ensure the directory exists
     std::fs::create_dir_all(data_dir).context("Failed to create wallet directory")?;
-    
+
     // Initialize wallet with the specified network
     BitcoinWallet::init(data_dir, network).context("Failed to initialize wallet")
 }
@@ -301,11 +308,11 @@ fn handle_addresses(wallet: &BitcoinWallet, _sub_matches: &ArgMatches) -> Result
 // Find the corresponding compose endpoint for a broadcast command
 fn find_compose_endpoint<'a>(
     endpoints: &'a HashMap<String, ApiEndpoint>,
-    command_name: &str
+    command_name: &str,
 ) -> Result<(&'a String, &'a ApiEndpoint)> {
     // Convert broadcast_X to compose_X to find the matching endpoint
     let compose_name = command_name.replace("broadcast_", "compose_");
-    
+
     // Find matching endpoint for the compose function
     api::find_matching_endpoint(endpoints, &compose_name)
 }
@@ -314,23 +321,23 @@ fn find_compose_endpoint<'a>(
 fn extract_parameters_from_matches(
     endpoint: &ApiEndpoint,
     command_name: &str,
-    sub_matches: &ArgMatches
+    sub_matches: &ArgMatches,
 ) -> HashMap<String, String> {
     let mut params = HashMap::new();
-    
+
     // For each argument in the endpoint, look up the corresponding value from matches
     let id_map = ID_ARG_MAP.lock().unwrap();
-    
+
     for arg in &endpoint.args {
         // Try to find the argument by iterating through the id_map
         // and looking for entries with this command_name and argument name
         let mut found = false;
-        
+
         for (key, original_name) in id_map.iter() {
             if key.starts_with(&format!("{}:", command_name)) && original_name == &arg.name {
                 // Extract the internal ID from the key
                 let internal_id = key.split(':').nth(1).unwrap_or("");
-                
+
                 if arg.arg_type == "bool" {
                     if sub_matches.get_flag(internal_id) {
                         params.insert(arg.name.clone(), "true".to_string());
@@ -344,16 +351,19 @@ fn extract_parameters_from_matches(
                 }
             }
         }
-        
+
         // For debugging
         if !found && arg.required {
-            eprintln!("Warning: Required argument '{}' not found in matches", arg.name);
+            eprintln!(
+                "Warning: Required argument '{}' not found in matches",
+                arg.name
+            );
         }
     }
-    
+
     // Always add verbose=true
     params.insert("verbose".to_string(), "true".to_string());
-    
+
     params
 }
 
@@ -367,73 +377,85 @@ async fn handle_broadcast_command(
 ) -> Result<()> {
     // Find the corresponding compose endpoint
     let (path, endpoint) = find_compose_endpoint(endpoints, command_name)?;
-    
+
     // Extract parameters from command line arguments
     let params = extract_parameters_from_matches(endpoint, command_name, sub_matches);
-    
+
     // Try to find the address parameter (commonly named 'source' or 'address')
-    let address = params.get("source")
+    let address = params
+        .get("source")
         .or_else(|| params.get("address"))
         .ok_or_else(|| anyhow::anyhow!("Address parameter not found"))?;
-    
+
     // Verify that the address exists in the wallet
-    wallet.show_address(address, None)
+    wallet
+        .show_address(address, None)
         .map_err(|_| anyhow::anyhow!("Address {} not found in wallet", address))?;
-    
+
     // Call API and get the result
     let api_path = api::build_api_path(path, endpoint, &params);
     let result = api::perform_api_request(config, &api_path, &params).await?;
-    
+
     // Print the compose result
-    println!("Composed transaction: {}", serde_json::to_string_pretty(&result)?);
-    
+    println!(
+        "Composed transaction: {}",
+        serde_json::to_string_pretty(&result)?
+    );
+
     // Extract required fields from result
-    let raw_tx_hex = result.get("rawtransaction")
+    let raw_tx_hex = result
+        .get("rawtransaction")
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("Missing rawtransaction in API response"))?;
-    
-    let inputs_values = result.get("inputs_values")
+
+    let inputs_values = result
+        .get("inputs_values")
         .and_then(|v| v.as_array())
         .ok_or_else(|| anyhow::anyhow!("Missing inputs_values in API response"))?
         .iter()
         .filter_map(|v| v.as_u64())
         .collect::<Vec<_>>();
-    
-    let lock_scripts = result.get("lock_scripts")
+
+    let lock_scripts = result
+        .get("lock_scripts")
         .and_then(|v| v.as_array())
         .ok_or_else(|| anyhow::anyhow!("Missing lock_scripts in API response"))?
         .iter()
         .filter_map(|v| v.as_str())
         .collect::<Vec<_>>();
-    
+
     // Check that inputs_values and lock_scripts have the same length
     if inputs_values.len() != lock_scripts.len() {
-        return Err(anyhow::anyhow!("inputs_values and lock_scripts have different lengths"));
+        return Err(anyhow::anyhow!(
+            "inputs_values and lock_scripts have different lengths"
+        ));
     }
-    
+
     // Construct utxos vector - FIX: removed .as_str() call that was causing the error
-    let utxos = lock_scripts.iter()
+    let utxos = lock_scripts
+        .iter()
         .zip(inputs_values.iter())
         .map(|(script, value)| (*script, *value))
         .collect::<Vec<_>>();
-    
+
     // Sign the transaction
-    let signed_tx = wallet.sign_transaction(raw_tx_hex, utxos)
+    let signed_tx = wallet
+        .sign_transaction(raw_tx_hex, utxos)
         .map_err(|e| anyhow::anyhow!("Failed to sign transaction: {}", e))?;
-    
+
     // Print the signed transaction
     println!("Signed transaction: {}", signed_tx);
-    
+
     // TODO: Add code to broadcast the signed transaction
-    
+
     Ok(())
 }
 
 // Executes a wallet command
 pub async fn execute_command(
-    config: &AppConfig, 
-    matches: &ArgMatches, 
-    endpoints: &HashMap<String, ApiEndpoint>
+    config: &AppConfig,
+    matches: &ArgMatches,
+    endpoints: &HashMap<String, ApiEndpoint>,
 ) -> Result<()> {
     let data_dir = get_wallet_data_dir();
     let mut wallet = init_wallet(&data_dir, config.network)?;

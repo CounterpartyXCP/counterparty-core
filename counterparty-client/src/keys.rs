@@ -23,7 +23,11 @@ pub struct KeyData {
 }
 
 // Generate key data from an existing private key
-pub fn generate_keys_from_private_key(pk_str: &str, network: Network, secp: &Secp256k1<All>) -> Result<KeyData> {
+pub fn generate_keys_from_private_key(
+    pk_str: &str,
+    network: Network,
+    secp: &Secp256k1<All>,
+) -> Result<KeyData> {
     let pk = PrivateKey::from_str(pk_str)
         .map_err(|e| WalletError::BitcoinError(format!("Invalid private key: {}", e)))?;
 
@@ -35,7 +39,7 @@ pub fn generate_keys_from_private_key(pk_str: &str, network: Network, secp: &Sec
     };
 
     let public_key = PublicKey::from_private_key(secp, &pk);
-    
+
     Ok(KeyData {
         private_key: pk,
         public_key,
@@ -46,17 +50,17 @@ pub fn generate_keys_from_private_key(pk_str: &str, network: Network, secp: &Sec
 
 // Generate key data from a mnemonic phrase
 pub fn generate_keys_from_mnemonic(
-    mnemonic_str: &str, 
-    path_str: Option<&str>, 
-    addr_type: &str, 
+    mnemonic_str: &str,
+    path_str: Option<&str>,
+    addr_type: &str,
     network: Network,
-    secp: &Secp256k1<All>
+    secp: &Secp256k1<All>,
 ) -> Result<KeyData> {
     let mnemonic = Mnemonic::parse_normalized(mnemonic_str)
         .map_err(|e| WalletError::Bip39Error(format!("Invalid mnemonic: {}", e)))?;
 
     let seed = mnemonic.to_seed("");
-    
+
     // Determine derivation path based on address type
     let derivation_path = get_derivation_path(path_str, addr_type);
 
@@ -71,7 +75,11 @@ pub fn generate_keys_from_mnemonic(
 }
 
 // Generate new random key data
-pub fn generate_new_keys(addr_type: &str, network: Network, secp: &Secp256k1<All>) -> Result<KeyData> {
+pub fn generate_new_keys(
+    addr_type: &str,
+    network: Network,
+    secp: &Secp256k1<All>,
+) -> Result<KeyData> {
     let mut entropy = [0u8; 16];
     thread_rng().fill(&mut entropy);
 
@@ -111,10 +119,10 @@ pub fn get_derivation_path<'a>(path: Option<&'a str>, addr_type: &'a str) -> &'a
 
 // Derive a key pair from a seed using the specified derivation path
 pub fn derive_key_pair(
-    seed: &[u8], 
-    derivation_path: &str, 
+    seed: &[u8],
+    derivation_path: &str,
     network: Network,
-    secp: &Secp256k1<All>
+    secp: &Secp256k1<All>,
 ) -> Result<(PrivateKey, PublicKey)> {
     let path = DerivationPath::from_str(derivation_path)
         .map_err(|e| WalletError::BitcoinError(format!("Invalid derivation path: {}", e)))?;
@@ -122,7 +130,8 @@ pub fn derive_key_pair(
     let master_key = Xpriv::new_master(network, seed)
         .map_err(|e| WalletError::BitcoinError(format!("Failed to generate master key: {}", e)))?;
 
-    let derived_key = master_key.derive_priv(secp, &path)
+    let derived_key = master_key
+        .derive_priv(secp, &path)
         .map_err(|e| WalletError::BitcoinError(format!("Failed to derive private key: {}", e)))?;
 
     let private_key = PrivateKey {
@@ -137,11 +146,17 @@ pub fn derive_key_pair(
 }
 
 // Create a Bitcoin address from a public key based on the address type
-pub fn create_bitcoin_address(pub_key: &PublicKey, addr_type: &str, network: Network) -> Result<Address> {
+pub fn create_bitcoin_address(
+    pub_key: &PublicKey,
+    addr_type: &str,
+    network: Network,
+) -> Result<Address> {
     if addr_type == "bech32" {
         // Create a Bech32 address (P2WPKH)
-        let compressed_pubkey = CompressedPublicKey::from_slice(&pub_key.to_bytes())
-            .map_err(|e| WalletError::BitcoinError(format!("Failed to create compressed public key: {}", e)))?;
+        let compressed_pubkey =
+            CompressedPublicKey::from_slice(&pub_key.to_bytes()).map_err(|e| {
+                WalletError::BitcoinError(format!("Failed to create compressed public key: {}", e))
+            })?;
 
         Ok(Address::p2wpkh(&compressed_pubkey, network))
     } else {
