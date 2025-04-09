@@ -368,7 +368,7 @@ pub async fn handle_broadcast_command(
         let reveal_tx = handle_reveal_transaction(reveal_tx_info, &signed_tx, wallet, &address)?;
         signed_reveal_tx = Some(reveal_tx);
     }
-    return Ok(());
+    //return Ok(());
     
     // Broadcast the transaction(s)
     broadcast_transactions(

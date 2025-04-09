@@ -4,14 +4,14 @@ use clap::{Arg, ArgAction, Command};
 pub fn build_command() -> Command {
     Command::new("wallet")
         .about("Manage your Counterparty wallet")
-        .subcommand(build_addaddress_command())
-        .subcommand(build_showaddress_command())
-        .subcommand(build_addresses_command())
+        .subcommand(build_add_address_command())
+        .subcommand(build_show_address_command())
+        .subcommand(build_list_addresses_command())
 }
 
 /// Builds the addaddress subcommand
-fn build_addaddress_command() -> Command {
-    Command::new("addaddress")
+fn build_add_address_command() -> Command {
+    Command::new("add_address")
         .about("Generate or import a new Bitcoin address")
         .arg(
             Arg::new("private_key")
@@ -48,8 +48,8 @@ fn build_addaddress_command() -> Command {
 }
 
 /// Builds the showaddress subcommand
-fn build_showaddress_command() -> Command {
-    Command::new("showaddress")
+fn build_show_address_command() -> Command {
+    Command::new("show_address")
         .about("Show details for a specific address")
         .arg(
             Arg::new("address")
@@ -67,8 +67,8 @@ fn build_showaddress_command() -> Command {
 }
 
 /// Builds the addresses subcommand
-fn build_addresses_command() -> Command {
-    Command::new("addresses")
+fn build_list_addresses_command() -> Command {
+    Command::new("list_addresses")
         .about("List all addresses in the wallet")
         .arg(
             Arg::new("verbose")

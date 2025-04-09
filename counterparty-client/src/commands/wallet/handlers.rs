@@ -5,7 +5,7 @@ use serde_json;
 use crate::wallet::BitcoinWallet;
 
 /// Handle the addaddress subcommand
-pub fn handle_addaddress(wallet: &mut BitcoinWallet, sub_matches: &ArgMatches) -> Result<()> {
+pub fn handle_add_address(wallet: &mut BitcoinWallet, sub_matches: &ArgMatches) -> Result<()> {
     // Extract parameters
     let private_key = sub_matches
         .get_one::<String>("private_key")
@@ -29,7 +29,7 @@ pub fn handle_addaddress(wallet: &mut BitcoinWallet, sub_matches: &ArgMatches) -
 }
 
 /// Handle the showaddress subcommand
-pub fn handle_showaddress(wallet: &BitcoinWallet, sub_matches: &ArgMatches) -> Result<()> {
+pub fn handle_show_address(wallet: &BitcoinWallet, sub_matches: &ArgMatches) -> Result<()> {
     let address = sub_matches.get_one::<String>("address").unwrap();
     let show_private_key = Some(sub_matches.get_flag("private_key"));
     
@@ -42,11 +42,11 @@ pub fn handle_showaddress(wallet: &BitcoinWallet, sub_matches: &ArgMatches) -> R
 }
 
 /// Handle the addresses subcommand
-pub fn handle_addresses(wallet: &BitcoinWallet, _sub_matches: &ArgMatches) -> Result<()> {
+pub fn handle_list_addresses(wallet: &BitcoinWallet, _sub_matches: &ArgMatches) -> Result<()> {
     let addresses = wallet
         .list_addresses()
         .map_err(|e| anyhow!("Failed to list addresses: {}", e))?;
     
-    println!("{}", serde_json::to_string_pretty(&addresses)?);
+    println!("list {}", serde_json::to_string_pretty(&addresses)?);
     Ok(())
 }

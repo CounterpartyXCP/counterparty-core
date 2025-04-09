@@ -30,9 +30,9 @@ pub async fn execute_command(
     println!("Using network: {}", network_name);
     
     match matches.subcommand() {
-        Some(("addaddress", sub_matches)) => handlers::handle_addaddress(&mut wallet, sub_matches),
-        Some(("showaddress", sub_matches)) => handlers::handle_showaddress(&wallet, sub_matches),
-        Some(("addresses", sub_matches)) => handlers::handle_addresses(&wallet, sub_matches),
+        Some(("add_address", sub_matches)) => handlers::handle_add_address(&mut wallet, sub_matches),
+        Some(("show_address", sub_matches)) => handlers::handle_show_address(&wallet, sub_matches),
+        Some(("list_addresses", sub_matches)) => handlers::handle_list_addresses(&wallet, sub_matches),
         Some((cmd_name, sub_matches)) if cmd_name.starts_with("broadcast_") => {
             // Handle broadcast commands asynchronously
             transaction::handle_broadcast_command(config, endpoints, cmd_name, sub_matches, &wallet).await
