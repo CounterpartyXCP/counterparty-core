@@ -22,7 +22,7 @@ pub async fn execute_command(
     matches: &ArgMatches,
     endpoints: &HashMap<String, ApiEndpoint>,
 ) -> Result<()> {
-    let data_dir = utils::get_wallet_data_dir();
+    let data_dir = config.get_data_dir();
     let mut wallet = utils::init_wallet(&data_dir, config.network)?;
     
     // Print current network information
