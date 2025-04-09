@@ -1,9 +1,9 @@
-use bitcoin::ScriptBuf;
-use bitcoin::secp256k1::Message;
 use bitcoin::blockdata::witness::Witness;
-use bitcoin::XOnlyPublicKey;
-use bitcoin::PublicKey;
 use bitcoin::key::CompressedPublicKey;
+use bitcoin::secp256k1::Message;
+use bitcoin::PublicKey;
+use bitcoin::ScriptBuf;
+use bitcoin::XOnlyPublicKey;
 
 use crate::signer::types::Result;
 use crate::wallet::WalletError;

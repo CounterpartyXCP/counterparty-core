@@ -11,12 +11,12 @@ use bitcoin::Network;
 use serde_json::{self, json, Value};
 use std::path::Path;
 
-use crate::config;
-use crate::signer;
 use super::keys::{self, create_bitcoin_address};
 use super::storage::WalletStorage;
 use super::types::{AddressInfo, AddressMap, Result, WalletError};
-use super::utils::{to_bitcoin_network, network_to_string};
+use super::utils::{network_to_string, to_bitcoin_network};
+use crate::config;
+use crate::signer;
 
 /// Main wallet structure for Bitcoin operations
 pub struct BitcoinWallet {

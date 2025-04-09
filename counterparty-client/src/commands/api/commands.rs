@@ -9,13 +9,13 @@ use crate::api::models::{ApiEndpoint, ApiEndpointArg};
 // Builds the API command structure with all subcommands
 pub fn build_command(endpoints: &HashMap<String, ApiEndpoint>) -> Command {
     let mut api_cmd = Command::new("api").about("Interact with the Counterparty API");
-    
+
     let grouped_endpoints = group_endpoints_by_type(endpoints);
-    
+
     for (func_name, endpoint) in grouped_endpoints {
         api_cmd = add_subcommand(api_cmd, func_name, endpoint);
     }
-    
+
     api_cmd
 }
 
@@ -24,10 +24,10 @@ fn group_endpoints_by_type(endpoints: &HashMap<String, ApiEndpoint>) -> Vec<(Str
     let mut compose_commands = Vec::new();
     let mut get_commands = Vec::new();
     let mut other_commands = Vec::new();
-    
+
     // Create a deduplicated map of functions
     let functions = deduplicate_endpoint_functions(endpoints);
-    
+
     // Sort functions into groups
     for (func_name, endpoint) in functions {
         if func_name.starts_with("compose_") {
@@ -38,28 +38,30 @@ fn group_endpoints_by_type(endpoints: &HashMap<String, ApiEndpoint>) -> Vec<(Str
             other_commands.push((func_name, endpoint));
         }
     }
-    
+
     // Sort each group and combine
     compose_commands.sort_by(|a, b| a.0.cmp(&b.0));
     get_commands.sort_by(|a, b| a.0.cmp(&b.0));
     other_commands.sort_by(|a, b| a.0.cmp(&b.0));
-    
+
     let mut all_commands = Vec::new();
     all_commands.extend(compose_commands);
     all_commands.extend(get_commands);
     all_commands.extend(other_commands);
-    
+
     all_commands
 }
 
 // Creates a deduplicated map of function names to endpoints
-fn deduplicate_endpoint_functions(endpoints: &HashMap<String, ApiEndpoint>) -> HashMap<String, ApiEndpoint> {
+fn deduplicate_endpoint_functions(
+    endpoints: &HashMap<String, ApiEndpoint>,
+) -> HashMap<String, ApiEndpoint> {
     let mut functions = HashMap::new();
-    
+
     for (_path, endpoint) in endpoints {
         functions.insert(endpoint.function.clone(), endpoint.clone());
     }
-    
+
     functions
 }
 
@@ -69,12 +71,12 @@ fn add_subcommand(cmd: Command, func_name: String, endpoint: ApiEndpoint) -> Com
     let static_description: &'static str = Box::leak(endpoint.description.into_boxed_str());
 
     let mut subcmd = Command::new(static_func_name).about(static_description);
-    
+
     // Add arguments for this endpoint
     for arg in &endpoint.args {
         subcmd = add_command_argument(subcmd, arg);
     }
-    
+
     cmd.subcommand(subcmd)
 }
 
@@ -143,21 +145,21 @@ pub fn build_request_parameters(
 // Creates a map of argument names to static references
 fn create_static_arg_names(args: &[ApiEndpointArg]) -> HashMap<String, &'static str> {
     let mut static_arg_names = HashMap::new();
-    
+
     for arg in args {
         let static_name: &'static str = Box::leak(arg.name.clone().into_boxed_str());
         static_arg_names.insert(arg.name.clone(), static_name);
     }
-    
+
     static_arg_names
 }
 
 // Adds a parameter from a command match
 fn add_parameter_from_match(
-    params: &mut HashMap<String, String>, 
+    params: &mut HashMap<String, String>,
     arg: &ApiEndpointArg,
     static_arg_names: &HashMap<String, &'static str>,
-    matches: &ArgMatches
+    matches: &ArgMatches,
 ) {
     let static_arg_name = static_arg_names.get(&arg.name).unwrap();
 
@@ -177,7 +179,7 @@ pub fn build_api_path(
     params: &HashMap<String, String>,
 ) -> String {
     let mut api_path = path.to_string();
-    let mut updated_params = params.clone();  // Clone params for tracking replacements
+    let mut updated_params = params.clone(); // Clone params for tracking replacements
 
     for arg in &endpoint.args {
         if let Some(value) = params.get(&arg.name) {
@@ -193,16 +195,16 @@ fn replace_placeholder_in_path(
     api_path: &mut String,
     arg_name: &str,
     value: &str,
-    updated_params: &mut HashMap<String, String>  // For tracking replacements
+    updated_params: &mut HashMap<String, String>, // For tracking replacements
 ) {
     let int_placeholder = format!("<int:{}>", arg_name);
     let simple_placeholder = format!("<{}>", arg_name);
 
     if api_path.contains(&int_placeholder) {
         *api_path = api_path.replace(&int_placeholder, value);
-        updated_params.remove(arg_name);  // Remove from params since used in path
+        updated_params.remove(arg_name); // Remove from params since used in path
     } else if api_path.contains(&simple_placeholder) {
         *api_path = api_path.replace(&simple_placeholder, value);
-        updated_params.remove(arg_name);  // Remove from params since used in path
+        updated_params.remove(arg_name); // Remove from params since used in path
     }
 }

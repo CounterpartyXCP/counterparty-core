@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-use crate::config::AppConfig;
 use crate::api::models::ApiEndpoint;
+use crate::config::AppConfig;
 
 // ---- API Endpoint Management ----
 
@@ -52,11 +52,9 @@ fn parse_endpoints_from_response(response: Value) -> Result<HashMap<String, ApiE
 fn cache_endpoints(config: &AppConfig, endpoints: &HashMap<String, ApiEndpoint>) -> Result<()> {
     let cache_file = config.get_cache_file();
     ensure_cache_directory(&cache_file)?;
-    
-    fs::write(
-        &cache_file, 
-        serde_json::to_string_pretty(&endpoints)?
-    ).context("Failed to cache API endpoints")
+
+    fs::write(&cache_file, serde_json::to_string_pretty(&endpoints)?)
+        .context("Failed to cache API endpoints")
 }
 
 // Ensures cache directory exists
@@ -71,7 +69,7 @@ fn ensure_cache_directory(cache_file: &Path) -> Result<()> {
 pub fn load_cached_api_endpoints(config: &AppConfig) -> Result<HashMap<String, ApiEndpoint>> {
     let cache_file = config.get_cache_file();
     let cache = fs::read_to_string(&cache_file).context("Failed to read cache file")?;
-    
+
     serde_json::from_str(&cache).context("Failed to parse cached API endpoints")
 }
 
@@ -84,7 +82,7 @@ pub async fn update_cache(config: &AppConfig) -> Result<()> {
 // Loads endpoints from cache or fetches them if needed
 pub async fn load_or_fetch_endpoints(config: &AppConfig) -> Result<HashMap<String, ApiEndpoint>> {
     let cache_file = config.get_cache_file();
-    
+
     if cache_file.exists() {
         match load_cached_api_endpoints(config) {
             Ok(endpoints) => Ok(endpoints),

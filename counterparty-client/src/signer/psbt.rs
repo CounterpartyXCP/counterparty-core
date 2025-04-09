@@ -1,16 +1,16 @@
+use bitcoin::amount::Amount;
+use bitcoin::blockdata::transaction::TxOut;
+use bitcoin::psbt::{Input as PsbtInput, Psbt};
+use bitcoin::secp256k1::{Secp256k1, SecretKey};
+use bitcoin::sighash::SighashCache;
+use bitcoin::ScriptBuf;
+use bitcoin::Transaction;
+use bitcoin::{Network, PrivateKey, PublicKey};
 use std::collections::HashMap;
 use std::str::FromStr;
-use bitcoin::amount::Amount;
-use bitcoin::secp256k1::{Secp256k1, SecretKey};
-use bitcoin::ScriptBuf;
-use bitcoin::{Network, PrivateKey, PublicKey};
-use bitcoin::blockdata::transaction::TxOut;
-use bitcoin::psbt::{Psbt, Input as PsbtInput};
-use bitcoin::sighash::SighashCache;
-use bitcoin::Transaction;
 
 use crate::signer::address::{can_sign_input, determine_address_type};
-use crate::signer::signature::{compute_signature, add_signature_to_input};
+use crate::signer::signature::{add_signature_to_input, compute_signature};
 use crate::signer::taproot::try_sign_taproot_reveal;
 use crate::signer::types::Result;
 use crate::signer::utils::decode_script;
@@ -146,9 +146,8 @@ pub fn handle_taproot_reveal(
         .ok_or_else(|| WalletError::AddressNotFound(source_addr.to_string()))?;
 
     // Parse the envelope script
-    let script_bytes = hex::decode(envelope_script_hex).map_err(|e| {
-        WalletError::BitcoinError(format!("Invalid envelope script hex: {}", e))
-    })?;
+    let script_bytes = hex::decode(envelope_script_hex)
+        .map_err(|e| WalletError::BitcoinError(format!("Invalid envelope script hex: {}", e)))?;
     let envelope_script = ScriptBuf::from_bytes(script_bytes);
 
     // Parse the private key for the source address

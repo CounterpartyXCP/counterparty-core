@@ -1,8 +1,8 @@
-use std::collections::HashMap;
 use bitcoin::consensus::{deserialize, serialize};
-use bitcoin::Network;
 use bitcoin::psbt::Psbt;
+use bitcoin::Network;
 use bitcoin::Transaction;
+use std::collections::HashMap;
 
 use crate::signer::psbt::{add_utxos_to_psbt, sign_psbt_inputs};
 use crate::signer::types::Result;

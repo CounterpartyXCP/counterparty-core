@@ -1,8 +1,8 @@
-use bitcoin::secp256k1::{Secp256k1, Message};
 use bitcoin::secp256k1::ecdsa;
+use bitcoin::secp256k1::{Message, Secp256k1};
+use bitcoin::sighash::EcdsaSighashType;
 use bitcoin::PublicKey;
 use bitcoin::XOnlyPublicKey;
-use bitcoin::sighash::EcdsaSighashType;
 
 use crate::signer::types::Result;
 use crate::wallet::WalletError;
@@ -19,7 +19,7 @@ pub fn verify_ecdsa_signature(
         .is_err()
     {
         return Err(WalletError::BitcoinError(
-            "Generated ECDSA signature failed verification".to_string()
+            "Generated ECDSA signature failed verification".to_string(),
         ));
     }
     Ok(())
@@ -37,7 +37,7 @@ pub fn verify_schnorr_signature(
         .is_err()
     {
         return Err(WalletError::BitcoinError(
-            "Generated Schnorr signature failed verification".to_string()
+            "Generated Schnorr signature failed verification".to_string(),
         ));
     }
     Ok(())

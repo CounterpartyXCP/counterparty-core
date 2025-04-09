@@ -18,12 +18,12 @@ pub fn handle_add_address(wallet: &mut BitcoinWallet, sub_matches: &ArgMatches) 
     let address_type = sub_matches
         .get_one::<String>("address_type")
         .map(|s| s.as_str());
-    
+
     // Call the wallet function
     let address = wallet
         .add_address(private_key, mnemonic, path, label, address_type)
         .map_err(|e| anyhow!("Failed to add address: {}", e))?;
-    
+
     println!("Address added successfully: {}", address);
     Ok(())
 }
@@ -32,11 +32,11 @@ pub fn handle_add_address(wallet: &mut BitcoinWallet, sub_matches: &ArgMatches) 
 pub fn handle_show_address(wallet: &BitcoinWallet, sub_matches: &ArgMatches) -> Result<()> {
     let address = sub_matches.get_one::<String>("address").unwrap();
     let show_private_key = Some(sub_matches.get_flag("private_key"));
-    
+
     let details = wallet
         .show_address(address, show_private_key)
         .map_err(|e| anyhow!("Failed to show address details: {}", e))?;
-    
+
     println!("{}", serde_json::to_string_pretty(&details)?);
     Ok(())
 }
@@ -46,7 +46,7 @@ pub fn handle_list_addresses(wallet: &BitcoinWallet, _sub_matches: &ArgMatches) 
     let addresses = wallet
         .list_addresses()
         .map_err(|e| anyhow!("Failed to list addresses: {}", e))?;
-    
+
     println!("list {}", serde_json::to_string_pretty(&addresses)?);
     Ok(())
 }

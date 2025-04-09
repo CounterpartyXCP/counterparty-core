@@ -1,15 +1,15 @@
-use bitcoin::secp256k1::{Secp256k1, SecretKey, Keypair};
-use bitcoin::ScriptBuf;
-use bitcoin::{Address, Network};
 use bitcoin::blockdata::witness::Witness;
 use bitcoin::psbt::Input as PsbtInput;
+use bitcoin::secp256k1::{Keypair, Secp256k1, SecretKey};
 use bitcoin::sighash::{SighashCache, TapSighashType};
 use bitcoin::taproot::{LeafVersion, TapLeafHash, TapNodeHash, TaprootBuilder, TaprootSpendInfo};
+use bitcoin::ScriptBuf;
 use bitcoin::Transaction;
 use bitcoin::XOnlyPublicKey;
+use bitcoin::{Address, Network};
 
 use crate::signer::types::Result;
-use crate::signer::utils::{create_message_from_hash, create_empty_script_sig, get_xonly_pubkey};
+use crate::signer::utils::{create_empty_script_sig, create_message_from_hash, get_xonly_pubkey};
 use crate::signer::verification::verify_schnorr_signature;
 use crate::wallet::WalletError;
 

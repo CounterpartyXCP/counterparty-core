@@ -1,9 +1,9 @@
 use anyhow::Result;
 use serde_json::Value;
+use std::io::Write;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
-use std::io::Write;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 /// Converts and prints a JSON value as colored YAML
@@ -32,9 +32,10 @@ pub fn print_colored_json(json_value: &Value) -> Result<()> {
         .unwrap_or_else(|| syntax_set.find_syntax_plain_text());
 
     // Use the first available theme or fallback to a default
-    let theme = theme_set.themes.get("InspiredGitHub").unwrap_or_else(|| {
-        theme_set.themes.get("Solarized (dark)").unwrap()
-    });
+    let theme = theme_set
+        .themes
+        .get("InspiredGitHub")
+        .unwrap_or_else(|| theme_set.themes.get("Solarized (dark)").unwrap());
 
     let mut highlighter = HighlightLines::new(syntax, theme);
 
@@ -44,17 +45,21 @@ pub fn print_colored_json(json_value: &Value) -> Result<()> {
     // Highlight and print each line
     for line in yaml_str.lines() {
         let highlights = highlighter.highlight_line(line, &syntax_set)?;
-        
+
         for &(style, text) in &highlights {
             // Convert syntect style to termcolor
             let mut color_spec = ColorSpec::new();
-            color_spec.set_fg(Some(Color::Rgb(style.foreground.r, style.foreground.g, style.foreground.b)));
-            
+            color_spec.set_fg(Some(Color::Rgb(
+                style.foreground.r,
+                style.foreground.g,
+                style.foreground.b,
+            )));
+
             // Apply color and write
             stdout.set_color(&color_spec)?;
             write!(stdout, "{}", text)?;
         }
-        
+
         // Reset color and add newline
         stdout.reset()?;
         writeln!(stdout)?;

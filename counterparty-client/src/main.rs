@@ -4,9 +4,9 @@ use std::path::PathBuf;
 
 mod commands;
 mod config;
+mod helpers;
 mod signer;
 mod wallet;
-mod helpers;
 
 use crate::commands::api;
 use crate::commands::wallet as wallet_commands;
@@ -60,9 +60,9 @@ fn apply_network_overrides(config: &mut AppConfig, matches: &clap::ArgMatches) {
 #[tokio::main]
 async fn main() -> Result<()> {
     // Step 1: Create preliminary CLI app to parse config-file and network arguments
-    let preliminary_cli = add_common_cli_args(Command::new("counterparty-client"))
-        .ignore_errors(true);
-        
+    let preliminary_cli =
+        add_common_cli_args(Command::new("counterparty-client")).ignore_errors(true);
+
     let matches = preliminary_cli.get_matches();
 
     // Step 2: Get config file path from arguments or use default
@@ -85,16 +85,18 @@ async fn main() -> Result<()> {
     let endpoints = api::load_or_fetch_endpoints(&config).await?;
 
     // Step 7: Build final CLI app with all top-level commands
-    let mut app = add_common_cli_args(Command::new("counterparty-client")
-        .version("0.1.0")
-        .about("A command-line client for the Counterparty API and wallet"))
-        .arg(
-            Arg::new("update-cache")
-                .long("update-cache")
-                .help("Update the API endpoints cache")
-                .action(ArgAction::SetTrue),
-        )
-        .subcommand(api::build_command(&endpoints));
+    let mut app = add_common_cli_args(
+        Command::new("counterparty-client")
+            .version("0.1.0")
+            .about("A command-line client for the Counterparty API and wallet"),
+    )
+    .arg(
+        Arg::new("update-cache")
+            .long("update-cache")
+            .help("Update the API endpoints cache")
+            .action(ArgAction::SetTrue),
+    )
+    .subcommand(api::build_command(&endpoints));
 
     // Add wallet command with broadcast subcommands dynamically added
     let wallet_cmd = wallet_commands::build_command();

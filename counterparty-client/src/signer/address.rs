@@ -1,9 +1,9 @@
-use std::str::FromStr;
-use bitcoin::ScriptBuf;
-use bitcoin::PublicKey;
+use bitcoin::secp256k1::Secp256k1;
 use bitcoin::Address;
 use bitcoin::Network;
-use bitcoin::secp256k1::Secp256k1;
+use bitcoin::PublicKey;
+use bitcoin::ScriptBuf;
+use std::str::FromStr;
 
 use crate::signer::types::{AddressType, Result};
 use crate::signer::utils::{get_compressed_pubkey, get_xonly_pubkey, standardize_address_type};
@@ -21,10 +21,12 @@ pub fn is_p2sh_p2wpkh_script(script_pubkey: &ScriptBuf) -> bool {
     if let Some(Ok(bitcoin::blockdata::script::Instruction::Op(op1))) = iter.next() {
         if op1 == bitcoin::blockdata::opcodes::all::OP_HASH160 {
             // Second instruction should be a 20-byte push
-            if let Some(Ok(bitcoin::blockdata::script::Instruction::PushBytes(bytes))) = iter.next() {
+            if let Some(Ok(bitcoin::blockdata::script::Instruction::PushBytes(bytes))) = iter.next()
+            {
                 if bytes.len() == 20 {
                     // Third instruction should be OP_EQUAL
-                    if let Some(Ok(bitcoin::blockdata::script::Instruction::Op(op2))) = iter.next() {
+                    if let Some(Ok(bitcoin::blockdata::script::Instruction::Op(op2))) = iter.next()
+                    {
                         if op2 == bitcoin::blockdata::opcodes::all::OP_EQUAL {
                             // No more instructions
                             if iter.next().is_none() {
@@ -83,7 +85,10 @@ where
 }
 
 /// Check if a public key is used in a witness script
-pub fn is_pubkey_in_witness_script(witness_script: &ScriptBuf, public_key: &PublicKey) -> Result<bool> {
+pub fn is_pubkey_in_witness_script(
+    witness_script: &ScriptBuf,
+    public_key: &PublicKey,
+) -> Result<bool> {
     // Convert the public key to serialized format that we're looking for
     let pubkey_bytes = public_key.to_bytes();
 
@@ -96,7 +101,8 @@ pub fn is_pubkey_in_witness_script(witness_script: &ScriptBuf, public_key: &Publ
         if let Ok(instruction) = result {
             if let bitcoin::blockdata::script::Instruction::PushBytes(bytes) = instruction {
                 // Check if this pushed data is a public key
-                if bytes.len() == pubkey_bytes.len() && bytes.as_bytes() == pubkey_bytes.as_slice() {
+                if bytes.len() == pubkey_bytes.len() && bytes.as_bytes() == pubkey_bytes.as_slice()
+                {
                     return Ok(true);
                 }
             }
@@ -139,7 +145,10 @@ pub fn can_sign_p2sh_p2wpkh_input(
         let compressed_pubkey = get_compressed_pubkey(pubkey)?;
         let p2wpkh = Address::p2wpkh(&compressed_pubkey, network);
         Address::p2sh(&p2wpkh.script_pubkey(), network).map_err(|e| {
-            crate::wallet::WalletError::BitcoinError(format!("Failed to create P2SH-P2WPKH address: {}", e))
+            crate::wallet::WalletError::BitcoinError(format!(
+                "Failed to create P2SH-P2WPKH address: {}",
+                e
+            ))
         })
     })
 }

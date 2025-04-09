@@ -1,7 +1,7 @@
 //! Common types and error definitions for the wallet module.
 
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use thiserror::Error;
 
 /// Error types that can occur in wallet operations

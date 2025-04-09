@@ -4,10 +4,10 @@ use reqwest::Client;
 use serde_json::Value;
 use std::collections::HashMap;
 
+use crate::api::commands::{build_api_path, build_request_parameters, find_matching_endpoint};
+use crate::api::endpoints::load_or_fetch_endpoints;
 use crate::config::AppConfig;
 use crate::helpers;
-use crate::api::endpoints::load_or_fetch_endpoints;
-use crate::api::commands::{find_matching_endpoint, build_request_parameters, build_api_path};
 
 // ---- Command Execution ----
 
@@ -60,7 +60,7 @@ pub async fn perform_api_request(
     // Get active network API URL
     let api_url = config.get_api_url();
     let full_url = format!("{}{}", api_url, api_path);
-    
+
     // Make the API request
     let client = Client::new();
     let response = send_api_request(&client, &full_url, params).await?;

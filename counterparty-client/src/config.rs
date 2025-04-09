@@ -1,7 +1,7 @@
+use dirs::{cache_dir, data_dir};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use dirs::{cache_dir, data_dir};
 
 // Define supported Bitcoin networks
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq, Hash)]
@@ -55,26 +55,26 @@ impl AppConfig {
     pub fn new() -> Self {
         // Get application directories
         let (app_cache, app_data) = Self::get_app_directories();
-        
+
         // Create network configurations
         let mut network_configs = HashMap::new();
-        
+
         // Add mainnet config
         let mainnet_config = Self::create_mainnet_config(&app_cache, &app_data);
         network_configs.insert(Network::Mainnet, mainnet_config.clone());
-        
+
         // Add testnet4 config
         network_configs.insert(
-            Network::Testnet4, 
-            Self::create_testnet4_config(&app_cache, &app_data)
+            Network::Testnet4,
+            Self::create_testnet4_config(&app_cache, &app_data),
         );
-        
+
         // Add regtest config
         network_configs.insert(
-            Network::Regtest, 
-            Self::create_regtest_config(&app_cache, &app_data)
+            Network::Regtest,
+            Self::create_regtest_config(&app_cache, &app_data),
         );
-        
+
         // Use mainnet values for the root config (backward compatibility)
         AppConfig {
             api_url: mainnet_config.api_url.clone(),
@@ -91,11 +91,11 @@ impl AppConfig {
         // Get user cache directory
         let cache_base = cache_dir().unwrap_or_else(|| PathBuf::from(".cache"));
         let app_cache = cache_base.join("counterparty-client");
-        
+
         // Get user data directory
         let data_base = data_dir().unwrap_or_else(|| PathBuf::from(".data"));
         let app_data = data_base.join("counterparty-client");
-        
+
         (app_cache, app_data)
     }
 
@@ -144,12 +144,12 @@ impl AppConfig {
         if file_config.data_dir != PathBuf::new() {
             self.data_dir = file_config.data_dir;
         }
-        
+
         // Merge network configurations
         for (network, net_config) in file_config.network_configs {
             self.network_configs.insert(network, net_config);
         }
-        
+
         // Use the network specified in the configuration file
         self.network = file_config.network;
     }
@@ -170,19 +170,22 @@ impl AppConfig {
             }
 
             // Serialize the configuration to TOML
-            let config_toml = toml::to_string(self).context("Failed to serialize config to TOML")?;
+            let config_toml =
+                toml::to_string(self).context("Failed to serialize config to TOML")?;
 
             // Write to the file
             let mut file = fs::File::create(config_path)?;
             file.write_all(config_toml.as_bytes())?;
-            
-            println!("Created default configuration file at: {}", config_path.display());
+
+            println!(
+                "Created default configuration file at: {}",
+                config_path.display()
+            );
             return Ok(());
         }
-        
+
         // Load configuration from the specified file
-        let settings_builder = Config::builder()
-            .add_source(File::from(config_path.clone()));
+        let settings_builder = Config::builder().add_source(File::from(config_path.clone()));
 
         // If configuration can be loaded, update our AppConfig instance
         if let Ok(settings) = settings_builder.build() {
@@ -191,7 +194,7 @@ impl AppConfig {
                 self.merge_from(file_config);
             }
         }
-        
+
         Ok(())
     }
 
@@ -230,7 +233,7 @@ impl AppConfig {
     pub fn get_cache_file(&self) -> PathBuf {
         self.get_active_network_config().cache_file
     }
-    
+
     // Get current network's data directory
     pub fn get_data_dir(&self) -> PathBuf {
         self.get_active_network_config().data_dir

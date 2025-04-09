@@ -1,15 +1,20 @@
-use std::str::FromStr;
-use bitcoin::secp256k1::{Secp256k1, Message, SecretKey, Keypair};
-use bitcoin::ScriptBuf;
-use bitcoin::PublicKey;
 use bitcoin::blockdata::script::{Builder, PushBytesBuf};
 use bitcoin::psbt::Input as PsbtInput;
+use bitcoin::secp256k1::{Keypair, Message, Secp256k1, SecretKey};
 use bitcoin::sighash::{EcdsaSighashType, SighashCache, TapSighashType};
+use bitcoin::PublicKey;
+use bitcoin::ScriptBuf;
 use bitcoin::Transaction;
+use std::str::FromStr;
 
 use crate::signer::types::{AddressType, Result};
-use crate::signer::utils::{create_message_from_hash, create_witness_with_sig_and_pubkey, create_empty_script_sig, get_xonly_pubkey, standardize_address_type};
-use crate::signer::verification::{verify_ecdsa_signature, verify_schnorr_signature, encode_ecdsa_signature};
+use crate::signer::utils::{
+    create_empty_script_sig, create_message_from_hash, create_witness_with_sig_and_pubkey,
+    get_xonly_pubkey, standardize_address_type,
+};
+use crate::signer::verification::{
+    encode_ecdsa_signature, verify_ecdsa_signature, verify_schnorr_signature,
+};
 use crate::wallet::WalletError;
 
 /// Signs a message with ECDSA and verifies the signature
@@ -372,7 +377,7 @@ pub fn add_signature_to_input(
                 add_p2wsh_signature(input, signature_bytes, pubkey_bytes, script)
             } else {
                 Err(WalletError::BitcoinError(
-                    "Missing witness script for P2WSH".to_string()
+                    "Missing witness script for P2WSH".to_string(),
                 ))
             }
         }

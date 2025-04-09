@@ -14,9 +14,9 @@ use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use serde_json;
 
-use crate::config;
 use super::types::{AddressMap, Result, WalletError};
 use super::utils::get_network_dir;
+use crate::config;
 
 /// Handles wallet storage operations
 pub struct WalletStorage {
@@ -38,7 +38,10 @@ impl WalletStorage {
     /// # Returns
     ///
     /// * `Result<(WalletStorage, AddressMap)>` - Storage instance and loaded addresses, or error
-    pub fn init<P: AsRef<Path>>(data_dir: P, network: config::Network) -> Result<(Self, AddressMap)> {
+    pub fn init<P: AsRef<Path>>(
+        data_dir: P,
+        network: config::Network,
+    ) -> Result<(Self, AddressMap)> {
         let data_dir = data_dir.as_ref().to_path_buf();
 
         // Create network-specific subdirectory using utility function
@@ -102,14 +105,13 @@ impl WalletStorage {
 
         // Create a new Cocoon and decrypt
         let cocoon = Cocoon::new(password.as_bytes());
-        cocoon.decrypt(&mut encrypted_data, &prefix).map_err(|e| {
-            WalletError::CocoonError(format!("Failed to decrypt wallet: {:?}", e))
-        })?;
+        cocoon
+            .decrypt(&mut encrypted_data, &prefix)
+            .map_err(|e| WalletError::CocoonError(format!("Failed to decrypt wallet: {:?}", e)))?;
 
         // Convert to UTF-8 string and parse JSON
-        let json_data = String::from_utf8(encrypted_data).map_err(|_| {
-            WalletError::BitcoinError("Invalid UTF-8 in wallet file".to_string())
-        })?;
+        let json_data = String::from_utf8(encrypted_data)
+            .map_err(|_| WalletError::BitcoinError("Invalid UTF-8 in wallet file".to_string()))?;
 
         Ok(serde_json::from_str(&json_data)?)
     }
