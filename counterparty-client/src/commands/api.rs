@@ -7,6 +7,7 @@ use std::fs;
 use std::path::Path;
 
 use crate::config::{ApiEndpoint, AppConfig};
+use crate::helpers;
 
 // ---- API Endpoint Management ----
 
@@ -214,7 +215,7 @@ async fn execute_api_command(
     let result = perform_api_request(config, &api_path, &params).await?;
 
     // Output result
-    println!("{}", serde_json::to_string_pretty(&result)?);
+    helpers::print_colored_json(&result)?;
 
     Ok(())
 }

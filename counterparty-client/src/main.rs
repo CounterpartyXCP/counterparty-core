@@ -10,6 +10,7 @@ mod commands;
 mod config;
 mod signer;
 mod wallet;
+mod helpers;
 
 use crate::commands::api;
 use crate::commands::wallet as wallet_commands;
