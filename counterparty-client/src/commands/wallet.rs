@@ -371,15 +371,15 @@ fn extract_parameters_from_matches(
 async fn broadcast_transaction(config: &AppConfig, signed_tx: &str) -> Result<String> {
     let client = reqwest::Client::new();
     let api_url = config.get_api_url();
-    
+
     // Prepare the URL for transaction broadcast
     // NOTE: Including signedhex in both URL and POST body due to an API bug
     // TODO: Remove the URL parameter once the API bug is fixed
     let broadcast_url = format!("{}/v2/bitcoin/transactions?signedhex={}", api_url, signed_tx);
-    
+
     // Create URL-encoded form data
     let params = [("signedhex", signed_tx)];
-    
+
     // Send POST request with URL-encoded form
     let response = client
         .post(&broadcast_url)
@@ -387,13 +387,13 @@ async fn broadcast_transaction(config: &AppConfig, signed_tx: &str) -> Result<St
         .send()
         .await
         .context("Failed to broadcast transaction")?;
-    
+
     // Parse the response
     let result: serde_json::Value = response
         .json()
         .await
         .context("Failed to parse API response")?;
-    
+
     // Extract transaction ID from the response
     if let Some(tx_id) = result.get("result").and_then(|r| r.as_str()) {
         Ok(tx_id.to_string())
@@ -418,25 +418,25 @@ fn extract_first_output_info(raw_tx_hex: &str) -> Result<(String, u64)> {
     // Decode the transaction from hex
     let tx_bytes = hex::decode(raw_tx_hex)
         .map_err(|e| anyhow::anyhow!("Failed to decode transaction hex: {}", e))?;
-    
+
     // Parse the transaction
     let tx: bitcoin::Transaction = bitcoin::consensus::deserialize(&tx_bytes)
         .map_err(|e| anyhow::anyhow!("Failed to parse transaction: {}", e))?;
-    
+
     // Check if the transaction has any outputs
     if tx.output.is_empty() {
         return Err(anyhow::anyhow!("Transaction has no outputs"));
     }
-    
+
     // Get the first output
     let first_output = &tx.output[0];
-    
+
     // Get the script_pubkey as hex
     let script_hex = hex::encode(first_output.script_pubkey.as_bytes());
-    
+
     // Get the value in satoshis
     let value = first_output.value.to_sat();
-    
+
     Ok((script_hex, value))
 }
 
@@ -474,14 +474,14 @@ async fn handle_broadcast_command(
 
     // Add the public key as a multisig_pubkey parameter
     params.insert("multisig_pubkey".to_string(), public_key.to_string());
-    
+
     // Log that we're using the public key
     println!("Using public key for multisig: {}", public_key);
 
     // Call API and get the result
     let api_path = api::build_api_path(path, endpoint, &params);
     let result = api::perform_api_request(config, &api_path, &params).await?;
-    
+
     // Check if we have a 'result' field in the response
     let api_result = if let Some(api_result) = result.get("result") {
         // Print the compose result
@@ -544,27 +544,27 @@ async fn handle_broadcast_command(
 
     // Variable to store signed reveal transaction if needed
     let mut signed_reveal_tx = String::new();
-    
+
     // Check if there's a reveal transaction to handle
     if let Some(reveal_raw_tx) = api_result.get("reveal_rawtransaction").and_then(|v| v.as_str()) {
         println!("Found Taproot reveal transaction, processing...");
-        
+
         // Get the envelope script
         let envelope_script = api_result
             .get("envelope_script")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Missing envelope_script in API response"))?;
-        
+
         // Extract the first output's script and value from the signed transaction
         let (output_script, output_value) = extract_first_output_info(&signed_tx)
             .map_err(|e| anyhow::anyhow!("Failed to extract output info from transaction: {}", e))?;
-        
-        println!("Using output script: {} and value: {} satoshis for reveal transaction", 
+
+        println!("Using output script: {} and value: {} satoshis for reveal transaction",
                  output_script, output_value);
-        
+
         // Create UTXOs vector for the reveal transaction
         let reveal_utxos = vec![(output_script.as_str(), output_value)];
-        
+
         // Sign the reveal transaction with taproot reveal parameters
         signed_reveal_tx = wallet
             .sign_transaction_with_taproot_reveal(
@@ -574,28 +574,28 @@ async fn handle_broadcast_command(
                 Some(&address)
             )
             .map_err(|e| anyhow::anyhow!("Failed to sign reveal transaction: {}", e))?;
-        
+
         println!("Signed reveal transaction: {}", signed_reveal_tx);
     }
 
-    return Ok(());
+    //return Ok(());
 
     // Check if we have a reveal transaction that needs to be broadcast
     if let Some(_) = api_result.get("reveal_rawtransaction").and_then(|v| v.as_str()) {
         // Broadcast the first transaction
         println!("Broadcasting main transaction...");
         let tx_id = broadcast_transaction(config, &signed_tx).await?;
-        
+
         // Create and display explorer URL for the first transaction
         let explorer_url = get_explorer_url(config.network, &tx_id);
         println!("Main transaction broadcast successfully!");
         println!("Transaction ID: {}", tx_id);
         println!("Explorer URL: {}", explorer_url);
-        
+
         // We already have the signed reveal transaction from above, now broadcast it
         println!("Broadcasting reveal transaction...");
         let reveal_tx_id = broadcast_transaction(config, &signed_reveal_tx).await?;
-        
+
         // Create and display explorer URL for the reveal transaction
         let reveal_explorer_url = get_explorer_url(config.network, &reveal_tx_id);
         println!("Reveal transaction broadcast successfully!");
@@ -605,7 +605,7 @@ async fn handle_broadcast_command(
         // Only one transaction to broadcast
         println!("Broadcasting transaction...");
         let tx_id = broadcast_transaction(config, &signed_tx).await?;
-        
+
         // Create and display explorer URL
         let explorer_url = get_explorer_url(config.network, &tx_id);
         println!("Transaction broadcast successfully!");
