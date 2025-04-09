@@ -576,7 +576,7 @@ async fn handle_broadcast_command(
 
         // Sign the reveal transaction with taproot reveal parameters
         signed_reveal_tx = wallet
-            .sign_transaction_with_taproot_reveal(
+            .sign_reveal_transaction(
                 reveal_raw_tx,
                 reveal_utxos,
                 Some(envelope_script),
@@ -587,7 +587,7 @@ async fn handle_broadcast_command(
         println!("Signed reveal transaction: {}", signed_reveal_tx);
     }
 
-    //return Ok(());
+    return Ok(());
 
     // Check if we have a reveal transaction that needs to be broadcast
     if let Some(_) = api_result

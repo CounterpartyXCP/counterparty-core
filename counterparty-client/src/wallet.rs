@@ -337,14 +337,14 @@ impl BitcoinWallet {
         signer::sign_transaction(&self.addresses, raw_tx_hex, utxos, self.network)
     }
 
-    pub fn sign_transaction_with_taproot_reveal(
+    pub fn sign_reveal_transaction(
         &self,
         raw_tx_hex: &str,
         utxos: Vec<(&str, u64)>,
         envelope_script: Option<&str>,
         source_address: Option<&str>,
     ) -> Result<String> {
-        signer::sign_transaction_with_taproot_reveal(
+        signer::sign_reveal_transaction(
             &self.addresses,
             raw_tx_hex,
             utxos,
