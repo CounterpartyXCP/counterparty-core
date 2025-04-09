@@ -413,6 +413,33 @@ fn get_explorer_url(network: config::Network, tx_id: &str) -> String {
     }
 }
 
+// New function to extract the first output's script and value from a raw transaction
+fn extract_first_output_info(raw_tx_hex: &str) -> Result<(String, u64)> {
+    // Decode the transaction from hex
+    let tx_bytes = hex::decode(raw_tx_hex)
+        .map_err(|e| anyhow::anyhow!("Failed to decode transaction hex: {}", e))?;
+    
+    // Parse the transaction
+    let tx: bitcoin::Transaction = bitcoin::consensus::deserialize(&tx_bytes)
+        .map_err(|e| anyhow::anyhow!("Failed to parse transaction: {}", e))?;
+    
+    // Check if the transaction has any outputs
+    if tx.output.is_empty() {
+        return Err(anyhow::anyhow!("Transaction has no outputs"));
+    }
+    
+    // Get the first output
+    let first_output = &tx.output[0];
+    
+    // Get the script_pubkey as hex
+    let script_hex = hex::encode(first_output.script_pubkey.as_bytes());
+    
+    // Get the value in satoshis
+    let value = first_output.value.to_sat();
+    
+    Ok((script_hex, value))
+}
+
 // Handle broadcast commands by calling the corresponding compose API function
 async fn handle_broadcast_command(
     config: &AppConfig,
@@ -425,18 +452,31 @@ async fn handle_broadcast_command(
     let (path, endpoint) = find_compose_endpoint(endpoints, command_name)?;
 
     // Extract parameters from command line arguments
-    let params = extract_parameters_from_matches(endpoint, command_name, sub_matches);
+    let mut params = extract_parameters_from_matches(endpoint, command_name, sub_matches);
 
     // Try to find the address parameter (commonly named 'source' or 'address')
     let address = params
         .get("source")
         .or_else(|| params.get("address"))
-        .ok_or_else(|| anyhow::anyhow!("Address parameter not found"))?;
+        .ok_or_else(|| anyhow::anyhow!("Address parameter not found"))?
+        .clone();
 
-    // Verify that the address exists in the wallet
-    wallet
-        .show_address(address, None)
+    // Verify that the address exists in the wallet and get its details
+    let addr_details = wallet
+        .show_address(&address, None)
         .map_err(|_| anyhow::anyhow!("Address {} not found in wallet", address))?;
+
+    // Extract the public key from the address details
+    let public_key = addr_details
+        .get("public_key")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow::anyhow!("Public key not found for address {}", address))?;
+
+    // Add the public key as a multisig_pubkey parameter
+    params.insert("multisig_pubkey".to_string(), public_key.to_string());
+    
+    // Log that we're using the public key
+    println!("Using public key for multisig: {}", public_key);
 
     // Call API and get the result
     let api_path = api::build_api_path(path, endpoint, &params);
@@ -502,15 +542,76 @@ async fn handle_broadcast_command(
     // Print the signed transaction
     println!("Signed transaction: {}", signed_tx);
 
-    // Broadcast the signed transaction
-    println!("Broadcasting transaction...");
-    let tx_id = broadcast_transaction(config, &signed_tx).await?;
+    // Variable to store signed reveal transaction if needed
+    let mut signed_reveal_tx = String::new();
     
-    // Create and display explorer URL
-    let explorer_url = get_explorer_url(config.network, &tx_id);
-    println!("Transaction broadcast successfully!");
-    println!("Transaction ID: {}", tx_id);
-    println!("Explorer URL: {}", explorer_url);
+    // Check if there's a reveal transaction to handle
+    if let Some(reveal_raw_tx) = api_result.get("reveal_rawtransaction").and_then(|v| v.as_str()) {
+        println!("Found Taproot reveal transaction, processing...");
+        
+        // Get the envelope script
+        let envelope_script = api_result
+            .get("envelope_script")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow::anyhow!("Missing envelope_script in API response"))?;
+        
+        // Extract the first output's script and value from the signed transaction
+        let (output_script, output_value) = extract_first_output_info(&signed_tx)
+            .map_err(|e| anyhow::anyhow!("Failed to extract output info from transaction: {}", e))?;
+        
+        println!("Using output script: {} and value: {} satoshis for reveal transaction", 
+                 output_script, output_value);
+        
+        // Create UTXOs vector for the reveal transaction
+        let reveal_utxos = vec![(output_script.as_str(), output_value)];
+        
+        // Sign the reveal transaction with taproot reveal parameters
+        signed_reveal_tx = wallet
+            .sign_transaction_with_taproot_reveal(
+                reveal_raw_tx,
+                reveal_utxos,
+                Some(envelope_script),
+                Some(&address)
+            )
+            .map_err(|e| anyhow::anyhow!("Failed to sign reveal transaction: {}", e))?;
+        
+        println!("Signed reveal transaction: {}", signed_reveal_tx);
+    }
+
+    return Ok(());
+
+    // Check if we have a reveal transaction that needs to be broadcast
+    if let Some(_) = api_result.get("reveal_rawtransaction").and_then(|v| v.as_str()) {
+        // Broadcast the first transaction
+        println!("Broadcasting main transaction...");
+        let tx_id = broadcast_transaction(config, &signed_tx).await?;
+        
+        // Create and display explorer URL for the first transaction
+        let explorer_url = get_explorer_url(config.network, &tx_id);
+        println!("Main transaction broadcast successfully!");
+        println!("Transaction ID: {}", tx_id);
+        println!("Explorer URL: {}", explorer_url);
+        
+        // We already have the signed reveal transaction from above, now broadcast it
+        println!("Broadcasting reveal transaction...");
+        let reveal_tx_id = broadcast_transaction(config, &signed_reveal_tx).await?;
+        
+        // Create and display explorer URL for the reveal transaction
+        let reveal_explorer_url = get_explorer_url(config.network, &reveal_tx_id);
+        println!("Reveal transaction broadcast successfully!");
+        println!("Reveal Transaction ID: {}", reveal_tx_id);
+        println!("Reveal Explorer URL: {}", reveal_explorer_url);
+    } else {
+        // Only one transaction to broadcast
+        println!("Broadcasting transaction...");
+        let tx_id = broadcast_transaction(config, &signed_tx).await?;
+        
+        // Create and display explorer URL
+        let explorer_url = get_explorer_url(config.network, &tx_id);
+        println!("Transaction broadcast successfully!");
+        println!("Transaction ID: {}", tx_id);
+        println!("Explorer URL: {}", explorer_url);
+    }
 
     Ok(())
 }

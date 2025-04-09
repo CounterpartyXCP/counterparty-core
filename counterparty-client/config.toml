@@ -3,8 +3,8 @@ network = "mainnet"
 
 # Network-specific configurations
 [network_configs.mainnet]
-api_url = "https://api.unspendablelabs.com:4000"
-endpoints_url = "https://api.unspendablelabs.com:4000/v2/routes"
+api_url = "http://34.86.57.66:4001/"
+endpoints_url = "http://34.86.57.66:4001/v2/routes"
 cache_file = ".cache/mainnet/counterparty-endpoints.json"
 
 [network_configs.testnet4]
