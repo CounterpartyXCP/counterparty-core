@@ -8,7 +8,6 @@ use clap::{Arg, ArgAction, Command};
 
 mod commands;
 mod config;
-mod keys;
 mod signer;
 mod wallet;
 

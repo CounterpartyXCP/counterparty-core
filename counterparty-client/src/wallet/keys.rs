@@ -1,4 +1,9 @@
-// keys.rs - Module for managing Bitcoin keys and their derivations
+//! Key generation and management functionality for Bitcoin wallets.
+//!
+//! This module handles:
+//! - Generation of keys from private keys, mnemonics, or randomly
+//! - Derivation of key pairs from seeds
+//! - Creation of Bitcoin addresses
 
 use bip39::Mnemonic;
 use bitcoin::bip32::{DerivationPath, Xpriv};
@@ -8,12 +13,9 @@ use bitcoin::{Address, Network, PrivateKey, PublicKey};
 use rand::{thread_rng, Rng};
 use std::str::FromStr;
 
-use crate::wallet::WalletError;
+use super::types::{Result, WalletError};
 
-// Type alias for our result type
-type Result<T> = std::result::Result<T, WalletError>;
-
-// Structure to hold generated key data
+/// Structure to hold generated key data
 #[derive(Debug)]
 pub struct KeyData {
     pub private_key: PrivateKey,
@@ -22,7 +24,7 @@ pub struct KeyData {
     pub path: Option<String>,
 }
 
-// Generate key data from an existing private key
+/// Generate key data from an existing private key
 pub fn generate_keys_from_private_key(
     pk_str: &str,
     network: Network,
@@ -48,7 +50,7 @@ pub fn generate_keys_from_private_key(
     })
 }
 
-// Generate key data from a mnemonic phrase
+/// Generate key data from a mnemonic phrase
 pub fn generate_keys_from_mnemonic(
     mnemonic_str: &str,
     path_str: Option<&str>,
@@ -74,7 +76,7 @@ pub fn generate_keys_from_mnemonic(
     })
 }
 
-// Generate new random key data
+/// Generate new random key data
 pub fn generate_new_keys(
     addr_type: &str,
     network: Network,
@@ -101,8 +103,8 @@ pub fn generate_new_keys(
     })
 }
 
-// Get the appropriate derivation path based on address type
-pub fn get_derivation_path<'a>(path: Option<&'a str>, addr_type: &'a str) -> &'a str {
+/// Get the appropriate derivation path based on address type
+fn get_derivation_path<'a>(path: Option<&'a str>, addr_type: &'a str) -> &'a str {
     match path {
         Some(p) => p,
         None => {
@@ -117,8 +119,8 @@ pub fn get_derivation_path<'a>(path: Option<&'a str>, addr_type: &'a str) -> &'a
     }
 }
 
-// Derive a key pair from a seed using the specified derivation path
-pub fn derive_key_pair(
+/// Derive a key pair from a seed using the specified derivation path
+fn derive_key_pair(
     seed: &[u8],
     derivation_path: &str,
     network: Network,
@@ -145,7 +147,7 @@ pub fn derive_key_pair(
     Ok((private_key, public_key))
 }
 
-// Create a Bitcoin address from a public key based on the address type
+/// Create a Bitcoin address from a public key based on the address type
 pub fn create_bitcoin_address(
     pub_key: &PublicKey,
     addr_type: &str,
