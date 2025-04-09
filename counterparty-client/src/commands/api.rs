@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use anyhow::{Context, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use reqwest::Client;
@@ -6,8 +7,30 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-use crate::config::{ApiEndpoint, AppConfig};
+use crate::config::AppConfig;
 use crate::helpers;
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct ApiEndpoint {
+    pub function: String,
+    pub description: String,
+    pub args: Vec<ApiEndpointArg>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct ApiEndpointArg {
+    pub name: String,
+    #[serde(default)]
+    pub required: bool,
+    #[serde(rename = "type")]
+    pub arg_type: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub default: Option<serde_json::Value>,
+    #[serde(default)]
+    pub members: Option<Vec<serde_json::Value>>,
+}
 
 // ---- API Endpoint Management ----
 

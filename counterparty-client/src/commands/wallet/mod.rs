@@ -14,7 +14,8 @@ use anyhow::Result;
 use clap::ArgMatches;
 use std::collections::HashMap;
 
-use crate::config::{ApiEndpoint, AppConfig};
+use crate::config::AppConfig;
+use crate::commands::api::ApiEndpoint;
 
 /// Executes a wallet command
 pub async fn execute_command(

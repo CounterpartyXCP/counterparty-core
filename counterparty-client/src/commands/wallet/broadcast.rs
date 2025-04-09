@@ -2,7 +2,7 @@ use clap::{Arg, ArgAction, Command};
 use std::collections::{HashMap, HashSet};
 
 use crate::commands::wallet::args::ID_ARG_MAP;
-use crate::config::{ApiEndpoint, ApiEndpointArg};
+use crate::commands::api::{ApiEndpoint, ApiEndpointArg};
 
 /// Filter and sort compose endpoints
 fn filter_compose_endpoints(

@@ -4,7 +4,8 @@ use std::collections::HashMap;
 
 use crate::commands::api;
 use crate::commands::wallet::args::ID_ARG_MAP;
-use crate::config::{ApiEndpoint, ApiEndpointArg, AppConfig};
+use crate::config::AppConfig;
+use crate::commands::api::{ApiEndpoint, ApiEndpointArg};
 use crate::wallet::BitcoinWallet;
 
 /// Information needed for reveal transaction
@@ -368,7 +369,7 @@ pub async fn handle_broadcast_command(
         let reveal_tx = handle_reveal_transaction(reveal_tx_info, &signed_tx, wallet, &address)?;
         signed_reveal_tx = Some(reveal_tx);
     }
-    //return Ok(());
+    return Ok(());
     
     // Broadcast the transaction(s)
     broadcast_transactions(
