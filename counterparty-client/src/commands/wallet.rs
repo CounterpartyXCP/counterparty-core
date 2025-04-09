@@ -375,7 +375,10 @@ async fn broadcast_transaction(config: &AppConfig, signed_tx: &str) -> Result<St
     // Prepare the URL for transaction broadcast
     // NOTE: Including signedhex in both URL and POST body due to an API bug
     // TODO: Remove the URL parameter once the API bug is fixed
-    let broadcast_url = format!("{}/v2/bitcoin/transactions?signedhex={}", api_url, signed_tx);
+    let broadcast_url = format!(
+        "{}/v2/bitcoin/transactions?signedhex={}",
+        api_url, signed_tx
+    );
 
     // Create URL-encoded form data
     let params = [("signedhex", signed_tx)];
@@ -546,7 +549,10 @@ async fn handle_broadcast_command(
     let mut signed_reveal_tx = String::new();
 
     // Check if there's a reveal transaction to handle
-    if let Some(reveal_raw_tx) = api_result.get("reveal_rawtransaction").and_then(|v| v.as_str()) {
+    if let Some(reveal_raw_tx) = api_result
+        .get("reveal_rawtransaction")
+        .and_then(|v| v.as_str())
+    {
         println!("Found Taproot reveal transaction, processing...");
 
         // Get the envelope script
@@ -556,11 +562,14 @@ async fn handle_broadcast_command(
             .ok_or_else(|| anyhow::anyhow!("Missing envelope_script in API response"))?;
 
         // Extract the first output's script and value from the signed transaction
-        let (output_script, output_value) = extract_first_output_info(&signed_tx)
-            .map_err(|e| anyhow::anyhow!("Failed to extract output info from transaction: {}", e))?;
+        let (output_script, output_value) = extract_first_output_info(&signed_tx).map_err(|e| {
+            anyhow::anyhow!("Failed to extract output info from transaction: {}", e)
+        })?;
 
-        println!("Using output script: {} and value: {} satoshis for reveal transaction",
-                 output_script, output_value);
+        println!(
+            "Using output script: {} and value: {} satoshis for reveal transaction",
+            output_script, output_value
+        );
 
         // Create UTXOs vector for the reveal transaction
         let reveal_utxos = vec![(output_script.as_str(), output_value)];
@@ -571,7 +580,7 @@ async fn handle_broadcast_command(
                 reveal_raw_tx,
                 reveal_utxos,
                 Some(envelope_script),
-                Some(&address)
+                Some(&address),
             )
             .map_err(|e| anyhow::anyhow!("Failed to sign reveal transaction: {}", e))?;
 
@@ -581,7 +590,10 @@ async fn handle_broadcast_command(
     //return Ok(());
 
     // Check if we have a reveal transaction that needs to be broadcast
-    if let Some(_) = api_result.get("reveal_rawtransaction").and_then(|v| v.as_str()) {
+    if let Some(_) = api_result
+        .get("reveal_rawtransaction")
+        .and_then(|v| v.as_str())
+    {
         // Broadcast the first transaction
         println!("Broadcasting main transaction...");
         let tx_id = broadcast_transaction(config, &signed_tx).await?;

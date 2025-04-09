@@ -12,10 +12,10 @@ use bitcoin::blockdata::transaction::TxOut;
 use bitcoin::consensus::{deserialize, serialize};
 use bitcoin::psbt::Psbt;
 use bitcoin::sighash::{EcdsaSighashType, SighashCache};
+use bitcoin::taproot::{LeafVersion, TapLeafHash, TapNodeHash, TaprootBuilder, TaprootSpendInfo};
+use bitcoin::TapSighashType;
 use bitcoin::Transaction;
 use bitcoin::XOnlyPublicKey;
-use bitcoin::taproot::{TapLeafHash, LeafVersion, TapNodeHash, TaprootBuilder, TaprootSpendInfo};
-use bitcoin::TapSighashType;
 
 use crate::wallet::AddressInfo;
 use crate::wallet::WalletError;
@@ -65,11 +65,7 @@ struct TaprootControlBlock {
 
 impl TaprootControlBlock {
     /// Create a control block for a Taproot script path spend
-    fn new(
-        internal_key: XOnlyPublicKey,
-        parity: bool,
-        merkle_proof: Vec<TapNodeHash>,
-    ) -> Self {
+    fn new(internal_key: XOnlyPublicKey, parity: bool, merkle_proof: Vec<TapNodeHash>) -> Self {
         Self {
             leaf_version: LeafVersion::TapScript,
             parity,
@@ -106,7 +102,9 @@ fn taproot_leaf_hash(script: &ScriptBuf) -> TapLeafHash {
 
 /// Create a basic TaprootBuilder with a single script
 fn create_taproot_builder(script: &ScriptBuf) -> TaprootBuilder {
-    TaprootBuilder::new().add_leaf(0, script.clone()).expect("Valid leaf addition")
+    TaprootBuilder::new()
+        .add_leaf(0, script.clone())
+        .expect("Valid leaf addition")
 }
 
 /// Generate Taproot spending information with the provided internal key and script
@@ -117,8 +115,9 @@ fn generate_taproot_spend_info(
 ) -> Result<TaprootSpendInfo> {
     let builder = create_taproot_builder(script);
 
-    builder.finalize(secp, *internal_key)
-        .map_err(|e| WalletError::BitcoinError(format!("Failed to create Taproot spend info: {:?}", e)))
+    builder.finalize(secp, *internal_key).map_err(|e| {
+        WalletError::BitcoinError(format!("Failed to create Taproot spend info: {:?}", e))
+    })
 }
 
 /// Create control block for a Taproot script path spend
@@ -132,7 +131,8 @@ fn create_taproot_control_block(
 
     // Try to create a control block for this script
     let script_ver = (envelope_script.clone(), LeafVersion::TapScript);
-    let control_block = spend_info.control_block(&script_ver)
+    let control_block = spend_info
+        .control_block(&script_ver)
         .ok_or_else(|| WalletError::BitcoinError("Failed to create control block".to_string()))?;
 
     // Extract merkle proof
@@ -144,7 +144,11 @@ fn create_taproot_control_block(
     // Get parity from the spend info
     let parity = spend_info.output_key_parity() == bitcoin::key::Parity::Odd;
 
-    Ok(TaprootControlBlock::new(*internal_key, parity, merkle_proof))
+    Ok(TaprootControlBlock::new(
+        *internal_key,
+        parity,
+        merkle_proof,
+    ))
 }
 
 /// Generate a taproot commit address with the given public key and script
@@ -152,14 +156,15 @@ fn generate_taproot_commit_address(
     secp: &Secp256k1<bitcoin::secp256k1::All>,
     source_key: &XOnlyPublicKey,
     envelope_script: &ScriptBuf,
-    network: Network
+    network: Network,
 ) -> Result<Address> {
     // Create taproot builder with the script
     let builder = create_taproot_builder(envelope_script);
 
     // Finalize to get the taproot spend info
-    let taproot_spend_info = builder.finalize(secp, *source_key)
-        .map_err(|e| WalletError::BitcoinError(format!("Failed to create taproot spend info: {:?}", e)))?;
+    let taproot_spend_info = builder.finalize(secp, *source_key).map_err(|e| {
+        WalletError::BitcoinError(format!("Failed to create taproot spend info: {:?}", e))
+    })?;
 
     // Get the output key
     let output_key = taproot_spend_info.output_key();
@@ -177,8 +182,6 @@ fn compute_taproot_script_path_signature(
     input: &bitcoin::psbt::Input,
     envelope_script: &ScriptBuf,
     secret_key: &bitcoin::secp256k1::SecretKey,
-    public_key: &PublicKey,
-    taproot_spend_info: &TaprootSpendInfo,
 ) -> Result<Vec<u8>> {
     // Get witness UTXO safely with error handling
     let witness_utxo = input.witness_utxo.as_ref().ok_or_else(|| {
@@ -190,9 +193,7 @@ fn compute_taproot_script_path_signature(
 
     // For Taproot, use the appropriate sighash algorithm from input or default to All
     let sighash_type = match input.sighash_type {
-        Some(s) => s
-            .taproot_hash_ty()
-            .unwrap_or(TapSighashType::All),
+        Some(s) => s.taproot_hash_ty().unwrap_or(TapSighashType::All),
         None => TapSighashType::All,
     };
 
@@ -205,14 +206,12 @@ fn compute_taproot_script_path_signature(
 
     // Compute the script path sighash
     let sighash = sighash_cache
-        .taproot_script_spend_signature_hash(
-            input_index,
-            &prevouts,
-            leaf_hash,
-            sighash_type,
-        )
+        .taproot_script_spend_signature_hash(input_index, &prevouts, leaf_hash, sighash_type)
         .map_err(|e| {
-            WalletError::BitcoinError(format!("Failed to compute Taproot script path signature hash: {}", e))
+            WalletError::BitcoinError(format!(
+                "Failed to compute Taproot script path signature hash: {}",
+                e
+            ))
         })?;
 
     // Create a message from the sighash
@@ -665,7 +664,6 @@ fn can_sign_input(
     }
 }
 
-
 //
 // SIGNATURE COMPUTATION
 //
@@ -681,9 +679,7 @@ fn compute_p2tr_signature(
 ) -> Result<Vec<u8>> {
     // For Taproot, use the appropriate sighash algorithm from input or default to All
     let sighash_type = match input.sighash_type {
-        Some(s) => s
-            .taproot_hash_ty()
-            .unwrap_or(TapSighashType::All),
+        Some(s) => s.taproot_hash_ty().unwrap_or(TapSighashType::All),
         None => TapSighashType::All,
     };
 
@@ -786,12 +782,7 @@ fn compute_p2wsh_signature(
     })?;
 
     let sighash = sighash_cache
-        .p2wsh_signature_hash(
-            input_index,
-            script_pubkey,
-            witness_utxo.value,
-            sighash_type,
-        )
+        .p2wsh_signature_hash(input_index, script_pubkey, witness_utxo.value, sighash_type)
         .map_err(|e| {
             WalletError::BitcoinError(format!("Failed to compute P2WSH signature hash: {}", e))
         })?;
@@ -1103,7 +1094,6 @@ fn try_sign_taproot_reveal(
     input_index: usize,
     private_key: &PrivateKey,
     public_key: &PublicKey,
-    script_pubkey: &ScriptBuf,
     envelope_script: &ScriptBuf,
     network: Network,
 ) -> Result<bool> {
@@ -1116,17 +1106,8 @@ fn try_sign_taproot_reveal(
 
     // Generate the taproot commit address for the given key and script
     // This is the address that was used in the commit transaction
-    let commit_address = generate_taproot_commit_address(
-        secp,
-        &xonly_pubkey,
-        envelope_script,
-        network
-    )?;
-
-    // Get the taproot spend info for validation and control block creation
-    let builder = create_taproot_builder(envelope_script);
-    let taproot_spend_info = builder.finalize(secp, xonly_pubkey)
-        .map_err(|e| WalletError::BitcoinError(format!("Failed to create taproot spend info: {:?}", e)))?;
+    let commit_address =
+        generate_taproot_commit_address(secp, &xonly_pubkey, envelope_script, network)?;
 
     // Ensure the witness UTXO is using the correct script_pubkey from the commit address
     // This is crucial for correct signature verification
@@ -1140,9 +1121,11 @@ fn try_sign_taproot_reveal(
         // We'll need to extract the value from the current input
         let value = match &input.witness_utxo {
             Some(utxo) => utxo.value,
-            None => return Err(WalletError::BitcoinError(
-                "Missing witness UTXO for Taproot reveal input".to_string()
-            )),
+            None => {
+                return Err(WalletError::BitcoinError(
+                    "Missing witness UTXO for Taproot reveal input".to_string(),
+                ))
+            }
         };
 
         input.witness_utxo = Some(TxOut {
@@ -1160,24 +1143,13 @@ fn try_sign_taproot_reveal(
         input,
         envelope_script,
         &secret_key,
-        public_key,
-        &taproot_spend_info,
     )?;
 
     // Create control block for witness data
-    let control_block = create_taproot_control_block(
-        secp,
-        &xonly_pubkey,
-        envelope_script
-    )?;
+    let control_block = create_taproot_control_block(secp, &xonly_pubkey, envelope_script)?;
 
     // Add the witness data to the input
-    add_taproot_script_path_witness(
-        input,
-        signature_bytes,
-        envelope_script,
-        &control_block,
-    )?;
+    add_taproot_script_path_witness(input, signature_bytes, envelope_script, &control_block)?;
 
     Ok(true)
 }
@@ -1200,123 +1172,6 @@ fn get_input_script_pubkey(psbt: &Psbt, input_index: usize) -> Option<ScriptBuf>
         .map(|utxo| utxo.script_pubkey.clone())
 }
 
-/// Try to sign a specific input with a key
-fn sign_input_with_key(
-    secp: &Secp256k1<bitcoin::secp256k1::All>,
-    sighash_cache: &mut SighashCache<&Transaction>,
-    psbt: &mut Psbt,
-    input_index: usize,
-    signed_inputs: &mut [bool],
-    private_key: &PrivateKey,
-    public_key: &PublicKey,
-    address_type: &str,
-    network: Network,
-    taproot_reveal_info: Option<(&ScriptBuf, &str)>,
-) -> Result<()> {
-    // Skip already signed inputs
-    if signed_inputs[input_index] {
-        return Ok(());
-    }
-
-    // Get script_pubkey for this input
-    let script_pubkey = match get_input_script_pubkey(psbt, input_index) {
-        Some(script) => script,
-        None => {
-            // Log warning for missing witness_utxo
-            eprintln!(
-                "Warning: Input at index {} missing witness_utxo, required for signing",
-                input_index
-            );
-            return Ok(());
-        }
-    };
-
-    // Check if this is a Taproot reveal transaction and the current key is for the source address
-    if let Some((envelope_script, source_addr)) = taproot_reveal_info {
-        if address_type == "p2tr" {
-            // Convert the current public key to an address string
-            let xonly_pubkey = get_xonly_pubkey(public_key)?;
-            let addr_str = Address::p2tr(secp, xonly_pubkey, None, network).to_string();
-
-            // If this is the key for source_address
-            if addr_str == source_addr {
-                // Try signing the taproot reveal transaction
-                let input = &mut psbt.inputs[input_index];
-                match try_sign_taproot_reveal(
-                    secp,
-                    sighash_cache,
-                    input,
-                    input_index,
-                    private_key,
-                    public_key,
-                    &script_pubkey,
-                    envelope_script,
-                    network,
-                ) {
-                    Ok(true) => {
-                        signed_inputs[input_index] = true;
-                        return Ok(());
-                    }
-                    Ok(false) => return Ok(()), // Could not sign this input
-                    Err(e) => return Err(e),    // Propagate error
-                }
-            }
-        }
-    }
-
-    // Try to sign the input using regular key path spending
-    let input = &mut psbt.inputs[input_index];
-    match try_sign_input(
-        secp,
-        sighash_cache,
-        input,
-        input_index,
-        private_key,
-        public_key,
-        address_type,
-        &script_pubkey,
-        network,
-    ) {
-        Ok(true) => {
-            signed_inputs[input_index] = true;
-            Ok(())
-        }
-        Ok(false) => Ok(()), // Could not sign this input with this key
-        Err(e) => Err(e),    // Propagate error
-    }
-}
-
-/// Process a private key for all inputs in the PSBT
-fn process_key_for_inputs(
-    secp: &Secp256k1<bitcoin::secp256k1::All>,
-    sighash_cache: &mut SighashCache<&Transaction>,
-    psbt: &mut Psbt,
-    signed_inputs: &mut Vec<bool>,
-    private_key: &PrivateKey,
-    public_key: &PublicKey,
-    address_type: &str,
-    network: Network,
-    taproot_reveal_info: Option<(&ScriptBuf, &str)>,
-) -> Result<()> {
-    // Sign each input one by one
-    for i in 0..psbt.inputs.len() {
-        sign_input_with_key(
-            secp,
-            sighash_cache,
-            psbt,
-            i,
-            signed_inputs,
-            private_key,
-            public_key,
-            address_type,
-            network,
-            taproot_reveal_info,
-        )?;
-    }
-
-    Ok(())
-}
-
 /// Sign PSBT inputs with wallet private keys
 fn sign_psbt_inputs(
     psbt: &mut Psbt,
@@ -1336,19 +1191,20 @@ fn sign_psbt_inputs(
     // Handle Taproot reveal transaction if parameters are provided
     if let (Some(envelope_script_hex), Some(source_addr)) = (envelope_script, source_address) {
         // Verify that the source address exists in the wallet
-        let source_info = addresses.get(source_addr)
+        let source_info = addresses
+            .get(source_addr)
             .ok_or_else(|| WalletError::AddressNotFound(source_addr.to_string()))?;
 
         // Parse the envelope script
-        let script_bytes = hex::decode(envelope_script_hex)
-            .map_err(|e| WalletError::BitcoinError(format!("Invalid envelope script hex: {}", e)))?;
+        let script_bytes = hex::decode(envelope_script_hex).map_err(|e| {
+            WalletError::BitcoinError(format!("Invalid envelope script hex: {}", e))
+        })?;
         let envelope_script = ScriptBuf::from_bytes(script_bytes);
 
         // Parse the private key for the source address
-        let private_key = PrivateKey::from_str(&source_info.private_key)
-            .map_err(|e| WalletError::BitcoinError(format!(
-                "Invalid private key for {}: {:?}", source_addr, e
-            )))?;
+        let private_key = PrivateKey::from_str(&source_info.private_key).map_err(|e| {
+            WalletError::BitcoinError(format!("Invalid private key for {}: {:?}", source_addr, e))
+        })?;
 
         // Get the public key
         let public_key = PublicKey::from_private_key(&secp, &private_key);
@@ -1360,15 +1216,6 @@ fn sign_psbt_inputs(
                 continue;
             }
 
-            // Get script pubkey for this input
-            let script_pubkey = match get_input_script_pubkey(psbt, i) {
-                Some(script) => script,
-                None => {
-                    eprintln!("Warning: Input at index {} missing witness_utxo", i);
-                    continue;
-                }
-            };
-
             // Try to sign as Taproot reveal transaction
             let input = &mut psbt.inputs[i];
             match try_sign_taproot_reveal(
@@ -1378,9 +1225,8 @@ fn sign_psbt_inputs(
                 i,
                 &private_key,
                 &public_key,
-                &script_pubkey,
                 &envelope_script,
-                network
+                network,
             ) {
                 Ok(true) => {
                     signed_inputs[i] = true;
@@ -1540,7 +1386,13 @@ pub fn sign_transaction_with_taproot_reveal(
     add_utxos_to_psbt(&mut psbt, &utxos)?;
 
     // Sign PSBT inputs with wallet keys
-    let signed_inputs = sign_psbt_inputs(&mut psbt, addresses, network, envelope_script, source_address)?;
+    let signed_inputs = sign_psbt_inputs(
+        &mut psbt,
+        addresses,
+        network,
+        envelope_script,
+        source_address,
+    )?;
 
     // Check if any inputs were signed
     if !signed_inputs.iter().any(|&signed| signed) {

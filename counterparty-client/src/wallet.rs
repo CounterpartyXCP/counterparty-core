@@ -344,6 +344,13 @@ impl BitcoinWallet {
         envelope_script: Option<&str>,
         source_address: Option<&str>,
     ) -> Result<String> {
-        signer::sign_transaction_with_taproot_reveal(&self.addresses, raw_tx_hex, utxos, self.network, envelope_script, source_address)
+        signer::sign_transaction_with_taproot_reveal(
+            &self.addresses,
+            raw_tx_hex,
+            utxos,
+            self.network,
+            envelope_script,
+            source_address,
+        )
     }
 }
