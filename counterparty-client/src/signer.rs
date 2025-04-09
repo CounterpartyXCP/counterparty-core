@@ -2,15 +2,14 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use bitcoin::amount::Amount;
-use bitcoin::secp256k1::Message;
-use bitcoin::secp256k1::Secp256k1;
+use bitcoin::secp256k1::{Message, Secp256k1, SecretKey, Keypair};
 use bitcoin::ScriptBuf;
 use bitcoin::{Address, Network, PrivateKey, PublicKey};
 
 use bitcoin::blockdata::script::{Builder, Instruction, PushBytesBuf};
 use bitcoin::blockdata::transaction::TxOut;
 use bitcoin::consensus::{deserialize, serialize};
-use bitcoin::psbt::Psbt;
+use bitcoin::psbt::{Psbt, Input as PsbtInput};
 use bitcoin::sighash::{EcdsaSighashType, SighashCache};
 use bitcoin::taproot::{LeafVersion, TapLeafHash, TapNodeHash, TaprootBuilder, TaprootSpendInfo};
 use bitcoin::TapSighashType;
@@ -33,22 +32,150 @@ enum AddressType {
     Unknown,
 }
 
-impl AddressType {
-    /// Converts a string to AddressType
-    fn from_str(address_type: &str) -> Self {
-        match address_type {
+impl FromStr for AddressType {
+    type Err = ();
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let address_type = match s {
             "p2pkh" => Self::P2PKH,
             "p2wpkh" | "bech32" => Self::P2WPKH,
             "p2sh-p2wpkh" => Self::P2SHP2WPKH,
             "p2tr" => Self::P2TR,
             "p2wsh" => Self::P2WSH,
             _ => Self::Unknown,
-        }
+        };
+        Ok(address_type)
     }
 }
 
 //
-// TAPROOT REVEAL TRANSACTION SUPPORT
+// HELPER FUNCTIONS
+//
+
+/// Decode a script hex string into a ScriptBuf
+fn decode_script(script_hex: &str, index: usize) -> Result<ScriptBuf> {
+    let script_bytes = hex::decode(script_hex).map_err(|e| {
+        WalletError::BitcoinError(format!(
+            "Invalid script_pubkey hex at index {}: {}",
+            index, e
+        ))
+    })?;
+
+    Ok(ScriptBuf::from_bytes(script_bytes))
+}
+
+/// Creates a Message from a signature hash
+fn create_message_from_hash(sighash: &[u8]) -> Result<Message> {
+    Message::from_digest_slice(sighash)
+        .map_err(|e| WalletError::BitcoinError(format!("Failed to create message: {}", e)))
+}
+
+/// Creates a standard witness with signature and public key
+fn create_witness_with_sig_and_pubkey(
+    signature_bytes: Vec<u8>,
+    pubkey_bytes: Vec<u8>,
+) -> bitcoin::blockdata::witness::Witness {
+    let mut witness = bitcoin::blockdata::witness::Witness::new();
+    witness.push(signature_bytes);
+    witness.push(pubkey_bytes);
+    witness
+}
+
+/// Creates an empty script_sig for SegWit inputs
+fn create_empty_script_sig() -> ScriptBuf {
+    ScriptBuf::new()
+}
+
+/// Get xonly pubkey from a regular pubkey
+fn get_xonly_pubkey(public_key: &PublicKey) -> Result<XOnlyPublicKey> {
+    XOnlyPublicKey::from_slice(&public_key.to_bytes()[1..33])
+        .map_err(|e| WalletError::BitcoinError(format!("Failed to convert to xonly pubkey: {}", e)))
+}
+
+/// Converts a PublicKey to CompressedPublicKey
+fn get_compressed_pubkey(public_key: &PublicKey) -> Result<bitcoin::key::CompressedPublicKey> {
+    bitcoin::key::CompressedPublicKey::from_slice(&public_key.to_bytes())
+        .map_err(|e| WalletError::BitcoinError(format!("Invalid public key: {}", e)))
+}
+
+/// Standardize address type string to ensure consistency
+fn standardize_address_type(address_type: &str) -> &str {
+    match address_type {
+        "bech32" => "p2wpkh",
+        _ => address_type,
+    }
+}
+
+//
+// SIGNATURE VERIFICATION
+//
+
+/// Verifies an ECDSA signature
+fn verify_ecdsa_signature(
+    secp: &Secp256k1<bitcoin::secp256k1::All>,
+    message: &Message,
+    signature: &bitcoin::secp256k1::ecdsa::Signature,
+    public_key: &PublicKey,
+) -> Result<()> {
+    if secp
+        .verify_ecdsa(message, signature, &public_key.inner)
+        .is_err()
+    {
+        return Err(WalletError::BitcoinError(
+            "Generated ECDSA signature failed verification".to_string()
+        ));
+    }
+    Ok(())
+}
+
+/// Verifies a Schnorr signature
+fn verify_schnorr_signature(
+    secp: &Secp256k1<bitcoin::secp256k1::All>,
+    message: &Message,
+    signature: &bitcoin::secp256k1::schnorr::Signature,
+    xonly_pubkey: &XOnlyPublicKey,
+) -> Result<()> {
+    if secp
+        .verify_schnorr(signature, message, xonly_pubkey)
+        .is_err()
+    {
+        return Err(WalletError::BitcoinError(
+            "Generated Schnorr signature failed verification".to_string()
+        ));
+    }
+    Ok(())
+}
+
+/// Encodes an ECDSA signature with sighash type
+fn encode_ecdsa_signature(
+    signature: &bitcoin::secp256k1::ecdsa::Signature,
+    sighash_type: EcdsaSighashType,
+) -> Vec<u8> {
+    let mut sig_bytes = signature.serialize_der().to_vec();
+    sig_bytes.push(sighash_type as u8);
+    sig_bytes
+}
+
+/// Signs a message with ECDSA and verifies the signature
+fn sign_and_verify_ecdsa(
+    secp: &Secp256k1<bitcoin::secp256k1::All>,
+    message: &Message,
+    secret_key: &SecretKey,
+    public_key: &PublicKey,
+    sighash_type: EcdsaSighashType,
+) -> Result<Vec<u8>> {
+    // Sign with ECDSA
+    let signature = secp.sign_ecdsa(message, secret_key);
+
+    // Verify the signature
+    verify_ecdsa_signature(secp, message, &signature, public_key)?;
+
+    // Encode with sighash type
+    Ok(encode_ecdsa_signature(&signature, sighash_type))
+}
+
+//
+// TAPROOT SPECIFIC FUNCTIONALITY
 //
 
 /// Structure to hold Taproot control block data
@@ -179,9 +306,9 @@ fn compute_taproot_script_path_signature(
     secp: &Secp256k1<bitcoin::secp256k1::All>,
     sighash_cache: &mut SighashCache<&Transaction>,
     input_index: usize,
-    input: &bitcoin::psbt::Input,
+    input: &PsbtInput,
     envelope_script: &ScriptBuf,
-    secret_key: &bitcoin::secp256k1::SecretKey,
+    secret_key: &SecretKey,
 ) -> Result<Vec<u8>> {
     // Get witness UTXO safely with error handling
     let witness_utxo = input.witness_utxo.as_ref().ok_or_else(|| {
@@ -200,7 +327,7 @@ fn compute_taproot_script_path_signature(
     // Get the leaf hash for our script
     let leaf_hash = taproot_leaf_hash(envelope_script);
 
-    // FIXED: Create a binding for the array so it lives long enough
+    // Create a binding for the array so it lives long enough
     let utxo_array = [witness_utxo.clone()];
     let prevouts = bitcoin::sighash::Prevouts::All(&utxo_array);
 
@@ -218,7 +345,7 @@ fn compute_taproot_script_path_signature(
     let message = create_message_from_hash(&sighash[..])?;
 
     // Convert SecretKey to Keypair for Schnorr signing
-    let keypair = bitcoin::secp256k1::Keypair::from_secret_key(&secp, &secret_key);
+    let keypair = Keypair::from_secret_key(&secp, &secret_key);
 
     // Get the XOnly pubkey directly from the keypair
     let xonly_pubkey = XOnlyPublicKey::from_keypair(&keypair).0;
@@ -241,7 +368,7 @@ fn compute_taproot_script_path_signature(
 
 /// Add Taproot script path witness data to the input
 fn add_taproot_script_path_witness(
-    input: &mut bitcoin::psbt::Input,
+    input: &mut PsbtInput,
     signature_bytes: Vec<u8>,
     envelope_script: &ScriptBuf,
     control_block: &TaprootControlBlock,
@@ -265,136 +392,9 @@ fn add_taproot_script_path_witness(
     Ok(())
 }
 
-/// Get xonly pubkey from a regular pubkey
-fn get_xonly_pubkey(public_key: &PublicKey) -> Result<XOnlyPublicKey> {
-    XOnlyPublicKey::from_slice(&public_key.to_bytes()[1..33])
-        .map_err(|e| WalletError::BitcoinError(format!("Failed to convert to xonly pubkey: {}", e)))
-}
-
-/// Creates a Message from a signature hash
-fn create_message_from_hash(sighash: &[u8]) -> Result<Message> {
-    Message::from_digest_slice(sighash)
-        .map_err(|e| WalletError::BitcoinError(format!("Failed to create message: {}", e)))
-}
-
-/// Verifies an ECDSA signature
-fn verify_ecdsa_signature(
-    secp: &Secp256k1<bitcoin::secp256k1::All>,
-    message: &Message,
-    signature: &bitcoin::secp256k1::ecdsa::Signature,
-    public_key: &PublicKey,
-) -> Result<()> {
-    if secp
-        .verify_ecdsa(message, signature, &public_key.inner)
-        .is_err()
-    {
-        return Err(WalletError::BitcoinError(format!(
-            "Generated ECDSA signature failed verification"
-        )));
-    }
-    Ok(())
-}
-
-/// Verifies a Schnorr signature
-fn verify_schnorr_signature(
-    secp: &Secp256k1<bitcoin::secp256k1::All>,
-    message: &Message,
-    signature: &bitcoin::secp256k1::schnorr::Signature,
-    xonly_pubkey: &XOnlyPublicKey,
-) -> Result<()> {
-    if secp
-        .verify_schnorr(signature, message, xonly_pubkey)
-        .is_err()
-    {
-        return Err(WalletError::BitcoinError(format!(
-            "Generated Schnorr signature failed verification"
-        )));
-    }
-    Ok(())
-}
-
-/// Encodes an ECDSA signature with sighash type
-fn encode_ecdsa_signature(
-    signature: &bitcoin::secp256k1::ecdsa::Signature,
-    sighash_type: EcdsaSighashType,
-) -> Vec<u8> {
-    let mut sig_bytes = signature.serialize_der().to_vec();
-    sig_bytes.push(sighash_type as u8);
-    sig_bytes
-}
-
-/// Signs a message with ECDSA and verifies the signature
-fn sign_and_verify_ecdsa(
-    secp: &Secp256k1<bitcoin::secp256k1::All>,
-    message: &Message,
-    secret_key: &bitcoin::secp256k1::SecretKey,
-    public_key: &PublicKey,
-    sighash_type: EcdsaSighashType,
-) -> Result<Vec<u8>> {
-    // Sign with ECDSA
-    let signature = secp.sign_ecdsa(message, secret_key);
-
-    // Verify the signature
-    verify_ecdsa_signature(secp, message, &signature, public_key)?;
-
-    // Encode with sighash type
-    Ok(encode_ecdsa_signature(&signature, sighash_type))
-}
-
-/// Converts a PublicKey to CompressedPublicKey
-fn get_compressed_pubkey(public_key: &PublicKey) -> Result<bitcoin::key::CompressedPublicKey> {
-    bitcoin::key::CompressedPublicKey::from_slice(&public_key.to_bytes())
-        .map_err(|e| WalletError::BitcoinError(format!("Invalid public key: {}", e)))
-}
-
-/// Creates a standard witness with signature and public key
-fn create_witness_with_sig_and_pubkey(
-    signature_bytes: Vec<u8>,
-    pubkey_bytes: Vec<u8>,
-) -> bitcoin::blockdata::witness::Witness {
-    let mut witness = bitcoin::blockdata::witness::Witness::new();
-    witness.push(signature_bytes);
-    witness.push(pubkey_bytes);
-    witness
-}
-
-/// Creates an empty script_sig for SegWit inputs
-fn create_empty_script_sig() -> ScriptBuf {
-    ScriptBuf::new()
-}
-
 //
-// TRANSACTION PARSING UTILITIES
+// ADDRESS TYPE DETECTION
 //
-
-/// Parse a raw transaction from hexadecimal format
-fn parse_transaction(raw_tx_hex: &str) -> Result<Transaction> {
-    let tx_bytes = hex::decode(raw_tx_hex)
-        .map_err(|e| WalletError::BitcoinError(format!("Invalid transaction hex: {}", e)))?;
-
-    let tx: Transaction = deserialize(&tx_bytes)
-        .map_err(|e| WalletError::BitcoinError(format!("Invalid transaction format: {}", e)))?;
-
-    Ok(tx)
-}
-
-/// Create a PSBT from an unsigned transaction
-fn create_psbt(tx: Transaction) -> Result<Psbt> {
-    Psbt::from_unsigned_tx(tx)
-        .map_err(|e| WalletError::BitcoinError(format!("Failed to create PSBT: {}", e)))
-}
-
-/// Decode a script hex string into a ScriptBuf
-fn decode_script(script_hex: &str, index: usize) -> Result<ScriptBuf> {
-    let script_bytes = hex::decode(script_hex).map_err(|e| {
-        WalletError::BitcoinError(format!(
-            "Invalid script_pubkey hex at index {}: {}",
-            index, e
-        ))
-    })?;
-
-    Ok(ScriptBuf::from_bytes(script_bytes))
-}
 
 /// Check if a script is a P2SH-P2WPKH script
 fn is_p2sh_p2wpkh_script(script_pubkey: &ScriptBuf) -> bool {
@@ -418,7 +418,6 @@ fn is_p2sh_p2wpkh_script(script_pubkey: &ScriptBuf) -> bool {
                             if iter.next().is_none() {
                                 // This confirms it's a P2SH, but we can't fully verify it's specifically P2SH-P2WPKH
                                 // without the redeem script. We rely on can_sign_input to verify using the address matching.
-                                // The 20-byte hash length is consistent with P2SH-P2WPKH, which is a good hint.
                                 return true;
                             }
                         }
@@ -431,7 +430,7 @@ fn is_p2sh_p2wpkh_script(script_pubkey: &ScriptBuf) -> bool {
     false
 }
 
-/// Determine the address type from script_pubkey with a more robust approach
+/// Determine the address type from script_pubkey
 fn determine_address_type(script_pubkey: &ScriptBuf) -> String {
     if script_pubkey.is_p2pkh() {
         "p2pkh".to_string()
@@ -453,58 +452,27 @@ fn determine_address_type(script_pubkey: &ScriptBuf) -> String {
 }
 
 //
-// PSBT INPUT PREPARATION
+// TRANSACTION PARSING UTILITIES
 //
 
-/// Prepare a single UTXO and add it to the PSBT input at a specific index
-fn prepare_utxo_for_input(
-    psbt: &mut Psbt,
-    index: usize,
-    script_hex: &str,
-    amount: u64,
-) -> Result<()> {
-    let script = decode_script(script_hex, index)?;
-    let address_type = determine_address_type(&script);
+/// Parse a raw transaction from hexadecimal format
+fn parse_transaction(raw_tx_hex: &str) -> Result<Transaction> {
+    let tx_bytes = hex::decode(raw_tx_hex)
+        .map_err(|e| WalletError::BitcoinError(format!("Invalid transaction hex: {}", e)))?;
 
-    if let Some(input) = psbt.inputs.get_mut(index) {
-        // Add witness UTXO with correct amount
-        input.witness_utxo = Some(TxOut {
-            value: Amount::from_sat(amount),
-            script_pubkey: script.clone(),
-        });
-
-        // Set appropriate sighash type based on address type
-        let sighash_type = match address_type.as_str() {
-            "p2tr" => TapSighashType::All.into(),
-            _ => EcdsaSighashType::All.into(),
-        };
-
-        input.sighash_type = Some(sighash_type);
-    }
-
-    Ok(())
+    deserialize(&tx_bytes)
+        .map_err(|e| WalletError::BitcoinError(format!("Invalid transaction format: {}", e)))
 }
 
-/// Add UTXOs to the PSBT inputs
-fn add_utxos_to_psbt(psbt: &mut Psbt, utxos: &[(&str, u64)]) -> Result<()> {
-    for (i, (script_hex, amount)) in utxos.iter().enumerate() {
-        prepare_utxo_for_input(psbt, i, script_hex, *amount)?;
-    }
-    Ok(())
+/// Create a PSBT from an unsigned transaction
+fn create_psbt(tx: Transaction) -> Result<Psbt> {
+    Psbt::from_unsigned_tx(tx)
+        .map_err(|e| WalletError::BitcoinError(format!("Failed to create PSBT: {}", e)))
 }
 
 //
-// ADDRESS UTILITIES
+// ADDRESS VERIFICATION
 //
-
-/// Standardize address type string to ensure consistency
-/// Converts legacy names like "bech32" to standard names like "p2wpkh"
-fn standardize_address_type(address_type: &str) -> &str {
-    match address_type {
-        "bech32" => "p2wpkh",
-        _ => address_type,
-    }
-}
 
 /// Helper function to check if a script matches an expected script
 fn script_matches(script_pubkey: &ScriptBuf, expected_script: &ScriptBuf) -> bool {
@@ -537,17 +505,11 @@ fn is_pubkey_in_witness_script(witness_script: &ScriptBuf, public_key: &PublicKe
     while let Some(result) = iter.next() {
         // Only process successfully parsed instructions
         if let Ok(instruction) = result {
-            match instruction {
-                Instruction::PushBytes(bytes) => {
-                    // Check if this pushed data is a public key
-                    if bytes.len() == pubkey_bytes.len()
-                        && bytes.as_bytes() == pubkey_bytes.as_slice()
-                    {
-                        return Ok(true);
-                    }
+            if let Instruction::PushBytes(bytes) = instruction {
+                // Check if this pushed data is a public key
+                if bytes.len() == pubkey_bytes.len() && bytes.as_bytes() == pubkey_bytes.as_slice() {
+                    return Ok(true);
                 }
-                // You could add more cases for opcodes that manipulate public keys
-                _ => {}
             }
         }
     }
@@ -556,7 +518,7 @@ fn is_pubkey_in_witness_script(witness_script: &ScriptBuf, public_key: &PublicKe
 }
 
 //
-// INPUT SIGNING CAPABILITY CHECKS
+// SIGNING CAPABILITY CHECKS
 //
 
 /// Check if a key can sign a P2WPKH input
@@ -638,10 +600,11 @@ fn can_sign_input(
     script_pubkey: &ScriptBuf,
     public_key: &PublicKey,
     address_type: &str,
-    psbt_input: Option<&bitcoin::psbt::Input>,
+    psbt_input: Option<&PsbtInput>,
     network: Network,
 ) -> Result<bool> {
-    let addr_type = AddressType::from_str(standardize_address_type(address_type));
+    let addr_type = AddressType::from_str(standardize_address_type(address_type))
+        .expect("AddressType::from_str never returns an error");
 
     match addr_type {
         AddressType::P2WPKH => can_sign_p2wpkh_input(script_pubkey, public_key, network),
@@ -673,8 +636,8 @@ fn compute_p2tr_signature(
     secp: &Secp256k1<bitcoin::secp256k1::All>,
     sighash_cache: &mut SighashCache<&Transaction>,
     input_index: usize,
-    input: &bitcoin::psbt::Input,
-    secret_key: &bitcoin::secp256k1::SecretKey,
+    input: &PsbtInput,
+    secret_key: &SecretKey,
     public_key: &PublicKey,
 ) -> Result<Vec<u8>> {
     // For Taproot, use the appropriate sighash algorithm from input or default to All
@@ -704,7 +667,7 @@ fn compute_p2tr_signature(
     let message = create_message_from_hash(&sighash[..])?;
 
     // Convert SecretKey to Keypair
-    let keypair = bitcoin::secp256k1::Keypair::from_secret_key(&secp, &secret_key);
+    let keypair = Keypair::from_secret_key(&secp, &secret_key);
     let schnorr_sig = secp.sign_schnorr_no_aux_rand(&message, &keypair);
     let mut sig_bytes = schnorr_sig.as_ref().to_vec();
 
@@ -725,9 +688,9 @@ fn compute_segwit_signature(
     secp: &Secp256k1<bitcoin::secp256k1::All>,
     sighash_cache: &mut SighashCache<&Transaction>,
     input_index: usize,
-    input: &bitcoin::psbt::Input,
+    input: &PsbtInput,
     script_pubkey: &ScriptBuf,
-    secret_key: &bitcoin::secp256k1::SecretKey,
+    secret_key: &SecretKey,
     public_key: &PublicKey,
 ) -> Result<Vec<u8>> {
     // For SegWit, use the correct method for segwit signatures
@@ -762,9 +725,9 @@ fn compute_p2wsh_signature(
     secp: &Secp256k1<bitcoin::secp256k1::All>,
     sighash_cache: &mut SighashCache<&Transaction>,
     input_index: usize,
-    input: &bitcoin::psbt::Input,
+    input: &PsbtInput,
     script_pubkey: &ScriptBuf,
-    secret_key: &bitcoin::secp256k1::SecretKey,
+    secret_key: &SecretKey,
     public_key: &PublicKey,
 ) -> Result<Vec<u8>> {
     // For P2WSH, use the correct method for segwit signatures
@@ -798,7 +761,7 @@ fn compute_legacy_signature(
     sighash_cache: &mut SighashCache<&Transaction>,
     input_index: usize,
     script_pubkey: &ScriptBuf,
-    secret_key: &bitcoin::secp256k1::SecretKey,
+    secret_key: &SecretKey,
     public_key: &PublicKey,
 ) -> Result<Vec<u8>> {
     // For legacy, use legacy_signature_hash
@@ -820,13 +783,14 @@ fn compute_signature(
     secp: &Secp256k1<bitcoin::secp256k1::All>,
     sighash_cache: &mut SighashCache<&Transaction>,
     input_index: usize,
-    input: &bitcoin::psbt::Input,
+    input: &PsbtInput,
     script_pubkey: &ScriptBuf,
-    secret_key: &bitcoin::secp256k1::SecretKey,
+    secret_key: &SecretKey,
     public_key: &PublicKey,
     address_type: &str,
 ) -> Result<Vec<u8>> {
-    let addr_type = AddressType::from_str(standardize_address_type(address_type));
+    let addr_type = AddressType::from_str(standardize_address_type(address_type))
+        .expect("AddressType::from_str never returns an error");
 
     match addr_type {
         AddressType::P2TR => compute_p2tr_signature(
@@ -875,7 +839,7 @@ fn compute_signature(
 
 /// Add signature to P2WPKH input
 fn add_p2wpkh_signature(
-    input: &mut bitcoin::psbt::Input,
+    input: &mut PsbtInput,
     signature_bytes: Vec<u8>,
     pubkey_bytes: Vec<u8>,
 ) -> Result<()> {
@@ -889,7 +853,7 @@ fn add_p2wpkh_signature(
 
 /// Add signature to P2PKH input
 fn add_p2pkh_signature(
-    input: &mut bitcoin::psbt::Input,
+    input: &mut PsbtInput,
     signature_bytes: Vec<u8>,
     pubkey_bytes: Vec<u8>,
 ) -> Result<()> {
@@ -915,7 +879,7 @@ fn add_p2pkh_signature(
 
 /// Add signature to P2SH-P2WPKH input
 fn add_p2sh_p2wpkh_signature(
-    input: &mut bitcoin::psbt::Input,
+    input: &mut PsbtInput,
     signature_bytes: Vec<u8>,
     pubkey_bytes: Vec<u8>,
 ) -> Result<()> {
@@ -951,7 +915,7 @@ fn add_p2sh_p2wpkh_signature(
 }
 
 /// Add signature to P2TR input
-fn add_p2tr_signature(input: &mut bitcoin::psbt::Input, signature_bytes: Vec<u8>) -> Result<()> {
+fn add_p2tr_signature(input: &mut PsbtInput, signature_bytes: Vec<u8>) -> Result<()> {
     let mut witness = bitcoin::blockdata::witness::Witness::new();
     witness.push(signature_bytes);
     input.final_script_witness = Some(witness);
@@ -964,7 +928,7 @@ fn add_p2tr_signature(input: &mut bitcoin::psbt::Input, signature_bytes: Vec<u8>
 
 /// Add signature to P2WSH input
 fn add_p2wsh_signature(
-    input: &mut bitcoin::psbt::Input,
+    input: &mut PsbtInput,
     signature_bytes: Vec<u8>,
     pubkey_bytes: Vec<u8>,
     witness_script: &ScriptBuf,
@@ -990,13 +954,14 @@ fn add_p2wsh_signature(
 
 /// Add signature to PSBT input based on address type
 fn add_signature_to_input(
-    input: &mut bitcoin::psbt::Input,
+    input: &mut PsbtInput,
     signature_bytes: Vec<u8>,
     pubkey_bytes: Vec<u8>,
     address_type: &str,
     witness_script: Option<&ScriptBuf>,
 ) -> Result<()> {
-    let addr_type = AddressType::from_str(standardize_address_type(address_type));
+    let addr_type = AddressType::from_str(standardize_address_type(address_type))
+        .expect("AddressType::from_str never returns an error");
 
     match addr_type {
         AddressType::P2WPKH => add_p2wpkh_signature(input, signature_bytes, pubkey_bytes),
@@ -1011,9 +976,9 @@ fn add_signature_to_input(
             if let Some(script) = witness_script {
                 add_p2wsh_signature(input, signature_bytes, pubkey_bytes, script)
             } else {
-                Err(WalletError::BitcoinError(format!(
-                    "Missing witness script for P2WSH"
-                )))
+                Err(WalletError::BitcoinError(
+                    "Missing witness script for P2WSH".to_string()
+                ))
             }
         }
 
@@ -1025,14 +990,51 @@ fn add_signature_to_input(
 }
 
 //
-// PSBT PROCESSING
+// PSBT PREPARATION AND SIGNING
 //
+
+/// Prepare a single UTXO and add it to the PSBT input at a specific index
+fn prepare_utxo_for_input(
+    psbt: &mut Psbt,
+    index: usize,
+    script_hex: &str,
+    amount: u64,
+) -> Result<()> {
+    let script = decode_script(script_hex, index)?;
+    let address_type = determine_address_type(&script);
+
+    if let Some(input) = psbt.inputs.get_mut(index) {
+        // Add witness UTXO with correct amount
+        input.witness_utxo = Some(TxOut {
+            value: Amount::from_sat(amount),
+            script_pubkey: script.clone(),
+        });
+
+        // Set appropriate sighash type based on address type
+        let sighash_type = match address_type.as_str() {
+            "p2tr" => TapSighashType::All.into(),
+            _ => EcdsaSighashType::All.into(),
+        };
+
+        input.sighash_type = Some(sighash_type);
+    }
+
+    Ok(())
+}
+
+/// Add UTXOs to the PSBT inputs
+fn add_utxos_to_psbt(psbt: &mut Psbt, utxos: &[(&str, u64)]) -> Result<()> {
+    for (i, (script_hex, amount)) in utxos.iter().enumerate() {
+        prepare_utxo_for_input(psbt, i, script_hex, *amount)?;
+    }
+    Ok(())
+}
 
 /// Try sign a PSBT input with a private key if possible
 fn try_sign_input(
     secp: &Secp256k1<bitcoin::secp256k1::All>,
     sighash_cache: &mut SighashCache<&Transaction>,
-    input: &mut bitcoin::psbt::Input,
+    input: &mut PsbtInput,
     input_index: usize,
     private_key: &PrivateKey,
     public_key: &PublicKey,
@@ -1059,7 +1061,7 @@ fn try_sign_input(
     };
 
     // Get secret key from private key
-    let secret_key = bitcoin::secp256k1::SecretKey::from_slice(&private_key.inner[..])
+    let secret_key = SecretKey::from_slice(&private_key.inner[..])
         .map_err(|e| WalletError::BitcoinError(format!("Failed to create secret key: {:?}", e)))?;
 
     // Compute signature based on address type
@@ -1090,7 +1092,7 @@ fn try_sign_input(
 fn try_sign_taproot_reveal(
     secp: &Secp256k1<bitcoin::secp256k1::All>,
     sighash_cache: &mut SighashCache<&Transaction>,
-    input: &mut bitcoin::psbt::Input,
+    input: &mut PsbtInput,
     input_index: usize,
     private_key: &PrivateKey,
     public_key: &PublicKey,
@@ -1101,7 +1103,7 @@ fn try_sign_taproot_reveal(
     let xonly_pubkey = get_xonly_pubkey(public_key)?;
 
     // Get secret key from private key
-    let secret_key = bitcoin::secp256k1::SecretKey::from_slice(&private_key.inner[..])
+    let secret_key = SecretKey::from_slice(&private_key.inner[..])
         .map_err(|e| WalletError::BitcoinError(format!("Failed to create secret key: {:?}", e)))?;
 
     // Generate the taproot commit address for the given key and script
@@ -1209,35 +1211,25 @@ fn sign_psbt_inputs(
         // Get the public key
         let public_key = PublicKey::from_private_key(&secp, &private_key);
 
-        // Sign all inputs that require Taproot reveal signature
-        for i in 0..psbt.inputs.len() {
-            // Skip already signed inputs
-            if signed_inputs[i] {
-                continue;
+        // Sign first input that require Taproot reveal signature
+        let input = &mut psbt.inputs[0];
+        match try_sign_taproot_reveal(
+            &secp,
+            &mut sighash_cache,
+            input,
+            0,
+            &private_key,
+            &public_key,
+            &envelope_script,
+            network,
+        ) {
+            Ok(true) => {
+                signed_inputs[0] = true;
             }
-
-            // Try to sign as Taproot reveal transaction
-            let input = &mut psbt.inputs[i];
-            match try_sign_taproot_reveal(
-                &secp,
-                &mut sighash_cache,
-                input,
-                i,
-                &private_key,
-                &public_key,
-                &envelope_script,
-                network,
-            ) {
-                Ok(true) => {
-                    signed_inputs[i] = true;
-                    // We've signed this input, continue to the next one
-                    continue;
-                }
-                Ok(false) => {
-                    // Could not sign this input as Taproot reveal, try regular signing below
-                }
-                Err(e) => return Err(e),
+            Ok(false) => {
+                // Could not sign this input as Taproot reveal, try regular signing below
             }
+            Err(e) => return Err(e),
         }
     }
 
