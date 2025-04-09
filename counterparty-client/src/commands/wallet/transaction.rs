@@ -7,6 +7,7 @@ use crate::commands::api::{ApiEndpoint, ApiEndpointArg};
 use crate::commands::wallet::args::ID_ARG_MAP;
 use crate::config::AppConfig;
 use crate::wallet::BitcoinWallet;
+use crate::helpers;
 
 /// Information needed for reveal transaction
 struct RevealTransactionInfo<'a> {
@@ -73,9 +74,9 @@ fn extract_parameter_for_arg(
 
     // For debugging
     if arg.required {
-        eprintln!(
+        helpers::print_warning(
             "Warning: Required argument '{}' not found in matches",
-            arg.name
+            Some(&arg.name)
         );
     }
 }
@@ -193,11 +194,6 @@ async fn call_compose_api(
 
     // Check if we have a 'result' field in the response
     if let Some(api_result) = result.get("result") {
-        // Print the compose result
-        println!(
-            "Composed transaction: {}",
-            serde_json::to_string_pretty(api_result)?
-        );
         Ok(api_result.clone())
     } else if let Some(error) = result.get("error") {
         // Handle API error
@@ -270,15 +266,8 @@ fn handle_reveal_transaction(
     wallet: &BitcoinWallet,
     address: &str,
 ) -> Result<String> {
-    println!("Found Taproot reveal transaction, processing...");
-
     // Extract the first output's script and value from the signed transaction
     let (output_script, output_value) = extract_first_output_info(signed_tx)?;
-
-    println!(
-        "Using output script: {} and value: {} satoshis for reveal transaction",
-        output_script, output_value
-    );
 
     // Create UTXOs vector for the reveal transaction
     let reveal_utxos = vec![(output_script.as_str(), output_value)];
@@ -293,7 +282,7 @@ fn handle_reveal_transaction(
         )
         .map_err(|e| anyhow!("Failed to sign reveal transaction: {}", e))?;
 
-    println!("Signed reveal transaction: {}", signed_reveal_tx);
+    helpers::print_success("Reveal transaction signed:", Some(&signed_reveal_tx));
 
     Ok(signed_reveal_tx)
 }
@@ -305,25 +294,23 @@ async fn broadcast_transactions(
     signed_reveal_tx: Option<&str>,
 ) -> Result<()> {
     // Broadcast the main transaction
-    println!("Broadcasting main transaction...");
     let tx_id = broadcast_transaction(config, signed_tx).await?;
 
     // Create and display explorer URL for the main transaction
     let explorer_url = get_explorer_url(config.network, &tx_id);
-    println!("Main transaction broadcast successfully!");
-    println!("Transaction ID: {}", tx_id);
-    println!("Explorer URL: {}", explorer_url);
+    if let Some(_) = signed_reveal_tx {
+        helpers::print_success("Commit transaction broadcasted:", Some(&explorer_url));
+    } else {
+        helpers::print_success("Transaction broadcasted:", Some(&explorer_url));
+    }
 
     // If we have a reveal transaction, broadcast it too
     if let Some(reveal_tx) = signed_reveal_tx {
-        println!("Broadcasting reveal transaction...");
         let reveal_tx_id = broadcast_transaction(config, reveal_tx).await?;
 
         // Create and display explorer URL for the reveal transaction
         let reveal_explorer_url = get_explorer_url(config.network, &reveal_tx_id);
-        println!("Reveal transaction broadcast successfully!");
-        println!("Reveal Transaction ID: {}", reveal_tx_id);
-        println!("Reveal Explorer URL: {}", reveal_explorer_url);
+        helpers::print_success("Reveal transaction broadcasted:", Some(&reveal_explorer_url));
     }
 
     Ok(())
@@ -346,7 +333,6 @@ pub async fn handle_broadcast_command(
     // Get address and public key
     let (address, public_key) = get_address_and_public_key(&params, wallet)?;
     params.insert("multisig_pubkey".to_string(), public_key.to_string());
-    println!("Using public key for multisig: {}", public_key);
 
     // Call API and get the composed transaction
     let api_result = call_compose_api(config, path, endpoint, &params).await?;
@@ -359,15 +345,18 @@ pub async fn handle_broadcast_command(
         .sign_transaction(raw_tx_hex, utxos)
         .map_err(|e| anyhow!("Failed to sign transaction: {}", e))?;
 
-    println!("Signed transaction: {}", signed_tx);
+    
 
     // Variable to store signed reveal transaction if needed
     let mut signed_reveal_tx = None;
 
     // Handle reveal transaction if present
     if let Some(reveal_tx_info) = extract_reveal_transaction_info(&api_result) {
+        helpers::print_success("Commit transaction signed:", Some(&signed_tx));
         let reveal_tx = handle_reveal_transaction(reveal_tx_info, &signed_tx, wallet, &address)?;
         signed_reveal_tx = Some(reveal_tx);
+    } else {
+        helpers::print_success("Transaction signed:", Some(&signed_tx));
     }
     // return Ok(());
 

@@ -1,8 +1,8 @@
 use anyhow::{anyhow, Result};
 use clap::ArgMatches;
-use serde_json;
 
 use crate::wallet::BitcoinWallet;
+use crate::helpers;
 
 /// Handle the addaddress subcommand
 pub fn handle_add_address(wallet: &mut BitcoinWallet, sub_matches: &ArgMatches) -> Result<()> {
@@ -24,7 +24,7 @@ pub fn handle_add_address(wallet: &mut BitcoinWallet, sub_matches: &ArgMatches) 
         .add_address(private_key, mnemonic, path, label, address_type)
         .map_err(|e| anyhow!("Failed to add address: {}", e))?;
 
-    println!("Address added successfully: {}", address);
+    helpers::print_success("Address added successfully:", Some(&address));
     Ok(())
 }
 
@@ -37,7 +37,7 @@ pub fn handle_show_address(wallet: &BitcoinWallet, sub_matches: &ArgMatches) -> 
         .show_address(address, show_private_key)
         .map_err(|e| anyhow!("Failed to show address details: {}", e))?;
 
-    println!("{}", serde_json::to_string_pretty(&details)?);
+    helpers::print_colored_json(&details)?;
     Ok(())
 }
 
@@ -47,6 +47,6 @@ pub fn handle_list_addresses(wallet: &BitcoinWallet, _sub_matches: &ArgMatches) 
         .list_addresses()
         .map_err(|e| anyhow!("Failed to list addresses: {}", e))?;
 
-    println!("list {}", serde_json::to_string_pretty(&addresses)?);
+    helpers::print_colored_json_list(&addresses)?;
     Ok(())
 }

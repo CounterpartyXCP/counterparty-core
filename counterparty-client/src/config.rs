@@ -177,10 +177,6 @@ impl AppConfig {
             let mut file = fs::File::create(config_path)?;
             file.write_all(config_toml.as_bytes())?;
 
-            println!(
-                "Created default configuration file at: {}",
-                config_path.display()
-            );
             return Ok(());
         }
 

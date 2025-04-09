@@ -26,10 +26,6 @@ pub async fn execute_command(
     let data_dir = config.get_data_dir();
     let mut wallet = utils::init_wallet(&data_dir, config.network)?;
 
-    // Print current network information
-    let network_name = utils::get_network_name(config.network);
-    println!("Using network: {}", network_name);
-
     match matches.subcommand() {
         Some(("add_address", sub_matches)) => {
             handlers::handle_add_address(&mut wallet, sub_matches)

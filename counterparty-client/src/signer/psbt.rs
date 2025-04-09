@@ -15,6 +15,7 @@ use crate::signer::taproot::try_sign_taproot_reveal;
 use crate::signer::types::Result;
 use crate::signer::utils::decode_script;
 use crate::wallet::{AddressInfo, WalletError};
+use crate::helpers;
 
 /// Initialize signing context and signed_inputs vector
 pub fn init_signing_context(input_count: usize) -> (Secp256k1<bitcoin::secp256k1::All>, Vec<bool>) {
@@ -214,7 +215,7 @@ pub fn handle_regular_signing(
             let script_pubkey = match get_input_script_pubkey(psbt, i) {
                 Some(script) => script,
                 None => {
-                    eprintln!("Warning: Input at index {} missing witness_utxo", i);
+                    helpers::print_warning("Warning: Input at index {} missing witness_utxo", Some(&i.to_string()));
                     continue;
                 }
             };

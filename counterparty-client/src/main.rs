@@ -108,9 +108,8 @@ async fn main() -> Result<()> {
 
     // Step 9: Handle special update-cache flag
     if final_matches.get_flag("update-cache") {
-        println!("Updating API endpoints cache...");
         api::update_cache(&config).await?;
-        println!("Cache updated successfully.");
+        helpers::print_success("Cache updated successfully.", None);
         return Ok(());
     }
 

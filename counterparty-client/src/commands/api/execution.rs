@@ -20,7 +20,7 @@ pub async fn execute_command(config: &AppConfig, matches: &ArgMatches) -> Result
     if let Some((cmd_name, cmd_matches)) = matches.subcommand() {
         execute_api_command(config, &endpoints, cmd_name, cmd_matches).await?;
     } else {
-        println!("Please specify an API command. Use 'api --help' to see available commands.");
+        helpers::print_error("Please specify an API command. Use 'api --help' to see available commands.", None);
     }
 
     Ok(())
@@ -72,7 +72,7 @@ pub async fn perform_api_request(
         .context("Failed to parse API response")?;
 
     if !status.is_success() {
-        eprintln!("API request failed with status: {}", status);
+        helpers::print_error("API request failed with status:", Some(&status.to_string()));
     }
 
     Ok(result)
