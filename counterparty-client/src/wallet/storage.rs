@@ -61,7 +61,6 @@ impl WalletStorage {
         let password_manager = PasswordManager::new(network, &wallet_name);
 
         let wallet_exists = wallet_file.exists();
-        println!("Wallet exists: {}", wallet_exists);
 
         // Get or set password
         let password = if wallet_exists {
@@ -74,10 +73,8 @@ impl WalletStorage {
 
         // Initialize or load addresses
         let addresses = if wallet_exists {
-            println!("Loading wallet addresses from file");
             Self::load_addresses(&wallet_file, &password)?
         } else {
-            println!("Initializing new address map");
             AddressMap::new()
         };
 
@@ -131,9 +128,7 @@ impl WalletStorage {
     /// * `Result<()>` - Success or error
     pub fn save(&self, addresses: &AddressMap) -> Result<()> {
         // Get the password from the keyring/cache
-        println!("Retrieving wallet password");
         let password = self.password_manager.get_password()?;
-        println!("Successfully retrieved password");
 
         let json_data = serde_json::to_string(addresses)?;
         let mut cocoon = Cocoon::new(password.expose_secret().as_bytes());
@@ -153,7 +148,6 @@ impl WalletStorage {
         let prefix_file = self.wallet_file.with_extension("prefix");
         fs::write(&prefix_file, prefix)?;
 
-        println!("Wallet data saved successfully");
         Ok(())
     }
 
@@ -189,7 +183,6 @@ impl WalletStorage {
         let prefix_file = self.wallet_file.with_extension("prefix");
         fs::write(&prefix_file, prefix)?;
 
-        println!("Password changed successfully");
         Ok(())
     }
 
