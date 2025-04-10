@@ -32,7 +32,10 @@ mod operations;
 mod storage;
 mod types;
 mod utils;
+mod agent;
 
 // Re-export the main public API
 pub use operations::BitcoinWallet;
 pub use types::{AddressInfo, WalletError};
+
+pub use agent::run_agent;

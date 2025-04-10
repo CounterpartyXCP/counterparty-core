@@ -4,16 +4,16 @@
 //! - Loading and saving wallet data
 //! - Encryption and decryption of wallet files
 //! - Managing wallet file paths
+//! - Secure password management via the password agent
 
-use std::fs::{self, File};
-use std::io::{Read, Write};
+use std::fs;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 use cocoon::Cocoon;
-use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
 use serde_json;
 
+use super::agent::PasswordAgent;
 use super::types::{AddressMap, Result, WalletError};
 use super::utils::get_network_dir;
 use crate::config;
@@ -21,14 +21,15 @@ use crate::config;
 /// Handles wallet storage operations
 pub struct WalletStorage {
     wallet_file: PathBuf,
-    password: String,
+    password_agent: PasswordAgent,
 }
 
 impl WalletStorage {
     /// Initialize wallet storage
     ///
     /// This creates a new wallet storage or loads an existing one from the specified data directory.
-    /// If the wallet doesn't exist, it generates a random password and stores it in a .cookie file.
+    /// The system automatically manages password storage using an in-memory agent that is started
+    /// transparently when needed.
     ///
     /// # Arguments
     ///
@@ -51,39 +52,70 @@ impl WalletStorage {
         fs::create_dir_all(&network_dir)?;
 
         let wallet_file = network_dir.join("wallet.db");
-        let cookie_file = network_dir.join(".cookie");
-
-        // Get or create password
-        let password = if cookie_file.exists() {
-            // Read existing password from cookie file
-            let mut password_buf = String::new();
-            File::open(&cookie_file)?.read_to_string(&mut password_buf)?;
-            password_buf
+        
+        // Create password agent
+        let mut password_agent = PasswordAgent::new(&data_dir, network)?;
+        
+        // Initialize password agent (10 minute timeout by default)
+        // Added debugging to see if agent initialization completes successfully
+        println!("Starting password agent...");
+        match password_agent.start(None) {
+            Ok(_) => println!("Password agent started successfully"),
+            Err(e) => {
+                eprintln!("Failed to start password agent: {:?}", e);
+                return Err(e);
+            }
+        }
+        
+        let wallet_exists = wallet_file.exists();
+        println!("Wallet exists: {}", wallet_exists);
+        
+        // Get or set password
+        let password = if wallet_exists {
+            // Try to get the password from the agent
+            match password_agent.get_password() {
+                Ok(pw) => {
+                    println!("Retrieved password from agent");
+                    pw
+                },
+                Err(e) => {
+                    // Agent doesn't have the password, prompt the user
+                    println!("Need to prompt for password: {:?}", e);
+                    let pw = prompt_password("Enter wallet password: ")?;
+                    // Store password in agent for future use
+                    if let Err(e) = password_agent.store_password(&pw) {
+                        eprintln!("Warning: Failed to store password in agent: {:?}", e);
+                    } else {
+                        println!("Password stored in agent");
+                    }
+                    pw
+                }
+            }
         } else {
-            // Generate new random password
-            let new_password: String = thread_rng()
-                .sample_iter(&Alphanumeric)
-                .take(32)
-                .map(char::from)
-                .collect();
-
-            // Write password to cookie file
-            let mut file = File::create(&cookie_file)?;
-            file.write_all(new_password.as_bytes())?;
-
-            new_password
+            // New wallet, prompt for a new password and confirmation
+            println!("Creating new wallet, prompting for password");
+            let pw = prompt_new_password()?;
+            // Store password in agent for future use
+            if let Err(e) = password_agent.store_password(&pw) {
+                eprintln!("Warning: Failed to store password in agent: {:?}", e);
+            } else {
+                println!("New password stored in agent");
+            }
+            pw
         };
 
         // Initialize or load addresses
-        let addresses = if wallet_file.exists() {
-            WalletStorage::load_addresses(&wallet_file, &password)?
+        let addresses = if wallet_exists {
+            println!("Loading wallet addresses from file");
+            Self::load_addresses(&wallet_file, &password)?
         } else {
+            println!("Initializing new address map");
             AddressMap::new()
         };
 
         let storage = WalletStorage {
             wallet_file,
-            password,
+            password_agent,
         };
 
         Ok((storage, addresses))
@@ -126,8 +158,13 @@ impl WalletStorage {
     ///
     /// * `Result<()>` - Success or error
     pub fn save(&self, addresses: &AddressMap) -> Result<()> {
+        // Get the password from the agent
+        println!("Attempting to get password from agent");
+        let password = self.password_agent.get_password()?;
+        println!("Successfully retrieved password from agent");
+        
         let json_data = serde_json::to_string(addresses)?;
-        let mut cocoon = Cocoon::new(self.password.as_bytes());
+        let mut cocoon = Cocoon::new(password.as_bytes());
 
         // Convert data to mutable vector
         let mut data = json_data.into_bytes();
@@ -144,6 +181,56 @@ impl WalletStorage {
         let prefix_file = self.wallet_file.with_extension("prefix");
         fs::write(&prefix_file, prefix)?;
 
+        println!("Wallet data saved successfully");
         Ok(())
     }
+    
+    /// Change the wallet password
+    ///
+    /// # Arguments
+    ///
+    /// * `addresses` - Current address map (needed to re-encrypt the wallet)
+    ///
+    /// # Returns
+    ///
+    /// * `Result<()>` - Success or error
+    pub fn change_password(&self, addresses: &AddressMap) -> Result<()> {
+        // Prompt for new password
+        let new_password = prompt_new_password()?;
+        
+        // Update the password in the agent
+        self.password_agent.store_password(&new_password)?;
+        
+        // Re-encrypt and save the wallet with the new password
+        self.save(addresses)
+    }
+}
+
+/// Prompt the user for a password
+fn prompt_password(prompt: &str) -> Result<String> {
+    // Print prompt
+    print!("{}", prompt);
+    io::stdout().flush()?;
+    
+    // Read password without echoing
+    let password = rpassword::read_password()
+        .map_err(|e| WalletError::IoError(io::Error::new(io::ErrorKind::Other, e)))?;
+    
+    if password.is_empty() {
+        return Err(WalletError::BitcoinError("Password cannot be empty".to_string()));
+    }
+    
+    Ok(password)
+}
+
+/// Prompt for a new password with confirmation
+fn prompt_new_password() -> Result<String> {
+    let password = prompt_password("Enter new wallet password: ")?;
+    let confirmation = prompt_password("Confirm wallet password: ")?;
+    
+    if password != confirmation {
+        return Err(WalletError::BitcoinError("Passwords do not match".to_string()));
+    }
+    
+    Ok(password)
 }
