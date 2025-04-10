@@ -58,6 +58,23 @@ def test_generate_envelope_script():
         ]
     )
 
+    data = b"Z\x92\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5sune asset super top"
+    envelope_script = composer.generate_envelope_script(data)
+    assert envelope_script == Script(
+        [
+            "OP_FALSE",
+            "OP_IF",
+            "6f7264",
+            "01",
+            "746578742f706c61696e",
+            "05",
+            "911b000018c0fdcdeb5f0000010a001903e818641a000c35001a000dbba018321a000cf8501a00989680f4f4f5f5",
+            "00",
+            "756e6520617373657420737570657220746f70",
+            "OP_ENDIF",
+        ]
+    )
+
 
 def calculate_reveal_transaction_vsize(data):
     # Calculate the envelope script size

@@ -9,6 +9,7 @@ import time
 from collections import OrderedDict
 from decimal import Decimal as D
 
+import cbor2
 from arc4 import ARC4  # pylint: disable=no-name-in-module
 from bitcoinutils.keys import (
     P2pkhAddress,
@@ -27,8 +28,9 @@ from counterpartycore.lib import (
     config,
     exceptions,
     ledger,
+    messages,
 )
-from counterpartycore.lib.parser import deserialize, utxosinfo
+from counterpartycore.lib.parser import deserialize, messagetype, utxosinfo
 from counterpartycore.lib.utils import helpers, multisig, opcodes, script
 
 MAX_INPUTS_SET = 100
@@ -342,10 +344,46 @@ def get_reveal_transaction_vsize(data):
     return reveal_tx.get_vsize()
 
 
+def string_to_hex(string):
+    """Convert a string to hex representation."""
+    return binascii.hexlify(string.encode("utf-8")).decode("utf-8")
+
+
 def generate_envelope_script(data):
+    message_type_id, message = messagetype.unpack(data)
+    if message_type_id == messages.fairminter.ID:
+        message_data = cbor2.loads(message)
+        description = message_data.pop()
+        if description != "":
+            # construct metadata
+            metadata = cbor2.dumps(message_data)
+            metadata_chunks = helpers.chunkify(metadata, 520)
+            metatdata_array = []
+            for chunk in metadata_chunks:
+                metatdata_array += ["05", binascii.hexlify(chunk).decode("utf-8")]
+            # construct description
+            description_chunks = helpers.chunkify(description.encode("utf-8"), 520)
+            description_array = ["00"]
+            description_array += [
+                binascii.hexlify(chunk).decode("utf-8") for chunk in description_chunks
+            ]
+            # construct script
+            script_array = [
+                "OP_FALSE",
+                "OP_IF",
+                string_to_hex("ord"),
+                "01",
+                string_to_hex("text/plain"),
+                *metatdata_array,
+                *description_array,
+                "OP_ENDIF",
+            ]
+            print("Script array:", script_array)
+            return Script(script_array)
+
     # split the data in chunks of 520 bytes
     datas = helpers.chunkify(data, 520)
-    datas = [binascii.hexlify(data).decode("utf-8") for data in datas]
+    datas = [binascii.hexlify(chunk).decode("utf-8") for chunk in datas]
     # Build inscription envelope script
     return Script(["OP_FALSE", "OP_IF"] + datas + ["OP_ENDIF"])
 
