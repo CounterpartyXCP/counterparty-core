@@ -4,7 +4,6 @@ use std::path::PathBuf;
 use crate::config;
 use crate::wallet::BitcoinWallet;
 
-
 /// Initialize the wallet with the specified network
 pub fn init_wallet(data_dir: &PathBuf, network: config::Network) -> Result<BitcoinWallet> {
     // Ensure the directory exists

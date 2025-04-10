@@ -5,15 +5,17 @@
 //! - Encryption and decryption of wallet files
 //! - Managing wallet file paths
 //! - Secure password management via the system keyring
+//!
+//! See instruction to Setting Up Gnome Keyring on Ubuntu 22.04 Headless/Server
+//! https://claude.site/artifacts/61cc183c-1b8c-487b-ab92-9421e0e1a11c
 
 use std::fs;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use cocoon::Cocoon;
-use serde_json;
-use secrecy::SecretString;
 use secrecy::ExposeSecret;
+use secrecy::SecretString;
+use serde_json;
 
 use super::password::PasswordManager;
 use super::types::{AddressMap, Result, WalletError};
@@ -53,14 +55,14 @@ impl WalletStorage {
         fs::create_dir_all(&network_dir)?;
 
         let wallet_file = network_dir.join("wallet.db");
-        
+
         // Create the password manager with a unique name for this wallet
         let wallet_name = network_dir.to_string_lossy().to_string();
         let password_manager = PasswordManager::new(network, &wallet_name);
-        
+
         let wallet_exists = wallet_file.exists();
         println!("Wallet exists: {}", wallet_exists);
-        
+
         // Get or set password
         let password = if wallet_exists {
             // Try to get the password from the keyring or prompt the user
@@ -83,6 +85,10 @@ impl WalletStorage {
             wallet_file,
             password_manager,
         };
+
+        if !wallet_exists {
+            storage.save(&addresses)?;
+        }
 
         Ok((storage, addresses))
     }
@@ -128,7 +134,7 @@ impl WalletStorage {
         println!("Retrieving wallet password");
         let password = self.password_manager.get_password()?;
         println!("Successfully retrieved password");
-        
+
         let json_data = serde_json::to_string(addresses)?;
         let mut cocoon = Cocoon::new(password.expose_secret().as_bytes());
 
@@ -150,7 +156,7 @@ impl WalletStorage {
         println!("Wallet data saved successfully");
         Ok(())
     }
-    
+
     /// Change the wallet password
     ///
     /// # Arguments
@@ -163,7 +169,7 @@ impl WalletStorage {
     pub fn change_password(&self, addresses: &AddressMap) -> Result<()> {
         // Change the password
         let new_password = self.password_manager.change_password()?;
-        
+
         // Re-encrypt and save the wallet with the new password
         let json_data = serde_json::to_string(addresses)?;
         let mut cocoon = Cocoon::new(new_password.expose_secret().as_bytes());
@@ -185,5 +191,14 @@ impl WalletStorage {
 
         println!("Password changed successfully");
         Ok(())
+    }
+
+    /// Clear the wallet password from the keyring and cache
+    ///
+    /// # Returns
+    ///
+    /// * `Result<()>` - Success or error
+    pub fn clear_password(&self) -> Result<()> {
+        self.password_manager.clear_password()
     }
 }

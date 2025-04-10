@@ -34,6 +34,10 @@ pub async fn execute_command(
         Some(("list_addresses", sub_matches)) => {
             handlers::handle_list_addresses(&wallet, sub_matches)
         }
+        Some(("change_password", sub_matches)) => {
+            handlers::handle_change_password(&mut wallet, sub_matches)
+        }
+        Some(("disconnect", sub_matches)) => handlers::handle_disconnect(&mut wallet, sub_matches),
         Some((cmd_name, sub_matches)) if cmd_name.starts_with("broadcast_") => {
             // Handle broadcast commands asynchronously
             transaction::handle_broadcast_command(config, endpoints, cmd_name, sub_matches, &wallet)

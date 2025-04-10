@@ -86,7 +86,7 @@ pub fn print_colored_json(json_value: &Value) -> Result<()> {
 pub fn print_colored_json_list(json_values: &Vec<Value>) -> Result<()> {
     // Créer un nouveau Value::Array contenant tous les éléments
     let array_value = Value::Array(json_values.clone());
-    
+
     // Appeler print_colored_json une seule fois avec cette valeur
     print_colored_json(&array_value)
 }
@@ -104,19 +104,19 @@ pub fn print_colored_json_list(json_values: &Vec<Value>) -> Result<()> {
 /// * `Result<()>` - Ok if successful, Err otherwise
 fn print_colored(text: &str, color: Color, more_text: Option<&str>) {
     let mut stdout = StandardStream::stdout(ColorChoice::Always);
-    
+
     // Configure and print the colored text
     let mut color_spec = ColorSpec::new();
     color_spec.set_fg(Some(color));
     let _ = stdout.set_color(&color_spec);
     let _ = write!(stdout, "{}", text);
-    
+
     // Reset color and print additional text if provided
     let _ = stdout.reset();
     if let Some(additional) = more_text {
         let _ = write!(stdout, " {}", additional);
     }
-    
+
     // Add a newline at the end
     let _ = writeln!(stdout);
 }

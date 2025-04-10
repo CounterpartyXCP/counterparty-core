@@ -222,4 +222,28 @@ impl BitcoinWallet {
             source_address,
         )
     }
+
+    /// Change the wallet encryption password
+    ///
+    /// This method changes the password used to encrypt the wallet database.
+    /// It will prompt for the current password and then for a new password.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<()>` - Success or error
+    pub fn change_password(&mut self) -> Result<()> {
+        self.storage.change_password(&self.addresses)
+    }
+
+    /// Disconnect the wallet by clearing the password
+    ///
+    /// This method removes the wallet password from the system keyring
+    /// and from the in-memory cache, effectively "disconnecting" the wallet.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<()>` - Success or error
+    pub fn disconnect(&mut self) -> Result<()> {
+        self.storage.clear_password()
+    }
 }

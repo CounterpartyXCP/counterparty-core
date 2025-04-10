@@ -20,7 +20,10 @@ pub async fn execute_command(config: &AppConfig, matches: &ArgMatches) -> Result
     if let Some((cmd_name, cmd_matches)) = matches.subcommand() {
         execute_api_command(config, &endpoints, cmd_name, cmd_matches).await?;
     } else {
-        helpers::print_error("Please specify an API command. Use 'api --help' to see available commands.", None);
+        helpers::print_error(
+            "Please specify an API command. Use 'api --help' to see available commands.",
+            None,
+        );
     }
 
     Ok(())

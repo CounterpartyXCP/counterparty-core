@@ -7,6 +7,8 @@ pub fn build_command() -> Command {
         .subcommand(build_add_address_command())
         .subcommand(build_show_address_command())
         .subcommand(build_list_addresses_command())
+        .subcommand(build_change_password_command())
+        .subcommand(build_disconnect_command())
 }
 
 /// Builds the addaddress subcommand
@@ -76,4 +78,15 @@ fn build_list_addresses_command() -> Command {
                 .help("Show detailed information")
                 .action(ArgAction::SetTrue),
         )
+}
+
+/// Builds the change_password subcommand
+fn build_change_password_command() -> Command {
+    Command::new("change_password").about("Change the wallet encryption password")
+}
+
+/// Builds the disconnect subcommand
+fn build_disconnect_command() -> Command {
+    Command::new("disconnect")
+        .about("Clear the wallet password from the system keyring and memory cache")
 }

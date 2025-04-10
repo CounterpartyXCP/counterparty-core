@@ -1,8 +1,8 @@
 use anyhow::{anyhow, Result};
 use clap::ArgMatches;
 
-use crate::wallet::BitcoinWallet;
 use crate::helpers;
+use crate::wallet::BitcoinWallet;
 
 /// Handle the addaddress subcommand
 pub fn handle_add_address(wallet: &mut BitcoinWallet, sub_matches: &ArgMatches) -> Result<()> {
@@ -48,5 +48,27 @@ pub fn handle_list_addresses(wallet: &BitcoinWallet, _sub_matches: &ArgMatches) 
         .map_err(|e| anyhow!("Failed to list addresses: {}", e))?;
 
     helpers::print_colored_json_list(&addresses)?;
+    Ok(())
+}
+
+/// Handle the change_password subcommand
+pub fn handle_change_password(wallet: &mut BitcoinWallet, _sub_matches: &ArgMatches) -> Result<()> {
+    // Call the wallet function to change the password
+    wallet
+        .change_password()
+        .map_err(|e| anyhow!("Failed to change password: {}", e))?;
+
+    helpers::print_success("Password changed successfully", None);
+    Ok(())
+}
+
+/// Handle the disconnect subcommand
+pub fn handle_disconnect(wallet: &mut BitcoinWallet, _sub_matches: &ArgMatches) -> Result<()> {
+    // Call the wallet function to clear the password
+    wallet
+        .disconnect()
+        .map_err(|e| anyhow!("Failed to disconnect wallet: {}", e))?;
+
+    helpers::print_success("Wallet disconnected successfully", None);
     Ok(())
 }

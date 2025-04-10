@@ -6,8 +6,8 @@ use crate::commands::api;
 use crate::commands::api::{ApiEndpoint, ApiEndpointArg};
 use crate::commands::wallet::args::ID_ARG_MAP;
 use crate::config::AppConfig;
-use crate::wallet::BitcoinWallet;
 use crate::helpers;
+use crate::wallet::BitcoinWallet;
 
 /// Information needed for reveal transaction
 struct RevealTransactionInfo<'a> {
@@ -76,7 +76,7 @@ fn extract_parameter_for_arg(
     if arg.required {
         helpers::print_warning(
             "Warning: Required argument '{}' not found in matches",
-            Some(&arg.name)
+            Some(&arg.name),
         );
     }
 }
@@ -310,7 +310,10 @@ async fn broadcast_transactions(
 
         // Create and display explorer URL for the reveal transaction
         let reveal_explorer_url = get_explorer_url(config.network, &reveal_tx_id);
-        helpers::print_success("Reveal transaction broadcasted:", Some(&reveal_explorer_url));
+        helpers::print_success(
+            "Reveal transaction broadcasted:",
+            Some(&reveal_explorer_url),
+        );
     }
 
     Ok(())
@@ -344,8 +347,6 @@ pub async fn handle_broadcast_command(
     let signed_tx = wallet
         .sign_transaction(raw_tx_hex, utxos)
         .map_err(|e| anyhow!("Failed to sign transaction: {}", e))?;
-
-    
 
     // Variable to store signed reveal transaction if needed
     let mut signed_reveal_tx = None;
