@@ -29,3 +29,8 @@ sha2 = "0.10.6"
 constant_time_eq = "0.2.5"
 rpassword = "7.2.0"
 parking_lot = "0.12.1"
+nix = "0.26.0"
+keyring = "2.0.0"
+once_cell = "1.17.1"
+secrecy = "0.8.0"
+
