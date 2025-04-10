@@ -2,10 +2,12 @@ import decimal
 import logging
 import struct
 
+import cbor2
+
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import protocol
-from counterpartycore.lib.utils import assetnames, helpers
+from counterpartycore.lib.utils import assetnames
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -243,25 +245,27 @@ def compose(
         asset_parent_id = (
             ledger.issuances.generate_asset_id(asset_parent) if asset_parent != "" else 0
         )
-        data += helpers.encode_data(
-            asset_id,
-            asset_parent_id or "",
-            price or "",
-            quantity_by_price or "",
-            max_mint_per_tx or "",
-            max_mint_per_address or "",
-            hard_cap or "",
-            premint_quantity or "",
-            start_block or "",
-            end_block or "",
-            soft_cap or "",
-            soft_cap_deadline_block or "",
-            minted_asset_commission_int or "",
-            int(burn_payment) or "",
-            int(lock_description) or "",
-            int(lock_quantity) or "",
-            int(divisible) or "",
-            description,
+        data += cbor2.dumps(
+            [
+                asset_id,
+                asset_parent_id,
+                price,
+                quantity_by_price,
+                max_mint_per_tx,
+                max_mint_per_address,
+                hard_cap,
+                premint_quantity,
+                start_block,
+                end_block,
+                soft_cap,
+                soft_cap_deadline_block,
+                minted_asset_commission_int,
+                burn_payment,
+                lock_description,
+                lock_quantity,
+                divisible,
+                description,
+            ]
         )
     else:
         packed_value += []
@@ -293,8 +297,6 @@ def compose(
 def unpack(message, return_dict=False):
     try:
         if protocol.enabled("fairminter_v2"):
-            decoded_data = helpers.decode_data(message)
-            description = helpers.bytes_to_string(decoded_data.pop())
             (
                 asset_id,
                 asset_parent_id,
@@ -313,7 +315,8 @@ def unpack(message, return_dict=False):
                 lock_description,
                 lock_quantity,
                 divisible,
-            ) = [helpers.bytes_to_int(value or b"\x00") for value in decoded_data]
+                description,
+            ) = cbor2.loads(message)
 
             asset = ledger.issuances.generate_asset_name(asset_id)
             asset_parent = (
