@@ -197,6 +197,7 @@ def test_desrialize_reveal_tx():
     for data in [
         b"Hello, World!",
         b"a" * 1024 * 400,
+        b"Z\x92\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5sune asset super top",
     ]:
         reveal_tx = composer.get_dummy_signed_reveal_tx(data)
         reveal_tx_hex = reveal_tx.serialize()

@@ -411,40 +411,6 @@ fn parse_vout(
     }
 }
 
-fn decode_cbor_and_add_description(metadata: &[u8], description: &str) -> Result<Vec<u8>, String> {
-    // Decode the CBOR metadata
-    let decoded = serde_cbor::from_slice::<Value>(metadata)
-        .map_err(|e| format!("Failed to decode CBOR: {}", e))?;
-    
-    // Convert to an array if possible
-    let mut array = match decoded {
-        Value::Array(arr) => arr,
-        _ => return Err("CBOR metadata is not an array".to_string()),
-    };
-    
-    // Add the description as the last element
-    array.push(Value::Text(description.to_string()));
-    
-    // Re-encode the array as CBOR
-    let encoded = serde_cbor::to_vec(&array)
-        .map_err(|e| format!("Failed to encode CBOR: {}", e))?;
-    
-    Ok(encoded)
-}
-
-/// Extracts data from a witness script for both ord inscriptions and generic inscriptions
-///
-/// For ord inscriptions:
-/// - Identifies scripts following the format: OP_FALSE OP_IF "ord" "01" ...
-/// - For metadata with "05" markers: decodes CBOR to get the data array
-/// - Gets description data (after "00" marker)
-/// - Appends description to the data array
-/// - Re-encodes the complete array as CBOR to form the final data
-///
-/// For generic inscriptions:
-/// - Extracts all data chunks between OP_FALSE OP_IF and OP_ENDIF
-///
-/// Returns the combined data as a byte vector or an error if parsing fails
 fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
     let instructions: Vec<_> = script.instructions().collect();
     
@@ -453,10 +419,15 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
         return Err(Error::ParseVout("Invalid witness script: too few instructions".to_string()));
     }
     
-    // Verify it's an envelope script (OP_FALSE OP_IF ... OP_ENDIF)
-    let is_envelope = match (&instructions[0], &instructions[1]) {
-        (Ok(Op(op1)), Ok(Op(op2))) => {
-            format!("{:?}", op1).contains("OP_FALSE") && format!("{:?}", op2).contains("OP_IF")
+    // Verify it's an envelope script with empty push bytes as equivalent to OP_FALSE
+    let is_envelope = match (&instructions[0], &instructions[1], instructions.last()) {
+        (Ok(PushBytes(pb)), Ok(Op(op2)), Some(Ok(Op(op3)))) if pb.is_empty() => {
+            format!("{:?}", op2).contains("OP_IF") && format!("{:?}", op3).contains("OP_ENDIF")
+        },
+        (Ok(Op(op1)), Ok(Op(op2)), Some(Ok(Op(op3)))) => {
+            (format!("{:?}", op1).contains("OP_FALSE") || format!("{:?}", op1).contains("OP_0")) && 
+            format!("{:?}", op2).contains("OP_IF") && 
+            format!("{:?}", op3).contains("OP_ENDIF")
         },
         _ => false
     };
@@ -466,64 +437,120 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
     }
     
     // Check if this is an "ord" inscription
-    let is_ord = instructions.len() >= 4 && 
-                 match &instructions[2] {
-                     Ok(PushBytes(bytes)) => bytes.as_bytes() == b"ord",
-                     _ => false
-                 } &&
-                 match &instructions[3] {
-                     Ok(PushBytes(bytes)) => bytes.as_bytes() == b"01",
-                     _ => false
-                 };
+    let is_ord = instructions.len() >= 5 && 
+        match (&instructions.get(2), &instructions.get(3), &instructions.get(4)) {
+            (Some(Ok(PushBytes(pb1))), Some(Ok(PushBytes(pb2))), Some(Ok(PushBytes(pb3)))) => {
+                pb1.as_bytes() == b"ord" && 
+                (pb2.as_bytes().len() == 1 && pb2.as_bytes()[0] == 1) && 
+                pb3.as_bytes() == b"text/plain"
+            },
+            _ => false
+        };
     
     if is_ord {
-        let mut metadata_bytes = Vec::new();
-        let mut description = String::new();
-        let mut i = 4; // Start after "ord" and "01"
-        let mut collecting_metadata = false;
-        let mut collecting_description = false;
+        // For ord inscriptions, collect all metadata chunks and description chunks
+        let mut metadata_chunks = Vec::new();
+        let mut description_chunks = Vec::new();
         
-        // Skip content type
-        i += 1;
+        let mut i = 5; // Skip protocol prefix elements
+        let mut current_section = "none";
         
-        while i < instructions.len() - 1 { // Skip the final OP_ENDIF
-            if let Ok(PushBytes(bytes)) = &instructions[i] {
-                if bytes.as_bytes() == b"05" {
-                    collecting_metadata = true;
-                    collecting_description = false;
-                    i += 1; // Skip the marker
+        // Process all instructions to collect metadata and description
+        while i < instructions.len() - 1 {
+            if let Ok(PushBytes(marker)) = &instructions[i] {
+                let marker_bytes = marker.as_bytes();
+                if marker_bytes.len() == 1 && marker_bytes[0] == 5 {
+                    current_section = "metadata";
+                    i += 1;
                     continue;
-                } else if bytes.as_bytes() == b"00" {
-                    collecting_metadata = false;
-                    collecting_description = true;
-                    i += 1; // Skip the marker
+                } else if marker_bytes.len() == 1 && marker_bytes[0] == 0 {
+                    current_section = "description";
+                    i += 1;
                     continue;
                 }
-                
-                if collecting_metadata {
-                    metadata_bytes.extend_from_slice(bytes.as_bytes());
-                } else if collecting_description {
-                    // We'll need to convert these bytes to a UTF-8 string later
-                    if let Ok(s) = std::str::from_utf8(bytes.as_bytes()) {
-                        description.push_str(s);
-                    } else {
-                        return Err(Error::ParseVout("Invalid UTF-8 in description".to_string()));
+            }
+
+            // Collect the chunk if we're in a data section
+            if current_section != "none" && i < instructions.len() - 1 {
+                if let Ok(PushBytes(data)) = &instructions[i] {
+                    if current_section == "metadata" {
+                        metadata_chunks.push(data.as_bytes().to_vec());
+                    } else if current_section == "description" {
+                        description_chunks.push(data.as_bytes().to_vec());
                     }
                 }
             }
+            
             i += 1;
         }
         
-        // If we have metadata, try to decode it as CBOR and add the description
-        if !metadata_bytes.is_empty() {
-            // We need to use a CBOR library here, for example serde_cbor
-            match decode_cbor_and_add_description(&metadata_bytes, &description) {
-                Ok(data) => return Ok(data),
-                Err(e) => return Err(Error::ParseVout(format!("Failed to process CBOR data: {}", e))),
+        // Combine all metadata chunks
+        let mut combined_metadata = Vec::new();
+        for chunk in metadata_chunks {
+            combined_metadata.extend_from_slice(&chunk);
+        }
+        
+        // Combine all description chunks and convert to string
+        let mut combined_description = Vec::new();
+        for chunk in description_chunks {
+            combined_description.extend_from_slice(&chunk);
+        }
+        
+        // Convert description to string
+        let description_str = match std::str::from_utf8(&combined_description) {
+            Ok(s) => s.to_string(),
+            Err(_) => return Err(Error::ParseVout("Invalid UTF-8 in description".to_string())),
+        };
+        
+        // If we have metadata, use it directly
+        if !combined_metadata.is_empty() {
+            // First try to decode existing CBOR data
+            match serde_cbor::from_slice::<Value>(&combined_metadata) {
+                Ok(value) => {
+                    // Extract message_type_id and create a modified value in one step
+                    let (message_type_id, mut value_without_type_id) = match value {
+                        Value::Array(mut arr) => {
+                            if arr.is_empty() {
+                                return Err(Error::ParseVout("CBOR array is empty, missing message_type_id".to_string()));
+                            }
+                            let type_id = arr.remove(0);
+                            (type_id, Value::Array(arr))
+                        },
+                        _ => return Err(Error::ParseVout("Expected CBOR array, found different type".to_string())),
+                    };
+                    
+                    // Ensure message_type_id is an integer
+                    let type_id = match message_type_id {
+                        Value::Integer(id) => id as u8,
+                        _ => return Err(Error::ParseVout("message_type_id must be an integer".to_string())),
+                    };
+                    
+                    // If there's a description, add it back to the data structure
+                    if !description_str.is_empty() {
+                        if let Value::Array(ref mut arr) = value_without_type_id {
+                            arr.push(Value::Text(description_str));
+                        }
+                    }
+                    
+                    // Repack the message as CBOR
+                    match serde_cbor::to_vec(&value_without_type_id) {
+                        Ok(final_data) => {
+                            // Create a Vec with just the message_type_id byte
+                            let mut result = vec![type_id];
+                            // Append the rest of the CBOR data
+                            result.extend_from_slice(&final_data);
+                            Ok(result)
+                        },
+                        Err(e) => Err(Error::ParseVout(format!("Failed to encode CBOR data: {}", e))),
+                    }
+                },
+                Err(e) => {
+                   Err(Error::ParseVout(format!("CBOR decode error: {}", e)))
+                }
             }
         } else {
-            // If no metadata but there is a description, this is an invalid state
-            return Err(Error::ParseVout("Ord inscription missing required metadata".to_string()));
+            // Neither metadata nor description found
+            Err(Error::ParseVout("No data found in the ord inscription".to_string()))
         }
     } else {
         // Generic inscription - collect all data between OP_IF and OP_ENDIF
@@ -533,12 +560,7 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
                 result_data.extend_from_slice(bytes.as_bytes());
             }
         }
-        
-        if result_data.is_empty() {
-            return Err(Error::ParseVout("No data found in witness script".to_string()));
-        }
-        
-        Ok(result_data)
+        return Ok(result_data);
     }
 }
 
@@ -631,7 +653,6 @@ pub fn parse_transaction(
                         if config.taproot_support_enabled(height) && new_data == b"CNTRPRTY" && !vtxinwit.is_empty() && vtxinwit[0].len() == 3 {
                             if let Ok(bytes) = hex::decode(&vtxinwit[0][1]) {
                                 let script = Script::from_bytes(&bytes);
-                                
                                 match extract_data_from_witness(&script) {
                                     Ok(mut inscription_data) => {
                                         if !inscription_data.is_empty() {

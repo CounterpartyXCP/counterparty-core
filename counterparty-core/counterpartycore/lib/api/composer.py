@@ -344,9 +344,9 @@ def get_reveal_transaction_vsize(data):
     return reveal_tx.get_vsize()
 
 
-def string_to_hex(string):
+def string_to_hex(value):
     """Convert a string to hex representation."""
-    return binascii.hexlify(string.encode("utf-8")).decode("utf-8")
+    return binascii.hexlify(value.encode("utf-8")).decode("utf-8")
 
 
 def generate_envelope_script(data):
@@ -356,6 +356,7 @@ def generate_envelope_script(data):
         description = message_data.pop()
         if description != "":
             # construct metadata
+            message_data = [message_type_id] + message_data
             metadata = cbor2.dumps(message_data)
             metadata_chunks = helpers.chunkify(metadata, 520)
             metatdata_array = []
@@ -378,7 +379,6 @@ def generate_envelope_script(data):
                 *description_array,
                 "OP_ENDIF",
             ]
-            print("Script array:", script_array)
             return Script(script_array)
 
     # split the data in chunks of 520 bytes
