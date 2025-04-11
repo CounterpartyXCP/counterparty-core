@@ -482,7 +482,7 @@ def test_compose_long_description(ledger_db, defaults):
         False,  # lock_description,
         True,  # lock_quantity,
         True,  # divisible,
-        "",
+        "text/plain",
         "a" * 30,  # description
     )
 
@@ -513,7 +513,7 @@ def test_unpack():
         "lock_description": False,
         "lock_quantity": True,
         "divisible": True,
-        "mime_type": "",
+        "mime_type": "text/plain",
         "description": "une asset super top",
     }
 
@@ -538,7 +538,7 @@ def test_unpack():
         False,
         True,
         True,
-        "",
+        "text/plain",
         "une asset super top",
     )
 

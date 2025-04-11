@@ -361,6 +361,8 @@ def unpack(message, return_dict=False):
 
         minted_asset_commission = D(minted_asset_commission_int) / D(1e8)
 
+        mime_type = mime_type or "text/plain"
+
         if return_dict:
             return {
                 "asset": asset,

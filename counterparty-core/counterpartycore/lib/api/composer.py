@@ -355,6 +355,7 @@ def generate_envelope_script(data):
         message_data = cbor2.loads(message)
         description = message_data.pop()
         if description != "":
+            mime_type = message_data.pop() or "text/plain"
             # construct metadata
             message_data = [message_type_id] + message_data
             metadata = cbor2.dumps(message_data)
@@ -374,7 +375,7 @@ def generate_envelope_script(data):
                 "OP_IF",
                 string_to_hex("ord"),
                 "01",
-                string_to_hex("text/plain"),
+                string_to_hex(mime_type),
                 *metatdata_array,
                 *description_array,
                 "OP_ENDIF",

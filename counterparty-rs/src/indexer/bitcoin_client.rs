@@ -441,13 +441,23 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
         match (&instructions.get(2), &instructions.get(3), &instructions.get(4)) {
             (Some(Ok(PushBytes(pb1))), Some(Ok(PushBytes(pb2))), Some(Ok(PushBytes(pb3)))) => {
                 pb1.as_bytes() == b"ord" && 
-                (pb2.as_bytes().len() == 1 && pb2.as_bytes()[0] == 1) && 
-                pb3.as_bytes() == b"text/plain"
+                (pb2.as_bytes().len() == 1 && pb2.as_bytes()[0] == 1)
             },
             _ => false
         };
     
     if is_ord {
+        // Extract mime_type from the script (index 4)
+        let mime_type = match &instructions.get(4) {
+            Some(Ok(PushBytes(pb))) => {
+                match std::str::from_utf8(pb.as_bytes()) {
+                    Ok(mime) => mime.to_string(),
+                    Err(_) => "".to_string(), // Default to empty string if decoding fails
+                }
+            },
+            _ => "".to_string(), // Default to empty string if not found
+        };
+        
         // For ord inscriptions, collect all metadata chunks and description chunks
         let mut metadata_chunks = Vec::new();
         let mut description_chunks = Vec::new();
@@ -490,17 +500,14 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
             combined_metadata.extend_from_slice(&chunk);
         }
         
-        // Combine all description chunks and convert to string
+        // Combine all description chunks
         let mut combined_description = Vec::new();
-        for chunk in description_chunks {
-            combined_description.extend_from_slice(&chunk);
+        for chunk in &description_chunks {
+            combined_description.extend_from_slice(chunk);
         }
         
-        // Convert description to string
-        let description_str = match std::str::from_utf8(&combined_description) {
-            Ok(s) => s.to_string(),
-            Err(_) => return Err(Error::ParseVout("Invalid UTF-8 in description".to_string())),
-        };
+        // Always store descriptions as raw bytes
+        let description_value = Value::Bytes(combined_description);
         
         // If we have metadata, use it directly
         if !combined_metadata.is_empty() {
@@ -526,9 +533,13 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
                     };
                     
                     // If there's a description, add it back to the data structure
-                    if !description_str.is_empty() {
-                        if let Value::Array(ref mut arr) = value_without_type_id {
-                            arr.push(Value::Text(description_str));
+                    if let Value::Array(ref mut arr) = value_without_type_id {
+                        // Add the mime_type before the description
+                        arr.push(Value::Text(mime_type));
+                        
+                        // Add the description if it's not empty
+                        if !description_chunks.is_empty() {
+                            arr.push(description_value);
                         }
                     }
                     
