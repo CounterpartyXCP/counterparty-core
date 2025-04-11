@@ -420,6 +420,7 @@ def compose_fairminter(
     lock_quantity: bool = False,
     divisible: bool = True,
     description: str = "",
+    mime_type: str = "",
     price: int = 0,
     quantity_by_price: int = 1,
     **construct_params,
@@ -444,6 +445,7 @@ def compose_fairminter(
     :param lock_quantity: If True, the quantity of the asset cannot be changed after the minting
     :param divisible: If True, the asset is divisible
     :param description: The description of the asset. Overrides the current description if the asset already exists.
+    :param mime_type: The MIME type of the description. For binary MIME type, the `description` must be in hexadecimal format (default: text/plain).
     :param price: alias for `lot_price`
     :param quantity_by_price: alias for `lot_size`
     """
@@ -469,6 +471,7 @@ def compose_fairminter(
         "lock_quantity": lock_quantity,
         "divisible": divisible,
         "description": description,
+        "mime_type": mime_type,
     }
     return composer.compose_transaction(db, "fairminter", params, construct_params)
 

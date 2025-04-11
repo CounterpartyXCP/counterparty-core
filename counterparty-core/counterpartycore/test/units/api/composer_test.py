@@ -1678,6 +1678,27 @@ def test_compose_issuance(ledger_db, defaults):
     assert result == expected
 
 
+def test_compose_fairminter(ledger_db, defaults):
+    params = {
+        "source": defaults["addresses"][0],
+        "asset": "FAIRMANT",
+        "max_mint_per_tx": 10,
+        "description": "ff00ff00",
+        "mime_type": "image/png",
+    }
+
+    construct_params = {"encoding": "taproot"}
+
+    expected = {
+        "rawtransaction": "02000000010c84d44d89292224a8e7b0ee86204bc23a12f8a96fe86929d7fa0c0bc03b43e00000000000ffffffff024a01000000000000225120a210a9d1735d375af73aa5cecb2ee9df0593ab068844616861172acbe246f412e0c69a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "envelope_script": "0063036f7264010109696d6167652f706e6701051c92185a1b000000095fce9cd50000010a0000000000000000f4f4f4f5010004ff00ff0068",
+        "reveal_rawtransaction": "020000000177ba9c7d05dd57bbe3e098d9385679f85f9eeb3d369a456cdabd660a8e748c8a0000000000ffffffff0100000000000000000a6a08434e54525052545900000000",
+    }
+
+    result = composer.compose_transaction(ledger_db, "fairminter", params, construct_params)
+    assert result == expected
+
+
 def test_compose_enhanced_send(ledger_db, defaults, monkeypatch):
     params = {
         "memo": "0102030405",
