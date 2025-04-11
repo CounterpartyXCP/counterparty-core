@@ -181,7 +181,7 @@ def validate(
             problems.append(f"Invalid mime type: {mime_type}")
         try:
             helpers.content_to_bytes(description, content_mime_type)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             problems.append(f"Error converting description to bytes: {e}")
 
     return problems
