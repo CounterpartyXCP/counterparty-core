@@ -161,6 +161,16 @@ def bytes_to_string(bytes_in: bytes) -> str:
         return binascii.hexlify(bytes_in).decode("utf-8")
 
 
+def string_to_bytes(string_in: str) -> bytes:
+    if all(c in string.hexdigits for c in string_in):
+        try:
+            return bytes.fromhex(string_in)
+        except ValueError:
+            return string_in.encode("utf-8")
+    else:
+        return string_in.encode("utf-8")
+
+
 def varint(number):
     """Pack `number` into varint bytes"""
     buf = b""
@@ -246,3 +256,59 @@ def get_current_commit_hash(not_from_env=False):
         return f"{branch_name} - {commit_hash}"
     except pygit2.GitError:  # pylint: disable=E1101
         return None
+
+
+def classify_mime_type(mime_type):
+    """
+    Classifies a MIME type as "text" or "binary".
+
+    Args:
+        mime_type (str): The MIME type to classify
+
+    Returns:
+        str: "text" if the MIME type is textual, "binary" if it's binary
+    """
+    # Types that start with "text/" are textual
+    if mime_type.startswith("text/"):
+        return "text"
+
+    # XML and related types are generally textual
+    if mime_type.endswith("+xml") or mime_type == "application/xml":
+        return "text"
+
+    # List of application types that are textual
+    text_application_types = {
+        "application/javascript",
+        "application/json",
+        "application/manifest+json",
+        "application/x-python-code",
+        "application/x-sh",
+        "application/x-csh",
+        "application/x-tex",
+        "application/x-latex",
+        "text/xml",
+    }
+
+    if mime_type in text_application_types:
+        return "text"
+
+    # RFC822 messages are generally textual
+    if mime_type.startswith("message/"):
+        return "text"
+
+    # By default, consider the MIME type as binary
+    return "binary"
+
+
+def content_to_bytes(content: str, mime_type: str) -> bytes:
+    file_type = classify_mime_type(mime_type)
+    if file_type == "text":
+        return content.encode("utf-8")
+    return binascii.unhexlify(content)
+
+
+def bytes_to_content(content: bytes, mime_type: str) -> str:
+    file_type = classify_mime_type(mime_type)
+    if file_type == "text":
+        return content.decode("utf-8")
+    return binascii.hexlify(content).decode("utf-8")

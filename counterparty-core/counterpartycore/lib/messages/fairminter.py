@@ -8,7 +8,7 @@ import cbor2
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import protocol
-from counterpartycore.lib.utils import assetnames
+from counterpartycore.lib.utils import assetnames, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -175,8 +175,14 @@ def validate(
         ):
             problems.append("Premint quantity + soft cap must be <= hard cap.")
 
-    if mime_type != "" and mime_type not in mimetypes.types_map.values():
-        problems.append(f"Invalid mime type: {mime_type}")
+    if protocol.enabled("fairminter_v2"):
+        content_mime_type = mime_type or "text/plain"
+        if content_mime_type not in mimetypes.types_map.values():
+            problems.append(f"Invalid mime type: {mime_type}")
+        try:
+            helpers.content_to_bytes(description, content_mime_type)
+        except Exception as e:
+            problems.append(f"Error converting description to bytes: {e}")
 
     return problems
 
@@ -272,7 +278,7 @@ def compose(
                 lock_quantity,
                 divisible,
                 mime_type,
-                description,
+                helpers.content_to_bytes(description, mime_type or "text/plain"),
             ]
         )
     else:
@@ -326,7 +332,7 @@ def unpack(message, return_dict=False):
                 mime_type,
                 description,
             ) = cbor2.loads(message)
-
+            description = helpers.bytes_to_content(description, mime_type or "text/plain")
             asset = ledger.issuances.generate_asset_name(asset_id)
             asset_parent = (
                 ledger.issuances.generate_asset_name(asset_parent_id)

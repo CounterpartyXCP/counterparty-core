@@ -354,7 +354,7 @@ def generate_envelope_script(data):
     if message_type_id == messages.fairminter.ID:
         message_data = cbor2.loads(message)
         description = message_data.pop()
-        if description != "":
+        if len(description) > 0:
             mime_type = message_data.pop() or "text/plain"
             # construct metadata
             message_data = [message_type_id] + message_data
@@ -364,7 +364,7 @@ def generate_envelope_script(data):
             for chunk in metadata_chunks:
                 metatdata_array += ["05", binascii.hexlify(chunk).decode("utf-8")]
             # construct description
-            description_chunks = helpers.chunkify(description.encode("utf-8"), 520)
+            description_chunks = helpers.chunkify(description, 520)
             description_array = ["00"]
             description_array += [
                 binascii.hexlify(chunk).decode("utf-8") for chunk in description_chunks
