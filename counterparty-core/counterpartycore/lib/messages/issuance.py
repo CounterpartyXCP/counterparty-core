@@ -179,8 +179,10 @@ def validate(
             problems.append("parent asset not found")
 
     # validate subasset issuance is not a duplicate
+    print("CHECKING", subasset_longname, reissuance)
     if subasset_longname is not None and not reissuance:
         assets = ledger.issuances.get_assets_by_longname(db, subasset_longname)
+        print("LENGTH", len(assets))
         if len(assets) > 0:
             problems.append("subasset already exists")
 
@@ -260,7 +262,7 @@ def validate(
         if content_mime_type not in mimetypes.types_map.values():
             problems.append(f"Invalid mime type: {mime_type}")
         try:
-            helpers.content_to_bytes(description, content_mime_type)
+            helpers.content_to_bytes(description, content_mime_type or "text/plain")
         except Exception as e:
             problems.append(f"Error converting description to bytes: {e}")
 
@@ -382,7 +384,9 @@ def compose(
                 mime_type,
             ]
             if validated_description is not None:
-                data_array.append(helpers.content_to_bytes(validated_description, mime_type))
+                data_array.append(
+                    helpers.content_to_bytes(validated_description, mime_type or "text/plain")
+                )
             else:
                 data_array.append(None)
             data += cbor2.dumps(data_array)
@@ -480,7 +484,9 @@ def compose(
                 mime_type,
             ]
             if validated_description is not None:
-                data_array.append(helpers.content_to_bytes(validated_description, mime_type))
+                data_array.append(
+                    helpers.content_to_bytes(validated_description, mime_type or "text/plain")
+                )
             else:
                 data_array.append(None)
             data += cbor2.dumps(data_array)
@@ -577,32 +583,38 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
         mime_type = "text/plain"
 
         if protocol.enabled("taproot_support"):
-            if message_type_id == LR_ISSUANCE_ID:
-                (
-                    asset_id,
-                    quantity,
-                    divisible,
-                    lock,
-                    reset,
-                    mime_type,
-                    description,
-                ) = cbor2.loads(message)
-            elif message_type_id == LR_SUBASSET_ID:
-                (
-                    asset_id,
-                    quantity,
-                    divisible,
-                    lock,
-                    reset,
-                    compacted_subasset_length,
-                    compacted_subasset_longname,
-                    mime_type,
-                    description,
-                ) = cbor2.loads(message)
-                subasset_longname = assetnames.expand_subasset_longname(compacted_subasset_longname)
-            else:
-                raise exceptions.UnpackError("Invalid message type ID")
+            try:
+                if message_type_id in [ID, LR_ISSUANCE_ID]:
+                    (
+                        asset_id,
+                        quantity,
+                        divisible,
+                        lock,
+                        reset,
+                        mime_type,
+                        description,
+                    ) = cbor2.loads(message)
+                elif message_type_id in [SUBASSET_ID, LR_SUBASSET_ID]:
+                    (
+                        asset_id,
+                        quantity,
+                        divisible,
+                        lock,
+                        reset,
+                        compacted_subasset_length,
+                        compacted_subasset_longname,
+                        mime_type,
+                        description,
+                    ) = cbor2.loads(message)
+                    subasset_longname = assetnames.expand_subasset_longname(
+                        compacted_subasset_longname
+                    )
+                else:
+                    raise exceptions.UnpackError("Invalid message type ID")
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                raise exceptions.UnpackError from e
 
+            mime_type = mime_type or "text/plain"
             if description is not None:
                 description = helpers.bytes_to_content(description, mime_type)
             callable_, call_date, call_price = False, 0, 0.0
@@ -742,7 +754,8 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
         except exceptions.AssetIDError:
             asset = None
             status = "invalid: bad asset name"
-    except exceptions.UnpackError:
+    except exceptions.UnpackError as e:
+        logger.warning("unpack error: %s", e)
         (
             asset_id,
             asset,
@@ -755,7 +768,9 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
             call_date,
             call_price,
             description,
+            mime_type,
         ) = (
+            None,
             None,
             None,
             None,
@@ -783,6 +798,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
             "call_date": call_date,
             "call_price": call_price,
             "description": description,
+            "mime_type": mime_type,
             "status": status,
         }
     return (
@@ -797,6 +813,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
         call_date,
         call_price,
         description,
+        mime_type,
         status,
     )
 
@@ -824,6 +841,7 @@ def parse(db, tx, message, message_type_id):
         call_date,
         call_price,
         description,
+        mime_type,
         status,
     ) = unpack(db, message, message_type_id, tx["block_index"])
     # parse and validate the subasset from the message
@@ -869,6 +887,7 @@ def parse(db, tx, message, message_type_id):
             subasset_parent,
             subasset_longname,
             block_index=tx["block_index"],
+            mime_type=mime_type,
         )
 
         if problems:
@@ -933,6 +952,7 @@ def parse(db, tx, message, message_type_id):
                     "call_date": call_date,
                     "call_price": call_price,
                     "description": description,
+                    "mime_type": mime_type,
                     "fee_paid": 0,
                     "locked": lock,
                     "status": status,
@@ -1037,6 +1057,7 @@ def parse(db, tx, message, message_type_id):
             "call_date": call_date,
             "call_price": call_price,
             "description": description,
+            "mime_type": mime_type,
             "fee_paid": fee,
             "locked": lock,
             "description_locked": description_locked,
