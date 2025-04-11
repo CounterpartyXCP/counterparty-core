@@ -349,38 +349,40 @@ def string_to_hex(value):
     return binascii.hexlify(value.encode("utf-8")).decode("utf-8")
 
 
+def generate_ordinal_envelope_script(message_data, message_type_id, content):
+    mime_type = message_data.pop() or "text/plain"
+    # construct metadata
+    message_data = [message_type_id] + message_data
+    metadata = cbor2.dumps(message_data)
+    metadata_chunks = helpers.chunkify(metadata, 520)
+    metatdata_array = []
+    for chunk in metadata_chunks:
+        metatdata_array += ["05", binascii.hexlify(chunk).decode("utf-8")]
+    # construct content
+    content_chunks = helpers.chunkify(content, 520)
+    content_array = ["00"]
+    content_array += [binascii.hexlify(chunk).decode("utf-8") for chunk in content_chunks]
+    # construct script
+    script_array = [
+        "OP_FALSE",
+        "OP_IF",
+        string_to_hex("ord"),
+        "01",
+        string_to_hex(mime_type),
+        *metatdata_array,
+        *content_array,
+        "OP_ENDIF",
+    ]
+    return Script(script_array)
+
+
 def generate_envelope_script(data):
     message_type_id, message = messagetype.unpack(data)
     if message_type_id == messages.fairminter.ID:
         message_data = cbor2.loads(message)
-        description = message_data.pop()
-        if len(description) > 0:
-            mime_type = message_data.pop() or "text/plain"
-            # construct metadata
-            message_data = [message_type_id] + message_data
-            metadata = cbor2.dumps(message_data)
-            metadata_chunks = helpers.chunkify(metadata, 520)
-            metatdata_array = []
-            for chunk in metadata_chunks:
-                metatdata_array += ["05", binascii.hexlify(chunk).decode("utf-8")]
-            # construct description
-            description_chunks = helpers.chunkify(description, 520)
-            description_array = ["00"]
-            description_array += [
-                binascii.hexlify(chunk).decode("utf-8") for chunk in description_chunks
-            ]
-            # construct script
-            script_array = [
-                "OP_FALSE",
-                "OP_IF",
-                string_to_hex("ord"),
-                "01",
-                string_to_hex(mime_type),
-                *metatdata_array,
-                *description_array,
-                "OP_ENDIF",
-            ]
-            return Script(script_array)
+        content = message_data.pop()
+        if len(content) > 0:
+            return generate_ordinal_envelope_script(message_data, message_type_id, content)
 
     # split the data in chunks of 520 bytes
     datas = helpers.chunkify(data, 520)
