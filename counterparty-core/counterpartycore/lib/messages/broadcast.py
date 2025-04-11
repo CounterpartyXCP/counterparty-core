@@ -159,9 +159,8 @@ def compose(
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
-    data = messagetype.pack(ID)
-
     if protocol.enabled("taproot_support"):
+        data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
         data += cbor2.dumps(
             [
                 broadcast_timestamp,
@@ -172,7 +171,10 @@ def compose(
             ]
         )
 
+        print("Data:", data)
+
     else:  # for the record
+        data = messagetype.pack(ID)
         # always use custom length byte instead of problematic usage of 52p format and make sure to encode('utf-8') for length
         if protocol.enabled("broadcast_pack_text"):
             data += struct.pack(FORMAT, timestamp, value, fee_fraction_int)
@@ -197,10 +199,12 @@ def unpack(message, block_index, return_dict=False):
         if protocol.enabled("taproot_support"):
             # Unpack the message using cbor2
             try:
+                print("Message:", message)
                 timestamp, value, fee_fraction_int, mime_type, text = cbor2.loads(message)
                 mime_type = mime_type or "text/plain"
                 text = helpers.bytes_to_content(text, mime_type)
             except Exception as e:  # pylint: disable=broad-exception-caught
+                logger.error("Error unpacking broadcast message: %s", e, exc_info=True)
                 raise struct.error from e
         else:
             if protocol.enabled("broadcast_pack_text", block_index):
