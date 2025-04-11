@@ -47,7 +47,8 @@ def apply(db):
             description TEXT,
             description_locked BOOL DEFAULT 0,
             first_issuance_block_index INTEGER,
-            last_issuance_block_index INTEGER
+            last_issuance_block_index INTEGER,
+            mime_type TEXT DEFAULT 'text/plain'
     )""")
 
     sql = """
@@ -64,7 +65,8 @@ def apply(db):
         description,
         description_locked,
         first_issuance_block_index,
-        last_issuance_block_index
+        last_issuance_block_index,
+        mime_type
     FROM (
         SELECT
             asset,
@@ -85,7 +87,8 @@ def apply(db):
             SUM(description_locked) AS description_locked,
             MIN(ledger_db.issuances.block_index) AS first_issuance_block_index,
             MAX(ledger_db.issuances.block_index) AS last_issuance_block_index,
-            MAX(ledger_db.issuances.rowid) AS rowid
+            MAX(ledger_db.issuances.rowid) AS rowid,
+            mime_type
         FROM ledger_db.issuances, ledger_db.assets
         WHERE ledger_db.issuances.asset = ledger_db.assets.asset_name
         AND ledger_db.issuances.status = 'valid'

@@ -1,5 +1,6 @@
 import decimal
 import logging
+import mimetypes
 import struct
 
 import cbor2
@@ -36,6 +37,7 @@ def validate(
     lock_quantity=False,
     divisible=True,
     description="",
+    mime_type="",
 ):
     problems = []
 
@@ -173,6 +175,9 @@ def validate(
         ):
             problems.append("Premint quantity + soft cap must be <= hard cap.")
 
+    if mime_type != "" and mime_type not in mimetypes.types_map.values():
+        problems.append(f"Invalid mime type: {mime_type}")
+
     return problems
 
 
@@ -197,6 +202,7 @@ def compose(
     lock_quantity: bool = False,
     divisible: bool = True,
     description: str = "",
+    mime_type: str = "",
     skip_validation: bool = False,
 ):
     # validate parameters
@@ -221,6 +227,7 @@ def compose(
         lock_quantity,
         divisible,
         description,
+        mime_type,
     )
     if len(problems) > 0 and not skip_validation:
         raise exceptions.ComposeError(problems)
@@ -264,6 +271,7 @@ def compose(
                 lock_description,
                 lock_quantity,
                 divisible,
+                mime_type,
                 description,
             ]
         )
@@ -315,6 +323,7 @@ def unpack(message, return_dict=False):
                 lock_description,
                 lock_quantity,
                 divisible,
+                mime_type,
                 description,
             ) = cbor2.loads(message)
 
@@ -348,6 +357,7 @@ def unpack(message, return_dict=False):
             # The description is placed last to be able to contain `|`.
             description = "|".join(data_content[arg_count - 1 :])
             max_mint_per_address = 0
+            mime_type = ""
 
         minted_asset_commission = D(minted_asset_commission_int) / D(1e8)
 
@@ -370,6 +380,7 @@ def unpack(message, return_dict=False):
                 "lock_description": bool(int(lock_description)),
                 "lock_quantity": bool(int(lock_quantity)),
                 "divisible": bool(int(divisible)),
+                "mime_type": mime_type,
                 "description": description,
             }
 
@@ -391,10 +402,11 @@ def unpack(message, return_dict=False):
             bool(int(lock_description)),
             bool(int(lock_quantity)),
             bool(int(divisible)),
+            mime_type,
             description,
         )
     except Exception:  # pylint: disable=broad-exception-caught
-        return "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, ""
+        return "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, "", ""
 
 
 def parse(db, tx, message):
@@ -416,6 +428,7 @@ def parse(db, tx, message):
         lock_description,
         lock_quantity,
         divisible,
+        mime_type,
         description,
     ) = unpack(message)
 
@@ -440,6 +453,7 @@ def parse(db, tx, message):
         lock_quantity,
         divisible,
         description,
+        mime_type,
     )
 
     if (
@@ -534,6 +548,7 @@ def parse(db, tx, message):
         "divisible": divisible,
         "status": status,
         "pre_minted": pre_minted,
+        "mime_type": mime_type,
     }
     ledger.events.insert_record(db, "fairminters", bindings, "NEW_FAIRMINTER")
     logger.info("Fair minter opened for %s by %s.", asset_name, tx["source"])
@@ -571,6 +586,7 @@ def parse(db, tx, message):
         "asset_longname": asset_longname or None,
         "fair_minting": True,
         "asset_events": "open_fairminter",
+        "mime_type": mime_type,
     }
     ledger.events.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
 
