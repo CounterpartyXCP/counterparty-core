@@ -405,7 +405,8 @@ def unpack(message, return_dict=False):
             mime_type,
             description,
         )
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        print(f"Error unpacking fairminter message: {e}")
         return "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, "", ""
 
 
