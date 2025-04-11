@@ -381,7 +381,7 @@ def generate_envelope_script(data):
     if message_type_id == messages.fairminter.ID:
         message_data = cbor2.loads(message)
         content = message_data.pop()
-        if len(content) > 0:
+        if content is not None and len(content) > 0:
             return generate_ordinal_envelope_script(message_data, message_type_id, content)
 
     # split the data in chunks of 520 bytes
