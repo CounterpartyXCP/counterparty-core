@@ -179,10 +179,8 @@ def validate(
             problems.append("parent asset not found")
 
     # validate subasset issuance is not a duplicate
-    print("CHECKING", subasset_longname, reissuance)
     if subasset_longname is not None and not reissuance:
         assets = ledger.issuances.get_assets_by_longname(db, subasset_longname)
-        print("LENGTH", len(assets))
         if len(assets) > 0:
             problems.append("subasset already exists")
 
@@ -263,7 +261,7 @@ def validate(
             problems.append(f"Invalid mime type: {mime_type}")
         try:
             helpers.content_to_bytes(description, content_mime_type or "text/plain")
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             problems.append(f"Error converting description to bytes: {e}")
 
     return (

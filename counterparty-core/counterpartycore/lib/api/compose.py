@@ -199,6 +199,7 @@ def compose_issuance(
     lock: bool = False,
     reset: bool = False,
     description: str = None,
+    mime_type: str = "",
     **construct_params,
 ):
     """
@@ -211,6 +212,7 @@ def compose_issuance(
     :param lock: Whether this issuance should lock supply of this asset forever
     :param reset: Wether this issuance should reset any existing supply
     :param description: A textual description for the asset
+    :param mime_type: The MIME type of the description. For binary MIME type, the `description` must be in hexadecimal format (default: text/plain).
     """
     params = {
         "source": address,
@@ -221,6 +223,7 @@ def compose_issuance(
         "lock": lock,
         "reset": reset,
         "description": description,
+        "mime_type": mime_type,
     }
     return composer.compose_transaction(db, "issuance", params, construct_params)
 

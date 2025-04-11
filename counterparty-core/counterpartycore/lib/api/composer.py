@@ -378,7 +378,13 @@ def generate_ordinal_envelope_script(message_data, message_type_id, content):
 
 def generate_envelope_script(data):
     message_type_id, message = messagetype.unpack(data)
-    if message_type_id == messages.fairminter.ID:
+    if message_type_id in [
+        messages.fairminter.ID,
+        messages.issuance.ID,
+        messages.issuance.SUBASSET_ID,
+        messages.issuance.LR_ISSUANCE_ID,
+        messages.issuance.LR_SUBASSET_ID,
+    ]:
         message_data = cbor2.loads(message)
         content = message_data.pop()
         if content is not None and len(content) > 0:

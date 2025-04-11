@@ -1678,7 +1678,36 @@ def test_compose_issuance(ledger_db, defaults):
     assert result == expected
 
 
-def test_compose_fairminter(ledger_db, defaults):
+def test_compose_issuance_tparoot(ledger_db, defaults):
+    params = {
+        "source": defaults["addresses"][0],
+        "transfer_destination": None,
+        "asset": "BSSET",
+        "quantity": 1000,
+        "divisible": True,
+        "description": "aaffaaff",
+        "mime_type": "image/png",
+    }
+
+    construct_params = {"encoding": "taproot"}
+
+    expected = {
+        "rawtransaction": "020000000147155f17ac58e707b326ec914d00bcce2f0ee527830c291bc02cdeb47c4ef7ed0000000000ffffffff024a0100000000000022512085c9ae620a32eb35ccdec4df40e92c84d63c43714014664e646622ea1b5aa3a9e0c69a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "envelope_script": "0063036f7264010109696d6167652f706e6701050d86161a000bfce31903e8f5f4f4010004aaffaaff68",
+        "reveal_rawtransaction": "020000000166a10901561675ad22b863c42245d4e4ecefe2dddcb9c250334dfaeb19ee057e0000000000ffffffff0100000000000000000a6a08434e54525052545900000000",
+    }
+
+    result = composer.compose_transaction(ledger_db, "issuance", params, construct_params)
+    assert result == expected
+
+    envelope_script = Script.from_raw(result["envelope_script"])
+    assert (
+        str(envelope_script)
+        == "['OP_0', 'OP_IF', '6f7264', '01', '696d6167652f706e67', '05', '86161a000bfce31903e8f5f4f4', '00', 'aaffaaff', 'OP_ENDIF']"
+    )
+
+
+def test_compose_fairminter_taproot(ledger_db, defaults):
     params = {
         "source": defaults["addresses"][0],
         "asset": "FAIRMANT",
@@ -1690,13 +1719,19 @@ def test_compose_fairminter(ledger_db, defaults):
     construct_params = {"encoding": "taproot"}
 
     expected = {
-        "rawtransaction": "02000000010c84d44d89292224a8e7b0ee86204bc23a12f8a96fe86929d7fa0c0bc03b43e00000000000ffffffff024a01000000000000225120a210a9d1735d375af73aa5cecb2ee9df0593ab068844616861172acbe246f412e0c69a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "rawtransaction": "0200000001f4b46f0fa251a8802e0823d95573525bc918a395f3f8d4e0694f7d3cbe1329100000000000ffffffff024a01000000000000225120a210a9d1735d375af73aa5cecb2ee9df0593ab068844616861172acbe246f412e0c69a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "envelope_script": "0063036f7264010109696d6167652f706e6701051c92185a1b000000095fce9cd50000010a0000000000000000f4f4f4f5010004ff00ff0068",
-        "reveal_rawtransaction": "020000000177ba9c7d05dd57bbe3e098d9385679f85f9eeb3d369a456cdabd660a8e748c8a0000000000ffffffff0100000000000000000a6a08434e54525052545900000000",
+        "reveal_rawtransaction": "0200000001de7c9c20a9dc90a3f6a945e9318e496aef3de9376f29762369963f8c277690c70000000000ffffffff0100000000000000000a6a08434e54525052545900000000",
     }
 
     result = composer.compose_transaction(ledger_db, "fairminter", params, construct_params)
     assert result == expected
+
+    envelope_script = Script.from_raw(result["envelope_script"])
+    assert (
+        str(envelope_script)
+        == "['OP_0', 'OP_IF', '6f7264', '01', '696d6167652f706e67', '05', '92185a1b000000095fce9cd50000010a0000000000000000f4f4f4f5', '00', 'ff00ff00', 'OP_ENDIF']"
+    )
 
 
 def test_compose_enhanced_send(ledger_db, defaults, monkeypatch):
