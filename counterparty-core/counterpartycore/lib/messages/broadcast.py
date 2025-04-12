@@ -287,6 +287,7 @@ def parse(db, tx, message):
         "text": text,
         "locked": lock,
         "status": status,
+        "mime_type": mime_type,
     }
     if "integer overflow" not in status:
         ledger.events.insert_record(db, "broadcasts", bindings, "BROADCAST")
