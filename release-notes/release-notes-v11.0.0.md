@@ -51,7 +51,7 @@ counterparty-server start
 
 ## Codebase
 
-- Use a new data encoding format for Sweep, Enhanced Send, Fairminter and Fairmint with variable length for every data field
+- Use CBOR encoding format for Sweep, Enhanced Send, Fairminter, Fairmint, Issuance and Broadcast
 - Update ledger hashes checkpoints using truncated addresses
 - Use asset ID instead asset name in Fairminter and Fairmint messages
 - Allow `soft_cap` to be equal to `hard_cap` in Fairminter
@@ -60,6 +60,8 @@ counterparty-server start
 - Add Taproot envelope data encoding support
 - Remove P2SH data encoding support
 - Ensure fairminters' hard cap is a multiple of lot size
+- Add `mime_type` in `issuances`, `fairminters` and `broadcasts` tables
+- Use an envelope script compatible with Ordinals when the description/text of a Fairminter, Issuance or Broadcast is not empty.
 
 ## API
 
@@ -70,6 +72,7 @@ counterparty-server start
 - In Composer Fairmint, ensure that `quantity` is a multiple of `lot_size`
 - Ensure that Fairminter's `hard_cap` is greater than the sum of `premint_quantity` and `soft_cap`
 - The POST URL encoded parameters are now accepted to compose a transaction
+- Add `mime_type` parameter for `compose_issuance`, `compose_fairminter` and `compose_broadcast` endpoints
 
 ## CLI
 
