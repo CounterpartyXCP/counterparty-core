@@ -62,6 +62,7 @@ def compose_broadcast(
     value: float,
     fee_fraction: float,
     text: str,
+    mime_type: str = "",
     **construct_params,
 ):
     """
@@ -71,6 +72,7 @@ def compose_broadcast(
     :param value: Numerical value of the broadcast (e.g. 100)
     :param fee_fraction: How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. 0.05 is five percent) (e.g. 0.05)
     :param text: The textual part of the broadcast (e.g. "Hello, world!")
+    :param mime_type: The MIME type of the text. For binary MIME type, the `text` must be in hexadecimal format (default: text/plain).
     """
     params = {
         "source": address,
@@ -78,6 +80,7 @@ def compose_broadcast(
         "value": value,
         "fee_fraction": fee_fraction,
         "text": text,
+        "mime_type": mime_type,
     }
     return composer.compose_transaction(db, "broadcast", params, construct_params)
 
