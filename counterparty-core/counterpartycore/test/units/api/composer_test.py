@@ -1734,6 +1734,31 @@ def test_compose_fairminter_taproot(ledger_db, defaults):
     )
 
 
+def test_compose_broadcast_taproot(ledger_db, defaults):
+    params = {
+        "source": defaults["addresses"][0],
+        "text": "ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00",
+        "mime_type": "image/png",
+    }
+
+    construct_params = {"encoding": "taproot"}
+
+    expected = {
+        "rawtransaction": "02000000014f4851c5dc2eff52025d7d337748c9bfa1e12ab43ee3523ba5dbbadffb6a31bb0000000000ffffffff024a01000000000000225120fcae6f84590f72860ecba792b4e658b7cb1fcf5c9ffeeb26634322a01240755de0c69a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "envelope_script": "0063036f7264010109696d6167652f706e6701051284181e1a52bb3303fb000000000000000000010020ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff0068",
+        "reveal_rawtransaction": "0200000001fb2dae8c0534ca13f1deefe832012bfbff3d0d6ede1ba997a19aa0240bb498200000000000ffffffff0100000000000000000a6a08434e54525052545900000000",
+    }
+
+    result = composer.compose_transaction(ledger_db, "broadcast", params, construct_params)
+    assert result == expected
+
+    envelope_script = Script.from_raw(result["envelope_script"])
+    assert (
+        str(envelope_script)
+        == "['OP_0', 'OP_IF', '6f7264', '01', '696d6167652f706e67', '05', '84181e1a52bb3303fb000000000000000000', '00', 'ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00', 'OP_ENDIF']"
+    )
+
+
 def test_compose_enhanced_send(ledger_db, defaults, monkeypatch):
     params = {
         "memo": "0102030405",

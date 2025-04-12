@@ -238,6 +238,20 @@ def test_desrialize_reveal_tx():
         True,
     )
 
+    data = b"\x16\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`X1description much much much longer than 42 letters"
+    reveal_tx = composer.get_dummy_signed_reveal_tx(data)
+    reveal_tx_hex = reveal_tx.serialize()
+    decoded_tx = deserialize_rust(reveal_tx_hex)
+    assert decoded_tx["parsed_vouts"] == (
+        [],
+        0,
+        0,
+        # mime type is injected when Ordinals envelope is used
+        b"\x16\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4jtext/plainX1description much much much longer than 42 letters",
+        [(None, None)],
+        True,
+    )
+
     reveal_tx = composer.get_dummy_signed_reveal_tx(b"")
     reveal_tx_hex = reveal_tx.serialize()
     decoded_tx = deserialize_rust(reveal_tx_hex)

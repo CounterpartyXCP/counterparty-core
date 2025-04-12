@@ -384,6 +384,7 @@ def generate_envelope_script(data):
         messages.issuance.SUBASSET_ID,
         messages.issuance.LR_ISSUANCE_ID,
         messages.issuance.LR_SUBASSET_ID,
+        messages.broadcast.ID,
     ]:
         message_data = cbor2.loads(message)
         content = message_data.pop()
