@@ -33,7 +33,6 @@ from counterpartycore.lib import (
     exceptions,
     ledger,
 )
-from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import helpers
 
@@ -73,7 +72,7 @@ def validate_address_options(options):
         raise exceptions.OptionsError("options not possible")
 
 
-def validate(db, source, timestamp, value, fee_fraction_int, text, block_index, mime_type):
+def validate(db, source, timestamp, value, fee_fraction_int, text, mime_type):
     problems = []
 
     # For SQLite3
@@ -153,7 +152,6 @@ def compose(
         value,
         fee_fraction_int,
         text,
-        CurrentState().current_block_index(),
         mime_type,
     )
     if problems and not skip_validation:
@@ -261,9 +259,7 @@ def parse(db, tx, message):
         timestamp = min(timestamp, config.MAX_INT)
         value = min(value, config.MAX_INT)
 
-        problems = validate(
-            db, tx["source"], timestamp, value, fee_fraction_int, text, tx["block_index"], mime_type
-        )
+        problems = validate(db, tx["source"], timestamp, value, fee_fraction_int, text, mime_type)
         if problems:
             status = "invalid: " + "; ".join(problems)
 

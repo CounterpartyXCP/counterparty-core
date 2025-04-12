@@ -12,7 +12,6 @@ def test_validate(ledger_db, defaults, current_block_index):
             1,
             defaults["fee_multiplier"],
             "Unit Test",
-            current_block_index,
             "",
         )
         == []
@@ -26,7 +25,6 @@ def test_validate(ledger_db, defaults, current_block_index):
             1,
             defaults["fee_multiplier"],
             "Unit Test",
-            current_block_index,
             "",
         )
         == []
@@ -39,7 +37,6 @@ def test_validate(ledger_db, defaults, current_block_index):
         1,
         defaults["fee_multiplier"],
         "Unit Test",
-        current_block_index,
         "",
     ) == ["locked feed"]
 
@@ -50,7 +47,6 @@ def test_validate(ledger_db, defaults, current_block_index):
         1,
         4294967296,
         "Unit Test",
-        current_block_index,
         "",
     ) == ["fee fraction greater than or equal to 1"]
 
@@ -61,7 +57,6 @@ def test_validate(ledger_db, defaults, current_block_index):
         1,
         defaults["fee_multiplier"],
         "Unit Test",
-        current_block_index,
         "",
     ) == ["negative timestamp", "feed timestamps not monotonically increasing"]
 
@@ -72,7 +67,6 @@ def test_validate(ledger_db, defaults, current_block_index):
         1,
         defaults["fee_multiplier"],
         "Unit Test",
-        current_block_index,
         "",
     ) == ["null source address"]
 
@@ -83,7 +77,6 @@ def test_validate(ledger_db, defaults, current_block_index):
         1,
         defaults["fee_multiplier"],
         "OPTIONS %i" % (config.ADDRESS_OPTION_MAX_VALUE + 1),
-        current_block_index,
         "",
     ) == ["options out of range"]
 
@@ -94,7 +87,6 @@ def test_validate(ledger_db, defaults, current_block_index):
         1,
         defaults["fee_multiplier"],
         "OPTIONS -1",
-        current_block_index,
         "",
     ) == ["options integer overflow"]
 
@@ -105,7 +97,6 @@ def test_validate(ledger_db, defaults, current_block_index):
         1,
         defaults["fee_multiplier"],
         "OPTIONS XCP",
-        current_block_index,
         "",
     ) == ["options not an integer"]
 
