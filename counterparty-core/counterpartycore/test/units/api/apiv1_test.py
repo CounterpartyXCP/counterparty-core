@@ -18,7 +18,7 @@ def test_create_burn(apiv1_client, defaults):
     ).json
     assert (
         result["result"]
-        == "0200000001c3f809cfdfc5190e9bde38bab8378a6e191db467645fadd23a3182c8013f52f50000000000ffffffff020000000000000000296a27c504f53e28185bc36016b17095852387614995f6d05f2ebc822aacadf442f03716b64787bdffea1cc89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        == "0200000001c3f809cfdfc5190e9bde38bab8378a6e191db467645fadd23a3182c8013f52f50000000000ffffffff020000000000000000296a27c504f53e28185bc36093b16e178f2905214995f6d05f2ebc822aacadf442f03716b64787bdffaa1cc89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     )
 
     result = apiv1_client(
@@ -46,7 +46,7 @@ def test_create_burn(apiv1_client, defaults):
     ).json
     assert (
         result["result"]
-        == "020000000123cf835e30524abad885998c242cc8eeaa449f6b2681b81783a2cb49d10d72910000000000ffffffff02e80300000000000069512103458d7b21aecdb08550b62395a5324626dd2fc0cb58d5f87793f1b3993e3613aa2103307223ebf731e9021ae4d5f9b9cc1995172e0821becb236c71bd18de09adc05b210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aed0c29a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        == "020000000123cf835e30524abad885998c242cc8eeaa449f6b2681b81783a2cb49d10d72910000000000ffffffff02e80300000000000069512103458d7b21aecdb08550b6a695bbb04c2c5f6fc0cb58d5f87793f1b3993e3613a72102307223ebf731e9025ae4d5f9b9cc1995172e0821becb236c71bd18de09adc0f8210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aed0c29a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     )
 
     result = apiv1_client(
@@ -62,7 +62,7 @@ def test_create_burn(apiv1_client, defaults):
     ).json
     assert (
         result["result"]
-        == "020000000153bcb9aa0761fd59990a6b1fffdd9e5b173ca9352266154cd4c215da64ddd3900000000000ffffffff02e80300000000000069512103dd877dc76d1f97ac994b01814fd2098606d60a16adbd552dc7c8108ecafd1a5921031c39b33684850852aefebda70d149c10dba4543afcf135a1ac2a5fb60b7c1c7d210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aef8c29a3b0000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e8700000000"
+        == "020000000153bcb9aa0761fd59990a6b1fffdd9e5b173ca9352266154cd4c215da64ddd3900000000000ffffffff02e80300000000000069512102dd877dc76d1f97ac994b84815150038c84960a16adbd552dc7c8108ecafd1a7321031c39b33684850852eefebda70d149c10dba4543afcf135a1ac2a5fb60b7c1c9b210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aef8c29a3b0000000017a9144264cfd7eb65f8cbbdba98bd9815d5461fad8d7e8700000000"
     )
 
     result = apiv1_client(
@@ -336,7 +336,7 @@ def test_create_burn(apiv1_client, defaults):
     ).json
     assert (
         result["result"]
-        == "0200000001becef02909ba0cde75d5ccc95be981d076200f73bc5da2dbc5e8ecd70e0f1a720000000000ffffffff020000000000000000296a27fcdd139c50bdfee69f6f17787cedb11ce2492a6e55ea2be1b35647a8078d72e7acbd5bd7d5048d1cc89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        == "0200000001becef02909ba0cde75d5ccc95be981d076200f73bc5da2dbc5e8ecd70e0f1a720000000000ffffffff020000000000000000296a27fcdd139c50bdfee69fea1766fee7bb9ea2492a6e55ea2be1b35647a8078d72e7acbd5bd7d504cd1cc89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     )
 
     result = apiv1_client(
@@ -351,7 +351,7 @@ def test_create_burn(apiv1_client, defaults):
     ).json
     assert (
         result["result"]
-        == "02000000019f1bfbda70c3fad5e1e8d50ac95ec917bd5d41e3ee09a0990a63d5e55e522b090000000000ffffffff0200000000000000002e6a2cd98f50aa2a792c8791da6851688b2e4645176f82c6262db8ea8de3074ddc69700f0f3e280373b02d939174a312c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        == "02000000019f1bfbda70c3fad5e1e8d50ac95ec917bd5d41e3ee09a0990a63d5e55e522b090000000000ffffffff0200000000000000002e6a2cd98f50aa2a792c87915f684fea8124c405176f82c6262db8ea8de3074ddc69700f0f3e280373f02d939174a312c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     )
 
     result = apiv1_client(
@@ -367,7 +367,7 @@ def test_create_burn(apiv1_client, defaults):
     ).json
     assert (
         result["result"]
-        == "0200000001f2fadee21459be8bf78023123b6b57a3a10cbf53d847323028f2483ebc93094d0000000000ffffffff0200000000000000002e6a2c207e03880c6473427237bbeea7c4de095baec7c943ac1cab018ea69745fc015d3dbd9ee5eb827230c3270f7712c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        == "0200000001f2fadee21459be8bf78023123b6b57a3a10cbf53d847323028f2483ebc93094d0000000000ffffffff0200000000000000002e6a2c207e03880c64734272b2bbf025ced48b1baec7c943ac1cab018ea69745fc015d3dbd9ee5eb823230c3270f7712c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     )
 
     result = apiv1_client(
@@ -383,7 +383,7 @@ def test_create_burn(apiv1_client, defaults):
     ).json
     assert (
         result["result"]
-        == "0200000001f720b4622d56c2d98b2a6046c364487233ce53cce7ea2ff1c4d51dafd91659340000000000ffffffff0200000000000000002e6a2cf352716d54f862ded469e970ea038d3341bb4a42c73d25614de3f2328e39483ca75dc60b60ecfb429c8bb18f12c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        == "0200000001f720b4622d56c2d98b2a6046c364487233ce53cce7ea2ff1c4d51dafd91659340000000000ffffffff0200000000000000002e6a2cf352716d54f862ded4ece96e680987b101bb4a42c73d25614de3f2328e39483ca75dc60b60ecbb429c8bb18f12c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     )
 
     with ProtocolChangesDisabled(["enhanced_sends"]):
@@ -414,7 +414,7 @@ def test_create_burn(apiv1_client, defaults):
     ).json
     assert (
         result["result"]
-        == "0200000001010349e422e4bdd73ad321017ebd25856d72bb0eaf9d559d0c16e06c191b21220000000000ffffffff020000000000000000296a27a09e65ce18ec77c76f83e7b7178a25f80f39d84de0096f934cdfbf0447211a2031e06f2edaafd31cc89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        == "0200000001010349e422e4bdd73ad321017ebd25856d72bb0eaf9d559d0c16e06c191b21220000000000ffffffff020000000000000000296a27a09e65ce18ec77c76f06e7a995802f7a4f39d84de0096f934cdfbf0447211a2031e06f2edaaf931cc89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     )
 
 
@@ -615,7 +615,7 @@ def test_get_rows(ledger_db, state_db):
     ) == [
         {
             "tx_index": 37,
-            "tx_hash": "3f6e6215862ae2474cc68901ebd9490eeb77449ad5d5cf9606aaac4c5aa3cdc7",
+            "tx_hash": "e19fac8a054ebc636c86169ddc2edf73310c19b7d52da7af2378e00b8e3380b5",
             "block_index": 717,
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -647,7 +647,7 @@ def test_get_rows(ledger_db, state_db):
     ) == [
         {
             "tx_index": 38,
-            "tx_hash": "c9d0ec1beed7974c490f9ffd9103d0ecbc818135b7e0829882a36b810c86ffd8",
+            "tx_hash": "45235a0a1ee523adc876bb0ffedc7f4eb2ca695cf1d0303e4990a0dd867d896d",
             "block_index": 718,
             "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
             "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
@@ -679,7 +679,7 @@ def test_get_rows(ledger_db, state_db):
     ) == [
         {
             "tx_index": 37,
-            "tx_hash": "3f6e6215862ae2474cc68901ebd9490eeb77449ad5d5cf9606aaac4c5aa3cdc7",
+            "tx_hash": "e19fac8a054ebc636c86169ddc2edf73310c19b7d52da7af2378e00b8e3380b5",
             "block_index": 717,
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -711,7 +711,7 @@ def test_get_rows(ledger_db, state_db):
     ) == [
         {
             "tx_index": 37,
-            "tx_hash": "3f6e6215862ae2474cc68901ebd9490eeb77449ad5d5cf9606aaac4c5aa3cdc7",
+            "tx_hash": "e19fac8a054ebc636c86169ddc2edf73310c19b7d52da7af2378e00b8e3380b5",
             "block_index": 717,
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -743,7 +743,7 @@ def test_get_rows(ledger_db, state_db):
     ) == [
         {
             "tx_index": 37,
-            "tx_hash": "3f6e6215862ae2474cc68901ebd9490eeb77449ad5d5cf9606aaac4c5aa3cdc7",
+            "tx_hash": "e19fac8a054ebc636c86169ddc2edf73310c19b7d52da7af2378e00b8e3380b5",
             "block_index": 717,
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -775,7 +775,7 @@ def test_get_rows(ledger_db, state_db):
     ) == [
         {
             "tx_index": 37,
-            "tx_hash": "3f6e6215862ae2474cc68901ebd9490eeb77449ad5d5cf9606aaac4c5aa3cdc7",
+            "tx_hash": "e19fac8a054ebc636c86169ddc2edf73310c19b7d52da7af2378e00b8e3380b5",
             "block_index": 717,
             "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "destination": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
@@ -807,7 +807,7 @@ def test_get_rows(ledger_db, state_db):
     ) == [
         {
             "tx_index": 38,
-            "tx_hash": "c9d0ec1beed7974c490f9ffd9103d0ecbc818135b7e0829882a36b810c86ffd8",
+            "tx_hash": "45235a0a1ee523adc876bb0ffedc7f4eb2ca695cf1d0303e4990a0dd867d896d",
             "block_index": 718,
             "source": "mtQheFaSfWELRB2MyMBaiWjdDm6ux9Ezns",
             "destination": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
