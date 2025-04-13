@@ -776,3 +776,241 @@ def test_parse_invalid_message(ledger_db, blockchain_mock, defaults, test_helper
                 },
             ],
         )
+
+
+def test_compose_legacy(ledger_db, defaults):
+    with ProtocolChangesDisabled(["broadcast_pack_text", "short_tx_type_id", "taproot_support"]):
+        assert broadcast.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            1588000000,
+            1,
+            defaults["fee_multiplier"],
+            "Unit Test",
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00LK@\tUnit Test",
+        )
+
+        assert broadcast.compose(
+            ledger_db,
+            defaults["p2sh_addresses"][0],
+            1588000000,
+            1,
+            defaults["fee_multiplier"],
+            "Unit Test",
+        ) == (
+            defaults["p2sh_addresses"][0],
+            [],
+            b"\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00LK@\tUnit Test",
+        )
+
+        assert broadcast.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            1588000000,
+            1,
+            0,
+            "Exactly 51 characters test test test test test tes.",
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x003Exactly 51 characters test test test test test tes.",
+        )
+
+        assert broadcast.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            1588000000,
+            1,
+            0,
+            "Exactly 52 characters test test test test test test.",
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x004Exactly 52 characters test test test test test test.",
+        )
+
+        assert broadcast.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            1588000000,
+            1,
+            0,
+            "Exactly 53 characters test test test test test testt.",
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Exactly 53 characters test test test test test testt.",
+        )
+
+        assert broadcast.compose(
+            ledger_db, defaults["addresses"][0], 1588000000, 1, 0, "This is an e with an: è."
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x18This is an e with an: \xc3\xa8",
+        )
+
+        assert broadcast.compose(
+            ledger_db, defaults["addresses"][0], 1388000100, 50000000, 0, "LOCK"
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\x04LOCK",
+        )
+
+        assert broadcast.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            1588000000,
+            1,
+            defaults["fee_multiplier"],
+            "Unit Test",
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00LK@\tUnit Test",
+        )
+
+    with ProtocolChangesDisabled(["short_tx_type_id", "taproot_support"]):
+        assert broadcast.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            1588000000,
+            1,
+            0,
+            "Exactly 51 characters test test test test test tes.",
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x003Exactly 51 characters test test test test test tes.",
+        )
+
+        assert broadcast.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            1588000000,
+            1,
+            0,
+            "Exactly 52 characters test test test test test test.",
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x004Exactly 52 characters test test test test test test.",
+        )
+
+        assert broadcast.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            1588000000,
+            1,
+            0,
+            "Exactly 53 characters test test test test test testt.",
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x005Exactly 53 characters test test test test test testt.",
+        )
+
+        assert broadcast.compose(
+            ledger_db, defaults["addresses"][0], 1588000000, 1, 0, "This is an e with an: è."
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x19This is an e with an: \xc3\xa8.",
+        )
+
+        assert broadcast.compose(
+            ledger_db, defaults["addresses"][0], 1388000100, 50000000, 0, "LOCK"
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\x04LOCK",
+        )
+
+        assert broadcast.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            1588000000,
+            1,
+            defaults["fee_multiplier"],
+            "Over 80 characters test test test test test test test test test test test test test test test test test test",
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x00\x00\x00\x1e^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00LK@lOver 80 characters test test test test test test test test test test test test test test test test test test",
+        )
+
+        assert broadcast.compose(
+            ledger_db, defaults["addresses"][0], 1388000100, 50000000, 0, "OPTIONS 1"
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\tOPTIONS 1",
+        )
+
+        assert broadcast.compose(
+            ledger_db, defaults["addresses"][0], 1388000100, 50000000, 0, "OPTIONS 0"
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x00\x00\x00\x1eR\xbb3dA\x87\xd7\x84\x00\x00\x00\x00\x00\x00\x00\x00\tOPTIONS 0",
+        )
+
+
+def test_packing_52_chars_legcay(ledger_db, blockchain_mock, defaults, test_helpers):
+    with ProtocolChangesDisabled(["taproot_support"]):
+        tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][1])
+        message = b"^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x004Exactly 52 characters test test test test test test."
+        broadcast.parse(ledger_db, tx, message)
+
+        test_helpers.check_records(
+            ledger_db,
+            [
+                {
+                    "table": "broadcasts",
+                    "values": {
+                        "block_index": tx["block_index"],
+                        "fee_fraction_int": 0,
+                        "locked": 0,
+                        "source": defaults["addresses"][1],
+                        "status": "valid",
+                        "text": "Exactly 52 characters test test test test test test.",
+                        "timestamp": 1588000000,
+                        "tx_hash": tx["tx_hash"],
+                        "tx_index": tx["tx_index"],
+                        "value": 1.0,
+                    },
+                },
+            ],
+        )
+
+
+def test_parse_invalid_message_legacy(ledger_db, blockchain_mock, defaults, test_helpers):
+    with ProtocolChangesDisabled(["taproot_support"]):
+        tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][4], use_first_tx=True)
+        message = b"^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00LK@#A 28 CHARACTERS LONG TEXT"
+        broadcast.parse(ledger_db, tx, message)
+
+        test_helpers.check_records(
+            ledger_db,
+            [
+                {
+                    "table": "broadcasts",
+                    "values": {
+                        "block_index": tx["block_index"],
+                        "fee_fraction_int": 0,
+                        "locked": 0,
+                        "source": defaults["addresses"][4],
+                        "status": "invalid: could not unpack text",
+                        "text": None,
+                        "timestamp": 0,
+                        "tx_hash": tx["tx_hash"],
+                        "tx_index": tx["tx_index"],
+                        "value": None,
+                    },
+                },
+            ],
+        )
