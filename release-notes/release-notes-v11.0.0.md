@@ -74,6 +74,7 @@ counterparty-server start
 - Ensure that Fairminter's `hard_cap` is greater than the sum of `premint_quantity` and `soft_cap`
 - The POST URL encoded parameters are now accepted to compose a transaction
 - Add `mime_type` parameter for `compose_issuance`, `compose_fairminter` and `compose_broadcast` endpoints
+- Remove the mandatory fields for broadcast: `fee_fraction`, `value`, `timestamp`
 
 ## CLI
 
