@@ -2066,3 +2066,56 @@ def test_parse_divisible_legacy(
                 },
             ],
         )
+
+
+def test_compose_issuance_data():
+    # Test branch 1: asset_format_length <= 19
+    fmt1 = ">QQ???s"
+    result1 = issuance._compose_issuance_data(
+        19, fmt1, issuance.ID, 1000, True, True, True, b"desc", False, 0, 0.0
+    )
+    assert result1 is not None
+
+    # Test branch 2: asset_format_length <= 26
+    fmt2 = ">QQ??Ifs"
+    result2 = issuance._compose_issuance_data(
+        26, fmt2, issuance.ID, 2000, False, True, False, b"desc", True, 1000, 5.0
+    )
+    assert result2 is not None
+
+    # Test branch 3: asset_format_length <= 27
+    fmt3 = ">QQ???Ifs"
+    result3 = issuance._compose_issuance_data(
+        27, fmt3, issuance.ID, 3000, True, False, True, b"desc", True, 2000, 10.0
+    )
+    assert result3 is not None
+
+    # Test branch 4: asset_format_length <= 28
+    fmt4 = ">QQ????Ifs"
+    result4 = issuance._compose_issuance_data(
+        28, fmt4, issuance.ID, 4000, False, True, True, b"desc", False, 0, 0.0
+    )
+    assert result4 is not None
+
+
+def test_compose_issuance_data_subasset():
+    # Test branch 1: subasset_format_length <= 18
+    fmt1 = ">QQ?Bss"
+    result1 = issuance._compose_issuance_data_subasset(
+        18, fmt1, issuance.SUBASSET_ID, 1000, True, False, False, 5, b"subname", b"desc"
+    )
+    assert result1 is not None
+
+    # Test branch 2: subasset_format_length <= 19
+    fmt2 = ">QQ??Bss"
+    result2 = issuance._compose_issuance_data_subasset(
+        19, fmt2, issuance.SUBASSET_ID, 2000, False, False, True, 6, b"subname", b"desc"
+    )
+    assert result2 is not None
+
+    # Test branch 3: subasset_format_length <= 20
+    fmt3 = ">QQ???Bss"
+    result3 = issuance._compose_issuance_data_subasset(
+        20, fmt3, issuance.SUBASSET_ID, 3000, True, True, False, 7, b"subname", b"desc"
+    )
+    assert result3 is not None

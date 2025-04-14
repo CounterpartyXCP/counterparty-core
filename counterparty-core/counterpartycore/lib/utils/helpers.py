@@ -170,25 +170,17 @@ def get_current_commit_hash(not_from_env=False):
 
 
 def classify_mime_type(mime_type):
-    """
-    Classifies a MIME type as "text" or "binary".
-
-    Args:
-        mime_type (str): The MIME type to classify
-
-    Returns:
-        str: "text" if the MIME type is textual, "binary" if it's binary
-    """
     # Types that start with "text/" are textual
-    if mime_type.startswith("text/"):
-        return "text"
-
-    # XML and related types are generally textual
-    if mime_type.endswith("+xml") or mime_type == "application/xml":
+    if (
+        mime_type.startswith("text/")
+        or mime_type.startswith("message/")
+        or mime_type.endswith("+xml")
+    ):
         return "text"
 
     # List of application types that are textual
-    text_application_types = {
+    if mime_type in [
+        "application/xml",
         "application/javascript",
         "application/json",
         "application/manifest+json",
@@ -197,14 +189,7 @@ def classify_mime_type(mime_type):
         "application/x-csh",
         "application/x-tex",
         "application/x-latex",
-        "text/xml",
-    }
-
-    if mime_type in text_application_types:
-        return "text"
-
-    # RFC822 messages are generally textual
-    if mime_type.startswith("message/"):
+    ]:
         return "text"
 
     # By default, consider the MIME type as binary

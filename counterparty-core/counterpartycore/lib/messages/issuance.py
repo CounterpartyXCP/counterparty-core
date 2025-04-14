@@ -278,6 +278,118 @@ def validate(
     )
 
 
+def _compose_issuance_data(
+    asset_format_length,
+    curr_format,
+    asset_id,
+    quantity,
+    divisible,
+    lock,
+    reset,
+    encoded_description,
+    callable_,
+    call_date,
+    call_price,
+):
+    data = b""
+    if asset_format_length <= 19:  # callbacks parameters were removed
+        data = struct.pack(
+            curr_format,
+            asset_id,
+            quantity,
+            1 if divisible else 0,
+            1 if lock else 0,
+            1 if reset else 0,
+            encoded_description,
+        )
+    elif asset_format_length <= 26:
+        data = struct.pack(
+            curr_format,
+            asset_id,
+            quantity,
+            1 if divisible else 0,
+            1 if callable_ else 0,
+            call_date or 0,
+            call_price or 0.0,
+            encoded_description,
+        )
+    elif asset_format_length <= 27:  # param reset was inserted
+        data = struct.pack(
+            curr_format,
+            asset_id,
+            quantity,
+            1 if divisible else 0,
+            1 if reset else 0,
+            1 if callable_ else 0,
+            call_date or 0,
+            call_price or 0.0,
+            encoded_description,
+        )
+    elif asset_format_length <= 28:  # param lock was inserted
+        data = struct.pack(
+            curr_format,
+            asset_id,
+            quantity,
+            1 if divisible else 0,
+            1 if lock else 0,
+            1 if reset else 0,
+            1 if callable_ else 0,
+            call_date or 0,
+            call_price or 0.0,
+            encoded_description,
+        )
+    return data
+
+
+def _compose_issuance_data_subasset(
+    subasset_format_length,
+    curr_format,
+    asset_id,
+    quantity,
+    divisible,
+    lock,
+    reset,
+    compacted_subasset_length,
+    compacted_subasset_longname,
+    encoded_description,
+):
+    data = b""
+    if subasset_format_length <= 18:
+        data += struct.pack(
+            curr_format,
+            asset_id,
+            quantity,
+            1 if divisible else 0,
+            compacted_subasset_length,
+            compacted_subasset_longname,
+            encoded_description,
+        )
+    elif subasset_format_length <= 19:  # param reset was inserted
+        data += struct.pack(
+            curr_format,
+            asset_id,
+            quantity,
+            1 if divisible else 0,
+            1 if reset else 0,
+            compacted_subasset_length,
+            compacted_subasset_longname,
+            encoded_description,
+        )
+    elif subasset_format_length <= 20:  # param lock was inserted
+        data += struct.pack(
+            curr_format,
+            asset_id,
+            quantity,
+            1 if divisible else 0,
+            1 if lock else 0,
+            1 if reset else 0,
+            compacted_subasset_length,
+            compacted_subasset_longname,
+            encoded_description,
+        )
+    return data
+
+
 def compose(
     db,
     source: str,
@@ -413,52 +525,19 @@ def compose(
 
                 encoded_description = validated_description.encode("utf-8")
 
-            if asset_format_length <= 19:  # callbacks parameters were removed
-                data += struct.pack(
-                    curr_format,
-                    asset_id,
-                    quantity,
-                    1 if divisible else 0,
-                    1 if lock else 0,
-                    1 if reset else 0,
-                    encoded_description,
-                )
-            elif asset_format_length <= 26:
-                data += struct.pack(
-                    curr_format,
-                    asset_id,
-                    quantity,
-                    1 if divisible else 0,
-                    1 if callable_ else 0,
-                    call_date or 0,
-                    call_price or 0.0,
-                    encoded_description,
-                )
-            elif asset_format_length <= 27:  # param reset was inserted
-                data += struct.pack(
-                    curr_format,
-                    asset_id,
-                    quantity,
-                    1 if divisible else 0,
-                    1 if reset else 0,
-                    1 if callable_ else 0,
-                    call_date or 0,
-                    call_price or 0.0,
-                    encoded_description,
-                )
-            elif asset_format_length <= 28:  # param lock was inserted
-                data += struct.pack(
-                    curr_format,
-                    asset_id,
-                    quantity,
-                    1 if divisible else 0,
-                    1 if lock else 0,
-                    1 if reset else 0,
-                    1 if callable_ else 0,
-                    call_date or 0,
-                    call_price or 0.0,
-                    encoded_description,
-                )
+            data += _compose_issuance_data(
+                asset_format_length,
+                curr_format,
+                asset_id,
+                quantity,
+                divisible,
+                lock,
+                reset,
+                encoded_description,
+                callable_,
+                call_date,
+                call_price,
+            )
     else:
         # Type 21 subasset issuance SUBASSET_FORMAT >QQ?B
         #   Used only for initial subasset issuance
@@ -515,39 +594,18 @@ def compose(
                 )
                 encoded_description = validated_description.encode("utf-8")
 
-            if subasset_format_length <= 18:
-                data += struct.pack(
-                    curr_format,
-                    asset_id,
-                    quantity,
-                    1 if divisible else 0,
-                    compacted_subasset_length,
-                    compacted_subasset_longname,
-                    encoded_description,
-                )
-            elif subasset_format_length <= 19:  # param reset was inserted
-                data += struct.pack(
-                    curr_format,
-                    asset_id,
-                    quantity,
-                    1 if divisible else 0,
-                    1 if reset else 0,
-                    compacted_subasset_length,
-                    compacted_subasset_longname,
-                    encoded_description,
-                )
-            elif subasset_format_length <= 20:  # param lock was inserted
-                data += struct.pack(
-                    curr_format,
-                    asset_id,
-                    quantity,
-                    1 if divisible else 0,
-                    1 if lock else 0,
-                    1 if reset else 0,
-                    compacted_subasset_length,
-                    compacted_subasset_longname,
-                    encoded_description,
-                )
+            data += _compose_issuance_data_subasset(
+                subasset_format_length,
+                curr_format,
+                asset_id,
+                quantity,
+                divisible,
+                lock,
+                reset,
+                compacted_subasset_length,
+                compacted_subasset_longname,
+                encoded_description,
+            )
 
     if transfer_destination:
         destination_outputs = [(transfer_destination, None)]

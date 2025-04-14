@@ -97,3 +97,22 @@ def test_get_commit_hash_from_env():
     os.environ["CURRENT_COMMIT"] = "abcdef1234567890"
     result = helpers.get_current_commit_hash()
     assert result == "abcdef1234567890"
+
+
+def test_classify_mime_type():
+    assert helpers.classify_mime_type("text/plain") == "text"
+    assert helpers.classify_mime_type("message/rfc822") == "text"
+    assert helpers.classify_mime_type("application/atom+xml") == "text"
+    assert helpers.classify_mime_type("application/json") == "text"
+    assert helpers.classify_mime_type("application/javascript") == "text"
+    assert helpers.classify_mime_type("image/jpeg") == "binary"
+
+
+def test_content_to_bytes():
+    assert helpers.content_to_bytes("texte", "text/plain") == b"texte"
+    assert helpers.content_to_bytes("48656c6c6f", "image/jpeg") == b"Hello"
+
+
+def test_bytes_to_content():
+    assert helpers.bytes_to_content(b"texte", "text/plain") == "texte"
+    assert helpers.bytes_to_content(b"Hello", "image/jpeg") == "48656c6c6f"
