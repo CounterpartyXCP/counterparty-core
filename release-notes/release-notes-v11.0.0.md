@@ -63,6 +63,7 @@ counterparty-server start
 - Add `mime_type` in `issuances`, `fairminters` and `broadcasts` tables
 - Use an envelope script compatible with Ordinals when the description/text of a Fairminter, Issuance or Broadcast is not empty
 - When using an envelope script compatible with Ordinals, add a dust output to the source address
+- Improves test coverage by 10% (from ~78% to ~88%)
 
 ## API
 
