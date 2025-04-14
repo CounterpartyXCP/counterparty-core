@@ -61,7 +61,8 @@ counterparty-server start
 - Remove P2SH data encoding support
 - Ensure fairminters' hard cap is a multiple of lot size
 - Add `mime_type` in `issuances`, `fairminters` and `broadcasts` tables
-- Use an envelope script compatible with Ordinals when the description/text of a Fairminter, Issuance or Broadcast is not empty.
+- Use an envelope script compatible with Ordinals when the description/text of a Fairminter, Issuance or Broadcast is not empty
+- When using an envelope script compatible with Ordinals, add a dust output to the source address
 
 ## API
 
