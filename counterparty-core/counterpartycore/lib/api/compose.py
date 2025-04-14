@@ -58,10 +58,10 @@ def compose_bet(
 def compose_broadcast(
     db,
     address: str,
-    timestamp: int,
-    value: float,
-    fee_fraction: float,
-    text: str,
+    timestamp: int = 0,
+    value: float = 0.0,
+    fee_fraction: float = 0.0,
+    text: str = "",
     mime_type: str = "",
     **construct_params,
 ):

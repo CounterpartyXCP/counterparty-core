@@ -407,7 +407,7 @@ def generate_ordinal_envelope_script(message_data, message_type_id, content):
         metatdata_array += ["05", binascii.hexlify(chunk).decode("utf-8")]
     # construct content
     content_chunks = helpers.chunkify(content, 520)
-    content_array = ["00"]
+    content_array = ["OP_0"]
     content_array += [binascii.hexlify(chunk).decode("utf-8") for chunk in content_chunks]
     # construct script
     script_array = [
