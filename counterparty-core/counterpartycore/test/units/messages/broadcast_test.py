@@ -1,3 +1,7 @@
+import struct
+
+import pytest
+from bitcoin.core import VarIntSerializer
 from counterpartycore.lib import config
 from counterpartycore.lib.messages import broadcast
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
@@ -1014,3 +1018,138 @@ def test_parse_invalid_message_legacy(ledger_db, blockchain_mock, defaults, test
                 },
             ],
         )
+
+
+def test_loads_cbor(monkeypatch):
+    message = (
+        b"\x85\x1a^\xa6\xf5\x00\x01\x00`X5Exactly 53 characters test test test test test testt."
+    )
+    timestamp, value, fee_fraction_int, mime_type, text = broadcast.load_cbor(message)
+    assert timestamp == 1588000000
+    assert value == 1.0
+    assert fee_fraction_int == 0
+    assert mime_type == "text/plain"
+    assert text == "Exactly 53 characters test test test test test testt."
+
+    def bytes_to_content_mock(*args):
+        raise Exception("bytes_to_content error")
+
+    monkeypatch.setattr(
+        "counterpartycore.lib.utils.helpers.bytes_to_content", bytes_to_content_mock
+    )
+    with pytest.raises(struct.error):
+        broadcast.load_cbor(message)
+
+
+def test_load_data_legacy_broadcast_pack_text_enabled_textlen_0():
+    timestamp = 123
+    value = 456.0
+    fee_fraction_int = 789
+
+    textlen_bytes = VarIntSerializer.serialize(0)
+
+    message = struct.pack(broadcast.FORMAT, timestamp, value, fee_fraction_int) + textlen_bytes
+
+    result_timestamp, result_value, result_fee_fraction_int, result_encoding, result_text = (
+        broadcast.load_data_legacy(message, 0)
+    )
+
+    assert result_timestamp == timestamp
+    assert result_value == value
+    assert result_fee_fraction_int == fee_fraction_int
+    assert result_encoding == "text/plain"
+    assert result_text == ""
+
+
+def test_load_data_legacy_broadcast_pack_text_enabled_textlen_positive():
+    timestamp = 123
+    value = 456.0
+    fee_fraction_int = 789
+    text = "Hello, World!"
+
+    textlen_bytes = VarIntSerializer.serialize(len(text.encode("utf-8")))
+
+    message = (
+        struct.pack(broadcast.FORMAT, timestamp, value, fee_fraction_int)
+        + textlen_bytes
+        + text.encode("utf-8")
+    )
+
+    result_timestamp, result_value, result_fee_fraction_int, result_encoding, result_text = (
+        broadcast.load_data_legacy(message, 0)
+    )
+
+    assert result_timestamp == timestamp
+    assert result_value == value
+    assert result_fee_fraction_int == fee_fraction_int
+    assert result_encoding == "text/plain"
+    assert result_text == text
+
+
+def test_load_data_legacy_broadcast_pack_text_disabled_short_message():
+    with ProtocolChangesDisabled(["broadcast_pack_text"]):
+        timestamp = 123
+        value = 456.0
+        fee_fraction_int = 789
+        text = "Short text".encode("utf-8")
+
+        message = struct.pack(broadcast.FORMAT, timestamp, value, fee_fraction_int) + text
+
+        assert len(message) - broadcast.LENGTH <= 52
+
+        result_timestamp, result_value, result_fee_fraction_int, result_encoding, result_text = (
+            broadcast.load_data_legacy(message, 0)
+        )
+
+        assert result_timestamp == timestamp
+        assert result_value == value
+        assert result_fee_fraction_int == fee_fraction_int
+        assert result_encoding == "text/plain"
+        assert result_text == "hort text"
+
+
+def test_load_data_legacy_broadcast_pack_text_disabled_long_message():
+    with ProtocolChangesDisabled(["broadcast_pack_text"]):
+        timestamp = 123
+        value = 456.0
+        fee_fraction_int = 789
+        text = (
+            "This is a long text that exceeds 52 characters in length. "
+            "It needs to be longer than 52 characters to trigger the 's' format."
+        ).encode("utf-8")
+
+        message = struct.pack(broadcast.FORMAT, timestamp, value, fee_fraction_int) + text
+
+        assert len(message) - broadcast.LENGTH > 52
+        result_timestamp, result_value, result_fee_fraction_int, result_encoding, result_text = (
+            broadcast.load_data_legacy(message, 0)
+        )
+
+        assert result_timestamp == timestamp
+        assert result_value == value
+        assert result_fee_fraction_int == fee_fraction_int
+        assert result_encoding == "text/plain"
+        assert (
+            result_text
+            == "This is a long text that exceeds 52 characters in length. It needs to be longer than 52 characters to trigger the 's' format."
+        )
+
+
+def test_load_data_legacy_unicode_decode_error():
+    with ProtocolChangesDisabled(["broadcast_pack_text"]):
+        timestamp = 123
+        value = 456.0
+        fee_fraction_int = 789
+        text = b"\xff\xfe\xfd"  # invalid UTF-8 sequence
+
+        message = struct.pack(broadcast.FORMAT, timestamp, value, fee_fraction_int) + text
+
+        result_timestamp, result_value, result_fee_fraction_int, result_encoding, result_text = (
+            broadcast.load_data_legacy(message, 0)
+        )
+
+        assert result_timestamp == timestamp
+        assert result_value == value
+        assert result_fee_fraction_int == fee_fraction_int
+        assert result_encoding == "text/plain"
+        assert result_text == ""

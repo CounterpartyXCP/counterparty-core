@@ -161,9 +161,6 @@ def compose(
                 helpers.content_to_bytes(text, mime_type or "text/plain"),
             ]
         )
-
-        print("Data:", data)
-
     else:  # for the record
         data = messagetype.pack(ID)
         # always use custom length byte instead of problematic usage of 52p format and make sure to encode('utf-8') for length
@@ -184,43 +181,54 @@ def compose(
     return (source, [], data)
 
 
+def load_cbor(message):
+    try:
+        timestamp, value, fee_fraction_int, mime_type, text = cbor2.loads(message)
+        mime_type = mime_type or "text/plain"
+        text = helpers.bytes_to_content(text, mime_type)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        raise struct.error from e
+    return timestamp, value, fee_fraction_int, mime_type, text
+
+
+def load_data_legacy(message, block_index):
+    if protocol.enabled("broadcast_pack_text", block_index):
+        timestamp, value, fee_fraction_int, rawtext = struct.unpack(
+            FORMAT + f"{len(message) - LENGTH}s", message
+        )
+        textlen = VarIntSerializer.deserialize(rawtext)
+        if textlen == 0:
+            text = b""
+        else:
+            text = rawtext[-textlen:]
+
+        assert len(text) == textlen
+    else:
+        if len(message) - LENGTH <= 52:
+            curr_format = FORMAT + f"{len(message) - LENGTH}p"
+        else:
+            curr_format = FORMAT + f"{len(message) - LENGTH}s"
+
+        timestamp, value, fee_fraction_int, text = struct.unpack(curr_format, message)
+
+    try:
+        text = text.decode("utf-8")
+    except UnicodeDecodeError:
+        text = ""
+
+    return timestamp, value, fee_fraction_int, "text/plain", text
+
+
 def unpack(message, block_index, return_dict=False):
     try:
         mime_type = "text/plain"
         if protocol.enabled("taproot_support"):
             # Unpack the message using cbor2
-            try:
-                print("Message:", message)
-                timestamp, value, fee_fraction_int, mime_type, text = cbor2.loads(message)
-                mime_type = mime_type or "text/plain"
-                text = helpers.bytes_to_content(text, mime_type)
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                logger.error("Error unpacking broadcast message: %s", e, exc_info=True)
-                raise struct.error from e
+            timestamp, value, fee_fraction_int, mime_type, text = load_cbor(message)
         else:
-            if protocol.enabled("broadcast_pack_text", block_index):
-                timestamp, value, fee_fraction_int, rawtext = struct.unpack(
-                    FORMAT + f"{len(message) - LENGTH}s", message
-                )
-                textlen = VarIntSerializer.deserialize(rawtext)
-                if textlen == 0:
-                    text = b""
-                else:
-                    text = rawtext[-textlen:]
-
-                assert len(text) == textlen
-            else:
-                if len(message) - LENGTH <= 52:
-                    curr_format = FORMAT + f"{len(message) - LENGTH}p"
-                else:
-                    curr_format = FORMAT + f"{len(message) - LENGTH}s"
-
-                timestamp, value, fee_fraction_int, text = struct.unpack(curr_format, message)
-
-            try:
-                text = text.decode("utf-8")
-            except UnicodeDecodeError:
-                text = ""
+            timestamp, value, fee_fraction_int, mime_type, text = load_data_legacy(
+                message, block_index
+            )
         status = "valid"
     except struct.error:
         timestamp, value, fee_fraction_int, mime_type, text = 0, None, 0, "", None
