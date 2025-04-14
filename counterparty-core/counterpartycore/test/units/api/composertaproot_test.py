@@ -3,7 +3,7 @@ import random
 
 import pytest
 from bitcoinutils.script import Script
-from bitcoinutils.transactions import Transaction
+from bitcoinutils.transactions import Transaction, TxOutput
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import composer
 from counterpartycore.test.fixtures.defaults import DEFAULT_PARAMS as DEFAULTS
@@ -14,7 +14,11 @@ PROVIDED_PUBKEYS = ",".join(
 
 
 def test_generate_raw_reveal_tx():
-    raw_tx = composer.generate_raw_reveal_tx("FF" * 32, 0)
+    raw_tx = composer.generate_raw_reveal_tx(
+        "FF" * 32,
+        0,
+        [TxOutput(0, Script(["OP_RETURN", binascii.hexlify(config.PREFIX).decode("ascii")]))],
+    )
     tx = Transaction.from_raw(raw_tx)
     assert len(tx.inputs) == 1
     assert len(tx.outputs) == 1
@@ -152,44 +156,62 @@ def calculate_reveal_transaction_vsize(data):
 
 
 def test_get_reveal_transaction_vsize():
+    db, source, unspent_list, construct_params = None, None, [], {}
+
     data = b""
-    vsize = composer.get_reveal_transaction_vsize(data)
+    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
+        db, source, data, unspent_list, construct_params
+    )
     assert vsize == 97
     assert calculate_reveal_transaction_vsize(data) == 97
 
     data = b"a"
-    vsize = composer.get_reveal_transaction_vsize(data)
+    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
+        db, source, data, unspent_list, construct_params
+    )
     assert vsize == 97
     assert calculate_reveal_transaction_vsize(data) == 98
 
     data = b"a" * 1000
-    vsize = composer.get_reveal_transaction_vsize(data)
+    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
+        db, source, data, unspent_list, construct_params
+    )
     assert vsize == 349
     assert calculate_reveal_transaction_vsize(data) == 349
 
     data = b"a" * 2000
-    vsize = composer.get_reveal_transaction_vsize(data)
+    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
+        db, source, data, unspent_list, construct_params
+    )
     assert vsize == 600
     assert calculate_reveal_transaction_vsize(data) == 601
 
     data = b"a" * 10000
-    vsize = composer.get_reveal_transaction_vsize(data)
+    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
+        db, source, data, unspent_list, construct_params
+    )
     assert vsize == 2612
     assert calculate_reveal_transaction_vsize(data) == 2612
 
     data = b"a" * 20000
-    vsize = composer.get_reveal_transaction_vsize(data)
+    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
+        db, source, data, unspent_list, construct_params
+    )
     assert vsize == 5126
     assert calculate_reveal_transaction_vsize(data) == 5127
 
     data = b"a" * 400 * 1024
-    vsize = composer.get_reveal_transaction_vsize(data)
+    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
+        db, source, data, unspent_list, construct_params
+    )
     assert vsize == 103089
     assert calculate_reveal_transaction_vsize(data) == 103089
 
     for _i in range(10):
         data = b"a" * random.randint(1, 400000)  # noqa
-        vsize = composer.get_reveal_transaction_vsize(data)
+        vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
+            db, source, data, unspent_list, construct_params
+        )
         assert (
             calculate_reveal_transaction_vsize(data) - 1
             <= vsize
@@ -197,8 +219,9 @@ def test_get_reveal_transaction_vsize():
         )
 
 
-def test_prepare_taproot_output(defaults):
+def test_prepare_taproot_output(ledger_db, defaults):
     outputs = composer.prepare_taproot_output(
+        ledger_db,
         defaults["addresses"][0],
         b"Hello world",
         [],
@@ -213,6 +236,7 @@ def test_prepare_taproot_output(defaults):
     )
 
     outputs = composer.prepare_taproot_output(
+        ledger_db,
         defaults["p2wpkh_addresses"][0],
         b"Hello world",
         [],
@@ -226,7 +250,9 @@ def test_prepare_taproot_output(defaults):
         ["OP_1", "a08105b2c25dfe0d5b3ef9471ae2bf886a81206f9e972bc2855d53048ec9a611"]
     )
 
-    outputs = composer.prepare_taproot_output(defaults["p2tr_addresses"][0], b"Hello world", [], {})
+    outputs = composer.prepare_taproot_output(
+        ledger_db, defaults["p2tr_addresses"][0], b"Hello world", [], {}
+    )
     assert len(outputs) == 1
     assert outputs[0].amount == 330
     assert outputs[0].script_pubkey == Script(
@@ -234,6 +260,7 @@ def test_prepare_taproot_output(defaults):
     )
 
     outputs = composer.prepare_data_outputs(
+        ledger_db,
         defaults["p2tr_addresses"][0],
         [],
         b"Hello world",

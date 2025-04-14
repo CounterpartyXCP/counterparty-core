@@ -272,17 +272,18 @@ def test_prepare_multisig_output(defaults):
     )
 
 
-def test_prepare_data_outputs(defaults):
+def test_prepare_data_outputs(ledger_db, defaults):
     # Test case 1: Simple OP_RETURN output
     assert str(
         composer.prepare_data_outputs(
-            defaults["addresses"][0], [], b"Hello, World!", [{"txid": ARC4_KEY}], {}
+            ledger_db, defaults["addresses"][0], [], b"Hello, World!", [{"txid": ARC4_KEY}], {}
         )
     ) == str([TxOutput(0, Script(["OP_RETURN", OPRETURN_DATA]))])
 
     # Test case 2: Error case - multiple OP_RETURN not allowed
     with pytest.raises(exceptions.ComposeError, match="One `OP_RETURN` output per transaction"):
         composer.prepare_data_outputs(
+            ledger_db,
             defaults["addresses"][0],
             [],
             b"Hello, World!" * 10,
@@ -293,6 +294,7 @@ def test_prepare_data_outputs(defaults):
     # Test case 3: Multisig encoding
     assert str(
         composer.prepare_data_outputs(
+            ledger_db,
             defaults["addresses"][0],
             [],
             b"Hello, World!" * 10,
@@ -346,6 +348,7 @@ def test_prepare_data_outputs(defaults):
     # Test case 4: Error case - p2sh encoding not supported
     with pytest.raises(exceptions.ComposeError, match="Not supported encoding: p2sh"):
         composer.prepare_data_outputs(
+            ledger_db,
             defaults["addresses"][0],
             [],
             b"Hello, World!" * 10,
@@ -420,7 +423,7 @@ def test_prepare_more_outputs(defaults):
     )
 
 
-def test_prepare_outputs(defaults):
+def test_prepare_outputs(ledger_db, defaults):
     # Test case 1 & 2: Simple OP_RETURN output
     expected_output = str(
         [
@@ -432,6 +435,7 @@ def test_prepare_outputs(defaults):
     assert (
         str(
             composer.prepare_outputs(
+                ledger_db,
                 defaults["addresses"][0],
                 [(defaults["addresses"][0], 9999)],
                 b"Hello, World!",
@@ -445,6 +449,7 @@ def test_prepare_outputs(defaults):
     # Test case 3: Multisig encoding
     assert str(
         composer.prepare_outputs(
+            ledger_db,
             defaults["addresses"][0],
             [(defaults["addresses"][0], 9999)],
             b"Hello, World!" * 10,
@@ -476,6 +481,7 @@ def test_prepare_outputs(defaults):
     # Test case 4: Multisig with additional output
     assert str(
         composer.prepare_outputs(
+            ledger_db,
             defaults["addresses"][0],
             [(defaults["addresses"][0], 9999)],
             b"Hello, World!" * 10,
@@ -1692,9 +1698,9 @@ def test_compose_issuance_tparoot(ledger_db, defaults):
     construct_params = {"encoding": "taproot"}
 
     expected = {
-        "rawtransaction": "020000000147155f17ac58e707b326ec914d00bcce2f0ee527830c291bc02cdeb47c4ef7ed0000000000ffffffff024a0100000000000022512085c9ae620a32eb35ccdec4df40e92c84d63c43714014664e646622ea1b5aa3a9e0c69a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "rawtransaction": "020000000147155f17ac58e707b326ec914d00bcce2f0ee527830c291bc02cdeb47c4ef7ed0000000000ffffffff023c0300000000000022512085c9ae620a32eb35ccdec4df40e92c84d63c43714014664e646622ea1b5aa3a9eec49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "envelope_script": "0063036f7264010109696d6167652f706e6701050d86161a000bfce31903e8f5f4f4010004aaffaaff68",
-        "reveal_rawtransaction": "020000000166a10901561675ad22b863c42245d4e4ecefe2dddcb9c250334dfaeb19ee057e0000000000ffffffff0100000000000000000a6a08434e54525052545900000000",
+        "reveal_rawtransaction": "0200000001032ca949bc57749eb1cff94ccc902a0cd325c72fb1b47faec5052934a3638c520000000000ffffffff0200000000000000000a6a08434e54525052545922020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
     }
 
     result = composer.compose_transaction(ledger_db, "issuance", params, construct_params)
@@ -1719,9 +1725,9 @@ def test_compose_fairminter_taproot(ledger_db, defaults):
     construct_params = {"encoding": "taproot"}
 
     expected = {
-        "rawtransaction": "0200000001f4b46f0fa251a8802e0823d95573525bc918a395f3f8d4e0694f7d3cbe1329100000000000ffffffff024a01000000000000225120a210a9d1735d375af73aa5cecb2ee9df0593ab068844616861172acbe246f412e0c69a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "rawtransaction": "0200000001f4b46f0fa251a8802e0823d95573525bc918a395f3f8d4e0694f7d3cbe1329100000000000ffffffff024203000000000000225120a210a9d1735d375af73aa5cecb2ee9df0593ab068844616861172acbe246f412e8c49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "envelope_script": "0063036f7264010109696d6167652f706e6701051c92185a1b000000095fce9cd50000010a0000000000000000f4f4f4f5010004ff00ff0068",
-        "reveal_rawtransaction": "0200000001de7c9c20a9dc90a3f6a945e9318e496aef3de9376f29762369963f8c277690c70000000000ffffffff0100000000000000000a6a08434e54525052545900000000",
+        "reveal_rawtransaction": "02000000019ee59eb6d2eff84e60dae9aa2f2dfdcedfc919326a72bdfdf5eacff0357683d70000000000ffffffff0200000000000000000a6a08434e54525052545922020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
     }
 
     result = composer.compose_transaction(ledger_db, "fairminter", params, construct_params)
@@ -1744,9 +1750,9 @@ def test_compose_broadcast_taproot(ledger_db, defaults):
     construct_params = {"encoding": "taproot"}
 
     expected = {
-        "rawtransaction": "02000000014f4851c5dc2eff52025d7d337748c9bfa1e12ab43ee3523ba5dbbadffb6a31bb0000000000ffffffff024a01000000000000225120fcae6f84590f72860ecba792b4e658b7cb1fcf5c9ffeeb26634322a01240755de0c69a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "rawtransaction": "02000000014f4851c5dc2eff52025d7d337748c9bfa1e12ab43ee3523ba5dbbadffb6a31bb0000000000ffffffff024c03000000000000225120fcae6f84590f72860ecba792b4e658b7cb1fcf5c9ffeeb26634322a01240755ddec49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         "envelope_script": "0063036f7264010109696d6167652f706e6701051284181e1a52bb3303fb000000000000000000010020ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff0068",
-        "reveal_rawtransaction": "0200000001fb2dae8c0534ca13f1deefe832012bfbff3d0d6ede1ba997a19aa0240bb498200000000000ffffffff0100000000000000000a6a08434e54525052545900000000",
+        "reveal_rawtransaction": "02000000014684eb2b5f5cbeb33a4d46b944c1985bed01885db7f8e185dc10f685f92e22870000000000ffffffff0200000000000000000a6a08434e54525052545922020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
     }
 
     result = composer.compose_transaction(ledger_db, "broadcast", params, construct_params)
