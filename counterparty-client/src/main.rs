@@ -1,6 +1,8 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Arg, ArgAction, Command};
 use std::path::PathBuf;
+use std::fs;
+use std::path::Path;
 
 mod commands;
 mod config;
@@ -18,6 +20,37 @@ fn get_default_config_path() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from(".data"))
         .join("counterparty-client")
         .join("config.toml")
+}
+
+// Function to process file references
+fn process_file_reference(value: &str) -> Result<String> {
+    if value.starts_with('@') {
+        let path = &value[1..]; // Remove @ prefix
+        if !Path::new(path).exists() {
+            return Err(anyhow::anyhow!("File not found: {}", path));
+        }
+        
+        // Read file content
+        let content = fs::read(path)
+            .context(format!("Failed to read file: {}", path))?;
+        
+        // Try to interpret as UTF-8 text, fall back to hex for binary
+        match String::from_utf8(content.clone()) {
+            Ok(text) => Ok(text),
+            Err(_) => Ok(hex::encode(content)), // Convert binary to hex
+        }
+    } else {
+        // Not a file reference, return as is
+        Ok(value.to_string())
+    }
+}
+
+// Value parser for file references
+fn file_reference_parser(arg: &str) -> std::result::Result<String, String> {
+    match process_file_reference(arg) {
+        Ok(value) => Ok(value),
+        Err(e) => Err(e.to_string()),
+    }
 }
 
 // Add common CLI arguments shared between preliminary and final CLI parsers
@@ -55,6 +88,47 @@ fn apply_network_overrides(config: &mut AppConfig, matches: &clap::ArgMatches) {
     } else if matches.get_flag("regtest") {
         config.set_network(Network::Regtest);
     }
+}
+
+// Recursive function to add file reference support to all targeted arguments
+fn add_file_ref_support_recursive(cmd: Command) -> Command {
+    // These argument names will support file references
+    let target_args = ["private-key", "mnemonic", "description", "text"];
+    
+    // Function to process a command's arguments
+    fn process_command_args(mut cmd: Command, target_args: &[&str]) -> Command {
+        // Collect all argument IDs to avoid consumption
+        let arg_ids: Vec<String> = cmd.get_arguments()
+            .map(|arg| arg.get_id().to_string())
+            .collect();
+        
+        // Apply custom parser to specified arguments
+        for arg_id in arg_ids {
+            // Check if this argument matches one of the target names
+            if target_args.iter().any(|&target| arg_id == target) {
+                cmd = cmd.mut_arg(&arg_id, |arg| {
+                    arg.value_parser(file_reference_parser)
+                });
+            }
+        }
+        
+        // Collect subcommand names
+        let subcmd_names: Vec<String> = cmd.get_subcommands()
+            .map(|subcmd| subcmd.get_name().to_string())
+            .collect();
+        
+        // Process each subcommand recursively
+        for subcmd_name in subcmd_names {
+            cmd = cmd.mut_subcommand(subcmd_name, |subcmd| {
+                process_command_args(subcmd, target_args)
+            });
+        }
+        
+        cmd
+    }
+    
+    // Apply recursive process to the command
+    process_command_args(cmd, &target_args)
 }
 
 #[tokio::main]
@@ -104,6 +178,10 @@ async fn main() -> Result<()> {
     let wallet_cmd = wallet_commands::build_command();
     let wallet_cmd_with_broadcast = wallet_commands::add_broadcast_commands(wallet_cmd, &endpoints);
     app = app.subcommand(wallet_cmd_with_broadcast);
+    
+    // Add file reference support
+    // This step traverses the ENTIRE command tree and adds file reference support to specified arguments
+    app = add_file_ref_support_recursive(app);
 
     // Step 8: Parse final command line arguments with the complete command structure
     let final_matches = app.clone().get_matches();
