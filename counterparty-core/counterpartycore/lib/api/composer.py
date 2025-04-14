@@ -298,14 +298,63 @@ def prepare_multisig_output(source, data, arc4_key, unspent_list, construct_para
     return outputs
 
 
-def generate_raw_reveal_tx(commit_txid, commit_vout):
+def string_to_hex(value):
+    """Convert a string to hex representation."""
+    return binascii.hexlify(value.encode("utf-8")).decode("utf-8")
+
+
+def generate_raw_reveal_tx(commit_txid, commit_vout, outputs):
     tx_in = TxInput(commit_txid, commit_vout)
-    tx_out = TxOutput(0, Script(["OP_RETURN", binascii.hexlify(config.PREFIX).decode("ascii")]))
-    reveal_tx = Transaction([tx_in], [tx_out])
+    reveal_tx = Transaction([tx_in], outputs)
     return reveal_tx.serialize()
 
 
-def get_dummy_signed_reveal_tx(data):
+def is_ordinal_envelope_script(envelope_script):
+    return envelope_script.script[2] == string_to_hex("ord")
+
+
+def utxo_to_address(db, utxo):
+    # first try with the database
+    sql = "SELECT utxo_address FROM balances WHERE utxo = ? LIMIT 1"
+    balance = db.execute(sql, (utxo,)).fetchone()
+    if balance:
+        return balance["utxo_address"]
+    # then try with Bitcoin Core
+    txid, vout = utxo.split(":")
+    try:
+        tx = backend.bitcoind.getrawtransaction(txid, verbose=True)
+        vout = int(vout)
+        address = tx["vout"][vout]["scriptPubKey"]["address"]
+        return address
+    except Exception as e:  # pylint: disable=broad-except
+        raise exceptions.ComposeError(
+            f"invalid UTXOs: {utxo} (not found in the database or Bitcoin Core)"
+        ) from e
+
+
+def get_change_address(db, source, construct_params):
+    change_address = construct_params.get("change_address")
+    if change_address is None:
+        if utxosinfo.is_utxo_format(source):
+            change_address = utxo_to_address(db, source)
+        else:
+            change_address = source
+    return change_address
+
+
+def get_reveal_outputs(db, source, envelope_script, unspent_list, construct_params):
+    tx_out = TxOutput(0, Script(["OP_RETURN", binascii.hexlify(config.PREFIX).decode("ascii")]))
+    outputs = [tx_out]
+    if is_ordinal_envelope_script(envelope_script):
+        change_address = get_change_address(db, source, construct_params)
+        change_amount = regular_dust_size(construct_params)
+        outputs.append(
+            create_tx_output(change_amount, change_address, unspent_list, construct_params)
+        )
+    return outputs
+
+
+def get_dummy_signed_reveal_tx(db, source, data, unspent_list, construct_params):
     envelope_script = generate_envelope_script(data)
     # use fake private key and fake input to calculate the size
     private_key = PrivateKey(secret_exponent=1)
@@ -313,8 +362,9 @@ def get_dummy_signed_reveal_tx(data):
     commit_address = source_pubkey.get_taproot_address([[envelope_script]])
     tx_in = TxInput("F" * 64, 0)
     # use source address as output
-    tx_out = TxOutput(0, Script(["OP_RETURN", binascii.hexlify(config.PREFIX).decode("ascii")]))
-    reveal_tx = Transaction([tx_in], [tx_out], has_segwit=True)
+    outputs = get_reveal_outputs(db, source, envelope_script, unspent_list, construct_params)
+    outputs_value = sum([output.amount for output in outputs])
+    reveal_tx = Transaction([tx_in], outputs, has_segwit=True)
     # sign the input containing the inscription script
     sig = private_key.sign_taproot_input(
         reveal_tx,
@@ -336,17 +386,14 @@ def get_dummy_signed_reveal_tx(data):
     reveal_tx.witnesses.append(
         TxWitnessInput([sig, envelope_script.to_hex(), control_block.to_hex()])
     )
-    return reveal_tx
+    return reveal_tx, outputs_value
 
 
-def get_reveal_transaction_vsize(data):
-    reveal_tx = get_dummy_signed_reveal_tx(data)
-    return reveal_tx.get_vsize()
-
-
-def string_to_hex(value):
-    """Convert a string to hex representation."""
-    return binascii.hexlify(value.encode("utf-8")).decode("utf-8")
+def get_reveal_transaction_vsize_and_value(db, source, data, unspent_list, construct_params):
+    reveal_tx, outputs_value = get_dummy_signed_reveal_tx(
+        db, source, data, unspent_list, construct_params
+    )
+    return reveal_tx.get_vsize(), outputs_value
 
 
 def generate_ordinal_envelope_script(message_data, message_type_id, content):
@@ -398,22 +445,24 @@ def generate_envelope_script(data):
     return Script(["OP_FALSE", "OP_IF"] + datas + ["OP_ENDIF"])
 
 
-def prepare_taproot_output(source, data, unspent_list, construct_params):
+def prepare_taproot_output(db, source, data, unspent_list, construct_params):
     multisig_pubkey = get_source_pubkey(source, unspent_list, construct_params)
     source_pubkey = PublicKey.from_hex(multisig_pubkey)
     # Build inscription envelope script
     envelope_script = generate_envelope_script(data)
     # use source address as destination
     commit_address = source_pubkey.get_taproot_address([[envelope_script]])
-    reveal_tx_vsize = get_reveal_transaction_vsize(data)
+    reveal_tx_vsize, outputs_value = get_reveal_transaction_vsize_and_value(
+        db, source, data, unspent_list, construct_params
+    )
     # commit value must pay fees for the reveal tx
-    commit_value = math.ceil(reveal_tx_vsize * get_sat_per_vbyte(construct_params))
+    commit_value = math.ceil(reveal_tx_vsize * get_sat_per_vbyte(construct_params)) + outputs_value
     commit_value = max(commit_value, config.DEFAULT_SEGWIT_DUST_SIZE)
     tx_out = TxOutput(commit_value, commit_address.to_script_pub_key())
     return [tx_out]
 
 
-def prepare_data_outputs(source, destinations, data, unspent_list, construct_params):
+def prepare_data_outputs(db, source, destinations, data, unspent_list, construct_params):
     encoding = determine_encoding(data, destinations, construct_params)
     arc4_key = unspent_list[0]["txid"]
     if encoding == "multisig":
@@ -421,7 +470,7 @@ def prepare_data_outputs(source, destinations, data, unspent_list, construct_par
     if encoding == "opreturn":
         return prepare_opreturn_output(data, arc4_key)
     if encoding == "taproot":
-        return prepare_taproot_output(source, data, unspent_list, construct_params)
+        return prepare_taproot_output(db, source, data, unspent_list, construct_params)
     raise exceptions.ComposeError(f"Not supported encoding: {encoding}")
 
 
@@ -443,12 +492,14 @@ def prepare_more_outputs(more_outputs, unspent_list, construct_params):
     return outputs
 
 
-def prepare_outputs(source, destinations, data, unspent_list, construct_params):
+def prepare_outputs(db, source, destinations, data, unspent_list, construct_params):
     # prepare non-data outputs
     outputs = perpare_non_data_outputs(destinations, unspent_list, construct_params)
     # prepare data outputs
     if data:
-        outputs += prepare_data_outputs(source, destinations, data, unspent_list, construct_params)
+        outputs += prepare_data_outputs(
+            db, source, destinations, data, unspent_list, construct_params
+        )
     # Add more outputs if needed
     more_outputs = construct_params.get("more_outputs")
     if more_outputs:
@@ -585,25 +636,6 @@ def prepare_inputs_set(inputs_set):
         unspent_list.append(unspent)
 
     return unspent_list
-
-
-def utxo_to_address(db, utxo):
-    # first try with the database
-    sql = "SELECT utxo_address FROM balances WHERE utxo = ? LIMIT 1"
-    balance = db.execute(sql, (utxo,)).fetchone()
-    if balance:
-        return balance["utxo_address"]
-    # then try with Bitcoin Core
-    txid, vout = utxo.split(":")
-    try:
-        tx = backend.bitcoind.getrawtransaction(txid, verbose=True)
-        vout = int(vout)
-        address = tx["vout"][vout]["scriptPubKey"]["address"]
-        return address
-    except Exception as e:  # pylint: disable=broad-except
-        raise exceptions.ComposeError(
-            f"invalid UTXOs: {utxo} (not found in the database or Bitcoin Core)"
-        ) from e
 
 
 def ensure_utxo_is_first(utxo, unspent_list):
@@ -886,12 +918,7 @@ def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_param
     # prepare fee parameters
     exact_fee, sat_per_vbyte, max_fee = prepare_fee_parameters(construct_params)
 
-    change_address = construct_params.get("change_address")
-    if change_address is None:
-        if utxosinfo.is_utxo_format(source):
-            change_address = utxo_to_address(db, source)
-        else:
-            change_address = source
+    change_address = get_change_address(db, source, construct_params)
 
     outputs_total = sum(output.amount for output in outputs)
 
@@ -1003,7 +1030,7 @@ def construct(db, tx_info, construct_params):
     unspent_list = prepare_unspent_list(db, source, construct_params)
 
     # prepare outputs
-    outputs = prepare_outputs(source, destinations, data, unspent_list, construct_params)
+    outputs = prepare_outputs(db, source, destinations, data, unspent_list, construct_params)
 
     # prepare inputs and change
     selected_utxos, btc_in, change_outputs = prepare_inputs_and_change(
@@ -1041,8 +1068,12 @@ def construct(db, tx_info, construct_params):
     if data:
         encoding = determine_encoding(data, destinations, construct_params)
         if encoding == "taproot":
-            result["envelope_script"] = generate_envelope_script(data).to_hex()
-            result["reveal_rawtransaction"] = generate_raw_reveal_tx(tx.get_txid(), 0)
+            envelope_script = generate_envelope_script(data)
+            outputs = get_reveal_outputs(
+                db, source, envelope_script, unspent_list, construct_params
+            )
+            result["reveal_rawtransaction"] = generate_raw_reveal_tx(tx.get_txid(), 0, outputs)
+            result["envelope_script"] = envelope_script.to_hex()
 
     return result
 
