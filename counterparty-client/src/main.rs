@@ -26,6 +26,7 @@ fn get_default_config_path() -> PathBuf {
 fn process_file_reference(value: &str) -> Result<String> {
     if value.starts_with('@') {
         let path = &value[1..]; // Remove @ prefix
+        
         if !Path::new(path).exists() {
             return Err(anyhow::anyhow!("File not found: {}", path));
         }
@@ -81,37 +82,68 @@ fn add_common_cli_args(command: Command) -> Command {
         )
 }
 
-// Recursive function to add file reference support to all targeted arguments
-fn add_file_ref_support_recursive(cmd: Command) -> Command {
-    // These argument names will support file references
-    let target_args = ["private-key", "mnemonic", "description", "text"];
+// Pre-process arguments for file references
+fn pre_process_args() -> Result<()> {
+    // Get command line arguments
+    let args: Vec<String> = std::env::args().collect();
     
+    // Identify arguments that might be file references and their values
+    for i in 1..args.len() {
+        if i < args.len() - 1 && 
+           args[i].starts_with("--") && 
+           (args[i].contains("text") || 
+            args[i].contains("description") || 
+            args[i].contains("private-key") || 
+            args[i].contains("mnemonic")) {
+            
+            let arg_value = &args[i+1];
+            
+            if arg_value.starts_with('@') {
+                // Process the file reference
+                let _ = process_file_reference(arg_value);
+            }
+        }
+    }
+    
+    Ok(())
+}
+
+// Function to determine if an argument should have file reference support
+fn should_support_file_reference(arg_id: &str) -> bool {
+    // Check if the argument ID contains any of these keywords
+    arg_id.contains("text") || 
+    arg_id.contains("description") || 
+    arg_id.contains("private-key") || 
+    arg_id.contains("mnemonic")
+}
+
+// Recursive function to add file reference support to all matching arguments
+fn add_file_ref_support_recursive(cmd: Command) -> Command {
     // Function to process a command's arguments
-    fn process_command_args(mut cmd: Command, target_args: &[&str]) -> Command {
-        // Collect all argument IDs to avoid consumption
-        let arg_ids: Vec<String> = cmd.get_arguments()
-            .map(|arg| arg.get_id().to_string())
-            .collect();
+    fn process_command_args(mut cmd: Command) -> Command {
+        // Collect all arguments to avoid consumption
+        let args: Vec<_> = cmd.get_arguments().cloned().collect();
         
-        // Apply custom parser to specified arguments
-        for arg_id in arg_ids {
-            // Check if this argument matches one of the target names
-            if target_args.iter().any(|&target| arg_id == target) {
+        // Apply custom parser to matching arguments
+        for arg in args {
+            let arg_id = arg.get_id().to_string();
+            
+            // Check if this argument should support file references
+            if should_support_file_reference(&arg_id) {
                 cmd = cmd.mut_arg(&arg_id, |arg| {
                     arg.value_parser(file_reference_parser)
                 });
             }
         }
         
-        // Collect subcommand names
-        let subcmd_names: Vec<String> = cmd.get_subcommands()
-            .map(|subcmd| subcmd.get_name().to_string())
-            .collect();
+        // Collect subcommand names to avoid consumption
+        let subcmds: Vec<_> = cmd.get_subcommands().cloned().collect();
         
         // Process each subcommand recursively
-        for subcmd_name in subcmd_names {
-            cmd = cmd.mut_subcommand(subcmd_name, |subcmd| {
-                process_command_args(subcmd, target_args)
+        for subcmd in subcmds {
+            let subcmd_name = subcmd.get_name().to_string();
+            cmd = cmd.mut_subcommand(&subcmd_name, |s| {
+                process_command_args(s.to_owned())
             });
         }
         
@@ -119,11 +151,14 @@ fn add_file_ref_support_recursive(cmd: Command) -> Command {
     }
     
     // Apply recursive process to the command
-    process_command_args(cmd, &target_args)
+    process_command_args(cmd)
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Pre-process arguments for file references
+    pre_process_args()?;
+    
     // Step 1: Build the full CLI app first
     let mut app = add_common_cli_args(
         Command::new("counterparty-client")
@@ -146,6 +181,7 @@ async fn main() -> Result<()> {
     // Step 4: Parse just the config-file and network args using a temporary parser
     // This parser only looks for these specific args and ignores everything else
     let temp_args = std::env::args().collect::<Vec<_>>();
+    
     let config_file_path = if let Some(pos) = temp_args.iter().position(|a| a == "--config-file") {
         if pos + 1 < temp_args.len() {
             PathBuf::from(&temp_args[pos + 1])
@@ -189,8 +225,7 @@ async fn main() -> Result<()> {
     
     // Step 8: Parse final command line arguments with the complete command structure
     let final_matches = app.clone().get_matches();
-
-
+    
     // Step 9: Handle special update-cache flag
     if final_matches.get_flag("update-cache") {
         api::update_cache(&config).await?;

@@ -57,7 +57,7 @@ fn add_argument_to_command(
     used_long_names.insert(arg.name.clone());
 
     // Create unique internal ID
-    let internal_id = format!("__broadcast_{}_arg_{}", command_name, idx);
+    let internal_id = format!("__broadcast_{}_arg_{}_{}", command_name, idx, &arg.name);
     let static_internal_id: &'static str = Box::leak(internal_id.into_boxed_str());
 
     // Use original argument name as long flag
