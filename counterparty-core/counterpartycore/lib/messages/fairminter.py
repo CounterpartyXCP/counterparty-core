@@ -1,6 +1,5 @@
 import decimal
 import logging
-import mimetypes
 import struct
 
 import cbor2
@@ -176,13 +175,7 @@ def validate(
             problems.append("Premint quantity + soft cap must be <= hard cap.")
 
     if protocol.enabled("fairminter_v2"):
-        content_mime_type = mime_type or "text/plain"
-        if content_mime_type not in mimetypes.types_map.values():
-            problems.append(f"Invalid mime type: {mime_type}")
-        try:
-            helpers.content_to_bytes(description, content_mime_type)
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            problems.append(f"Error converting description to bytes: {e}")
+        problems += helpers.check_content(mime_type, description)
 
     return problems
 

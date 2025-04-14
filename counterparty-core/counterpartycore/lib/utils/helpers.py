@@ -3,6 +3,7 @@ import decimal
 import hashlib
 import itertools
 import json
+import mimetypes
 import os
 import string
 from operator import itemgetter
@@ -208,3 +209,15 @@ def bytes_to_content(content: bytes, mime_type: str) -> str:
     if file_type == "text":
         return content.decode("utf-8")
     return binascii.hexlify(content).decode("utf-8")
+
+
+def check_content(mime_type, content):
+    problems = []
+    content_mime_type = mime_type or "text/plain"
+    if content_mime_type not in mimetypes.types_map.values():
+        problems.append(f"Invalid mime type: {mime_type}")
+    try:
+        content_to_bytes(content, content_mime_type)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        problems.append(f"Error converting description to bytes: {e}")
+    return problems

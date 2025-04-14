@@ -21,7 +21,6 @@ because it is stored as a four‐byte integer, it may not be greater than about
 
 import decimal
 import logging
-import mimetypes
 import struct
 from fractions import Fraction
 
@@ -114,13 +113,7 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, mime_type):
             problems.append(str(e))
 
     if protocol.enabled("taproot_support"):
-        content_mime_type = mime_type or "text/plain"
-        if content_mime_type not in mimetypes.types_map.values():
-            problems.append(f"Invalid mime type: {mime_type}")
-        try:
-            helpers.content_to_bytes(text, content_mime_type or "text/plain")
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            problems.append(f"Error converting description to bytes: {e}")
+        problems += helpers.check_content(mime_type, text)
 
     return problems
 

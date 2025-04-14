@@ -4,7 +4,6 @@ Allow simultaneous lock and transfer.
 
 import decimal
 import logging
-import mimetypes
 import struct
 
 import cbor2
@@ -256,13 +255,7 @@ def validate(
         problems.append("integer overflow")
 
     if protocol.enabled("taproot_support") and description is not None:
-        content_mime_type = mime_type or "text/plain"
-        if content_mime_type not in mimetypes.types_map.values():
-            problems.append(f"Invalid mime type: {mime_type}")
-        try:
-            helpers.content_to_bytes(description, content_mime_type or "text/plain")
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            problems.append(f"Error converting description to bytes: {e}")
+        problems += helpers.check_content(mime_type, description)
 
     return (
         call_date,

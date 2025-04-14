@@ -116,3 +116,32 @@ def test_content_to_bytes():
 def test_bytes_to_content():
     assert helpers.bytes_to_content(b"texte", "text/plain") == "texte"
     assert helpers.bytes_to_content(b"Hello", "image/jpeg") == "48656c6c6f"
+
+
+@pytest.mark.parametrize(
+    "mime_type,content,expected",
+    [
+        ("text/plain", "valid content", []),  # Valid MIME type
+        (None, "valid content", []),  # None defaults to text/plain
+        # Invalid MIME with both errors
+        (
+            "fake/nonexistent-type",
+            "valid content",
+            [
+                "Invalid mime type: fake/nonexistent-type",
+                "Error converting description to bytes: Odd-length string",
+            ],
+        ),
+        # Exception from content_to_bytes only
+        ("text/plain", "valid content", ["Error converting description to bytes: Test error"]),
+    ],
+)
+def test_check_content(mime_type, content, expected):
+    if "Test error" in str(expected):
+        with patch(
+            "counterpartycore.lib.utils.helpers.content_to_bytes",
+            side_effect=Exception("Test error"),
+        ):
+            assert helpers.check_content(mime_type, content) == expected
+    else:
+        assert helpers.check_content(mime_type, content) == expected
