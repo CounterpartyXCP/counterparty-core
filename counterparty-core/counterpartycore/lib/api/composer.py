@@ -363,7 +363,7 @@ def get_dummy_signed_reveal_tx(db, source, data, unspent_list, construct_params)
     tx_in = TxInput("F" * 64, 0)
     # use source address as output
     outputs = get_reveal_outputs(db, source, envelope_script, unspent_list, construct_params)
-    outputs_value = sum([output.amount for output in outputs])
+    outputs_value = sum(output.amount for output in outputs)
     reveal_tx = Transaction([tx_in], outputs, has_segwit=True)
     # sign the input containing the inscription script
     sig = private_key.sign_taproot_input(
