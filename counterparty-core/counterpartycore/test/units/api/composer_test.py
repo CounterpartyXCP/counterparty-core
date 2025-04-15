@@ -1695,7 +1695,7 @@ def test_compose_issuance_tparoot(ledger_db, defaults):
         "mime_type": "image/png",
     }
 
-    construct_params = {"encoding": "taproot", "ordinals_envelope": True}
+    construct_params = {"encoding": "taproot", "inscription": True}
 
     expected = {
         "rawtransaction": "020000000147155f17ac58e707b326ec914d00bcce2f0ee527830c291bc02cdeb47c4ef7ed0000000000ffffffff023a0300000000000022512038129ad98fcd0946308a70f055890d3f8453cf8f1f433c99a632458dd8aec3c8f0c49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
@@ -1722,7 +1722,7 @@ def test_compose_fairminter_taproot(ledger_db, defaults):
         "mime_type": "image/png",
     }
 
-    construct_params = {"encoding": "taproot", "ordinals_envelope": True}
+    construct_params = {"encoding": "taproot", "inscription": True}
 
     expected = {
         "rawtransaction": "0200000001f4b46f0fa251a8802e0823d95573525bc918a395f3f8d4e0694f7d3cbe1329100000000000ffffffff02420300000000000022512056e8c595e32a433556b0a03fc176874e360f0102a68990892ee4880a01b1a5bee8c49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
@@ -1747,7 +1747,7 @@ def test_compose_broadcast_taproot(ledger_db, defaults):
         "mime_type": "image/png",
     }
 
-    construct_params = {"encoding": "taproot", "ordinals_envelope": True}
+    construct_params = {"encoding": "taproot", "inscription": True}
 
     expected = {
         "rawtransaction": "02000000014f4851c5dc2eff52025d7d337748c9bfa1e12ab43ee3523ba5dbbadffb6a31bb0000000000ffffffff024c0300000000000022512078520fb31f3d28fc2992bdfbc32e1edd95563d7f4bb2c83ed20a0c1e642c462bdec49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
@@ -1772,7 +1772,7 @@ def test_compose_broadcast_taproot_no_ordinals(ledger_db, defaults):
         "mime_type": "image/png",
     }
 
-    construct_params = {"encoding": "taproot", "ordinals_envelope": False}
+    construct_params = {"encoding": "taproot", "inscription": False}
 
     expected = {
         "rawtransaction": "0200000001af72db3a5a121119973198c962cc1a4464633a7bb4d14ed8e4d76eae1fac43a40000000000ffffffff024a010000000000002251205e6b724be11368170a45308f5e860b565a4363d55c8f4f470dea99cde239049fe0c69a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
