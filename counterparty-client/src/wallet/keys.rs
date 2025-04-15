@@ -64,7 +64,7 @@ pub fn generate_keys_from_mnemonic(
     let seed = mnemonic.to_seed("");
 
     // Determine derivation path based on address type
-    let derivation_path = get_derivation_path(path_str, addr_type);
+    let derivation_path = get_derivation_path(path_str, addr_type, network);
 
     let (private_key, public_key) = derive_key_pair(&seed, derivation_path, network, secp)?;
 
@@ -91,7 +91,7 @@ pub fn generate_new_keys(
     let seed = mnemonic.to_seed("");
 
     // Determine derivation path based on address type
-    let derivation_path = get_derivation_path(None, addr_type);
+    let derivation_path = get_derivation_path(None, addr_type, network);
 
     let (private_key, public_key) = derive_key_pair(&seed, derivation_path, network, secp)?;
 
@@ -104,16 +104,27 @@ pub fn generate_new_keys(
 }
 
 /// Get the appropriate derivation path based on address type
-fn get_derivation_path<'a>(path: Option<&'a str>, addr_type: &'a str) -> &'a str {
+fn get_derivation_path<'a>(path: Option<&'a str>, addr_type: &'a str, network: Network) -> &'a str {
     match path {
         Some(p) => p,
         None => {
             if addr_type == "bech32" {
                 // BIP84 for native Bech32/SegWit
-                "m/84'/0'/0'/0/0"
+                if network == Network::Testnet {
+                    // Testnet BIP84 path
+                    "m/84'/1'/0'/0/0"
+                } else {
+                    // Mainnet BIP84 path
+                    "m/84'/0'/0'/0/0"
+                }
             } else {
-                // BIP44 for P2PKH
-                "m/44'/0'/0'/0/0"
+                if network == Network::Testnet {
+                    // Testnet BIP44 path
+                    "m/44'/1'/0'/0/0"
+                } else {
+                    // Mainnet BIP44 path
+                    "m/44'/0'/0'/0/0"
+                }
             }
         }
     }
