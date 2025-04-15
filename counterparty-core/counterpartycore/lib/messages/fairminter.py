@@ -2,6 +2,8 @@ import decimal
 import logging
 import struct
 
+import cbor2
+
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import protocol
@@ -34,6 +36,7 @@ def validate(
     lock_quantity=False,
     divisible=True,
     description="",
+    mime_type="",
 ):
     problems = []
 
@@ -171,6 +174,9 @@ def validate(
         ):
             problems.append("Premint quantity + soft cap must be <= hard cap.")
 
+    if protocol.enabled("fairminter_v2"):
+        problems += helpers.check_content(mime_type, description)
+
     return problems
 
 
@@ -195,6 +201,7 @@ def compose(
     lock_quantity: bool = False,
     divisible: bool = True,
     description: str = "",
+    mime_type: str = "",
     skip_validation: bool = False,
 ):
     # validate parameters
@@ -219,6 +226,7 @@ def compose(
         lock_quantity,
         divisible,
         description,
+        mime_type,
     )
     if len(problems) > 0 and not skip_validation:
         raise exceptions.ComposeError(problems)
@@ -243,25 +251,28 @@ def compose(
         asset_parent_id = (
             ledger.issuances.generate_asset_id(asset_parent) if asset_parent != "" else 0
         )
-        data += helpers.encode_data(
-            asset_id,
-            asset_parent_id or "",
-            price or "",
-            quantity_by_price or "",
-            max_mint_per_tx or "",
-            max_mint_per_address or "",
-            hard_cap or "",
-            premint_quantity or "",
-            start_block or "",
-            end_block or "",
-            soft_cap or "",
-            soft_cap_deadline_block or "",
-            minted_asset_commission_int or "",
-            int(burn_payment) or "",
-            int(lock_description) or "",
-            int(lock_quantity) or "",
-            int(divisible) or "",
-            description,
+        data += cbor2.dumps(
+            [
+                asset_id,
+                asset_parent_id,
+                price,
+                quantity_by_price,
+                max_mint_per_tx,
+                max_mint_per_address,
+                hard_cap,
+                premint_quantity,
+                start_block,
+                end_block,
+                soft_cap,
+                soft_cap_deadline_block,
+                minted_asset_commission_int,
+                burn_payment,
+                lock_description,
+                lock_quantity,
+                divisible,
+                mime_type,
+                helpers.content_to_bytes(description, mime_type or "text/plain"),
+            ]
         )
     else:
         packed_value += []
@@ -293,8 +304,6 @@ def compose(
 def unpack(message, return_dict=False):
     try:
         if protocol.enabled("fairminter_v2"):
-            decoded_data = helpers.decode_data(message)
-            description = helpers.bytes_to_string(decoded_data.pop())
             (
                 asset_id,
                 asset_parent_id,
@@ -313,8 +322,10 @@ def unpack(message, return_dict=False):
                 lock_description,
                 lock_quantity,
                 divisible,
-            ) = [helpers.bytes_to_int(value or b"\x00") for value in decoded_data]
-
+                mime_type,
+                description,
+            ) = cbor2.loads(message)
+            description = helpers.bytes_to_content(description, mime_type or "text/plain")
             asset = ledger.issuances.generate_asset_name(asset_id)
             asset_parent = (
                 ledger.issuances.generate_asset_name(asset_parent_id)
@@ -345,8 +356,11 @@ def unpack(message, return_dict=False):
             # The description is placed last to be able to contain `|`.
             description = "|".join(data_content[arg_count - 1 :])
             max_mint_per_address = 0
+            mime_type = ""
 
         minted_asset_commission = D(minted_asset_commission_int) / D(1e8)
+
+        mime_type = mime_type or "text/plain"
 
         if return_dict:
             return {
@@ -367,6 +381,7 @@ def unpack(message, return_dict=False):
                 "lock_description": bool(int(lock_description)),
                 "lock_quantity": bool(int(lock_quantity)),
                 "divisible": bool(int(divisible)),
+                "mime_type": mime_type,
                 "description": description,
             }
 
@@ -388,10 +403,11 @@ def unpack(message, return_dict=False):
             bool(int(lock_description)),
             bool(int(lock_quantity)),
             bool(int(divisible)),
+            mime_type,
             description,
         )
     except Exception:  # pylint: disable=broad-exception-caught
-        return "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, ""
+        return "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, "", ""
 
 
 def parse(db, tx, message):
@@ -413,6 +429,7 @@ def parse(db, tx, message):
         lock_description,
         lock_quantity,
         divisible,
+        mime_type,
         description,
     ) = unpack(message)
 
@@ -437,6 +454,7 @@ def parse(db, tx, message):
         lock_quantity,
         divisible,
         description,
+        mime_type,
     )
 
     if (
@@ -531,6 +549,7 @@ def parse(db, tx, message):
         "divisible": divisible,
         "status": status,
         "pre_minted": pre_minted,
+        "mime_type": mime_type,
     }
     ledger.events.insert_record(db, "fairminters", bindings, "NEW_FAIRMINTER")
     logger.info("Fair minter opened for %s by %s.", asset_name, tx["source"])
@@ -568,6 +587,7 @@ def parse(db, tx, message):
         "asset_longname": asset_longname or None,
         "fair_minting": True,
         "asset_events": "open_fairminter",
+        "mime_type": mime_type,
     }
     ledger.events.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
 

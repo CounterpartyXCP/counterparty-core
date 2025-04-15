@@ -41,6 +41,7 @@ SCENARIO = [
                             "call_price": 0.0,
                             "callable": False,
                             "description": "My super asset",
+                            "mime_type": "text/plain",
                             "description_locked": False,
                             "divisible": True,
                             "fee_paid": 50000000,

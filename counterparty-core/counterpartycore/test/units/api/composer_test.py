@@ -272,17 +272,18 @@ def test_prepare_multisig_output(defaults):
     )
 
 
-def test_prepare_data_outputs(defaults):
+def test_prepare_data_outputs(ledger_db, defaults):
     # Test case 1: Simple OP_RETURN output
     assert str(
         composer.prepare_data_outputs(
-            defaults["addresses"][0], [], b"Hello, World!", [{"txid": ARC4_KEY}], {}
+            ledger_db, defaults["addresses"][0], [], b"Hello, World!", [{"txid": ARC4_KEY}], {}
         )
     ) == str([TxOutput(0, Script(["OP_RETURN", OPRETURN_DATA]))])
 
     # Test case 2: Error case - multiple OP_RETURN not allowed
     with pytest.raises(exceptions.ComposeError, match="One `OP_RETURN` output per transaction"):
         composer.prepare_data_outputs(
+            ledger_db,
             defaults["addresses"][0],
             [],
             b"Hello, World!" * 10,
@@ -293,6 +294,7 @@ def test_prepare_data_outputs(defaults):
     # Test case 3: Multisig encoding
     assert str(
         composer.prepare_data_outputs(
+            ledger_db,
             defaults["addresses"][0],
             [],
             b"Hello, World!" * 10,
@@ -346,6 +348,7 @@ def test_prepare_data_outputs(defaults):
     # Test case 4: Error case - p2sh encoding not supported
     with pytest.raises(exceptions.ComposeError, match="Not supported encoding: p2sh"):
         composer.prepare_data_outputs(
+            ledger_db,
             defaults["addresses"][0],
             [],
             b"Hello, World!" * 10,
@@ -420,7 +423,7 @@ def test_prepare_more_outputs(defaults):
     )
 
 
-def test_prepare_outputs(defaults):
+def test_prepare_outputs(ledger_db, defaults):
     # Test case 1 & 2: Simple OP_RETURN output
     expected_output = str(
         [
@@ -432,6 +435,7 @@ def test_prepare_outputs(defaults):
     assert (
         str(
             composer.prepare_outputs(
+                ledger_db,
                 defaults["addresses"][0],
                 [(defaults["addresses"][0], 9999)],
                 b"Hello, World!",
@@ -445,6 +449,7 @@ def test_prepare_outputs(defaults):
     # Test case 3: Multisig encoding
     assert str(
         composer.prepare_outputs(
+            ledger_db,
             defaults["addresses"][0],
             [(defaults["addresses"][0], 9999)],
             b"Hello, World!" * 10,
@@ -476,6 +481,7 @@ def test_prepare_outputs(defaults):
     # Test case 4: Multisig with additional output
     assert str(
         composer.prepare_outputs(
+            ledger_db,
             defaults["addresses"][0],
             [(defaults["addresses"][0], 9999)],
             b"Hello, World!" * 10,
@@ -1583,7 +1589,7 @@ def test_compose_transaction(ledger_db, defaults, monkeypatch):
     }
 
     expected = {
-        "rawtransaction": "020000000105f0cbd18027cba6bde130352b2a5317416baa4c19290c715f9bc7548aadd4fa0000000000ffffffff0200000000000000002e6a2c7ab25078709fa6c35f0961d67540cb3e630a291e018f9b9080d87e8a6346dfcb52c1cd17370695b0359890eb12c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        "rawtransaction": "020000000105f0cbd18027cba6bde130352b2a5317416baa4c19290c715f9bc7548aadd4fa0000000000ffffffff0200000000000000002e6a2c7ab25078709fa6c35f8c61c8f74ac1bc230a291e018f9b9080d87e8a6346dfcb52c1cd173706d5b0359890eb12c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     }
 
     result = composer.compose_transaction(ledger_db, "send", params, {})
@@ -1635,7 +1641,7 @@ def test_compose_send(ledger_db, defaults):
     }
 
     expected = {
-        "rawtransaction": "02000000016b943ec9d681f10b66ee691acfbb6e7319e4f0b26f33f9109d86b1a33c4af3f00000000000ffffffff020000000000000000266a24318b1f3daa68ee4d01d82d35f61f3351bcebaaad1a1569238cd94affebc4a076cfffaf1422c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        "rawtransaction": "02000000016b943ec9d681f10b66ee691acfbb6e7319e4f0b26f33f9109d86b1a33c4af3f00000000000ffffffff020000000000000000256a23318b1f3daa68ee4d015d2d3ea90bbfb63ea0ba9ffd42408fd9d751c4e3d3e5ae54c50324c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     }
 
     result = composer.compose_transaction(ledger_db, "send", params, {})
@@ -1671,11 +1677,117 @@ def test_compose_issuance(ledger_db, defaults):
     construct_params = {"encoding": "multisig"}
 
     expected = {
-        "rawtransaction": "02000000016aaa312bc6d9faef69825ef56bf2aac2fd8e72fdea5cec406b7498612380ccd90000000000ffffffff02e803000000000000695121026777d124966236b53b47ebbd2a4358d18b57e8177e4b83ee3c148d2c8e5156ad2103e5a4feeaa6547dc1615858aae9bdb107c691ddf2ab180d72dbd2a90c7eb8d894210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aed0c29a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        "rawtransaction": "02000000016aaa312bc6d9faef69825ef56bf2aac2fd8e72fdea5cec406b7498612380ccd90000000000ffffffff02e803000000000000695121026c77d124966236b53b476ca72a48a4396eb700e28abfe3ae3ffc8c2c8e51566e2103e5a4feeaa6547dc1615858aae9bdb107c691ddf2ab180d72dbd2a90c7eb8d894210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053aed0c29a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     }
 
     result = composer.compose_transaction(ledger_db, "issuance", params, construct_params)
     assert result == expected
+
+
+def test_compose_issuance_tparoot(ledger_db, defaults):
+    params = {
+        "source": defaults["addresses"][0],
+        "transfer_destination": None,
+        "asset": "BSSET",
+        "quantity": 1000,
+        "divisible": True,
+        "description": "aaffaaff",
+        "mime_type": "image/png",
+    }
+
+    construct_params = {"encoding": "taproot", "ordinals_envelope": True}
+
+    expected = {
+        "rawtransaction": "020000000147155f17ac58e707b326ec914d00bcce2f0ee527830c291bc02cdeb47c4ef7ed0000000000ffffffff023a0300000000000022512038129ad98fcd0946308a70f055890d3f8453cf8f1f433c99a632458dd8aec3c8f0c49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "envelope_script": "0063036f7264010109696d6167652f706e6701050d86161a000bfce31903e8f5f4f40004aaffaaff68",
+        "reveal_rawtransaction": "020000000100eae451f1268bcf10916e9304f4523887b2cf05133c00263c0e1385ebfafe2c0000000000ffffffff0200000000000000000a6a08434e54525052545922020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+    }
+
+    result = composer.compose_transaction(ledger_db, "issuance", params, construct_params)
+    assert result == expected
+
+    envelope_script = Script.from_raw(result["envelope_script"])
+    assert (
+        str(envelope_script)
+        == "['OP_0', 'OP_IF', '6f7264', '01', '696d6167652f706e67', '05', '86161a000bfce31903e8f5f4f4', 'OP_0', 'aaffaaff', 'OP_ENDIF']"
+    )
+
+
+def test_compose_fairminter_taproot(ledger_db, defaults):
+    params = {
+        "source": defaults["addresses"][0],
+        "asset": "FAIRMANT",
+        "max_mint_per_tx": 10,
+        "description": "ff00ff00",
+        "mime_type": "image/png",
+    }
+
+    construct_params = {"encoding": "taproot", "ordinals_envelope": True}
+
+    expected = {
+        "rawtransaction": "0200000001f4b46f0fa251a8802e0823d95573525bc918a395f3f8d4e0694f7d3cbe1329100000000000ffffffff02420300000000000022512056e8c595e32a433556b0a03fc176874e360f0102a68990892ee4880a01b1a5bee8c49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "envelope_script": "0063036f7264010109696d6167652f706e6701051c92185a1b000000095fce9cd50000010a0000000000000000f4f4f4f50004ff00ff0068",
+        "reveal_rawtransaction": "0200000001a6bbf87354f3e45c415fddab66798acac8c8deacd43540a8a5c63d5315980e8a0000000000ffffffff0200000000000000000a6a08434e54525052545922020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+    }
+
+    result = composer.compose_transaction(ledger_db, "fairminter", params, construct_params)
+    assert result == expected
+
+    envelope_script = Script.from_raw(result["envelope_script"])
+    assert (
+        str(envelope_script)
+        == "['OP_0', 'OP_IF', '6f7264', '01', '696d6167652f706e67', '05', '92185a1b000000095fce9cd50000010a0000000000000000f4f4f4f5', 'OP_0', 'ff00ff00', 'OP_ENDIF']"
+    )
+
+
+def test_compose_broadcast_taproot(ledger_db, defaults):
+    params = {
+        "source": defaults["addresses"][0],
+        "text": "ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00",
+        "mime_type": "image/png",
+    }
+
+    construct_params = {"encoding": "taproot", "ordinals_envelope": True}
+
+    expected = {
+        "rawtransaction": "02000000014f4851c5dc2eff52025d7d337748c9bfa1e12ab43ee3523ba5dbbadffb6a31bb0000000000ffffffff024c0300000000000022512078520fb31f3d28fc2992bdfbc32e1edd95563d7f4bb2c83ed20a0c1e642c462bdec49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "envelope_script": "0063036f7264010109696d6167652f706e6701051284181e1a52bb3303fb0000000000000000000020ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff0068",
+        "reveal_rawtransaction": "02000000018b42349673afdf09c1ad0f1e3ca3d6fcfcfd747fd0701b7b6e6ffe35b82e7cbb0000000000ffffffff0200000000000000000a6a08434e54525052545922020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+    }
+
+    result = composer.compose_transaction(ledger_db, "broadcast", params, construct_params)
+    assert result == expected
+
+    envelope_script = Script.from_raw(result["envelope_script"])
+    assert (
+        str(envelope_script)
+        == "['OP_0', 'OP_IF', '6f7264', '01', '696d6167652f706e67', '05', '84181e1a52bb3303fb000000000000000000', 'OP_0', 'ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00', 'OP_ENDIF']"
+    )
+
+
+def test_compose_broadcast_taproot_no_ordinals(ledger_db, defaults):
+    params = {
+        "source": defaults["addresses"][0],
+        "text": "ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00",
+        "mime_type": "image/png",
+    }
+
+    construct_params = {"encoding": "taproot", "ordinals_envelope": False}
+
+    expected = {
+        "rawtransaction": "0200000001af72db3a5a121119973198c962cc1a4464633a7bb4d14ed8e4d76eae1fac43a40000000000ffffffff024a010000000000002251205e6b724be11368170a45308f5e860b565a4363d55c8f4f470dea99cde239049fe0c69a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "envelope_script": "00633d1e851a52bb3303fb00000000000000000069696d6167652f706e675820ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff0068",
+        "reveal_rawtransaction": "0200000001d3125daf10c159aebeee13df8f9cfe837705494bba8321b8352da1caea35c8e90000000000ffffffff0100000000000000000a6a08434e54525052545900000000",
+    }
+
+    result = composer.compose_transaction(ledger_db, "broadcast", params, construct_params)
+    assert result == expected
+
+    envelope_script = Script.from_raw(result["envelope_script"])
+    assert (
+        str(envelope_script)
+        == "['OP_0', 'OP_IF', '1e851a52bb3303fb00000000000000000069696d6167652f706e675820ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00', 'OP_ENDIF']"
+    )
 
 
 def test_compose_enhanced_send(ledger_db, defaults, monkeypatch):
@@ -1688,7 +1800,7 @@ def test_compose_enhanced_send(ledger_db, defaults, monkeypatch):
         "quantity": defaults["small"],
     }
     expected = {
-        "rawtransaction": "0200000001c4c89e2b3af0e583eb6d97619bfc3c649c4e01b7912c25a0c221c24adc7b80180000000000ffffffff0200000000000000002e6a2c2df23dca673690a7495d930d4b3063a84e2b892be47803ef0aaf9a81995e6971fc0462288da968054a8aaf8b12c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        "rawtransaction": "0200000001c4c89e2b3af0e583eb6d97619bfc3c649c4e01b7912c25a0c221c24adc7b80180000000000ffffffff0200000000000000002e6a2c2df23dca673690a749d89313c93a692a0e2b892be47803ef0aaf9a81995e6971fc0462288da928054a8aaf8b12c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     }
     result = composer.compose_transaction(ledger_db, "send", params, {})
     assert result == expected
@@ -2115,16 +2227,16 @@ def test_compose_taproot(ledger_db, defaults):
     )
 
     assert result == {
-        "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020000000000000000266a243d5b4af14ef23843673cd6acaec973f769e0c6c61ff98b425a9bdcee3e2257c19782e3b2de020000000000002251208790903eefbbb8ac03e5e884f76127186e3d18d9c93331f10dd112ad4426415600000000",
+        "rawtransaction": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020000000000000000256a233d5b4af14ef2384367b9d6a7f1ddff10ebabd6f4f8aea2ee0f95c7d5363512190cb84fe0020000000000002251208790903eefbbb8ac03e5e884f76127186e3d18d9c93331f10dd112ad4426415600000000",
         "btc_in": 1052,
         "btc_out": 0,
-        "btc_change": 734,
-        "btc_fee": 318,
-        "data": b"CNTRPRTY\x02\x01\x01\x01\n\x15\x01\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec\x00",
+        "btc_change": 736,
+        "btc_fee": 316,
+        "data": b"CNTRPRTY\x02\x84\x01\nU\x01\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec@",
         "lock_scripts": ["51208790903eefbbb8ac03e5e884f76127186e3d18d9c93331f10dd112ad44264156"],
         "inputs_values": [1052],
-        "signed_tx_estimated_size": {"vsize": 159, "adjusted_vsize": 159, "sigops_count": 0},
-        "psbt": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020000000000000000266a243d5b4af14ef23843673cd6acaec973f769e0c6c61ff98b425a9bdcee3e2257c19782e3b2de020000000000002251208790903eefbbb8ac03e5e884f76127186e3d18d9c93331f10dd112ad4426415600000000",
+        "signed_tx_estimated_size": {"vsize": 158, "adjusted_vsize": 158, "sigops_count": 0},
+        "psbt": "0200000001c1d8c075936c3495f6d653c50f73d987f75448d97a750249b1eb83bee71b24ae0000000000ffffffff020000000000000000256a233d5b4af14ef2384367b9d6a7f1ddff10ebabd6f4f8aea2ee0f95c7d5363512190cb84fe0020000000000002251208790903eefbbb8ac03e5e884f76127186e3d18d9c93331f10dd112ad4426415600000000",
         "params": {
             "source": "bcrt1ps7gfq0h0hwu2cql9azz0wcf8rphr6xxeeyenrugd6yf263pxg9tqzsj5ec",
             "asset": "XCP",

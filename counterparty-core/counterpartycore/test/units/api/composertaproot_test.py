@@ -3,7 +3,7 @@ import random
 
 import pytest
 from bitcoinutils.script import Script
-from bitcoinutils.transactions import Transaction
+from bitcoinutils.transactions import Transaction, TxOutput
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import composer
 from counterpartycore.test.fixtures.defaults import DEFAULT_PARAMS as DEFAULTS
@@ -14,7 +14,11 @@ PROVIDED_PUBKEYS = ",".join(
 
 
 def test_generate_raw_reveal_tx():
-    raw_tx = composer.generate_raw_reveal_tx("FF" * 32, 0)
+    raw_tx = composer.generate_raw_reveal_tx(
+        "FF" * 32,
+        0,
+        [TxOutput(0, Script(["OP_RETURN", binascii.hexlify(config.PREFIX).decode("ascii")]))],
+    )
     tx = Transaction.from_raw(raw_tx)
     assert len(tx.inputs) == 1
     assert len(tx.outputs) == 1
@@ -27,14 +31,16 @@ def test_generate_raw_reveal_tx():
 
 
 def test_generate_envelope_script():
+    construct_params = {"ordinals_envelope": True}
+
     data = b"Hello, World!"
-    envelope_script = composer.generate_envelope_script(data)
+    envelope_script = composer.generate_envelope_script(data, construct_params)
     assert envelope_script == Script(
         ["OP_FALSE", "OP_IF", binascii.hexlify(data).decode("ascii"), "OP_ENDIF"]
     )
 
     data = b"a" * 1000
-    envelope_script = composer.generate_envelope_script(data)
+    envelope_script = composer.generate_envelope_script(data, construct_params)
     assert envelope_script == Script(
         [
             "OP_FALSE",
@@ -46,7 +52,7 @@ def test_generate_envelope_script():
     )
 
     data = b"a" * 1041
-    envelope_script = composer.generate_envelope_script(data)
+    envelope_script = composer.generate_envelope_script(data, construct_params)
     assert envelope_script == Script(
         [
             "OP_FALSE",
@@ -58,10 +64,28 @@ def test_generate_envelope_script():
         ]
     )
 
+    data = b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5`Sune asset super top"
+    envelope_script = composer.generate_envelope_script(data, construct_params)
+    assert envelope_script == Script(
+        [
+            "OP_FALSE",
+            "OP_IF",
+            "6f7264",
+            "01",
+            "746578742f706c61696e",
+            "05",
+            "92185a1b000018c0fdcdeb5f0000010a001903e818641a000c35001a000dbba018321a000cf8501a00989680f4f4f5f5",
+            "OP_0",
+            "756e6520617373657420737570657220746f70",
+            "OP_ENDIF",
+        ]
+    )
+
 
 def calculate_reveal_transaction_vsize(data):
+    construct_params = {"ordinals_envelope": True}
     # Calculate the envelope script size
-    envelope_script = composer.generate_envelope_script(data)
+    envelope_script = composer.generate_envelope_script(data, construct_params)
     envelope_script_serialized = envelope_script.to_hex()
     envelope_script_size = len(envelope_script_serialized) // 2
 
@@ -135,44 +159,62 @@ def calculate_reveal_transaction_vsize(data):
 
 
 def test_get_reveal_transaction_vsize():
+    db, source, unspent_list, construct_params = None, None, [], {}
+
     data = b""
-    vsize = composer.get_reveal_transaction_vsize(data)
+    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
+        db, source, data, unspent_list, construct_params
+    )
     assert vsize == 97
     assert calculate_reveal_transaction_vsize(data) == 97
 
     data = b"a"
-    vsize = composer.get_reveal_transaction_vsize(data)
+    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
+        db, source, data, unspent_list, construct_params
+    )
     assert vsize == 97
     assert calculate_reveal_transaction_vsize(data) == 98
 
     data = b"a" * 1000
-    vsize = composer.get_reveal_transaction_vsize(data)
+    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
+        db, source, data, unspent_list, construct_params
+    )
     assert vsize == 349
     assert calculate_reveal_transaction_vsize(data) == 349
 
     data = b"a" * 2000
-    vsize = composer.get_reveal_transaction_vsize(data)
+    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
+        db, source, data, unspent_list, construct_params
+    )
     assert vsize == 600
     assert calculate_reveal_transaction_vsize(data) == 601
 
     data = b"a" * 10000
-    vsize = composer.get_reveal_transaction_vsize(data)
+    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
+        db, source, data, unspent_list, construct_params
+    )
     assert vsize == 2612
     assert calculate_reveal_transaction_vsize(data) == 2612
 
     data = b"a" * 20000
-    vsize = composer.get_reveal_transaction_vsize(data)
+    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
+        db, source, data, unspent_list, construct_params
+    )
     assert vsize == 5126
     assert calculate_reveal_transaction_vsize(data) == 5127
 
     data = b"a" * 400 * 1024
-    vsize = composer.get_reveal_transaction_vsize(data)
+    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
+        db, source, data, unspent_list, construct_params
+    )
     assert vsize == 103089
     assert calculate_reveal_transaction_vsize(data) == 103089
 
     for _i in range(10):
         data = b"a" * random.randint(1, 400000)  # noqa
-        vsize = composer.get_reveal_transaction_vsize(data)
+        vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
+            db, source, data, unspent_list, construct_params
+        )
         assert (
             calculate_reveal_transaction_vsize(data) - 1
             <= vsize
@@ -180,8 +222,9 @@ def test_get_reveal_transaction_vsize():
         )
 
 
-def test_prepare_taproot_output(defaults):
+def test_prepare_taproot_output(ledger_db, defaults):
     outputs = composer.prepare_taproot_output(
+        ledger_db,
         defaults["addresses"][0],
         b"Hello world",
         [],
@@ -196,6 +239,7 @@ def test_prepare_taproot_output(defaults):
     )
 
     outputs = composer.prepare_taproot_output(
+        ledger_db,
         defaults["p2wpkh_addresses"][0],
         b"Hello world",
         [],
@@ -209,7 +253,9 @@ def test_prepare_taproot_output(defaults):
         ["OP_1", "a08105b2c25dfe0d5b3ef9471ae2bf886a81206f9e972bc2855d53048ec9a611"]
     )
 
-    outputs = composer.prepare_taproot_output(defaults["p2tr_addresses"][0], b"Hello world", [], {})
+    outputs = composer.prepare_taproot_output(
+        ledger_db, defaults["p2tr_addresses"][0], b"Hello world", [], {}
+    )
     assert len(outputs) == 1
     assert outputs[0].amount == 330
     assert outputs[0].script_pubkey == Script(
@@ -217,6 +263,7 @@ def test_prepare_taproot_output(defaults):
     )
 
     outputs = composer.prepare_data_outputs(
+        ledger_db,
         defaults["p2tr_addresses"][0],
         [],
         b"Hello world",

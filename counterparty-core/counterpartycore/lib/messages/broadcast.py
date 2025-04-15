@@ -24,6 +24,7 @@ import logging
 import struct
 from fractions import Fraction
 
+import cbor2
 from bitcoin.core import VarIntSerializer
 
 from counterpartycore.lib import (
@@ -31,7 +32,6 @@ from counterpartycore.lib import (
     exceptions,
     ledger,
 )
-from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import helpers
 
@@ -71,7 +71,7 @@ def validate_address_options(options):
         raise exceptions.OptionsError("options not possible")
 
 
-def validate(db, source, timestamp, value, fee_fraction_int, text, block_index):
+def validate(db, source, timestamp, value, fee_fraction_int, text, mime_type):
     problems = []
 
     # For SQLite3
@@ -112,75 +112,129 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, block_index):
         except exceptions.OptionsError as e:
             problems.append(str(e))
 
+    if protocol.enabled("taproot_support"):
+        problems += helpers.check_content(mime_type, text)
+
     return problems
 
 
 def compose(
     db,
     source: str,
-    timestamp: int,
-    value: float,
-    fee_fraction: float,
-    text: str,
+    timestamp: int = 0,
+    value: float = 0.0,
+    fee_fraction: float = 0.0,
+    text: str = "",
+    mime_type: str = "",
     skip_validation: bool = False,
 ):
     # Store the fee fraction as an integer.
     fee_fraction_int = int(fee_fraction * 1e8)
 
+    broadcast_timestamp = timestamp
+    if timestamp == 0:
+        broadcasts = ledger.other.get_broadcasts_by_source(db, source, "valid", order_by="ASC")
+        if broadcasts:
+            last_broadcast = broadcasts[-1]
+            broadcast_timestamp = last_broadcast["timestamp"] + 1
+
     problems = validate(
-        db, source, timestamp, value, fee_fraction_int, text, CurrentState().current_block_index()
+        db,
+        source,
+        broadcast_timestamp,
+        value,
+        fee_fraction_int,
+        text,
+        mime_type,
     )
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
-    data = messagetype.pack(ID)
-
-    # always use custom length byte instead of problematic usage of 52p format and make sure to encode('utf-8') for length
-    if protocol.enabled("broadcast_pack_text"):
-        data += struct.pack(FORMAT, timestamp, value, fee_fraction_int)
-        data += VarIntSerializer.serialize(len(text.encode("utf-8")))
-        data += text.encode("utf-8")
-    else:
-        if len(text) <= 52:
-            curr_format = FORMAT + f"{len(text) + 1}p"
+    if protocol.enabled("taproot_support"):
+        data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
+        data += cbor2.dumps(
+            [
+                broadcast_timestamp,
+                value,
+                fee_fraction_int,
+                mime_type,
+                helpers.content_to_bytes(text, mime_type or "text/plain"),
+            ]
+        )
+    else:  # for the record
+        data = messagetype.pack(ID)
+        # always use custom length byte instead of problematic usage of 52p format and make sure to encode('utf-8') for length
+        if protocol.enabled("broadcast_pack_text"):
+            data += struct.pack(FORMAT, timestamp, value, fee_fraction_int)
+            data += VarIntSerializer.serialize(len(text.encode("utf-8")))
+            data += text.encode("utf-8")
         else:
-            curr_format = FORMAT + f"{len(text)}s"
+            if len(text) <= 52:
+                curr_format = FORMAT + f"{len(text) + 1}p"
+            else:
+                curr_format = FORMAT + f"{len(text)}s"
 
-        data += struct.pack(curr_format, timestamp, value, fee_fraction_int, text.encode("utf-8"))
+            data += struct.pack(
+                curr_format, timestamp, value, fee_fraction_int, text.encode("utf-8")
+            )
+
     return (source, [], data)
+
+
+def load_cbor(message):
+    try:
+        timestamp, value, fee_fraction_int, mime_type, text = cbor2.loads(message)
+        mime_type = mime_type or "text/plain"
+        text = helpers.bytes_to_content(text, mime_type)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        raise struct.error from e
+    return timestamp, value, fee_fraction_int, mime_type, text
+
+
+def load_data_legacy(message, block_index):
+    if protocol.enabled("broadcast_pack_text", block_index):
+        timestamp, value, fee_fraction_int, rawtext = struct.unpack(
+            FORMAT + f"{len(message) - LENGTH}s", message
+        )
+        textlen = VarIntSerializer.deserialize(rawtext)
+        if textlen == 0:
+            text = b""
+        else:
+            text = rawtext[-textlen:]
+
+        assert len(text) == textlen
+    else:
+        if len(message) - LENGTH <= 52:
+            curr_format = FORMAT + f"{len(message) - LENGTH}p"
+        else:
+            curr_format = FORMAT + f"{len(message) - LENGTH}s"
+
+        timestamp, value, fee_fraction_int, text = struct.unpack(curr_format, message)
+
+    try:
+        text = text.decode("utf-8")
+    except UnicodeDecodeError:
+        text = ""
+
+    return timestamp, value, fee_fraction_int, "text/plain", text
 
 
 def unpack(message, block_index, return_dict=False):
     try:
-        if protocol.enabled("broadcast_pack_text", block_index):
-            timestamp, value, fee_fraction_int, rawtext = struct.unpack(
-                FORMAT + f"{len(message) - LENGTH}s", message
-            )
-            textlen = VarIntSerializer.deserialize(rawtext)
-            if textlen == 0:
-                text = b""
-            else:
-                text = rawtext[-textlen:]
-
-            assert len(text) == textlen
+        mime_type = "text/plain"
+        if protocol.enabled("taproot_support"):
+            # Unpack the message using cbor2
+            timestamp, value, fee_fraction_int, mime_type, text = load_cbor(message)
         else:
-            if len(message) - LENGTH <= 52:
-                curr_format = FORMAT + f"{len(message) - LENGTH}p"
-            else:
-                curr_format = FORMAT + f"{len(message) - LENGTH}s"
-
-            timestamp, value, fee_fraction_int, text = struct.unpack(curr_format, message)
-
-        try:
-            text = text.decode("utf-8")
-        except UnicodeDecodeError:
-            text = ""
+            timestamp, value, fee_fraction_int, mime_type, text = load_data_legacy(
+                message, block_index
+            )
         status = "valid"
     except struct.error:
-        timestamp, value, fee_fraction_int, text = 0, None, 0, None
+        timestamp, value, fee_fraction_int, mime_type, text = 0, None, 0, "", None
         status = "invalid: could not unpack"
     except AssertionError:
-        timestamp, value, fee_fraction_int, text = 0, None, 0, None
+        timestamp, value, fee_fraction_int, mime_type, text = 0, None, 0, "", None
         status = "invalid: could not unpack text"
 
     if return_dict:
@@ -189,25 +243,24 @@ def unpack(message, block_index, return_dict=False):
             "value": value,
             "fee_fraction_int": fee_fraction_int,
             "text": text,
+            "mime_type": mime_type,
             "status": status,
         }
-    return timestamp, value, fee_fraction_int, text, status
+    return timestamp, value, fee_fraction_int, mime_type, text, status
 
 
 def parse(db, tx, message):
     cursor = db.cursor()
 
     # Unpack message.
-    timestamp, value, fee_fraction_int, text, status = unpack(message, tx["block_index"])
+    timestamp, value, fee_fraction_int, mime_type, text, status = unpack(message, tx["block_index"])
 
     if status == "valid":
         # For SQLite3
         timestamp = min(timestamp, config.MAX_INT)
         value = min(value, config.MAX_INT)
 
-        problems = validate(
-            db, tx["source"], timestamp, value, fee_fraction_int, text, tx["block_index"]
-        )
+        problems = validate(db, tx["source"], timestamp, value, fee_fraction_int, text, mime_type)
         if problems:
             status = "invalid: " + "; ".join(problems)
 
@@ -231,6 +284,7 @@ def parse(db, tx, message):
         "text": text,
         "locked": lock,
         "status": status,
+        "mime_type": mime_type,
     }
     if "integer overflow" not in status:
         ledger.events.insert_record(db, "broadcasts", bindings, "BROADCAST")

@@ -69,7 +69,7 @@ def test_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][1],
         [],
-        b"[\x07u\xdbH\x16\xb1\xd6\x02\x00",
+        b"[\x82\x1b\x00\x02\xd6\xb1\x16H\xdbu\x00",
     )
 
     with pytest.raises(exceptions.ComposeError, match="asset supply quantity exceeds hard cap"):
@@ -88,7 +88,7 @@ def test_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][1],
         [],
-        b"[\x07\xf5>sZ\xcb\x07\x08\x01\n",
+        b"[\x82\x1b\x00\x08\x07\xcbZs>\xf5\n",
     )
 
     with pytest.raises(
@@ -126,8 +126,8 @@ def test_compose(ledger_db, defaults):
 
 
 def test_unpack():
-    assert fairmint.unpack(b"\x07u\xdbH\x16\xb1\xd6\x02\x00", False) == ("FREEFAIRMIN", 0)
-    assert fairmint.unpack(b"\x07u\xdbH\x16\xb1\xd6\x02\x00", True) == {
+    assert fairmint.unpack(b"\x82\x1b\x00\x02\xd6\xb1\x16H\xdbu\x00", False) == ("FREEFAIRMIN", 0)
+    assert fairmint.unpack(b"\x82\x1b\x00\x02\xd6\xb1\x16H\xdbu\x00", True) == {
         "asset": "FREEFAIRMIN",
         "quantity": 0,
     }
@@ -204,7 +204,7 @@ def tes_parse_freefairmint_legacy(
 
 def tes_parse_freefairmint(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
-    message = b"\x07u\xdbH\x16\xb1\xd6\x02\x00"
+    message = b"\x82\x1b\x00\x02\xd6\xb1\x16H\xdbu\x00"
     fairmint.parse(ledger_db, tx, message)
 
     test_helpers.check_records(
@@ -265,7 +265,7 @@ def test_parse_escrowed_fairmint(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
-    message = b"\x07\xf5>sZ\xcb\x07\x08\x01\n"
+    message = b"\x82\x1b\x00\x08\x07\xcbZs>\xf5\n"
     fairmint.parse(ledger_db, tx, message)
 
     test_helpers.check_records(
