@@ -191,14 +191,19 @@ def test_deserialize_error():
         )
 
 
-def test_desrialize_reveal_tx():
+def test_desrialize_reveal_tx(ledger_db, defaults):
     deserialize.Deserializer.reset_instance()
+    unspent_list = []
+    construct_params = {"ordinals_envelope": True}
+    source = defaults["addresses"][0]
 
     for data in [
         b"Hello, World!",
         b"a" * 1024 * 400,
     ]:
-        reveal_tx = composer.get_dummy_signed_reveal_tx(data)
+        reveal_tx, output_value = composer.get_dummy_signed_reveal_tx(
+            ledger_db, source, data, unspent_list, construct_params
+        )
         reveal_tx_hex = reveal_tx.serialize()
         decoded_tx = deserialize_rust(reveal_tx_hex)
         assert decoded_tx["parsed_vouts"] == (
@@ -210,7 +215,57 @@ def test_desrialize_reveal_tx():
             True,
         )
 
-    reveal_tx = composer.get_dummy_signed_reveal_tx(b"")
+    data = b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5`Sune asset super top"
+    reveal_tx, output_value = composer.get_dummy_signed_reveal_tx(
+        ledger_db, source, data, unspent_list, construct_params
+    )
+    reveal_tx_hex = reveal_tx.serialize()
+    decoded_tx = deserialize_rust(reveal_tx_hex)
+    assert decoded_tx["parsed_vouts"] == (
+        [],
+        0,
+        -546,
+        # mime type is injected when Ordinals envelope is used
+        b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5jtext/plainSune asset super top",
+        [(None, None), (defaults["addresses"][0], 546)],
+        True,
+    )
+
+    data = b"\x16\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`X1description much much much longer than 42 letters"
+    reveal_tx, output_value = composer.get_dummy_signed_reveal_tx(
+        ledger_db, source, data, unspent_list, construct_params
+    )
+    reveal_tx_hex = reveal_tx.serialize()
+    decoded_tx = deserialize_rust(reveal_tx_hex)
+    assert decoded_tx["parsed_vouts"] == (
+        [],
+        0,
+        -546,
+        # mime type is injected when Ordinals envelope is used
+        b"\x16\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4jtext/plainX1description much much much longer than 42 letters",
+        [(None, None), (defaults["addresses"][0], 546)],
+        True,
+    )
+
+    data = b"\x16\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`X1description much much much longer than 42 letters"
+    reveal_tx, output_value = composer.get_dummy_signed_reveal_tx(
+        ledger_db, source, data, unspent_list, construct_params
+    )
+    reveal_tx_hex = reveal_tx.serialize()
+    decoded_tx = deserialize_rust(reveal_tx_hex)
+    assert decoded_tx["parsed_vouts"] == (
+        [],
+        0,
+        -546,
+        # mime type is injected when Ordinals envelope is used
+        b"\x16\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4jtext/plainX1description much much much longer than 42 letters",
+        [(None, None), (defaults["addresses"][0], 546)],
+        True,
+    )
+
+    reveal_tx, output_value = composer.get_dummy_signed_reveal_tx(
+        ledger_db, source, b"", unspent_list, construct_params
+    )
     reveal_tx_hex = reveal_tx.serialize()
     decoded_tx = deserialize_rust(reveal_tx_hex)
     assert decoded_tx["parsed_vouts"] == ([], 0, 0, b"", [(None, None)], False)

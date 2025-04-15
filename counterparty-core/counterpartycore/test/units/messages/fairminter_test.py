@@ -356,7 +356,7 @@ def test_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][1],
         [],
-        b"Z\x06_\xeb\xcd\xfd\xc0\x18\x00\x00\x01\x01\x01\n\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x01\x00",
+        b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x00\x00\x00\x00\x00\x00\x00\xf4\xf4\xf4\xf5`@",
     )
 
     assert fairminter.compose(
@@ -383,7 +383,7 @@ def test_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][1],
         [],
-        b"Z\x06_\xeb\xcd\xfd\xc0\x18\x00\x00\x01\x01\x01\n\x00\x02\xe8\x03\x01d\x03\x005\x0c\x03\xa0\xbb\r\x012\x03P\xf8\x0c\x03\x80\x96\x98\x00\x00\x01\x01\x01\x01\x13une asset super top",
+        b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5`Sune asset super top",
     )
 
     with ProtocolChangesDisabled(["fairminter_v2"]):
@@ -433,7 +433,7 @@ def test_compose_long_description(ledger_db, defaults):
     result = (
         defaults["addresses"][1],
         [],
-        b"Z\x06_\xeb\xcd\xfd\xc0\x18\x00\x00\x01\x01\x01\n\x00\x02\xe8\x03\x01d\x03\x005\x0c\x03\xa0\xbb\r\x012\x03P\xf8\x0c\x03\x80\x96\x98\x00\x00\x01\x01\x01\x01\x0f\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa",
+        b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5`X\x1eaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     )
     assert (
         fairminter.compose(
@@ -482,6 +482,7 @@ def test_compose_long_description(ledger_db, defaults):
         False,  # lock_description,
         True,  # lock_quantity,
         True,  # divisible,
+        "text/plain",
         "a" * 30,  # description
     )
 
@@ -492,7 +493,7 @@ def test_compose_long_description(ledger_db, defaults):
 
 def test_unpack():
     assert fairminter.unpack(
-        b"\x06_\xeb\xcd\xfd\xc0\x18\x00\x00\x01\x01\x01\n\x00\x02\xe8\x03\x01d\x03\x005\x0c\x03\xa0\xbb\r\x012\x03P\xf8\x0c\x03\x80\x96\x98\x00\x00\x01\x01\x01\x01\x13une asset super top",
+        b"\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5`Sune asset super top",
         True,
     ) == {
         "asset": "FAIRMINTED",
@@ -512,11 +513,12 @@ def test_unpack():
         "lock_description": False,
         "lock_quantity": True,
         "divisible": True,
+        "mime_type": "text/plain",
         "description": "une asset super top",
     }
 
     assert fairminter.unpack(
-        b"\x06_\xeb\xcd\xfd\xc0\x18\x00\x00\x01\x01\x01\n\x00\x02\xe8\x03\x01d\x03\x005\x0c\x03\xa0\xbb\r\x012\x03P\xf8\x0c\x03\x80\x96\x98\x00\x00\x01\x01\x01\x01\x13une asset super top",
+        b"\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5`Sune asset super top",
         False,
     ) == (
         "FAIRMINTED",
@@ -536,20 +538,21 @@ def test_unpack():
         False,
         True,
         True,
+        "text/plain",
         "une asset super top",
     )
 
     assert fairminter.unpack(
         b"\x06_\xeb\xcd\xfd\xc0\x18\x00\x00\x03\x01d\x03\x005\x0c\x03\xa0\xbb\r\x012\x03P\xf8\x0c\x03\x80\x96\x98\x01\x01\x01\x01\x13une asset super top",
         False,
-    ) == ("", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, "")
+    ) == ("", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, "", "")
 
 
 def test_parse_fairminter_start_block(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
-    message = b"\x06_\xeb\xcd\xfd\xc0\x18\x01\x00\x01\x00\x01\x01\x01\n\x01\x00\x02\xe8\x03\x01d\x03\x005\x0c\x03\xa0\xbb\r\x012\x03P\xf8\x0c\x03\x80\x96\x98\x01\x00\x01\x00\x01\x01\x01\x01\x13une asset super top"
+    message = b"\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5`Sune asset super top"
     fairminter.parse(ledger_db, tx, message)
 
     test_helpers.check_records(
@@ -783,7 +786,7 @@ def test_normalized_price(ledger_db, state_db, apiv2_client, defaults, blockchai
     result = apiv2_client.get(url).json
     assert (
         result["result"]["rawtransaction"]
-        == "0200000001772cb58382f7d1f15093dc8e7a2cf1ee114890e1a3d26552213a9faabd4960010000000000ffffffff020000000000000000146a12c1ea99c71125e4116401b813e3636b1818a346c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
+        == "0200000001772cb58382f7d1f15093dc8e7a2cf1ee114890e1a3d26552213a9faabd4960010000000000ffffffff020000000000000000166a14c1ea99c71125e4116485c3f82e866bfdd44bb89e42c89a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000"
     )
 
 
@@ -841,7 +844,7 @@ def test_compose_2(ledger_db, defaults, current_block_index):
     ) == (
         defaults["addresses"][1],
         [],
-        b"Z\x06_\xeb\xcd\xfd\xc0\x18\x00\x01\x01\x01\x03\x01\n\x00\x00\x00\x00\x02\x8b\x07\x00\x00\x00\x00\x00\x00\x01\x01\x00",
+        b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x03\n\x00\x00\x00\x00\x19\x07\x8b\x00\x00\x00\xf4\xf4\xf4\xf5`@",
     )
 
     assert fairminter.compose(
@@ -860,5 +863,5 @@ def test_compose_2(ledger_db, defaults, current_block_index):
     ) == (
         defaults["addresses"][1],
         [],
-        b"Z\x06_\xeb\xcd\xfd\xc0\x18\x00\x01\x01\x01\x03\x01\n\x00\x00\x00\x02\x8b\x07\x00\x00\x00\x00\x00\x00\x00\x01\x01\x00",
+        b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x03\n\x00\x00\x00\x19\x07\x8b\x00\x00\x00\x00\xf4\xf4\xf4\xf5`@",
     )
