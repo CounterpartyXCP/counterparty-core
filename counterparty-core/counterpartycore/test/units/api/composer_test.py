@@ -1695,12 +1695,12 @@ def test_compose_issuance_tparoot(ledger_db, defaults):
         "mime_type": "image/png",
     }
 
-    construct_params = {"encoding": "taproot"}
+    construct_params = {"encoding": "taproot", "ordinals_envelope": True}
 
     expected = {
-        "rawtransaction": "020000000147155f17ac58e707b326ec914d00bcce2f0ee527830c291bc02cdeb47c4ef7ed0000000000ffffffff023c0300000000000022512085c9ae620a32eb35ccdec4df40e92c84d63c43714014664e646622ea1b5aa3a9eec49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
-        "envelope_script": "0063036f7264010109696d6167652f706e6701050d86161a000bfce31903e8f5f4f4010004aaffaaff68",
-        "reveal_rawtransaction": "0200000001032ca949bc57749eb1cff94ccc902a0cd325c72fb1b47faec5052934a3638c520000000000ffffffff0200000000000000000a6a08434e54525052545922020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "rawtransaction": "020000000147155f17ac58e707b326ec914d00bcce2f0ee527830c291bc02cdeb47c4ef7ed0000000000ffffffff023a0300000000000022512038129ad98fcd0946308a70f055890d3f8453cf8f1f433c99a632458dd8aec3c8f0c49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "envelope_script": "0063036f7264010109696d6167652f706e6701050d86161a000bfce31903e8f5f4f40004aaffaaff68",
+        "reveal_rawtransaction": "020000000100eae451f1268bcf10916e9304f4523887b2cf05133c00263c0e1385ebfafe2c0000000000ffffffff0200000000000000000a6a08434e54525052545922020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
     }
 
     result = composer.compose_transaction(ledger_db, "issuance", params, construct_params)
@@ -1709,7 +1709,7 @@ def test_compose_issuance_tparoot(ledger_db, defaults):
     envelope_script = Script.from_raw(result["envelope_script"])
     assert (
         str(envelope_script)
-        == "['OP_0', 'OP_IF', '6f7264', '01', '696d6167652f706e67', '05', '86161a000bfce31903e8f5f4f4', '00', 'aaffaaff', 'OP_ENDIF']"
+        == "['OP_0', 'OP_IF', '6f7264', '01', '696d6167652f706e67', '05', '86161a000bfce31903e8f5f4f4', 'OP_0', 'aaffaaff', 'OP_ENDIF']"
     )
 
 
@@ -1722,12 +1722,12 @@ def test_compose_fairminter_taproot(ledger_db, defaults):
         "mime_type": "image/png",
     }
 
-    construct_params = {"encoding": "taproot"}
+    construct_params = {"encoding": "taproot", "ordinals_envelope": True}
 
     expected = {
-        "rawtransaction": "0200000001f4b46f0fa251a8802e0823d95573525bc918a395f3f8d4e0694f7d3cbe1329100000000000ffffffff024203000000000000225120a210a9d1735d375af73aa5cecb2ee9df0593ab068844616861172acbe246f412e8c49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
-        "envelope_script": "0063036f7264010109696d6167652f706e6701051c92185a1b000000095fce9cd50000010a0000000000000000f4f4f4f5010004ff00ff0068",
-        "reveal_rawtransaction": "02000000019ee59eb6d2eff84e60dae9aa2f2dfdcedfc919326a72bdfdf5eacff0357683d70000000000ffffffff0200000000000000000a6a08434e54525052545922020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "rawtransaction": "0200000001f4b46f0fa251a8802e0823d95573525bc918a395f3f8d4e0694f7d3cbe1329100000000000ffffffff02420300000000000022512056e8c595e32a433556b0a03fc176874e360f0102a68990892ee4880a01b1a5bee8c49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "envelope_script": "0063036f7264010109696d6167652f706e6701051c92185a1b000000095fce9cd50000010a0000000000000000f4f4f4f50004ff00ff0068",
+        "reveal_rawtransaction": "0200000001a6bbf87354f3e45c415fddab66798acac8c8deacd43540a8a5c63d5315980e8a0000000000ffffffff0200000000000000000a6a08434e54525052545922020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
     }
 
     result = composer.compose_transaction(ledger_db, "fairminter", params, construct_params)
@@ -1736,7 +1736,7 @@ def test_compose_fairminter_taproot(ledger_db, defaults):
     envelope_script = Script.from_raw(result["envelope_script"])
     assert (
         str(envelope_script)
-        == "['OP_0', 'OP_IF', '6f7264', '01', '696d6167652f706e67', '05', '92185a1b000000095fce9cd50000010a0000000000000000f4f4f4f5', '00', 'ff00ff00', 'OP_ENDIF']"
+        == "['OP_0', 'OP_IF', '6f7264', '01', '696d6167652f706e67', '05', '92185a1b000000095fce9cd50000010a0000000000000000f4f4f4f5', 'OP_0', 'ff00ff00', 'OP_ENDIF']"
     )
 
 
@@ -1747,12 +1747,12 @@ def test_compose_broadcast_taproot(ledger_db, defaults):
         "mime_type": "image/png",
     }
 
-    construct_params = {"encoding": "taproot"}
+    construct_params = {"encoding": "taproot", "ordinals_envelope": True}
 
     expected = {
-        "rawtransaction": "02000000014f4851c5dc2eff52025d7d337748c9bfa1e12ab43ee3523ba5dbbadffb6a31bb0000000000ffffffff024c03000000000000225120fcae6f84590f72860ecba792b4e658b7cb1fcf5c9ffeeb26634322a01240755ddec49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
-        "envelope_script": "0063036f7264010109696d6167652f706e6701051284181e1a52bb3303fb000000000000000000010020ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff0068",
-        "reveal_rawtransaction": "02000000014684eb2b5f5cbeb33a4d46b944c1985bed01885db7f8e185dc10f685f92e22870000000000ffffffff0200000000000000000a6a08434e54525052545922020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "rawtransaction": "02000000014f4851c5dc2eff52025d7d337748c9bfa1e12ab43ee3523ba5dbbadffb6a31bb0000000000ffffffff024c0300000000000022512078520fb31f3d28fc2992bdfbc32e1edd95563d7f4bb2c83ed20a0c1e642c462bdec49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "envelope_script": "0063036f7264010109696d6167652f706e6701051284181e1a52bb3303fb0000000000000000000020ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff0068",
+        "reveal_rawtransaction": "02000000018b42349673afdf09c1ad0f1e3ca3d6fcfcfd747fd0701b7b6e6ffe35b82e7cbb0000000000ffffffff0200000000000000000a6a08434e54525052545922020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
     }
 
     result = composer.compose_transaction(ledger_db, "broadcast", params, construct_params)
@@ -1761,7 +1761,32 @@ def test_compose_broadcast_taproot(ledger_db, defaults):
     envelope_script = Script.from_raw(result["envelope_script"])
     assert (
         str(envelope_script)
-        == "['OP_0', 'OP_IF', '6f7264', '01', '696d6167652f706e67', '05', '84181e1a52bb3303fb000000000000000000', '00', 'ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00', 'OP_ENDIF']"
+        == "['OP_0', 'OP_IF', '6f7264', '01', '696d6167652f706e67', '05', '84181e1a52bb3303fb000000000000000000', 'OP_0', 'ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00', 'OP_ENDIF']"
+    )
+
+
+def test_compose_broadcast_taproot_no_ordinals(ledger_db, defaults):
+    params = {
+        "source": defaults["addresses"][0],
+        "text": "ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00",
+        "mime_type": "image/png",
+    }
+
+    construct_params = {"encoding": "taproot", "ordinals_envelope": False}
+
+    expected = {
+        "rawtransaction": "0200000001af72db3a5a121119973198c962cc1a4464633a7bb4d14ed8e4d76eae1fac43a40000000000ffffffff024a010000000000002251205e6b724be11368170a45308f5e860b565a4363d55c8f4f470dea99cde239049fe0c69a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "envelope_script": "00633d1e851a52bb3303fb00000000000000000069696d6167652f706e675820ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff0068",
+        "reveal_rawtransaction": "0200000001d3125daf10c159aebeee13df8f9cfe837705494bba8321b8352da1caea35c8e90000000000ffffffff0100000000000000000a6a08434e54525052545900000000",
+    }
+
+    result = composer.compose_transaction(ledger_db, "broadcast", params, construct_params)
+    assert result == expected
+
+    envelope_script = Script.from_raw(result["envelope_script"])
+    assert (
+        str(envelope_script)
+        == "['OP_0', 'OP_IF', '1e851a52bb3303fb00000000000000000069696d6167652f706e675820ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00', 'OP_ENDIF']"
     )
 
 

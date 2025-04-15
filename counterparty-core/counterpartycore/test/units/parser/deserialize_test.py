@@ -194,7 +194,7 @@ def test_deserialize_error():
 def test_desrialize_reveal_tx(ledger_db, defaults):
     deserialize.Deserializer.reset_instance()
     unspent_list = []
-    construct_params = {}
+    construct_params = {"ordinals_envelope": True}
     source = defaults["addresses"][0]
 
     for data in [

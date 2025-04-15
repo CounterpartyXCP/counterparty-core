@@ -355,7 +355,7 @@ def get_reveal_outputs(db, source, envelope_script, unspent_list, construct_para
 
 
 def get_dummy_signed_reveal_tx(db, source, data, unspent_list, construct_params):
-    envelope_script = generate_envelope_script(data)
+    envelope_script = generate_envelope_script(data, construct_params)
     # use fake private key and fake input to calculate the size
     private_key = PrivateKey(secret_exponent=1)
     source_pubkey = private_key.get_public_key()
@@ -423,7 +423,7 @@ def generate_ordinal_envelope_script(message_data, message_type_id, content):
     return Script(script_array)
 
 
-def generate_envelope_script(data):
+def generate_envelope_script(data, construct_params):
     message_type_id, message = messagetype.unpack(data)
     if message_type_id in [
         messages.fairminter.ID,
@@ -432,7 +432,7 @@ def generate_envelope_script(data):
         messages.issuance.LR_ISSUANCE_ID,
         messages.issuance.LR_SUBASSET_ID,
         messages.broadcast.ID,
-    ]:
+    ] and construct_params.get("ordinals_envelope", False):
         message_data = cbor2.loads(message)
         content = message_data.pop()
         if content is not None and len(content) > 0:
@@ -449,7 +449,7 @@ def prepare_taproot_output(db, source, data, unspent_list, construct_params):
     multisig_pubkey = get_source_pubkey(source, unspent_list, construct_params)
     source_pubkey = PublicKey.from_hex(multisig_pubkey)
     # Build inscription envelope script
-    envelope_script = generate_envelope_script(data)
+    envelope_script = generate_envelope_script(data, construct_params)
     # use source address as destination
     commit_address = source_pubkey.get_taproot_address([[envelope_script]])
     reveal_tx_vsize, outputs_value = get_reveal_transaction_vsize_and_value(
@@ -1068,7 +1068,7 @@ def construct(db, tx_info, construct_params):
     if data:
         encoding = determine_encoding(data, destinations, construct_params)
         if encoding == "taproot":
-            envelope_script = generate_envelope_script(data)
+            envelope_script = generate_envelope_script(data, construct_params)
             outputs = get_reveal_outputs(
                 db, source, envelope_script, unspent_list, construct_params
             )
@@ -1131,7 +1131,7 @@ def check_transaction_sanity(tx_info, composed_tx, construct_params):
     if data:
         if "reveal_rawtransaction" in composed_tx:
             envelope_script = composed_tx["envelope_script"]
-            envelope_script = generate_envelope_script(data).to_hex()
+            envelope_script = generate_envelope_script(data, construct_params).to_hex()
             if envelope_script != composed_tx["envelope_script"]:
                 raise exceptions.ComposeError(
                     "Sanity check error: envelope script does not match the data"
@@ -1214,6 +1214,7 @@ CONSTRUCT_PARAMS = {
     ),
     "return_only_data": (bool, False, "Return only the data part of the transaction"),
     "segwit_dust_size": (int, None, "The dust size for segwit outputs (default is 330)"),
+    "ordinals_envelope": (bool, False, "Use ordinals envelope script when possible"),
     # deprecated parameters
     "fee_per_kb": (int, None, "Deprecated, use `sat_per_vbyte` instead"),
     "fee_provided": (int, None, "Deprecated, use `max_fee` instead"),

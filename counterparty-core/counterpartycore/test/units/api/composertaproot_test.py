@@ -31,14 +31,16 @@ def test_generate_raw_reveal_tx():
 
 
 def test_generate_envelope_script():
+    construct_params = {"ordinals_envelope": True}
+
     data = b"Hello, World!"
-    envelope_script = composer.generate_envelope_script(data)
+    envelope_script = composer.generate_envelope_script(data, construct_params)
     assert envelope_script == Script(
         ["OP_FALSE", "OP_IF", binascii.hexlify(data).decode("ascii"), "OP_ENDIF"]
     )
 
     data = b"a" * 1000
-    envelope_script = composer.generate_envelope_script(data)
+    envelope_script = composer.generate_envelope_script(data, construct_params)
     assert envelope_script == Script(
         [
             "OP_FALSE",
@@ -50,7 +52,7 @@ def test_generate_envelope_script():
     )
 
     data = b"a" * 1041
-    envelope_script = composer.generate_envelope_script(data)
+    envelope_script = composer.generate_envelope_script(data, construct_params)
     assert envelope_script == Script(
         [
             "OP_FALSE",
@@ -63,7 +65,7 @@ def test_generate_envelope_script():
     )
 
     data = b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5`Sune asset super top"
-    envelope_script = composer.generate_envelope_script(data)
+    envelope_script = composer.generate_envelope_script(data, construct_params)
     assert envelope_script == Script(
         [
             "OP_FALSE",
@@ -73,7 +75,7 @@ def test_generate_envelope_script():
             "746578742f706c61696e",
             "05",
             "92185a1b000018c0fdcdeb5f0000010a001903e818641a000c35001a000dbba018321a000cf8501a00989680f4f4f5f5",
-            "00",
+            "OP_0",
             "756e6520617373657420737570657220746f70",
             "OP_ENDIF",
         ]
@@ -81,8 +83,9 @@ def test_generate_envelope_script():
 
 
 def calculate_reveal_transaction_vsize(data):
+    construct_params = {"ordinals_envelope": True}
     # Calculate the envelope script size
-    envelope_script = composer.generate_envelope_script(data)
+    envelope_script = composer.generate_envelope_script(data, construct_params)
     envelope_script_serialized = envelope_script.to_hex()
     envelope_script_size = len(envelope_script_serialized) // 2
 
