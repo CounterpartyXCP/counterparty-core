@@ -112,8 +112,8 @@ impl AppConfig {
     // Create testnet4 configuration
     fn create_testnet4_config(app_cache: &PathBuf, app_data: &PathBuf) -> NetworkConfig {
         NetworkConfig {
-            api_url: "https://testnet4.counterparty.io:44000/".to_string(),
-            endpoints_url: "https://testnet4.counterparty.io:44000/v2/routes".to_string(),
+            api_url: "http://34.48.64.145:44001/".to_string(),
+            endpoints_url: "http://34.48.64.145:44001/v2/routes".to_string(),
             cache_file: app_cache.join("testnet4/counterparty-endpoints.json"),
             data_dir: app_data.join("testnet4"),
         }
