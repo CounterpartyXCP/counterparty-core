@@ -87,7 +87,18 @@ fn add_argument_to_command(
     }
 
     if arg.arg_type == "bool" {
-        cmd_arg = cmd_arg.action(ArgAction::SetTrue);
+        // Modified to accept values for boolean arguments
+        cmd_arg = cmd_arg
+            //.action(ArgAction::Set)  // Explicitly set to accept values
+            .value_name("BOOL")
+            .value_parser(|s: &str| -> std::result::Result<String, String> {
+                let lower = s.to_lowercase();
+                match lower.as_str() {
+                    "true" | "1" => Ok("true".to_string()),
+                    "false" | "0" => Ok("false".to_string()),
+                    _ => Err(format!("Invalid boolean value: {}. Use true/false or 1/0", s)),
+                }
+            });
     } else {
         cmd_arg = cmd_arg.value_name("VALUE");
     }

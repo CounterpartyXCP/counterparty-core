@@ -100,12 +100,37 @@ fn add_command_argument(cmd: Command, arg: &ApiEndpointArg) -> Command {
     }
 
     if arg.arg_type == "bool" {
-        cmd_arg = cmd_arg.action(ArgAction::SetTrue);
+        // Modified to accept values for boolean arguments
+        cmd_arg = cmd_arg
+            //.action(ArgAction::Set)  // Explicitly set to accept values
+            .value_name("BOOL")
+            .value_parser(|s: &str| -> std::result::Result<String, String> {
+                let lower = s.to_lowercase();
+                match lower.as_str() {
+                    "true" | "1" => Ok("true".to_string()),
+                    "false" | "0" => Ok("false".to_string()),
+                    _ => Err(format!("Invalid boolean value: {}. Use true/false or 1/0", s)),
+                }
+            });
     } else {
         cmd_arg = cmd_arg.value_name("VALUE");
     }
 
     cmd.arg(cmd_arg)
+}
+
+// Adds a parameter from a command match
+fn add_parameter_from_match(
+    params: &mut HashMap<String, String>,
+    arg: &ApiEndpointArg,
+    static_arg_names: &HashMap<String, &'static str>,
+    matches: &ArgMatches,
+) {
+    let static_arg_name = static_arg_names.get(&arg.name).unwrap();
+
+    if let Some(value) = matches.get_one::<String>(static_arg_name) {
+        params.insert(arg.name.clone(), value.clone());
+    }
 }
 
 // Finds a matching endpoint for the given command
@@ -152,24 +177,6 @@ fn create_static_arg_names(args: &[ApiEndpointArg]) -> HashMap<String, &'static 
     }
 
     static_arg_names
-}
-
-// Adds a parameter from a command match
-fn add_parameter_from_match(
-    params: &mut HashMap<String, String>,
-    arg: &ApiEndpointArg,
-    static_arg_names: &HashMap<String, &'static str>,
-    matches: &ArgMatches,
-) {
-    let static_arg_name = static_arg_names.get(&arg.name).unwrap();
-
-    if arg.arg_type == "bool" {
-        if matches.get_flag(static_arg_name) {
-            params.insert(arg.name.clone(), "true".to_string());
-        }
-    } else if let Some(value) = matches.get_one::<String>(static_arg_name) {
-        params.insert(arg.name.clone(), value.clone());
-    }
 }
 
 // Builds the API path with path parameters replaced

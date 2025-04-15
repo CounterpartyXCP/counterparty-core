@@ -60,12 +60,7 @@ fn extract_parameter_for_arg(
             // Extract the internal ID from the key
             let internal_id = key.split(':').nth(1).unwrap_or("");
 
-            if arg.arg_type == "bool" {
-                if sub_matches.get_flag(internal_id) {
-                    params.insert(arg.name.clone(), "true".to_string());
-                    return;
-                }
-            } else if let Some(value) = sub_matches.get_one::<String>(internal_id) {
+            if let Some(value) = sub_matches.get_one::<String>(internal_id) {
                 params.insert(arg.name.clone(), value.clone());
                 return;
             }
