@@ -445,7 +445,7 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
             },
             _ => false
         };
-    
+
     if is_ord {
         // Extract mime_type from the script (index 4)
         let mime_type = match &instructions.get(4) {
@@ -467,17 +467,28 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
         
         // Process all instructions to collect metadata and description
         while i < instructions.len() - 1 {
-            if let Ok(PushBytes(marker)) = &instructions[i] {
-                let marker_bytes = marker.as_bytes();
-                if marker_bytes.len() == 1 && marker_bytes[0] == 5 {
-                    current_section = "metadata";
-                    i += 1;
-                    continue;
-                } else if marker_bytes.len() == 1 && marker_bytes[0] == 0 {
-                    current_section = "description";
-                    i += 1;
-                    continue;
-                }
+            match &instructions[i] {
+                Ok(PushBytes(marker)) => {
+                    let marker_bytes = marker.as_bytes();
+                    if marker_bytes.len() == 1 && marker_bytes[0] == 5 {
+                        current_section = "metadata";
+                        i += 1;
+                        continue;
+                    } else if (marker_bytes.len() == 1 && marker_bytes[0] == 0) || marker_bytes.is_empty() {
+                        current_section = "description";
+                        i += 1;
+                        continue;
+                    }
+                },
+                Ok(Op(op)) => {
+                    // Vérifier si l'instruction est OP_0/OP_FALSE pour le marqueur de description
+                    if format!("{:?}", op).contains("OP_0") || format!("{:?}", op).contains("OP_FALSE") {
+                        current_section = "description";
+                        i += 1;
+                        continue;
+                    }
+                },
+                _ => {}
             }
 
             // Collect the chunk if we're in a data section
