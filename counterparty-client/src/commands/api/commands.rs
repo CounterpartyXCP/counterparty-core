@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command};
 use std::collections::HashMap;
 
 use crate::api::models::{ApiEndpoint, ApiEndpointArg};

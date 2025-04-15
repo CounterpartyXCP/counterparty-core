@@ -4,6 +4,10 @@ use std::path::PathBuf;
 use std::fs;
 use std::path::Path;
 
+use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+use std::io::Write;
+use std::env;
+
 mod commands;
 mod config;
 mod helpers;
@@ -154,6 +158,74 @@ fn add_file_ref_support_recursive(cmd: Command) -> Command {
     process_command_args(cmd)
 }
 
+
+// Display header information message before executing commands
+fn header_message(config: &AppConfig, command_name: &str) {
+    // Get active network configuration
+    let network_config = config.get_active_network_config();
+    
+    // Get wallet path based on current network
+    let wallet_path = config.get_data_dir().join("wallet.json");
+    
+    // Get app version from Cargo.toml
+    let version = env!("CARGO_PKG_VERSION");
+    
+    // Format network name with proper capitalization
+    let network_name = match config.network {
+        Network::Mainnet => "Mainnet",
+        Network::Testnet4 => "Testnet4",
+        Network::Regtest => "Regtest",
+    };
+    
+    // Create a line of dashes with command name
+    let line_length = 50;
+    let cmd_len = command_name.len();
+    let dashes_prefix = "-".repeat((line_length - cmd_len) / 2);
+    let dashes_suffix = "-".repeat(line_length - cmd_len - dashes_prefix.len());
+    let separator = format!("{}{}{}", dashes_prefix, command_name, dashes_suffix);
+    
+    // Print the header with just two colors
+    let mut stdout = StandardStream::stdout(ColorChoice::Always);
+    
+    // Define colors for keys and values
+    let mut key_color = ColorSpec::new();
+    key_color.set_fg(Some(Color::Cyan)).set_bold(true);
+    
+    let mut value_color = ColorSpec::new();
+    value_color.set_fg(Some(Color::White));
+    
+    // API URL
+    let _ = stdout.set_color(&key_color);
+    let _ = write!(stdout, "API: ");
+    let _ = stdout.set_color(&value_color);
+    let _ = writeln!(stdout, "{}", network_config.api_url);
+    
+    // Wallet path
+    let _ = stdout.set_color(&key_color);
+    let _ = write!(stdout, "Wallet: ");
+    let _ = stdout.set_color(&value_color);
+    let _ = writeln!(stdout, "{}", wallet_path.display());
+    
+    // Network
+    let _ = stdout.set_color(&key_color);
+    let _ = write!(stdout, "Network: ");
+    let _ = stdout.set_color(&value_color);
+    let _ = writeln!(stdout, "{}", network_name);
+    
+    // Version
+    let _ = stdout.set_color(&key_color);
+    let _ = write!(stdout, "Version: ");
+    let _ = stdout.set_color(&value_color);
+    let _ = writeln!(stdout, "{}", version);
+    
+    // Separator line
+    let _ = stdout.set_color(&key_color);
+    let _ = writeln!(stdout, "{}\n", separator);
+    
+    // Reset color
+    let _ = stdout.reset();
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     // Pre-process arguments for file references
@@ -236,9 +308,13 @@ async fn main() -> Result<()> {
     // Step 10: Execute the requested subcommand
     match final_matches.subcommand() {
         Some(("api", sub_matches)) => {
+            let cmd_name = sub_matches.subcommand_name().unwrap_or("api");
+            header_message(&config, &format!(" API {} ", cmd_name));
             api::execute_command(&config, sub_matches).await?;
         }
         Some(("wallet", sub_matches)) => {
+            let cmd_name = sub_matches.subcommand_name().unwrap_or("wallet");
+            header_message(&config, &format!(" Wallet {} ", cmd_name));
             wallet_commands::execute_command(&config, sub_matches, &endpoints).await?;
         }
         _ => {
