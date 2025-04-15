@@ -76,7 +76,7 @@ counterparty-server start
 - POST URL-encoded parameters are now accepted for composing a transaction
 - Add `mime_type` parameter to `compose_issuance`, `compose_fairminter` and `compose_broadcast` endpoints
 - Remove mandatory fields for broadcast: `fee_fraction`, `value`, `timestamp`
-- Add `ordinals_envelope` parameter to the compose API
+- Add `inscription` parameter to the compose API
 
 ## CLI
 

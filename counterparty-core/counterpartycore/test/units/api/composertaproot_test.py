@@ -31,7 +31,7 @@ def test_generate_raw_reveal_tx():
 
 
 def test_generate_envelope_script():
-    construct_params = {"ordinals_envelope": True}
+    construct_params = {"inscriptioninscription": True}
 
     data = b"Hello, World!"
     envelope_script = composer.generate_envelope_script(data, construct_params)
@@ -83,7 +83,7 @@ def test_generate_envelope_script():
 
 
 def calculate_reveal_transaction_vsize(data):
-    construct_params = {"ordinals_envelope": True}
+    construct_params = {"inscription": True}
     # Calculate the envelope script size
     envelope_script = composer.generate_envelope_script(data, construct_params)
     envelope_script_serialized = envelope_script.to_hex()
