@@ -432,7 +432,7 @@ def generate_envelope_script(data, construct_params):
         messages.issuance.LR_ISSUANCE_ID,
         messages.issuance.LR_SUBASSET_ID,
         messages.broadcast.ID,
-    ] and construct_params.get("ordinals_envelope", False):
+    ] and construct_params.get("ordinals_envelope", True):
         message_data = cbor2.loads(message)
         content = message_data.pop()
         if content is not None and len(content) > 0:
