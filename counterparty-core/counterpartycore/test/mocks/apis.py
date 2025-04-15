@@ -1,4 +1,5 @@
 import pytest
+from counterpartycore.lib import config
 from counterpartycore.lib.api import apiserver, apiv1
 
 
@@ -26,6 +27,7 @@ def apiv2_app(ledger_db, state_db, monkeypatch, current_block_index):
             "TESTING": True,
         }
     )
+    config.DISABLE_API_CACHE = True
     yield app
 
 

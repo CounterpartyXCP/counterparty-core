@@ -1,6 +1,8 @@
 import logging
 import struct
 
+import cbor2
+
 from counterpartycore.lib import (
     config,
     exceptions,
@@ -86,10 +88,12 @@ def compose(
 
     if protocol.enabled("taproot_support"):
         data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
-        data += helpers.encode_data(
-            short_address_bytes,
-            flags,
-            memo_bytes,
+        data += cbor2.dumps(
+            [
+                short_address_bytes,
+                flags,
+                memo_bytes,
+            ]
         )
     else:
         data = messagetype.pack(ID)
@@ -101,9 +105,7 @@ def compose(
 
 def new_unpack(message):
     try:
-        (short_address_bytes, flags_bytes, memo_bytes) = helpers.decode_data(message)  # pylint: disable=unbalanced-tuple-unpacking
-
-        flags = helpers.bytes_to_int(flags_bytes)
+        (short_address_bytes, flags, memo_bytes) = cbor2.loads(message)  # pylint: disable=unbalanced-tuple-unpacking
 
         if len(memo_bytes) == 0:
             memo_bytes = None

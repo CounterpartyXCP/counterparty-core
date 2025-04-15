@@ -3,6 +3,8 @@
 import logging
 import struct
 
+import cbor2
+
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages.versions import send1
 from counterpartycore.lib.parser import messagetype, protocol
@@ -18,16 +20,10 @@ ID = 2  # 0x02
 
 def new_unpack(message):
     try:
-        (asset_id_bytes, quantity_bytes, short_address_bytes, memo_bytes) = helpers.decode_data(  # pylint: disable=unbalanced-tuple-unpacking
-            message
-        )
-
-        asset_id = helpers.bytes_to_int(asset_id_bytes)
+        (asset_id, quantity, short_address_bytes, memo_bytes) = cbor2.loads(message)
         asset = ledger.issuances.generate_asset_name(asset_id)
         if asset == config.BTC:
             raise exceptions.AssetNameError(f"{config.BTC} not allowed")
-
-        quantity = helpers.bytes_to_int(quantity_bytes)
 
         full_address = address.unpack(short_address_bytes)
 
@@ -181,11 +177,13 @@ def compose(
 
     if protocol.enabled("taproot_support"):
         data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
-        data += helpers.encode_data(
-            asset_id,
-            quantity,
-            short_address_bytes,
-            memo_bytes,
+        data += cbor2.dumps(
+            [
+                asset_id,
+                quantity,
+                short_address_bytes,
+                memo_bytes,
+            ]
         )
     else:
         data = messagetype.pack(ID)
