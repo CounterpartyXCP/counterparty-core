@@ -1214,7 +1214,7 @@ CONSTRUCT_PARAMS = {
     ),
     "return_only_data": (bool, False, "Return only the data part of the transaction"),
     "segwit_dust_size": (int, None, "The dust size for segwit outputs (default is 330)"),
-    "ordinals_envelope": (bool, False, "Use ordinals envelope script when possible"),
+    "ordinals_envelope": (bool, True, "Use ordinals envelope script when possible"),
     # deprecated parameters
     "fee_per_kb": (int, None, "Deprecated, use `sat_per_vbyte` instead"),
     "fee_provided": (int, None, "Deprecated, use `max_fee` instead"),
