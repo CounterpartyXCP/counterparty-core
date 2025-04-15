@@ -33,4 +33,5 @@ nix = "0.26.0"
 keyring = "2.0.0"
 once_cell = "1.17.1"
 secrecy = "0.8.0"
+indicatif = "0.17.11"
 

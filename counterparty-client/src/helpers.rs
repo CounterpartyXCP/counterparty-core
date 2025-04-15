@@ -5,6 +5,51 @@ use syntect::easy::HighlightLines;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+use indicatif::{ProgressBar, ProgressStyle};
+
+/// A wrapper around ProgressBar that provides a stop() method
+pub struct Spinner {
+    progress_bar: ProgressBar,
+}
+
+impl Spinner {
+    /// Creates a new Spinner
+    fn new(message: &str) -> Self {
+        let progress_bar = ProgressBar::new_spinner();
+        let style = ProgressStyle::default_spinner();
+        progress_bar.set_style(style);
+        progress_bar.set_message(message.to_string());
+        progress_bar.enable_steady_tick(std::time::Duration::from_millis(100));
+        
+        Spinner { progress_bar }
+    }
+    
+    /// Stops the spinner
+    pub fn stop(self) {
+        self.progress_bar.finish_and_clear();
+    }
+}
+
+/// Prints a loading message with a spinner and returns the spinner
+///
+/// # Arguments
+///
+/// * `message` - The message to display with the spinner
+///
+/// # Returns
+///
+/// * `Spinner` - A handle to the spinner that can be used to stop it with `.stop()`
+///
+/// # Examples
+///
+/// ```
+/// let spinner = print_loading("Chargement des données...");
+/// // Do some work
+/// spinner.stop();
+/// ```
+pub fn print_loading(message: &str) -> Spinner {
+    Spinner::new(message)
+}
 
 /// Converts and prints a JSON value as colored YAML
 ///
