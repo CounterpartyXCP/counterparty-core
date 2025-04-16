@@ -36,8 +36,12 @@ pub async fn execute_command(
         Some(("export_address", sub_matches)) => {
             handlers::handle_export_address(&wallet, sub_matches)
         }
-        Some(("list_addresses", sub_matches)) => {
-            handlers::handle_list_addresses(&wallet, sub_matches)
+        Some(("list_addresses", _sub_matches)) => {
+            handlers::handle_list_addresses(&wallet)
+        }
+        Some(("address_balances", sub_matches)) => {
+            // Pass the config directly to the handler
+            handlers::handle_address_balances(config, sub_matches).await
         }
         Some(("send_transaction", send_tx_matches)) => {
             // Process send_transaction subcommands

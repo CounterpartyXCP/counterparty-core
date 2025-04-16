@@ -8,6 +8,7 @@ pub fn build_command() -> Command {
         .subcommand(build_import_address_command())
         .subcommand(build_export_address_command())
         .subcommand(build_list_addresses_command())
+        .subcommand(build_address_balances_command())
         .subcommand(build_change_password_command())
         .subcommand(build_disconnect_command())
 }
@@ -97,6 +98,19 @@ fn build_list_addresses_command() -> Command {
                 .long("verbose")
                 .help("Show detailed information")
                 .action(ArgAction::SetTrue),
+        )
+}
+
+/// Builds the address_balances subcommand
+fn build_address_balances_command() -> Command {
+    Command::new("address_balances")
+        .about("Display balances for a specific address")
+        .arg(
+            Arg::new("address")
+                .long("address")
+                .help("The blockchain address to check balances for")
+                .required(true)
+                .value_name("ADDRESS"),
         )
 }
 
