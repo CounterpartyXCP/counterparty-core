@@ -18,13 +18,13 @@ struct RevealTransactionInfo<'a> {
     envelope_script: &'a str,
 }
 
-/// Find the corresponding compose endpoint for a broadcast command
+/// Find the corresponding compose endpoint for a transaction command
 fn find_compose_endpoint<'a>(
     endpoints: &'a HashMap<String, ApiEndpoint>,
-    command_name: &str,
+    transaction_name: &str,
 ) -> Result<(&'a String, &'a ApiEndpoint)> {
-    // Convert broadcast_X to compose_X to find the matching endpoint
-    let compose_name = command_name.replace("broadcast_", "compose_");
+    // Convert transaction name to compose_X to find the matching endpoint
+    let compose_name = format!("compose_{}", transaction_name);
 
     // Find matching endpoint for the compose function
     api::find_matching_endpoint(endpoints, &compose_name)
@@ -33,14 +33,14 @@ fn find_compose_endpoint<'a>(
 /// Extract parameters from command line arguments
 fn extract_parameters_from_matches(
     endpoint: &ApiEndpoint,
-    command_name: &str,
+    transaction_name: &str,
     sub_matches: &ArgMatches,
 ) -> HashMap<String, String> {
     let mut params = HashMap::new();
     let id_map = ID_ARG_MAP.lock().unwrap();
 
     for arg in &endpoint.args {
-        extract_parameter_for_arg(arg, command_name, sub_matches, &id_map, &mut params);
+        extract_parameter_for_arg(arg, transaction_name, sub_matches, &id_map, &mut params);
     }
 
     // Always add verbose=true
@@ -52,14 +52,14 @@ fn extract_parameters_from_matches(
 /// Extract a specific parameter for an argument
 fn extract_parameter_for_arg(
     arg: &ApiEndpointArg,
-    command_name: &str,
+    transaction_name: &str,
     sub_matches: &ArgMatches,
     id_map: &HashMap<String, String>,
     params: &mut HashMap<String, String>,
 ) {
     // Try to find the argument by iterating through the id_map
     for (key, original_name) in id_map.iter() {
-        if key.starts_with(&format!("{}:", command_name)) && original_name == &arg.name {
+        if key.starts_with(&format!("{}:", transaction_name)) && original_name == &arg.name {
             // Extract the internal ID from the key
             let internal_id = key.split(':').nth(1).unwrap_or("");
 
@@ -435,19 +435,19 @@ async fn broadcast_transactions(
     Ok(())
 }
 
-/// Handle broadcast command by calling the corresponding compose API function
+/// Handle transaction command by calling the corresponding compose API function
 pub async fn handle_broadcast_command(
     config: &AppConfig,
     endpoints: &HashMap<String, ApiEndpoint>,
-    command_name: &str,
+    transaction_name: &str,
     sub_matches: &ArgMatches,
     wallet: &BitcoinWallet,
 ) -> Result<()> {
     // Find the corresponding compose endpoint
-    let (path, endpoint) = find_compose_endpoint(endpoints, command_name)?;
+    let (path, endpoint) = find_compose_endpoint(endpoints, transaction_name)?;
 
     // Extract parameters from command line arguments
-    let mut params = extract_parameters_from_matches(endpoint, command_name, sub_matches);
+    let mut params = extract_parameters_from_matches(endpoint, transaction_name, sub_matches);
 
     // Get address and public key
     let (address, public_key) = get_address_and_public_key(&params, wallet)?;

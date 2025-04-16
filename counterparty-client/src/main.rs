@@ -61,6 +61,7 @@ fn file_reference_parser(arg: &str) -> std::result::Result<String, String> {
 // Add common CLI arguments shared between preliminary and final CLI parsers
 fn add_common_cli_args(command: Command) -> Command {
     command
+        .disable_help_subcommand(true)
         .arg(
             Arg::new("config-file")
                 .long("config-file")

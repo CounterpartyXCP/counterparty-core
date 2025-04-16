@@ -1,4 +1,6 @@
 use clap::{Arg, ArgAction, Command};
+use std::collections::HashMap;
+use crate::commands::api::ApiEndpoint;
 
 /// Builds the main wallet command with its subcommands
 pub fn build_command() -> Command {
@@ -9,6 +11,12 @@ pub fn build_command() -> Command {
         .subcommand(build_list_addresses_command())
         .subcommand(build_change_password_command())
         .subcommand(build_disconnect_command())
+}
+
+/// Builds the send_transaction command
+pub fn build_send_transaction_command() -> Command {
+    Command::new("send_transaction")
+        .about("Send Counterparty transactions")
 }
 
 /// Builds the addaddress subcommand

@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::commands::api::{ApiEndpoint, ApiEndpointArg};
 use crate::commands::wallet::args::ID_ARG_MAP;
+use crate::commands::wallet::commands;
 
 /// Filter and sort compose endpoints
 fn filter_compose_endpoints(
@@ -21,23 +22,23 @@ fn filter_compose_endpoints(
     compose_commands
 }
 
-/// Create a broadcast command from a compose endpoint
-fn create_broadcast_command(func_name: &str, endpoint: &ApiEndpoint) -> (String, Command) {
-    // Convert compose_X to broadcast_X
-    let broadcast_name = func_name.replace("compose_", "broadcast_");
-    let static_broadcast_name: &'static str = Box::leak(broadcast_name.into_boxed_str());
+/// Create a transaction command from a compose endpoint
+fn create_transaction_command(func_name: &str, endpoint: &ApiEndpoint) -> (String, Command) {
+    // Extract transaction name (without compose_ prefix)
+    let tx_name = func_name.replace("compose_", "");
+    let static_tx_name: &'static str = Box::leak(tx_name.into_boxed_str());
 
-    // Create description for broadcast command
+    // Create description for transaction command
     let description = format!(
-        "Compose, sign and broadcast a {}",
+        "Send a {}",
         &endpoint.description.replace("Composes a ", "")
     );
     let static_description: &'static str = Box::leak(description.into_boxed_str());
 
     // Create the command
-    let cmd = Command::new(static_broadcast_name).about(static_description);
+    let cmd = Command::new(static_tx_name).about(static_description);
 
-    (static_broadcast_name.to_string(), cmd)
+    (static_tx_name.to_string(), cmd)
 }
 
 /// Add a single argument to a command
@@ -57,7 +58,7 @@ fn add_argument_to_command(
     used_long_names.insert(arg.name.clone());
 
     // Create unique internal ID
-    let internal_id = format!("__broadcast_{}_arg_{}_{}", command_name, idx, &arg.name);
+    let internal_id = format!("__transaction_{}_arg_{}_{}", command_name, idx, &arg.name);
     let static_internal_id: &'static str = Box::leak(internal_id.into_boxed_str());
 
     // Use original argument name as long flag
@@ -106,32 +107,38 @@ fn add_argument_to_command(
     cmd.arg(cmd_arg)
 }
 
-/// Add broadcast commands to the wallet command based on compose API endpoints
+/// Add send_transaction command to the wallet command based on compose API endpoints
 pub fn add_broadcast_commands(cmd: Command, endpoints: &HashMap<String, ApiEndpoint>) -> Command {
     let mut wallet_cmd = cmd;
-
+    
+    // Create the parent send_transaction command
+    let mut send_transaction_cmd = commands::build_send_transaction_command();
+    
     // Get filtered and sorted compose endpoints
     let sorted_commands = filter_compose_endpoints(endpoints);
 
-    // Add each broadcast command
+    // Add each transaction command as a subcommand of send_transaction
     for (func_name, endpoint) in sorted_commands {
-        let (broadcast_name, mut broadcast_cmd) = create_broadcast_command(&func_name, endpoint);
+        let (tx_name, mut tx_cmd) = create_transaction_command(&func_name, endpoint);
 
         // Add arguments, skipping any duplicates
         let mut used_long_names = HashSet::new();
 
         for (idx, arg) in endpoint.args.iter().enumerate() {
-            broadcast_cmd = add_argument_to_command(
-                broadcast_cmd,
+            tx_cmd = add_argument_to_command(
+                tx_cmd,
                 arg,
                 idx,
-                &broadcast_name,
+                &tx_name,
                 &mut used_long_names,
             );
         }
 
-        wallet_cmd = wallet_cmd.subcommand(broadcast_cmd);
+        send_transaction_cmd = send_transaction_cmd.subcommand(tx_cmd);
     }
 
+    // Add send_transaction to wallet command
+    wallet_cmd = wallet_cmd.subcommand(send_transaction_cmd);
+    
     wallet_cmd
 }
