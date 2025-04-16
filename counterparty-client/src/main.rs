@@ -66,7 +66,8 @@ fn add_common_cli_args(command: Command) -> Command {
                 .long("config-file")
                 .help("Path to configuration file")
                 .value_parser(clap::value_parser!(PathBuf))
-                .global(true),
+                .global(true)
+                .display_order(999999),
         )
         .arg(
             Arg::new("testnet4")
@@ -74,7 +75,8 @@ fn add_common_cli_args(command: Command) -> Command {
                 .help("Use Testnet4 network")
                 .action(ArgAction::SetTrue)
                 .global(true)
-                .conflicts_with("regtest"),
+                .conflicts_with("regtest")
+                .display_order(999999),
         )
         .arg(
             Arg::new("regtest")
@@ -82,7 +84,8 @@ fn add_common_cli_args(command: Command) -> Command {
                 .help("Use Regtest network")
                 .action(ArgAction::SetTrue)
                 .global(true)
-                .conflicts_with("testnet4"),
+                .conflicts_with("testnet4")
+                .display_order(999999),
         )
 }
 

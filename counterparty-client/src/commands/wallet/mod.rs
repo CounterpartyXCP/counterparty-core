@@ -1,5 +1,5 @@
 // Declare submodules
-mod args;
+pub mod args;
 mod broadcast;
 mod commands;
 mod handlers;

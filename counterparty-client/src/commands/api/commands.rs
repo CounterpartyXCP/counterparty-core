@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use crate::api::models::{ApiEndpoint, ApiEndpointArg};
 
@@ -71,18 +72,48 @@ fn add_subcommand(cmd: Command, func_name: String, endpoint: ApiEndpoint) -> Com
     let static_description: &'static str = Box::leak(endpoint.description.into_boxed_str());
 
     let mut subcmd = Command::new(static_func_name).about(static_description);
+    
+    // Create a set to track used long names to avoid conflicts
+    let mut used_long_names = HashSet::new();
 
     // Add arguments for this endpoint
-    for arg in &endpoint.args {
-        subcmd = add_command_argument(subcmd, arg);
+    for (idx, arg) in endpoint.args.iter().enumerate() {
+        subcmd = add_command_argument(subcmd, arg, idx, static_func_name, &mut used_long_names);
     }
 
     cmd.subcommand(subcmd)
 }
 
-// Adds an argument to a command
-fn add_command_argument(cmd: Command, arg: &ApiEndpointArg) -> Command {
-    let static_arg_name: &'static str = Box::leak(arg.name.clone().into_boxed_str());
+// Adds an argument to a command with unique internal ID to prevent name conflicts
+fn add_command_argument(
+    cmd: Command,
+    arg: &ApiEndpointArg,
+    idx: usize,
+    command_name: &str,
+    used_long_names: &mut HashSet<String>,
+) -> Command {
+    // Skip this argument if the long name is already used
+    if used_long_names.contains(&arg.name) {
+        return cmd;
+    }
+
+    // Mark this argument name as used
+    used_long_names.insert(arg.name.clone());
+
+    // Create unique internal ID
+    let internal_id = format!("__api_{}_arg_{}_{}", command_name, idx, &arg.name);
+    let static_internal_id: &'static str = Box::leak(internal_id.into_boxed_str());
+
+    // Use original argument name as long flag
+    let static_long_flag: &'static str = Box::leak(arg.name.clone().into_boxed_str());
+
+    // Store mapping for later retrieval
+    let id_map_key = format!("{}:{}", command_name, static_internal_id);
+    crate::commands::wallet::args::ID_ARG_MAP
+        .lock()
+        .unwrap()
+        .insert(id_map_key, arg.name.clone());
+
     let static_help: &'static str = Box::leak(
         arg.description
             .as_deref()
@@ -91,8 +122,8 @@ fn add_command_argument(cmd: Command, arg: &ApiEndpointArg) -> Command {
             .into_boxed_str(),
     );
 
-    let mut cmd_arg = Arg::new(static_arg_name)
-        .long(static_arg_name)
+    let mut cmd_arg = Arg::new(static_internal_id)
+        .long(static_long_flag)
         .help(static_help);
 
     if arg.required {
@@ -102,7 +133,6 @@ fn add_command_argument(cmd: Command, arg: &ApiEndpointArg) -> Command {
     if arg.arg_type == "bool" {
         // Modified to accept values for boolean arguments
         cmd_arg = cmd_arg
-            //.action(ArgAction::Set)  // Explicitly set to accept values
             .value_name("BOOL")
             .value_parser(|s: &str| -> std::result::Result<String, String> {
                 let lower = s.to_lowercase();
@@ -120,20 +150,6 @@ fn add_command_argument(cmd: Command, arg: &ApiEndpointArg) -> Command {
     }
 
     cmd.arg(cmd_arg)
-}
-
-// Adds a parameter from a command match
-fn add_parameter_from_match(
-    params: &mut HashMap<String, String>,
-    arg: &ApiEndpointArg,
-    static_arg_names: &HashMap<String, &'static str>,
-    matches: &ArgMatches,
-) {
-    let static_arg_name = static_arg_names.get(&arg.name).unwrap();
-
-    if let Some(value) = matches.get_one::<String>(static_arg_name) {
-        params.insert(arg.name.clone(), value.clone());
-    }
 }
 
 // Finds a matching endpoint for the given command
@@ -161,25 +177,24 @@ pub fn build_request_parameters(
     matches: &ArgMatches,
 ) -> HashMap<String, String> {
     let mut params = HashMap::new();
-    let static_arg_names = create_static_arg_names(&endpoint.args);
+    let id_map = crate::commands::wallet::args::ID_ARG_MAP.lock().unwrap();
 
     for arg in &endpoint.args {
-        add_parameter_from_match(&mut params, arg, &static_arg_names, matches);
+        // Try to find the argument by iterating through the id_map
+        for (key, original_name) in id_map.iter() {
+            if key.starts_with(&format!("{}:", &endpoint.function)) && original_name == &arg.name {
+                // Extract the internal ID from the key
+                let internal_id = key.split(':').nth(1).unwrap_or("");
+
+                if let Some(value) = matches.get_one::<String>(internal_id) {
+                    params.insert(arg.name.clone(), value.clone());
+                    break;  // Once we find a matching value, break out of the loop
+                }
+            }
+        }
     }
 
     params
-}
-
-// Creates a map of argument names to static references
-fn create_static_arg_names(args: &[ApiEndpointArg]) -> HashMap<String, &'static str> {
-    let mut static_arg_names = HashMap::new();
-
-    for arg in args {
-        let static_name: &'static str = Box::leak(arg.name.clone().into_boxed_str());
-        static_arg_names.insert(arg.name.clone(), static_name);
-    }
-
-    static_arg_names
 }
 
 // Builds the API path with path parameters replaced

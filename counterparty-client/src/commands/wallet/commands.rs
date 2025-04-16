@@ -1,4 +1,4 @@
-use clap::{Arg, ArgAction, Command};
+use clap::{Arg, Command};
 
 /// Builds the main wallet command with its subcommands
 pub fn build_command() -> Command {
@@ -93,12 +93,6 @@ fn build_export_address_command() -> Command {
 fn build_list_addresses_command() -> Command {
     Command::new("list_addresses")
         .about("List all addresses in the wallet")
-        .arg(
-            Arg::new("verbose")
-                .long("verbose")
-                .help("Show detailed information")
-                .action(ArgAction::SetTrue),
-        )
 }
 
 /// Builds the address_balances subcommand
