@@ -77,6 +77,7 @@ counterparty-server start
 - Add `mime_type` parameter to `compose_issuance`, `compose_fairminter` and `compose_broadcast` endpoints
 - Remove mandatory fields for broadcast: `fee_fraction`, `value`, `timestamp`
 - Add `inscription` parameter to the compose API
+- Add `category` field to functions and arguments in `/v2/routes` endpoint response
 
 ## CLI
 
