@@ -4,8 +4,9 @@ use clap::{Arg, ArgAction, Command};
 pub fn build_command() -> Command {
     Command::new("wallet")
         .about("Manage your Counterparty wallet")
-        .subcommand(build_add_address_command())
-        .subcommand(build_show_address_command())
+        .subcommand(build_new_address_command())
+        .subcommand(build_import_address_command())
+        .subcommand(build_export_address_command())
         .subcommand(build_list_addresses_command())
         .subcommand(build_change_password_command())
         .subcommand(build_disconnect_command())
@@ -16,10 +17,30 @@ pub fn build_send_transaction_command() -> Command {
     Command::new("send_transaction").about("Send Counterparty transactions")
 }
 
-/// Builds the addaddress subcommand
-fn build_add_address_command() -> Command {
-    Command::new("add_address")
-        .about("Generate or import a new Bitcoin address")
+/// Builds the new_address subcommand for generating a random address
+fn build_new_address_command() -> Command {
+    Command::new("new_address")
+        .about("Generate a new random Bitcoin address")
+        .arg(
+            Arg::new("label")
+                .long("label")
+                .help("A label for the address")
+                .value_name("LABEL"),
+        )
+        .arg(
+            Arg::new("address_type")
+                .long("address-type")
+                .help("Type of address to generate (bech32 or p2pkh, default: bech32)")
+                .value_name("TYPE")
+                .value_parser(["bech32", "p2pkh"])
+                .default_value("bech32"),
+        )
+}
+
+/// Builds the import_address subcommand for importing existing keys
+fn build_import_address_command() -> Command {
+    Command::new("import_address")
+        .about("Import an existing private key or mnemonic")
         .arg(
             Arg::new("private_key")
                 .long("private-key")
@@ -54,22 +75,16 @@ fn build_add_address_command() -> Command {
         )
 }
 
-/// Builds the showaddress subcommand
-fn build_show_address_command() -> Command {
-    Command::new("show_address")
-        .about("Show details for a specific address")
+/// Builds the export_address subcommand
+fn build_export_address_command() -> Command {
+    Command::new("export_address")
+        .about("Export details for a specific address including private key")
         .arg(
             Arg::new("address")
                 .long("address")
-                .help("The blockchain address to show")
+                .help("The blockchain address to export")
                 .required(true)
                 .value_name("ADDRESS"),
-        )
-        .arg(
-            Arg::new("private_key")
-                .long("private-key")
-                .help("Show private key and other sensitive information")
-                .action(ArgAction::SetTrue),
         )
 }
 

@@ -27,17 +27,18 @@ pub async fn execute_command(
     let mut wallet = utils::init_wallet(&data_dir, config.network)?;
 
     match matches.subcommand() {
-        Some(("add_address", sub_matches)) => {
-            handlers::handle_add_address(&mut wallet, sub_matches)
+        Some(("new_address", sub_matches)) => {
+            handlers::handle_new_address(&mut wallet, sub_matches)
         }
-        Some(("show_address", sub_matches)) => handlers::handle_show_address(&wallet, sub_matches),
+        Some(("import_address", sub_matches)) => {
+            handlers::handle_import_address(&mut wallet, sub_matches)
+        }
+        Some(("export_address", sub_matches)) => {
+            handlers::handle_export_address(&wallet, sub_matches)
+        }
         Some(("list_addresses", sub_matches)) => {
             handlers::handle_list_addresses(&wallet, sub_matches)
         }
-        Some(("change_password", sub_matches)) => {
-            handlers::handle_change_password(&mut wallet, sub_matches)
-        }
-        Some(("disconnect", sub_matches)) => handlers::handle_disconnect(&mut wallet, sub_matches),
         Some(("send_transaction", send_tx_matches)) => {
             // Process send_transaction subcommands
             match send_tx_matches.subcommand() {
@@ -60,6 +61,11 @@ pub async fn execute_command(
                 }
             }
         }
+        Some(("change_password", sub_matches)) => {
+            handlers::handle_change_password(&mut wallet, sub_matches)
+        }
+        Some(("disconnect", sub_matches)) => handlers::handle_disconnect(&mut wallet, sub_matches),
+
         _ => {
             // No subcommand provided, display help
             let mut wallet_cmd = commands::build_command();
