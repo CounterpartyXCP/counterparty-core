@@ -109,7 +109,10 @@ fn add_command_argument(cmd: Command, arg: &ApiEndpointArg) -> Command {
                 match lower.as_str() {
                     "true" | "1" => Ok("true".to_string()),
                     "false" | "0" => Ok("false".to_string()),
-                    _ => Err(format!("Invalid boolean value: {}. Use true/false or 1/0", s)),
+                    _ => Err(format!(
+                        "Invalid boolean value: {}. Use true/false or 1/0",
+                        s
+                    )),
                 }
             });
     } else {

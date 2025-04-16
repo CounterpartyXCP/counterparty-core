@@ -42,7 +42,14 @@ pub async fn execute_command(
             // Process send_transaction subcommands
             match send_tx_matches.subcommand() {
                 Some((tx_name, sub_matches)) => {
-                    transaction::handle_broadcast_command(config, endpoints, tx_name, sub_matches, &wallet).await
+                    transaction::handle_broadcast_command(
+                        config,
+                        endpoints,
+                        tx_name,
+                        sub_matches,
+                        &wallet,
+                    )
+                    .await
                 }
                 _ => {
                     // No transaction type provided, display send_transaction help

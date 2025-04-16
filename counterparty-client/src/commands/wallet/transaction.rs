@@ -115,7 +115,6 @@ fn extract_first_output_info(raw_tx_hex: &str) -> Result<(String, u64)> {
     Ok((script_hex, value))
 }
 
-
 /// Determine the script type from a ScriptBuf
 fn get_script_type(script: &bitcoin::ScriptBuf) -> &'static str {
     // Check for common script patterns
@@ -139,8 +138,8 @@ fn get_script_type(script: &bitcoin::ScriptBuf) -> &'static str {
 /// Parse a signed transaction and display inputs, outputs, and fees
 fn display_transaction_summary(signed_tx: &str) -> Result<()> {
     // Decode the transaction from hex
-    let tx_bytes = hex::decode(signed_tx)
-        .map_err(|e| anyhow!("Failed to decode transaction hex: {}", e))?;
+    let tx_bytes =
+        hex::decode(signed_tx).map_err(|e| anyhow!("Failed to decode transaction hex: {}", e))?;
 
     // Parse the transaction
     let tx: bitcoin::Transaction = bitcoin::consensus::deserialize(&tx_bytes)
@@ -152,27 +151,27 @@ fn display_transaction_summary(signed_tx: &str) -> Result<()> {
 
     // Create colored output stream
     let mut stdout = StandardStream::stdout(ColorChoice::Always);
-    
+
     // Define colors (without bold)
     let mut title_color = ColorSpec::new();
     title_color.set_fg(Some(Color::Green));
-    
+
     let mut subtitle_color = ColorSpec::new();
     subtitle_color.set_fg(Some(Color::Cyan));
-    
+
     let mut text_color = ColorSpec::new();
     text_color.set_fg(Some(Color::White));
-    
+
     // Display title in green
     let _ = stdout.set_color(&title_color);
     let _ = writeln!(stdout, "Transaction details:");
     let _ = stdout.reset();
-    
+
     // Display inputs with count in cyan
     let _ = stdout.set_color(&subtitle_color);
     let _ = writeln!(stdout, "Inputs ({}):", input_count);
     let _ = stdout.reset();
-    
+
     // List inputs
     for input in &tx.input {
         let _ = stdout.set_color(&text_color);
@@ -180,57 +179,60 @@ fn display_transaction_summary(signed_tx: &str) -> Result<()> {
         let vout = input.previous_output.vout;
         let _ = writeln!(stdout, "{}:{}", txid, vout);
     }
-    
+
     // Display outputs with count in cyan
     let _ = stdout.set_color(&subtitle_color);
     let _ = writeln!(stdout, "Outputs ({}):", output_count);
     let _ = stdout.reset();
-    
+
     // List outputs
     for output in &tx.output {
         let _ = stdout.set_color(&text_color);
         // Convert satoshis to BTC
         let value_btc = output.value.to_sat() as f64 / 100_000_000.0;
-        
+
         // Get script type
         let script_type = get_script_type(&output.script_pubkey);
-        
+
         // Get script in string format
         let script_display = output.script_pubkey.to_string();
-        
-        let _ = writeln!(stdout, "{:.8} BTC, {} ({})", value_btc, script_type, script_display);
+
+        let _ = writeln!(
+            stdout,
+            "{:.8} BTC, {} ({})",
+            value_btc, script_type, script_display
+        );
     }
 
     let _ = writeln!(stdout, "");
-    
+
     // Reset color at the end
     let _ = stdout.reset();
-    
+
     Ok(())
 }
-
 
 /// Ask for user confirmation before broadcasting
 fn confirm_broadcast() -> Result<bool> {
     // Create colored output stream
     let mut stdout = StandardStream::stdout(ColorChoice::Always);
-    
+
     // Define green bold color
     let mut prompt_color = ColorSpec::new();
     prompt_color.set_fg(Some(Color::Green)).set_bold(true);
-    
+
     // Display prompt in green bold
     let _ = stdout.set_color(&prompt_color);
     let _ = write!(stdout, "Confirm broadcast (y/N): ");
     let _ = stdout.reset();
-    
+
     // Flush to ensure prompt is displayed before waiting for input
     stdout.flush()?;
-    
+
     // Get user input
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
-    
+
     let input = input.trim().to_lowercase();
     Ok(input == "y" || input == "yes")
 }
@@ -472,11 +474,14 @@ pub async fn handle_broadcast_command(
         helpers::print_success("Commit transaction signed:", Some(&signed_tx));
         // Display transaction summary
         display_transaction_summary(&signed_tx)?;
-        
+
         let reveal_tx = handle_reveal_transaction(reveal_tx_info, &signed_tx, wallet, &address)?;
         signed_reveal_tx = Some(reveal_tx);
 
-        helpers::print_success("Reveal transaction signed:", Some(&signed_reveal_tx.as_ref().unwrap()));
+        helpers::print_success(
+            "Reveal transaction signed:",
+            Some(&signed_reveal_tx.as_ref().unwrap()),
+        );
         // Display transaction summary
         display_transaction_summary(signed_reveal_tx.as_ref().unwrap())?;
     } else {
@@ -484,7 +489,7 @@ pub async fn handle_broadcast_command(
         // Display transaction summary
         display_transaction_summary(&signed_tx)?;
     }
-    
+
     // Ask for confirmation before broadcasting
     if !confirm_broadcast()? {
         return Ok(());

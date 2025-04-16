@@ -1,11 +1,11 @@
 use anyhow::Result;
+use indicatif::{ProgressBar, ProgressStyle};
 use serde_json::Value;
 use std::io::Write;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
-use indicatif::{ProgressBar, ProgressStyle};
 
 /// A wrapper around ProgressBar that provides a stop() method
 pub struct Spinner {
@@ -20,10 +20,10 @@ impl Spinner {
         progress_bar.set_style(style);
         progress_bar.set_message(message.to_string());
         progress_bar.enable_steady_tick(std::time::Duration::from_millis(100));
-        
+
         Spinner { progress_bar }
     }
-    
+
     /// Stops the spinner
     pub fn stop(self) {
         self.progress_bar.finish_and_clear();

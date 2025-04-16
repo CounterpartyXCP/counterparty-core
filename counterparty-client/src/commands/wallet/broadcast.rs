@@ -97,7 +97,10 @@ fn add_argument_to_command(
                 match lower.as_str() {
                     "true" | "1" => Ok("true".to_string()),
                     "false" | "0" => Ok("false".to_string()),
-                    _ => Err(format!("Invalid boolean value: {}. Use true/false or 1/0", s)),
+                    _ => Err(format!(
+                        "Invalid boolean value: {}. Use true/false or 1/0",
+                        s
+                    )),
                 }
             });
     } else {
@@ -110,10 +113,10 @@ fn add_argument_to_command(
 /// Add send_transaction command to the wallet command based on compose API endpoints
 pub fn add_broadcast_commands(cmd: Command, endpoints: &HashMap<String, ApiEndpoint>) -> Command {
     let mut wallet_cmd = cmd;
-    
+
     // Create the parent send_transaction command
     let mut send_transaction_cmd = commands::build_send_transaction_command();
-    
+
     // Get filtered and sorted compose endpoints
     let sorted_commands = filter_compose_endpoints(endpoints);
 
@@ -125,13 +128,7 @@ pub fn add_broadcast_commands(cmd: Command, endpoints: &HashMap<String, ApiEndpo
         let mut used_long_names = HashSet::new();
 
         for (idx, arg) in endpoint.args.iter().enumerate() {
-            tx_cmd = add_argument_to_command(
-                tx_cmd,
-                arg,
-                idx,
-                &tx_name,
-                &mut used_long_names,
-            );
+            tx_cmd = add_argument_to_command(tx_cmd, arg, idx, &tx_name, &mut used_long_names);
         }
 
         send_transaction_cmd = send_transaction_cmd.subcommand(tx_cmd);
@@ -139,6 +136,6 @@ pub fn add_broadcast_commands(cmd: Command, endpoints: &HashMap<String, ApiEndpo
 
     // Add send_transaction to wallet command
     wallet_cmd = wallet_cmd.subcommand(send_transaction_cmd);
-    
+
     wallet_cmd
 }
