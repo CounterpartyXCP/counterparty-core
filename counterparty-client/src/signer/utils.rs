@@ -58,6 +58,7 @@ pub fn get_compressed_pubkey(public_key: &PublicKey) -> Result<CompressedPublicK
 pub fn standardize_address_type(address_type: &str) -> &str {
     match address_type {
         "bech32" => "p2wpkh",
+        "taproot" => "p2tr",
         _ => address_type,
     }
 }

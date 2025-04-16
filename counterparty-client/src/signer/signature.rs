@@ -1,10 +1,12 @@
 use bitcoin::blockdata::script::{Builder, PushBytesBuf};
 use bitcoin::psbt::Input as PsbtInput;
-use bitcoin::secp256k1::{Keypair, Message, Secp256k1, SecretKey};
+use bitcoin::secp256k1::{Message, Secp256k1, SecretKey};
 use bitcoin::sighash::{EcdsaSighashType, SighashCache, TapSighashType};
 use bitcoin::PublicKey;
 use bitcoin::ScriptBuf;
 use bitcoin::Transaction;
+use bitcoin::key::{TweakedKeypair, Keypair, TapTweak};
+use bitcoin::taproot::{TaprootSpendInfo};
 use std::str::FromStr;
 
 use crate::signer::types::{AddressType, Result};
@@ -59,7 +61,12 @@ pub fn compute_p2tr_signature(
     })?;
 
     // Create the Prevouts structure
-    let prevouts = bitcoin::sighash::Prevouts::One(input_index, witness_utxo);
+    let utxos = [witness_utxo.clone()];
+    let prevouts = bitcoin::sighash::Prevouts::All(&utxos);
+
+    println!("Prevouts: {:?}", prevouts);
+    println!("Input index: {}", input_index);
+    println!("Sighash type: {:?}", sighash_type);
 
     let sighash = sighash_cache
         .taproot_key_spend_signature_hash(input_index, &prevouts, sighash_type)
@@ -72,19 +79,28 @@ pub fn compute_p2tr_signature(
 
     // Convert SecretKey to Keypair
     let keypair = Keypair::from_secret_key(&secp, &secret_key);
-    let schnorr_sig = secp.sign_schnorr_no_aux_rand(&message, &keypair);
+    let merkle_root = None;
+    let tweaked_keypair = keypair.tap_tweak(secp, merkle_root);
+
+    let schnorr_sig = secp.sign_schnorr_no_aux_rand(&message, &tweaked_keypair.to_inner());
     let mut sig_bytes = schnorr_sig.as_ref().to_vec();
 
     // Add sighash byte for Taproot if not ALL
-    if sighash_type != TapSighashType::All {
-        sig_bytes.push(sighash_type as u8);
-    }
+    //if sighash_type != TapSighashType::All {
+    //    sig_bytes.push(sighash_type as u8);
+    //}
+
+    let taproot_signature = bitcoin::taproot::Signature {
+        signature: schnorr_sig,
+        sighash_type,
+    }.serialize();
 
     // Verify the signature
-    let xonly_pubkey = get_xonly_pubkey(public_key)?;
-    verify_schnorr_signature(secp, &message, &schnorr_sig, &xonly_pubkey)?;
+    let (_pk, _parity) = tweaked_keypair.public_parts();
+    //let xonly_pubkey = get_xonly_pubkey(_pk.to_inner())?;
+    verify_schnorr_signature(secp, &message, &schnorr_sig, &_pk.to_inner())?;
 
-    Ok(sig_bytes)
+    Ok(taproot_signature.to_vec())
 }
 
 /// Compute SegWit (P2WPKH/P2SH-P2WPKH) signature
