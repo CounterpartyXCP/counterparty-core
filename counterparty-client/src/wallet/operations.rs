@@ -59,7 +59,7 @@ impl BitcoinWallet {
     /// * `mnemonic` - Optional mnemonic phrase
     /// * `path` - Optional derivation path
     /// * `label` - Optional label for the address
-    /// * `address_type` - Optional address type ("bech32" or "p2pkh")
+    /// * `address_type` - Optional address type ("bech32", "p2pkh", or "taproot")
     ///
     /// # Returns
     ///
@@ -77,6 +77,7 @@ impl BitcoinWallet {
         // Determine address type (bech32/p2wpkh by default)
         let addr_type = match address_type {
             Some("p2pkh") => "p2pkh",
+            Some("taproot") => "taproot", // Support for taproot addresses
             _ => "bech32", // By default, we use bech32
         };
 

@@ -7,7 +7,7 @@
 
 use bip39::Mnemonic;
 use bitcoin::bip32::{DerivationPath, Xpriv};
-use bitcoin::key::CompressedPublicKey;
+use bitcoin::key::{CompressedPublicKey, XOnlyPublicKey};
 use bitcoin::secp256k1::{All, Secp256k1};
 use bitcoin::{Address, Network, PrivateKey, PublicKey};
 use rand::{thread_rng, Rng};
@@ -108,7 +108,16 @@ fn get_derivation_path<'a>(path: Option<&'a str>, addr_type: &'a str, network: N
     match path {
         Some(p) => p,
         None => {
-            if addr_type == "bech32" {
+            if addr_type == "taproot" {
+                // BIP86 for taproot
+                if network == Network::Testnet {
+                    // Testnet BIP86 path
+                    "m/86'/1'/0'/0/0"
+                } else {
+                    // Mainnet BIP86 path
+                    "m/86'/0'/0'/0/0"
+                }
+            } else if addr_type == "bech32" {
                 // BIP84 for native Bech32/SegWit
                 if network == Network::Testnet {
                     // Testnet BIP84 path
@@ -164,7 +173,18 @@ pub fn create_bitcoin_address(
     addr_type: &str,
     network: Network,
 ) -> Result<Address> {
-    if addr_type == "bech32" {
+    if addr_type == "taproot" {
+        // Create a taproot address (P2TR)
+        // Convert PublicKey to XOnlyPublicKey (taking the x coordinate only)
+        let pub_key_bytes = pub_key.to_bytes();
+        let x_only_pubkey = XOnlyPublicKey::from_slice(&pub_key_bytes[1..33])
+            .map_err(|e| {
+                WalletError::BitcoinError(format!("Failed to create x-only public key: {}", e))
+            })?;
+
+        // Create a P2TR address with the key and no script tree (None)
+        Ok(Address::p2tr(&Secp256k1::new(), x_only_pubkey, None, network))
+    } else if addr_type == "bech32" {
         // Create a Bech32 address (P2WPKH)
         let compressed_pubkey =
             CompressedPublicKey::from_slice(&pub_key.to_bytes()).map_err(|e| {

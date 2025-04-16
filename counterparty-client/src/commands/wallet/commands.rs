@@ -31,9 +31,9 @@ fn build_new_address_command() -> Command {
         .arg(
             Arg::new("address_type")
                 .long("address-type")
-                .help("Type of address to generate (bech32 or p2pkh, default: bech32)")
+                .help("Type of address to generate (bech32, p2pkh, or taproot, default: bech32)")
                 .value_name("TYPE")
-                .value_parser(["bech32", "p2pkh"])
+                .value_parser(["bech32", "p2pkh", "taproot"])
                 .default_value("bech32"),
         )
 }
@@ -57,7 +57,7 @@ fn build_import_address_command() -> Command {
         .arg(
             Arg::new("path")
                 .long("path")
-                .help("Derivation path (default: m/84'/0'/0'/0/0 for bech32)")
+                .help("Derivation path (default depends on address type)")
                 .value_name("PATH"),
         )
         .arg(
@@ -69,9 +69,9 @@ fn build_import_address_command() -> Command {
         .arg(
             Arg::new("address_type")
                 .long("address-type")
-                .help("Type of address to generate (bech32 or p2pkh, default: bech32)")
+                .help("Type of address to generate (bech32, p2pkh, or taproot, default: bech32)")
                 .value_name("TYPE")
-                .value_parser(["bech32", "p2pkh"])
+                .value_parser(["bech32", "p2pkh", "taproot"])
                 .default_value("bech32"),
         )
 }
