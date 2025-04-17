@@ -113,13 +113,6 @@ class CounterpartyServer(threading.Thread):
         blocks.check_database_version(self.db)
         database.optimize(self.db)
 
-        if self.args.rebuild_state_db:
-            dbbuilder.build_state_db()
-        elif self.args.refresh_state_db:
-            state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
-            dbbuilder.refresh_state_db(state_db)
-            state_db.close()
-
         # Check software version
         check.software_version()
 
