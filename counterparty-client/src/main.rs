@@ -157,6 +157,68 @@ fn add_file_ref_support_recursive(cmd: Command) -> Command {
     process_command_args(cmd)
 }
 
+// Function to add label resolution support to address and destination parameters
+fn add_label_resolution_recursive(cmd: Command, wallet: &wallet::BitcoinWallet) -> Command {
+    // Function to process a command's arguments
+    fn process_command_args(mut cmd: Command, wallet: &wallet::BitcoinWallet) -> Command {
+        // Collect all arguments to avoid consumption
+        let args: Vec<_> = cmd.get_arguments().cloned().collect();
+
+        // Apply custom parser to address/destination arguments
+        for arg in args {
+            
+            let arg_id = arg.get_id().to_string();
+            
+            // Check if this argument is for address or destination
+            if arg_id.ends_with("address") || arg_id.ends_with("destination") {
+                // Create a custom value parser that checks for label resolution
+                // We need to do the lookup now and create a new parser that doesn't capture wallet
+                let addresses = wallet
+                    .list_addresses()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter_map(|addr_value| {
+                        if let (Some(addr), Some(label)) = (
+                            addr_value.get("address").and_then(|a| a.as_str()),
+                            addr_value.get("label").and_then(|l| l.as_str()),
+                        ) {
+                            Some((label.to_string(), addr.to_string()))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<std::collections::HashMap<String, String>>();
+                
+                // Create a Send + Sync parser that doesn't capture wallet
+                let parser = move |s: &str| -> std::result::Result<String, String> {
+                    if let Some(address) = addresses.get(s) {
+                        println!("Resolved label '{}' to address '{}'", s, address);
+                        Ok(address.clone())
+                    } else {
+                        Ok(s.to_string())
+                    }
+                };
+                
+                cmd = cmd.mut_arg(&arg_id, |a| a.value_parser(parser));
+            }
+        }
+
+        // Collect subcommand names to avoid consumption
+        let subcmds: Vec<_> = cmd.get_subcommands().cloned().collect();
+
+        // Process each subcommand recursively
+        for subcmd in subcmds {
+            let subcmd_name = subcmd.get_name().to_string();
+            cmd = cmd.mut_subcommand(&subcmd_name, |s| process_command_args(s.to_owned(), wallet));
+        }
+
+        cmd
+    }
+
+    // Apply recursive process to the command
+    process_command_args(cmd, wallet)
+}
+
 // Display header information message before executing commands
 fn header_message(config: &AppConfig, command_name: &str) {
     // Get active network configuration
@@ -282,6 +344,9 @@ async fn main() -> Result<()> {
     // Step 6: Load endpoints
     let endpoints = api::load_or_fetch_endpoints(&config).await?;
 
+    // Step 7: Initialize wallet (moved earlier in the process)
+    let mut wallet = wallet_commands::utils::init_wallet(&config)?;
+
     // Now add subcommands after we have loaded endpoints
     app = app.subcommand(api::build_command(&endpoints));
 
@@ -290,22 +355,23 @@ async fn main() -> Result<()> {
     let wallet_cmd_with_broadcast = wallet_commands::add_broadcast_commands(wallet_cmd, &endpoints);
     app = app.subcommand(wallet_cmd_with_broadcast);
 
-    let mut wallet = wallet_commands::utils::init_wallet(&config)?;
-
-    // Step 7: Add file reference support
+    // Step 8: Add file reference support
     app = add_file_ref_support_recursive(app);
 
-    // Step 8: Parse final command line arguments with the complete command structure
+    // Step 9: Add label resolution support for address/destination parameters
+    app = add_label_resolution_recursive(app, &wallet);
+
+    // Step 10: Parse final command line arguments with the complete command structure
     let final_matches = app.clone().get_matches();
 
-    // Step 9: Handle special update-cache flag
+    // Step 11: Handle special update-cache flag
     if final_matches.get_flag("update-cache") {
         api::update_cache(&config).await?;
         helpers::print_success("Cache updated successfully.", None);
         return Ok(());
     }
 
-    // Step 10: Execute the requested subcommand
+    // Step 12: Execute the requested subcommand
     match final_matches.subcommand() {
         Some(("api", sub_matches)) => {
             let cmd_name = sub_matches.subcommand_name().unwrap_or("api");
