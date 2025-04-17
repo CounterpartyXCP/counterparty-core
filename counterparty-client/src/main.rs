@@ -8,6 +8,10 @@ use std::env;
 use std::io::Write;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
+// Add clap_complete for shell completion
+use clap_complete::{generate, Shell};
+use std::io;
+
 mod commands;
 mod config;
 mod helpers;
@@ -55,6 +59,19 @@ fn file_reference_parser(arg: &str) -> std::result::Result<String, String> {
         Ok(value) => Ok(value),
         Err(e) => Err(e.to_string()),
     }
+}
+
+// Build the completion command
+fn build_completion_command() -> Command {
+    Command::new("completion")
+        .about("Generate shell completion scripts")
+        .arg(
+            Arg::new("shell")
+                .required(true)
+                .help("The shell to generate completions for")
+                .value_parser(["bash", "zsh", "fish", "powershell", "elvish"])
+                .value_name("SHELL"),
+        )
 }
 
 // Add common CLI arguments shared between preliminary and final CLI parsers
@@ -415,6 +432,9 @@ async fn main() -> Result<()> {
     let wallet_cmd_with_broadcast = wallet_commands::add_broadcast_commands(wallet_cmd, &endpoints);
     app = app.subcommand(wallet_cmd_with_broadcast);
 
+    // Add completion command
+    app = app.subcommand(build_completion_command());
+
     // Step 8: Add file reference support
     app = add_file_ref_support_recursive(app);
 
@@ -445,6 +465,25 @@ async fn main() -> Result<()> {
             let cmd_name = sub_matches.subcommand_name().unwrap_or("wallet");
             header_message(&config, &format!(" Wallet {} ", cmd_name), &config_file_path);
             wallet_commands::execute_command(&config, sub_matches, &endpoints, &mut wallet).await?;
+        }
+        Some(("completion", sub_matches)) => {
+            // Handle completion command - no header message needed
+            let shell_name = sub_matches.get_one::<String>("shell").unwrap();
+            let shell = match shell_name.as_str() {
+                "bash" => Shell::Bash,
+                "zsh" => Shell::Zsh,
+                "fish" => Shell::Fish,
+                "powershell" => Shell::PowerShell,
+                "elvish" => Shell::Elvish,
+                _ => {
+                    helpers::print_error("Unsupported shell", Some(shell_name));
+                    return Ok(());
+                }
+            };
+            
+            // Clone and rebind command for generation
+            let mut cmd = app.clone();
+            generate(shell, &mut cmd, "counterparty-client", &mut io::stdout());
         }
         _ => {
             // No subcommand provided, print help
