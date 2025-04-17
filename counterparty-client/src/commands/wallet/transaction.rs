@@ -324,8 +324,8 @@ async fn call_compose_api(
     }
 }
 
-/// Extract transaction details from API result
-fn extract_transaction_details(api_result: &serde_json::Value) -> Result<(&str, Vec<(&str, u64)>)> {
+//// Extract transaction details from API result
+fn extract_transaction_details(api_result: &serde_json::Value) -> Result<(&str, Vec<(&str, u64)>, Option<&str>, Option<serde_json::Value>)> {
     // Extract required fields from result
     let raw_tx_hex = api_result
         .get("rawtransaction")
@@ -355,6 +355,28 @@ fn extract_transaction_details(api_result: &serde_json::Value) -> Result<(&str, 
         ));
     }
 
+    // Extract transaction name - optional field
+    let name = api_result.get("name").and_then(|v| v.as_str());
+
+    // Extract transaction parameters - optional field, with asset_info removed
+    let params = if let Some(params_value) = api_result.get("params") {
+        if let Some(params_obj) = params_value.as_object() {
+            // Create a filtered copy of the params
+            let mut filtered_params = params_obj.clone();
+            
+            // Remove asset_info field if it exists
+            filtered_params.remove("asset_info");
+            
+            // Convert back to Value and store
+            Some(serde_json::Value::Object(filtered_params))
+        } else {
+            // If not an object, keep as is
+            Some(params_value.clone())
+        }
+    } else {
+        None
+    };
+
     // Construct utxos vector
     let utxos = lock_scripts
         .iter()
@@ -362,7 +384,7 @@ fn extract_transaction_details(api_result: &serde_json::Value) -> Result<(&str, 
         .map(|(script, value)| (*script, *value))
         .collect::<Vec<_>>();
 
-    Ok((raw_tx_hex, utxos))
+    Ok((raw_tx_hex, utxos, name, params))
 }
 
 /// Extract reveal transaction information if present
@@ -459,7 +481,27 @@ pub async fn handle_broadcast_command(
     let api_result = call_compose_api(config, path, endpoint, &params).await?;
 
     // Extract transaction details from the result
-    let (raw_tx_hex, utxos) = extract_transaction_details(&api_result)?;
+    let (raw_tx_hex, utxos, tx_name, tx_params) = extract_transaction_details(&api_result)?;
+
+    // Display transaction name and parameters before signing
+    if tx_name.is_some() || tx_params.is_some() {
+        // Create JSON structure with available information
+        let mut display_data = serde_json::Map::new();
+        
+        if let Some(name) = tx_name {
+            display_data.insert("name".to_string(), serde_json::Value::String(name.to_string()));
+        }
+        
+        if let Some(params_value) = tx_params {
+            display_data.insert("params".to_string(), params_value.clone());
+        }
+        
+        if !display_data.is_empty() {
+            helpers::print_success("Transaction:", None);
+            let _ = helpers::print_colored_json(&serde_json::Value::Object(display_data));
+            println!();
+        }
+    }
 
     // Sign the transaction
     let signed_tx = wallet
@@ -471,21 +513,23 @@ pub async fn handle_broadcast_command(
 
     // Handle reveal transaction if present
     if let Some(reveal_tx_info) = extract_reveal_transaction_info(&api_result) {
-        helpers::print_success("Commit transaction signed:", Some(&signed_tx));
+        helpers::print_success("Commit transaction signed:", None);
+        println!("{}\n", &signed_tx);
+
         // Display transaction summary
         display_transaction_summary(&signed_tx)?;
 
         let reveal_tx = handle_reveal_transaction(reveal_tx_info, &signed_tx, wallet, &address)?;
         signed_reveal_tx = Some(reveal_tx);
 
-        helpers::print_success(
-            "Reveal transaction signed:",
-            Some(&signed_reveal_tx.as_ref().unwrap()),
-        );
+        helpers::print_success("Reveal transaction signed:", None);
+        println!("{}\n", &signed_reveal_tx.as_ref().unwrap());
+
         // Display transaction summary
         display_transaction_summary(signed_reveal_tx.as_ref().unwrap())?;
     } else {
-        helpers::print_success("Transaction signed:", Some(&signed_tx));
+        helpers::print_success("Transaction signed:", None);
+        println!("{}\n", &signed_tx);
         // Display transaction summary
         display_transaction_summary(&signed_tx)?;
     }

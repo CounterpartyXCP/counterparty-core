@@ -62,10 +62,6 @@ pub fn compute_p2tr_signature(
     let utxos = [witness_utxo.clone()];
     let prevouts = bitcoin::sighash::Prevouts::All(&utxos);
 
-    println!("Prevouts: {:?}", prevouts);
-    println!("Input index: {}", input_index);
-    println!("Sighash type: {:?}", sighash_type);
-
     let sighash = sighash_cache
         .taproot_key_spend_signature_hash(input_index, &prevouts, sighash_type)
         .map_err(|e| {
