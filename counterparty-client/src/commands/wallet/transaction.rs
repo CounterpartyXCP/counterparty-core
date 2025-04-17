@@ -536,6 +536,7 @@ pub async fn handle_broadcast_command(
 
     // Ask for confirmation before broadcasting
     if !confirm_broadcast()? {
+        helpers::print_error("Transaction aborted", None);
         return Ok(());
     }
 
