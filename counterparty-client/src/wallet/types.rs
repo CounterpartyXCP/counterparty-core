@@ -24,9 +24,6 @@ pub enum WalletError {
 
     #[error("Address not found: {0}")]
     AddressNotFound(String),
-
-    #[error("Label not found: {0}")]
-    LabelNotFound(String),
 }
 
 /// Type alias for our result type

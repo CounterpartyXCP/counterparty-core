@@ -247,25 +247,4 @@ impl BitcoinWallet {
     pub fn disconnect(&mut self) -> Result<()> {
         self.storage.clear_password()
     }
-
-    /// Get address by label
-    ///
-    /// This method searches for an address with the specified label.
-    ///
-    /// # Arguments
-    ///
-    /// * `label` - The label to search for
-    ///
-    /// # Returns
-    ///
-    /// * `Result<String>` - The Bitcoin address if found, or error if no address with that label exists
-    pub fn get_address_by_label(&self, label: &str) -> Result<String> {
-        for (address, info) in &self.addresses {
-            if info.label == label {
-                return Ok(address.clone());
-            }
-        }
-        
-        Err(WalletError::LabelNotFound(label.to_string()))
-    }
 }

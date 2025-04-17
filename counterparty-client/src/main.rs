@@ -192,7 +192,6 @@ fn add_label_resolution_recursive(cmd: Command, wallet: &wallet::BitcoinWallet) 
                 // Create a Send + Sync parser that doesn't capture wallet
                 let parser = move |s: &str| -> std::result::Result<String, String> {
                     if let Some(address) = addresses.get(s) {
-                        println!("Resolved label '{}' to address '{}'", s, address);
                         Ok(address.clone())
                     } else {
                         Ok(s.to_string())
@@ -217,6 +216,61 @@ fn add_label_resolution_recursive(cmd: Command, wallet: &wallet::BitcoinWallet) 
 
     // Apply recursive process to the command
     process_command_args(cmd, wallet)
+}
+
+// Function to add quantity resolution support to convert floating-point BTC values to integer satoshi values
+fn add_quantity_resolution_recursive(cmd: Command) -> Command {
+    // Function to process a command's arguments recursively
+    fn process_command_args(mut cmd: Command) -> Command {
+        // Collect all arguments to avoid consumption during iteration
+        let args: Vec<_> = cmd.get_arguments().cloned().collect();
+
+        // Apply custom parser to quantity arguments
+        for arg in args {
+            let arg_id = arg.get_id().to_string();
+            
+            // Check if this argument is for quantity (ends with "quantity")
+            if arg_id.ends_with("quantity") {
+                // Create a custom value parser for quantity conversion
+                let parser = move |s: &str| -> std::result::Result<String, String> {
+                    // Check if the input contains a decimal point (indicating a float)
+                    if s.contains('.') {
+                        match s.parse::<f64>() {
+                            Ok(value) => {
+                                // Convert from BTC to satoshi (multiply by 10^8)
+                                let satoshi = (value * 100_000_000.0).round() as i64;
+                                Ok(satoshi.to_string())
+                            },
+                            Err(_) => {
+                                // Not a valid floating-point number, return as is
+                                Ok(s.to_string())
+                            }
+                        }
+                    } else {
+                        // No decimal point, return as is (already in satoshi format)
+                        Ok(s.to_string())
+                    }
+                };
+                
+                // Apply the custom parser to this argument
+                cmd = cmd.mut_arg(&arg_id, |a| a.value_parser(parser));
+            }
+        }
+
+        // Collect subcommand names to avoid consumption
+        let subcmds: Vec<_> = cmd.get_subcommands().cloned().collect();
+
+        // Process each subcommand recursively
+        for subcmd in subcmds {
+            let subcmd_name = subcmd.get_name().to_string();
+            cmd = cmd.mut_subcommand(&subcmd_name, |s| process_command_args(s.to_owned()));
+        }
+
+        cmd
+    }
+
+    // Apply recursive process to the command
+    process_command_args(cmd)
 }
 
 // Display header information message before executing commands
@@ -358,20 +412,23 @@ async fn main() -> Result<()> {
     // Step 8: Add file reference support
     app = add_file_ref_support_recursive(app);
 
-    // Step 9: Add label resolution support for address/destination parameters
+    // Step 9: Add quantity resolution support (convert BTC to satoshi for float values)
+    app = add_quantity_resolution_recursive(app);
+
+    // Step 10: Add label resolution support for address/destination parameters
     app = add_label_resolution_recursive(app, &wallet);
 
-    // Step 10: Parse final command line arguments with the complete command structure
+    // Step 11: Parse final command line arguments with the complete command structure
     let final_matches = app.clone().get_matches();
 
-    // Step 11: Handle special update-cache flag
+    // Step 12: Handle special update-cache flag
     if final_matches.get_flag("update-cache") {
         api::update_cache(&config).await?;
         helpers::print_success("Cache updated successfully.", None);
         return Ok(());
     }
 
-    // Step 12: Execute the requested subcommand
+    // Step 13: Execute the requested subcommand
     match final_matches.subcommand() {
         Some(("api", sub_matches)) => {
             let cmd_name = sub_matches.subcommand_name().unwrap_or("api");
