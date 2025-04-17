@@ -5,14 +5,13 @@ use bitcoin::sighash::{EcdsaSighashType, SighashCache, TapSighashType};
 use bitcoin::PublicKey;
 use bitcoin::ScriptBuf;
 use bitcoin::Transaction;
-use bitcoin::key::{TweakedKeypair, Keypair, TapTweak};
-use bitcoin::taproot::{TaprootSpendInfo};
+use bitcoin::key::{Keypair, TapTweak};
 use std::str::FromStr;
 
 use crate::signer::types::{AddressType, Result};
 use crate::signer::utils::{
     create_empty_script_sig, create_message_from_hash, create_witness_with_sig_and_pubkey,
-    get_xonly_pubkey, standardize_address_type,
+    standardize_address_type,
 };
 use crate::signer::verification::{
     encode_ecdsa_signature, verify_ecdsa_signature, verify_schnorr_signature,
@@ -44,7 +43,6 @@ pub fn compute_p2tr_signature(
     input_index: usize,
     input: &PsbtInput,
     secret_key: &SecretKey,
-    public_key: &PublicKey,
 ) -> Result<Vec<u8>> {
     // For Taproot, use the appropriate sighash algorithm from input or default to All
     let sighash_type = match input.sighash_type {
@@ -83,12 +81,6 @@ pub fn compute_p2tr_signature(
     let tweaked_keypair = keypair.tap_tweak(secp, merkle_root);
 
     let schnorr_sig = secp.sign_schnorr_no_aux_rand(&message, &tweaked_keypair.to_inner());
-    let mut sig_bytes = schnorr_sig.as_ref().to_vec();
-
-    // Add sighash byte for Taproot if not ALL
-    //if sighash_type != TapSighashType::All {
-    //    sig_bytes.push(sighash_type as u8);
-    //}
 
     let taproot_signature = bitcoin::taproot::Signature {
         signature: schnorr_sig,
@@ -96,9 +88,8 @@ pub fn compute_p2tr_signature(
     }.serialize();
 
     // Verify the signature
-    let (_pk, _parity) = tweaked_keypair.public_parts();
-    //let xonly_pubkey = get_xonly_pubkey(_pk.to_inner())?;
-    verify_schnorr_signature(secp, &message, &schnorr_sig, &_pk.to_inner())?;
+    let (xonly_pubkey, _parity) = tweaked_keypair.public_parts();
+    verify_schnorr_signature(secp, &message, &schnorr_sig, &xonly_pubkey.to_inner())?;
 
     Ok(taproot_signature.to_vec())
 }
@@ -219,7 +210,6 @@ pub fn compute_signature(
             input_index,
             input,
             secret_key,
-            public_key,
         ),
 
         AddressType::P2WPKH | AddressType::P2SHP2WPKH => compute_segwit_signature(
