@@ -290,6 +290,8 @@ async fn main() -> Result<()> {
     let wallet_cmd_with_broadcast = wallet_commands::add_broadcast_commands(wallet_cmd, &endpoints);
     app = app.subcommand(wallet_cmd_with_broadcast);
 
+    let mut wallet = wallet_commands::utils::init_wallet(&config)?;
+
     // Step 7: Add file reference support
     app = add_file_ref_support_recursive(app);
 
@@ -313,7 +315,7 @@ async fn main() -> Result<()> {
         Some(("wallet", sub_matches)) => {
             let cmd_name = sub_matches.subcommand_name().unwrap_or("wallet");
             header_message(&config, &format!(" Wallet {} ", cmd_name));
-            wallet_commands::execute_command(&config, sub_matches, &endpoints).await?;
+            wallet_commands::execute_command(&config, sub_matches, &endpoints, &mut wallet).await?;
         }
         _ => {
             // No subcommand provided, print help

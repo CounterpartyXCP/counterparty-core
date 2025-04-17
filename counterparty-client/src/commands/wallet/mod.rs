@@ -4,7 +4,7 @@ mod broadcast;
 mod commands;
 mod handlers;
 mod transaction;
-mod utils;
+pub mod utils;
 
 // Re-export public functions and types
 pub use broadcast::add_broadcast_commands;
@@ -16,28 +16,29 @@ use std::collections::HashMap;
 
 use crate::commands::api::ApiEndpoint;
 use crate::config::AppConfig;
+use crate::wallet::BitcoinWallet;
 
 /// Executes a wallet command
 pub async fn execute_command(
     config: &AppConfig,
     matches: &ArgMatches,
     endpoints: &HashMap<String, ApiEndpoint>,
+    wallet: &mut BitcoinWallet,
 ) -> Result<()> {
-    let data_dir = config.get_data_dir();
-    let mut wallet = utils::init_wallet(&data_dir, config.network)?;
+    //let mut wallet = utils::init_wallet(config)?;
 
     match matches.subcommand() {
         Some(("new_address", sub_matches)) => {
-            handlers::handle_new_address(&mut wallet, sub_matches)
+            handlers::handle_new_address(wallet, sub_matches)
         }
         Some(("import_address", sub_matches)) => {
-            handlers::handle_import_address(&mut wallet, sub_matches)
+            handlers::handle_import_address(wallet, sub_matches)
         }
         Some(("export_address", sub_matches)) => {
-            handlers::handle_export_address(&wallet, sub_matches)
+            handlers::handle_export_address(wallet, sub_matches)
         }
         Some(("list_addresses", _sub_matches)) => {
-            handlers::handle_list_addresses(&wallet)
+            handlers::handle_list_addresses(wallet)
         }
         Some(("address_balances", sub_matches)) => {
             // Pass the config directly to the handler
@@ -52,7 +53,7 @@ pub async fn execute_command(
                         endpoints,
                         tx_name,
                         sub_matches,
-                        &wallet,
+                        wallet,
                     )
                     .await
                 }
@@ -66,9 +67,9 @@ pub async fn execute_command(
             }
         }
         Some(("change_password", sub_matches)) => {
-            handlers::handle_change_password(&mut wallet, sub_matches)
+            handlers::handle_change_password(wallet, sub_matches)
         }
-        Some(("disconnect", sub_matches)) => handlers::handle_disconnect(&mut wallet, sub_matches),
+        Some(("disconnect", sub_matches)) => handlers::handle_disconnect(wallet, sub_matches),
 
         _ => {
             // No subcommand provided, display help
