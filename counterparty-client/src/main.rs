@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::{Arg, ArgAction, Command};
 use std::fs;
 use std::path::Path;
@@ -11,6 +11,7 @@ use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 // Add clap_complete for shell completion
 use clap_complete::{generate, Shell};
 use std::io;
+use std::fs::File;
 
 mod commands;
 mod config;
@@ -61,16 +62,185 @@ fn file_reference_parser(arg: &str) -> std::result::Result<String, String> {
     }
 }
 
-// Build the completion command
+// Detect the current shell
+fn detect_shell() -> Option<Shell> {
+    if let Ok(shell_path) = env::var("SHELL") {
+        // Unix-like systems
+        if shell_path.contains("bash") {
+            return Some(Shell::Bash);
+        } else if shell_path.contains("zsh") {
+            return Some(Shell::Zsh);
+        } else if shell_path.contains("fish") {
+            return Some(Shell::Fish);
+        }
+    }
+    
+    // Check for PowerShell on Windows
+    #[cfg(windows)]
+    {
+        if let Ok(pspid) = env::var("POWERSHELL_PROCESS_ID") {
+            if !pspid.is_empty() {
+                return Some(Shell::PowerShell);
+            }
+        }
+    }
+    
+    None
+}
+
+// Get the default completion path for a shell
+fn get_completion_path(shell: Shell) -> Option<PathBuf> {
+    let home = dirs::home_dir()?;
+    
+    match shell {
+        Shell::Bash => {
+            // Check if ~/.bashrc exists
+            let bashrc = home.join(".bashrc");
+            if bashrc.exists() {
+                Some(home.join(".bash_completion"))
+            } else {
+                None
+            }
+        },
+        Shell::Zsh => {
+            // Common zsh completion directory
+            let zsh_comp_dir = home.join(".zsh/completions");
+            if zsh_comp_dir.exists() || fs::create_dir_all(&zsh_comp_dir).is_ok() {
+                Some(zsh_comp_dir.join("_counterparty-client"))
+            } else {
+                None
+            }
+        },
+        Shell::Fish => {
+            // Fish completion directory
+            let fish_comp_dir = home.join(".config/fish/completions");
+            if fish_comp_dir.exists() || fs::create_dir_all(&fish_comp_dir).is_ok() {
+                Some(fish_comp_dir.join("counterparty-client.fish"))
+            } else {
+                None
+            }
+        },
+        Shell::PowerShell => {
+            // PowerShell doesn't have a standard location, so we'll create it in the home directory
+            Some(home.join("counterparty-client.ps1"))
+        },
+        Shell::Elvish => {
+            // Elvish completion path
+            let elvish_comp_dir = home.join(".elvish/lib");
+            if elvish_comp_dir.exists() || fs::create_dir_all(&elvish_comp_dir).is_ok() {
+                Some(elvish_comp_dir.join("counterparty-client.elv"))
+            } else {
+                None
+            }
+        },
+        _ => None,
+    }
+}
+
+// Get the instruction for adding completion to shell config
+fn get_shell_config_instruction(shell: Shell, path: &Path) -> String {
+    match shell {
+        Shell::Bash => {
+            format!("Add the following line to your ~/.bashrc or ~/.bash_profile:\n  source \"{}\"", path.display())
+        },
+        Shell::Zsh => {
+            "Make sure that the following is present in your ~/.zshrc:\n  \
+             fpath=(~/.zsh/completions $fpath)\n  \
+             autoload -U compinit\n  \
+             compinit".to_string()
+        },
+        Shell::Fish => {
+            "Fish will automatically load completions from ~/.config/fish/completions/".to_string()
+        },
+        Shell::PowerShell => {
+            format!("Add the following line to your PowerShell profile (run `echo $PROFILE` to locate it):\n  \
+                    . \"{}\"", path.display())
+        },
+        Shell::Elvish => {
+            format!("Add the following line to your ~/.elvish/rc.elv:\n  use \"{}\"", path.display())
+        },
+        _ => "Completion script generated.".to_string(),
+    }
+}
+
+// Install completion script for a given shell
+fn install_completion_script(app: &mut Command, shell: Shell) -> Result<()> {
+    let path = get_completion_path(shell)
+        .ok_or_else(|| anyhow!("Could not determine completion path for {:?}", shell))?;
+    
+    // Create parent directory if it doesn't exist
+    if let Some(parent) = path.parent() {
+        if !parent.exists() {
+            fs::create_dir_all(parent)?;
+        }
+    }
+    
+    // Generate completion script
+    let mut file = File::create(&path)?;
+    generate(shell, app, "counterparty-client", &mut file);
+    
+    // Get additional instructions
+    let instructions = get_shell_config_instruction(shell, &path);
+    
+    helpers::print_success(
+        &format!("Completion script installed to {}", path.display()),
+        Some(&instructions)
+    );
+    
+    Ok(())
+}
+
+// Build the completion command with detailed help
 fn build_completion_command() -> Command {
+    let long_about = "\
+Generate shell completion scripts for counterparty-client commands.
+
+USAGE EXAMPLES:
+  # Generate and display completions for your current shell (detected automatically)
+  counterparty-client completion
+
+  # Install completions for your current shell (detected automatically)
+  counterparty-client completion --install
+
+  # Generate completions for a specific shell (bash, zsh, fish, powershell, elvish)
+  counterparty-client completion bash
+
+MANUAL INSTALLATION:
+  # Bash
+  counterparty-client completion bash > ~/.bash_completion
+  # Add to your ~/.bashrc: source ~/.bash_completion
+
+  # Zsh
+  mkdir -p ~/.zsh/completions
+  counterparty-client completion zsh > ~/.zsh/completions/_counterparty-client
+  # Add to your ~/.zshrc:
+  # fpath=(~/.zsh/completions $fpath)
+  # autoload -U compinit
+  # compinit
+
+  # Fish
+  counterparty-client completion fish > ~/.config/fish/completions/counterparty-client.fish
+
+  # PowerShell
+  counterparty-client completion powershell > ~/counterparty-client.ps1
+  # Add to your profile: . ~/counterparty-client.ps1
+";
+
     Command::new("completion")
         .about("Generate shell completion scripts")
+        .long_about(long_about)
         .arg(
             Arg::new("shell")
-                .required(true)
-                .help("The shell to generate completions for")
+                .help("The shell to generate completions for (if not specified, attempts to detect current shell)")
                 .value_parser(["bash", "zsh", "fish", "powershell", "elvish"])
                 .value_name("SHELL"),
+        )
+        .arg(
+            Arg::new("install")
+                .long("install")
+                .short('i')
+                .help("Install completions for current shell (or specified shell)")
+                .action(ArgAction::SetTrue),
         )
 }
 
@@ -468,22 +638,38 @@ async fn main() -> Result<()> {
         }
         Some(("completion", sub_matches)) => {
             // Handle completion command - no header message needed
-            let shell_name = sub_matches.get_one::<String>("shell").unwrap();
-            let shell = match shell_name.as_str() {
-                "bash" => Shell::Bash,
-                "zsh" => Shell::Zsh,
-                "fish" => Shell::Fish,
-                "powershell" => Shell::PowerShell,
-                "elvish" => Shell::Elvish,
-                _ => {
-                    helpers::print_error("Unsupported shell", Some(shell_name));
-                    return Ok(());
+            let install = sub_matches.get_flag("install");
+            
+            // Determine which shell to use - either specified by user or detected
+            let shell = if let Some(shell_name) = sub_matches.get_one::<String>("shell") {
+                match shell_name.as_str() {
+                    "bash" => Shell::Bash,
+                    "zsh" => Shell::Zsh,
+                    "fish" => Shell::Fish,
+                    "powershell" => Shell::PowerShell,
+                    "elvish" => Shell::Elvish,
+                    _ => {
+                        helpers::print_error("Unsupported shell", Some(shell_name));
+                        return Ok(());
+                    }
                 }
+            } else if let Some(detected) = detect_shell() {
+                detected
+            } else {
+                helpers::print_error(
+                    "Could not detect your shell. Please specify a shell explicitly:", 
+                    Some("counterparty-client completion [bash|zsh|fish|powershell|elvish]")
+                );
+                return Ok(());
             };
             
-            // Clone and rebind command for generation
-            let mut cmd = app.clone();
-            generate(shell, &mut cmd, "counterparty-client", &mut io::stdout());
+            if install {
+                // Install mode - save to appropriate location
+                install_completion_script(&mut app.clone(), shell)?;
+            } else {
+                // Just output to stdout
+                generate(shell, &mut app.clone(), "counterparty-client", &mut io::stdout());
+            }
         }
         _ => {
             // No subcommand provided, print help
