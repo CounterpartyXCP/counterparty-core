@@ -274,7 +274,7 @@ fn add_quantity_resolution_recursive(cmd: Command) -> Command {
 }
 
 // Display header information message before executing commands
-fn header_message(config: &AppConfig, command_name: &str) {
+fn header_message(config: &AppConfig, command_name: &str, config_path: &Path) {
     // Get active network configuration
     let network_config = config.get_active_network_config();
 
@@ -307,6 +307,12 @@ fn header_message(config: &AppConfig, command_name: &str) {
 
     let mut value_color = ColorSpec::new();
     value_color.set_fg(Some(Color::White));
+
+    // Configuration file path
+    let _ = stdout.set_color(&key_color);
+    let _ = write!(stdout, "Config: ");
+    let _ = stdout.set_color(&value_color);
+    let _ = writeln!(stdout, "{}", config_path.display());
 
     // API URL
     let _ = stdout.set_color(&key_color);
@@ -432,12 +438,12 @@ async fn main() -> Result<()> {
     match final_matches.subcommand() {
         Some(("api", sub_matches)) => {
             let cmd_name = sub_matches.subcommand_name().unwrap_or("api");
-            header_message(&config, &format!(" API {} ", cmd_name));
+            header_message(&config, &format!(" API {} ", cmd_name), &config_file_path);
             api::execute_command(&config, sub_matches).await?;
         }
         Some(("wallet", sub_matches)) => {
             let cmd_name = sub_matches.subcommand_name().unwrap_or("wallet");
-            header_message(&config, &format!(" Wallet {} ", cmd_name));
+            header_message(&config, &format!(" Wallet {} ", cmd_name), &config_file_path);
             wallet_commands::execute_command(&config, sub_matches, &endpoints, &mut wallet).await?;
         }
         _ => {
