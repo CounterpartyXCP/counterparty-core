@@ -497,9 +497,6 @@ fn header_message(config: &AppConfig, command_name: &str, config_path: &Path) {
     // Get active network configuration
     let network_config = config.get_active_network_config();
 
-    // Get wallet path based on current network
-    let wallet_path = config.get_data_dir().join("wallet.json");
-
     // Get app version from Cargo.toml
     let version = env!("CARGO_PKG_VERSION");
 
@@ -509,6 +506,9 @@ fn header_message(config: &AppConfig, command_name: &str, config_path: &Path) {
         Network::Testnet4 => "Testnet4",
         Network::Regtest => "Regtest",
     };
+
+    // Get wallet path based on current network
+    let wallet_path = config.get_data_dir().join(network_name.to_lowercase());
 
     // Create a line of dashes with command name
     let line_length = 50;
@@ -541,9 +541,9 @@ fn header_message(config: &AppConfig, command_name: &str, config_path: &Path) {
 
     // Wallet path
     let _ = stdout.set_color(&key_color);
-    let _ = write!(stdout, "Wallet: ");
+    let _ = write!(stdout, "Wallet DB: ");
     let _ = stdout.set_color(&value_color);
-    let _ = writeln!(stdout, "{}", wallet_path.display());
+    let _ = writeln!(stdout, "{}/", wallet_path.display());
 
     // Network
     let _ = stdout.set_color(&key_color);
