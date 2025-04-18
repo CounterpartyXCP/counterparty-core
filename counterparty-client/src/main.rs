@@ -18,6 +18,7 @@ mod config;
 mod helpers;
 mod signer;
 mod wallet;
+mod bitcoinsigner;
 
 use crate::commands::api;
 use crate::commands::wallet as wallet_commands;

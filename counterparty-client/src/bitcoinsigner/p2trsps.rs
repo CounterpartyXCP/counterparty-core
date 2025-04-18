@@ -1,0 +1,284 @@
+use bitcoin::amount::Amount;
+use bitcoin::blockdata::transaction::TxOut;
+use bitcoin::blockdata::witness::Witness;
+use bitcoin::psbt::Input as PsbtInput;
+use bitcoin::secp256k1::{Keypair, Message, Secp256k1, SecretKey};
+use bitcoin::sighash::{Prevouts, SighashCache, TapSighashType};
+use bitcoin::taproot::{LeafVersion, TapLeafHash, TapNodeHash, TaprootBuilder, TaprootSpendInfo};
+use bitcoin::{Address, Network, PublicKey, ScriptBuf, Transaction, XOnlyPublicKey};
+
+use super::types::{Result, UTXO};
+use super::utils::{create_empty_script_sig, get_tap_sighash_type, get_xonly_pubkey};
+use crate::wallet::WalletError;
+
+/// Control block for script path spending
+pub struct TaprootControlBlock {
+    pub leaf_version: LeafVersion,
+    pub parity: bool,
+    pub internal_key: XOnlyPublicKey,
+    pub merkle_proof: Vec<TapNodeHash>,
+}
+
+impl TaprootControlBlock {
+    /// Create a new control block
+    pub fn new(internal_key: XOnlyPublicKey, parity: bool, merkle_proof: Vec<TapNodeHash>) -> Self {
+        Self {
+            leaf_version: LeafVersion::TapScript,
+            parity,
+            internal_key,
+            merkle_proof,
+        }
+    }
+
+    /// Serialize the control block to bytes
+    pub fn serialize(&self) -> Vec<u8> {
+        let mut bytes = Vec::new();
+
+        // Control byte: leaf version (0xc0) + parity bit
+        let control_byte = self.leaf_version.to_consensus() | if self.parity { 1 } else { 0 };
+        bytes.push(control_byte);
+
+        // Internal key (32 bytes)
+        bytes.extend_from_slice(&self.internal_key.serialize());
+
+        // Merkle proof elements (if any)
+        for node in &self.merkle_proof {
+            bytes.extend_from_slice(node.as_ref());
+        }
+
+        bytes
+    }
+}
+
+/// Generate a TapLeafHash from a script
+fn taproot_leaf_hash(script: &ScriptBuf) -> TapLeafHash {
+    TapLeafHash::from_script(script, LeafVersion::TapScript)
+}
+
+/// Create a basic TaprootBuilder with a single script
+fn create_taproot_builder(script: &ScriptBuf) -> TaprootBuilder {
+    TaprootBuilder::new()
+        .add_leaf(0, script.clone())
+        .expect("Valid leaf addition")
+}
+
+/// Generate Taproot spending information
+fn generate_spend_info(
+    secp: &Secp256k1<bitcoin::secp256k1::All>,
+    internal_key: &XOnlyPublicKey,
+    script: &ScriptBuf,
+) -> Result<TaprootSpendInfo> {
+    let builder = create_taproot_builder(script);
+
+    builder.finalize(secp, *internal_key).map_err(|e| {
+        WalletError::BitcoinError(format!("Failed to create Taproot spend info: {:?}", e))
+    })
+}
+
+/// Generate a taproot commit address with the given public key and script
+fn generate_taproot_commit_address(
+    secp: &Secp256k1<bitcoin::secp256k1::All>,
+    source_key: &XOnlyPublicKey,
+    leaf_script: &ScriptBuf,
+    network: Network,
+) -> Result<Address> {
+    // Create taproot builder with the script
+    let builder = create_taproot_builder(leaf_script);
+
+    // Finalize to get the taproot spend info
+    let taproot_spend_info = builder.finalize(secp, *source_key).map_err(|e| {
+        WalletError::BitcoinError(format!("Failed to create taproot spend info: {:?}", e))
+    })?;
+
+    // Get the output key
+    let output_key = taproot_spend_info.output_key();
+
+    // Create the taproot address
+    let address = Address::p2tr(secp, output_key.to_inner(), None, network);
+    Ok(address)
+}
+
+/// Create control block for script path spending
+fn create_control_block(
+    secp: &Secp256k1<bitcoin::secp256k1::All>,
+    internal_key: &XOnlyPublicKey,
+    leaf_script: &ScriptBuf,
+) -> Result<TaprootControlBlock> {
+    // Get the Taproot spend info which contains path information
+    let spend_info = generate_spend_info(secp, internal_key, leaf_script)?;
+
+    // Try to create a control block for this script
+    let script_ver = (leaf_script.clone(), LeafVersion::TapScript);
+    let control_block = spend_info
+        .control_block(&script_ver)
+        .ok_or_else(|| WalletError::BitcoinError("Failed to create control block".to_string()))?;
+
+    // Extract merkle proof
+    let merkle_proof: Vec<TapNodeHash> = match &control_block.merkle_branch {
+        branch if !branch.is_empty() => branch.iter().cloned().collect(),
+        _ => Vec::new(),
+    };
+
+    // Get parity from the spend info
+    let parity = spend_info.output_key_parity() == bitcoin::key::Parity::Odd;
+
+    Ok(TaprootControlBlock::new(
+        *internal_key,
+        parity,
+        merkle_proof,
+    ))
+}
+
+/// Compute signature for script path spending
+fn compute_signature(
+    secp: &Secp256k1<bitcoin::secp256k1::All>,
+    sighash_cache: &mut SighashCache<&Transaction>,
+    input_index: usize,
+    input: &PsbtInput,
+    leaf_script: &ScriptBuf,
+    secret_key: &SecretKey,
+) -> Result<Vec<u8>> {
+    // Get the sighash type
+    let sighash_type = get_tap_sighash_type(input);
+
+    // Get witness UTXO
+    let witness_utxo = input.witness_utxo.as_ref().ok_or_else(|| {
+        WalletError::BitcoinError(format!(
+            "Missing witness UTXO for Taproot input at index {}",
+            input_index
+        ))
+    })?;
+
+    // Get the leaf hash
+    let leaf_hash = taproot_leaf_hash(leaf_script);
+
+    // Create Prevouts for the sighash calculation
+    let utxos = [witness_utxo.clone()];
+    let prevouts = Prevouts::All(&utxos);
+
+    // Compute the sighash
+    let sighash = sighash_cache
+        .taproot_script_spend_signature_hash(input_index, &prevouts, leaf_hash, sighash_type)
+        .map_err(|e| {
+            WalletError::BitcoinError(format!("Failed to compute Taproot script path signature hash: {}", e))
+        })?;
+
+    // Convert sighash to bytes and create message
+    let mut sighash_bytes = [0u8; 32];
+    let hash_bytes: &[u8] = sighash.as_ref();
+    sighash_bytes.copy_from_slice(&hash_bytes[0..32]);
+    let message = Message::from_digest_slice(&sighash_bytes)
+        .map_err(|e| WalletError::BitcoinError(format!("Failed to create message: {}", e)))?;
+
+    // Create a keypair from the secret key
+    let keypair = Keypair::from_secret_key(secp, secret_key);
+
+    // Sign with Schnorr (no tweaking for script path)
+    let schnorr_sig = secp.sign_schnorr_no_aux_rand(&message, &keypair);
+
+    // Create signature
+    let mut sig_bytes = schnorr_sig.as_ref().to_vec();
+    
+    // Add sighash type if not default
+    if sighash_type != TapSighashType::All {
+        sig_bytes.push(sighash_type as u8);
+    }
+
+    // Verify signature
+    let xonly_pubkey = XOnlyPublicKey::from_keypair(&keypair).0;
+    
+    if secp.verify_schnorr(&schnorr_sig, &message, &xonly_pubkey).is_err() {
+        return Err(WalletError::BitcoinError(
+            "Generated Schnorr signature failed verification".to_string(),
+        ));
+    }
+
+    Ok(sig_bytes)
+}
+
+/// Add script path spending witness
+fn add_witness(
+    input: &mut PsbtInput,
+    signature: Vec<u8>,
+    leaf_script: &ScriptBuf,
+    control_block: &TaprootControlBlock,
+) -> Result<()> {
+    let mut witness = Witness::new();
+    
+    // Add signature
+    witness.push(signature);
+    
+    // Add script
+    witness.push(leaf_script.as_bytes());
+    
+    // Add control block
+    witness.push(control_block.serialize());
+    
+    // Set witness data
+    input.final_script_witness = Some(witness);
+    
+    // Set empty script_sig (required for SegWit)
+    input.final_script_sig = Some(create_empty_script_sig());
+    
+    Ok(())
+}
+
+/// Signs a P2TR script path spending input
+pub fn sign_psbt_input(
+    sighash_cache: &mut SighashCache<&Transaction>,
+    input: &mut PsbtInput,
+    input_index: usize,
+    secret_key: &SecretKey,
+    public_key: &PublicKey,
+    utxo: &UTXO,
+    network: Network,
+) -> Result<()> {
+    // Create a secp256k1 context
+    let secp = Secp256k1::new();
+    
+    // Get XOnly pubkey from the source public key
+    let xonly_pubkey = get_xonly_pubkey(public_key)?;
+    
+    // Get leaf script
+    let leaf_script = utxo.leaf_script.as_ref().ok_or_else(|| {
+        WalletError::BitcoinError("Missing leaf script for P2TR script path spending".to_string())
+    })?;
+    
+    // Generate the taproot commit address for the given key and script
+    // This is the address that was used in the commit transaction
+    let commit_address = generate_taproot_commit_address(&secp, &xonly_pubkey, leaf_script, network)?;
+    
+    // Get the script pubkey from the commit address
+    let commit_script_pubkey = commit_address.script_pubkey();
+    
+    // Important: Update the witness UTXO with the correct script_pubkey
+    // This is crucial for correct signature verification
+    if let Some(witness_utxo) = &mut input.witness_utxo {
+        witness_utxo.script_pubkey = commit_script_pubkey.clone();
+    } else {
+        // If there's no witness UTXO, create one with the commit script pubkey
+        // Extract the value from the original UTXO
+        input.witness_utxo = Some(TxOut {
+            value: Amount::from_sat(utxo.amount),
+            script_pubkey: commit_script_pubkey.clone(),
+        });
+    }
+    
+    // Create control block for witness data
+    let control_block = create_control_block(&secp, &xonly_pubkey, leaf_script)?;
+    
+    // Compute signature
+    let signature = compute_signature(
+        &secp,
+        sighash_cache,
+        input_index,
+        input,
+        leaf_script,
+        secret_key,
+    )?;
+    
+    // Add witness data
+    add_witness(input, signature, leaf_script, &control_block)?;
+    
+    Ok(())
+}
