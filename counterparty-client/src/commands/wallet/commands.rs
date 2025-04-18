@@ -45,13 +45,13 @@ fn build_import_address_command() -> Command {
         .arg(
             Arg::new("private_key")
                 .long("private-key")
-                .help("Existing private key to import")
+                .help("Existing private key to import. Use @ prefix to read from a file.")
                 .value_name("PRIVATE_KEY"),
         )
         .arg(
             Arg::new("mnemonic")
                 .long("mnemonic")
-                .help("BIP39 mnemonic phrase")
+                .help("BIP39 mnemonic phrase. Use @ prefix to read from a file.")
                 .value_name("MNEMONIC"),
         )
         .arg(

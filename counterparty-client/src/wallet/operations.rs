@@ -101,7 +101,7 @@ impl BitcoinWallet {
         // Create the label
         let final_label = match label {
             Some(l) => l.to_string(),
-            None => format!("Address {}", self.addresses.len() + 1),
+            None => format!("address{}", self.addresses.len() + 1),
         };
 
         // Store the address information
