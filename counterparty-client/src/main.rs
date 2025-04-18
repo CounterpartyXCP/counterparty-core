@@ -45,7 +45,7 @@ fn process_file_reference(value: &str) -> Result<String> {
 
         // Try to interpret as UTF-8 text, fall back to hex for binary
         match String::from_utf8(content.clone()) {
-            Ok(text) => Ok(text),
+            Ok(text) => Ok(text.trim().to_string()),
             Err(_) => Ok(hex::encode(content)), // Convert binary to hex
         }
     } else {
@@ -319,7 +319,7 @@ fn should_support_file_reference(arg_id: &str) -> bool {
     // Check if the argument ID contains any of these keywords
     arg_id.contains("text")
         || arg_id.contains("description")
-        || arg_id.contains("private-key")
+        || arg_id.contains("private_key")
         || arg_id.contains("mnemonic")
 }
 
