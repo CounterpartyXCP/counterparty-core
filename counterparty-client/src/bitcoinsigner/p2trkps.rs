@@ -17,6 +17,7 @@ fn compute_signature(
     input: &PsbtInput,
     secret_key: &SecretKey,
 ) -> Result<Vec<u8>> {
+    println!("Computing signature for Taproot key path spending...");
     // Get the sighash type
     let sighash_type = get_tap_sighash_type(input);
 
@@ -54,13 +55,11 @@ fn compute_signature(
     // Sign with Schnorr
     let schnorr_sig = secp.sign_schnorr_no_aux_rand(&message, &tweaked_keypair.to_inner());
 
-    // Create taproot signature
-    let mut sig_bytes = schnorr_sig.as_ref().to_vec();
-    
-    // Add sighash type if not default
-    if sighash_type != TapSighashType::All {
-        sig_bytes.push(sighash_type as u8);
-    }
+    // Add sighash type 
+    let taproot_signature = bitcoin::taproot::Signature {
+        signature: schnorr_sig,
+        sighash_type,
+    }.serialize();
 
     // Verify signature
     let (xonly_pubkey, _) = tweaked_keypair.public_parts();
@@ -70,7 +69,7 @@ fn compute_signature(
         ));
     }
 
-    Ok(sig_bytes)
+    Ok(taproot_signature.to_vec())
 }
 
 /// Add key path spending witness

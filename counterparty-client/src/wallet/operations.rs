@@ -17,6 +17,7 @@ use super::types::{AddressInfo, AddressMap, Result, WalletError};
 use super::utils::{network_to_string, to_bitcoin_network};
 use crate::config;
 use crate::signer;
+use crate::bitcoinsigner;
 
 /// Main wallet structure for Bitcoin operations
 pub struct BitcoinWallet {
@@ -192,7 +193,15 @@ impl BitcoinWallet {
     ///
     /// * `Result<String>` - Signed transaction in hexadecimal format or error
     pub fn sign_transaction(&self, raw_tx_hex: &str, utxos: Vec<(&str, u64)>) -> Result<String> {
-        signer::sign_transaction(&self.addresses, raw_tx_hex, utxos, self.network)
+        //signer::sign_transaction(&self.addresses, raw_tx_hex, utxos, self.network)
+        bitcoinsigner::sign_transaction_legacy(
+            &self.addresses,
+            raw_tx_hex,
+            utxos,
+            self.network,
+            None,
+            None,
+        )
     }
 
     /// Sign a reveal transaction (used in certain Bitcoin protocols)
@@ -214,7 +223,8 @@ impl BitcoinWallet {
         envelope_script: Option<&str>,
         source_address: Option<&str>,
     ) -> Result<String> {
-        signer::sign_reveal_transaction(
+        //signer::sign_reveal_transaction(
+        bitcoinsigner::sign_transaction_legacy(
             &self.addresses,
             raw_tx_hex,
             utxos,
