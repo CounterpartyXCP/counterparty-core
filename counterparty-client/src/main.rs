@@ -16,7 +16,6 @@ use std::fs::File;
 mod commands;
 mod config;
 mod helpers;
-mod signer;
 mod wallet;
 mod bitcoinsigner;
 

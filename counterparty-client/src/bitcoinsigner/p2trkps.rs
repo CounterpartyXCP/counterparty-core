@@ -2,7 +2,7 @@ use bitcoin::blockdata::witness::Witness;
 use bitcoin::key::{Keypair, TapTweak};
 use bitcoin::psbt::Input as PsbtInput;
 use bitcoin::secp256k1::{Message, Secp256k1, SecretKey};
-use bitcoin::sighash::{Prevouts, SighashCache, TapSighashType};
+use bitcoin::sighash::{Prevouts, SighashCache};
 use bitcoin::{PublicKey, Transaction};
 
 use super::types::{Result, UTXO};

@@ -16,5 +16,4 @@ pub mod transaction;
 
 // Re-export the main API functions
 pub use transaction::sign_transaction;
-pub use transaction::sign_transaction_legacy;
-pub use types::{UTXO, UTXOList, UTXOType};
+pub use types::{UTXO, UTXOList};

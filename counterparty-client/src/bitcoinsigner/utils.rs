@@ -1,9 +1,9 @@
-use bitcoin::blockdata::script::{Builder, PushBytesBuf};
+use bitcoin::blockdata::script::PushBytesBuf;
 use bitcoin::blockdata::witness::Witness;
 use bitcoin::psbt::Input as PsbtInput;
 use bitcoin::secp256k1::{Message, Secp256k1};
-use bitcoin::sighash::{EcdsaSighashType, SighashCache, TapSighashType};
-use bitcoin::{CompressedPublicKey, Network, PrivateKey, PublicKey, ScriptBuf, Transaction, XOnlyPublicKey};
+use bitcoin::sighash::{EcdsaSighashType, TapSighashType};
+use bitcoin::{CompressedPublicKey, Network, PrivateKey, PublicKey, ScriptBuf, XOnlyPublicKey};
 use std::str::FromStr;
 
 use super::types::{Result, UTXOType};
@@ -101,19 +101,6 @@ pub fn hex_to_bytes(hex_str: &str) -> Result<Vec<u8>> {
     hex::decode(hex_str).map_err(|e| {
         WalletError::BitcoinError(format!("Invalid hex string: {}", e))
     })
-}
-
-/// Convert an UTXO type to a string representation
-pub fn utxo_type_to_string(utxo_type: UTXOType) -> &'static str {
-    match utxo_type {
-        UTXOType::P2PKH => "p2pkh",
-        UTXOType::P2SH => "p2sh",
-        UTXOType::P2WPKH => "p2wpkh",
-        UTXOType::P2WSH => "p2wsh",
-        UTXOType::P2TRKPS => "p2tr-kps",
-        UTXOType::P2TRSPS => "p2tr-sps",
-        UTXOType::Unknown => "unknown",
-    }
 }
 
 /// Verify if the signature is successful by checking if the public key can sign the input

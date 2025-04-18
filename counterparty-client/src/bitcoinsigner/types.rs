@@ -69,47 +69,6 @@ impl UTXO {
         }
     }
 
-    /// Creates a P2SH UTXO
-    pub fn new_p2sh(amount: u64, script_pubkey: ScriptBuf, redeem_script: ScriptBuf) -> Self {
-        Self {
-            amount,
-            script_pubkey,
-            redeem_script: Some(redeem_script),
-            witness_script: None,
-            leaf_script: None,
-            source_address: None,
-        }
-    }
-
-    /// Creates a P2WSH UTXO
-    pub fn new_p2wsh(amount: u64, script_pubkey: ScriptBuf, witness_script: ScriptBuf) -> Self {
-        Self {
-            amount,
-            script_pubkey,
-            redeem_script: None,
-            witness_script: Some(witness_script),
-            leaf_script: None,
-            source_address: None,
-        }
-    }
-
-    /// Creates a P2TR script path spending UTXO
-    pub fn new_p2tr_sps(
-        amount: u64,
-        script_pubkey: ScriptBuf,
-        leaf_script: ScriptBuf,
-        source_address: String,
-    ) -> Self {
-        Self {
-            amount,
-            script_pubkey,
-            redeem_script: None,
-            witness_script: None,
-            leaf_script: Some(leaf_script),
-            source_address: Some(source_address),
-        }
-    }
-
     /// Determines the type of UTXO based on its properties
     pub fn get_type(&self) -> UTXOType {
         if self.leaf_script.is_some() && self.source_address.is_some() {
@@ -150,10 +109,6 @@ impl UTXOList {
         Self(Vec::new())
     }
 
-    /// Creates a UTXO list from a vector of UTXOs
-    pub fn from_vec(utxos: Vec<UTXO>) -> Self {
-        Self(utxos)
-    }
 
     /// Adds a UTXO to the list
     pub fn add(&mut self, utxo: UTXO) {
@@ -163,11 +118,6 @@ impl UTXOList {
     /// Returns the number of UTXOs in the list
     pub fn len(&self) -> usize {
         self.0.len()
-    }
-
-    /// Checks if the list is empty
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
     }
 
     /// Gets a UTXO at the specified index

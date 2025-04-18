@@ -1,4 +1,4 @@
-use bitcoin::blockdata::script::{Builder, PushBytesBuf};
+use bitcoin::blockdata::script::Builder;
 use bitcoin::psbt::Input as PsbtInput;
 use bitcoin::secp256k1::{Message, Secp256k1, SecretKey};
 use bitcoin::sighash::{EcdsaSighashType, SighashCache};

@@ -5,7 +5,7 @@ use bitcoin::psbt::Psbt;
 use bitcoin::sighash::SighashCache;
 use bitcoin::{Transaction, ScriptBuf};
 
-use super::types::{Result, UTXO, UTXOList};
+use super::types::{Result, UTXOList};
 use super::utils::hex_to_bytes;
 use crate::wallet::WalletError;
 

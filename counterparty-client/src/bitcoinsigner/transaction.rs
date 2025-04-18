@@ -10,7 +10,7 @@ use super::p2trkps;
 use super::p2trsps;
 use super::psbt::{create_psbt_from_raw, extract_transaction, init_sighash_cache, is_psbt_finalized};
 use super::types::{Result, UTXO, UTXOList, UTXOType};
-use super::utils::{parse_private_key, get_public_key, utxo_type_to_string, decode_script};
+use super::utils::{parse_private_key, get_public_key};
 use crate::wallet::{AddressInfo, WalletError};
 
 /// Track which inputs were successfully signed
@@ -242,55 +242,4 @@ pub fn sign_transaction(
     
     // Extract and serialize the final transaction
     extract_transaction(psbt)
-}
-
-/// Legacy function to sign a transaction including support for Taproot reveal
-/// (maintains the same interface as the original signer module)
-///
-/// # Arguments
-///
-/// * `addresses` - HashMap of addresses and their information
-/// * `raw_tx_hex` - Unsigned transaction in hexadecimal format
-/// * `utxos` - Vector of (script_pubkey_hex, amount_in_satoshis) pairs for each input
-/// * `network` - Bitcoin network to use
-/// * `envelope_script` - Optional envelope script hex for Taproot reveal transactions
-/// * `source_address` - Optional source address for Taproot reveal transactions
-///
-/// # Returns
-///
-/// * Signed transaction in hex format or error
-pub fn sign_transaction_legacy(
-    addresses: &HashMap<String, AddressInfo>,
-    raw_tx_hex: &str,
-    utxos: Vec<(&str, u64)>,
-    network: Network,
-    envelope_script: Option<&str>,
-    source_address: Option<&str>,
-) -> Result<String> {
-    // Convert legacy utxos format to UTXOList
-    let mut utxo_list = UTXOList::new();
-    
-    for (i, (script_hex, amount)) in utxos.iter().enumerate() {
-        // Decode the script from hex
-        let script_pubkey = decode_script(script_hex)?;
-        
-        // Create a basic UTXO
-        let mut utxo = UTXO::new(*amount, script_pubkey);
-        
-        // For the first input, if this is a Taproot reveal transaction
-        if i == 0 && envelope_script.is_some() && source_address.is_some() {
-            // Get the leaf script from the envelope script
-            let leaf_script = decode_script(envelope_script.unwrap())?;
-            
-            // Set the source address
-            utxo.leaf_script = Some(leaf_script);
-            utxo.source_address = Some(source_address.unwrap().to_string());
-        }
-        
-        // Add the UTXO to the list
-        utxo_list.add(utxo);
-    }
-    
-    // Call the new implementation with the converted parameters
-    sign_transaction(addresses, raw_tx_hex, &utxo_list, network)
 }
