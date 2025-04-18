@@ -23,6 +23,20 @@ use crate::commands::api;
 use crate::commands::wallet as wallet_commands;
 use crate::config::{AppConfig, Network};
 
+// Get the binary name used to execute the program
+fn get_binary_name() -> String {
+    std::env::args()
+        .nth(0)
+        .map(|path| {
+            Path::new(&path)
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("counterparty-client")
+                .to_string()
+        })
+        .unwrap_or_else(|| "counterparty-client".to_string())
+}
+
 // Generate default config path
 fn get_default_config_path() -> PathBuf {
     dirs::data_dir()
@@ -89,7 +103,7 @@ fn detect_shell() -> Option<Shell> {
 }
 
 // Get the default completion path for a shell
-fn get_completion_path(shell: Shell) -> Option<PathBuf> {
+fn get_completion_path(shell: Shell, binary_name: &str) -> Option<PathBuf> {
     let home = dirs::home_dir()?;
     
     match shell {
@@ -97,7 +111,8 @@ fn get_completion_path(shell: Shell) -> Option<PathBuf> {
             // Check if ~/.bashrc exists
             let bashrc = home.join(".bashrc");
             if bashrc.exists() {
-                Some(home.join(".bash_completion"))
+                // Include binary name in the file path for bash
+                Some(home.join(format!(".{}_bash_completion", binary_name)))
             } else {
                 None
             }
@@ -106,7 +121,7 @@ fn get_completion_path(shell: Shell) -> Option<PathBuf> {
             // Common zsh completion directory
             let zsh_comp_dir = home.join(".zsh/completions");
             if zsh_comp_dir.exists() || fs::create_dir_all(&zsh_comp_dir).is_ok() {
-                Some(zsh_comp_dir.join("_counterparty-client"))
+                Some(zsh_comp_dir.join(format!("_{}", binary_name)))
             } else {
                 None
             }
@@ -115,20 +130,20 @@ fn get_completion_path(shell: Shell) -> Option<PathBuf> {
             // Fish completion directory
             let fish_comp_dir = home.join(".config/fish/completions");
             if fish_comp_dir.exists() || fs::create_dir_all(&fish_comp_dir).is_ok() {
-                Some(fish_comp_dir.join("counterparty-client.fish"))
+                Some(fish_comp_dir.join(format!("{}.fish", binary_name)))
             } else {
                 None
             }
         },
         Shell::PowerShell => {
             // PowerShell doesn't have a standard location, so we'll create it in the home directory
-            Some(home.join("counterparty-client.ps1"))
+            Some(home.join(format!("{}.ps1", binary_name)))
         },
         Shell::Elvish => {
             // Elvish completion path
             let elvish_comp_dir = home.join(".elvish/lib");
             if elvish_comp_dir.exists() || fs::create_dir_all(&elvish_comp_dir).is_ok() {
-                Some(elvish_comp_dir.join("counterparty-client.elv"))
+                Some(elvish_comp_dir.join(format!("{}.elv", binary_name)))
             } else {
                 None
             }
@@ -144,10 +159,10 @@ fn get_shell_config_instruction(shell: Shell, path: &Path) -> String {
             format!("Add the following line to your ~/.bashrc or ~/.bash_profile:\n  source \"{}\"", path.display())
         },
         Shell::Zsh => {
-            "Make sure that the following is present in your ~/.zshrc:\n  \
+            format!("Make sure that the following is present in your ~/.zshrc:\n  \
              fpath=(~/.zsh/completions $fpath)\n  \
              autoload -U compinit\n  \
-             compinit".to_string()
+             compinit")
         },
         Shell::Fish => {
             "Fish will automatically load completions from ~/.config/fish/completions/".to_string()
@@ -165,7 +180,8 @@ fn get_shell_config_instruction(shell: Shell, path: &Path) -> String {
 
 // Install completion script for a given shell
 fn install_completion_script(app: &mut Command, shell: Shell) -> Result<()> {
-    let path = get_completion_path(shell)
+    let binary_name = get_binary_name();
+    let path = get_completion_path(shell, &binary_name)
         .ok_or_else(|| anyhow!("Could not determine completion path for {:?}", shell))?;
     
     // Create parent directory if it doesn't exist
@@ -177,7 +193,7 @@ fn install_completion_script(app: &mut Command, shell: Shell) -> Result<()> {
     
     // Generate completion script
     let mut file = File::create(&path)?;
-    generate(shell, app, "counterparty-client", &mut file);
+    generate(shell, app, &binary_name, &mut file);
     
     // Get additional instructions
     let instructions = get_shell_config_instruction(shell, &path);
@@ -192,39 +208,43 @@ fn install_completion_script(app: &mut Command, shell: Shell) -> Result<()> {
 
 // Build the completion command with detailed help
 fn build_completion_command() -> Command {
-    let long_about = "\
-Generate shell completion scripts for counterparty-client commands.
+    let binary_name = get_binary_name();
+    let long_about = format!("\
+Generate shell completion scripts for {} commands.
 
 USAGE EXAMPLES:
   # Generate and display completions for your current shell (detected automatically)
-  counterparty-client completion
+  {} completion
 
   # Install completions for your current shell (detected automatically)
-  counterparty-client completion --install
+  {} completion --install
 
   # Generate completions for a specific shell (bash, zsh, fish, powershell, elvish)
-  counterparty-client completion bash
+  {} completion bash
 
 MANUAL INSTALLATION:
   # Bash
-  counterparty-client completion bash > ~/.bash_completion
-  # Add to your ~/.bashrc: source ~/.bash_completion
+  {} completion bash > ~/.{}_bash_completion
+  # Add to your ~/.bashrc: source ~/.{}_bash_completion
 
   # Zsh
   mkdir -p ~/.zsh/completions
-  counterparty-client completion zsh > ~/.zsh/completions/_counterparty-client
+  {} completion zsh > ~/.zsh/completions/_{} 
   # Add to your ~/.zshrc:
   # fpath=(~/.zsh/completions $fpath)
   # autoload -U compinit
   # compinit
 
   # Fish
-  counterparty-client completion fish > ~/.config/fish/completions/counterparty-client.fish
+  {} completion fish > ~/.config/fish/completions/{}.fish
 
   # PowerShell
-  counterparty-client completion powershell > ~/counterparty-client.ps1
-  # Add to your profile: . ~/counterparty-client.ps1
-";
+  {} completion powershell > ~/{}.ps1
+  # Add to your profile: . ~/{}.ps1
+", 
+        binary_name, binary_name, binary_name, binary_name, 
+        binary_name, binary_name, binary_name, binary_name, binary_name,
+        binary_name, binary_name, binary_name, binary_name, binary_name);
 
     Command::new("completion")
         .about("Generate shell completion scripts")
@@ -551,8 +571,11 @@ async fn main() -> Result<()> {
     pre_process_args()?;
 
     // Step 1: Build the full CLI app first
+    let binary_name = get_binary_name();
+    // Create a string slice with static lifetime to use with clap
+    let bin_name: &'static str = Box::leak(binary_name.clone().into_boxed_str());
     let mut app = add_common_cli_args(
-        Command::new("counterparty-client")
+        Command::new(bin_name)
             .version("0.1.0")
             .about("A command-line client for the Counterparty API and wallet"),
     )
@@ -674,7 +697,7 @@ async fn main() -> Result<()> {
             } else {
                 helpers::print_error(
                     "Could not detect your shell. Please specify a shell explicitly:", 
-                    Some("counterparty-client completion [bash|zsh|fish|powershell|elvish]")
+                    Some(&format!("{} completion [bash|zsh|fish|powershell|elvish]", binary_name))
                 );
                 return Ok(());
             };
@@ -684,7 +707,7 @@ async fn main() -> Result<()> {
                 install_completion_script(&mut app.clone(), shell)?;
             } else {
                 // Just output to stdout
-                generate(shell, &mut app.clone(), "counterparty-client", &mut io::stdout());
+                generate(shell, &mut app.clone(), &binary_name, &mut io::stdout());
             }
         }
         _ => {
