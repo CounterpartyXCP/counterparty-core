@@ -15,7 +15,7 @@ pub enum Network {
 // Default implementation for Network
 impl Default for Network {
     fn default() -> Self {
-        Network::Mainnet // Default network is Mainnet
+        Network::Testnet4 // Default network is Testnet4
     }
 }
 
@@ -60,14 +60,14 @@ impl AppConfig {
         let mut network_configs = HashMap::new();
 
         // Add mainnet config
-        let mainnet_config = Self::create_mainnet_config(&app_cache, &app_data);
-        network_configs.insert(Network::Mainnet, mainnet_config.clone());
+        network_configs.insert(
+            Network::Mainnet,
+            Self::create_mainnet_config(&app_cache, &app_data),
+        );
 
         // Add testnet4 config
-        network_configs.insert(
-            Network::Testnet4,
-            Self::create_testnet4_config(&app_cache, &app_data),
-        );
+        let testnet4_config = Self::create_testnet4_config(&app_cache, &app_data);
+        network_configs.insert(Network::Testnet4, testnet4_config.clone());
 
         // Add regtest config
         network_configs.insert(
@@ -75,14 +75,14 @@ impl AppConfig {
             Self::create_regtest_config(&app_cache, &app_data),
         );
 
-        // Use mainnet values for the root config (backward compatibility)
+        // Use testnet4 values for the root config (now default)
         AppConfig {
-            api_url: mainnet_config.api_url.clone(),
-            endpoints_url: mainnet_config.endpoints_url.clone(),
-            cache_file: mainnet_config.cache_file.clone(),
-            data_dir: mainnet_config.data_dir.clone(),
+            api_url: testnet4_config.api_url.clone(),
+            endpoints_url: testnet4_config.endpoints_url.clone(),
+            cache_file: testnet4_config.cache_file.clone(),
+            data_dir: testnet4_config.data_dir.clone(),
             network_configs,
-            network: Network::Mainnet,
+            network: Network::Testnet4,
         }
     }
 

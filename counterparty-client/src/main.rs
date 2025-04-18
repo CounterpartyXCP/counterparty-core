@@ -257,12 +257,23 @@ fn add_common_cli_args(command: Command) -> Command {
                 .display_order(999999),
         )
         .arg(
+            Arg::new("mainnet")
+                .long("mainnet")
+                .help("Use mainnet network")
+                .action(ArgAction::SetTrue)
+                .global(true)
+                .conflicts_with("regtest")
+                .conflicts_with("testnet4")
+                .display_order(999999),
+        )
+        .arg(
             Arg::new("testnet4")
                 .long("testnet4")
                 .help("Use Testnet4 network")
                 .action(ArgAction::SetTrue)
                 .global(true)
                 .conflicts_with("regtest")
+                .conflicts_with("mainnet")
                 .display_order(999999),
         )
         .arg(
@@ -272,6 +283,7 @@ fn add_common_cli_args(command: Command) -> Command {
                 .action(ArgAction::SetTrue)
                 .global(true)
                 .conflicts_with("testnet4")
+                .conflicts_with("mainnet")
                 .display_order(999999),
         )
 }
@@ -572,7 +584,9 @@ async fn main() -> Result<()> {
     };
 
     // Apply network settings from command line
-    if temp_args.contains(&"--testnet4".to_string()) {
+    if temp_args.contains(&"--mainnet".to_string()) {
+        config.set_network(Network::Mainnet);
+    } else if temp_args.contains(&"--testnet4".to_string()) {
         config.set_network(Network::Testnet4);
     } else if temp_args.contains(&"--regtest".to_string()) {
         config.set_network(Network::Regtest);
@@ -582,7 +596,9 @@ async fn main() -> Result<()> {
     config.load_from_file(&config_file_path)?;
 
     // Apply network settings again (command line takes precedence)
-    if temp_args.contains(&"--testnet4".to_string()) {
+    if temp_args.contains(&"--mainnet".to_string()) {
+        config.set_network(Network::Mainnet);
+    } else if temp_args.contains(&"--testnet4".to_string()) {
         config.set_network(Network::Testnet4);
     } else if temp_args.contains(&"--regtest".to_string()) {
         config.set_network(Network::Regtest);
