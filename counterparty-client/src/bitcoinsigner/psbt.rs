@@ -6,8 +6,15 @@ use bitcoin::sighash::SighashCache;
 use bitcoin::{Transaction, ScriptBuf};
 
 use super::types::{Result, UTXOList};
-use super::utils::hex_to_bytes;
 use crate::wallet::WalletError;
+
+
+/// Convert hex string to bytes
+pub fn hex_to_bytes(hex_str: &str) -> Result<Vec<u8>> {
+    hex::decode(hex_str).map_err(|e| {
+        WalletError::BitcoinError(format!("Invalid hex string: {}", e))
+    })
+}
 
 /// Parse a raw transaction from hexadecimal format
 pub fn parse_transaction(raw_tx_hex: &str) -> Result<Transaction> {

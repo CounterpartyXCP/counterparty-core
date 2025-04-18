@@ -7,7 +7,7 @@
 //! - Signing transactions
 
 use bitcoin::secp256k1::Secp256k1;
-use bitcoin::Network;
+use bitcoin::{Network, ScriptBuf};
 use serde_json::{self, json, Value};
 use std::path::Path;
 use std::collections::HashMap;
@@ -19,6 +19,7 @@ use super::utils::{network_to_string, to_bitcoin_network};
 use crate::config;
 use crate::bitcoinsigner;
 
+
 /// Main wallet structure for Bitcoin operations
 pub struct BitcoinWallet {
     storage: WalletStorage,
@@ -26,6 +27,13 @@ pub struct BitcoinWallet {
     network: Network, // Bitcoin network type
 }
 
+/// Decode a hex-encoded script
+pub fn decode_script(script_hex: &str) -> Result<ScriptBuf> {
+    let script_bytes = hex::decode(script_hex)
+        .map_err(|e| WalletError::BitcoinError(format!("Invalid script hex: {}", e)))?;
+
+    Ok(ScriptBuf::from_bytes(script_bytes))
+}
 
 pub fn sign_transaction(
     addresses: &HashMap<String, AddressInfo>,
@@ -40,7 +48,7 @@ pub fn sign_transaction(
     
     for (i, (script_hex, amount)) in utxos.iter().enumerate() {
         // Decode the script from hex
-        let script_pubkey = bitcoinsigner::utils::decode_script(script_hex)?;
+        let script_pubkey = decode_script(script_hex)?;
         
         // Create a basic UTXO
         let mut utxo = bitcoinsigner::UTXO::new(*amount, script_pubkey);
@@ -48,7 +56,7 @@ pub fn sign_transaction(
         // For the first input, if this is a Taproot reveal transaction
         if i == 0 && envelope_script.is_some() && source_address.is_some() {
             // Get the leaf script from the envelope script
-            let leaf_script = bitcoinsigner::utils::decode_script(envelope_script.unwrap())?;
+            let leaf_script = decode_script(envelope_script.unwrap())?;
             
             // Set the source address
             utxo.leaf_script = Some(leaf_script);

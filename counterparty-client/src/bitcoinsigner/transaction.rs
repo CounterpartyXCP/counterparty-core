@@ -1,6 +1,8 @@
-use bitcoin::Network;
 use bitcoin::secp256k1::{Secp256k1, SecretKey};
+use bitcoin::{Network, PrivateKey, PublicKey};
 use std::collections::HashMap;
+
+use std::str::FromStr;
 
 use super::p2pkh;
 use super::p2wpkh;
@@ -10,8 +12,65 @@ use super::p2trkps;
 use super::p2trsps;
 use super::psbt::{create_psbt_from_raw, extract_transaction, init_sighash_cache, is_psbt_finalized};
 use super::types::{Result, UTXO, UTXOList, UTXOType};
-use super::utils::{parse_private_key, get_public_key};
 use crate::wallet::{AddressInfo, WalletError};
+
+
+/// Parse a private key from a string
+pub fn parse_private_key(private_key_str: &str, _network: Network) -> Result<PrivateKey> {
+    PrivateKey::from_str(private_key_str).map_err(|e| {
+        WalletError::BitcoinError(format!("Invalid private key: {:?}", e))
+    })
+}
+
+/// Get a public key from a private key
+pub fn get_public_key(
+    secp: &Secp256k1<bitcoin::secp256k1::All>,
+    private_key: &PrivateKey,
+) -> PublicKey {
+    PublicKey::from_private_key(secp, private_key)
+}
+
+/// Verify if the signature is successful by checking if the public key can sign the input
+pub fn can_sign_input(
+    script_pubkey: &bitcoin::ScriptBuf,
+    public_key: &bitcoin::PublicKey,
+    utxo_type: UTXOType,
+    network: Network,
+) -> Result<bool> {
+    match utxo_type {
+        UTXOType::P2PKH => {
+            let address = bitcoin::Address::p2pkh(public_key, network);
+            Ok(script_pubkey == &address.script_pubkey())
+        },
+        UTXOType::P2WPKH => {
+            let compressed_key = super::common::get_compressed_pubkey(public_key)?;
+            let address = bitcoin::Address::p2wpkh(&compressed_key, network);
+            Ok(script_pubkey == &address.script_pubkey())
+        },
+        UTXOType::P2SH => {
+            // For P2SH, we need the redeem script to verify
+            // This is typically handled in the specific signing function
+            Ok(false)
+        },
+        UTXOType::P2WSH => {
+            // For P2WSH, we need the witness script to verify
+            // This is typically handled in the specific signing function
+            Ok(false)
+        },
+        UTXOType::P2TRKPS => {
+            let secp = Secp256k1::verification_only();
+            let xonly_pubkey = super::common::get_xonly_pubkey(public_key)?;
+            let address = bitcoin::Address::p2tr(&secp, xonly_pubkey, None, network);
+            Ok(script_pubkey == &address.script_pubkey())
+        },
+        UTXOType::P2TRSPS => {
+            // For P2TR script path, this is handled in the specific signing function
+            // We rely on the source_address field
+            Ok(false)
+        },
+        UTXOType::Unknown => Ok(false),
+    }
+}
 
 /// Track which inputs were successfully signed
 fn track_inputs(input_count: usize) -> Vec<bool> {
@@ -130,7 +189,7 @@ fn find_address_for_utxo<'a>(
         let public_key = get_public_key(&secp, &private_key);
         
         // Check if this key can sign the input
-        if super::utils::can_sign_input(&utxo.script_pubkey, &public_key, utxo.get_type(), network)? {
+        if can_sign_input(&utxo.script_pubkey, &public_key, utxo.get_type(), network)? {
             return Ok(Some((addr_str, addr_info)));
         }
     }

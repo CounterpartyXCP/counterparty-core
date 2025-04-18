@@ -4,7 +4,7 @@
 // using various address types (P2PKH, P2WPKH, P2SH, P2WSH, P2TR)
 
 pub mod types;
-pub mod utils;
+pub mod common;
 pub mod p2pkh;
 pub mod p2wpkh;
 pub mod p2sh;

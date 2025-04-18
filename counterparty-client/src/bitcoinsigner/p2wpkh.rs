@@ -1,34 +1,30 @@
-use bitcoin::amount::Amount;
+use bitcoin::blockdata::witness::Witness;
 use bitcoin::psbt::Input as PsbtInput;
-use bitcoin::secp256k1::{Secp256k1, SecretKey};
-use bitcoin::sighash::{EcdsaSighashType, SighashCache};
+use bitcoin::secp256k1::SecretKey;
+use bitcoin::sighash::SighashCache;
 use bitcoin::{PublicKey, Transaction};
 
-use super::types::{Result, UTXO};
-use super::utils::{create_empty_script_sig, create_message_from_hash, create_witness_stack, 
-                   encode_ecdsa_signature, get_ecdsa_sighash_type};
-use crate::wallet::WalletError;
+use super::common::{create_and_verify_ecdsa_signature, create_empty_script_sig, get_ecdsa_sighash_type};
+use super::types::{Result, UTXO, UTXOType};
 
-/// Computes the signature hash for P2WPKH inputs
-fn compute_sighash(
-    sighash_cache: &mut SighashCache<&Transaction>,
-    input_index: usize,
-    script_pubkey: &bitcoin::ScriptBuf,
-    amount: u64,
-    sighash_type: EcdsaSighashType,
-) -> Result<[u8; 32]> {
-    let amount = Amount::from_sat(amount);
-    let sighash = sighash_cache
-        .p2wpkh_signature_hash(input_index, script_pubkey, amount, sighash_type)
-        .map_err(|e| {
-            WalletError::BitcoinError(format!("Failed to compute signature hash: {}", e))
-        })?;
+/// Adds a signature to a P2WPKH input
+pub fn add_p2wpkh_signature(
+    input: &mut PsbtInput,
+    signature: Vec<u8>,
+    pubkey: Vec<u8>,
+) -> Result<()> {
+    // Create a witness stack with the signature and public key
+    let mut witness = Witness::new();
+    witness.push(signature);
+    witness.push(pubkey);
     
-    // Convert sighash to [u8; 32]
-    let mut bytes = [0u8; 32];
-    let hash_bytes: &[u8] = sighash.as_ref();
-    bytes.copy_from_slice(&hash_bytes[0..32]);
-    Ok(bytes)
+    // Set the witness data
+    input.final_script_witness = Some(witness);
+    
+    // Set empty script_sig (required for SegWit)
+    input.final_script_sig = Some(create_empty_script_sig());
+    
+    Ok(())
 }
 
 /// Signs a P2WPKH input
@@ -47,40 +43,20 @@ pub fn sign_psbt_input(
     // Define sighash type
     let sighash_type = get_ecdsa_sighash_type(input);
     
-    // Compute the sighash
-    let sighash = compute_sighash(
+    // Create and verify the signature
+    let signature = create_and_verify_ecdsa_signature(
         sighash_cache,
         input_index,
         script_pubkey,
-        amount,
+        Some(amount), // Amount is required for SegWit inputs
+        UTXOType::P2WPKH,
+        secret_key,
+        public_key,
         sighash_type,
     )?;
     
-    // Create a message from the sighash
-    let message = create_message_from_hash(&sighash)?;
-    
-    // Create a secp256k1 context
-    let secp = Secp256k1::new();
-    
-    // Sign the message
-    let signature = secp.sign_ecdsa(&message, secret_key);
-    
-    // Verify signature
-    if secp.verify_ecdsa(&message, &signature, &public_key.inner).is_err() {
-        return Err(WalletError::BitcoinError(
-            "Generated signature failed verification".to_string(),
-        ));
-    }
-    
-    // Encode the signature
-    let sig_bytes = encode_ecdsa_signature(&signature, sighash_type);
-    
-    // Create the witness data
-    let witness = create_witness_stack(sig_bytes, public_key.to_bytes());
-    input.final_script_witness = Some(witness);
-    
-    // Set empty script_sig (required for SegWit)
-    input.final_script_sig = Some(create_empty_script_sig());
+    // Add the signature to the input
+    add_p2wpkh_signature(input, signature, public_key.to_bytes())?;
     
     Ok(())
 }

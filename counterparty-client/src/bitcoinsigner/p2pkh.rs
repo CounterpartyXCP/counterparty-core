@@ -1,62 +1,15 @@
 use bitcoin::blockdata::script::Builder;
 use bitcoin::psbt::Input as PsbtInput;
-use bitcoin::secp256k1::{Message, Secp256k1, SecretKey};
-use bitcoin::sighash::{EcdsaSighashType, SighashCache};
+use bitcoin::secp256k1::SecretKey;
+use bitcoin::sighash::SighashCache;
 use bitcoin::{PublicKey, Transaction};
 
-use super::types::{Result, UTXO};
-use super::utils::{create_message_from_hash, encode_ecdsa_signature, to_push_bytes};
-use crate::wallet::WalletError;
-
-/// Computes the signature hash for P2PKH inputs
-fn compute_sighash(
-    sighash_cache: &mut SighashCache<&Transaction>,
-    input_index: usize,
-    script_pubkey: &bitcoin::ScriptBuf,
-    sighash_type: EcdsaSighashType,
-) -> Result<[u8; 32]> {
-    let sighash = sighash_cache
-        .legacy_signature_hash(input_index, script_pubkey, sighash_type as u32)
-        .map_err(|e| {
-            WalletError::BitcoinError(format!("Failed to compute signature hash: {}", e))
-        })?;
-    
-    // Convert sighash to [u8; 32]
-    let mut bytes = [0u8; 32];
-    let hash_bytes: &[u8] = sighash.as_ref();
-    bytes.copy_from_slice(&hash_bytes[0..32]);
-    Ok(bytes)
-}
-
-/// Signs a message with ECDSA and returns the signature bytes
-fn sign_message_ecdsa(
-    secp: &Secp256k1<bitcoin::secp256k1::All>,
-    message: &Message,
-    secret_key: &SecretKey,
-    sighash_type: EcdsaSighashType,
-) -> Result<Vec<u8>> {
-    let signature = secp.sign_ecdsa(message, secret_key);
-    
-    // Verify signature (by checking it matches public key)
-    let public_key = PublicKey::from_private_key(secp, 
-        &bitcoin::PrivateKey { 
-            inner: *secret_key, 
-            compressed: true, 
-            network: bitcoin::Network::Bitcoin.into() 
-        });
-    
-    if secp.verify_ecdsa(message, &signature, &public_key.inner).is_err() {
-        return Err(WalletError::BitcoinError(
-            "Generated signature failed verification".to_string(),
-        ));
-    }
-    
-    // Encode the signature with sighash type
-    Ok(encode_ecdsa_signature(&signature, sighash_type))
-}
+use super::common::{create_and_verify_ecdsa_signature, get_ecdsa_sighash_type};
+use super::types::{Result, UTXO, UTXOType};
+use super::common::to_push_bytes;
 
 /// Adds a signature to a P2PKH input
-fn add_signature(
+pub fn add_p2pkh_signature(
     input: &mut PsbtInput,
     signature: Vec<u8>,
     pubkey: Vec<u8>,
@@ -86,27 +39,22 @@ pub fn sign_psbt_input(
     let script_pubkey = &utxo.script_pubkey;
     
     // Define sighash type
-    let sighash_type = EcdsaSighashType::All;
+    let sighash_type = get_ecdsa_sighash_type(input);
     
-    // Compute the sighash
-    let sighash = compute_sighash(
+    // Create and verify the signature
+    let signature = create_and_verify_ecdsa_signature(
         sighash_cache,
         input_index,
         script_pubkey,
+        None, // Amount not needed for P2PKH
+        UTXOType::P2PKH,
+        secret_key,
+        public_key,
         sighash_type,
     )?;
     
-    // Create a message from the sighash
-    let message = create_message_from_hash(&sighash)?;
-    
-    // Create a secp256k1 context
-    let secp = Secp256k1::new();
-    
-    // Sign the message
-    let signature = sign_message_ecdsa(&secp, &message, secret_key, sighash_type)?;
-    
     // Add the signature to the input
-    add_signature(input, signature, public_key.to_bytes())?;
+    add_p2pkh_signature(input, signature, public_key.to_bytes())?;
     
     Ok(())
 }

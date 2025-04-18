@@ -2,13 +2,13 @@ use bitcoin::amount::Amount;
 use bitcoin::blockdata::transaction::TxOut;
 use bitcoin::blockdata::witness::Witness;
 use bitcoin::psbt::Input as PsbtInput;
-use bitcoin::secp256k1::{Keypair, Message, Secp256k1, SecretKey};
+use bitcoin::secp256k1::{Keypair, Secp256k1, SecretKey};
 use bitcoin::sighash::{Prevouts, SighashCache, TapSighashType};
 use bitcoin::taproot::{LeafVersion, TapLeafHash, TapNodeHash, TaprootBuilder, TaprootSpendInfo};
 use bitcoin::{Address, Network, PublicKey, ScriptBuf, Transaction, XOnlyPublicKey};
 
+use super::common::{create_empty_script_sig, create_message_from_hash, get_tap_sighash_type, get_xonly_pubkey};
 use super::types::{Result, UTXO};
-use super::utils::{create_empty_script_sig, get_tap_sighash_type, get_xonly_pubkey};
 use crate::wallet::WalletError;
 
 /// Control block for script path spending
@@ -167,8 +167,7 @@ fn compute_signature(
     let mut sighash_bytes = [0u8; 32];
     let hash_bytes: &[u8] = sighash.as_ref();
     sighash_bytes.copy_from_slice(&hash_bytes[0..32]);
-    let message = Message::from_digest_slice(&sighash_bytes)
-        .map_err(|e| WalletError::BitcoinError(format!("Failed to create message: {}", e)))?;
+    let message = create_message_from_hash(&sighash_bytes)?;
 
     // Create a keypair from the secret key
     let keypair = Keypair::from_secret_key(secp, secret_key);
