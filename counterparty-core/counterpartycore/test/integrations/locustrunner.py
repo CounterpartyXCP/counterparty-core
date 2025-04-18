@@ -35,7 +35,7 @@ def generate_mainnet_fixtures(db_file):
             "SELECT * FROM broadcasts ORDER BY rowid DESC LIMIT 1"
         ).fetchone()
         last_fairminter = db.execute(
-            "SELECT * FROM fairminters ORDER BY rowid DESC LIMIT 1"
+            "SELECT * FROM fairminters WHERE status = 'open' ORDER BY rowid DESC LIMIT 1"
         ).fetchone()
         last_fairmint = db.execute("SELECT * FROM fairmints ORDER BY rowid DESC LIMIT 1").fetchone()
         asset, asset1, asset2 = "XCP", "PEPECASH", "FAIREST"
