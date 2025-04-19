@@ -4,9 +4,8 @@ use bitcoin::secp256k1::SecretKey;
 use bitcoin::sighash::SighashCache;
 use bitcoin::{PublicKey, Transaction};
 
-use super::common::{create_and_verify_ecdsa_signature, get_ecdsa_sighash_type};
+use super::common::{create_and_verify_ecdsa_signature, get_ecdsa_sighash_type, to_push_bytes};
 use super::types::{Result, UTXO, UTXOType};
-use super::common::to_push_bytes;
 
 /// Adds a signature to a P2PKH input
 pub fn add_p2pkh_signature(

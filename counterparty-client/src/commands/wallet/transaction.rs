@@ -11,6 +11,7 @@ use crate::commands::wallet::args::ID_ARG_MAP;
 use crate::config::AppConfig;
 use crate::helpers;
 use crate::wallet::BitcoinWallet;
+use crate::bitcoinsigner;
 
 /// Information needed for reveal transaction
 struct RevealTransactionInfo<'a> {
@@ -400,8 +401,62 @@ fn extract_reveal_transaction_info(
     })
 }
 
-/// Handle reveal transaction signing
-/// Returns the signed reveal transaction hex
+/// Decode a hex-encoded script
+fn decode_script(script_hex: &str) -> Result<bitcoin::ScriptBuf> {
+    let script_bytes = hex::decode(script_hex)
+        .map_err(|e| anyhow!("Invalid script hex: {}", e))?;
+
+    Ok(bitcoin::ScriptBuf::from_bytes(script_bytes))
+}
+
+/// Build UTXOList for main transaction from raw utxos data
+fn build_utxo_list(utxos: Vec<(&str, u64)>) -> Result<bitcoinsigner::UTXOList> {
+    // Create a new UTXOList
+    let mut utxo_list = bitcoinsigner::UTXOList::new();
+    
+    // Process each UTXO
+    for (script_hex, amount) in utxos.iter() {
+        // Decode the script from hex
+        let script_pubkey = decode_script(script_hex)?;
+        
+        // Create a basic UTXO
+        let utxo = bitcoinsigner::UTXO::new(*amount, script_pubkey);
+        
+        // Add the UTXO to the list
+        utxo_list.add(utxo);
+    }
+    
+    Ok(utxo_list)
+}
+
+/// Build UTXOList for reveal transaction
+fn build_reveal_utxo_list(
+    script_hex: &str, 
+    amount: u64, 
+    envelope_script: &str, 
+    source_address: &str
+) -> Result<bitcoinsigner::UTXOList> {
+    // Create a new UTXOList
+    let mut utxo_list = bitcoinsigner::UTXOList::new();
+    
+    // Decode the script from hex
+    let script_pubkey = decode_script(script_hex)?;
+    
+    // Decode the envelope script
+    let leaf_script = decode_script(envelope_script)?;
+    
+    // Create a UTXO with the additional fields for a Taproot reveal transaction
+    let mut utxo = bitcoinsigner::UTXO::new(amount, script_pubkey);
+    utxo.leaf_script = Some(leaf_script);
+    utxo.source_address = Some(source_address.to_string());
+    
+    // Add the UTXO to the list
+    utxo_list.add(utxo);
+    
+    Ok(utxo_list)
+}
+
+/// Handle reveal transaction signing using sign_transaction2
 fn handle_reveal_transaction(
     reveal_info: RevealTransactionInfo,
     signed_tx: &str,
@@ -411,17 +466,17 @@ fn handle_reveal_transaction(
     // Extract the first output's script and value from the signed transaction
     let (output_script, output_value) = extract_first_output_info(signed_tx)?;
 
-    // Create UTXOs vector for the reveal transaction
-    let reveal_utxos = vec![(output_script.as_str(), output_value)];
+    // Build the UTXOList for the reveal transaction
+    let reveal_utxo_list = build_reveal_utxo_list(
+        &output_script,
+        output_value,
+        reveal_info.envelope_script,
+        address
+    )?;
 
-    // Sign the reveal transaction with taproot reveal parameters
+    // Sign the reveal transaction using sign_transaction2
     let signed_reveal_tx = wallet
-        .sign_reveal_transaction(
-            reveal_info.raw_tx,
-            reveal_utxos,
-            Some(reveal_info.envelope_script),
-            Some(address),
-        )
+        .sign_transaction(reveal_info.raw_tx, &reveal_utxo_list)
         .map_err(|e| anyhow!("Failed to sign reveal transaction: {}", e))?;
 
     Ok(signed_reveal_tx)
@@ -503,9 +558,12 @@ pub async fn handle_broadcast_command(
         }
     }
 
-    // Sign the transaction
+    // Build the UTXOList for the main transaction
+    let utxo_list = build_utxo_list(utxos)?;
+
+    // Sign the transaction using sign_transaction2
     let signed_tx = wallet
-        .sign_transaction(raw_tx_hex, utxos)
+        .sign_transaction(raw_tx_hex, &utxo_list)
         .map_err(|e| anyhow!("Failed to sign transaction: {}", e))?;
 
     // Variable to store signed reveal transaction if needed

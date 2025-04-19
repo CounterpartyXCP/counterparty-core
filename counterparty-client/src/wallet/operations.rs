@@ -7,10 +7,9 @@
 //! - Signing transactions
 
 use bitcoin::secp256k1::Secp256k1;
-use bitcoin::{Network, ScriptBuf};
+use bitcoin::Network;
 use serde_json::{self, json, Value};
 use std::path::Path;
-use std::collections::HashMap;
 
 use super::keys::{self, create_bitcoin_address};
 use super::storage::WalletStorage;
@@ -25,50 +24,6 @@ pub struct BitcoinWallet {
     storage: WalletStorage,
     addresses: AddressMap,
     network: Network, // Bitcoin network type
-}
-
-/// Decode a hex-encoded script
-pub fn decode_script(script_hex: &str) -> Result<ScriptBuf> {
-    let script_bytes = hex::decode(script_hex)
-        .map_err(|e| WalletError::BitcoinError(format!("Invalid script hex: {}", e)))?;
-
-    Ok(ScriptBuf::from_bytes(script_bytes))
-}
-
-pub fn sign_transaction(
-    addresses: &HashMap<String, AddressInfo>,
-    raw_tx_hex: &str,
-    utxos: Vec<(&str, u64)>,
-    network: Network,
-    envelope_script: Option<&str>,
-    source_address: Option<&str>,
-) -> Result<String> {
-    // Convert legacy utxos format to UTXOList
-    let mut utxo_list = bitcoinsigner::UTXOList::new();
-    
-    for (i, (script_hex, amount)) in utxos.iter().enumerate() {
-        // Decode the script from hex
-        let script_pubkey = decode_script(script_hex)?;
-        
-        // Create a basic UTXO
-        let mut utxo = bitcoinsigner::UTXO::new(*amount, script_pubkey);
-        
-        // For the first input, if this is a Taproot reveal transaction
-        if i == 0 && envelope_script.is_some() && source_address.is_some() {
-            // Get the leaf script from the envelope script
-            let leaf_script = decode_script(envelope_script.unwrap())?;
-            
-            // Set the source address
-            utxo.leaf_script = Some(leaf_script);
-            utxo.source_address = Some(source_address.unwrap().to_string());
-        }
-        
-        // Add the UTXO to the list
-        utxo_list.add(utxo);
-    }
-    
-    // Call the new implementation with the converted parameters
-    bitcoinsigner::sign_transaction(addresses, raw_tx_hex, &utxo_list, network)
 }
 
 impl BitcoinWallet {
@@ -237,47 +192,10 @@ impl BitcoinWallet {
     /// # Returns
     ///
     /// * `Result<String>` - Signed transaction in hexadecimal format or error
-    pub fn sign_transaction(&self, raw_tx_hex: &str, utxos: Vec<(&str, u64)>) -> Result<String> {
-        //signer::sign_transaction(&self.addresses, raw_tx_hex, utxos, self.network)
-        sign_transaction(
-            &self.addresses,
-            raw_tx_hex,
-            utxos,
-            self.network,
-            None,
-            None,
-        )
+    pub fn sign_transaction(&self, raw_tx_hex: &str, utxos: &bitcoinsigner::UTXOList) -> Result<String> {
+        bitcoinsigner::sign_transaction(&self.addresses, raw_tx_hex, &utxos, self.network)
     }
 
-    /// Sign a reveal transaction (used in certain Bitcoin protocols)
-    ///
-    /// # Arguments
-    ///
-    /// * `raw_tx_hex` - Unsigned transaction in hexadecimal format
-    /// * `utxos` - Vector of (script_pubkey_hex, amount_in_satoshis) pairs for each input
-    /// * `envelope_script` - Optional envelope script
-    /// * `source_address` - Optional source address
-    ///
-    /// # Returns
-    ///
-    /// * `Result<String>` - Signed transaction in hexadecimal format or error
-    pub fn sign_reveal_transaction(
-        &self,
-        raw_tx_hex: &str,
-        utxos: Vec<(&str, u64)>,
-        envelope_script: Option<&str>,
-        source_address: Option<&str>,
-    ) -> Result<String> {
-        //signer::sign_reveal_transaction(
-        sign_transaction(
-            &self.addresses,
-            raw_tx_hex,
-            utxos,
-            self.network,
-            envelope_script,
-            source_address,
-        )
-    }
 
     /// Change the wallet encryption password
     ///
