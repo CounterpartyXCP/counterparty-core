@@ -28,6 +28,7 @@
 
 // Private module structure - not exposed to users
 mod keys;
+mod key_service;
 mod operations;
 mod password;
 mod storage;
@@ -37,3 +38,4 @@ mod utils;
 // Re-export the main public API
 pub use operations::BitcoinWallet;
 pub use types::{AddressInfo, WalletError};
+pub use key_service::KeyService;

@@ -8,6 +8,7 @@
 
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::Network;
+use secrecy::{Secret, ExposeSecret};
 use serde_json::{self, json, Value};
 use std::path::Path;
 
@@ -108,8 +109,8 @@ impl BitcoinWallet {
         // Store the address information
         let address_info = AddressInfo {
             public_key: key_data.public_key.to_string(),
-            private_key: key_data.private_key.to_string(),
-            mnemonic: key_data.mnemonic,
+            private_key: Secret::new(key_data.private_key.to_string()),
+            mnemonic: key_data.mnemonic.map(Secret::new),
             path: key_data.path,
             label: final_label,
             address_type: addr_type.to_string(),
@@ -147,9 +148,9 @@ impl BitcoinWallet {
         });
 
         if show_private_key {
-            result["private_key"] = json!(address_info.private_key);
+            result["private_key"] = json!(address_info.private_key.expose_secret());
             if let Some(ref mnemonic) = address_info.mnemonic {
-                result["mnemonic"] = json!(mnemonic);
+                result["mnemonic"] = json!(mnemonic.expose_secret());
             }
             if let Some(ref path) = address_info.path {
                 result["path"] = json!(path);

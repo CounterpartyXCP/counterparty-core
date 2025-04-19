@@ -1,8 +1,6 @@
 use bitcoin::secp256k1::{Secp256k1, SecretKey};
-use bitcoin::{Network, PrivateKey, PublicKey};
+use bitcoin::Network;
 use std::collections::HashMap;
-
-use std::str::FromStr;
 
 use super::p2pkh;
 use super::p2wpkh;
@@ -12,23 +10,8 @@ use super::p2trkps;
 use super::p2trsps;
 use super::psbt::{create_psbt_from_raw, extract_transaction, init_sighash_cache, is_psbt_finalized};
 use super::types::{Result, UTXO, UTXOList, UTXOType};
-use crate::wallet::{AddressInfo, WalletError};
+use crate::wallet::{AddressInfo, WalletError, KeyService};
 
-
-/// Parse a private key from a string
-pub fn parse_private_key(private_key_str: &str, _network: Network) -> Result<PrivateKey> {
-    PrivateKey::from_str(private_key_str).map_err(|e| {
-        WalletError::BitcoinError(format!("Invalid private key: {:?}", e))
-    })
-}
-
-/// Get a public key from a private key
-pub fn get_public_key(
-    secp: &Secp256k1<bitcoin::secp256k1::All>,
-    private_key: &PrivateKey,
-) -> PublicKey {
-    PublicKey::from_private_key(secp, private_key)
-}
 
 /// Verify if the signature is successful by checking if the public key can sign the input
 pub fn can_sign_input(
@@ -183,10 +166,8 @@ fn find_address_for_utxo<'a>(
     
     // Try to find an address in our wallet that matches the script_pubkey
     for (addr_str, addr_info) in addresses {
-        // Parse the private key to get the public key
-        let private_key = parse_private_key(&addr_info.private_key, network)?;
-        let secp = Secp256k1::new();
-        let public_key = get_public_key(&secp, &private_key);
+        // Get the public key from the private key securely
+        let public_key = KeyService::get_public_key(&addr_info.private_key, network)?;
         
         // Check if this key can sign the input
         if can_sign_input(&utxo.script_pubkey, &public_key, utxo.get_type(), network)? {
@@ -209,7 +190,7 @@ fn find_address_for_utxo<'a>(
 ///
 /// # Returns
 ///
-/// * Signed transaction in hex format
+/// * `Result<String>` - Signed transaction in hex format
 pub fn sign_transaction(
     addresses: &HashMap<String, AddressInfo>,
     raw_tx_hex: &str,
@@ -235,33 +216,27 @@ pub fn sign_transaction(
         // Find a matching address in our wallet
         match find_address_for_utxo(addresses, utxo, network)? {
             Some((_addr_str, addr_info)) => {
-                // Parse the private key
-                let private_key = parse_private_key(&addr_info.private_key, network)?;
-                
-                // Get the public key
-                let secp = Secp256k1::new();
-                let public_key = get_public_key(&secp, &private_key);
-                
-                // Try to sign the input
-                match sign_input_by_type(
-                    &mut sighash_cache,
-                    &mut psbt,
-                    i,
-                    &SecretKey::from_slice(&private_key.inner[..])
-                        .map_err(|e| WalletError::BitcoinError(format!("Invalid private key: {}", e)))?,
-                    &public_key,
-                    utxo,
+                // Use KeyService to sign without exposing the private key
+                let input_index = i; // Capture for the closure
+                let input_signed = KeyService::sign_with_key(
+                    &addr_info.private_key, 
                     network,
-                ) {
-                    Ok(true) => {
-                        signed_inputs[i] = true;
-                    },
-                    Ok(false) => {
-                        // Could not sign this input with this key
-                    },
-                    Err(e) => {
-                        return Err(e);
-                    },
+                    |secret_key, public_key| {
+                        // Sign the input within the closure
+                        sign_input_by_type(
+                            &mut sighash_cache,
+                            &mut psbt,
+                            input_index,
+                            secret_key,
+                            public_key,
+                            utxo,
+                            network,
+                        )
+                    }
+                )?;
+                
+                if input_signed {
+                    signed_inputs[i] = true;
                 }
             },
             None => {
