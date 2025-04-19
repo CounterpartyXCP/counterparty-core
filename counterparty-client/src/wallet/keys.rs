@@ -20,8 +20,6 @@ use super::types::{Result, WalletError};
 pub struct KeyData {
     pub private_key: PrivateKey,
     pub public_key: PublicKey,
-    pub mnemonic: Option<String>,
-    pub path: Option<String>,
 }
 
 /// Generate key data from an existing private key
@@ -45,8 +43,6 @@ pub fn generate_keys_from_private_key(
     Ok(KeyData {
         private_key: pk,
         public_key,
-        mnemonic: None,
-        path: None,
     })
 }
 
@@ -71,8 +67,6 @@ pub fn generate_keys_from_mnemonic(
     Ok(KeyData {
         private_key,
         public_key,
-        mnemonic: Some(mnemonic_str.to_string()),
-        path: Some(derivation_path.to_string()),
     })
 }
 
@@ -98,8 +92,6 @@ pub fn generate_new_keys(
     Ok(KeyData {
         private_key,
         public_key,
-        mnemonic: Some(mnemonic.to_string()),
-        path: Some(derivation_path.to_string()),
     })
 }
 
