@@ -1074,6 +1074,7 @@ def construct(db, tx_info, construct_params):
             )
             result["reveal_rawtransaction"] = generate_raw_reveal_tx(tx.get_txid(), 0, outputs)
             result["envelope_script"] = envelope_script.to_hex()
+            result["reveal_input"] = (outputs[0].script_pubkey.to_hex(), outputs[0].amount)
 
     return result
 
