@@ -2,6 +2,7 @@ import binascii
 import random
 
 import pytest
+from bitcoinutils.keys import PrivateKey
 from bitcoinutils.script import Script
 from bitcoinutils.transactions import Transaction, TxOutput
 from counterpartycore.lib import config, exceptions
@@ -32,15 +33,24 @@ def test_generate_raw_reveal_tx():
 
 def test_generate_envelope_script():
     construct_params = {"inscriptioninscription": True}
+    private_key = PrivateKey(secret_exponent=1)
+    source_pubkey = private_key.get_public_key()
 
     data = b"Hello, World!"
-    envelope_script = composer.generate_envelope_script(data, construct_params)
+    envelope_script = composer.generate_envelope_script(data, source_pubkey, construct_params)
     assert envelope_script == Script(
-        ["OP_FALSE", "OP_IF", binascii.hexlify(data).decode("ascii"), "OP_ENDIF"]
+        [
+            "OP_FALSE",
+            "OP_IF",
+            binascii.hexlify(data).decode("ascii"),
+            "OP_ENDIF",
+            source_pubkey.to_x_only_hex(),
+            "OP_CHECKSIG",
+        ]
     )
 
     data = b"a" * 1000
-    envelope_script = composer.generate_envelope_script(data, construct_params)
+    envelope_script = composer.generate_envelope_script(data, source_pubkey, construct_params)
     assert envelope_script == Script(
         [
             "OP_FALSE",
@@ -48,11 +58,13 @@ def test_generate_envelope_script():
             binascii.hexlify(b"a" * 520).decode("ascii"),
             binascii.hexlify(b"a" * 480).decode("ascii"),
             "OP_ENDIF",
+            source_pubkey.to_x_only_hex(),
+            "OP_CHECKSIG",
         ]
     )
 
     data = b"a" * 1041
-    envelope_script = composer.generate_envelope_script(data, construct_params)
+    envelope_script = composer.generate_envelope_script(data, source_pubkey, construct_params)
     assert envelope_script == Script(
         [
             "OP_FALSE",
@@ -61,11 +73,13 @@ def test_generate_envelope_script():
             binascii.hexlify(b"a" * 520).decode("ascii"),
             binascii.hexlify(b"a").decode("ascii"),
             "OP_ENDIF",
+            source_pubkey.to_x_only_hex(),
+            "OP_CHECKSIG",
         ]
     )
 
     data = b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5`Sune asset super top"
-    envelope_script = composer.generate_envelope_script(data, construct_params)
+    envelope_script = composer.generate_envelope_script(data, source_pubkey, construct_params)
     assert envelope_script == Script(
         [
             "OP_FALSE",
@@ -78,14 +92,18 @@ def test_generate_envelope_script():
             "OP_0",
             "756e6520617373657420737570657220746f70",
             "OP_ENDIF",
+            source_pubkey.to_x_only_hex(),
+            "OP_CHECKSIG",
         ]
     )
 
 
 def calculate_reveal_transaction_vsize(data):
     construct_params = {"inscription": True}
+    private_key = PrivateKey(secret_exponent=1)
+    source_pubkey = private_key.get_public_key()
     # Calculate the envelope script size
-    envelope_script = composer.generate_envelope_script(data, construct_params)
+    envelope_script = composer.generate_envelope_script(data, source_pubkey, construct_params)
     envelope_script_serialized = envelope_script.to_hex()
     envelope_script_size = len(envelope_script_serialized) // 2
 
@@ -165,50 +183,50 @@ def test_get_reveal_transaction_vsize():
     vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
         db, source, data, unspent_list, construct_params
     )
-    assert vsize == 97
-    assert calculate_reveal_transaction_vsize(data) == 97
+    assert vsize == 105
+    assert calculate_reveal_transaction_vsize(data) == 106
 
     data = b"a"
     vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
         db, source, data, unspent_list, construct_params
     )
-    assert vsize == 97
-    assert calculate_reveal_transaction_vsize(data) == 98
+    assert vsize == 106
+    assert calculate_reveal_transaction_vsize(data) == 106
 
     data = b"a" * 1000
     vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
         db, source, data, unspent_list, construct_params
     )
-    assert vsize == 349
-    assert calculate_reveal_transaction_vsize(data) == 349
+    assert vsize == 357
+    assert calculate_reveal_transaction_vsize(data) == 358
 
     data = b"a" * 2000
     vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
         db, source, data, unspent_list, construct_params
     )
-    assert vsize == 600
-    assert calculate_reveal_transaction_vsize(data) == 601
+    assert vsize == 609
+    assert calculate_reveal_transaction_vsize(data) == 609
 
     data = b"a" * 10000
     vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
         db, source, data, unspent_list, construct_params
     )
-    assert vsize == 2612
-    assert calculate_reveal_transaction_vsize(data) == 2612
+    assert vsize == 2621
+    assert calculate_reveal_transaction_vsize(data) == 2621
 
     data = b"a" * 20000
     vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
         db, source, data, unspent_list, construct_params
     )
-    assert vsize == 5126
-    assert calculate_reveal_transaction_vsize(data) == 5127
+    assert vsize == 5135
+    assert calculate_reveal_transaction_vsize(data) == 5135
 
     data = b"a" * 400 * 1024
     vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
         db, source, data, unspent_list, construct_params
     )
-    assert vsize == 103089
-    assert calculate_reveal_transaction_vsize(data) == 103089
+    assert vsize == 103097
+    assert calculate_reveal_transaction_vsize(data) == 103098
 
     for _i in range(10):
         data = b"a" * random.randint(1, 400000)  # noqa
@@ -235,7 +253,7 @@ def test_prepare_taproot_output(ledger_db, defaults):
     assert len(outputs) == 1
     assert outputs[0].amount == 330
     assert outputs[0].script_pubkey == Script(
-        ["OP_1", "f5f05f105fff2aa11354afd243beeb8a45ce37becc0dd52da01b6612bfb0bc36"]
+        ["OP_1", "bda735a8764223a80459850d3a6434b5b90db96a0770f89664790100948f4f9e"]
     )
 
     outputs = composer.prepare_taproot_output(
@@ -250,7 +268,7 @@ def test_prepare_taproot_output(ledger_db, defaults):
     assert len(outputs) == 1
     assert outputs[0].amount == 330
     assert outputs[0].script_pubkey == Script(
-        ["OP_1", "a08105b2c25dfe0d5b3ef9471ae2bf886a81206f9e972bc2855d53048ec9a611"]
+        ["OP_1", "85ffdfaa05f1c01f61727f2d34a14b42d1aa4e0a6e6d5bf98dc65b2c0b8efd9c"]
     )
 
     outputs = composer.prepare_taproot_output(
@@ -259,7 +277,7 @@ def test_prepare_taproot_output(ledger_db, defaults):
     assert len(outputs) == 1
     assert outputs[0].amount == 330
     assert outputs[0].script_pubkey == Script(
-        ["OP_1", "dbf963209b9d74c19b2ddadac83fbd16f427f4266369a999feefdc32ab5466f7"]
+        ["OP_1", "fb4e62f6bb056d0925672a8877f0212314b37594639abfd8a98098ae747449b6"]
     )
 
     outputs = composer.prepare_data_outputs(
@@ -277,7 +295,7 @@ def test_prepare_taproot_output(ledger_db, defaults):
     assert len(outputs) == 1
     assert outputs[0].amount == 330
     assert outputs[0].script_pubkey == Script(
-        ["OP_1", "dbf963209b9d74c19b2ddadac83fbd16f427f4266369a999feefdc32ab5466f7"]
+        ["OP_1", "fb4e62f6bb056d0925672a8877f0212314b37594639abfd8a98098ae747449b6"]
     )
 
 
@@ -333,7 +351,7 @@ def test_check_transaction_sanity(ledger_db, defaults):
     with pytest.raises(
         exceptions.ComposeError, match="Sanity check error: envelope script does not match the data"
     ):
-        composer.check_transaction_sanity(tx_info, result, construct_params)
+        composer.check_transaction_sanity(tx_info, result, [], construct_params)
 
 
 def test_get_sat_per_vbyte(monkeypatch):
