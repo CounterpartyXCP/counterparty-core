@@ -57,13 +57,13 @@ def send_taproot_transaction(node, utxo, source_private_key, tx_name, params, in
 
     # sign the input containing the inscription script
     sig = source_private_key.sign_taproot_input(
-        reveal_tx,
-        0,
-        [commit_address.to_script_pub_key()],
-        [commit_value],
+        tx=reveal_tx,
+        txin_index=0,
+        utxo_scripts=[commit_address.to_script_pub_key()],
+        amounts=[commit_value],
         script_path=True,
         tapleaf_script=inscription_script,
-        tweak=True,
+        tweak=False,
     )
     # generate the control block
     control_block = ControlBlock(
@@ -79,6 +79,8 @@ def send_taproot_transaction(node, utxo, source_private_key, tx_name, params, in
     )
 
     node.broadcast_transaction(reveal_tx.serialize(), use_rpc=True)
+
+    print("Reveal TX Broadcasted:", commit_tx.get_txid())
 
     return {
         "txid": commit_tx.get_txid(),
@@ -612,6 +614,7 @@ def test_p2ptr_inscription():
             "invalid: Soft cap deadline block must be > start block."
             not in node.server_out.getvalue()
         )
+        print("All tests passed")
 
     except Exception as e:  # pylint: disable=broad-exception-caught
         print(regtest_node_thread.node.server_out.getvalue())
