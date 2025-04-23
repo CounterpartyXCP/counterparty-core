@@ -148,7 +148,7 @@ class RegtestNode:
                 tx_hash = result["result"]
             except KeyError as e:
                 print(result)
-                raise e
+                raise ValueError(result["error"]["message"]) from e
         if not no_confirmation:
             block_hash, block_time = self.mine_blocks(1)
         else:
