@@ -226,3 +226,8 @@ pub fn create_and_verify_ecdsa_signature(
     // Sign the message
     sign_message_ecdsa(&secp, &message, secret_key, public_key, sighash_type)
 }
+
+/// Helper to create a Bitcoin error with formatted message
+pub fn bitcoin_err<S: Into<String>>(msg: S) -> WalletError {
+    WalletError::BitcoinError(msg.into())
+}

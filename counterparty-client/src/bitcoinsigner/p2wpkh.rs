@@ -7,14 +7,10 @@ use bitcoin::{PublicKey, Transaction};
 use super::common::{
     create_and_verify_ecdsa_signature, create_empty_script_sig, get_ecdsa_sighash_type,
 };
-use super::types::{Result, UTXOType, UTXO};
+use super::types::{InputSigner, Result, UTXOType, UTXO};
 
 /// Adds a signature to a P2WPKH input
-pub fn add_p2wpkh_signature(
-    input: &mut PsbtInput,
-    signature: Vec<u8>,
-    pubkey: Vec<u8>,
-) -> Result<()> {
+fn add_p2wpkh_signature(input: &mut PsbtInput, signature: Vec<u8>, pubkey: Vec<u8>) -> Result<()> {
     // Create a witness stack with the signature and public key
     let mut witness = Witness::new();
     witness.push(signature);
@@ -29,36 +25,38 @@ pub fn add_p2wpkh_signature(
     Ok(())
 }
 
-/// Signs a P2WPKH input
-pub fn sign_psbt_input(
-    sighash_cache: &mut SighashCache<&Transaction>,
-    input: &mut PsbtInput,
-    input_index: usize,
-    secret_key: &SecretKey,
-    public_key: &PublicKey,
-    utxo: &UTXO,
-) -> Result<()> {
-    // Get the script pubkey
-    let script_pubkey = &utxo.script_pubkey;
-    let amount = utxo.amount;
+/// Implementation of InputSigner for P2WPKH
+pub struct P2WPKHSigner;
 
-    // Define sighash type
-    let sighash_type = get_ecdsa_sighash_type(input);
+impl InputSigner for P2WPKHSigner {
+    fn sign_input(
+        sighash_cache: &mut SighashCache<&Transaction>,
+        input: &mut PsbtInput,
+        input_index: usize,
+        secret_key: &SecretKey,
+        public_key: &PublicKey,
+        utxo: &UTXO,
+    ) -> Result<()> {
+        // Get the script pubkey
+        let script_pubkey = &utxo.script_pubkey;
+        let amount = utxo.amount;
 
-    // Create and verify the signature
-    let signature = create_and_verify_ecdsa_signature(
-        sighash_cache,
-        input_index,
-        script_pubkey,
-        Some(amount), // Amount is required for SegWit inputs
-        UTXOType::P2WPKH,
-        secret_key,
-        public_key,
-        sighash_type,
-    )?;
+        // Define sighash type
+        let sighash_type = get_ecdsa_sighash_type(input);
 
-    // Add the signature to the input
-    add_p2wpkh_signature(input, signature, public_key.to_bytes())?;
+        // Create and verify the signature
+        let signature = create_and_verify_ecdsa_signature(
+            sighash_cache,
+            input_index,
+            script_pubkey,
+            Some(amount), // Amount is required for SegWit inputs
+            UTXOType::P2WPKH,
+            secret_key,
+            public_key,
+            sighash_type,
+        )?;
 
-    Ok(())
+        // Add the signature to the input
+        add_p2wpkh_signature(input, signature, public_key.to_bytes())
+    }
 }

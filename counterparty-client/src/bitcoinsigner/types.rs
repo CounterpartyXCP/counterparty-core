@@ -1,4 +1,8 @@
+use bitcoin::psbt::Input as PsbtInput;
+use bitcoin::secp256k1::SecretKey;
+use bitcoin::sighash::SighashCache;
 use bitcoin::ScriptBuf;
+use bitcoin::{PublicKey, Transaction};
 use std::str::FromStr;
 
 type WalletError = crate::wallet::WalletError;
@@ -135,4 +139,18 @@ impl AsRef<[UTXO]> for UTXOList {
     fn as_ref(&self) -> &[UTXO] {
         &self.0
     }
+}
+
+/// Trait for implementation of various transaction input signers
+/// This provides a common interface for all address types
+pub trait InputSigner {
+    /// Sign a specific input in a PSBT
+    fn sign_input(
+        sighash_cache: &mut SighashCache<&Transaction>,
+        input: &mut PsbtInput,
+        input_index: usize,
+        secret_key: &SecretKey,
+        public_key: &PublicKey,
+        utxo: &UTXO,
+    ) -> Result<()>;
 }

@@ -6,7 +6,7 @@ use bitcoin::sighash::{Prevouts, SighashCache};
 use bitcoin::{PublicKey, Transaction};
 
 use super::common::{create_empty_script_sig, create_message_from_hash, get_tap_sighash_type};
-use super::types::{Result, UTXO};
+use super::types::{InputSigner, Result, UTXO};
 use crate::wallet::WalletError;
 
 /// Compute signature for key path spending
@@ -17,7 +17,6 @@ fn compute_signature(
     input: &PsbtInput,
     secret_key: &SecretKey,
 ) -> Result<Vec<u8>> {
-    println!("Computing signature for Taproot key path spending...");
     // Get the sighash type
     let sighash_type = get_tap_sighash_type(input);
 
@@ -89,23 +88,25 @@ fn add_witness(input: &mut PsbtInput, signature: Vec<u8>) -> Result<()> {
     Ok(())
 }
 
-/// Signs a P2TR key path spending input
-pub fn sign_psbt_input(
-    sighash_cache: &mut SighashCache<&Transaction>,
-    input: &mut PsbtInput,
-    input_index: usize,
-    secret_key: &SecretKey,
-    _public_key: &PublicKey,
-    _utxo: &UTXO,
-) -> Result<()> {
-    // Create a secp256k1 context
-    let secp = Secp256k1::new();
+/// Implementation of InputSigner for P2TR key path spending
+pub struct P2TRKPSSigner;
 
-    // Compute signature for key path spending
-    let signature = compute_signature(&secp, sighash_cache, input_index, input, secret_key)?;
+impl InputSigner for P2TRKPSSigner {
+    fn sign_input(
+        sighash_cache: &mut SighashCache<&Transaction>,
+        input: &mut PsbtInput,
+        input_index: usize,
+        secret_key: &SecretKey,
+        _public_key: &PublicKey,
+        _utxo: &UTXO,
+    ) -> Result<()> {
+        // Create a secp256k1 context
+        let secp = Secp256k1::new();
 
-    // Add witness data
-    add_witness(input, signature)?;
+        // Compute signature for key path spending
+        let signature = compute_signature(&secp, sighash_cache, input_index, input, secret_key)?;
 
-    Ok(())
+        // Add witness data
+        add_witness(input, signature)
+    }
 }

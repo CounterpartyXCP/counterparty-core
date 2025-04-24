@@ -7,7 +7,7 @@ use bitcoin::{PublicKey, ScriptBuf, Transaction};
 use super::common::{
     create_and_verify_ecdsa_signature, create_empty_script_sig, get_ecdsa_sighash_type,
 };
-use super::types::{Result, UTXOType, UTXO};
+use super::types::{InputSigner, Result, UTXOType, UTXO};
 use crate::wallet::WalletError;
 
 /// Checks if a public key is used in a witness script
@@ -67,44 +67,46 @@ fn add_signature(
     Ok(())
 }
 
-/// Signs a P2WSH input
-pub fn sign_psbt_input(
-    sighash_cache: &mut SighashCache<&Transaction>,
-    input: &mut PsbtInput,
-    input_index: usize,
-    secret_key: &SecretKey,
-    public_key: &PublicKey,
-    utxo: &UTXO,
-) -> Result<()> {
-    // Get the witness script
-    let witness_script = utxo.witness_script.as_ref().ok_or_else(|| {
-        WalletError::BitcoinError("Missing witness script for P2WSH input".to_string())
-    })?;
+/// Implementation of InputSigner for P2WSH
+pub struct P2WSHSigner;
 
-    // Check if the public key is in the witness script
-    if !is_pubkey_in_witness_script(witness_script, public_key)? {
-        return Err(WalletError::BitcoinError(
-            "Public key not found in witness script".to_string(),
-        ));
+impl InputSigner for P2WSHSigner {
+    fn sign_input(
+        sighash_cache: &mut SighashCache<&Transaction>,
+        input: &mut PsbtInput,
+        input_index: usize,
+        secret_key: &SecretKey,
+        public_key: &PublicKey,
+        utxo: &UTXO,
+    ) -> Result<()> {
+        // Get the witness script
+        let witness_script = utxo.witness_script.as_ref().ok_or_else(|| {
+            WalletError::BitcoinError("Missing witness script for P2WSH input".to_string())
+        })?;
+
+        // Check if the public key is in the witness script
+        if !is_pubkey_in_witness_script(witness_script, public_key)? {
+            return Err(WalletError::BitcoinError(
+                "Public key not found in witness script".to_string(),
+            ));
+        }
+
+        // Define sighash type
+        let sighash_type = get_ecdsa_sighash_type(input);
+
+        // Create and verify the signature
+        let signature = create_and_verify_ecdsa_signature(
+            sighash_cache,
+            input_index,
+            witness_script,
+            Some(utxo.amount), // Amount is required for SegWit inputs
+            UTXOType::P2WSH,
+            secret_key,
+            public_key,
+            sighash_type,
+        )?;
+
+        // Add the signature to the input
+        add_signature(input, signature, public_key.to_bytes(), witness_script)
     }
-
-    // Define sighash type
-    let sighash_type = get_ecdsa_sighash_type(input);
-
-    // Create and verify the signature
-    let signature = create_and_verify_ecdsa_signature(
-        sighash_cache,
-        input_index,
-        witness_script,
-        Some(utxo.amount), // Amount is required for SegWit inputs
-        UTXOType::P2WSH,
-        secret_key,
-        public_key,
-        sighash_type,
-    )?;
-
-    // Add the signature to the input
-    add_signature(input, signature, public_key.to_bytes(), witness_script)?;
-
-    Ok(())
 }

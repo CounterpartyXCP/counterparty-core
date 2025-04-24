@@ -10,7 +10,7 @@ use bitcoin::{PublicKey, ScriptBuf, Transaction, XOnlyPublicKey};
 use super::common::{
     create_empty_script_sig, create_message_from_hash, get_tap_sighash_type, get_xonly_pubkey,
 };
-use super::types::{Result, UTXO};
+use super::types::{InputSigner, Result, UTXO};
 use crate::wallet::WalletError;
 
 /// Control block for script path spending
@@ -178,6 +178,7 @@ fn compute_signature(
     Ok(signature.to_vec())
 }
 
+/// Add witness for script path spending
 fn add_witness(
     input: &mut PsbtInput,
     signature: Vec<u8>,
@@ -211,47 +212,51 @@ fn add_witness(
     Ok(())
 }
 
-/// Signs a P2TR script path spending input
-pub fn sign_psbt_input(
-    sighash_cache: &mut SighashCache<&Transaction>,
-    input: &mut PsbtInput,
-    input_index: usize,
-    secret_key: &SecretKey,
-    public_key: &PublicKey,
-    utxo: &UTXO,
-) -> Result<()> {
-    // Create a secp256k1 context
-    let secp = bitcoin::key::Secp256k1::new();
+/// Implementation of InputSigner for P2TR script path spending
+pub struct P2TRSPSSigner;
 
-    // Get XOnly pubkey from the source public key
-    let xonly_pubkey = get_xonly_pubkey(public_key)?;
+impl InputSigner for P2TRSPSSigner {
+    fn sign_input(
+        sighash_cache: &mut SighashCache<&Transaction>,
+        input: &mut PsbtInput,
+        input_index: usize,
+        secret_key: &SecretKey,
+        public_key: &PublicKey,
+        utxo: &UTXO,
+    ) -> Result<()> {
+        // Create a secp256k1 context
+        let secp = bitcoin::key::Secp256k1::new();
 
-    // Get leaf script
-    let leaf_script = utxo.leaf_script.as_ref().ok_or_else(|| {
-        WalletError::BitcoinError("Missing leaf script for P2TR script path spending".to_string())
-    })?;
+        // Get XOnly pubkey from the source public key
+        let xonly_pubkey = get_xonly_pubkey(public_key)?;
 
-    // Use the script_pubkey from the UTXO
-    input.witness_utxo = Some(TxOut {
-        value: Amount::from_sat(utxo.amount),
-        script_pubkey: utxo.script_pubkey.clone(),
-    });
+        // Get leaf script
+        let leaf_script = utxo.leaf_script.as_ref().ok_or_else(|| {
+            WalletError::BitcoinError(
+                "Missing leaf script for P2TR script path spending".to_string(),
+            )
+        })?;
 
-    // Create control block for witness data
-    let control_block = create_control_block(&secp, &xonly_pubkey, leaf_script)?;
+        // Use the script_pubkey from the UTXO
+        input.witness_utxo = Some(TxOut {
+            value: Amount::from_sat(utxo.amount),
+            script_pubkey: utxo.script_pubkey.clone(),
+        });
 
-    // Compute signature
-    let signature = compute_signature(
-        &secp,
-        sighash_cache,
-        input_index,
-        input,
-        leaf_script,
-        secret_key,
-    )?;
+        // Create control block for witness data
+        let control_block = create_control_block(&secp, &xonly_pubkey, leaf_script)?;
 
-    // Add witness data
-    add_witness(input, signature, leaf_script, &control_block)?;
+        // Compute signature
+        let signature = compute_signature(
+            &secp,
+            sighash_cache,
+            input_index,
+            input,
+            leaf_script,
+            secret_key,
+        )?;
 
-    Ok(())
+        // Add witness data
+        add_witness(input, signature, leaf_script, &control_block)
+    }
 }

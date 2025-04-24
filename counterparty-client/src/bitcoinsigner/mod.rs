@@ -14,6 +14,6 @@ pub mod psbt;
 pub mod transaction;
 pub mod types;
 
-// Re-export the main API functions
+// Re-export the main API functions and types
 pub use transaction::sign_transaction;
 pub use types::{UTXOList, UTXO};

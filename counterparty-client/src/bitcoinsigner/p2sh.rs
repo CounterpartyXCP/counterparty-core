@@ -7,7 +7,7 @@ use bitcoin::{PublicKey, ScriptBuf, Transaction};
 use super::common::{
     create_and_verify_ecdsa_signature, get_compressed_pubkey, get_ecdsa_sighash_type, to_push_bytes,
 };
-use super::types::{Result, UTXOType, UTXO};
+use super::types::{InputSigner, Result, UTXOType, UTXO};
 use crate::wallet::WalletError;
 
 /// Adds a signature to a regular P2SH input
@@ -66,48 +66,50 @@ fn add_p2sh_p2wpkh_signature(
     Ok(())
 }
 
-/// Signs a P2SH input (handles both regular P2SH and P2SH-P2WPKH)
-pub fn sign_psbt_input(
-    sighash_cache: &mut SighashCache<&Transaction>,
-    input: &mut PsbtInput,
-    input_index: usize,
-    secret_key: &SecretKey,
-    public_key: &PublicKey,
-    utxo: &UTXO,
-) -> Result<()> {
-    // Get the redeem script
-    let redeem_script = utxo.redeem_script.as_ref().ok_or_else(|| {
-        WalletError::BitcoinError("Missing redeem script for P2SH input".to_string())
-    })?;
+/// Implementation of InputSigner for P2SH
+pub struct P2SHSigner;
 
-    // Determine if this is P2SH-P2WPKH
-    let is_p2sh_p2wpkh = redeem_script.is_p2wpkh();
+impl InputSigner for P2SHSigner {
+    fn sign_input(
+        sighash_cache: &mut SighashCache<&Transaction>,
+        input: &mut PsbtInput,
+        input_index: usize,
+        secret_key: &SecretKey,
+        public_key: &PublicKey,
+        utxo: &UTXO,
+    ) -> Result<()> {
+        // Get the redeem script
+        let redeem_script = utxo.redeem_script.as_ref().ok_or_else(|| {
+            WalletError::BitcoinError("Missing redeem script for P2SH input".to_string())
+        })?;
 
-    // Define sighash type
-    let sighash_type = get_ecdsa_sighash_type(input);
+        // Determine if this is P2SH-P2WPKH
+        let is_p2sh_p2wpkh = redeem_script.is_p2wpkh();
 
-    // Create and verify the signature
-    let signature = create_and_verify_ecdsa_signature(
-        sighash_cache,
-        input_index,
-        redeem_script,
+        // Define sighash type
+        let sighash_type = get_ecdsa_sighash_type(input);
+
+        // Create and verify the signature
+        let signature = create_and_verify_ecdsa_signature(
+            sighash_cache,
+            input_index,
+            redeem_script,
+            if is_p2sh_p2wpkh {
+                Some(utxo.amount)
+            } else {
+                None
+            },
+            UTXOType::P2SH,
+            secret_key,
+            public_key,
+            sighash_type,
+        )?;
+
+        // Add the signature to the input based on the type
         if is_p2sh_p2wpkh {
-            Some(utxo.amount)
+            add_p2sh_p2wpkh_signature(input, signature, public_key.to_bytes())
         } else {
-            None
-        },
-        UTXOType::P2SH,
-        secret_key,
-        public_key,
-        sighash_type,
-    )?;
-
-    // Add the signature to the input based on the type
-    if is_p2sh_p2wpkh {
-        add_p2sh_p2wpkh_signature(input, signature, public_key.to_bytes())?;
-    } else {
-        add_legacy_signature(input, signature, public_key.to_bytes(), redeem_script)?;
+            add_legacy_signature(input, signature, public_key.to_bytes(), redeem_script)
+        }
     }
-
-    Ok(())
 }
