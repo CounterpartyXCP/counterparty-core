@@ -8,7 +8,8 @@ use bitcoin::taproot::{LeafVersion, TapLeafHash, TapNodeHash, TaprootBuilder, Ta
 use bitcoin::{PublicKey, ScriptBuf, Transaction, XOnlyPublicKey};
 
 use super::common::{
-    create_empty_script_sig, create_message_from_hash, get_tap_sighash_type, get_xonly_pubkey,
+    create_empty_script_sig, create_message_from_tap_sighash, get_tap_sighash_type,
+    get_xonly_pubkey,
 };
 use super::types::{InputSigner, Result, UTXO};
 use crate::wallet::WalletError;
@@ -146,10 +147,7 @@ fn compute_signature(
         })?;
 
     // Convert sighash to bytes and create message
-    let mut sighash_bytes = [0u8; 32];
-    let hash_bytes: &[u8] = sighash.as_ref();
-    sighash_bytes.copy_from_slice(&hash_bytes[0..32]);
-    let message = create_message_from_hash(&sighash_bytes)?;
+    let message = create_message_from_tap_sighash(sighash)?;
 
     // Create a keypair from the secret key
     let keypair = Keypair::from_secret_key(secp, secret_key);

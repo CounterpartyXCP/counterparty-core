@@ -4,7 +4,7 @@ use bitcoin::secp256k1::SecretKey;
 use bitcoin::sighash::SighashCache;
 use bitcoin::{PublicKey, Transaction};
 
-use super::common::{create_and_verify_ecdsa_signature, get_ecdsa_sighash_type, to_push_bytes};
+use super::common::{create_and_verify_ecdsa_signature, to_push_bytes};
 use super::types::{InputSigner, Result, UTXOType, UTXO};
 
 /// Adds a signature to a P2PKH input
@@ -33,22 +33,16 @@ impl InputSigner for P2PKHSigner {
         public_key: &PublicKey,
         utxo: &UTXO,
     ) -> Result<()> {
-        // Get the script pubkey
-        let script_pubkey = &utxo.script_pubkey;
-
-        // Define sighash type
-        let sighash_type = get_ecdsa_sighash_type(input);
-
         // Create and verify the signature
         let signature = create_and_verify_ecdsa_signature(
             sighash_cache,
             input_index,
-            script_pubkey,
+            &utxo.script_pubkey,
             None, // Amount not needed for P2PKH
             UTXOType::P2PKH,
             secret_key,
             public_key,
-            sighash_type,
+            input,
         )?;
 
         // Add the signature to the input

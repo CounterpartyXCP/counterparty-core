@@ -116,22 +116,24 @@ fn find_address_for_utxo<'a>(
             return Err(WalletError::AddressNotFound(source_address.clone()));
         }
     }
-    
+
     // Otherwise, convert the script_pubkey to an address
-    let address = bitcoin::Address::from_script(&utxo.script_pubkey, network)
-        .map_err(|_| WalletError::BitcoinError(
-            format!("Could not convert script_pubkey to address for type {:?}", utxo.get_type())
-        ))?;
-    
+    let address = bitcoin::Address::from_script(&utxo.script_pubkey, network).map_err(|_| {
+        WalletError::BitcoinError(format!(
+            "Could not convert script_pubkey to address for type {:?}",
+            utxo.get_type()
+        ))
+    })?;
+
     let address_str = address.to_string();
-    
+
     // Look for this address in our wallet
     for (addr_str, addr_info) in addresses {
         if addr_str == &address_str {
             return Ok((addr_str, addr_info));
         }
     }
-    
+
     // No matching address found
     Err(WalletError::AddressNotFound(address_str))
 }

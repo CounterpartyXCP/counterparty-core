@@ -4,9 +4,7 @@ use bitcoin::secp256k1::SecretKey;
 use bitcoin::sighash::SighashCache;
 use bitcoin::{PublicKey, ScriptBuf, Transaction};
 
-use super::common::{
-    create_and_verify_ecdsa_signature, get_compressed_pubkey, get_ecdsa_sighash_type, to_push_bytes,
-};
+use super::common::{create_and_verify_ecdsa_signature, get_compressed_pubkey, to_push_bytes};
 use super::types::{InputSigner, Result, UTXOType, UTXO};
 use crate::wallet::WalletError;
 
@@ -85,24 +83,22 @@ impl InputSigner for P2SHSigner {
 
         // Determine if this is P2SH-P2WPKH
         let is_p2sh_p2wpkh = redeem_script.is_p2wpkh();
-
-        // Define sighash type
-        let sighash_type = get_ecdsa_sighash_type(input);
+        let amount = if is_p2sh_p2wpkh {
+            Some(utxo.amount)
+        } else {
+            None
+        };
 
         // Create and verify the signature
         let signature = create_and_verify_ecdsa_signature(
             sighash_cache,
             input_index,
             redeem_script,
-            if is_p2sh_p2wpkh {
-                Some(utxo.amount)
-            } else {
-                None
-            },
+            amount,
             UTXOType::P2SH,
             secret_key,
             public_key,
-            sighash_type,
+            input,
         )?;
 
         // Add the signature to the input based on the type

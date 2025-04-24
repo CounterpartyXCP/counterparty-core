@@ -5,7 +5,7 @@ use bitcoin::blockdata::script::PushBytesBuf;
 use bitcoin::psbt::Input as PsbtInput;
 use bitcoin::secp256k1::{Message, Secp256k1, SecretKey};
 use bitcoin::sighash::{EcdsaSighashType, SighashCache, TapSighashType};
-use bitcoin::{CompressedPublicKey, PublicKey, ScriptBuf, Transaction, XOnlyPublicKey};
+use bitcoin::{CompressedPublicKey, PublicKey, ScriptBuf, TapSighash, Transaction, XOnlyPublicKey};
 
 use super::types::{Result, UTXOType};
 use crate::wallet::WalletError;
@@ -20,6 +20,13 @@ pub fn to_push_bytes(bytes: &[u8]) -> Result<PushBytesBuf> {
 pub fn create_message_from_hash(hash: &[u8]) -> Result<Message> {
     Message::from_digest_slice(hash)
         .map_err(|e| WalletError::BitcoinError(format!("Failed to create message: {}", e)))
+}
+
+pub fn create_message_from_tap_sighash(sighash: TapSighash) -> Result<Message> {
+    let mut sighash_bytes = [0u8; 32];
+    let hash_bytes: &[u8] = sighash.as_ref();
+    sighash_bytes.copy_from_slice(&hash_bytes[0..32]);
+    create_message_from_hash(&sighash_bytes)
 }
 
 /// Create an empty script signature (used in SegWit)
@@ -162,8 +169,9 @@ pub fn create_and_verify_ecdsa_signature(
     utxo_type: UTXOType,
     secret_key: &SecretKey,
     public_key: &PublicKey,
-    sighash_type: EcdsaSighashType,
+    input: &mut PsbtInput,
 ) -> Result<Vec<u8>> {
+    let sighash_type = get_ecdsa_sighash_type(input);
     // Compute the sighash based on the address type
     let sighash = match utxo_type {
         UTXOType::P2PKH => {
