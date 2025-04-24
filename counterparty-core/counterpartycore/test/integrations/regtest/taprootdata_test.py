@@ -1,7 +1,9 @@
 import binascii
 import os
+import re
 import time
 
+import pytest
 from bitcoinutils.keys import PrivateKey
 from bitcoinutils.script import Script
 from bitcoinutils.setup import setup
@@ -12,7 +14,9 @@ from regtestnode import RegtestNodeThread, rpc_call
 SENDS_COUNT = {}
 
 
-def send_taproot_transaction(node, utxo, source_private_key, tx_name, params, inputs_set=None):
+def send_taproot_transaction(
+    node, utxo, source_private_key, tx_name, params, inputs_set=None, invalid_sig=False
+):
     print(utxo)
     source_pubkey = source_private_key.get_public_key()
     source_address = source_pubkey.get_taproot_address()
@@ -57,14 +61,16 @@ def send_taproot_transaction(node, utxo, source_private_key, tx_name, params, in
 
     # sign the input containing the inscription script
     sig = source_private_key.sign_taproot_input(
-        reveal_tx,
-        0,
-        [commit_address.to_script_pub_key()],
-        [commit_value],
+        tx=reveal_tx,
+        txin_index=0,
+        utxo_scripts=[commit_address.to_script_pub_key()],
+        amounts=[commit_value],
         script_path=True,
         tapleaf_script=inscription_script,
-        tweak=True,
+        tweak=False,
     )
+    if invalid_sig:
+        sig = "f" * len(sig)
     # generate the control block
     control_block = ControlBlock(
         source_pubkey,
@@ -79,6 +85,8 @@ def send_taproot_transaction(node, utxo, source_private_key, tx_name, params, in
     )
 
     node.broadcast_transaction(reveal_tx.serialize(), use_rpc=True)
+
+    print("Reveal TX Broadcasted:", commit_tx.get_txid())
 
     return {
         "txid": commit_tx.get_txid(),
@@ -129,7 +137,7 @@ def generate_taproot_funded_address(node):
     }
 
 
-def check_send(node, source_private_key, utxo, quantity):
+def check_send(node, source_private_key, utxo, quantity, invalid_sig=False):
     global SENDS_COUNT  # pylint: disable=global-statement # noqa PLW0603
 
     new_utxo = send_taproot_transaction(
@@ -142,6 +150,7 @@ def check_send(node, source_private_key, utxo, quantity):
             "quantity": quantity,
             "asset": "XCP",
         },
+        invalid_sig=invalid_sig,
     )
 
     source_address = source_private_key.get_public_key().get_taproot_address().to_string()
@@ -471,7 +480,7 @@ def check_destroy(node, source_private_key, utxo):
     return new_utxo
 
 
-def check_send2(node, source_private_key, utxo):
+def check_send2(node, source_private_key, utxo, invalid_sig=False):
     global SENDS_COUNT  # pylint: disable=global-statement # noqa PLW0603
 
     new_utxo = send_taproot_transaction(
@@ -484,6 +493,7 @@ def check_send2(node, source_private_key, utxo):
             "quantity": 2,
             "asset": "A95428959745315388",
         },
+        invalid_sig=invalid_sig,
     )
 
     source_address = source_private_key.get_public_key().get_taproot_address().to_string()
@@ -577,6 +587,34 @@ def check_fairminter2(node, source_private_key, utxo):
     return new_utxo
 
 
+def check_fairminter3(node, source_private_key, utxo, invalid_sig=False):
+    last_block = int(node.api_call("")["result"]["counterparty_height"])
+    new_utxo = send_taproot_transaction(
+        node,
+        utxo,
+        source_private_key,
+        "fairminter",
+        {
+            "asset": "A95428959745315390",
+            "price": 1,
+            "hard_cap": 100 * 10**8,
+            "description": "a" * 400000,
+            "premint_quantity": 100,
+            "start_block": last_block + 1,
+            "soft_cap": 90 * 10**8,
+            "soft_cap_deadline_block": last_block + 10,
+        },
+        invalid_sig=invalid_sig,
+    )
+
+    source_address = source_private_key.get_public_key().get_taproot_address().to_string()
+    result = node.api_call(f"addresses/{source_address}/fairminters")
+    assert len(result["result"]) == 1
+    assert result["result"][0]["asset"] == "A95428959745315390"
+
+    return new_utxo
+
+
 def test_p2ptr_inscription():
     setup("regtest")
 
@@ -607,11 +645,17 @@ def test_p2ptr_inscription():
         utxo_2 = check_dividend(node, source_private_key_2, utxo_2)
         utxo_2 = check_sweep(node, source_private_key_2, utxo_2)
         utxo_2 = check_fairminter2(node, source_private_key_2, utxo_2)
+        with pytest.raises(
+            ValueError,
+            match=re.escape("mandatory-script-verify-flag-failed (Invalid Schnorr signature)"),
+        ):
+            check_fairminter3(node, source_private_key_2, utxo_2, invalid_sig=True)
 
         assert (
             "invalid: Soft cap deadline block must be > start block."
             not in node.server_out.getvalue()
         )
+        print("All tests passed")
 
     except Exception as e:  # pylint: disable=broad-exception-caught
         print(regtest_node_thread.node.server_out.getvalue())

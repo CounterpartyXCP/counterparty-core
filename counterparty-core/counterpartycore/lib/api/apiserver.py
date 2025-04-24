@@ -506,7 +506,16 @@ def run_apiserver(
         sentry.init()
         initialise_log_and_config(argparse.Namespace(**args), api=True, log_stream=log_stream)
 
-        database.apply_outstanding_migration(config.STATE_DATABASE, config.STATE_DB_MIGRATIONS_DIR)
+        if args["rebuild_state_db"]:
+            dbbuilder.build_state_db()
+        elif args["refresh_state_db"]:
+            state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
+            dbbuilder.refresh_state_db(state_db)
+            state_db.close()
+        else:
+            database.apply_outstanding_migration(
+                config.STATE_DATABASE, config.STATE_DB_MIGRATIONS_DIR
+            )
 
         state_db = database.get_db_connection(
             config.STATE_DATABASE, read_only=False, check_wal=False

@@ -143,7 +143,12 @@ class RegtestNode:
         if not use_rpc:
             tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction, 0).strip()
         else:
-            tx_hash = rpc_call("sendrawtransaction", [signed_transaction])["result"]
+            result = rpc_call("sendrawtransaction", [signed_transaction])
+            try:
+                tx_hash = result["result"]
+            except KeyError as e:
+                print(result)
+                raise ValueError(result["error"]["message"]) from e
         if not no_confirmation:
             block_hash, block_time = self.mine_blocks(1)
         else:
