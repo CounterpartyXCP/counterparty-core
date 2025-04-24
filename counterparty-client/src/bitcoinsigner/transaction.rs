@@ -1,4 +1,4 @@
-use bitcoin::secp256k1::{Secp256k1, SecretKey};
+use bitcoin::secp256k1::SecretKey;
 use bitcoin::Network;
 use std::collections::HashMap;
 
@@ -14,34 +14,6 @@ use super::psbt::{
 };
 use super::types::{InputSigner, Result, UTXOList, UTXOType, UTXO};
 use crate::wallet::{AddressInfo, KeyService, WalletError};
-
-/// Check if a given public key can sign for a specific UTXO type and script
-pub fn can_sign_input(
-    script_pubkey: &bitcoin::ScriptBuf,
-    public_key: &bitcoin::PublicKey,
-    utxo_type: UTXOType,
-    network: Network,
-) -> Result<bool> {
-    match utxo_type {
-        UTXOType::P2PKH => {
-            let address = bitcoin::Address::p2pkh(public_key, network);
-            Ok(script_pubkey == &address.script_pubkey())
-        }
-        UTXOType::P2WPKH => {
-            let compressed_key = super::common::get_compressed_pubkey(public_key)?;
-            let address = bitcoin::Address::p2wpkh(&compressed_key, network);
-            Ok(script_pubkey == &address.script_pubkey())
-        }
-        UTXOType::P2TRKPS => {
-            let secp = Secp256k1::verification_only();
-            let xonly_pubkey = super::common::get_xonly_pubkey(public_key)?;
-            let address = bitcoin::Address::p2tr(&secp, xonly_pubkey, None, network);
-            Ok(script_pubkey == &address.script_pubkey())
-        }
-        // Script-based address types need more context to verify
-        UTXOType::P2SH | UTXOType::P2WSH | UTXOType::P2TRSPS | UTXOType::Unknown => Ok(false),
-    }
-}
 
 /// Sign a specific PSBT input using the appropriate InputSigner
 fn sign_input_by_type(
@@ -135,32 +107,33 @@ fn find_address_for_utxo<'a>(
     addresses: &'a HashMap<String, AddressInfo>,
     utxo: &'a UTXO,
     network: Network,
-) -> Result<Option<(&'a String, &'a AddressInfo)>> {
-    // Special case for P2TR script path spending - use the provided source address
-    if utxo.get_type() == UTXOType::P2TRSPS {
-        if let Some(source_address) = &utxo.source_address {
-            // Wrap the result in Some() to match the return type
-            if let Some(addr_info) = addresses.get(source_address) {
-                return Ok(Some((source_address, addr_info)));
-            } else {
-                return Err(WalletError::AddressNotFound(source_address.clone()));
-            }
+) -> Result<(&'a String, &'a AddressInfo)> {
+    // If the UTXO has a source_address, use it directly
+    if let Some(source_address) = &utxo.source_address {
+        if let Some(addr_info) = addresses.get(source_address) {
+            return Ok((source_address, addr_info));
+        } else {
+            return Err(WalletError::AddressNotFound(source_address.clone()));
         }
     }
-
-    // For other types, try to find a matching address in our wallet
+    
+    // Otherwise, convert the script_pubkey to an address
+    let address = bitcoin::Address::from_script(&utxo.script_pubkey, network)
+        .map_err(|_| WalletError::BitcoinError(
+            format!("Could not convert script_pubkey to address for type {:?}", utxo.get_type())
+        ))?;
+    
+    let address_str = address.to_string();
+    
+    // Look for this address in our wallet
     for (addr_str, addr_info) in addresses {
-        // Get the public key from the address info
-        let public_key = KeyService::get_public_key(&addr_info.private_key, network)?;
-
-        // Check if this key can sign the input
-        if can_sign_input(&utxo.script_pubkey, &public_key, utxo.get_type(), network)? {
-            return Ok(Some((addr_str, addr_info)));
+        if addr_str == &address_str {
+            return Ok((addr_str, addr_info));
         }
     }
-
+    
     // No matching address found
-    Ok(None)
+    Err(WalletError::AddressNotFound(address_str))
 }
 
 /// Sign a transaction using wallet addresses
@@ -197,9 +170,10 @@ pub fn sign_transaction(
             .get(i)
             .ok_or_else(|| bitcoin_err(format!("Missing UTXO for input {}", i)))?;
 
-        // Find a matching address in our wallet
-        match find_address_for_utxo(addresses, utxo, network)? {
-            Some((_addr_str, addr_info)) => {
+        // Find a matching address in our wallet - handle the error case separately
+        let result = find_address_for_utxo(addresses, utxo, network);
+        match result {
+            Ok((_addr_str, addr_info)) => {
                 // Use KeyService to sign with the private key
                 let input_index = i; // Capture for the closure
                 let input_signed = KeyService::sign_with_key(
@@ -222,9 +196,7 @@ pub fn sign_transaction(
                     signed_inputs[i] = true;
                 }
             }
-            None => {
-                // No matching address found for this input
-            }
+            Err(e) => return Err(e), // Propagate errors
         }
     }
 

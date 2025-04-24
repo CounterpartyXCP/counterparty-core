@@ -54,7 +54,7 @@ impl KeyService {
         Ok(result)
     }
 
-    /// Get a public key from a private key without exposing it
+    /*/// Get a public key from a private key without exposing it
     pub fn get_public_key(private_key_str: &Secret<String>, network: Network) -> Result<PublicKey> {
         let private_key = PrivateKey::from_str(private_key_str.expose_secret())
             .map_err(|e| WalletError::BitcoinError(format!("Invalid private key: {:?}", e)))?;
@@ -71,5 +71,5 @@ impl KeyService {
         let public_key = PublicKey::from_private_key(&secp, &pk);
 
         Ok(public_key)
-    }
+    }*/
 }
