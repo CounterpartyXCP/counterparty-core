@@ -101,6 +101,7 @@ counterparty-server start
 - The `--profile` flag now generates a report every 15 minutes instead of just once at shutdown
 - Add `URGENT` log level displayed even with `--quiet` flag
 - Add `--enable-all-protocol-changes` flag for testing purposes
+- Remove `mempoolfullrbf=1` from `docker-compose.yml`
 
 # Credits
 
