@@ -175,43 +175,46 @@ fn compute_signature(
     // Sign with Schnorr (no tweaking for script path)
     let schnorr_sig = secp.sign_schnorr_no_aux_rand(&message, &keypair);
 
-    // Create signature
-    let mut sig_bytes = schnorr_sig.as_ref().to_vec();
-    
-    // Add sighash type if not default
-    if sighash_type != TapSighashType::All {
-        sig_bytes.push(sighash_type as u8);
-    }
+    // Add sighash type to the signature
+    let signature = bitcoin::taproot::Signature {
+        signature: schnorr_sig,
+        sighash_type,
+    }.serialize();
 
-    // Verify signature
+    // Verify signature locally
     let xonly_pubkey = XOnlyPublicKey::from_keypair(&keypair).0;
-    
     if secp.verify_schnorr(&schnorr_sig, &message, &xonly_pubkey).is_err() {
         return Err(WalletError::BitcoinError(
             "Generated Schnorr signature failed verification".to_string(),
         ));
     }
 
-    Ok(sig_bytes)
+    Ok(signature.to_vec())
 }
 
-/// Add script path spending witness
 fn add_witness(
     input: &mut PsbtInput,
     signature: Vec<u8>,
     leaf_script: &ScriptBuf,
     control_block: &TaprootControlBlock,
 ) -> Result<()> {
-    let mut witness = Witness::new();
+    // Create witness manually without using Witness::push
+    // which can add unwanted length prefixes
     
-    // Add signature
-    witness.push(signature);
+    // Build witness directly as a series of elements
+    let mut witness_elements = Vec::new();
     
-    // Add script
-    witness.push(leaf_script.as_bytes());
+    // Element 1: Signature
+    witness_elements.push(signature);
     
-    // Add control block
-    witness.push(control_block.serialize());
+    // Element 2: Script
+    witness_elements.push(leaf_script.as_bytes().to_vec());
+    
+    // Element 3: Control block
+    witness_elements.push(control_block.serialize());
+    
+    // Create witness from elements
+    let witness = Witness::from_slice(&witness_elements);
     
     // Set witness data
     input.final_script_witness = Some(witness);
@@ -233,7 +236,7 @@ pub fn sign_psbt_input(
     network: Network,
 ) -> Result<()> {
     // Create a secp256k1 context
-    let secp = Secp256k1::new();
+    let secp = bitcoin::key::Secp256k1::new();
     
     // Get XOnly pubkey from the source public key
     let xonly_pubkey = get_xonly_pubkey(public_key)?;
@@ -243,23 +246,15 @@ pub fn sign_psbt_input(
         WalletError::BitcoinError("Missing leaf script for P2TR script path spending".to_string())
     })?;
     
-    // Generate the taproot commit address for the given key and script
-    // This is the address that was used in the commit transaction
-    let commit_address = generate_taproot_commit_address(&secp, &xonly_pubkey, leaf_script, network)?;
-    
-    // Get the script pubkey from the commit address
-    let commit_script_pubkey = commit_address.script_pubkey();
-    
-    // Important: Update the witness UTXO with the correct script_pubkey
+    // Important: Use the script_pubkey directly from the UTXO
     // This is crucial for correct signature verification
     if let Some(witness_utxo) = &mut input.witness_utxo {
-        witness_utxo.script_pubkey = commit_script_pubkey.clone();
+        // No need to modify it - use existing script_pubkey from the input
     } else {
-        // If there's no witness UTXO, create one with the commit script pubkey
-        // Extract the value from the original UTXO
+        // If there's no witness UTXO, create one with the UTXO's script pubkey
         input.witness_utxo = Some(TxOut {
             value: Amount::from_sat(utxo.amount),
-            script_pubkey: commit_script_pubkey.clone(),
+            script_pubkey: utxo.script_pubkey.clone(),
         });
     }
     
