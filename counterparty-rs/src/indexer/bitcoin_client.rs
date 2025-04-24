@@ -415,19 +415,19 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
     let instructions: Vec<_> = script.instructions().collect();
     
     // Check if we have enough instructions for a valid envelope script
-    if instructions.len() < 3 {
+    if instructions.len() < 5 {
         return Err(Error::ParseVout("Invalid witness script: too few instructions".to_string()));
     }
     
     // Verify it's an envelope script with empty push bytes as equivalent to OP_FALSE
     let is_envelope = match (&instructions[0], &instructions[1], instructions.last()) {
         (Ok(PushBytes(pb)), Ok(Op(op2)), Some(Ok(Op(op3)))) if pb.is_empty() => {
-            format!("{:?}", op2).contains("OP_IF") && format!("{:?}", op3).contains("OP_ENDIF")
+            format!("{:?}", op2).contains("OP_IF") && format!("{:?}", op3).contains("OP_CHECKSIG")
         },
         (Ok(Op(op1)), Ok(Op(op2)), Some(Ok(Op(op3)))) => {
             (format!("{:?}", op1).contains("OP_FALSE") || format!("{:?}", op1).contains("OP_0")) && 
             format!("{:?}", op2).contains("OP_IF") && 
-            format!("{:?}", op3).contains("OP_ENDIF")
+            format!("{:?}", op3).contains("OP_CHECKSIG")
         },
         _ => false
     };
@@ -437,7 +437,7 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
     }
     
     // Check if this is an "ord" inscription
-    let is_ord = instructions.len() >= 5 && 
+    let is_ord = instructions.len() >= 7 && 
         match (&instructions.get(2), &instructions.get(3), &instructions.get(4)) {
             (Some(Ok(PushBytes(pb1))), Some(Ok(PushBytes(pb2))), Some(Ok(PushBytes(pb3)))) => {
                 pb1.as_bytes() == b"ord" && 
@@ -466,7 +466,7 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
         let mut current_section = "none";
         
         // Process all instructions to collect metadata and description
-        while i < instructions.len() - 1 {
+        while i < instructions.len() - 3 {
             match &instructions[i] {
                 Ok(PushBytes(marker)) => {
                     let marker_bytes = marker.as_bytes();
@@ -492,7 +492,7 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
             }
 
             // Collect the chunk if we're in a data section
-            if current_section != "none" && i < instructions.len() - 1 {
+            if current_section != "none" {
                 if let Ok(PushBytes(data)) = &instructions[i] {
                     if current_section == "metadata" {
                         metadata_chunks.push(data.as_bytes().to_vec());
@@ -577,7 +577,7 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
     } else {
         // Generic inscription - collect all data between OP_IF and OP_ENDIF
         let mut result_data = Vec::new();
-        for i in 2..instructions.len() - 1 {
+        for i in 2..instructions.len() - 3 {
             if let Ok(PushBytes(bytes)) = &instructions[i] {
                 result_data.extend_from_slice(bytes.as_bytes());
             }
