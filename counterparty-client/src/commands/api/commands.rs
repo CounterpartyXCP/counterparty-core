@@ -72,7 +72,7 @@ fn add_subcommand(cmd: Command, func_name: String, endpoint: ApiEndpoint) -> Com
     let static_description: &'static str = Box::leak(endpoint.description.into_boxed_str());
 
     let mut subcmd = Command::new(static_func_name).about(static_description);
-    
+
     // Create a set to track used long names to avoid conflicts
     let mut used_long_names = HashSet::new();
 
@@ -132,9 +132,8 @@ fn add_command_argument(
 
     if arg.arg_type == "bool" {
         // Modified to accept values for boolean arguments
-        cmd_arg = cmd_arg
-            .value_name("BOOL")
-            .value_parser(|s: &str| -> std::result::Result<String, String> {
+        cmd_arg = cmd_arg.value_name("BOOL").value_parser(
+            |s: &str| -> std::result::Result<String, String> {
                 let lower = s.to_lowercase();
                 match lower.as_str() {
                     "true" | "1" => Ok("true".to_string()),
@@ -144,7 +143,8 @@ fn add_command_argument(
                         s
                     )),
                 }
-            });
+            },
+        );
     } else {
         cmd_arg = cmd_arg.value_name("VALUE");
     }
@@ -188,7 +188,7 @@ pub fn build_request_parameters(
 
                 if let Some(value) = matches.get_one::<String>(internal_id) {
                     params.insert(arg.name.clone(), value.clone());
-                    break;  // Once we find a matching value, break out of the loop
+                    break; // Once we find a matching value, break out of the loop
                 }
             }
         }

@@ -5,7 +5,7 @@ use bitcoin::sighash::SighashCache;
 use bitcoin::{PublicKey, Transaction};
 
 use super::common::{create_and_verify_ecdsa_signature, get_ecdsa_sighash_type, to_push_bytes};
-use super::types::{Result, UTXO, UTXOType};
+use super::types::{Result, UTXOType, UTXO};
 
 /// Adds a signature to a P2PKH input
 pub fn add_p2pkh_signature(
@@ -36,10 +36,10 @@ pub fn sign_psbt_input(
 ) -> Result<()> {
     // Get the script pubkey
     let script_pubkey = &utxo.script_pubkey;
-    
+
     // Define sighash type
     let sighash_type = get_ecdsa_sighash_type(input);
-    
+
     // Create and verify the signature
     let signature = create_and_verify_ecdsa_signature(
         sighash_cache,
@@ -51,9 +51,9 @@ pub fn sign_psbt_input(
         public_key,
         sighash_type,
     )?;
-    
+
     // Add the signature to the input
     add_p2pkh_signature(input, signature, public_key.to_bytes())?;
-    
+
     Ok(())
 }

@@ -4,8 +4,10 @@ use bitcoin::secp256k1::SecretKey;
 use bitcoin::sighash::SighashCache;
 use bitcoin::{PublicKey, Transaction};
 
-use super::common::{create_and_verify_ecdsa_signature, create_empty_script_sig, get_ecdsa_sighash_type};
-use super::types::{Result, UTXO, UTXOType};
+use super::common::{
+    create_and_verify_ecdsa_signature, create_empty_script_sig, get_ecdsa_sighash_type,
+};
+use super::types::{Result, UTXOType, UTXO};
 
 /// Adds a signature to a P2WPKH input
 pub fn add_p2wpkh_signature(
@@ -17,13 +19,13 @@ pub fn add_p2wpkh_signature(
     let mut witness = Witness::new();
     witness.push(signature);
     witness.push(pubkey);
-    
+
     // Set the witness data
     input.final_script_witness = Some(witness);
-    
+
     // Set empty script_sig (required for SegWit)
     input.final_script_sig = Some(create_empty_script_sig());
-    
+
     Ok(())
 }
 
@@ -39,10 +41,10 @@ pub fn sign_psbt_input(
     // Get the script pubkey
     let script_pubkey = &utxo.script_pubkey;
     let amount = utxo.amount;
-    
+
     // Define sighash type
     let sighash_type = get_ecdsa_sighash_type(input);
-    
+
     // Create and verify the signature
     let signature = create_and_verify_ecdsa_signature(
         sighash_cache,
@@ -54,9 +56,9 @@ pub fn sign_psbt_input(
         public_key,
         sighash_type,
     )?;
-    
+
     // Add the signature to the input
     add_p2wpkh_signature(input, signature, public_key.to_bytes())?;
-    
+
     Ok(())
 }

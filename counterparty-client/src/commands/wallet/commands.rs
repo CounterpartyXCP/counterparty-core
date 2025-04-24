@@ -91,8 +91,7 @@ fn build_export_address_command() -> Command {
 
 /// Builds the addresses subcommand
 fn build_list_addresses_command() -> Command {
-    Command::new("list_addresses")
-        .about("List all addresses in the wallet")
+    Command::new("list_addresses").about("List all addresses in the wallet")
 }
 
 /// Builds the address_balances subcommand

@@ -109,7 +109,6 @@ impl UTXOList {
         Self(Vec::new())
     }
 
-
     /// Adds a UTXO to the list
     pub fn add(&mut self, utxo: UTXO) {
         self.0.push(utxo);

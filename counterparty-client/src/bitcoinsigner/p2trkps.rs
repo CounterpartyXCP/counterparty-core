@@ -54,15 +54,19 @@ fn compute_signature(
     // Sign with Schnorr
     let schnorr_sig = secp.sign_schnorr_no_aux_rand(&message, &tweaked_keypair.to_inner());
 
-    // Add sighash type 
+    // Add sighash type
     let taproot_signature = bitcoin::taproot::Signature {
         signature: schnorr_sig,
         sighash_type,
-    }.serialize();
+    }
+    .serialize();
 
     // Verify signature
     let (xonly_pubkey, _) = tweaked_keypair.public_parts();
-    if secp.verify_schnorr(&schnorr_sig, &message, &xonly_pubkey.to_inner()).is_err() {
+    if secp
+        .verify_schnorr(&schnorr_sig, &message, &xonly_pubkey.to_inner())
+        .is_err()
+    {
         return Err(WalletError::BitcoinError(
             "Generated Schnorr signature failed verification".to_string(),
         ));
@@ -72,19 +76,16 @@ fn compute_signature(
 }
 
 /// Add key path spending witness
-fn add_witness(
-    input: &mut PsbtInput,
-    signature: Vec<u8>,
-) -> Result<()> {
+fn add_witness(input: &mut PsbtInput, signature: Vec<u8>) -> Result<()> {
     let mut witness = Witness::new();
     witness.push(signature);
-    
+
     // Set witness data
     input.final_script_witness = Some(witness);
-    
+
     // Set empty script_sig (required for SegWit)
     input.final_script_sig = Some(create_empty_script_sig());
-    
+
     Ok(())
 }
 
@@ -99,18 +100,12 @@ pub fn sign_psbt_input(
 ) -> Result<()> {
     // Create a secp256k1 context
     let secp = Secp256k1::new();
-    
+
     // Compute signature for key path spending
-    let signature = compute_signature(
-        &secp,
-        sighash_cache,
-        input_index,
-        input,
-        secret_key,
-    )?;
-    
+    let signature = compute_signature(&secp, sighash_cache, input_index, input, secret_key)?;
+
     // Add witness data
     add_witness(input, signature)?;
-    
+
     Ok(())
 }

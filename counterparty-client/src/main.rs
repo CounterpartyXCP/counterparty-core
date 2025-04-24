@@ -10,14 +10,14 @@ use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 // Add clap_complete for shell completion
 use clap_complete::{generate, Shell};
-use std::io;
 use std::fs::File;
+use std::io;
 
+mod bitcoinsigner;
 mod commands;
 mod config;
 mod helpers;
 mod wallet;
-mod bitcoinsigner;
 
 use crate::commands::api;
 use crate::commands::wallet as wallet_commands;
@@ -88,7 +88,7 @@ fn detect_shell() -> Option<Shell> {
             return Some(Shell::Fish);
         }
     }
-    
+
     // Check for PowerShell on Windows
     #[cfg(windows)]
     {
@@ -98,14 +98,14 @@ fn detect_shell() -> Option<Shell> {
             }
         }
     }
-    
+
     None
 }
 
 // Get the default completion path for a shell
 fn get_completion_path(shell: Shell, binary_name: &str) -> Option<PathBuf> {
     let home = dirs::home_dir()?;
-    
+
     match shell {
         Shell::Bash => {
             // Check if ~/.bashrc exists
@@ -116,7 +116,7 @@ fn get_completion_path(shell: Shell, binary_name: &str) -> Option<PathBuf> {
             } else {
                 None
             }
-        },
+        }
         Shell::Zsh => {
             // Common zsh completion directory
             let zsh_comp_dir = home.join(".zsh/completions");
@@ -125,7 +125,7 @@ fn get_completion_path(shell: Shell, binary_name: &str) -> Option<PathBuf> {
             } else {
                 None
             }
-        },
+        }
         Shell::Fish => {
             // Fish completion directory
             let fish_comp_dir = home.join(".config/fish/completions");
@@ -134,11 +134,11 @@ fn get_completion_path(shell: Shell, binary_name: &str) -> Option<PathBuf> {
             } else {
                 None
             }
-        },
+        }
         Shell::PowerShell => {
             // PowerShell doesn't have a standard location, so we'll create it in the home directory
             Some(home.join(format!("{}.ps1", binary_name)))
-        },
+        }
         Shell::Elvish => {
             // Elvish completion path
             let elvish_comp_dir = home.join(".elvish/lib");
@@ -147,7 +147,7 @@ fn get_completion_path(shell: Shell, binary_name: &str) -> Option<PathBuf> {
             } else {
                 None
             }
-        },
+        }
         _ => None,
     }
 }
@@ -156,24 +156,32 @@ fn get_completion_path(shell: Shell, binary_name: &str) -> Option<PathBuf> {
 fn get_shell_config_instruction(shell: Shell, path: &Path) -> String {
     match shell {
         Shell::Bash => {
-            format!("Add the following line to your ~/.bashrc or ~/.bash_profile:\n  source \"{}\"", path.display())
-        },
+            format!(
+                "Add the following line to your ~/.bashrc or ~/.bash_profile:\n  source \"{}\"",
+                path.display()
+            )
+        }
         Shell::Zsh => {
-            format!("Make sure that the following is present in your ~/.zshrc:\n  \
+            format!(
+                "Make sure that the following is present in your ~/.zshrc:\n  \
              fpath=(~/.zsh/completions $fpath)\n  \
              autoload -U compinit\n  \
-             compinit")
-        },
+             compinit"
+            )
+        }
         Shell::Fish => {
             "Fish will automatically load completions from ~/.config/fish/completions/".to_string()
-        },
+        }
         Shell::PowerShell => {
             format!("Add the following line to your PowerShell profile (run `echo $PROFILE` to locate it):\n  \
                     . \"{}\"", path.display())
-        },
+        }
         Shell::Elvish => {
-            format!("Add the following line to your ~/.elvish/rc.elv:\n  use \"{}\"", path.display())
-        },
+            format!(
+                "Add the following line to your ~/.elvish/rc.elv:\n  use \"{}\"",
+                path.display()
+            )
+        }
         _ => "Completion script generated.".to_string(),
     }
 }
@@ -183,33 +191,34 @@ fn install_completion_script(app: &mut Command, shell: Shell) -> Result<()> {
     let binary_name = get_binary_name();
     let path = get_completion_path(shell, &binary_name)
         .ok_or_else(|| anyhow!("Could not determine completion path for {:?}", shell))?;
-    
+
     // Create parent directory if it doesn't exist
     if let Some(parent) = path.parent() {
         if !parent.exists() {
             fs::create_dir_all(parent)?;
         }
     }
-    
+
     // Generate completion script
     let mut file = File::create(&path)?;
     generate(shell, app, &binary_name, &mut file);
-    
+
     // Get additional instructions
     let instructions = get_shell_config_instruction(shell, &path);
-    
+
     helpers::print_success(
         &format!("Completion script installed to {}", path.display()),
-        Some(&instructions)
+        Some(&instructions),
     );
-    
+
     Ok(())
 }
 
 // Build the completion command with detailed help
 fn build_completion_command() -> Command {
     let binary_name = get_binary_name();
-    let long_about = format!("\
+    let long_about = format!(
+        "\
 Generate shell completion scripts for {} commands.
 
 USAGE EXAMPLES:
@@ -241,10 +250,22 @@ MANUAL INSTALLATION:
   # PowerShell
   {} completion powershell > ~/{}.ps1
   # Add to your profile: . ~/{}.ps1
-", 
-        binary_name, binary_name, binary_name, binary_name, 
-        binary_name, binary_name, binary_name, binary_name, binary_name,
-        binary_name, binary_name, binary_name, binary_name, binary_name);
+",
+        binary_name,
+        binary_name,
+        binary_name,
+        binary_name,
+        binary_name,
+        binary_name,
+        binary_name,
+        binary_name,
+        binary_name,
+        binary_name,
+        binary_name,
+        binary_name,
+        binary_name,
+        binary_name
+    );
 
     Command::new("completion")
         .about("Generate shell completion scripts")
@@ -385,9 +406,8 @@ fn add_label_resolution_recursive(cmd: Command, wallet: &wallet::BitcoinWallet) 
 
         // Apply custom parser to address/destination arguments
         for arg in args {
-            
             let arg_id = arg.get_id().to_string();
-            
+
             // Check if this argument is for address or destination
             if arg_id.ends_with("address") || arg_id.ends_with("destination") {
                 // Create a custom value parser that checks for label resolution
@@ -407,7 +427,7 @@ fn add_label_resolution_recursive(cmd: Command, wallet: &wallet::BitcoinWallet) 
                         }
                     })
                     .collect::<std::collections::HashMap<String, String>>();
-                
+
                 // Create a Send + Sync parser that doesn't capture wallet
                 let parser = move |s: &str| -> std::result::Result<String, String> {
                     if let Some(address) = addresses.get(s) {
@@ -416,7 +436,7 @@ fn add_label_resolution_recursive(cmd: Command, wallet: &wallet::BitcoinWallet) 
                         Ok(s.to_string())
                     }
                 };
-                
+
                 cmd = cmd.mut_arg(&arg_id, |a| a.value_parser(parser));
             }
         }
@@ -447,7 +467,7 @@ fn add_quantity_resolution_recursive(cmd: Command) -> Command {
         // Apply custom parser to quantity arguments
         for arg in args {
             let arg_id = arg.get_id().to_string();
-            
+
             // Check if this argument is for quantity (ends with "quantity")
             if arg_id.ends_with("quantity") {
                 // Create a custom value parser for quantity conversion
@@ -459,7 +479,7 @@ fn add_quantity_resolution_recursive(cmd: Command) -> Command {
                                 // Convert from BTC to satoshi (multiply by 10^8)
                                 let satoshi = (value * 100_000_000.0).round() as i64;
                                 Ok(satoshi.to_string())
-                            },
+                            }
                             Err(_) => {
                                 // Not a valid floating-point number, return as is
                                 Ok(s.to_string())
@@ -470,7 +490,7 @@ fn add_quantity_resolution_recursive(cmd: Command) -> Command {
                         Ok(s.to_string())
                     }
                 };
-                
+
                 // Apply the custom parser to this argument
                 cmd = cmd.mut_arg(&arg_id, |a| a.value_parser(parser));
             }
@@ -672,13 +692,17 @@ async fn main() -> Result<()> {
         }
         Some(("wallet", sub_matches)) => {
             let cmd_name = sub_matches.subcommand_name().unwrap_or("wallet");
-            header_message(&config, &format!(" Wallet {} ", cmd_name), &config_file_path);
+            header_message(
+                &config,
+                &format!(" Wallet {} ", cmd_name),
+                &config_file_path,
+            );
             wallet_commands::execute_command(&config, sub_matches, &endpoints, &mut wallet).await?;
         }
         Some(("completion", sub_matches)) => {
             // Handle completion command - no header message needed
             let install = sub_matches.get_flag("install");
-            
+
             // Determine which shell to use - either specified by user or detected
             let shell = if let Some(shell_name) = sub_matches.get_one::<String>("shell") {
                 match shell_name.as_str() {
@@ -696,12 +720,15 @@ async fn main() -> Result<()> {
                 detected
             } else {
                 helpers::print_error(
-                    "Could not detect your shell. Please specify a shell explicitly:", 
-                    Some(&format!("{} completion [bash|zsh|fish|powershell|elvish]", binary_name))
+                    "Could not detect your shell. Please specify a shell explicitly:",
+                    Some(&format!(
+                        "{} completion [bash|zsh|fish|powershell|elvish]",
+                        binary_name
+                    )),
                 );
                 return Ok(());
             };
-            
+
             if install {
                 // Install mode - save to appropriate location
                 install_completion_script(&mut app.clone(), shell)?;

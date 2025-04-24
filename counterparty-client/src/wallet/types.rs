@@ -1,7 +1,7 @@
 //! Common types and error definitions for the wallet module.
 
-use serde::{Deserialize, Serialize};
 use secrecy::Secret;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -42,16 +42,16 @@ pub struct AddressInfo {
 
 // Serialization helpers for Secret<String>
 mod serde_secret {
+    use secrecy::{ExposeSecret, Secret};
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
-    use secrecy::{Secret, ExposeSecret};
-    
+
     pub fn serialize<S>(secret: &Secret<String>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         secret.expose_secret().serialize(serializer)
     }
-    
+
     pub fn deserialize<'de, D>(deserializer: D) -> Result<Secret<String>, D::Error>
     where
         D: Deserializer<'de>,

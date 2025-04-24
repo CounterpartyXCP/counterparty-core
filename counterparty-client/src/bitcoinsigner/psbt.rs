@@ -3,23 +3,21 @@ use bitcoin::blockdata::transaction::TxOut;
 use bitcoin::consensus::{deserialize, serialize};
 use bitcoin::psbt::Psbt;
 use bitcoin::sighash::SighashCache;
-use bitcoin::{Transaction, ScriptBuf};
+use bitcoin::{ScriptBuf, Transaction};
 
 use super::types::{Result, UTXOList};
 use crate::wallet::WalletError;
 
-
 /// Convert hex string to bytes
 pub fn hex_to_bytes(hex_str: &str) -> Result<Vec<u8>> {
-    hex::decode(hex_str).map_err(|e| {
-        WalletError::BitcoinError(format!("Invalid hex string: {}", e))
-    })
+    hex::decode(hex_str)
+        .map_err(|e| WalletError::BitcoinError(format!("Invalid hex string: {}", e)))
 }
 
 /// Parse a raw transaction from hexadecimal format
 pub fn parse_transaction(raw_tx_hex: &str) -> Result<Transaction> {
     let tx_bytes = hex_to_bytes(raw_tx_hex)?;
-    
+
     deserialize(&tx_bytes)
         .map_err(|e| WalletError::BitcoinError(format!("Invalid transaction format: {}", e)))
 }
@@ -36,13 +34,18 @@ pub fn init_sighash_cache<'a>(tx: &'a Transaction) -> SighashCache<&'a Transacti
 }
 
 /// Add witness UTXO to PSBT input
-fn add_witness_utxo(psbt: &mut Psbt, index: usize, script_pubkey: ScriptBuf, amount: u64) -> Result<()> {
+fn add_witness_utxo(
+    psbt: &mut Psbt,
+    index: usize,
+    script_pubkey: ScriptBuf,
+    amount: u64,
+) -> Result<()> {
     if let Some(input) = psbt.inputs.get_mut(index) {
         input.witness_utxo = Some(TxOut {
             value: Amount::from_sat(amount),
             script_pubkey,
         });
-        
+
         // Set default sighash type if not already set
         if input.sighash_type.is_none() {
             input.sighash_type = Some(bitcoin::sighash::EcdsaSighashType::All.into());
@@ -53,7 +56,7 @@ fn add_witness_utxo(psbt: &mut Psbt, index: usize, script_pubkey: ScriptBuf, amo
             index
         )));
     }
-    
+
     Ok(())
 }
 
@@ -67,7 +70,7 @@ fn add_redeem_script(psbt: &mut Psbt, index: usize, redeem_script: &ScriptBuf) -
             index
         )));
     }
-    
+
     Ok(())
 }
 
@@ -81,7 +84,7 @@ fn add_witness_script(psbt: &mut Psbt, index: usize, witness_script: &ScriptBuf)
             index
         )));
     }
-    
+
     Ok(())
 }
 
@@ -95,23 +98,23 @@ fn add_utxos_to_psbt(psbt: &mut Psbt, utxos: &UTXOList) -> Result<()> {
             utxos.len()
         )));
     }
-    
+
     // Add each UTXO to the corresponding PSBT input
     for (i, utxo) in utxos.as_ref().iter().enumerate() {
         // Add witness UTXO
         add_witness_utxo(psbt, i, utxo.script_pubkey.clone(), utxo.amount)?;
-        
+
         // Add redeem script if present
         if let Some(redeem_script) = &utxo.redeem_script {
             add_redeem_script(psbt, i, redeem_script)?;
         }
-        
+
         // Add witness script if present
         if let Some(witness_script) = &utxo.witness_script {
             add_witness_script(psbt, i, witness_script)?;
         }
     }
-    
+
     Ok(())
 }
 
@@ -119,13 +122,13 @@ fn add_utxos_to_psbt(psbt: &mut Psbt, utxos: &UTXOList) -> Result<()> {
 pub fn create_psbt_from_raw(raw_tx_hex: &str, utxos: &UTXOList) -> Result<Psbt> {
     // Parse the raw transaction
     let tx = parse_transaction(raw_tx_hex)?;
-    
+
     // Create a PSBT from the transaction
     let mut psbt = create_psbt(tx)?;
-    
+
     // Add UTXOs to the PSBT
     add_utxos_to_psbt(&mut psbt, utxos)?;
-    
+
     Ok(psbt)
 }
 
@@ -134,16 +137,16 @@ pub fn extract_transaction(psbt: Psbt) -> Result<String> {
     let tx = psbt.extract_tx().map_err(|e| {
         WalletError::BitcoinError(format!("Failed to extract transaction: {:?}", e))
     })?;
-    
+
     let tx_bytes = serialize(&tx);
     let tx_hex = hex::encode(tx_bytes);
-    
+
     Ok(tx_hex)
 }
 
 /// Check if a PSBT has all inputs finalized
 pub fn is_psbt_finalized(psbt: &Psbt) -> bool {
-    psbt.inputs.iter().all(|input| {
-        input.final_script_sig.is_some() || input.final_script_witness.is_some()
-    })
+    psbt.inputs
+        .iter()
+        .all(|input| input.final_script_sig.is_some() || input.final_script_witness.is_some())
 }

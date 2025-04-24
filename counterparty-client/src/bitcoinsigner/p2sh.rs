@@ -4,8 +4,10 @@ use bitcoin::secp256k1::SecretKey;
 use bitcoin::sighash::SighashCache;
 use bitcoin::{PublicKey, ScriptBuf, Transaction};
 
-use super::common::{create_and_verify_ecdsa_signature, get_compressed_pubkey, get_ecdsa_sighash_type, to_push_bytes};
-use super::types::{Result, UTXO, UTXOType};
+use super::common::{
+    create_and_verify_ecdsa_signature, get_compressed_pubkey, get_ecdsa_sighash_type, to_push_bytes,
+};
+use super::types::{Result, UTXOType, UTXO};
 use crate::wallet::WalletError;
 
 /// Adds a signature to a regular P2SH input
@@ -19,16 +21,16 @@ fn add_legacy_signature(
     let sig_push_bytes = to_push_bytes(&signature)?;
     let pubkey_push_bytes = to_push_bytes(&pubkey)?;
     let redeem_script_push_bytes = to_push_bytes(&redeem_script.to_bytes())?;
-    
+
     let script_sig = Builder::new()
         .push_slice(&sig_push_bytes)
         .push_slice(&pubkey_push_bytes)
         .push_slice(&redeem_script_push_bytes)
         .into_script();
-    
+
     // Set the script_sig
     input.final_script_sig = Some(script_sig);
-    
+
     Ok(())
 }
 
@@ -41,26 +43,26 @@ fn add_p2sh_p2wpkh_signature(
     // Create the redeem script (P2WPKH)
     let public_key = PublicKey::from_slice(&pubkey)
         .map_err(|e| WalletError::BitcoinError(format!("Invalid public key: {}", e)))?;
-    
+
     let compressed_pubkey = get_compressed_pubkey(&public_key)?;
     let pubkey_hash = compressed_pubkey.wpubkey_hash();
     let redeem_script = ScriptBuf::new_p2wpkh(&pubkey_hash);
-    
+
     // Create a script_sig that pushes the redeem script
     let redeem_script_bytes = to_push_bytes(&redeem_script.to_bytes())?;
     let script_sig = Builder::new()
         .push_slice(&redeem_script_bytes)
         .into_script();
-    
+
     // Set the script_sig
     input.final_script_sig = Some(script_sig);
-    
+
     // Set the witness stack
     let mut witness = bitcoin::blockdata::witness::Witness::new();
     witness.push(signature);
     witness.push(pubkey);
     input.final_script_witness = Some(witness);
-    
+
     Ok(())
 }
 
@@ -77,31 +79,35 @@ pub fn sign_psbt_input(
     let redeem_script = utxo.redeem_script.as_ref().ok_or_else(|| {
         WalletError::BitcoinError("Missing redeem script for P2SH input".to_string())
     })?;
-    
+
     // Determine if this is P2SH-P2WPKH
     let is_p2sh_p2wpkh = redeem_script.is_p2wpkh();
-    
+
     // Define sighash type
     let sighash_type = get_ecdsa_sighash_type(input);
-    
+
     // Create and verify the signature
     let signature = create_and_verify_ecdsa_signature(
         sighash_cache,
         input_index,
         redeem_script,
-        if is_p2sh_p2wpkh { Some(utxo.amount) } else { None },
+        if is_p2sh_p2wpkh {
+            Some(utxo.amount)
+        } else {
+            None
+        },
         UTXOType::P2SH,
         secret_key,
         public_key,
         sighash_type,
     )?;
-    
+
     // Add the signature to the input based on the type
     if is_p2sh_p2wpkh {
         add_p2sh_p2wpkh_signature(input, signature, public_key.to_bytes())?;
     } else {
         add_legacy_signature(input, signature, public_key.to_bytes(), redeem_script)?;
     }
-    
+
     Ok(())
 }

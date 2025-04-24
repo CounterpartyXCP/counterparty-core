@@ -8,7 +8,7 @@
 
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::Network;
-use secrecy::{Secret, ExposeSecret};
+use secrecy::{ExposeSecret, Secret};
 use serde_json::{self, json, Value};
 use std::path::Path;
 
@@ -16,9 +16,8 @@ use super::keys::{self, create_bitcoin_address};
 use super::storage::WalletStorage;
 use super::types::{AddressInfo, AddressMap, Result, WalletError};
 use super::utils::{network_to_string, to_bitcoin_network};
-use crate::config;
 use crate::bitcoinsigner;
-
+use crate::config;
 
 /// Main wallet structure for Bitcoin operations
 pub struct BitcoinWallet {
@@ -80,7 +79,7 @@ impl BitcoinWallet {
         let addr_type = match address_type {
             Some("p2pkh") => "p2pkh",
             Some("taproot") => "taproot", // Support for taproot addresses
-            _ => "bech32", // By default, we use bech32
+            _ => "bech32",                // By default, we use bech32
         };
 
         // Generate keys based on provided parameters
@@ -185,10 +184,13 @@ impl BitcoinWallet {
     /// # Returns
     ///
     /// * `Result<String>` - Signed transaction in hexadecimal format or error
-    pub fn sign_transaction(&self, raw_tx_hex: &str, utxos: &bitcoinsigner::UTXOList) -> Result<String> {
+    pub fn sign_transaction(
+        &self,
+        raw_tx_hex: &str,
+        utxos: &bitcoinsigner::UTXOList,
+    ) -> Result<String> {
         bitcoinsigner::sign_transaction(&self.addresses, raw_tx_hex, &utxos, self.network)
     }
-
 
     /// Change the wallet encryption password
     ///

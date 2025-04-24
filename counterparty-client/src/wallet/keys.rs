@@ -169,13 +169,17 @@ pub fn create_bitcoin_address(
         // Create a taproot address (P2TR)
         // Convert PublicKey to XOnlyPublicKey (taking the x coordinate only)
         let pub_key_bytes = pub_key.to_bytes();
-        let x_only_pubkey = XOnlyPublicKey::from_slice(&pub_key_bytes[1..33])
-            .map_err(|e| {
-                WalletError::BitcoinError(format!("Failed to create x-only public key: {}", e))
-            })?;
+        let x_only_pubkey = XOnlyPublicKey::from_slice(&pub_key_bytes[1..33]).map_err(|e| {
+            WalletError::BitcoinError(format!("Failed to create x-only public key: {}", e))
+        })?;
 
         // Create a P2TR address with the key and no script tree (None)
-        Ok(Address::p2tr(&Secp256k1::new(), x_only_pubkey, None, network))
+        Ok(Address::p2tr(
+            &Secp256k1::new(),
+            x_only_pubkey,
+            None,
+            network,
+        ))
     } else if addr_type == "bech32" {
         // Create a Bech32 address (P2WPKH)
         let compressed_pubkey =

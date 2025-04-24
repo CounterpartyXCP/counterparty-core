@@ -28,18 +28,14 @@ pub async fn execute_command(
     //let mut wallet = utils::init_wallet(config)?;
 
     match matches.subcommand() {
-        Some(("new_address", sub_matches)) => {
-            handlers::handle_new_address(wallet, sub_matches)
-        }
+        Some(("new_address", sub_matches)) => handlers::handle_new_address(wallet, sub_matches),
         Some(("import_address", sub_matches)) => {
             handlers::handle_import_address(wallet, sub_matches)
         }
         Some(("export_address", sub_matches)) => {
             handlers::handle_export_address(wallet, sub_matches)
         }
-        Some(("list_addresses", _sub_matches)) => {
-            handlers::handle_list_addresses(wallet)
-        }
+        Some(("list_addresses", _sub_matches)) => handlers::handle_list_addresses(wallet),
         Some(("address_balances", sub_matches)) => {
             // Pass the config directly to the handler
             handlers::handle_address_balances(config, sub_matches).await

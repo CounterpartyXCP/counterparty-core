@@ -1,22 +1,20 @@
 // Common utility functions for transaction signing across different address types
 
 use bitcoin::amount::Amount;
+use bitcoin::blockdata::script::PushBytesBuf;
 use bitcoin::psbt::Input as PsbtInput;
 use bitcoin::secp256k1::{Message, Secp256k1, SecretKey};
 use bitcoin::sighash::{EcdsaSighashType, SighashCache, TapSighashType};
 use bitcoin::{CompressedPublicKey, PublicKey, ScriptBuf, Transaction, XOnlyPublicKey};
-use bitcoin::blockdata::script::PushBytesBuf;
 
 use super::types::{Result, UTXOType};
 use crate::wallet::WalletError;
 
 /// Convert script bytes to PushBytesBuf for script building
 pub fn to_push_bytes(bytes: &[u8]) -> Result<PushBytesBuf> {
-    PushBytesBuf::try_from(bytes.to_vec()).map_err(|e| {
-        WalletError::BitcoinError(format!("Failed to convert to push bytes: {:?}", e))
-    })
+    PushBytesBuf::try_from(bytes.to_vec())
+        .map_err(|e| WalletError::BitcoinError(format!("Failed to convert to push bytes: {:?}", e)))
 }
-
 
 /// Create a message from a hash
 pub fn create_message_from_hash(hash: &[u8]) -> Result<Message> {
@@ -76,14 +74,17 @@ pub fn sign_message_ecdsa(
     sighash_type: EcdsaSighashType,
 ) -> Result<Vec<u8>> {
     let signature = secp.sign_ecdsa(message, secret_key);
-    
+
     // Verify signature
-    if secp.verify_ecdsa(message, &signature, &public_key.inner).is_err() {
+    if secp
+        .verify_ecdsa(message, &signature, &public_key.inner)
+        .is_err()
+    {
         return Err(WalletError::BitcoinError(
             "Generated signature failed verification".to_string(),
         ));
     }
-    
+
     // Encode the signature with sighash type
     Ok(encode_ecdsa_signature(&signature, sighash_type))
 }
@@ -100,7 +101,7 @@ pub fn compute_legacy_sighash(
         .map_err(|e| {
             WalletError::BitcoinError(format!("Failed to compute signature hash: {}", e))
         })?;
-    
+
     // Convert sighash to [u8; 32]
     let mut bytes = [0u8; 32];
     let hash_bytes: &[u8] = sighash.as_ref();
@@ -122,7 +123,7 @@ pub fn compute_segwit_sighash(
         .map_err(|e| {
             WalletError::BitcoinError(format!("Failed to compute signature hash: {}", e))
         })?;
-    
+
     // Convert sighash to [u8; 32]
     let mut bytes = [0u8; 32];
     let hash_bytes: &[u8] = sighash.as_ref();
@@ -144,7 +145,7 @@ pub fn compute_p2wsh_sighash(
         .map_err(|e| {
             WalletError::BitcoinError(format!("Failed to compute signature hash: {}", e))
         })?;
-    
+
     // Convert sighash to [u8; 32]
     let mut bytes = [0u8; 32];
     let hash_bytes: &[u8] = sighash.as_ref();
@@ -165,12 +166,9 @@ pub fn create_and_verify_ecdsa_signature(
 ) -> Result<Vec<u8>> {
     // Compute the sighash based on the address type
     let sighash = match utxo_type {
-        UTXOType::P2PKH => compute_legacy_sighash(
-            sighash_cache,
-            input_index,
-            script_code,
-            sighash_type,
-        )?,
+        UTXOType::P2PKH => {
+            compute_legacy_sighash(sighash_cache, input_index, script_code, sighash_type)?
+        }
         UTXOType::P2WPKH => {
             let amount = amount.ok_or_else(|| {
                 WalletError::BitcoinError("Amount required for SegWit inputs".to_string())
@@ -182,7 +180,7 @@ pub fn create_and_verify_ecdsa_signature(
                 amount,
                 sighash_type,
             )?
-        },
+        }
         UTXOType::P2WSH => {
             let amount = amount.ok_or_else(|| {
                 WalletError::BitcoinError("Amount required for SegWit inputs".to_string())
@@ -194,7 +192,7 @@ pub fn create_and_verify_ecdsa_signature(
                 amount,
                 sighash_type,
             )?
-        },
+        }
         UTXOType::P2SH => {
             // For P2SH, need to determine if it's wrapping P2WPKH or legacy
             if script_code.is_p2wpkh() {
@@ -209,25 +207,22 @@ pub fn create_and_verify_ecdsa_signature(
                     sighash_type,
                 )?
             } else {
-                compute_legacy_sighash(
-                    sighash_cache,
-                    input_index,
-                    script_code,
-                    sighash_type,
-                )?
+                compute_legacy_sighash(sighash_cache, input_index, script_code, sighash_type)?
             }
-        },
-        _ => return Err(WalletError::BitcoinError(
-            "Unsupported UTXO type for ECDSA signing".to_string(),
-        )),
+        }
+        _ => {
+            return Err(WalletError::BitcoinError(
+                "Unsupported UTXO type for ECDSA signing".to_string(),
+            ))
+        }
     };
-    
+
     // Create a message from the sighash
     let message = create_message_from_hash(&sighash)?;
-    
+
     // Create a secp256k1 context
     let secp = Secp256k1::new();
-    
+
     // Sign the message
     sign_message_ecdsa(&secp, &message, secret_key, public_key, sighash_type)
 }

@@ -5,13 +5,13 @@ use std::io::{self, Write};
 
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
+use crate::bitcoinsigner;
 use crate::commands::api;
 use crate::commands::api::{ApiEndpoint, ApiEndpointArg};
 use crate::commands::wallet::args::ID_ARG_MAP;
 use crate::config::AppConfig;
 use crate::helpers;
 use crate::wallet::BitcoinWallet;
-use crate::bitcoinsigner;
 
 /// Information needed for reveal transaction
 struct RevealTransactionInfo<'a> {
@@ -326,7 +326,14 @@ async fn call_compose_api(
 }
 
 //// Extract transaction details from API result
-fn extract_transaction_details(api_result: &serde_json::Value) -> Result<(&str, Vec<(&str, u64)>, Option<&str>, Option<serde_json::Value>)> {
+fn extract_transaction_details(
+    api_result: &serde_json::Value,
+) -> Result<(
+    &str,
+    Vec<(&str, u64)>,
+    Option<&str>,
+    Option<serde_json::Value>,
+)> {
     // Extract required fields from result
     let raw_tx_hex = api_result
         .get("rawtransaction")
@@ -364,10 +371,10 @@ fn extract_transaction_details(api_result: &serde_json::Value) -> Result<(&str, 
         if let Some(params_obj) = params_value.as_object() {
             // Create a filtered copy of the params
             let mut filtered_params = params_obj.clone();
-            
+
             // Remove asset_info field if it exists
             filtered_params.remove("asset_info");
-            
+
             // Convert back to Value and store
             Some(serde_json::Value::Object(filtered_params))
         } else {
@@ -403,8 +410,7 @@ fn extract_reveal_transaction_info(
 
 /// Decode a hex-encoded script
 fn decode_script(script_hex: &str) -> Result<bitcoin::ScriptBuf> {
-    let script_bytes = hex::decode(script_hex)
-        .map_err(|e| anyhow!("Invalid script hex: {}", e))?;
+    let script_bytes = hex::decode(script_hex).map_err(|e| anyhow!("Invalid script hex: {}", e))?;
 
     Ok(bitcoin::ScriptBuf::from_bytes(script_bytes))
 }
@@ -413,46 +419,46 @@ fn decode_script(script_hex: &str) -> Result<bitcoin::ScriptBuf> {
 fn build_utxo_list(utxos: Vec<(&str, u64)>) -> Result<bitcoinsigner::UTXOList> {
     // Create a new UTXOList
     let mut utxo_list = bitcoinsigner::UTXOList::new();
-    
+
     // Process each UTXO
     for (script_hex, amount) in utxos.iter() {
         // Decode the script from hex
         let script_pubkey = decode_script(script_hex)?;
-        
+
         // Create a basic UTXO
         let utxo = bitcoinsigner::UTXO::new(*amount, script_pubkey);
-        
+
         // Add the UTXO to the list
         utxo_list.add(utxo);
     }
-    
+
     Ok(utxo_list)
 }
 
 /// Build UTXOList for reveal transaction
 fn build_reveal_utxo_list(
-    script_hex: &str, 
-    amount: u64, 
-    envelope_script: &str, 
-    source_address: &str
+    script_hex: &str,
+    amount: u64,
+    envelope_script: &str,
+    source_address: &str,
 ) -> Result<bitcoinsigner::UTXOList> {
     // Create a new UTXOList
     let mut utxo_list = bitcoinsigner::UTXOList::new();
-    
+
     // Decode the script from hex
     let script_pubkey = decode_script(script_hex)?;
-    
+
     // Decode the envelope script
     let leaf_script = decode_script(envelope_script)?;
-    
+
     // Create a UTXO with the additional fields for a Taproot reveal transaction
     let mut utxo = bitcoinsigner::UTXO::new(amount, script_pubkey);
     utxo.leaf_script = Some(leaf_script);
     utxo.source_address = Some(source_address.to_string());
-    
+
     // Add the UTXO to the list
     utxo_list.add(utxo);
-    
+
     Ok(utxo_list)
 }
 
@@ -471,7 +477,7 @@ fn handle_reveal_transaction(
         &output_script,
         output_value,
         reveal_info.envelope_script,
-        address
+        address,
     )?;
 
     // Sign the reveal transaction using sign_transaction2
@@ -542,15 +548,18 @@ pub async fn handle_broadcast_command(
     if tx_name.is_some() || tx_params.is_some() {
         // Create JSON structure with available information
         let mut display_data = serde_json::Map::new();
-        
+
         if let Some(name) = tx_name {
-            display_data.insert("name".to_string(), serde_json::Value::String(name.to_string()));
+            display_data.insert(
+                "name".to_string(),
+                serde_json::Value::String(name.to_string()),
+            );
         }
-        
+
         if let Some(params_value) = tx_params {
             display_data.insert("params".to_string(), params_value.clone());
         }
-        
+
         if !display_data.is_empty() {
             helpers::print_success("Transaction:", None);
             let _ = helpers::print_colored_json(&serde_json::Value::Object(display_data));
