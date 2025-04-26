@@ -424,11 +424,16 @@ def generate_ordinal_envelope_script(message_data, message_type_id, content, sou
     return Script(script_array)
 
 
+# for testing purposes
+def generate_random_private_key():
+    return PrivateKey()
+
+
 def generate_envelope_script(data, construct_params):
     # generate random private key
-    private_key = PrivateKey()
+    private_key = generate_random_private_key()
     source_pubkey = private_key.get_public_key()
-    script = None
+    envelope_script = None
 
     message_type_id, message = messagetype.unpack(data)
     if message_type_id in [
@@ -442,20 +447,20 @@ def generate_envelope_script(data, construct_params):
         message_data = cbor2.loads(message)
         content = message_data.pop()
         if content is not None and len(content) > 0:
-            script = generate_ordinal_envelope_script(
+            envelope_script = generate_ordinal_envelope_script(
                 message_data, message_type_id, content, source_pubkey
             )
 
-    if script is None:
+    if envelope_script is None:
         # split the data in chunks of 520 bytes
         datas = helpers.chunkify(data, 520)
         datas = [binascii.hexlify(chunk).decode("utf-8") for chunk in datas]
         # Build inscription envelope script
-        script = Script(
+        envelope_script = Script(
             ["OP_FALSE", "OP_IF", *datas, "OP_ENDIF", source_pubkey.to_x_only_hex(), "OP_CHECKSIG"]
         )
 
-    return script, private_key
+    return envelope_script, private_key
 
 
 def prepare_taproot_output(db, source, data, unspent_list, construct_params):
@@ -480,18 +485,16 @@ def prepare_taproot_output(db, source, data, unspent_list, construct_params):
 def prepare_data_outputs(db, source, destinations, data, unspent_list, construct_params):
     encoding = determine_encoding(data, destinations, construct_params)
     arc4_key = unspent_list[0]["txid"]
+    reveal_tx_info = None
+    outputs = []
     if encoding == "multisig":
         outputs = prepare_multisig_output(source, data, arc4_key, unspent_list, construct_params)
-        reveal_tx_info = None
-    elif encoding == "opreturn":
+    if encoding == "opreturn":
         outputs = prepare_opreturn_output(data, arc4_key)
-        reveal_tx_info = None
-    elif encoding == "taproot":
+    if encoding == "taproot":
         outputs, reveal_tx_info = prepare_taproot_output(
             db, source, data, unspent_list, construct_params
         )
-    else:
-        raise exceptions.ComposeError(f"Not supported encoding: {encoding}")
     return outputs, reveal_tx_info
 
 
