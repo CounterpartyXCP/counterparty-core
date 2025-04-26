@@ -354,9 +354,10 @@ def get_reveal_outputs(db, source, envelope_script, unspent_list, construct_para
     return outputs
 
 
-def get_signed_reveal_tx(inputs, outputs, envelope_script, reveal_tx_pk):
+def get_signed_reveal_tx(inputs, outputs, commit_value, envelope_script, reveal_tx_pk):
     # build transaction
-    reveal_tx = Transaction(inputs, outputs, has_segwit=True)
+    reveal_tx = Transaction(inputs, outputs)
+    reveal_tx.has_segwit = True
     # sign the input containing the inscription script
     source_pubkey = reveal_tx_pk.get_public_key()
     commit_address = source_pubkey.get_taproot_address([[envelope_script]])
@@ -364,7 +365,7 @@ def get_signed_reveal_tx(inputs, outputs, envelope_script, reveal_tx_pk):
         tx=reveal_tx,
         txin_index=0,
         utxo_scripts=[commit_address.to_script_pub_key()],
-        amounts=[outputs[0].amount],
+        amounts=[commit_value],
         script_path=True,
         tapleaf_script=envelope_script,
         tweak=False,
@@ -385,7 +386,8 @@ def get_signed_reveal_tx(inputs, outputs, envelope_script, reveal_tx_pk):
 
 def get_dummy_signed_reveal_tx(outputs, envelope_script, reveal_tx_pk):
     inputs = [TxInput("F" * 64, 0)]
-    return get_signed_reveal_tx(inputs, outputs, envelope_script, reveal_tx_pk)
+    commit_value = config.DEFAULT_SEGWIT_DUST_SIZE
+    return get_signed_reveal_tx(inputs, outputs, commit_value, envelope_script, reveal_tx_pk)
 
 
 def get_reveal_transaction_vsize_and_value(outputs, envelope_script, reveal_tx_pk):
@@ -457,8 +459,6 @@ def generate_envelope_script(data, construct_params):
 
 
 def prepare_taproot_output(db, source, data, unspent_list, construct_params):
-    multisig_pubkey = get_source_pubkey(source, unspent_list, construct_params)
-    source_pubkey = PublicKey.from_hex(multisig_pubkey)
     # Build inscription envelope script
     envelope_script, reveal_tx_pk = generate_envelope_script(data, construct_params)
     source_pubkey = reveal_tx_pk.get_public_key()
@@ -1091,10 +1091,13 @@ def construct(db, tx_info, construct_params):
         },
     }
     if reveal_tx_info is not None:
-        inputs = [TxInput(tx.get_txid(), outputs[0].amount)]
+        inputs = [TxInput(tx.get_txid(), 0)]
         outputs, envelope_script, reveal_tx_pk = reveal_tx_info
-        signed_reveal_tx = get_signed_reveal_tx(inputs, outputs, envelope_script, reveal_tx_pk)
-        result["signed_reveal_rawtransaction"] = signed_reveal_tx
+        commit_value = tx.outputs[0].amount
+        signed_reveal_tx = get_signed_reveal_tx(
+            inputs, outputs, commit_value, envelope_script, reveal_tx_pk
+        )
+        result["signed_reveal_rawtransaction"] = signed_reveal_tx.to_hex()
         result["envelope_script"] = envelope_script.to_hex()
 
     return result, unspent_list
@@ -1151,14 +1154,13 @@ def check_transaction_sanity(tx_info, composed_tx, unspent_list, construct_param
 
     # check if data matches the output data
     if data:
-        if "reveal_rawtransaction" in composed_tx:
-            envelope_script = composed_tx["envelope_script"]
-            multisig_pubkey = get_source_pubkey(source, unspent_list, construct_params)
-            source_pubkey = PublicKey.from_hex(multisig_pubkey)
-            envelope_script = generate_envelope_script(
-                data, source_pubkey, construct_params
-            ).to_hex()
-            if envelope_script != composed_tx["envelope_script"]:
+        if "signed_reveal_rawtransaction" in composed_tx:
+            envelope_script, _reveal_tx_pk = generate_envelope_script(data, construct_params)
+            composed_envelope_script = Script.from_raw(composed_tx["envelope_script"])
+            # remove the random pubkey from the envelope script
+            envelope_script.script = envelope_script.script[0:-2]
+            composed_envelope_script.script = composed_envelope_script.script[0:-2]
+            if envelope_script.to_hex() != composed_envelope_script.to_hex():
                 raise exceptions.ComposeError(
                     "Sanity check error: envelope script does not match the data"
                 )
@@ -1332,8 +1334,8 @@ def compose_transaction(db, name, params, construct_parameters):
         }
     else:
         final_result = {}
-        if "reveal_rawtransaction" in result:
-            final_result["reveal_rawtransaction"] = result["reveal_rawtransaction"]
+        if "signed_reveal_rawtransaction" in result:
+            final_result["signed_reveal_rawtransaction"] = result["signed_reveal_rawtransaction"]
             final_result["envelope_script"] = result["envelope_script"]
         final_result["rawtransaction"] = result["rawtransaction"]
 
