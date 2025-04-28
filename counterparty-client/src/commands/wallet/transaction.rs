@@ -371,7 +371,7 @@ fn extract_transaction_details(
 fn extract_reveal_transaction_info(
     api_result: &serde_json::Value,
 ) -> Option<RevealTransactionInfo> {
-    let signed_reveal_tx = api_result.get("signed_reveal_transaction")?.as_str()?;
+    let signed_reveal_tx = api_result.get("signed_reveal_rawtransaction")?.as_str()?;
 
     Some(RevealTransactionInfo {
         signed_tx: signed_reveal_tx,
