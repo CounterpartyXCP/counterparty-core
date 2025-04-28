@@ -15,8 +15,7 @@ use crate::wallet::BitcoinWallet;
 
 /// Information needed for reveal transaction
 struct RevealTransactionInfo<'a> {
-    raw_tx: &'a str,
-    envelope_script: &'a str,
+    signed_tx: &'a str,
 }
 
 /// Find the corresponding compose endpoint for a transaction command
@@ -87,33 +86,6 @@ fn get_explorer_url(network: crate::config::Network, tx_id: &str) -> String {
         crate::config::Network::Testnet4 => format!("https://mempool.space/testnet4/tx/{}", tx_id),
         crate::config::Network::Regtest => format!("Transaction ID: {}", tx_id), // No explorer for regtest
     }
-}
-
-/// Extract the first output's script and value from a raw transaction
-fn extract_first_output_info(raw_tx_hex: &str) -> Result<(String, u64)> {
-    // Decode the transaction from hex
-    let tx_bytes =
-        hex::decode(raw_tx_hex).map_err(|e| anyhow!("Failed to decode transaction hex: {}", e))?;
-
-    // Parse the transaction
-    let tx: bitcoin::Transaction = bitcoin::consensus::deserialize(&tx_bytes)
-        .map_err(|e| anyhow!("Failed to parse transaction: {}", e))?;
-
-    // Check if the transaction has any outputs
-    if tx.output.is_empty() {
-        return Err(anyhow!("Transaction has no outputs"));
-    }
-
-    // Get the first output
-    let first_output = &tx.output[0];
-
-    // Get the script_pubkey as hex
-    let script_hex = hex::encode(first_output.script_pubkey.as_bytes());
-
-    // Get the value in satoshis
-    let value = first_output.value.to_sat();
-
-    Ok((script_hex, value))
 }
 
 /// Determine the script type from a ScriptBuf
@@ -280,7 +252,7 @@ async fn broadcast_transaction(config: &AppConfig, signed_tx: &str) -> Result<St
 fn get_address_and_public_key(
     params: &HashMap<String, String>,
     wallet: &BitcoinWallet,
-) -> Result<(String, String)> {
+) -> Result<String> {
     // Try to find the address parameter (commonly named 'source' or 'address')
     let address = params
         .get("source")
@@ -299,7 +271,7 @@ fn get_address_and_public_key(
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow!("Public key not found for address {}", address))?;
 
-    Ok((address, public_key.to_string()))
+    Ok(public_key.to_string())
 }
 
 /// Call the compose API and return the result
@@ -399,12 +371,10 @@ fn extract_transaction_details(
 fn extract_reveal_transaction_info(
     api_result: &serde_json::Value,
 ) -> Option<RevealTransactionInfo> {
-    let reveal_raw_tx = api_result.get("reveal_rawtransaction")?.as_str()?;
-    let envelope_script = api_result.get("envelope_script")?.as_str()?;
+    let signed_reveal_tx = api_result.get("signed_reveal_transaction")?.as_str()?;
 
     Some(RevealTransactionInfo {
-        raw_tx: reveal_raw_tx,
-        envelope_script,
+        signed_tx: signed_reveal_tx,
     })
 }
 
@@ -433,59 +403,6 @@ fn build_utxo_list(utxos: Vec<(&str, u64)>) -> Result<bitcoinsigner::UTXOList> {
     }
 
     Ok(utxo_list)
-}
-
-/// Build UTXOList for reveal transaction
-fn build_reveal_utxo_list(
-    script_hex: &str,
-    amount: u64,
-    envelope_script: &str,
-    source_address: &str,
-) -> Result<bitcoinsigner::UTXOList> {
-    // Create a new UTXOList
-    let mut utxo_list = bitcoinsigner::UTXOList::new();
-
-    // Decode the script from hex
-    let script_pubkey = decode_script(script_hex)?;
-
-    // Decode the envelope script
-    let leaf_script = decode_script(envelope_script)?;
-
-    // Create a UTXO with the additional fields for a Taproot reveal transaction
-    let mut utxo = bitcoinsigner::UTXO::new(amount, script_pubkey);
-    utxo.leaf_script = Some(leaf_script);
-    utxo.source_address = Some(source_address.to_string());
-
-    // Add the UTXO to the list
-    utxo_list.add(utxo);
-
-    Ok(utxo_list)
-}
-
-/// Handle reveal transaction signing using sign_transaction2
-fn handle_reveal_transaction(
-    reveal_info: RevealTransactionInfo,
-    signed_tx: &str,
-    wallet: &BitcoinWallet,
-    address: &str,
-) -> Result<String> {
-    // Extract the first output's script and value from the signed transaction
-    let (output_script, output_value) = extract_first_output_info(signed_tx)?;
-
-    // Build the UTXOList for the reveal transaction
-    let reveal_utxo_list = build_reveal_utxo_list(
-        &output_script,
-        output_value,
-        reveal_info.envelope_script,
-        address,
-    )?;
-
-    // Sign the reveal transaction using sign_transaction2
-    let signed_reveal_tx = wallet
-        .sign_transaction(reveal_info.raw_tx, &reveal_utxo_list)
-        .map_err(|e| anyhow!("Failed to sign reveal transaction: {}", e))?;
-
-    Ok(signed_reveal_tx)
 }
 
 /// Broadcast transactions (both main and reveal if present)
@@ -535,7 +452,7 @@ pub async fn handle_broadcast_command(
     let mut params = extract_parameters_from_matches(endpoint, transaction_name, sub_matches);
 
     // Get address and public key
-    let (address, public_key) = get_address_and_public_key(&params, wallet)?;
+    let public_key = get_address_and_public_key(&params, wallet)?;
     params.insert("multisig_pubkey".to_string(), public_key.to_string());
 
     // Call API and get the composed transaction
@@ -586,8 +503,8 @@ pub async fn handle_broadcast_command(
         // Display transaction summary
         display_transaction_summary(&signed_tx)?;
 
-        let reveal_tx = handle_reveal_transaction(reveal_tx_info, &signed_tx, wallet, &address)?;
-        signed_reveal_tx = Some(reveal_tx);
+        // Use the already signed reveal transaction directly
+        signed_reveal_tx = Some(reveal_tx_info.signed_tx.to_string());
 
         helpers::print_success("Reveal transaction signed:", None);
         println!("{}\n", &signed_reveal_tx.as_ref().unwrap());
