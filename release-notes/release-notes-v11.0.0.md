@@ -49,6 +49,7 @@ counterparty-server start
 - Ensure Fairminter hard cap is a multiple of the lot size
 - Use asset ID instead of asset name in Fairminter and Fairmint messages
 - Add Taproot envelope data encoding support
+- Add support for Taproot change address
 - Remove P2SH data encoding support
 - Use an envelope script compatible with Ordinals when the description/text of a Fairminter, Issuance or Broadcast is not empty
 
