@@ -442,7 +442,7 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
         match (&instructions.get(2), &instructions.get(3), &instructions.get(4)) {
             (Some(Ok(PushBytes(pb1))), Some(Ok(PushBytes(pb2))), Some(Ok(PushBytes(pb3)))) => {
                 pb1.as_bytes() == b"ord" && 
-                (pb2.as_bytes().len() == 1 && pb2.as_bytes()[0] == 1)
+                (pb2.as_bytes().len() == 1 && pb2.as_bytes()[0] == 7) // 7 for metaprotocol
             },
             _ => false
         };
@@ -463,11 +463,11 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
         let mut metadata_chunks = Vec::new();
         let mut description_chunks = Vec::new();
         
-        let mut i = 5; // Skip protocol prefix elements
+        let mut i = 7; // Skip protocol prefix elements
         let mut current_section = "none";
         
         // Process all instructions to collect metadata and description
-        while i < instructions.len() - 5 { // Skip last 5 instructions: metaprotocol op_endif and checksig
+        while i < instructions.len() - 3 { // Skip last 3 instructions: op_endif and checksig
             match &instructions[i] {
                 Ok(PushBytes(marker)) => {
                     let marker_bytes = marker.as_bytes();
