@@ -89,6 +89,8 @@ def test_generate_envelope_script(monkeypatch):
             "OP_FALSE",
             "OP_IF",
             "6f7264",
+            "07",
+            "786370",
             "01",
             "746578742f706c61696e",
             "05",

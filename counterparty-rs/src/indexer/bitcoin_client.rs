@@ -449,7 +449,7 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
 
     if is_ord {
         // Extract mime_type from the script (index 4)
-        let mime_type = match &instructions.get(4) {
+        let mime_type = match &instructions.get(6) {
             Some(Ok(PushBytes(pb))) => {
                 match std::str::from_utf8(pb.as_bytes()) {
                     Ok(mime) => mime.to_string(),
