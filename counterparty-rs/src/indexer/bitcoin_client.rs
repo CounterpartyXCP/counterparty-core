@@ -386,7 +386,8 @@ fn parse_vout(
             txid, vi
         )));
     } else if (config.segwit_supported(height) && is_valid_segwit_script_legacy(&vout.script_pubkey)) || 
-                (config.taproot_support_enabled(height) && is_valid_segwit_script(&vout.script_pubkey)) {
+                (config.taproot_support_enabled(height) && is_valid_segwit_script(&vout.script_pubkey)) || 
+                (config.taproot_support_enabled(height) && vout.script_pubkey.is_p2tr()) {
         let destination = script_to_address(
             vout.script_pubkey.as_bytes().to_vec(),
             config.network.to_string().as_str(),

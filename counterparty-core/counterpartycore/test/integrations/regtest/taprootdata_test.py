@@ -1,14 +1,10 @@
 import binascii
 import os
-import re
 import time
 
-import pytest
 from bitcoinutils.keys import PrivateKey
-from bitcoinutils.script import Script
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxWitnessInput
-from bitcoinutils.utils import ControlBlock
 from regtestnode import RegtestNodeThread, rpc_call
 
 SENDS_COUNT = {}
@@ -17,7 +13,6 @@ SENDS_COUNT = {}
 def send_taproot_transaction(
     node, utxo, source_private_key, tx_name, params, inputs_set=None, invalid_sig=False
 ):
-    print(utxo)
     source_pubkey = source_private_key.get_public_key()
     source_address = source_pubkey.get_taproot_address()
 
@@ -45,48 +40,17 @@ def send_taproot_transaction(
     sig = source_private_key.sign_taproot_input(
         commit_tx, 0, [source_address.to_script_pub_key()], [utxo["value"]]
     )
-    print("unsigned commit tx", commit_tx.serialize())
     # add the witness to the transaction
     commit_tx.witnesses.append(TxWitnessInput([sig]))
     node.broadcast_transaction(commit_tx.serialize())
 
     print("Commit TX Broadcasted:", commit_tx.get_txid(), commit_tx.serialize())
 
-    inscription_script = Script.from_raw(result["envelope_script"])
-    reveal_tx = Transaction.from_raw(result["reveal_rawtransaction"])
-    reveal_tx.has_segwit = True
+    signed_reveal_rawtransaction_hex = result["signed_reveal_rawtransaction"]
+    signed_reveal_rawtransaction = Transaction.from_raw(signed_reveal_rawtransaction_hex)
+    node.broadcast_transaction(signed_reveal_rawtransaction_hex, use_rpc=True)
 
-    commit_address = source_pubkey.get_taproot_address([[inscription_script]])
-    commit_value = commit_tx.outputs[0].amount
-
-    # sign the input containing the inscription script
-    sig = source_private_key.sign_taproot_input(
-        tx=reveal_tx,
-        txin_index=0,
-        utxo_scripts=[commit_address.to_script_pub_key()],
-        amounts=[commit_value],
-        script_path=True,
-        tapleaf_script=inscription_script,
-        tweak=False,
-    )
-    if invalid_sig:
-        sig = "f" * len(sig)
-    # generate the control block
-    control_block = ControlBlock(
-        source_pubkey,
-        scripts=[inscription_script],
-        index=0,
-        is_odd=commit_address.is_odd(),
-    )
-
-    # add the witness to the transaction
-    reveal_tx.witnesses.append(
-        TxWitnessInput([sig, inscription_script.to_hex(), control_block.to_hex()])
-    )
-
-    node.broadcast_transaction(reveal_tx.serialize(), use_rpc=True)
-
-    print("Reveal TX Broadcasted:", commit_tx.get_txid())
+    print("Reveal TX Broadcasted:", signed_reveal_rawtransaction.get_txid())
 
     return {
         "txid": commit_tx.get_txid(),
@@ -645,11 +609,6 @@ def test_p2ptr_inscription():
         utxo_2 = check_dividend(node, source_private_key_2, utxo_2)
         utxo_2 = check_sweep(node, source_private_key_2, utxo_2)
         utxo_2 = check_fairminter2(node, source_private_key_2, utxo_2)
-        with pytest.raises(
-            ValueError,
-            match=re.escape("mandatory-script-verify-flag-failed (Invalid Schnorr signature)"),
-        ):
-            check_fairminter3(node, source_private_key_2, utxo_2, invalid_sig=True)
 
         assert (
             "invalid: Soft cap deadline block must be > start block."

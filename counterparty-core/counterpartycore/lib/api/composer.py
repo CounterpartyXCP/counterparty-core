@@ -354,26 +354,21 @@ def get_reveal_outputs(db, source, envelope_script, unspent_list, construct_para
     return outputs
 
 
-def get_dummy_signed_reveal_tx(db, source, data, unspent_list, construct_params):
-    # use fake private key and fake input to calculate the size
-    private_key = PrivateKey(secret_exponent=1)
-    source_pubkey = private_key.get_public_key()
-    envelope_script = generate_envelope_script(data, source_pubkey, construct_params)
-    commit_address = source_pubkey.get_taproot_address([[envelope_script]])
-    tx_in = TxInput("F" * 64, 0)
-    # use source address as output
-    outputs = get_reveal_outputs(db, source, envelope_script, unspent_list, construct_params)
-    outputs_value = sum(output.amount for output in outputs)
-    reveal_tx = Transaction([tx_in], outputs, has_segwit=True)
+def get_signed_reveal_tx(inputs, outputs, commit_value, envelope_script, reveal_tx_pk):
+    # build transaction
+    reveal_tx = Transaction(inputs, outputs)
+    reveal_tx.has_segwit = True
     # sign the input containing the inscription script
-    sig = private_key.sign_taproot_input(
-        reveal_tx,
-        0,
-        [commit_address.to_script_pub_key()],
-        [config.DEFAULT_SEGWIT_DUST_SIZE],
+    source_pubkey = reveal_tx_pk.get_public_key()
+    commit_address = source_pubkey.get_taproot_address([[envelope_script]])
+    sig = reveal_tx_pk.sign_taproot_input(
+        tx=reveal_tx,
+        txin_index=0,
+        utxo_scripts=[commit_address.to_script_pub_key()],
+        amounts=[commit_value],
         script_path=True,
         tapleaf_script=envelope_script,
-        tweak=True,
+        tweak=False,
     )
     # generate the control block
     control_block = ControlBlock(
@@ -386,14 +381,18 @@ def get_dummy_signed_reveal_tx(db, source, data, unspent_list, construct_params)
     reveal_tx.witnesses.append(
         TxWitnessInput([sig, envelope_script.to_hex(), control_block.to_hex()])
     )
-    return reveal_tx, outputs_value
+    return reveal_tx
 
 
-def get_reveal_transaction_vsize_and_value(db, source, data, unspent_list, construct_params):
-    reveal_tx, outputs_value = get_dummy_signed_reveal_tx(
-        db, source, data, unspent_list, construct_params
-    )
-    return reveal_tx.get_vsize(), outputs_value
+def get_dummy_signed_reveal_tx(outputs, envelope_script, reveal_tx_pk):
+    inputs = [TxInput("F" * 64, 0)]
+    commit_value = config.DEFAULT_SEGWIT_DUST_SIZE
+    return get_signed_reveal_tx(inputs, outputs, commit_value, envelope_script, reveal_tx_pk)
+
+
+def get_reveal_transaction_vsize_and_value(outputs, envelope_script, reveal_tx_pk):
+    reveal_tx = get_dummy_signed_reveal_tx(outputs, envelope_script, reveal_tx_pk)
+    return reveal_tx.get_vsize()
 
 
 def generate_ordinal_envelope_script(message_data, message_type_id, content, source_pubkey):
@@ -425,7 +424,17 @@ def generate_ordinal_envelope_script(message_data, message_type_id, content, sou
     return Script(script_array)
 
 
-def generate_envelope_script(data, source_pubkey, construct_params):
+# for testing purposes
+def generate_random_private_key():
+    return PrivateKey()
+
+
+def generate_envelope_script(data, construct_params):
+    # generate random private key
+    private_key = generate_random_private_key()
+    source_pubkey = private_key.get_public_key()
+    envelope_script = None
+
     message_type_id, message = messagetype.unpack(data)
     if message_type_id in [
         messages.fairminter.ID,
@@ -438,46 +447,55 @@ def generate_envelope_script(data, source_pubkey, construct_params):
         message_data = cbor2.loads(message)
         content = message_data.pop()
         if content is not None and len(content) > 0:
-            return generate_ordinal_envelope_script(
+            envelope_script = generate_ordinal_envelope_script(
                 message_data, message_type_id, content, source_pubkey
             )
 
-    # split the data in chunks of 520 bytes
-    datas = helpers.chunkify(data, 520)
-    datas = [binascii.hexlify(chunk).decode("utf-8") for chunk in datas]
-    # Build inscription envelope script
-    return Script(
-        ["OP_FALSE", "OP_IF", *datas, "OP_ENDIF", source_pubkey.to_x_only_hex(), "OP_CHECKSIG"]
-    )
+    if envelope_script is None:
+        # split the data in chunks of 520 bytes
+        datas = helpers.chunkify(data, 520)
+        datas = [binascii.hexlify(chunk).decode("utf-8") for chunk in datas]
+        # Build inscription envelope script
+        envelope_script = Script(
+            ["OP_FALSE", "OP_IF", *datas, "OP_ENDIF", source_pubkey.to_x_only_hex(), "OP_CHECKSIG"]
+        )
+
+    return envelope_script, private_key
 
 
 def prepare_taproot_output(db, source, data, unspent_list, construct_params):
-    multisig_pubkey = get_source_pubkey(source, unspent_list, construct_params)
-    source_pubkey = PublicKey.from_hex(multisig_pubkey)
     # Build inscription envelope script
-    envelope_script = generate_envelope_script(data, source_pubkey, construct_params)
-    # use source address as destination
-    commit_address = source_pubkey.get_taproot_address([[envelope_script]])
-    reveal_tx_vsize, outputs_value = get_reveal_transaction_vsize_and_value(
-        db, source, data, unspent_list, construct_params
-    )
+    envelope_script, reveal_tx_pk = generate_envelope_script(data, construct_params)
+    source_pubkey = reveal_tx_pk.get_public_key()
+    # generate the reveal outputs
+    outputs = get_reveal_outputs(db, source, envelope_script, unspent_list, construct_params)
+    # get output values and tx size
+    outputs_value = sum(output.amount for output in outputs)
     # commit value must pay fees for the reveal tx
-    commit_value = math.ceil(reveal_tx_vsize * get_sat_per_vbyte(construct_params)) + outputs_value
+    reveal_tx_vsize = get_reveal_transaction_vsize_and_value(outputs, envelope_script, reveal_tx_pk)
+    reveal_tx_fees = math.ceil(reveal_tx_vsize * get_sat_per_vbyte(construct_params))
+    commit_value = reveal_tx_fees + outputs_value
     commit_value = max(commit_value, config.DEFAULT_SEGWIT_DUST_SIZE)
+    # build output
+    commit_address = source_pubkey.get_taproot_address([[envelope_script]])
     tx_out = TxOutput(commit_value, commit_address.to_script_pub_key())
-    return [tx_out]
+    return [tx_out], (outputs, envelope_script, reveal_tx_pk)
 
 
 def prepare_data_outputs(db, source, destinations, data, unspent_list, construct_params):
     encoding = determine_encoding(data, destinations, construct_params)
     arc4_key = unspent_list[0]["txid"]
+    reveal_tx_info = None
+    outputs = []
     if encoding == "multisig":
-        return prepare_multisig_output(source, data, arc4_key, unspent_list, construct_params)
+        outputs = prepare_multisig_output(source, data, arc4_key, unspent_list, construct_params)
     if encoding == "opreturn":
-        return prepare_opreturn_output(data, arc4_key)
+        outputs = prepare_opreturn_output(data, arc4_key)
     if encoding == "taproot":
-        return prepare_taproot_output(db, source, data, unspent_list, construct_params)
-    raise exceptions.ComposeError(f"Not supported encoding: {encoding}")
+        outputs, reveal_tx_info = prepare_taproot_output(
+            db, source, data, unspent_list, construct_params
+        )
+    return outputs, reveal_tx_info
 
 
 def prepare_more_outputs(more_outputs, unspent_list, construct_params):
@@ -502,15 +520,17 @@ def prepare_outputs(db, source, destinations, data, unspent_list, construct_para
     # prepare non-data outputs
     outputs = perpare_non_data_outputs(destinations, unspent_list, construct_params)
     # prepare data outputs
+    reveal_tx_info = None
     if data:
-        outputs += prepare_data_outputs(
+        data_outputs, reveal_tx_info = prepare_data_outputs(
             db, source, destinations, data, unspent_list, construct_params
         )
+        outputs += data_outputs
     # Add more outputs if needed
     more_outputs = construct_params.get("more_outputs")
     if more_outputs:
         outputs += prepare_more_outputs(more_outputs, unspent_list, construct_params)
-    return outputs
+    return outputs, reveal_tx_info
 
 
 ################
@@ -1036,7 +1056,9 @@ def construct(db, tx_info, construct_params):
     unspent_list = prepare_unspent_list(db, source, construct_params)
 
     # prepare outputs
-    outputs = prepare_outputs(db, source, destinations, data, unspent_list, construct_params)
+    outputs, reveal_tx_info = prepare_outputs(
+        db, source, destinations, data, unspent_list, construct_params
+    )
 
     # prepare inputs and change
     selected_utxos, btc_in, change_outputs = prepare_inputs_and_change(
@@ -1071,18 +1093,15 @@ def construct(db, tx_info, construct_params):
             "sigops_count": sigops_count,
         },
     }
-    if data:
-        encoding = determine_encoding(data, destinations, construct_params)
-        if encoding == "taproot":
-            multisig_pubkey = get_source_pubkey(source, unspent_list, construct_params)
-            source_pubkey = PublicKey.from_hex(multisig_pubkey)
-            envelope_script = generate_envelope_script(data, source_pubkey, construct_params)
-            outputs = get_reveal_outputs(
-                db, source, envelope_script, unspent_list, construct_params
-            )
-            result["reveal_rawtransaction"] = generate_raw_reveal_tx(tx.get_txid(), 0, outputs)
-            result["envelope_script"] = envelope_script.to_hex()
-            result["reveal_input"] = (outputs[0].script_pubkey.to_hex(), outputs[0].amount)
+    if reveal_tx_info is not None:
+        inputs = [TxInput(tx.get_txid(), 0)]
+        outputs, envelope_script, reveal_tx_pk = reveal_tx_info
+        commit_value = tx.outputs[0].amount
+        signed_reveal_tx = get_signed_reveal_tx(
+            inputs, outputs, commit_value, envelope_script, reveal_tx_pk
+        )
+        result["signed_reveal_rawtransaction"] = signed_reveal_tx.to_hex()
+        result["envelope_script"] = envelope_script.to_hex()
 
     return result, unspent_list
 
@@ -1138,14 +1157,13 @@ def check_transaction_sanity(tx_info, composed_tx, unspent_list, construct_param
 
     # check if data matches the output data
     if data:
-        if "reveal_rawtransaction" in composed_tx:
-            envelope_script = composed_tx["envelope_script"]
-            multisig_pubkey = get_source_pubkey(source, unspent_list, construct_params)
-            source_pubkey = PublicKey.from_hex(multisig_pubkey)
-            envelope_script = generate_envelope_script(
-                data, source_pubkey, construct_params
-            ).to_hex()
-            if envelope_script != composed_tx["envelope_script"]:
+        if "signed_reveal_rawtransaction" in composed_tx:
+            envelope_script, _reveal_tx_pk = generate_envelope_script(data, construct_params)
+            composed_envelope_script = Script.from_raw(composed_tx["envelope_script"])
+            # remove the random pubkey from the envelope script
+            envelope_script.script = envelope_script.script[0:-2]
+            composed_envelope_script.script = composed_envelope_script.script[0:-2]
+            if envelope_script.to_hex() != composed_envelope_script.to_hex():
                 raise exceptions.ComposeError(
                     "Sanity check error: envelope script does not match the data"
                 )
@@ -1319,8 +1337,8 @@ def compose_transaction(db, name, params, construct_parameters):
         }
     else:
         final_result = {}
-        if "reveal_rawtransaction" in result:
-            final_result["reveal_rawtransaction"] = result["reveal_rawtransaction"]
+        if "signed_reveal_rawtransaction" in result:
+            final_result["signed_reveal_rawtransaction"] = result["signed_reveal_rawtransaction"]
             final_result["envelope_script"] = result["envelope_script"]
         final_result["rawtransaction"] = result["rawtransaction"]
 

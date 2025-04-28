@@ -4,6 +4,7 @@ from io import BytesIO
 
 import bitcoin as bitcoinlib
 import pytest
+from bitcoinutils.keys import PrivateKey
 from counterparty_rs import utils as pycoin_rs_utils
 from counterpartycore.lib import config
 from counterpartycore.lib.api import composer
@@ -191,19 +192,26 @@ def test_deserialize_error():
         )
 
 
-def test_desrialize_reveal_tx(ledger_db, defaults):
+def test_desrialize_reveal_tx(ledger_db, defaults, monkeypatch):
+    monkeypatch.setattr(
+        composer, "generate_random_private_key", lambda: PrivateKey(secret_exponent=1)
+    )
     deserialize.Deserializer.reset_instance()
     unspent_list = []
     construct_params = {"inscription": True}
     source = defaults["addresses"][0]
+    db = None
 
     for data in [
         b"Hello, World!",
         b"a" * 1024 * 400,
     ]:
-        reveal_tx, output_value = composer.get_dummy_signed_reveal_tx(
-            ledger_db, source, data, unspent_list, construct_params
+        envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
+        outputs = composer.get_reveal_outputs(
+            db, source, envelope_script, unspent_list, construct_params
         )
+
+        reveal_tx = composer.get_dummy_signed_reveal_tx(outputs, envelope_script, reveal_tx_pk)
         reveal_tx_hex = reveal_tx.serialize()
         decoded_tx = deserialize_rust(reveal_tx_hex)
         assert decoded_tx["parsed_vouts"] == (
@@ -216,9 +224,11 @@ def test_desrialize_reveal_tx(ledger_db, defaults):
         )
 
     data = b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5`Sune asset super top"
-    reveal_tx, output_value = composer.get_dummy_signed_reveal_tx(
-        ledger_db, source, data, unspent_list, construct_params
+    envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
+    outputs = composer.get_reveal_outputs(
+        db, source, envelope_script, unspent_list, construct_params
     )
+    reveal_tx = composer.get_dummy_signed_reveal_tx(outputs, envelope_script, reveal_tx_pk)
     reveal_tx_hex = reveal_tx.serialize()
     decoded_tx = deserialize_rust(reveal_tx_hex)
     assert decoded_tx["parsed_vouts"] == (
@@ -232,9 +242,11 @@ def test_desrialize_reveal_tx(ledger_db, defaults):
     )
 
     data = b"\x16\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`X1description much much much longer than 42 letters"
-    reveal_tx, output_value = composer.get_dummy_signed_reveal_tx(
-        ledger_db, source, data, unspent_list, construct_params
+    envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
+    outputs = composer.get_reveal_outputs(
+        db, source, envelope_script, unspent_list, construct_params
     )
+    reveal_tx = composer.get_dummy_signed_reveal_tx(outputs, envelope_script, reveal_tx_pk)
     reveal_tx_hex = reveal_tx.serialize()
     decoded_tx = deserialize_rust(reveal_tx_hex)
     assert decoded_tx["parsed_vouts"] == (
@@ -248,9 +260,11 @@ def test_desrialize_reveal_tx(ledger_db, defaults):
     )
 
     data = b"\x16\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`X1description much much much longer than 42 letters"
-    reveal_tx, output_value = composer.get_dummy_signed_reveal_tx(
-        ledger_db, source, data, unspent_list, construct_params
+    envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
+    outputs = composer.get_reveal_outputs(
+        db, source, envelope_script, unspent_list, construct_params
     )
+    reveal_tx = composer.get_dummy_signed_reveal_tx(outputs, envelope_script, reveal_tx_pk)
     reveal_tx_hex = reveal_tx.serialize()
     decoded_tx = deserialize_rust(reveal_tx_hex)
     assert decoded_tx["parsed_vouts"] == (
@@ -263,9 +277,75 @@ def test_desrialize_reveal_tx(ledger_db, defaults):
         True,
     )
 
-    reveal_tx, output_value = composer.get_dummy_signed_reveal_tx(
-        ledger_db, source, b"", unspent_list, construct_params
+    data = b""
+    envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
+    outputs = composer.get_reveal_outputs(
+        db, source, envelope_script, unspent_list, construct_params
     )
+    reveal_tx = composer.get_dummy_signed_reveal_tx(outputs, envelope_script, reveal_tx_pk)
     reveal_tx_hex = reveal_tx.serialize()
     decoded_tx = deserialize_rust(reveal_tx_hex)
     assert decoded_tx["parsed_vouts"] == ([], 0, 0, b"", [(None, None)], False)
+
+
+def test_desrialize_taproot_output(ledger_db, defaults):
+    helpers.setup_bitcoinutils("testnet4")
+    original_network_name = config.NETWORK_NAME
+    original_address_version = config.ADDRESSVERSION
+    config.NETWORK_NAME = "testnet4"
+    config.ADDRESSVERSION = config.ADDRESSVERSION_TESTNET4
+    config.BACKEND_SSL = True
+
+    deserialize.Deserializer.reset_instance()
+    # https://mempool.space/testnet4/tx/56a73cd818a19602b5508a68e5b10c970501ac1315cb087f3a21dc10c7652ed5
+    tx_hex = "020000000001018059419d618bd7d5bd9855e5f6d4c171cd691af9da8833b39e30ae31239847cb0100000000ffffffff0200000000000000003b6a39f3b398bbccadc3abeec52042e66b87fa17ddeaf9897bf74d66683f7ed76abb0cde09d25b9536d51f40d03b4f7a1b320b1cca6cfdd9d837518ffe6d020000000000225120bae0413a9ff02c6f0c56203a33f2d237e845145f60ce3aaf4d63dc06dfcf86780141dcc1b4710f930af86136babbf84bffc833837920aa6dda26135a958d87f7603fa69721cc13b04e530f6d657863a5d8a8c259400365512660dafdd9250a2ac7140100000000"
+
+    decoded_tx = deserialize_rust(tx_hex)
+    assert decoded_tx == {
+        "version": 2,
+        "segwit": True,
+        "coinbase": False,
+        "lock_time": 0,
+        "tx_id": "56a73cd818a19602b5508a68e5b10c970501ac1315cb087f3a21dc10c7652ed5",
+        "tx_hash": "56a73cd818a19602b5508a68e5b10c970501ac1315cb087f3a21dc10c7652ed5",
+        "vtxinwit": [
+            [
+                "dcc1b4710f930af86136babbf84bffc833837920aa6dda26135a958d87f7603fa69721cc13b04e530f6d657863a5d8a8c259400365512660dafdd9250a2ac71401"
+            ]
+        ],
+        "parsed_vouts": (
+            [],
+            0,
+            -159230,
+            b'\x02\x84\x1by\xcb\xa3\xaa\xa0\x06\xfd\x1a\x01X"\x03\x01\x1e\xf6\xd7\xb8P)O\xad~\x8d\x13bI\x82\x05\xc3\xcb$~d\xd0\xcbq$\xa9\x94\xe5i9|\x1c\xd3@',
+            [
+                (None, None),
+                ("tb1phtsyzw5l7qkx7rzkyqar8ukjxl5y29zlvr8r4t6dv0wqdh70seuq5pyxcl", 159230),
+            ],
+            False,
+        ),
+        "vin": [
+            {
+                "hash": "cb47982331ae309eb33388daf91a69cd71c1d4f6e55598bdd5d78b619d415980",
+                "n": 1,
+                "sequence": 4294967295,
+                "script_sig": b"",
+                "info": None,
+            }
+        ],
+        "vout": [
+            {
+                "value": 0,
+                "script_pub_key": b"j9\xf3\xb3\x98\xbb\xcc\xad\xc3\xab\xee\xc5 B\xe6k\x87\xfa\x17\xdd\xea\xf9\x89{\xf7Mfh?~\xd7j\xbb\x0c\xde\t\xd2[\x956\xd5\x1f@\xd0;Oz\x1b2\x0b\x1c\xcal\xfd\xd9\xd87Q\x8f",
+            },
+            {
+                "value": 159230,
+                "script_pub_key": b"Q \xba\xe0A:\x9f\xf0,o\x0cV :3\xf2\xd27\xe8E\x14_`\xce:\xafMc\xdc\x06\xdf\xcf\x86x",
+            },
+        ],
+    }
+
+    config.NETWORK_NAME = original_network_name
+    config.ADDRESSVERSION = original_address_version
+    config.BACKEND_SSL = False
+    helpers.setup_bitcoinutils("regtest")

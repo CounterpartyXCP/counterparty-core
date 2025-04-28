@@ -31,13 +31,17 @@ def test_generate_raw_reveal_tx():
     )
 
 
-def test_generate_envelope_script():
+def test_generate_envelope_script(monkeypatch):
+    monkeypatch.setattr(
+        composer, "generate_random_private_key", lambda: PrivateKey(secret_exponent=1)
+    )
+
     construct_params = {"inscriptioninscription": True}
     private_key = PrivateKey(secret_exponent=1)
     source_pubkey = private_key.get_public_key()
 
     data = b"Hello, World!"
-    envelope_script = composer.generate_envelope_script(data, source_pubkey, construct_params)
+    envelope_script, _reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
     assert envelope_script == Script(
         [
             "OP_FALSE",
@@ -50,7 +54,7 @@ def test_generate_envelope_script():
     )
 
     data = b"a" * 1000
-    envelope_script = composer.generate_envelope_script(data, source_pubkey, construct_params)
+    envelope_script, _reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
     assert envelope_script == Script(
         [
             "OP_FALSE",
@@ -64,7 +68,7 @@ def test_generate_envelope_script():
     )
 
     data = b"a" * 1041
-    envelope_script = composer.generate_envelope_script(data, source_pubkey, construct_params)
+    envelope_script, _reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
     assert envelope_script == Script(
         [
             "OP_FALSE",
@@ -79,7 +83,7 @@ def test_generate_envelope_script():
     )
 
     data = b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5`Sune asset super top"
-    envelope_script = composer.generate_envelope_script(data, source_pubkey, construct_params)
+    envelope_script, _reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
     assert envelope_script == Script(
         [
             "OP_FALSE",
@@ -100,10 +104,9 @@ def test_generate_envelope_script():
 
 def calculate_reveal_transaction_vsize(data):
     construct_params = {"inscription": True}
-    private_key = PrivateKey(secret_exponent=1)
-    source_pubkey = private_key.get_public_key()
+
     # Calculate the envelope script size
-    envelope_script = composer.generate_envelope_script(data, source_pubkey, construct_params)
+    envelope_script, _reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
     envelope_script_serialized = envelope_script.to_hex()
     envelope_script_size = len(envelope_script_serialized) // 2
 
@@ -176,62 +179,84 @@ def calculate_reveal_transaction_vsize(data):
     return vsize
 
 
-def test_get_reveal_transaction_vsize():
+def test_get_reveal_transaction_vsize(monkeypatch):
+    monkeypatch.setattr(
+        composer, "generate_random_private_key", lambda: PrivateKey(secret_exponent=1)
+    )
+
     db, source, unspent_list, construct_params = None, None, [], {}
 
     data = b""
-    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
-        db, source, data, unspent_list, construct_params
+    envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
+    outputs = composer.get_reveal_outputs(
+        db, source, envelope_script, unspent_list, construct_params
     )
+    vsize = composer.get_reveal_transaction_vsize_and_value(outputs, envelope_script, reveal_tx_pk)
     assert vsize == 105
     assert calculate_reveal_transaction_vsize(data) == 106
 
     data = b"a"
-    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
-        db, source, data, unspent_list, construct_params
+    envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
+    outputs = composer.get_reveal_outputs(
+        db, source, envelope_script, unspent_list, construct_params
     )
+    vsize = composer.get_reveal_transaction_vsize_and_value(outputs, envelope_script, reveal_tx_pk)
     assert vsize == 106
     assert calculate_reveal_transaction_vsize(data) == 106
 
     data = b"a" * 1000
-    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
-        db, source, data, unspent_list, construct_params
+    envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
+    outputs = composer.get_reveal_outputs(
+        db, source, envelope_script, unspent_list, construct_params
     )
+    vsize = composer.get_reveal_transaction_vsize_and_value(outputs, envelope_script, reveal_tx_pk)
     assert vsize == 357
     assert calculate_reveal_transaction_vsize(data) == 358
 
     data = b"a" * 2000
-    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
-        db, source, data, unspent_list, construct_params
+    envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
+    outputs = composer.get_reveal_outputs(
+        db, source, envelope_script, unspent_list, construct_params
     )
+    vsize = composer.get_reveal_transaction_vsize_and_value(outputs, envelope_script, reveal_tx_pk)
     assert vsize == 609
     assert calculate_reveal_transaction_vsize(data) == 609
 
     data = b"a" * 10000
-    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
-        db, source, data, unspent_list, construct_params
+    envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
+    outputs = composer.get_reveal_outputs(
+        db, source, envelope_script, unspent_list, construct_params
     )
+    vsize = composer.get_reveal_transaction_vsize_and_value(outputs, envelope_script, reveal_tx_pk)
     assert vsize == 2621
     assert calculate_reveal_transaction_vsize(data) == 2621
 
     data = b"a" * 20000
-    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
-        db, source, data, unspent_list, construct_params
+    envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
+    outputs = composer.get_reveal_outputs(
+        db, source, envelope_script, unspent_list, construct_params
     )
+    vsize = composer.get_reveal_transaction_vsize_and_value(outputs, envelope_script, reveal_tx_pk)
     assert vsize == 5135
     assert calculate_reveal_transaction_vsize(data) == 5135
 
     data = b"a" * 400 * 1024
-    vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
-        db, source, data, unspent_list, construct_params
+    envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
+    outputs = composer.get_reveal_outputs(
+        db, source, envelope_script, unspent_list, construct_params
     )
+    vsize = composer.get_reveal_transaction_vsize_and_value(outputs, envelope_script, reveal_tx_pk)
     assert vsize == 103097
     assert calculate_reveal_transaction_vsize(data) == 103098
 
     for _i in range(10):
         data = b"a" * random.randint(1, 400000)  # noqa
-        vsize, outputs_value = composer.get_reveal_transaction_vsize_and_value(
-            db, source, data, unspent_list, construct_params
+        envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
+        outputs = composer.get_reveal_outputs(
+            db, source, envelope_script, unspent_list, construct_params
+        )
+        vsize = composer.get_reveal_transaction_vsize_and_value(
+            outputs, envelope_script, reveal_tx_pk
         )
         assert (
             calculate_reveal_transaction_vsize(data) - 1
@@ -240,7 +265,11 @@ def test_get_reveal_transaction_vsize():
         )
 
 
-def test_prepare_taproot_output(ledger_db, defaults):
+def test_prepare_taproot_output(ledger_db, defaults, monkeypatch):
+    monkeypatch.setattr(
+        composer, "generate_random_private_key", lambda: PrivateKey(secret_exponent=1)
+    )
+
     outputs = composer.prepare_taproot_output(
         ledger_db,
         defaults["addresses"][0],
@@ -249,11 +278,11 @@ def test_prepare_taproot_output(ledger_db, defaults):
         {
             "multisig_pubkey": DEFAULTS["pubkey"][DEFAULTS["addresses"][0]],
         },
-    )
+    )[0]
     assert len(outputs) == 1
     assert outputs[0].amount == 330
     assert outputs[0].script_pubkey == Script(
-        ["OP_1", "bda735a8764223a80459850d3a6434b5b90db96a0770f89664790100948f4f9e"]
+        ["OP_1", "50a2b32ed8d07cd3498fbfb0bf2b3da636cdef9f9eabed4ee86aaf80a7f0e558"]
     )
 
     outputs = composer.prepare_taproot_output(
@@ -264,20 +293,20 @@ def test_prepare_taproot_output(ledger_db, defaults):
         {
             "multisig_pubkey": DEFAULTS["pubkey"][DEFAULTS["p2wpkh_addresses"][0]],
         },
-    )
+    )[0]
     assert len(outputs) == 1
     assert outputs[0].amount == 330
     assert outputs[0].script_pubkey == Script(
-        ["OP_1", "85ffdfaa05f1c01f61727f2d34a14b42d1aa4e0a6e6d5bf98dc65b2c0b8efd9c"]
+        ["OP_1", "50a2b32ed8d07cd3498fbfb0bf2b3da636cdef9f9eabed4ee86aaf80a7f0e558"]
     )
 
     outputs = composer.prepare_taproot_output(
         ledger_db, defaults["p2tr_addresses"][0], b"Hello world", [], {}
-    )
+    )[0]
     assert len(outputs) == 1
     assert outputs[0].amount == 330
     assert outputs[0].script_pubkey == Script(
-        ["OP_1", "fb4e62f6bb056d0925672a8877f0212314b37594639abfd8a98098ae747449b6"]
+        ["OP_1", "50a2b32ed8d07cd3498fbfb0bf2b3da636cdef9f9eabed4ee86aaf80a7f0e558"]
     )
 
     outputs = composer.prepare_data_outputs(
@@ -291,11 +320,11 @@ def test_prepare_taproot_output(ledger_db, defaults):
             }
         ],
         {"encoding": "taproot"},
-    )
+    )[0]
     assert len(outputs) == 1
     assert outputs[0].amount == 330
     assert outputs[0].script_pubkey == Script(
-        ["OP_1", "fb4e62f6bb056d0925672a8877f0212314b37594639abfd8a98098ae747449b6"]
+        ["OP_1", "50a2b32ed8d07cd3498fbfb0bf2b3da636cdef9f9eabed4ee86aaf80a7f0e558"]
     )
 
 
@@ -314,9 +343,9 @@ def test_compose_transaction(ledger_db, defaults):
 
     result = composer.compose_transaction(ledger_db, "send", params, construct_params)
     assert "envelope_script" in result
-    assert "reveal_rawtransaction" in result
+    assert "signed_reveal_rawtransaction" in result
 
-    reveal_tx = Transaction.from_raw(result["reveal_rawtransaction"])
+    reveal_tx = Transaction.from_raw(result["signed_reveal_rawtransaction"])
     assert len(reveal_tx.inputs) == 1
     assert len(reveal_tx.outputs) == 1
     assert reveal_tx.outputs[0].amount == 0
