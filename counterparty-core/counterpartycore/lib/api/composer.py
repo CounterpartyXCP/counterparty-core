@@ -417,6 +417,8 @@ def generate_ordinal_envelope_script(message_data, message_type_id, content, sou
         string_to_hex(mime_type),
         *metatdata_array,
         *content_array,
+        "07",
+        string_to_hex("xcp"),
         "OP_ENDIF",
         source_pubkey.to_x_only_hex(),
         "OP_CHECKSIG",

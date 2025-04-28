@@ -467,7 +467,7 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
         let mut current_section = "none";
         
         // Process all instructions to collect metadata and description
-        while i < instructions.len() - 3 {
+        while i < instructions.len() - 5 { // Skip last 5 instructions: metaprotocol op_endif and checksig
             match &instructions[i] {
                 Ok(PushBytes(marker)) => {
                     let marker_bytes = marker.as_bytes();
