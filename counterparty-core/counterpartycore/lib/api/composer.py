@@ -413,6 +413,8 @@ def generate_ordinal_envelope_script(message_data, message_type_id, content, sou
         "OP_FALSE",
         "OP_IF",
         string_to_hex("ord"),
+        "07",
+        string_to_hex("xcp"),
         "01",
         string_to_hex(mime_type),
         *metatdata_array,
