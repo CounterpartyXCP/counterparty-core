@@ -36,7 +36,7 @@ def test_generate_envelope_script(monkeypatch):
         composer, "generate_random_private_key", lambda: PrivateKey(secret_exponent=1)
     )
 
-    construct_params = {"inscriptioninscription": True}
+    construct_params = {"inscription": True}
     private_key = PrivateKey(secret_exponent=1)
     source_pubkey = private_key.get_public_key()
 
