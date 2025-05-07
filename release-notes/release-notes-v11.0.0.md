@@ -72,6 +72,7 @@ counterparty-server start
 - Fix event name: `BET_MATCH_RESOLUTON` -> `BET_MATCH_RESOLUTION`
 - Fix `is_segwit` value in `get_vin_info`
 - Fix `apsw.IOError` when using `--rebuild-state-db` flag
+- Fix round error in inputs values when composing transaction
 
 ## Codebase
 
