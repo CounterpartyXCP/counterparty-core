@@ -914,4 +914,8 @@ CHECKPOINTS_TESTNET4 = {
         "ledger_hash": "6b65bad08047eaaf9690ff0d95ee6f01a97b3b67f7a376407b28cbd7bb10b852",
         "txlist_hash": "7f3b1f29053049a1e7268c710b7d047f240632dc6addebe846845b66aa91cbf1",
     },
+    81303: {
+        "ledger_hash": "2af7376903ad0407be28e598f44a7d2fc13e8490f5c9e5c4aec8d55a2d36ff6f",
+        "txlist_hash": "c475017a797435f4d1c04a95e5a4a06628a12be534ff683f9e9b9980bac750c8",
+    },
 }
