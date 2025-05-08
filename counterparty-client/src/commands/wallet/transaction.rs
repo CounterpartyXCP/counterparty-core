@@ -144,7 +144,7 @@ fn get_script_type(script: &bitcoin::ScriptBuf) -> &'static str {
 
 /// Parse a signed transaction and display inputs, outputs, and fees
 /// Shows addresses instead of raw scripts and decodes OP_RETURN data
-fn display_transaction_summary(signed_tx: &str, network: crate::config::Network) -> Result<()> {
+fn display_transaction_summary(signed_tx: &str, utxo_list: &bitcoinsigner::UTXOList, network: crate::config::Network) -> Result<()> {
     // Decode the transaction from hex
     let tx_bytes =
         hex::decode(signed_tx).map_err(|e| anyhow!("Failed to decode transaction hex: {}", e))?;
@@ -152,6 +152,9 @@ fn display_transaction_summary(signed_tx: &str, network: crate::config::Network)
     // Parse the transaction
     let tx: bitcoin::Transaction = bitcoin::consensus::deserialize(&tx_bytes)
         .map_err(|e| anyhow!("Failed to parse transaction: {}", e))?;
+    
+    // Get the transaction ID (hash)
+    let txid = tx.compute_txid().to_string();
 
     // Get counts
     let input_count = tx.input.len();
@@ -175,17 +178,49 @@ fn display_transaction_summary(signed_tx: &str, network: crate::config::Network)
     let _ = writeln!(stdout, "Transaction details:");
     let _ = stdout.reset();
 
+    // Display txid
+    let _ = stdout.set_color(&subtitle_color);
+    let _ = write!(stdout, "txid: ");
+    let _ = stdout.set_color(&text_color);
+    let _ = writeln!(stdout, "{}", txid);
+    let _ = stdout.reset();
+
     // Display inputs with count in cyan
     let _ = stdout.set_color(&subtitle_color);
     let _ = writeln!(stdout, "Inputs ({}):", input_count);
     let _ = stdout.reset();
 
-    // List inputs
-    for input in &tx.input {
+    // List inputs with addresses and amounts
+    // We'll assume UTXOs are in the same order as inputs, which is common
+    for (idx, input) in tx.input.iter().enumerate() {
         let _ = stdout.set_color(&text_color);
         let txid = input.previous_output.txid.to_string();
         let vout = input.previous_output.vout;
-        let _ = writeln!(stdout, "{}:{}", txid, vout);
+        
+        // Get the UTXO if available at this index
+        if let Some(utxo) = utxo_list.get(idx) {
+            // Get amount in BTC
+            let amount_btc = utxo.amount as f64 / 100_000_000.0;
+            
+            // Try to get address from the UTXO
+            let address = if let Some(source_addr) = &utxo.source_address {
+                // Use source_address if available
+                source_addr.clone()
+            } else {
+                // Otherwise try to convert script_pubkey to address
+                script_to_address(&utxo.script_pubkey, network)
+                    .unwrap_or_else(|| "[Unable to derive address]".to_string())
+            };
+            
+            let _ = writeln!(
+                stdout,
+                "{:.8} BTC, {} ({}:{})",
+                amount_btc, address, txid, vout
+            );
+        } else {
+            // Fallback if no UTXO info is available for this input
+            let _ = writeln!(stdout, "{}:{}", txid, vout);
+        }
     }
 
     // Display outputs with count in cyan
@@ -224,12 +259,38 @@ fn display_transaction_summary(signed_tx: &str, network: crate::config::Network)
         }
     }
 
+    // Calculate and display transaction fee if possible
+    if let Some(fee) = calculate_transaction_fee(&tx, utxo_list) {
+        let fee_btc = fee as f64 / 100_000_000.0;
+        let _ = stdout.set_color(&subtitle_color);
+        let _ = write!(stdout, "Fee: ");
+        let _ = stdout.set_color(&text_color);
+        let _ = writeln!(stdout, "{:.8} BTC", fee_btc);
+        let _ = stdout.reset();
+    }
+
     let _ = writeln!(stdout, "");
 
     // Reset color at the end
     let _ = stdout.reset();
 
     Ok(())
+}
+
+/// Calculate the transaction fee by comparing input and output amounts
+fn calculate_transaction_fee(tx: &bitcoin::Transaction, utxo_list: &bitcoinsigner::UTXOList) -> Option<u64> {
+    // Calculate total input value
+    let total_input: u64 = utxo_list.as_ref().iter().map(|utxo| utxo.amount).sum();
+    
+    // Get total output value
+    let total_output: u64 = tx.output.iter().map(|output| output.value.to_sat()).sum();
+    
+    // Calculate fee (inputs - outputs)
+    if total_input >= total_output {
+        Some(total_input - total_output)
+    } else {
+        None // Something is wrong if outputs > inputs
+    }
 }
 
 /// Extract raw bytes from OP_RETURN data
@@ -520,6 +581,43 @@ async fn broadcast_transactions(
     Ok(())
 }
 
+/// Build UTXOList for reveal transaction from the commit transaction
+/// The reveal transaction spends the first output of the commit transaction
+fn build_reveal_utxo_list(commit_tx_hex: &str) -> Result<bitcoinsigner::UTXOList> {
+    // Decode the commit transaction from hex
+    let tx_bytes = hex::decode(commit_tx_hex)
+        .map_err(|e| anyhow!("Failed to decode commit transaction hex: {}", e))?;
+
+    // Parse the transaction
+    let commit_tx: bitcoin::Transaction = bitcoin::consensus::deserialize(&tx_bytes)
+        .map_err(|e| anyhow!("Failed to parse commit transaction: {}", e))?;
+
+    // Ensure the transaction has at least one output
+    if commit_tx.output.is_empty() {
+        return Err(anyhow!("Commit transaction has no outputs"));
+    }
+
+    // Get the first output - this is what the reveal transaction will spend
+    let first_output = &commit_tx.output[0];
+    
+    // Extract the amount in satoshis
+    let amount = first_output.value.to_sat();
+    
+    // Extract the script_pubkey
+    let script_pubkey = first_output.script_pubkey.clone();
+    
+    // Create a new UTXOList
+    let mut utxo_list = bitcoinsigner::UTXOList::new();
+    
+    // Create a UTXO for the first output
+    let utxo = bitcoinsigner::UTXO::new(amount, script_pubkey);
+    
+    // Add the UTXO to the list
+    utxo_list.add(utxo);
+    
+    Ok(utxo_list)
+}
+
 /// Handle transaction command by calling the corresponding compose API function
 pub async fn handle_transaction_command(
     config: &AppConfig,
@@ -584,7 +682,7 @@ pub async fn handle_transaction_command(
         println!("{}\n", &signed_tx);
 
         // Display transaction summary
-        display_transaction_summary(&signed_tx, config.network)?;
+        display_transaction_summary(&signed_tx, &utxo_list, config.network)?;
 
         // Use the already signed reveal transaction directly
         signed_reveal_tx = Some(reveal_tx_info.signed_tx.to_string());
@@ -593,12 +691,13 @@ pub async fn handle_transaction_command(
         println!("{}\n", &signed_reveal_tx.as_ref().unwrap());
 
         // Display transaction summary
-        display_transaction_summary(signed_reveal_tx.as_ref().unwrap(), config.network)?;
+        let reveal_utxo_list = build_reveal_utxo_list(&signed_tx)?;
+        display_transaction_summary(signed_reveal_tx.as_ref().unwrap(), &reveal_utxo_list, config.network)?;
     } else {
         helpers::print_success("Transaction signed:", None);
         println!("{}\n", &signed_tx);
         // Display transaction summary
-        display_transaction_summary(&signed_tx, config.network)?;
+        display_transaction_summary(&signed_tx, &utxo_list, config.network)?;
     }
 
     // Ask for confirmation before broadcasting
@@ -637,7 +736,7 @@ pub async fn handle_sign_command(config: &AppConfig, sub_matches: &ArgMatches, w
     println!("{}", &signed_tx);
 
     // Display transaction summary
-    display_transaction_summary(&signed_tx, config.network)?;
+    display_transaction_summary(&signed_tx, &utxo_list, config.network)?;
 
     Ok(())
 }
@@ -818,8 +917,10 @@ pub async fn handle_broadcast_command(
         .get_one::<String>("rawtransaction")
         .ok_or_else(|| anyhow!("Missing raw transaction"))?;
 
+    let utxo_list = get_utxos_from_api(config, signed_tx_hex).await?;
+
     // Verify that the transaction is valid and properly signed
-    let tx_result = display_transaction_summary(signed_tx_hex, config.network);
+    let tx_result = display_transaction_summary(signed_tx_hex, &utxo_list, config.network);
     if let Err(e) = tx_result {
         return Err(anyhow!("Invalid transaction: {}", e));
     }
