@@ -445,7 +445,7 @@ def generate_envelope_script(data, construct_params):
         messages.issuance.LR_ISSUANCE_ID,
         messages.issuance.LR_SUBASSET_ID,
         messages.broadcast.ID,
-    ] and construct_params.get("inscription", True):
+    ] and construct_params.get("inscription", False):
         message_data = cbor2.loads(message)
         content = message_data.pop()
         if content is not None and len(content) > 0:
@@ -606,7 +606,7 @@ def complete_unspent_list(unspent_list):
                     if "script_pub_key" not in utxo:
                         utxo["script_pub_key"] = vout["scriptPubKey"]["hex"]
                     if "value" not in utxo:
-                        utxo["value"] = int(vout["value"] * config.UNIT)
+                        utxo["value"] = int(D(str(vout["value"])) * D(config.UNIT))
                         utxo["amount"] = vout["value"]
         if "script_pub_key" not in utxo:
             raise exceptions.ComposeError(
@@ -687,7 +687,7 @@ def ensure_utxo_is_first(utxo, unspent_list):
             {
                 "txid": txid,
                 "vout": vout,
-                "value": int(value * config.UNIT),
+                "value": int(D(str(value)) * D(config.UNIT)),
                 "amount": value,
             },
         )
@@ -1247,7 +1247,7 @@ CONSTRUCT_PARAMS = {
     ),
     "return_only_data": (bool, False, "Return only the data part of the transaction"),
     "segwit_dust_size": (int, None, "The dust size for segwit outputs (default is 330)"),
-    "inscription": (bool, True, "Use Ordinals inscription script when possible"),
+    "inscription": (bool, False, "Use Ordinals inscription script when possible"),
     # deprecated parameters
     "fee_per_kb": (int, None, "Deprecated, use `sat_per_vbyte` instead"),
     "fee_provided": (int, None, "Deprecated, use `max_fee` instead"),
