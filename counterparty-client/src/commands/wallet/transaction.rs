@@ -19,15 +19,43 @@ struct RevealTransactionInfo<'a> {
 }
 
 /// Find the corresponding compose endpoint for a transaction command
+/// If the endpoint doesn't have an 'address' or 'source' parameter, add one
 fn find_compose_endpoint<'a>(
     endpoints: &'a HashMap<String, ApiEndpoint>,
     transaction_name: &str,
-) -> Result<(&'a String, &'a ApiEndpoint)> {
+) -> Result<(&'a String, ApiEndpoint)> {
     // Convert transaction name to compose_X to find the matching endpoint
     let compose_name = format!("compose_{}", transaction_name);
 
     // Find matching endpoint for the compose function
-    api::find_matching_endpoint(endpoints, &compose_name)
+    let (path, endpoint) = api::find_matching_endpoint(endpoints, &compose_name)?;
+    
+    // Check if the endpoint already has an address or source parameter
+    let has_address = endpoint.args.iter().any(|arg| arg.name == "address" || arg.name == "source");
+    
+    if has_address {
+        // If it already has an address parameter, just return it
+        return Ok((path, endpoint.clone()));
+    } else {
+        // Otherwise, create a modified endpoint with an address parameter
+        let mut modified_endpoint = endpoint.clone();
+        
+        // Create a new address argument
+        let address_arg = ApiEndpointArg {
+            name: "address".to_string(),
+            required: true,
+            arg_type: "string".to_string(),
+            description: Some("Destination address for the transaction".to_string()),
+            default: None,
+            members: None,
+        };
+        
+        // Add the address parameter to the endpoint's arguments
+        modified_endpoint.args.push(address_arg);
+        
+        // Return the modified endpoint
+        return Ok((path, modified_endpoint));
+    }
 }
 
 /// Extract parameters from command line arguments
@@ -446,17 +474,17 @@ pub async fn handle_broadcast_command(
     wallet: &BitcoinWallet,
 ) -> Result<()> {
     // Find the corresponding compose endpoint
-    let (path, endpoint) = find_compose_endpoint(endpoints, transaction_name)?;
+    let (path, endpoint) = find_compose_endpoint(&endpoints, transaction_name)?;
 
     // Extract parameters from command line arguments
-    let mut params = extract_parameters_from_matches(endpoint, transaction_name, sub_matches);
+    let mut params = extract_parameters_from_matches(&endpoint, transaction_name, sub_matches);
 
     // Get address and public key
     let public_key = get_address_and_public_key(&params, wallet)?;
     params.insert("multisig_pubkey".to_string(), public_key.to_string());
 
     // Call API and get the composed transaction
-    let api_result = call_compose_api(config, path, endpoint, &params).await?;
+    let api_result = call_compose_api(config, path, &endpoint, &params).await?;
 
     // Extract transaction details from the result
     let (raw_tx_hex, utxos, tx_name, tx_params) = extract_transaction_details(&api_result)?;
