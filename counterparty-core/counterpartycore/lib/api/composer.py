@@ -606,7 +606,7 @@ def complete_unspent_list(unspent_list):
                     if "script_pub_key" not in utxo:
                         utxo["script_pub_key"] = vout["scriptPubKey"]["hex"]
                     if "value" not in utxo:
-                        utxo["value"] = int(vout["value"] * config.UNIT)
+                        utxo["value"] = int(D(str(vout["value"])) * D(config.UNIT))
                         utxo["amount"] = vout["value"]
         if "script_pub_key" not in utxo:
             raise exceptions.ComposeError(
@@ -687,7 +687,7 @@ def ensure_utxo_is_first(utxo, unspent_list):
             {
                 "txid": txid,
                 "vout": vout,
-                "value": int(value * config.UNIT),
+                "value": int(D(str(value)) * D(config.UNIT)),
                 "amount": value,
             },
         )

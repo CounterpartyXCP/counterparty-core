@@ -12,7 +12,9 @@ Counterparty Core v11.0.0 is a large release with numerous protocol upgrades and
 
 # Upgrading
 
-**This release is a protocol upgrade. All nodes must upgrade by block <TO BE DETERMINED>.**
+**This release is a protocol upgrade. All nodes must upgrade by block 898800.**
+
+Please note: This update requires a full database re-run. This operation takes approximately 7 hours on an M3 Mac.
 
 **Upgrade Instructions:**
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
@@ -72,6 +74,7 @@ counterparty-server start
 - Fix event name: `BET_MATCH_RESOLUTON` -> `BET_MATCH_RESOLUTION`
 - Fix `is_segwit` value in `get_vin_info`
 - Fix `apsw.IOError` when using `--rebuild-state-db` flag
+- Fix round error in inputs values when composing transaction
 
 ## Codebase
 
