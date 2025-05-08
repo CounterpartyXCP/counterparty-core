@@ -143,7 +143,8 @@ fn get_script_type(script: &bitcoin::ScriptBuf) -> &'static str {
 }
 
 /// Parse a signed transaction and display inputs, outputs, and fees
-fn display_transaction_summary(signed_tx: &str) -> Result<()> {
+/// Shows addresses instead of raw scripts and decodes OP_RETURN data
+fn display_transaction_summary(signed_tx: &str, network: crate::config::Network) -> Result<()> {
     // Decode the transaction from hex
     let tx_bytes =
         hex::decode(signed_tx).map_err(|e| anyhow!("Failed to decode transaction hex: {}", e))?;
@@ -201,14 +202,26 @@ fn display_transaction_summary(signed_tx: &str) -> Result<()> {
         // Get script type
         let script_type = get_script_type(&output.script_pubkey);
 
-        // Get script in string format
-        let script_display = output.script_pubkey.to_string();
-
-        let _ = writeln!(
-            stdout,
-            "{:.8} BTC, {} ({})",
-            value_btc, script_type, script_display
-        );
+        // Handle output display based on script type
+        if output.script_pubkey.is_op_return() {
+            // For OP_RETURN, display the decoded data directly
+            let decoded_data = extract_op_return_data(&output.script_pubkey);
+            let _ = writeln!(
+                stdout,
+                "{:.8} BTC, OP_RETURN {}",
+                value_btc, decoded_data
+            );
+        } else {
+            // For other scripts, try to convert to address
+            let address = script_to_address(&output.script_pubkey, network)
+                .unwrap_or_else(|| output.script_pubkey.to_string());
+            
+            let _ = writeln!(
+                stdout,
+                "{:.8} BTC, {} ({})",
+                value_btc, address, script_type
+            );
+        }
     }
 
     let _ = writeln!(stdout, "");
@@ -217,6 +230,42 @@ fn display_transaction_summary(signed_tx: &str) -> Result<()> {
     let _ = stdout.reset();
 
     Ok(())
+}
+
+/// Extract raw bytes from OP_RETURN data
+fn extract_op_return_data(script: &bitcoin::ScriptBuf) -> String {
+    if !script.is_op_return() {
+        return "<not an OP_RETURN>".to_string();
+    }
+    
+    // A simpler approach: get the raw script and skip the first two bytes
+    // First byte is OP_RETURN (0x6a), second byte is the push operation
+    let raw_bytes = script.as_bytes();
+    if raw_bytes.len() <= 2 {
+        return "<no data>".to_string();
+    }
+    
+    // Skip OP_RETURN and push opcode, take the remaining bytes
+    // This assumes a simple OP_RETURN structure which is common
+    let data_bytes = &raw_bytes[2..];
+    
+    // For display, use the raw bytes directly
+    String::from_utf8_lossy(data_bytes).to_string()
+}
+
+/// Convert a script to a Bitcoin address based on the network
+fn script_to_address(script: &bitcoin::ScriptBuf, network: crate::config::Network) -> Option<String> {
+    // Convert network to Bitcoin network
+    let bitcoin_network = match network {
+        crate::config::Network::Mainnet => bitcoin::Network::Bitcoin,
+        crate::config::Network::Testnet4 => bitcoin::Network::Testnet,
+        crate::config::Network::Regtest => bitcoin::Network::Regtest,
+    };
+    
+    // Try to create address from script
+    bitcoin::Address::from_script(script, bitcoin_network)
+        .map(|addr| addr.to_string())
+        .ok()
 }
 
 /// Ask for user confirmation before broadcasting
@@ -535,7 +584,7 @@ pub async fn handle_transaction_command(
         println!("{}\n", &signed_tx);
 
         // Display transaction summary
-        display_transaction_summary(&signed_tx)?;
+        display_transaction_summary(&signed_tx, config.network)?;
 
         // Use the already signed reveal transaction directly
         signed_reveal_tx = Some(reveal_tx_info.signed_tx.to_string());
@@ -544,12 +593,12 @@ pub async fn handle_transaction_command(
         println!("{}\n", &signed_reveal_tx.as_ref().unwrap());
 
         // Display transaction summary
-        display_transaction_summary(signed_reveal_tx.as_ref().unwrap())?;
+        display_transaction_summary(signed_reveal_tx.as_ref().unwrap(), config.network)?;
     } else {
         helpers::print_success("Transaction signed:", None);
         println!("{}\n", &signed_tx);
         // Display transaction summary
-        display_transaction_summary(&signed_tx)?;
+        display_transaction_summary(&signed_tx, config.network)?;
     }
 
     // Ask for confirmation before broadcasting
@@ -588,7 +637,7 @@ pub async fn handle_sign_command(config: &AppConfig, sub_matches: &ArgMatches, w
     println!("{}", &signed_tx);
 
     // Display transaction summary
-    display_transaction_summary(&signed_tx)?;
+    display_transaction_summary(&signed_tx, config.network)?;
 
     Ok(())
 }
@@ -770,7 +819,7 @@ pub async fn handle_broadcast_command(
         .ok_or_else(|| anyhow!("Missing raw transaction"))?;
 
     // Verify that the transaction is valid and properly signed
-    let tx_result = display_transaction_summary(signed_tx_hex);
+    let tx_result = display_transaction_summary(signed_tx_hex, config.network);
     if let Err(e) = tx_result {
         return Err(anyhow!("Invalid transaction: {}", e));
     }
