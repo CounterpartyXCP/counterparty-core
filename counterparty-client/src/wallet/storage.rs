@@ -7,7 +7,7 @@
 //! - Secure password management via the system keyring
 //!
 //! See instruction to Setting Up Gnome Keyring on Ubuntu 22.04 Headless/Server
-//! https://claude.site/artifacts/61cc183c-1b8c-487b-ab92-9421e0e1a11c
+//! https://claude.ai/public/artifacts/e893899f-9cd1-4972-ae37-30c7d8b8cd70
 
 use std::fs;
 use std::path::{Path, PathBuf};

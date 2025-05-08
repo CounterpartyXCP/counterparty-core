@@ -110,38 +110,6 @@ fn add_argument_to_command(
     cmd.arg(cmd_arg)
 }
 
-/// Add the address argument to a command if it doesn't already exist
-fn add_address_argument_if_missing(
-    cmd: Command,
-    command_name: &str,
-    used_long_names: &HashSet<String>,
-) -> Command {
-    // If address argument already exists, return command unchanged
-    if used_long_names.contains("address") {
-        return cmd;
-    }
-
-    // Create unique internal ID for address argument
-    let internal_id = format!("__transaction_{}_arg_address", command_name);
-    let static_internal_id: &'static str = Box::leak(internal_id.into_boxed_str());
-
-    // Store mapping for later
-    let id_map_key = format!("{}:{}", command_name, static_internal_id);
-    ID_ARG_MAP
-        .lock()
-        .unwrap()
-        .insert(id_map_key, "address".to_string());
-
-    // Add address argument
-    cmd.arg(
-        Arg::new(static_internal_id)
-            .long("address")
-            .help("Destination address for the transaction")
-            .required(true)
-            .value_name("VALUE"),
-    )
-}
-
 /// Add send_transaction command to the wallet command based on compose API endpoints
 pub fn add_broadcast_commands(cmd: Command, endpoints: &HashMap<String, ApiEndpoint>) -> Command {
     let mut wallet_cmd = cmd;
