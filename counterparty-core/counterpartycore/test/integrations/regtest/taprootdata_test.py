@@ -2,9 +2,11 @@ import binascii
 import os
 import time
 
+import pytest
 from bitcoinutils.keys import PrivateKey
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxWitnessInput
+from counterpartycore.lib import exceptions
 from regtestnode import RegtestNodeThread, rpc_call
 
 SENDS_COUNT = {}
@@ -600,7 +602,11 @@ def test_p2ptr_inscription():
         utxo = check_fairmint(node, source_private_key, utxo)
         utxo = check_dispensers(node, source_private_key, utxo)
         attached_utxo = send_funds_to_utxo(node, source_private_key)
-        utxo = check_detach(node, source_private_key, attached_utxo)
+        with pytest.raises(
+            exceptions.ComposeError, match="Cannot use `taproot` encoding for `detach` transaction"
+        ):
+            check_detach(node, source_private_key, attached_utxo)
+
         utxo_2 = check_issuance(node, source_private_key_2, utxo_2)
         utxo_2, order_hash = check_order(node, source_private_key_2, utxo_2)
         utxo_2 = check_cancel(node, source_private_key_2, utxo_2, order_hash)
