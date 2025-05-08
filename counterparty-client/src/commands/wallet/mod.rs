@@ -64,7 +64,7 @@ pub async fn execute_command(
         }
         Some(("sign", sub_matches)) => {
             // Process sign command
-            transaction::handle_sign_command(sub_matches, wallet)
+            transaction::handle_sign_command(config, sub_matches, wallet).await
         }
         Some(("broadcast", sub_matches)) => {
             // Process broadcast command

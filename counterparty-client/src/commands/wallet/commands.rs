@@ -35,7 +35,7 @@ pub fn build_sign_command() -> Command {
             Arg::new("utxos")
                 .long("utxos")
                 .help("JSON array of UTXOs corresponding to inputs in the format [{\"scriptPubKey\":\"hex\",\"amount\":satoshis,\"redeemScript\":\"hex\",\"witnessScript\":\"hex\",\"sourceAddress\":\"addr\",\"leafScript\":\"hex\"}]")
-                .required(true)
+                .required(false)
                 .value_name("JSON"),
         )
 }

@@ -30,6 +30,7 @@ secrecy = "0.8.0"
 indicatif = "0.17.11"
 clap_complete = "4.5.47"
 zeroize = { version = "1.8.1", features = ["derive"] }
+rust_decimal = "1.37.1"
 
 [[bin]]
 name = "xcp"

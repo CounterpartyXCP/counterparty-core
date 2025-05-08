@@ -2,8 +2,11 @@ use anyhow::{anyhow, Context, Result};
 use clap::ArgMatches;
 use std::collections::HashMap;
 use std::io::{self, Write};
+use std::str::FromStr;
 
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+use rust_decimal::Decimal;
+use rust_decimal::prelude::ToPrimitive;
 
 use crate::bitcoinsigner;
 use crate::commands::api;
@@ -560,19 +563,20 @@ pub async fn handle_transaction_command(
 }
 
 /// Handle sign command by parsing UTXOs and signing the transaction
-pub fn handle_sign_command(sub_matches: &ArgMatches, wallet: &BitcoinWallet) -> Result<()> {
+pub async fn handle_sign_command(config: &AppConfig, sub_matches: &ArgMatches, wallet: &BitcoinWallet) -> Result<()> {
     // Get raw transaction hex from arguments
     let raw_tx_hex = sub_matches
         .get_one::<String>("rawtransaction")
         .ok_or_else(|| anyhow!("Missing raw transaction"))?;
 
-    // Get UTXOs JSON string from arguments
-    let utxos_json = sub_matches
-        .get_one::<String>("utxos")
-        .ok_or_else(|| anyhow!("Missing UTXOs data"))?;
-
-    // Parse UTXOs from JSON
-    let utxo_list = parse_utxos_from_json(utxos_json)?;
+    // Get UTXOs - either from command line parameter or API
+    let utxo_list = if let Some(utxos_json) = sub_matches.get_one::<String>("utxos") {
+        // Parse UTXOs from JSON
+        parse_utxos_from_json(utxos_json)?
+    } else {
+        // Fetch UTXOs from API
+        get_utxos_from_api(config, raw_tx_hex).await?
+    };
 
     // Sign the transaction
     let signed_tx = wallet
@@ -668,6 +672,88 @@ fn parse_utxos_from_json(utxos_json: &str) -> Result<bitcoinsigner::UTXOList> {
 
         // Add UTXO to the list
         utxo_list.add(utxo);
+    }
+
+    Ok(utxo_list)
+}
+
+/// Fetch UTXOs information from the API for a given transaction
+async fn get_utxos_from_api(
+    config: &AppConfig, 
+    raw_tx_hex: &str
+) -> Result<bitcoinsigner::UTXOList> {
+    // Decode the transaction from hex
+    let tx_bytes = hex::decode(raw_tx_hex)
+        .map_err(|e| anyhow!("Failed to decode transaction hex: {}", e))?;
+
+    // Parse the transaction
+    let tx: bitcoin::Transaction = bitcoin::consensus::deserialize(&tx_bytes)
+        .map_err(|e| anyhow!("Failed to parse transaction: {}", e))?;
+
+    // Get the inputs from the transaction
+    let inputs = &tx.input;
+    
+    // Create a new UTXO list
+    let mut utxo_list = bitcoinsigner::UTXOList::new();
+    
+    // For each input, fetch the transaction info from the API
+    for input in inputs {
+        let txid = input.previous_output.txid.to_string();
+        let vout = input.previous_output.vout;
+        
+        // Fetch transaction info from API
+        let api_path = format!("/v2/bitcoin/transactions/{}", txid);
+        let result = api::perform_api_request(config, &api_path, &HashMap::new()).await?;
+        
+        // Extract the UTXO information
+        if let Some(tx_result) = result.get("result") {
+            if let Some(vouts) = tx_result.get("vout").and_then(|v| v.as_array()) {
+                // Find the specific vout we need
+                let output = vouts.iter()
+                    .find(|output| {
+                        output.get("n").and_then(|n| n.as_u64()).map_or(false, |n| n == vout as u64)
+                    })
+                    .ok_or_else(|| anyhow!("Vout {} not found in transaction {}", vout, txid))?;
+                
+                // Extract amount (in BTC, need to convert to satoshis)
+                let amount_btc = output.get("value")
+                    .and_then(|v| v.as_f64())
+                    .ok_or_else(|| anyhow!("Missing or invalid amount for input {}:{}", txid, vout))?;
+                
+                // Convert to satoshis (multiply by 10^8)
+                let amount = Decimal::from_str(&amount_btc.to_string())?
+                    .checked_mul(Decimal::from(100_000_000))
+                    .and_then(|d| d.to_u64())
+                    .ok_or_else(|| anyhow::anyhow!("Conversion error"))?;
+                
+                // Extract scriptPubKey
+                let script_pubkey_obj = output.get("scriptPubKey")
+                    .and_then(|s| s.as_object())
+                    .ok_or_else(|| anyhow!("Missing scriptPubKey for input {}:{}", txid, vout))?;
+                
+                let script_pubkey_hex = script_pubkey_obj.get("hex")
+                    .and_then(|h| h.as_str())
+                    .ok_or_else(|| anyhow!("Missing scriptPubKey hex for input {}:{}", txid, vout))?;
+                
+                // Decode script_pubkey
+                let script_pubkey_bytes = hex::decode(script_pubkey_hex)
+                    .map_err(|e| anyhow!("Invalid scriptPubKey hex for input {}:{}: {}", txid, vout, e))?;
+                
+                let script_pubkey = bitcoin::ScriptBuf::from_bytes(script_pubkey_bytes);
+                
+                // Create UTXO
+                let utxo = bitcoinsigner::UTXO::new(amount, script_pubkey);
+                
+                // Add to the list
+                utxo_list.add(utxo);
+            } else {
+                return Err(anyhow!("Missing vout data for transaction {}", txid));
+            }
+        } else if let Some(error) = result.get("error") {
+            return Err(anyhow!("API error fetching transaction {}: {}", txid, error));
+        } else {
+            return Err(anyhow!("Unexpected API response format for transaction {}", txid));
+        }
     }
 
     Ok(utxo_list)
