@@ -15,7 +15,7 @@ pub fn build_command() -> Command {
 
 /// Builds the send_transaction command
 pub fn build_send_transaction_command() -> Command {
-    Command::new("send_transaction").about("Send Counterparty transactions")
+    Command::new("transaction").about("Send Counterparty transactions")
 }
 
 /// Builds the new_address subcommand for generating a random address

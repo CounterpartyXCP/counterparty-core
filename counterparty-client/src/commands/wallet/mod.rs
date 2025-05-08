@@ -40,7 +40,7 @@ pub async fn execute_command(
             // Pass the config directly to the handler
             handlers::handle_address_balances(config, sub_matches).await
         }
-        Some(("send_transaction", send_tx_matches)) => {
+        Some(("transaction", send_tx_matches)) => {
             // Process send_transaction subcommands
             match send_tx_matches.subcommand() {
                 Some((tx_name, sub_matches)) => {
