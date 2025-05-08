@@ -174,12 +174,17 @@ def determine_encoding(data, destinations, construct_params):
             encoding = "multisig"
     else:
         encoding = desired_encoding
-    if len(destinations) > 0 and encoding == "taproot":
-        raise exceptions.ComposeError(
-            "Cannot use `taproot` encoding for transactions with destinations"
-        )
+    if encoding == "taproot":
+        if len(destinations) > 0:
+            raise exceptions.ComposeError(
+                "Cannot use `taproot` encoding for transactions with destinations"
+            )
+        message_type_id, _message = messagetype.unpack(data)
+        if message_type_id == messages.detach.ID:
+            raise exceptions.ComposeError("Cannot use `taproot` encoding for `detach` transaction")
     if encoding not in ("multisig", "opreturn", "taproot"):
         raise exceptions.ComposeError(f"Not supported encoding: {encoding}")
+
     return encoding
 
 
