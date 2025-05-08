@@ -10,12 +10,33 @@ pub fn build_command() -> Command {
         .subcommand(build_list_addresses_command())
         .subcommand(build_address_balances_command())
         .subcommand(build_change_password_command())
+        .subcommand(build_sign_command())
         .subcommand(build_disconnect_command())
 }
 
 /// Builds the send_transaction command
 pub fn build_send_transaction_command() -> Command {
     Command::new("transaction").about("Send Counterparty transactions")
+}
+
+/// Builds the sign transaction command
+pub fn build_sign_command() -> Command {
+    Command::new("sign")
+        .about("Sign a raw Bitcoin transaction without broadcasting")
+        .arg(
+            Arg::new("rawtransaction")
+                .long("rawtransaction")
+                .help("Raw unsigned transaction in hexadecimal format")
+                .required(true)
+                .value_name("HEX"),
+        )
+        .arg(
+            Arg::new("utxos")
+                .long("utxos")
+                .help("JSON array of UTXOs corresponding to inputs in the format [{\"scriptPubKey\":\"hex\",\"amount\":satoshis,\"redeemScript\":\"hex\",\"witnessScript\":\"hex\",\"sourceAddress\":\"addr\",\"leafScript\":\"hex\"}]")
+                .required(true)
+                .value_name("JSON"),
+        )
 }
 
 /// Builds the new_address subcommand for generating a random address

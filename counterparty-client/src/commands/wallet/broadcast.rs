@@ -140,21 +140,21 @@ pub fn add_broadcast_commands(cmd: Command, endpoints: &HashMap<String, ApiEndpo
             let idx = endpoint.args.len();
             let internal_id = format!("__transaction_{}_arg_{}_address", tx_name, idx);
             let static_internal_id: &'static str = Box::leak(internal_id.into_boxed_str());
-            
+
             // Register the ID in the map - CRUCIAL for parameter extraction
             let id_map_key = format!("{}:{}", tx_name, static_internal_id);
             ID_ARG_MAP
                 .lock()
                 .unwrap()
                 .insert(id_map_key, "address".to_string());
-            
+
             // Add the address argument to the command
             tx_cmd = tx_cmd.arg(
                 Arg::new(static_internal_id)
                     .long("address")
                     .help("Destination address for the transaction")
                     .required(true)
-                    .value_name("VALUE")
+                    .value_name("VALUE"),
             );
         }
 

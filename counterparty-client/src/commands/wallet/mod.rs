@@ -62,6 +62,10 @@ pub async fn execute_command(
                 }
             }
         }
+        Some(("sign", sub_matches)) => {
+            // Process sign command
+            transaction::handle_sign_command(sub_matches, wallet)
+        }
         Some(("change_password", sub_matches)) => {
             handlers::handle_change_password(wallet, sub_matches)
         }

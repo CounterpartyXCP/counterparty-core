@@ -29,17 +29,20 @@ fn find_compose_endpoint<'a>(
 
     // Find matching endpoint for the compose function
     let (path, endpoint) = api::find_matching_endpoint(endpoints, &compose_name)?;
-    
+
     // Check if the endpoint already has an address or source parameter
-    let has_address = endpoint.args.iter().any(|arg| arg.name == "address" || arg.name == "source");
-    
+    let has_address = endpoint
+        .args
+        .iter()
+        .any(|arg| arg.name == "address" || arg.name == "source");
+
     if has_address {
         // If it already has an address parameter, just return it
         return Ok((path, endpoint.clone()));
     } else {
         // Otherwise, create a modified endpoint with an address parameter
         let mut modified_endpoint = endpoint.clone();
-        
+
         // Create a new address argument
         let address_arg = ApiEndpointArg {
             name: "address".to_string(),
@@ -49,10 +52,10 @@ fn find_compose_endpoint<'a>(
             default: None,
             members: None,
         };
-        
+
         // Add the address parameter to the endpoint's arguments
         modified_endpoint.args.push(address_arg);
-        
+
         // Return the modified endpoint
         return Ok((path, modified_endpoint));
     }
@@ -554,4 +557,118 @@ pub async fn handle_broadcast_command(
 
     // Broadcast the transaction(s)
     broadcast_transactions(config, &signed_tx, signed_reveal_tx.as_deref()).await
+}
+
+/// Handle sign command by parsing UTXOs and signing the transaction
+pub fn handle_sign_command(sub_matches: &ArgMatches, wallet: &BitcoinWallet) -> Result<()> {
+    // Get raw transaction hex from arguments
+    let raw_tx_hex = sub_matches
+        .get_one::<String>("rawtransaction")
+        .ok_or_else(|| anyhow!("Missing raw transaction"))?;
+
+    // Get UTXOs JSON string from arguments
+    let utxos_json = sub_matches
+        .get_one::<String>("utxos")
+        .ok_or_else(|| anyhow!("Missing UTXOs data"))?;
+
+    // Parse UTXOs from JSON
+    let utxo_list = parse_utxos_from_json(utxos_json)?;
+
+    // Sign the transaction
+    let signed_tx = wallet
+        .sign_transaction(raw_tx_hex, &utxo_list)
+        .map_err(|e| anyhow!("Failed to sign transaction: {}", e))?;
+
+    // Display the signed transaction
+    helpers::print_success("Transaction signed successfully:", None);
+    println!("{}", &signed_tx);
+
+    // Display transaction summary
+    display_transaction_summary(&signed_tx)?;
+
+    Ok(())
+}
+
+/// Parse UTXOs from a JSON string into a UTXOList
+fn parse_utxos_from_json(utxos_json: &str) -> Result<bitcoinsigner::UTXOList> {
+    // Parse the JSON string
+    let utxos_value: serde_json::Value =
+        serde_json::from_str(utxos_json).map_err(|e| anyhow!("Invalid UTXOs JSON: {}", e))?;
+
+    // Ensure it's an array
+    let utxos_array = utxos_value
+        .as_array()
+        .ok_or_else(|| anyhow!("UTXOs must be a JSON array"))?;
+
+    // Create a new UTXOList
+    let mut utxo_list = bitcoinsigner::UTXOList::new();
+
+    // Process each UTXO
+    for (idx, utxo_value) in utxos_array.iter().enumerate() {
+        let utxo_obj = utxo_value
+            .as_object()
+            .ok_or_else(|| anyhow!("UTXO {} is not a valid JSON object", idx))?;
+
+        // Extract required fields
+        let script_pubkey_hex = utxo_obj
+            .get("scriptPubKey")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow!("UTXO {} missing scriptPubKey field", idx))?;
+
+        let amount = utxo_obj
+            .get("amount")
+            .and_then(|v| v.as_u64())
+            .ok_or_else(|| anyhow!("UTXO {} missing amount field or invalid amount", idx))?;
+
+        // Decode script_pubkey
+        let script_pubkey_bytes = hex::decode(script_pubkey_hex)
+            .map_err(|e| anyhow!("Invalid scriptPubKey hex for UTXO {}: {}", idx, e))?;
+
+        let script_pubkey = bitcoin::ScriptBuf::from_bytes(script_pubkey_bytes);
+
+        // Create UTXO
+        let mut utxo = bitcoinsigner::UTXO::new(amount, script_pubkey);
+
+        // Add optional redeem script if present
+        if let Some(redeem_script_val) = utxo_obj.get("redeemScript") {
+            if let Some(redeem_script_hex) = redeem_script_val.as_str() {
+                let redeem_script_bytes = hex::decode(redeem_script_hex)
+                    .map_err(|e| anyhow!("Invalid redeemScript hex for UTXO {}: {}", idx, e))?;
+
+                utxo.redeem_script = Some(bitcoin::ScriptBuf::from_bytes(redeem_script_bytes));
+            }
+        }
+
+        // Add optional witness script if present
+        if let Some(witness_script_val) = utxo_obj.get("witnessScript") {
+            if let Some(witness_script_hex) = witness_script_val.as_str() {
+                let witness_script_bytes = hex::decode(witness_script_hex)
+                    .map_err(|e| anyhow!("Invalid witnessScript hex for UTXO {}: {}", idx, e))?;
+
+                utxo.witness_script = Some(bitcoin::ScriptBuf::from_bytes(witness_script_bytes));
+            }
+        }
+
+        // Add optional leaf script if present (for P2TR script path spending)
+        if let Some(leaf_script_val) = utxo_obj.get("leafScript") {
+            if let Some(leaf_script_hex) = leaf_script_val.as_str() {
+                let leaf_script_bytes = hex::decode(leaf_script_hex)
+                    .map_err(|e| anyhow!("Invalid leafScript hex for UTXO {}: {}", idx, e))?;
+
+                utxo.leaf_script = Some(bitcoin::ScriptBuf::from_bytes(leaf_script_bytes));
+            }
+        }
+
+        // Add optional source address if present
+        if let Some(source_address_val) = utxo_obj.get("sourceAddress") {
+            if let Some(source_address) = source_address_val.as_str() {
+                utxo.source_address = Some(source_address.to_string());
+            }
+        }
+
+        // Add UTXO to the list
+        utxo_list.add(utxo);
+    }
+
+    Ok(utxo_list)
 }
