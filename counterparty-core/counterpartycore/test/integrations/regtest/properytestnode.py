@@ -1,9 +1,12 @@
 import time
 
 import hypothesis
+from bitcoinutils.setup import setup
 from counterpartycore.lib.parser import utxosinfo
 from hypothesis import given
 from regtestnode import RegtestNodeThread
+
+setup("regtest")
 
 
 class PropertyTestNode:
@@ -41,6 +44,30 @@ class PropertyTestNode:
             no_confirmation=True,
             dont_wait_mempool=True,
         )
+        return tx_hash
+
+    def send_taproot_transaction(self, source, transaction_name, params):
+        tx_hash, _block_hash, _block_time, result = self.node.send_transaction(
+            source,
+            transaction_name,
+            params
+            | {
+                "encoding": "taproot",
+            },
+            no_confirmation=True,
+            dont_wait_mempool=True,
+        )
+        print("Broadcasting transaction 0000...")
+        try:
+            result = self.node.bitcoin_wallet(
+                "sendrawtransaction", result["signed_reveal_rawtransaction"], 0
+            ).strip()
+            print("result", result)
+        except Exception as e:
+            print("Error sending transaction:", e)
+
+        print("Broadcasting transaction 1111...")
+
         return tx_hash
 
     def upsert_balance(self, address_or_utxo, asset, quantity, utxo_address=None):

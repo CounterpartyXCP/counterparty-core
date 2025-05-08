@@ -142,6 +142,7 @@ class RegtestNode:
         mempool_event_count_before = self.get_mempool_event_count()
         if not use_rpc:
             tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction, 0).strip()
+            print(f"Transaction hash: {tx_hash}")
         else:
             result = rpc_call("sendrawtransaction", [signed_transaction])
             try:
@@ -302,7 +303,7 @@ class RegtestNode:
                 raise e
         print(f"Transaction sent: {tx_name} {params} ({tx_hash})")
 
-        return tx_hash, block_hash, block_time, result["result"]["data"]
+        return tx_hash, block_hash, block_time, result
 
     def wait_for_counterparty_server(self, block=None):
         target_block = block or self.block_count

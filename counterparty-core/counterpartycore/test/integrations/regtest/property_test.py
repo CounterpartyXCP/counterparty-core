@@ -45,6 +45,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
     def run_tests(self):
         # issue random assets
         self.asset_owners = {}
+        self.last_tx_hash = None
         self.test_with_given_data(
             self.issue_assets,
             hypothesis.strategies.sampled_from(self.addresses),
@@ -133,15 +134,22 @@ class UTXOSupportPropertyTest(PropertyTestNode):
         for balance in self.balances:
             if balance[1] == asset_name or (balance[0] == source and balance[1] != "XCP"):
                 return
-        self.send_transaction(
+
+        inputs_set = None
+        if self.last_tx_hash is not None:
+            inputs_set = f"{self.last_tx_hash}:1"
+        # self.send_transaction(
+        self.last_tx_hash = self.send_taproot_transaction(
             source,
             "issuance",
             {
                 "asset": asset_name,
                 "quantity": quantity,
                 "exact_fee": 0,
+                "inputs_set": inputs_set,
             },
         )
+        print("self.last_tx_hash", self.last_tx_hash)
         self.upsert_balance(source, asset_name, quantity)
         # issuance fee
         self.upsert_balance(source, "XCP", -50000000, None)
