@@ -469,7 +469,7 @@ async fn broadcast_transactions(
 }
 
 /// Handle transaction command by calling the corresponding compose API function
-pub async fn handle_broadcast_command(
+pub async fn handle_transaction_command(
     config: &AppConfig,
     endpoints: &HashMap<String, ApiEndpoint>,
     transaction_name: &str,
@@ -671,4 +671,36 @@ fn parse_utxos_from_json(utxos_json: &str) -> Result<bitcoinsigner::UTXOList> {
     }
 
     Ok(utxo_list)
+}
+
+/// Handle broadcast command to send a signed transaction to the network
+pub async fn handle_broadcast_command(
+    config: &AppConfig,
+    sub_matches: &ArgMatches,
+) -> Result<()> {
+    // Get raw transaction hex from arguments
+    let signed_tx_hex = sub_matches
+        .get_one::<String>("rawtransaction")
+        .ok_or_else(|| anyhow!("Missing raw transaction"))?;
+
+    // Verify that the transaction is valid and properly signed
+    let tx_result = display_transaction_summary(signed_tx_hex);
+    if let Err(e) = tx_result {
+        return Err(anyhow!("Invalid transaction: {}", e));
+    }
+
+    // Ask for confirmation before broadcasting
+    if !confirm_broadcast()? {
+        helpers::print_error("Transaction broadcast aborted", None);
+        return Ok(());
+    }
+
+    // Broadcast the transaction
+    let tx_id = broadcast_transaction(config, signed_tx_hex).await?;
+
+    // Create and display explorer URL for the transaction
+    let explorer_url = get_explorer_url(config.network, &tx_id);
+    helpers::print_success("Transaction broadcasted:", Some(&explorer_url));
+
+    Ok(())
 }

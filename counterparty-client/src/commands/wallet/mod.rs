@@ -44,7 +44,7 @@ pub async fn execute_command(
             // Process send_transaction subcommands
             match send_tx_matches.subcommand() {
                 Some((tx_name, sub_matches)) => {
-                    transaction::handle_broadcast_command(
+                    transaction::handle_transaction_command(
                         config,
                         endpoints,
                         tx_name,
@@ -65,6 +65,10 @@ pub async fn execute_command(
         Some(("sign", sub_matches)) => {
             // Process sign command
             transaction::handle_sign_command(sub_matches, wallet)
+        }
+        Some(("broadcast", sub_matches)) => {
+            // Process broadcast command
+            transaction::handle_broadcast_command(config, sub_matches).await
         }
         Some(("change_password", sub_matches)) => {
             handlers::handle_change_password(wallet, sub_matches)

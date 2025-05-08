@@ -11,6 +11,7 @@ pub fn build_command() -> Command {
         .subcommand(build_address_balances_command())
         .subcommand(build_change_password_command())
         .subcommand(build_sign_command())
+        .subcommand(build_broadcast_command())
         .subcommand(build_disconnect_command())
 }
 
@@ -36,6 +37,19 @@ pub fn build_sign_command() -> Command {
                 .help("JSON array of UTXOs corresponding to inputs in the format [{\"scriptPubKey\":\"hex\",\"amount\":satoshis,\"redeemScript\":\"hex\",\"witnessScript\":\"hex\",\"sourceAddress\":\"addr\",\"leafScript\":\"hex\"}]")
                 .required(true)
                 .value_name("JSON"),
+        )
+}
+
+/// Builds the broadcast transaction command
+pub fn build_broadcast_command() -> Command {
+    Command::new("broadcast")
+        .about("Broadcast a signed Bitcoin transaction to the network")
+        .arg(
+            Arg::new("rawtransaction")
+                .long("rawtransaction")
+                .help("Raw signed transaction in hexadecimal format")
+                .required(true)
+                .value_name("HEX"),
         )
 }
 
