@@ -87,6 +87,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             ),
             hypothesis.strategies.integers(min_value=10 * 1e8, max_value=1000 * 1e8),
             hypothesis.strategies.sampled_from(self.addresses),
+            hypothesis.strategies.booleans(),  # taproot encoding
         )
 
         # test move with counterparty data
@@ -127,6 +128,14 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             hypothesis.strategies.sampled_from(list(self.fairminters.keys())),
             hypothesis.strategies.integers(min_value=1, max_value=1000 * 1e8),  # quantity
             hypothesis.strategies.booleans(),  # taproot encoding
+        )
+
+        # send asset with taproot encoding
+        self.already_used = []
+        self.test_with_given_data(
+            self.send_asset_with_taproot_encoding,
+            hypothesis.strategies.sampled_from(self.balances),
+            hypothesis.strategies.sampled_from(self.addresses),
         )
 
     @settings(deadline=None)
@@ -207,7 +216,9 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             self.upsert_balance(*upsert)
 
     @settings(deadline=None, max_examples=20)
-    def issue_attach_move_detach_send(self, source, asset_name, quantity, destination):
+    def issue_attach_move_detach_send(
+        self, source, asset_name, quantity, destination, taproot_encoding
+    ):
         # don't issue the same asset twice
         # and don't issue twice from the same source
         if asset_name == "XCP":
@@ -228,6 +239,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "exact_fee": 0,
                 "exclude_utxos_with_balances": True,
             },
+            taproot_encoding,
         )
         tx_hash = self.send_transaction(
             source,
@@ -497,6 +509,47 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                     self.upsert_balance(fairminter_source, fairminer_asset, commission)
             self.fairminted.append(fairminter_source)
             self.minters.append(source)
+
+    @settings(deadline=None)
+    def send_asset_with_taproot_encoding(self, balance, destination):
+        source, asset, quantity, utxo_address = balance
+        # don't detach assets not attached or with 0 quantity
+        if utxo_address is not None or quantity == 0:
+            return
+        if source in (self.already_used + [config.UNSPENDABLE_REGTEST, destination]):
+            return
+        if asset == "XCP":
+            return
+        self.already_used.append(source)
+
+        sent_quantity = int(quantity / 2)
+        if sent_quantity == 0:
+            return
+
+        tx_hash = self.send_transaction(
+            source,
+            "send",
+            {
+                "destination": destination,
+                "quantity": sent_quantity,
+                "asset": asset,
+            },
+            taproot_encoding=True,
+        )
+        tx_hash = self.send_transaction(
+            source,
+            "broadcast",
+            {
+                "timestamp": 4003903984,
+                "value": 999,
+                "fee_fraction": 0.0,
+                "text": "Hello, world!",
+                "inputs_set": f"{tx_hash}:1",
+            },
+            taproot_encoding=True,
+        )
+        self.upsert_balance(source, asset, -sent_quantity, None)
+        self.upsert_balance(destination, asset, sent_quantity, None)
 
 
 def test_utxo_support():
