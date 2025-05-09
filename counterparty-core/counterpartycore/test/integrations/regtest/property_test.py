@@ -132,6 +132,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
 
         # send asset with taproot encoding
         self.already_used = []
+        self.in_mempool = {}
         self.test_with_given_data(
             self.send_asset_with_taproot_encoding,
             hypothesis.strategies.sampled_from(self.balances),
@@ -518,12 +519,14 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             return
         if source in (self.already_used + [config.UNSPENDABLE_REGTEST, destination]):
             return
-        if asset == "XCP":
-            return
+
         self.already_used.append(source)
 
+        if source in self.in_mempool:
+            quantity -= self.in_mempool[source]
+
         sent_quantity = int(quantity / 2)
-        if sent_quantity == 0:
+        if sent_quantity <= 0:
             return
 
         tx_hash = self.send_transaction(
@@ -548,6 +551,10 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             },
             taproot_encoding=True,
         )
+        if destination in self.in_mempool:
+            self.in_mempool[destination] += sent_quantity
+        else:
+            self.in_mempool[destination] = sent_quantity
         self.upsert_balance(source, asset, -sent_quantity, None)
         self.upsert_balance(destination, asset, sent_quantity, None)
 
