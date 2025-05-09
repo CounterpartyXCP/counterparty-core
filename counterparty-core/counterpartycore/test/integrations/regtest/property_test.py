@@ -441,11 +441,12 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             return
         if fairminter_source in self.fairminted:
             return
-
         price, quantity_by_price, soft_caped, minted_asset_commission = self.fairminters[
             fairminter_source
         ]
         fixed_quantity = (quantity // quantity_by_price) * quantity_by_price
+        if fixed_quantity == 0:
+            return
         total_price = (D(fixed_quantity) / D(quantity_by_price)) * D(price)
         total_price = int(math.ceil(total_price))
         earn_quantity = fixed_quantity

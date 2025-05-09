@@ -34,6 +34,7 @@ class PropertyTestNode:
             print(regtest_node_thread.node.server_out.getvalue())
             raise e
         finally:
+            # print(regtest_node_thread.node.server_out.getvalue())
             regtest_node_thread.stop()
 
     def send_transaction(self, source, transaction_name, params, taproot_encoding=False):
