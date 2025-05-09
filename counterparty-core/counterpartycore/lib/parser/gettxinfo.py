@@ -177,18 +177,13 @@ def collect_sighash_flags(script_sig, witnesses):
             flags.append(flag)
         return flags
 
-    # P2TR key path spend
-    if len(witnesses) == 1:
+    # P2TR
+    if len(witnesses) == 1 or len(witnesses) == 3:
         flag = get_schnorr_signature_sighash_flag(witnesses[0])
         if flag is not None:
             flags.append(flag)
         return flags
 
-    # Other cases
-    for item in witnesses:
-        flag = get_schnorr_signature_sighash_flag(item) or get_der_signature_sighash_flag(item)
-        if flag is not None:
-            flags.append(flag)
     return flags
 
 
