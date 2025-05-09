@@ -36,7 +36,9 @@ class PropertyTestNode:
         finally:
             regtest_node_thread.stop()
 
-    def send_transaction(self, source, transaction_name, params):
+    def send_transaction(self, source, transaction_name, params, taproot_encoding=False):
+        if taproot_encoding:
+            return self.send_taproot_transaction(source, transaction_name, params)
         tx_hash, _block_hash, _block_time, _data = self.node.send_transaction(
             source,
             transaction_name,
@@ -57,16 +59,11 @@ class PropertyTestNode:
             no_confirmation=True,
             dont_wait_mempool=True,
         )
-        print("Broadcasting transaction 0000...")
-        try:
-            result = self.node.bitcoin_wallet(
-                "sendrawtransaction", result["signed_reveal_rawtransaction"], 0
-            ).strip()
-            print("result", result)
-        except Exception as e:
-            print("Error sending transaction:", e)
-
-        print("Broadcasting transaction 1111...")
+        self.node.broadcast_transaction(
+            result["result"]["signed_reveal_rawtransaction"],
+            no_confirmation=True,
+            dont_wait_mempool=True,
+        )
 
         return tx_hash
 

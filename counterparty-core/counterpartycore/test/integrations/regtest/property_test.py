@@ -45,7 +45,6 @@ class UTXOSupportPropertyTest(PropertyTestNode):
     def run_tests(self):
         # issue random assets
         self.asset_owners = {}
-        self.last_tx_hash = None
         self.test_with_given_data(
             self.issue_assets,
             hypothesis.strategies.sampled_from(self.addresses),
@@ -53,6 +52,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 alphabet="BCDEFGHIJKLMNOPQRSTUVWXYZ", min_size=5, max_size=8
             ),
             hypothesis.strategies.integers(min_value=10 * 1e8, max_value=1000 * 1e8),
+            hypothesis.strategies.booleans(),  # taproot encoding
         )
 
         # attach assets
@@ -115,6 +115,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             hypothesis.strategies.booleans(),  # soft_caped
             hypothesis.strategies.booleans(),  # with_commission
             hypothesis.strategies.integers(min_value=1, max_value=10),  # commission
+            hypothesis.strategies.booleans(),  # taproot encoding
         )
 
         # create fairmints
@@ -125,31 +126,26 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             hypothesis.strategies.sampled_from(self.balances),
             hypothesis.strategies.sampled_from(list(self.fairminters.keys())),
             hypothesis.strategies.integers(min_value=1, max_value=1000 * 1e8),  # quantity
+            hypothesis.strategies.booleans(),  # taproot encoding
         )
 
     @settings(deadline=None)
-    def issue_assets(self, source, asset_name, quantity):
+    def issue_assets(self, source, asset_name, quantity, taproot_encoding):
         # don't issue the same asset twice
         # and don't issue twice from the same source
         for balance in self.balances:
             if balance[1] == asset_name or (balance[0] == source and balance[1] != "XCP"):
                 return
-
-        inputs_set = None
-        if self.last_tx_hash is not None:
-            inputs_set = f"{self.last_tx_hash}:1"
-        # self.send_transaction(
-        self.last_tx_hash = self.send_taproot_transaction(
+        self.send_transaction(
             source,
             "issuance",
             {
                 "asset": asset_name,
                 "quantity": quantity,
                 "exact_fee": 0,
-                "inputs_set": inputs_set,
             },
+            taproot_encoding,
         )
-        print("self.last_tx_hash", self.last_tx_hash)
         self.upsert_balance(source, asset_name, quantity)
         # issuance fee
         self.upsert_balance(source, "XCP", -50000000, None)
@@ -404,7 +400,14 @@ class UTXOSupportPropertyTest(PropertyTestNode):
 
     @settings(deadline=None)
     def create_fairminter(
-        self, source, price, quantity_by_price, soft_caped, with_commission, commission
+        self,
+        source,
+        price,
+        quantity_by_price,
+        soft_caped,
+        with_commission,
+        commission,
+        taproot_encoding,
     ):
         if source in self.fairminters:
             return
@@ -420,11 +423,12 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "soft_cap_deadline_block": 1000 if soft_caped else 0,
                 "minted_asset_commission": minted_asset_commission,
             },
+            taproot_encoding,
         )
         self.fairminters[source] = (price, quantity_by_price, soft_caped, minted_asset_commission)
 
     @settings(deadline=None)
-    def create_fairmints(self, balance_source, fairminter_source, quantity):
+    def create_fairmints(self, balance_source, fairminter_source, quantity, taproot_encoding):
         source, asset, balance, utxo_address = balance_source
         if (
             asset != "XCP"
@@ -462,6 +466,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                         "asset": fairminer_asset,
                         "quantity": fixed_quantity,
                     },
+                    taproot_encoding,
                 )
             except ComposeError as e:
                 assert str(e) == "['insufficient XCP balance']"
@@ -475,6 +480,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                     "asset": fairminer_asset,
                     "quantity": fixed_quantity,
                 },
+                taproot_encoding,
             )
             print(f"Fairminted {fixed_quantity} {fairminer_asset} for {total_price} XCP")
             self.upsert_balance(source, "XCP", -total_price)

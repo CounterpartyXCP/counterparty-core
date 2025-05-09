@@ -142,7 +142,6 @@ class RegtestNode:
         mempool_event_count_before = self.get_mempool_event_count()
         if not use_rpc:
             tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction, 0).strip()
-            print(f"Transaction hash: {tx_hash}")
         else:
             result = rpc_call("sendrawtransaction", [signed_transaction])
             try:
