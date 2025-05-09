@@ -26,6 +26,9 @@ class PropertyTestNode:
 
             print(self.balances)
 
+            self.node.start_electrs()
+            self.node.wait_for_electrs()
+
             self.run_tests()
         except KeyboardInterrupt:
             print(regtest_node_thread.node.server_out.getvalue())
@@ -34,6 +37,7 @@ class PropertyTestNode:
             print(regtest_node_thread.node.server_out.getvalue())
             raise e
         finally:
+            # self.node.stop_electrs()
             # print(regtest_node_thread.node.server_out.getvalue())
             regtest_node_thread.stop()
 
@@ -50,23 +54,26 @@ class PropertyTestNode:
         return tx_hash
 
     def send_taproot_transaction(self, source, transaction_name, params):
-        tx_hash, _block_hash, _block_time, result = self.node.send_transaction(
-            source,
-            transaction_name,
-            params
-            | {
-                "encoding": "taproot",
-            },
-            no_confirmation=True,
-            dont_wait_mempool=True,
-        )
-        self.node.broadcast_transaction(
-            result["result"]["signed_reveal_rawtransaction"],
-            no_confirmation=True,
-            dont_wait_mempool=True,
-        )
+        try:
+            tx_hash, _block_hash, _block_time, result = self.node.send_transaction(
+                source,
+                transaction_name,
+                params
+                | {
+                    "encoding": "taproot",
+                },
+                no_confirmation=True,
+                dont_wait_mempool=True,
+            )
+            reveal_tx_hash = self.node.bitcoin_wallet(
+                "sendrawtransaction", result["result"]["signed_reveal_rawtransaction"], 0
+            ).strip()
+            print(f"Reveal tx hash: {reveal_tx_hash}")
 
-        return tx_hash
+            return tx_hash
+        except Exception as e:
+            print(f"Error sending taproot transaction: {e}")
+            raise
 
     def upsert_balance(self, address_or_utxo, asset, quantity, utxo_address=None):
         # print(f"Upserting balance for {address_or_utxo}: {asset} {quantity}")
