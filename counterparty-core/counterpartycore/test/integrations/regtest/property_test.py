@@ -436,7 +436,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "soft_cap_deadline_block": 1000 if soft_caped else 0,
                 "minted_asset_commission": minted_asset_commission,
             },
-            taproot_encoding=True,
+            taproot_encoding,
         )
         self.fairminters[source] = (price, quantity_by_price, soft_caped, minted_asset_commission)
 
