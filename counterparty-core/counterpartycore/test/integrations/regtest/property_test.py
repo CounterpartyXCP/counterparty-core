@@ -7,7 +7,8 @@ from counterpartycore.lib import config
 from counterpartycore.lib.exceptions import ComposeError
 from counterpartycore.lib.utils import assetnames
 from hypothesis import settings
-from properytestnode import NoUTXOError, PropertyTestNode
+from properytestnode import PropertyTestNode
+from regtestnode import NoUTXOError
 
 MESSAGE_IDS = [
     0,

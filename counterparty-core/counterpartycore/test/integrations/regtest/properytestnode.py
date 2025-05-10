@@ -60,7 +60,6 @@ class PropertyTestNode:
                 source_address = self.get_utxo_address(source)
             else:
                 source_address = source
-            print("Source address", source, source_address)
             source_private_key, _utxo = self.taproot_addresses[source_address]
             source_pubkey = source_private_key.get_public_key()
             source_address = source_pubkey.get_taproot_address()
@@ -81,7 +80,6 @@ class PropertyTestNode:
             # add the witness to the transaction
             tx.witnesses.append(TxWitnessInput([sig]))
             tx_hash = self.node.bitcoin_wallet("sendrawtransaction", tx.serialize(), 0).strip()
-            print("Taproot tx hash", tx_hash)
             return tx_hash
         except Exception as e:
             print(f"Error sign_taproot_transaction {e}")
@@ -106,10 +104,9 @@ class PropertyTestNode:
             tx_hash = self.sign_taproot_transaction(source, result["result"]["rawtransaction"])
 
         if "signed_reveal_rawtransaction" in result["result"]:
-            reveal_tx_hash = self.node.bitcoin_wallet(
+            self.node.bitcoin_wallet(
                 "sendrawtransaction", result["result"]["signed_reveal_rawtransaction"], 0
-            ).strip()
-            print(f"Reveal tx hash: {reveal_tx_hash}")
+            )
 
         return tx_hash
 
@@ -146,7 +143,6 @@ class PropertyTestNode:
             self.node.bitcoin_wallet("signrawtransactionwithwallet", raw_tx).strip()
         )["hex"]
         txid = self.node.bitcoin_wallet("sendrawtransaction", signed_tx, 0).strip()
-        print("Funding txid", txid)
 
         self.node.mine_blocks(1)
 
