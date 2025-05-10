@@ -43,6 +43,11 @@ def D(value):
 
 class UTXOSupportPropertyTest(PropertyTestNode):
     def run_tests(self):
+        print("ADDRESSES")
+        print(self.addresses)
+        print("BALANCES")
+        print(self.balances)
+
         # issue random assets
         self.asset_owners = {}
         self.test_with_given_data(

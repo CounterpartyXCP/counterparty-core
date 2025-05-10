@@ -1,6 +1,9 @@
+import json
+import os
 import time
 
 import hypothesis
+from bitcoinutils.keys import PrivateKey
 from bitcoinutils.setup import setup
 from counterpartycore.lib.parser import utxosinfo
 from hypothesis import given
@@ -17,17 +20,25 @@ class PropertyTestNode:
             while not regtest_node_thread.ready():
                 time.sleep(1)
             self.node = regtest_node_thread.node
-            self.addresses = self.node.addresses[:-1]  # skip last empty legacy address
+            self.addresses = self.node.addresses[0:7]
             self.balances = []
-
-            balances = self.node.api_call("assets/XCP/balances")["result"]
-            for balance in balances:
-                self.balances.append([balance["address"], "XCP", balance["quantity"], None])
-
-            print(self.balances)
 
             self.node.start_electrs()
             self.node.wait_for_electrs()
+
+            self.taproot_addresses = {}
+            for i in range(3):
+                taproot_address, private_key, utxo = self.generate_taproot_funded_address(
+                    self.node.addresses[7 + i]
+                )
+                self.taproot_addresses[taproot_address] = (private_key, utxo)
+
+            balances = self.node.api_call("assets/XCP/balances")["result"]
+            for balance in balances:
+                if balance["address"] in self.addresses:
+                    self.balances.append([balance["address"], "XCP", balance["quantity"], None])
+
+            print(self.balances)
 
             self.run_tests()
         except KeyboardInterrupt:
@@ -42,38 +53,99 @@ class PropertyTestNode:
             regtest_node_thread.stop()
 
     def send_transaction(self, source, transaction_name, params, taproot_encoding=False):
-        if taproot_encoding:
-            return self.send_taproot_transaction(source, transaction_name, params)
-        tx_hash, _block_hash, _block_time, _data = self.node.send_transaction(
-            source,
-            transaction_name,
-            params,
-            no_confirmation=True,
-            dont_wait_mempool=True,
-        )
-        return tx_hash
-
-    def send_taproot_transaction(self, source, transaction_name, params):
         try:
+            tx_params = params.copy()
+            if taproot_encoding:
+                tx_params["encoding"] = "taproot"
+
             tx_hash, _block_hash, _block_time, result = self.node.send_transaction(
                 source,
                 transaction_name,
-                params
-                | {
-                    "encoding": "taproot",
-                },
+                tx_params,
                 no_confirmation=True,
                 dont_wait_mempool=True,
             )
-            reveal_tx_hash = self.node.bitcoin_wallet(
-                "sendrawtransaction", result["result"]["signed_reveal_rawtransaction"], 0
-            ).strip()
-            print(f"Reveal tx hash: {reveal_tx_hash}")
 
-            return tx_hash
+            if "signed_reveal_rawtransaction" in result["result"]:
+                reveal_tx_hash = self.node.bitcoin_wallet(
+                    "sendrawtransaction", result["result"]["signed_reveal_rawtransaction"], 0
+                ).strip()
+                print(f"Reveal tx hash: {reveal_tx_hash}")
         except Exception as e:
-            print(f"Error sending taproot transaction: {e}")
+            print(f"Error sending transaction: {e}")
             raise
+
+        return tx_hash
+
+    def generate_taproot_funded_address(self, funding_address):
+        print("Generating taproot funded address")
+
+        random = os.urandom(32)
+        source_private_key = PrivateKey(b=random)
+        source_pubkey = source_private_key.get_public_key()
+        source_address = source_pubkey.get_taproot_address()
+        print("Source address", source_address.to_string())
+        print("Source script_pub_key", source_address.to_script_pub_key().to_hex())
+        print("funding address", funding_address)
+
+        # send some BTC to the source address
+        list_unspent = json.loads(
+            self.node.bitcoin_cli("listunspent", 0, 9999999, json.dumps([funding_address])).strip()
+        )
+        inputs = []
+        amount = 0
+        for utxo in list_unspent:
+            inputs.append(
+                {
+                    "txid": utxo["txid"],
+                    "vout": int(utxo["vout"]),
+                }
+            )
+            amount += utxo["amount"]
+        outputs = [{source_address.to_string(): amount - 1}, {funding_address: 1}]
+        raw_tx = self.node.bitcoin_wallet(
+            "createrawtransaction", json.dumps(inputs), json.dumps(outputs)
+        ).strip()
+        signed_tx = json.loads(
+            self.node.bitcoin_wallet("signrawtransactionwithwallet", raw_tx).strip()
+        )["hex"]
+        txid = self.node.bitcoin_wallet("sendrawtransaction", signed_tx, 0).strip()
+        print("Funding txid", txid)
+
+        self.node.mine_blocks(1)
+
+        raw_tx = json.loads(self.node.bitcoin_cli("getrawtransaction", txid, 1).strip())
+
+        n = None
+        change_n = None
+        for i, vout in enumerate(raw_tx["vout"]):
+            if vout["scriptPubKey"]["address"] == source_address.to_string():
+                n = i
+            else:
+                change_n = i
+        if n is None:
+            raise Exception("Could not find the vout for the source address")
+
+        # send some XCP to the source address
+        self.node.send_transaction(
+            funding_address,
+            "send",
+            {
+                "destination": source_address.to_string(),
+                "quantity": 10 * 10**8,
+                "asset": "XCP",
+                "inputs_set": f"{txid}:{change_n}",
+            },
+        )
+        return (
+            source_address.to_string(),
+            source_private_key,
+            {
+                "txid": txid,
+                "n": n,
+                "value": int(1 * 10**8),
+            },
+        )
 
     def upsert_balance(self, address_or_utxo, asset, quantity, utxo_address=None):
         # print(f"Upserting balance for {address_or_utxo}: {asset} {quantity}")

@@ -354,12 +354,13 @@ class RegtestNode:
         return block_hash, block_time
 
     def generate_addresses_with_btc(self):
-        for i in range(10):
+        for _i in range(10):
             address = self.bitcoin_wallet("getnewaddress", WALLET_NAME, "bech32").strip()
-            print(f"Address {i}: {address}")
             self.addresses.append(address)
             self.mine_blocks(1, address)
         self.addresses.sort()
+        for i in range(10):
+            print(f"Address {i}: {self.addresses[i]}")
         empty_address = self.bitcoin_wallet("getnewaddress", WALLET_NAME, "legacy").strip()
         self.addresses.append(empty_address)
         print(f"Empty address: {empty_address}")
