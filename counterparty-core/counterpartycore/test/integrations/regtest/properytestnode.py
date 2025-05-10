@@ -4,10 +4,12 @@ import time
 
 import hypothesis
 from bitcoinutils.keys import PrivateKey
+from bitcoinutils.script import Script
 from bitcoinutils.setup import setup
+from bitcoinutils.transactions import Transaction, TxWitnessInput
 from counterpartycore.lib.parser import utxosinfo
 from hypothesis import given
-from regtestnode import RegtestNodeThread
+from regtestnode import RegtestNodeThread, SignTransactionError
 
 setup("regtest")
 
@@ -32,13 +34,14 @@ class PropertyTestNode:
                     self.node.addresses[7 + i]
                 )
                 self.taproot_addresses[taproot_address] = (private_key, utxo)
+                self.addresses.append(taproot_address)
 
             balances = self.node.api_call("assets/XCP/balances")["result"]
             for balance in balances:
                 if balance["address"] in self.addresses:
                     self.balances.append([balance["address"], "XCP", balance["quantity"], None])
 
-            print(self.balances)
+            self.utxo_to_address = {}
 
             self.run_tests()
         except KeyboardInterrupt:
@@ -48,16 +51,48 @@ class PropertyTestNode:
             print(regtest_node_thread.node.server_out.getvalue())
             raise e
         finally:
-            # self.node.stop_electrs()
             # print(regtest_node_thread.node.server_out.getvalue())
             regtest_node_thread.stop()
 
-    def send_transaction(self, source, transaction_name, params, taproot_encoding=False):
+    def sign_taproot_transaction(self, source, rawtransaction):
         try:
-            tx_params = params.copy()
-            if taproot_encoding:
-                tx_params["encoding"] = "taproot"
+            if ":" in source:
+                source_address = self.get_utxo_address(source)
+            else:
+                source_address = source
+            print("Source address", source, source_address)
+            source_private_key, _utxo = self.taproot_addresses[source_address]
+            source_pubkey = source_private_key.get_public_key()
+            source_address = source_pubkey.get_taproot_address()
+            # sign commit tx
+            tx = Transaction.from_raw(rawtransaction)
+            tx.has_segwit = True
+            # retrieve script_pub_key and amount
+            source_tx = json.loads(
+                self.node.bitcoin_cli("getrawtransaction", tx.inputs[0].txid, 1).strip()
+            )
+            script_pubkey = Script.from_raw(
+                source_tx["vout"][tx.inputs[0].txout_index]["scriptPubKey"]["hex"]
+            )
+            value = int(source_tx["vout"][tx.inputs[0].txout_index]["value"] * 10**8)
+            # sign the input
+            sig = source_private_key.sign_taproot_input(tx, 0, [script_pubkey], [value])
 
+            # add the witness to the transaction
+            tx.witnesses.append(TxWitnessInput([sig]))
+            tx_hash = self.node.bitcoin_wallet("sendrawtransaction", tx.serialize(), 0).strip()
+            print("Taproot tx hash", tx_hash)
+            return tx_hash
+        except Exception as e:
+            print(f"Error sign_taproot_transaction {e}")
+            raise
+
+    def send_transaction(self, source, transaction_name, params, taproot_encoding=False):
+        tx_params = params.copy() | {"disable_utxo_locks": True}
+        if taproot_encoding:
+            tx_params["encoding"] = "taproot"
+
+        try:
             tx_hash, _block_hash, _block_time, result = self.node.send_transaction(
                 source,
                 transaction_name,
@@ -65,15 +100,16 @@ class PropertyTestNode:
                 no_confirmation=True,
                 dont_wait_mempool=True,
             )
+        except SignTransactionError as e:
+            print(f"Error signing transaction, trying manually: {e}")
+            result = e.result
+            tx_hash = self.sign_taproot_transaction(source, result["result"]["rawtransaction"])
 
-            if "signed_reveal_rawtransaction" in result["result"]:
-                reveal_tx_hash = self.node.bitcoin_wallet(
-                    "sendrawtransaction", result["result"]["signed_reveal_rawtransaction"], 0
-                ).strip()
-                print(f"Reveal tx hash: {reveal_tx_hash}")
-        except Exception as e:
-            print(f"Error sending transaction: {e}")
-            raise
+        if "signed_reveal_rawtransaction" in result["result"]:
+            reveal_tx_hash = self.node.bitcoin_wallet(
+                "sendrawtransaction", result["result"]["signed_reveal_rawtransaction"], 0
+            ).strip()
+            print(f"Reveal tx hash: {reveal_tx_hash}")
 
         return tx_hash
 
@@ -157,6 +193,14 @@ class PropertyTestNode:
 
     def get_utxos_balances(self):
         return [balance for balance in self.balances if utxosinfo.is_utxo_format(balance[0])]
+
+    def get_utxo_address(self, utxo):
+        for balance in self.balances:
+            if balance[0] == utxo:
+                return balance[3]
+        if utxo in self.utxo_to_address:
+            return self.utxo_to_address[utxo]
+        raise Exception(f"UTXO {utxo} not found in balances")
 
     def check_balance(self, balance):
         address_or_utxo, asset, quantity, utxo_address = balance

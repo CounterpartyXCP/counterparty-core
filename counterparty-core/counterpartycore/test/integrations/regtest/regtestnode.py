@@ -26,6 +26,16 @@ setup("regtest")
 WALLET_NAME = "xcpwallet"
 
 
+class SignTransactionError(Exception):
+    def __init__(self, message, result):
+        super().__init__(message)
+        self.result = result
+
+
+class NoUTXOError(Exception):
+    pass
+
+
 def rpc_call(method, params):
     headers = {"content-type": "application/json"}
     payload = {
@@ -170,6 +180,8 @@ class RegtestNode:
             self.bitcoin_cli("listunspent", 0, 9999999, json.dumps([source])).strip()
         )
         sorted(list_unspent, key=lambda x: -x["amount"])
+        if len(list_unspent) == 0:
+            raise NoUTXOError("No UTXO available")
         utxo = list_unspent[0]
 
         tx_inputs = [TxInput(utxo["txid"], utxo["vout"])]
@@ -275,7 +287,10 @@ class RegtestNode:
         signed_transaction_json = rpc_call("signrawtransactionwithwallet", [raw_transaction])[
             "result"
         ]
-        # print(f"Signed transaction: {signed_transaction_json}")
+
+        if signed_transaction_json["complete"] is False:
+            raise SignTransactionError("Sign transaction error", result)
+
         signed_transaction = signed_transaction_json["hex"]
         try:
             tx_hash, block_hash, block_time = self.broadcast_transaction(

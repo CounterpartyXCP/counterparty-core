@@ -7,7 +7,7 @@ from counterpartycore.lib import config
 from counterpartycore.lib.exceptions import ComposeError
 from counterpartycore.lib.utils import assetnames
 from hypothesis import settings
-from properytestnode import PropertyTestNode
+from properytestnode import NoUTXOError, PropertyTestNode
 
 MESSAGE_IDS = [
     0,
@@ -209,9 +209,12 @@ class UTXOSupportPropertyTest(PropertyTestNode):
 
     @settings(deadline=None)
     def invalid_transaction(self, source, message_id, data):
-        utxo, tx_hash = self.node.compose_and_send_transaction(
-            source, message_id, data, no_confirmation=True, dont_wait_mempool=True
-        )
+        try:
+            utxo, tx_hash = self.node.compose_and_send_transaction(
+                source, message_id, data, no_confirmation=True, dont_wait_mempool=True
+            )
+        except NoUTXOError:
+            return
         upserts = []
         # check if no utxo moves
         for address_or_utxo, asset, quantity, utxo_address in self.balances:
@@ -259,6 +262,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "inputs_set": f"{tx_hash}:1",
             },
         )
+        self.utxo_to_address[f"{tx_hash}:0"] = source
         tx_hash = self.send_transaction(
             f"{tx_hash}:0",
             "movetoutxo",
@@ -270,6 +274,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "inputs_set": f"{tx_hash}:0",
             },
         )
+        self.utxo_to_address[f"{tx_hash}:0"] = source
         tx_hash = self.send_transaction(
             f"{tx_hash}:0",
             "movetoutxo",
@@ -281,6 +286,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "inputs_set": f"{tx_hash}:0",
             },
         )
+        self.utxo_to_address[f"{tx_hash}:0"] = source
         tx_hash = self.send_transaction(
             f"{tx_hash}:0",
             "detach",
@@ -290,6 +296,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "inputs_set": f"{tx_hash}:0",
             },
         )
+        self.utxo_to_address[f"{tx_hash}:0"] = source
 
         # issuance fee
         self.upsert_balance(source, "XCP", -50000000, None)
@@ -356,6 +363,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "utxo_value": 10000,
             },
         )
+        self.utxo_to_address[f"{tx_hash}:0"] = utxo_address
         tx_hash = self.send_transaction(
             utxo_address,
             "order",
