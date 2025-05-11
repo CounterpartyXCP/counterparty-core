@@ -275,13 +275,14 @@ def run_item(node, item, context):
                 )
                 tx_hash, block_hash, block_time = node.broadcast_transaction(signed_transaction)
             else:
-                tx_hash, block_hash, block_time, tx_data = node.send_transaction(
+                tx_hash, block_hash, block_time, tx_result = node.send_transaction(
                     item["source"],
                     item["transaction"],
                     item["params"],
                     no_confirmation=no_confirmation,
                     dont_wait_mempool=dont_wait_mempool,
                 )
+                tx_data = tx_result["result"]["data"]
             # test that the mempool is properly cleaned after each regtest transaction is confirmed
             if not no_confirmation:
                 while True:

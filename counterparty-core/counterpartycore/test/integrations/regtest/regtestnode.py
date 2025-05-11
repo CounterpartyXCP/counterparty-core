@@ -26,6 +26,16 @@ setup("regtest")
 WALLET_NAME = "xcpwallet"
 
 
+class SignTransactionError(Exception):
+    def __init__(self, message, result):
+        super().__init__(message)
+        self.result = result
+
+
+class NoUTXOError(Exception):
+    pass
+
+
 def rpc_call(method, params):
     headers = {"content-type": "application/json"}
     payload = {
@@ -170,6 +180,8 @@ class RegtestNode:
             self.bitcoin_cli("listunspent", 0, 9999999, json.dumps([source])).strip()
         )
         sorted(list_unspent, key=lambda x: -x["amount"])
+        if len(list_unspent) == 0:
+            raise NoUTXOError("No UTXO available")
         utxo = list_unspent[0]
 
         tx_inputs = [TxInput(utxo["txid"], utxo["vout"])]
@@ -275,7 +287,10 @@ class RegtestNode:
         signed_transaction_json = rpc_call("signrawtransactionwithwallet", [raw_transaction])[
             "result"
         ]
-        # print(f"Signed transaction: {signed_transaction_json}")
+
+        if signed_transaction_json["complete"] is False:
+            raise SignTransactionError("Sign transaction error", result)
+
         signed_transaction = signed_transaction_json["hex"]
         try:
             tx_hash, block_hash, block_time = self.broadcast_transaction(
@@ -302,7 +317,7 @@ class RegtestNode:
                 raise e
         print(f"Transaction sent: {tx_name} {params} ({tx_hash})")
 
-        return tx_hash, block_hash, block_time, result["result"]["data"]
+        return tx_hash, block_hash, block_time, result
 
     def wait_for_counterparty_server(self, block=None):
         target_block = block or self.block_count
@@ -354,12 +369,13 @@ class RegtestNode:
         return block_hash, block_time
 
     def generate_addresses_with_btc(self):
-        for i in range(10):
+        for _i in range(10):
             address = self.bitcoin_wallet("getnewaddress", WALLET_NAME, "bech32").strip()
-            print(f"Address {i}: {address}")
             self.addresses.append(address)
             self.mine_blocks(1, address)
         self.addresses.sort()
+        for i in range(10):
+            print(f"Address {i}: {self.addresses[i]}")
         empty_address = self.bitcoin_wallet("getnewaddress", WALLET_NAME, "legacy").strip()
         self.addresses.append(empty_address)
         print(f"Empty address: {empty_address}")

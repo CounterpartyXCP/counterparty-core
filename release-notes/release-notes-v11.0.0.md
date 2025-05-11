@@ -75,6 +75,8 @@ counterparty-server start
 - Fix `is_segwit` value in `get_vin_info`
 - Fix `apsw.IOError` when using `--rebuild-state-db` flag
 - Fix round error in inputs values when composing transaction
+- Fix Fairminter validation
+- Fix SIGHASH collecting
 
 ## Codebase
 
