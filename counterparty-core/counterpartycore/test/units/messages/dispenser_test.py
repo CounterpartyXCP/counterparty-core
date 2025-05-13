@@ -189,6 +189,14 @@ def test_compose(ledger_db, defaults):
         b"\x0c\x00\x00\x00\x00\n\xa4\t}\x00\x00\x00\x00\x00\x00\x00d\x00\x00\x00\x00;\x9a\xca\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
     )
 
+    assert dispenser.compose(
+        ledger_db, defaults["addresses"][0], "PARENT.already.issued", 1, 1, 1, 0
+    ) == (
+        defaults["addresses"][0],
+        [],
+        b'\x0c\x01S\x08"\x06\xe4c%\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00',
+    )
+
 
 def test_compose_with_oracle(ledger_db, defaults, monkeypatch):
     monkeypatch.setattr(dispenser, "calculate_oracle_fee", lambda *args: 0)
