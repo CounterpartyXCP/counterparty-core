@@ -77,6 +77,7 @@ counterparty-server start
 - Fix round error in inputs values when composing transaction
 - Fix Fairminter validation
 - Fix SIGHASH collecting
+- Fix create dispenser using subasset name
 
 ## Codebase
 
