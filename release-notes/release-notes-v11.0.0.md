@@ -9,6 +9,10 @@ Counterparty Core v11.0.0 is a large release with numerous protocol upgrades and
 - Allow `soft_cap` to be equal to `hard_cap` with Fairminters
 - Add `max_mint_per_address` parameter to Fairminters (API parameter: `max_mint_per_address`)
 
+**Important**
+
+Fixing the bech32 and taproot address handling requires a full database re-run to correct invalid addresses in the balances table. Since addresses are used to calculate ledger_hash and txlist_hash, all hashes and checkpoints have been updated.
+
 
 # Upgrading
 
