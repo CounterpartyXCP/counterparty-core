@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v11.0.0 (2025-03-??)
+# Release Notes - Counterparty Core v11.0.0 (2025-05-14)
 
 Counterparty Core v11.0.0 is a large release with numerous protocol upgrades and many miscellaneous improvements to the API, CLI and codebase, including significantly increased test coverage.
 
@@ -9,16 +9,11 @@ Counterparty Core v11.0.0 is a large release with numerous protocol upgrades and
 - Allow `soft_cap` to be equal to `hard_cap` with Fairminters
 - Add `max_mint_per_address` parameter to Fairminters (API parameter: `max_mint_per_address`)
 
-**Important**
-
-Fixing the bech32 and taproot address handling requires a full database re-run to correct invalid addresses in the balances table. Since addresses are used to calculate ledger_hash and txlist_hash, all hashes and checkpoints have been updated.
-
-
 # Upgrading
 
 **This release is a protocol upgrade. All nodes must upgrade by block 898800.**
 
-Please note: This update requires a full database re-run. This operation takes approximately 7 hours on an M3 Mac.
+**Important** A bug in Bech32 and Taproot address handling introduced in 2018 caused these addresses to be stored in the database incorrectly. As part of fixing this, and adding proper support for P2WSH and P2TR address types, a full database reparse is required. This operation takes approximately 7 hours on an M3 Mac. As a consequence, Counterparty Core >= v11.0.0 will have all consensus hashes and checkpoints updated retroactively.
 
 **Upgrade Instructions:**
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
