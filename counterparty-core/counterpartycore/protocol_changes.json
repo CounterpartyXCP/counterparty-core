@@ -1005,7 +1005,7 @@
         "minimum_version_major": 11,
         "minimum_version_minor": 0,
         "minimum_version_revision": 0,
-        "block_index": 899700,
+        "block_index": 900000,
         "testnet3_block_index": 4361000,
         "testnet4_block_index": 82500
     },
@@ -1013,7 +1013,7 @@
         "minimum_version_major": 11,
         "minimum_version_minor": 0,
         "minimum_version_revision": 0,
-        "block_index": 899700,
+        "block_index": 900000,
         "testnet3_block_index": 4361000,
         "testnet4_block_index": 82500
     },
@@ -1021,7 +1021,7 @@
         "minimum_version_major": 11,
         "minimum_version_minor": 0,
         "minimum_version_revision": 0,
-        "block_index": 899700,
+        "block_index": 900000,
         "testnet3_block_index": 4361000,
         "testnet4_block_index": 82500
     },
@@ -1029,7 +1029,7 @@
         "minimum_version_major": 11,
         "minimum_version_minor": 0,
         "minimum_version_revision": 0,
-        "block_index": 899700,
+        "block_index": 900000,
         "testnet3_block_index": 4361000,
         "testnet4_block_index": 82500
     }
