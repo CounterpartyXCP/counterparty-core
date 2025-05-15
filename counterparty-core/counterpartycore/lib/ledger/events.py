@@ -228,6 +228,8 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
 
 
 def append_to_ledger_hash(block_index, address, asset, quantity):
+    # Before checkpoint 500000 we don't want the hash to change.
+    # Afterwards the hash changes anyway, so we also truncate the multisg addresses.
     if multisig.is_multisig(address) and not protocol.enabled("truncate_multisig_address"):
         truncated_address = address
     else:
