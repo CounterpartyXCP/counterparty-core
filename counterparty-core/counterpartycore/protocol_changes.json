@@ -1032,5 +1032,13 @@
         "block_index": 899700,
         "testnet3_block_index": 4361000,
         "testnet4_block_index": 82500
+    },
+    "truncate_multisig_address": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 0,
+        "minimum_version_revision": 0,
+        "block_index": 500001,
+        "testnet3_block_index": 0,
+        "testnet4_block_index": 0
     }
 }
