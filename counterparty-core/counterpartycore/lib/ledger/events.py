@@ -9,7 +9,7 @@ from counterpartycore.lib.ledger.balances import get_balance
 from counterpartycore.lib.ledger.caches import AssetCache, UTXOBalancesCache
 from counterpartycore.lib.ledger.currentstate import ConsensusHashBuilder, CurrentState
 from counterpartycore.lib.parser import protocol, utxosinfo
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import helpers, multisig
 
 
 @contextmanager
@@ -227,6 +227,22 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
         balance_cursor.execute(query, bindings)
 
 
+def append_to_ledger_hash(block_index, address, asset, quantity):
+    # Before checkpoint 500000 we don't want the hash to change.
+    # Afterwards the hash changes anyway, so we also truncate the multisg addresses.
+    if (
+        address is not None
+        and multisig.is_multisig(address)
+        and not protocol.enabled("truncate_multisig_address")
+    ):
+        truncated_address = address
+    else:
+        truncated_address = str(address)[:36]
+    ConsensusHashBuilder().append_to_block_ledger(
+        f"{block_index}{truncated_address}{asset}{quantity}"
+    )
+
+
 def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     """Debit given address by quantity of asset."""
     block_index = CurrentState().current_block_index()
@@ -269,9 +285,8 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     }
     insert_record(db, "debits", bindings, "DEBIT")
 
-    ConsensusHashBuilder().append_to_block_ledger(
-        f"{block_index}{str(address)[0:36]}{asset}{quantity}"
-    )
+    append_to_ledger_hash(block_index, address, asset, quantity)
+
     return utxo_address
 
 
@@ -348,9 +363,7 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
     }
     insert_record(db, "credits", bindings, "CREDIT")
 
-    ConsensusHashBuilder().append_to_block_ledger(
-        f"{block_index}{str(address)[0:36]}{asset}{quantity}"
-    )
+    append_to_ledger_hash(block_index, address, asset, quantity)
 
     return utxo_address
 
