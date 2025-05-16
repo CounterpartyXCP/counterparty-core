@@ -4,6 +4,7 @@ import os
 
 from counterpartycore.lib import config
 from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.utils import multisig
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -92,3 +93,16 @@ def is_test_network():
 
 def after_block_or_test_network(tx_block_index, target_block_index):
     return tx_block_index >= target_block_index or is_test_network()
+
+
+def prepare_address_for_consensus_hash(address):
+    # Before checkpoint 500000 we don't want the hash to change.
+    # Afterwards the hash changes anyway, so we also truncate the multisg addresses.
+    if (
+        address is not None
+        and multisig.is_multisig(address)
+        and not enabled("truncate_multisig_address")
+    ):
+        return address
+    else:
+        return str(address)[:36]

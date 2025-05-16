@@ -351,8 +351,10 @@ def parse_block(
         try:
             parse_tx(db, tx)
             data = binascii.hexlify(tx["data"]).decode("UTF-8") if tx["data"] else ""
+            truncated_source = protocol.prepare_address_for_consensus_hash(tx["source"])
+            truncated_destination = protocol.prepare_address_for_consensus_hash(tx["destination"])
             txlist.append(
-                f"{tx['tx_hash']}{str(tx['source'])[0:36]}{str(tx['destination'])[0:36]}{tx['btc_amount']}{tx['fee']}{data}"
+                f"{tx['tx_hash']}{truncated_source}{truncated_destination}{tx['btc_amount']}{tx['fee']}{data}"
             )
         except exceptions.ParseTransactionError as e:
             logger.warning("ParseTransactionError for tx %s: %s", tx["tx_hash"], e)
