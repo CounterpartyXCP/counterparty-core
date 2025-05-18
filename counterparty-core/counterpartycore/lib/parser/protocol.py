@@ -100,7 +100,7 @@ def prepare_address_for_consensus_hash(address):
     # Afterwards the hash changes anyway, so we also truncate the multisg addresses.
     if (
         address is not None
-        and (multisig.is_multisig(address) or "-" in str(address))
+        and (multisig.is_multisig(str(address)) or "-" in str(address))
         and not enabled("truncate_multisig_address")
     ):
         return address
