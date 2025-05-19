@@ -9,7 +9,7 @@ from counterpartycore.lib.ledger.balances import get_balance
 from counterpartycore.lib.ledger.caches import AssetCache, UTXOBalancesCache
 from counterpartycore.lib.ledger.currentstate import ConsensusHashBuilder, CurrentState
 from counterpartycore.lib.parser import protocol, utxosinfo
-from counterpartycore.lib.utils import helpers, multisig
+from counterpartycore.lib.utils import helpers
 
 
 @contextmanager
@@ -228,16 +228,7 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
 
 
 def append_to_ledger_hash(block_index, address, asset, quantity):
-    # Before checkpoint 500000 we don't want the hash to change.
-    # Afterwards the hash changes anyway, so we also truncate the multisg addresses.
-    if (
-        address is not None
-        and multisig.is_multisig(address)
-        and not protocol.enabled("truncate_multisig_address")
-    ):
-        truncated_address = address
-    else:
-        truncated_address = str(address)[:36]
+    truncated_address = protocol.prepare_address_for_consensus_hash(address)
     ConsensusHashBuilder().append_to_block_ledger(
         f"{block_index}{truncated_address}{asset}{quantity}"
     )
