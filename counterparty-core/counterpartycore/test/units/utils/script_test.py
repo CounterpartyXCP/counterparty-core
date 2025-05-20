@@ -6,6 +6,8 @@ import bitcoin as bitcoinlib
 from bitcoin import bech32 as bech32lib
 from bitcoinutils.keys import PrivateKey
 from counterparty_rs import utils
+from counterpartycore.lib import config
+from counterpartycore.lib.parser import gettxinfo
 from counterpartycore.lib.parser.gettxinfo import get_checksig
 from counterpartycore.lib.utils import script
 from counterpartycore.lib.utils.opcodes import *  # noqa: F403
@@ -212,3 +214,30 @@ def test_taproot_script_to_address():
     print("Check address", check_address)
 
     assert source_address.to_string() == check_address
+
+
+def test_script_to_address_py(monkeypatch):
+    original_network = config.NETWORK_NAME
+    config.NETWORK_NAME = "mainnet"
+    monkeypatch.setattr(
+        "counterpartycore.lib.parser.protocol.enabled", lambda *args, **kwargs: False
+    )
+
+    script_pubkey = binascii.unhexlify(
+        "51200f9dab1a72f7c48da8a1df2f913bef649bfc0d77072dffd11329b8048293d7a3"
+    )
+
+    assert (
+        gettxinfo.script_to_address(script_pubkey) == "bc1pp7w6kxnj7lzgm29pmuhezwl0vjdlcrth0ugtv7"
+    )
+
+    monkeypatch.setattr(
+        "counterpartycore.lib.parser.protocol.enabled", lambda *args, **kwargs: True
+    )
+
+    assert (
+        gettxinfo.script_to_address(script_pubkey)
+        == "bc1pp7w6kxnj7lzgm29pmuhezwl0vjdlcrthqukll5gn9xuqfq5n673smy4m63"
+    )
+
+    config.NETWORK_NAME = original_network
