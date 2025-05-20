@@ -29,8 +29,6 @@ UPGRADE_ACTIONS = {
         "10.8.0": [("rollback", 871780)],
         "10.9.0-rc.1": [("rollback", 871780)],
         "10.9.0": [("rollback", 871780)],
-        "11.0.0-beta.1": [("reparse", 0)],
-        "11.0.0": [("reparse", 0)],
     },
     "testnet3": {
         "10.3.0": [("reparse", 0)],
@@ -41,13 +39,9 @@ UPGRADE_ACTIONS = {
         "10.9.0-rc.1": [("rollback", 3522632)],
         "10.9.0": [("rollback", 3522632)],
         "10.10.0": [("rollback", 3522632)],
-        "11.0.0-beta.1": [("reparse", 0)],
-        "11.0.0": [("reparse", 0)],
     },
     "testnet4": {
         "10.10.0": [("rollback", 64492)],
-        "11.0.0-beta.1": [("reparse", 0)],
-        "11.0.0": [("reparse", 0)],
     },
 }
 
