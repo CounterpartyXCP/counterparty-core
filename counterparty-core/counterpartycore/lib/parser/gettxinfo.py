@@ -266,7 +266,10 @@ def get_transaction_sources(decoded_tx):
             protocol.enabled("taproot_support") and asm[0] == b"\x01"
         ):
             # Segwit output
-            new_source = script.script_to_address(script_pubkey)
+            if protocol.enabled("taproot_support"):
+                new_source = script.script_to_address(script_pubkey)
+            else:
+                new_source = script.script_to_address_legacy(script_pubkey)
             new_data = None
         else:
             raise DecodeError("unrecognised source type")
