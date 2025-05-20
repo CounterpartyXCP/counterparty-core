@@ -37,4 +37,4 @@ def script_to_address(scriptpubkey):
 
 
 def script_to_address_legacy(scriptpubkey):
-    _script_to_address(scriptpubkey, use_legacy=True)
+    return _script_to_address(scriptpubkey, use_legacy=True)
