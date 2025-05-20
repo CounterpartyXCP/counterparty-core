@@ -152,6 +152,7 @@ def test_decode_p2w():
         "0020dcbc2340bd1f6cc3ab0a3887020647ec471a279e3c889fb4414df30e3dd59f96"
     )
     assert decode_p2w(script_pubkey) == ("bc1qmj7zxs9arakv82c28zrsypj8a3r35fu7pure55", None)
+    assert decode_p2w(script_pubkey)[0] == utils.script_to_address_legacy(script_pubkey, "mainnet")
     assert (
         decode_p2w(script_pubkey)[0] == "bc1qmj7zxs9arakv82c28zrsypj8a3r35fu7pure55"
     )  # instead bc1qmj7zxs9arakv82c28zrsypj8a3r35fu78jyfldzpfhesu0w4n7tqw23az4
@@ -160,6 +161,7 @@ def test_decode_p2w():
         "0020dfe1739dc0711f64ced999a2306691ff98fff038b2f40aec2b5ae917610ea0ac"
     )
     assert decode_p2w(script_pubkey) == ("bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupc6q5xx6", None)
+    assert decode_p2w(script_pubkey)[0] == utils.script_to_address_legacy(script_pubkey, "mainnet")
     assert (
         decode_p2w(script_pubkey)[0] == "bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupc6q5xx6"
     )  # instead bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupckt6q4mpttt53wcgw5zkqyw35cd
@@ -171,6 +173,10 @@ def test_decode_p2w():
     assert (
         utils.script_to_address(script_pubkey, "mainnet")
         == "bc1pp7w6kxnj7lzgm29pmuhezwl0vjdlcrthqukll5gn9xuqfq5n673smy4m63"
+    )
+    assert (
+        utils.script_to_address_legacy(script_pubkey, "mainnet")
+        == "bc1pp7w6kxnj7lzgm29pmuhezwl0vjdlcrth0ugtv7"
     )
     # incorrect address
     assert (
@@ -185,6 +191,11 @@ def test_decode_p2w():
     assert (
         utils.script_to_address(script_pubkey, "mainnet")
         == "bc1qwzrryqr3ja8w7hnja2spmkgfdcgvqwp5swz4af4ngsjecfz0w0pqud7k38"
+    )
+
+    assert (
+        utils.script_to_address_legacy(script_pubkey, "mainnet")
+        == "bc1qwzrryqr3ja8w7hnja2spmkgfdcgvqwp5wgm2h7"
     )
 
 
