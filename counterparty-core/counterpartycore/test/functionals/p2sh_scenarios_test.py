@@ -41,7 +41,7 @@ def test_p2sh_scenario_4(empty_ledger_db, bitcoind_mock, defaults):
         defaults,
         defaults["p2sh_addresses"][0],
         defaults["p2tr_addresses"][0],
-        "73bf8f3dfb2290285989b721876cbe40beadff7bff5116e3200b7cf9fb9afc55",
+        "49481efecf705d45fca78fc950df39e165eaaf6d27f7ee3ddd4b0e07ac00d679",
     )
 
 
@@ -52,5 +52,5 @@ def test_p2sh_scenario_5(empty_ledger_db, bitcoind_mock, defaults):
         defaults,
         defaults["p2tr_addresses"][0],
         defaults["p2sh_addresses"][0],
-        "d2bfeca5ce081a015353a9f9537e643f5480db6f23ce809dee1fb944049487c0",
+        "c54754424db5d9bae72e705a7b7421c08eec192cfc901d257c82166ef52342bb",
     )

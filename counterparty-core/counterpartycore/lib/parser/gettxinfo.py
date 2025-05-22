@@ -235,6 +235,12 @@ def check_signatures_sighash_flag(decoded_tx):
             raise SighashFlagError(error)
 
 
+def script_to_address(script_pubkey):
+    if protocol.enabled("taproot_support"):
+        return script.script_to_address(script_pubkey)
+    return script.script_to_address_legacy(script_pubkey)
+
+
 def get_transaction_sources(decoded_tx):
     sources = []
     outputs_value = 0
@@ -266,7 +272,7 @@ def get_transaction_sources(decoded_tx):
             protocol.enabled("taproot_support") and asm[0] == b"\x01"
         ):
             # Segwit output
-            new_source = script.script_to_address(script_pubkey)
+            new_source = script_to_address(script_pubkey)
             new_data = None
         else:
             raise DecodeError("unrecognised source type")

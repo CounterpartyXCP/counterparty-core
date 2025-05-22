@@ -228,10 +228,7 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
 
 
 def append_to_ledger_hash(block_index, address, asset, quantity):
-    truncated_address = protocol.prepare_address_for_consensus_hash(address)
-    ConsensusHashBuilder().append_to_block_ledger(
-        f"{block_index}{truncated_address}{asset}{quantity}"
-    )
+    ConsensusHashBuilder().append_to_block_ledger(f"{block_index}{address}{asset}{quantity}")
 
 
 def debit(db, address, asset, quantity, tx_index, action=None, event=None):

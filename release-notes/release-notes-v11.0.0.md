@@ -13,10 +13,6 @@ Counterparty Core v11.0.0 is a large release with numerous protocol upgrades and
 
 **This release is a protocol upgrade. All nodes must upgrade by block 900000.**
 
-**Important** A bug in Bech32 and Taproot address handling introduced in 2018 caused these addresses to be stored in the database incorrectly. As part of fixing this, and adding proper support for P2WSH and P2TR address types, a full database reparse is required. This operation takes approximately 7 hours on an M3 Mac. As a consequence, Counterparty Core >= v11.0.0 will have all consensus hashes and checkpoints updated retroactively.
-
-**Note** The new hashes are calculated by truncating the addresses to a maximum of 36 characters. To ensure 100% accuracy of the new hashes, they were calculated before any code changes.
-
 **Upgrade Instructions:**
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
 
@@ -83,7 +79,6 @@ counterparty-server start
 ## Codebase
 
 - Improve test coverage by 10% (from ~78% to ~88%)
-- Update ledger-hash checkpoints using truncated addresses
 - Clean up hard-coded protocol changes throughout codebase
 - Optimize `APSWConnectionPool`
 - Add `mime_type` to `issuances`, `fairminters` and `broadcasts` tables

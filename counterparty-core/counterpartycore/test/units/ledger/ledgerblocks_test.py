@@ -11,11 +11,11 @@ def test_blocks_functions(ledger_db, current_block_index):
     assert last_block["block_index"] == current_block_index
     assert (
         last_block["ledger_hash"]
-        == "f6b2b412e0d3eeba5e7b700dded887912563055c19ba89b77b24bfbefca4da28"
+        == "3b2bef139d2b964e8833e42546016ba32481541b18d8c64cbc899e440d386f1f"
     )
     assert (
         last_block["txlist_hash"]
-        == "ade6c2f7b84c85d98bba42b3ab7d5f254fa43e2fb00116e92ea430d11614f618"
+        == "8fba3ce017f4f6e87987d75218c16996961fce70ad4433f49d0715940ddb7f4e"
     )
 
     assert blocks.last_db_index(ledger_db) == current_block_index
@@ -28,11 +28,11 @@ def test_blocks_functions(ledger_db, current_block_index):
     assert last_block["block_index"] == current_block_index
     assert (
         last_block["ledger_hash"]
-        == "f6b2b412e0d3eeba5e7b700dded887912563055c19ba89b77b24bfbefca4da28"
+        == "3b2bef139d2b964e8833e42546016ba32481541b18d8c64cbc899e440d386f1f"
     )
     assert (
         last_block["txlist_hash"]
-        == "ade6c2f7b84c85d98bba42b3ab7d5f254fa43e2fb00116e92ea430d11614f618"
+        == "8fba3ce017f4f6e87987d75218c16996961fce70ad4433f49d0715940ddb7f4e"
     )
 
     assert (

@@ -112,8 +112,8 @@ impl Heights {
                 p2sh_dispensers: 2163328,
                 correct_segwit_txids: 1666625,
                 multisig_addresses: 0,
-                taproot_support: 5000000,
-                fix_is_segwit: 5000000,
+                taproot_support: 4500000,
+                fix_is_segwit: 4500000,
             },
             Network::Testnet4 => Heights {
                 segwit: 0,
@@ -121,8 +121,8 @@ impl Heights {
                 p2sh_dispensers: 0,
                 correct_segwit_txids: 0,
                 multisig_addresses: 0,
-                taproot_support: 80000,
-                fix_is_segwit: 80000,
+                taproot_support: 90000,
+                fix_is_segwit: 90000,
             },
             Network::Regtest => Heights {
                 segwit: 0,
