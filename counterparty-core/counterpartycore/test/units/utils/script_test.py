@@ -6,6 +6,8 @@ import bitcoin as bitcoinlib
 from bitcoin import bech32 as bech32lib
 from bitcoinutils.keys import PrivateKey
 from counterparty_rs import utils
+from counterpartycore.lib import config
+from counterpartycore.lib.parser import gettxinfo
 from counterpartycore.lib.parser.gettxinfo import get_checksig
 from counterpartycore.lib.utils import script
 from counterpartycore.lib.utils.opcodes import *  # noqa: F403
@@ -152,6 +154,7 @@ def test_decode_p2w():
         "0020dcbc2340bd1f6cc3ab0a3887020647ec471a279e3c889fb4414df30e3dd59f96"
     )
     assert decode_p2w(script_pubkey) == ("bc1qmj7zxs9arakv82c28zrsypj8a3r35fu7pure55", None)
+    assert decode_p2w(script_pubkey)[0] == utils.script_to_address_legacy(script_pubkey, "mainnet")
     assert (
         decode_p2w(script_pubkey)[0] == "bc1qmj7zxs9arakv82c28zrsypj8a3r35fu7pure55"
     )  # instead bc1qmj7zxs9arakv82c28zrsypj8a3r35fu78jyfldzpfhesu0w4n7tqw23az4
@@ -160,6 +163,7 @@ def test_decode_p2w():
         "0020dfe1739dc0711f64ced999a2306691ff98fff038b2f40aec2b5ae917610ea0ac"
     )
     assert decode_p2w(script_pubkey) == ("bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupc6q5xx6", None)
+    assert decode_p2w(script_pubkey)[0] == utils.script_to_address_legacy(script_pubkey, "mainnet")
     assert (
         decode_p2w(script_pubkey)[0] == "bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupc6q5xx6"
     )  # instead bc1qmlsh88wqwy0kfnkenx3rqe53l7v0lupckt6q4mpttt53wcgw5zkqyw35cd
@@ -171,6 +175,10 @@ def test_decode_p2w():
     assert (
         utils.script_to_address(script_pubkey, "mainnet")
         == "bc1pp7w6kxnj7lzgm29pmuhezwl0vjdlcrthqukll5gn9xuqfq5n673smy4m63"
+    )
+    assert (
+        utils.script_to_address_legacy(script_pubkey, "mainnet")
+        == "bc1pp7w6kxnj7lzgm29pmuhezwl0vjdlcrth0ugtv7"
     )
     # incorrect address
     assert (
@@ -187,6 +195,11 @@ def test_decode_p2w():
         == "bc1qwzrryqr3ja8w7hnja2spmkgfdcgvqwp5swz4af4ngsjecfz0w0pqud7k38"
     )
 
+    assert (
+        utils.script_to_address_legacy(script_pubkey, "mainnet")
+        == "bc1qwzrryqr3ja8w7hnja2spmkgfdcgvqwp5wgm2h7"
+    )
+
 
 def test_taproot_script_to_address():
     random = os.urandom(32)
@@ -201,3 +214,30 @@ def test_taproot_script_to_address():
     print("Check address", check_address)
 
     assert source_address.to_string() == check_address
+
+
+def test_script_to_address_py(monkeypatch):
+    original_network = config.NETWORK_NAME
+    config.NETWORK_NAME = "mainnet"
+    monkeypatch.setattr(
+        "counterpartycore.lib.parser.protocol.enabled", lambda *args, **kwargs: False
+    )
+
+    script_pubkey = binascii.unhexlify(
+        "51200f9dab1a72f7c48da8a1df2f913bef649bfc0d77072dffd11329b8048293d7a3"
+    )
+
+    assert (
+        gettxinfo.script_to_address(script_pubkey) == "bc1pp7w6kxnj7lzgm29pmuhezwl0vjdlcrth0ugtv7"
+    )
+
+    monkeypatch.setattr(
+        "counterpartycore.lib.parser.protocol.enabled", lambda *args, **kwargs: True
+    )
+
+    assert (
+        gettxinfo.script_to_address(script_pubkey)
+        == "bc1pp7w6kxnj7lzgm29pmuhezwl0vjdlcrthqukll5gn9xuqfq5n673smy4m63"
+    )
+
+    config.NETWORK_NAME = original_network

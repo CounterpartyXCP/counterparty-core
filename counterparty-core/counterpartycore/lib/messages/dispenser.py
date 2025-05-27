@@ -263,8 +263,8 @@ def compose(
     )
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
-
-    asset_id = ledger.issuances.generate_asset_id(asset)
+    if asset_id is None:
+        asset_id = ledger.issuances.generate_asset_id(asset)
     destination = []
     data = messagetype.pack(ID)
     data += struct.pack(FORMAT, asset_id, give_quantity, escrow_quantity, mainchainrate, status)
