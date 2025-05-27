@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v11.0.0 (2025-03-??)
+# Release Notes - Counterparty Core v11.0.0 (2025-05-14)
 
 Counterparty Core v11.0.0 is a large release with numerous protocol upgrades and many miscellaneous improvements to the API, CLI and codebase, including significantly increased test coverage.
 
@@ -9,12 +9,9 @@ Counterparty Core v11.0.0 is a large release with numerous protocol upgrades and
 - Allow `soft_cap` to be equal to `hard_cap` with Fairminters
 - Add `max_mint_per_address` parameter to Fairminters (API parameter: `max_mint_per_address`)
 
-
 # Upgrading
 
-**This release is a protocol upgrade. All nodes must upgrade by block 898800.**
-
-Please note: This update requires a full database re-run. This operation takes approximately 7 hours on an M3 Mac.
+**This release is a protocol upgrade. All nodes must upgrade by block 900000.**
 
 **Upgrade Instructions:**
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
@@ -75,11 +72,13 @@ counterparty-server start
 - Fix `is_segwit` value in `get_vin_info`
 - Fix `apsw.IOError` when using `--rebuild-state-db` flag
 - Fix round error in inputs values when composing transaction
+- Fix Fairminter validation
+- Fix SIGHASH collecting
+- Fix create dispenser using subasset name
 
 ## Codebase
 
 - Improve test coverage by 10% (from ~78% to ~88%)
-- Update ledger-hash checkpoints using truncated addresses
 - Clean up hard-coded protocol changes throughout codebase
 - Optimize `APSWConnectionPool`
 - Add `mime_type` to `issuances`, `fairminters` and `broadcasts` tables

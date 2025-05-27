@@ -177,18 +177,28 @@ def collect_sighash_flags(script_sig, witnesses):
             flags.append(flag)
         return flags
 
-    # P2TR key path spend
-    if len(witnesses) == 1:
-        flag = get_schnorr_signature_sighash_flag(witnesses[0])
-        if flag is not None:
-            flags.append(flag)
+    if protocol.enabled("taproot_support"):
+        # P2TR
+        if len(witnesses) == 1 or len(witnesses) > 2:
+            flag = get_schnorr_signature_sighash_flag(witnesses[0])
+            if flag is not None:
+                flags.append(flag)
+            return flags
+    else:
+        # P2TR key path spend
+        if len(witnesses) == 1:
+            flag = get_schnorr_signature_sighash_flag(witnesses[0])
+            if flag is not None:
+                flags.append(flag)
+            return flags
+
+        # Other cases
+        for item in witnesses:
+            flag = get_schnorr_signature_sighash_flag(item) or get_der_signature_sighash_flag(item)
+            if flag is not None:
+                flags.append(flag)
         return flags
 
-    # Other cases
-    for item in witnesses:
-        flag = get_schnorr_signature_sighash_flag(item) or get_der_signature_sighash_flag(item)
-        if flag is not None:
-            flags.append(flag)
     return flags
 
 
@@ -225,6 +235,12 @@ def check_signatures_sighash_flag(decoded_tx):
             raise SighashFlagError(error)
 
 
+def script_to_address(script_pubkey):
+    if protocol.enabled("taproot_support"):
+        return script.script_to_address(script_pubkey)
+    return script.script_to_address_legacy(script_pubkey)
+
+
 def get_transaction_sources(decoded_tx):
     sources = []
     outputs_value = 0
@@ -256,7 +272,7 @@ def get_transaction_sources(decoded_tx):
             protocol.enabled("taproot_support") and asm[0] == b"\x01"
         ):
             # Segwit output
-            new_source = script.script_to_address(script_pubkey)
+            new_source = script_to_address(script_pubkey)
             new_data = None
         else:
             raise DecodeError("unrecognised source type")

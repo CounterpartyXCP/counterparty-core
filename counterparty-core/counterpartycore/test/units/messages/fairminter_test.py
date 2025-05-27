@@ -21,6 +21,26 @@ def test_validate(ledger_db, defaults):
         == []
     )
 
+    assert fairminter.validate(
+        ledger_db,
+        defaults["addresses"][1],  # source
+        "XCP",  # asset
+        "",  # asset_parent,
+        0,  # price=0,
+        1,  # quantity_by_price,
+        10,  # max_mint_per_tx,
+    ) == ["`XCP` can't be fairminted."]
+
+    assert fairminter.validate(
+        ledger_db,
+        defaults["addresses"][1],  # source
+        "BTC",  # asset
+        "",  # asset_parent,
+        0,  # price=0,
+        1,  # quantity_by_price,
+        10,  # max_mint_per_tx,
+    ) == ["`BTC` can't be fairminted."]
+
     assert (
         fairminter.validate(
             ledger_db,

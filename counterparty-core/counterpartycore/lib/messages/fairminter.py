@@ -40,6 +40,9 @@ def validate(
 ):
     problems = []
 
+    if asset in (config.XCP, config.BTC):
+        problems.append(f"`{asset}` can't be fairminted.")
+
     # check integer parameters
     for param_name, param_value in {
         "price": price,

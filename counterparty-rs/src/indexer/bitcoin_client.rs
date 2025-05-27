@@ -4,7 +4,7 @@ use std::iter::repeat;
 use std::thread::JoinHandle;
 
 use crate::b58::b58_encode;
-use crate::utils::script_to_address;
+use crate::utils::{script_to_address, script_to_address_legacy};
 use bitcoin::{
     consensus::serialize,
     hashes::{hex::prelude::*, ripemd160, sha256, sha256d::Hash as Sha256dHash, Hash},
@@ -388,10 +388,18 @@ fn parse_vout(
     } else if (config.segwit_supported(height) && is_valid_segwit_script_legacy(&vout.script_pubkey)) || 
                 (config.taproot_support_enabled(height) && is_valid_segwit_script(&vout.script_pubkey)) || 
                 (config.taproot_support_enabled(height) && vout.script_pubkey.is_p2tr()) {
-        let destination = script_to_address(
-            vout.script_pubkey.as_bytes().to_vec(),
-            config.network.to_string().as_str(),
-        )
+        
+         let destination = if config.taproot_support_enabled(height) {
+            script_to_address(
+                vout.script_pubkey.as_bytes().to_vec(),
+                config.network.to_string().as_str(),
+            )
+        } else {
+            script_to_address_legacy(
+                vout.script_pubkey.as_bytes().to_vec(),
+                config.network.to_string().as_str(),
+            )
+        }
         .map_err(|e| Error::ParseVout(format!("Segwit script to address failed: {}", e)))?;
         let mut potential_dispenser = Some(PotentialDispenser {
             destination: None,
