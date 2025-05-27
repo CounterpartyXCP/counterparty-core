@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v11.0.0 (2025-05-14)
+# Release Notes - Counterparty Core v11.0.0 (2025-05-27)
 
 Counterparty Core v11.0.0 is a large release with numerous protocol upgrades and many miscellaneous improvements to the API, CLI and codebase, including significantly increased test coverage.
 
