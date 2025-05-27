@@ -48,6 +48,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                 "log_file": config.FETCHER_LOG,
                 "json_format": config.JSON_LOGS,
                 "only_write_in_reorg_window": True,
+                "enable_all_protocol_changes": config.ENABLE_ALL_PROTOCOL_CHANGES,
             }
             if (
                 isinstance(config.LOG_EXCLUDE_FILTERS, list)
@@ -173,7 +174,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                             break  # Break out of the inner loop after successfully putting the block
                         except queue.Full:
                             logger.debug("Prefetch queue is full; waiting...")
-                            time.sleep(0.1)
+                            self.stopped_event.wait(timeout=0.1)
                 elif not self.stopped_event.is_set():
                     retry += 1
                     logger.debug(

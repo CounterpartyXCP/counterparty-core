@@ -464,6 +464,21 @@ def test_compose_invalid(ledger_db, defaults):
             None,
         )
 
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(f"Address not supported by MPMA send: {defaults['p2tr_addresses'][1]}"),
+    ):
+        mpma.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            [
+                ("XCP", defaults["addresses"][2], defaults["quantity"]),
+                ("XCP", defaults["p2tr_addresses"][1], 0.1),
+            ],
+            None,
+            None,
+        )
+
 
 def test_parse_2_sends(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
@@ -486,7 +501,7 @@ def test_parse_2_sends(ledger_db, blockchain_mock, defaults, test_helpers, curre
                     "asset": "XCP",
                     "quantity": defaults["quantity"],
                     "status": "valid",
-                    "msg_index": 1,
+                    "msg_index": 0,
                     "fee_paid": 0,
                     "send_type": "send",
                     "memo": None,
@@ -503,7 +518,7 @@ def test_parse_2_sends(ledger_db, blockchain_mock, defaults, test_helpers, curre
                     "asset": "XCP",
                     "quantity": defaults["quantity"],
                     "status": "valid",
-                    "msg_index": 2,
+                    "msg_index": 1,
                     "fee_paid": 0,
                     "send_type": "send",
                     "memo": None,
@@ -569,7 +584,7 @@ def test_parse_2_sends_with_memo(
                     "asset": "XCP",
                     "quantity": defaults["quantity"],
                     "status": "valid",
-                    "msg_index": 1,
+                    "msg_index": 0,
                     "fee_paid": 0,
                     "send_type": "send",
                     "memo": binascii.unhexlify("DEADBEEF"),
@@ -586,7 +601,7 @@ def test_parse_2_sends_with_memo(
                     "asset": "XCP",
                     "quantity": defaults["quantity"],
                     "status": "valid",
-                    "msg_index": 2,
+                    "msg_index": 1,
                     "fee_paid": 0,
                     "send_type": "send",
                     "memo": binascii.unhexlify("DEADBEEF"),
@@ -650,7 +665,7 @@ def test_parse_2_assets(ledger_db, blockchain_mock, defaults, test_helpers, curr
                     "asset": "DIVISIBLE",
                     "quantity": defaults["quantity"],
                     "status": "valid",
-                    "msg_index": 1,
+                    "msg_index": 0,
                     "fee_paid": 0,
                     "send_type": "send",
                 },
@@ -666,7 +681,7 @@ def test_parse_2_assets(ledger_db, blockchain_mock, defaults, test_helpers, curr
                     "asset": "XCP",
                     "quantity": defaults["quantity"],
                     "status": "valid",
-                    "msg_index": 2,
+                    "msg_index": 1,
                     "fee_paid": 0,
                     "send_type": "send",
                 },

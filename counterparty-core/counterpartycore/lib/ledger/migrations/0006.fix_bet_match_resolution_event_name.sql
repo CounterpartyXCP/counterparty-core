@@ -1,0 +1,9 @@
+
+DROP TRIGGER IF EXISTS block_update_messages;
+
+UPDATE messages SET event = 'BET_MATCH_RESOLUTION' WHERE event = 'BET_MATCH_RESOLUTON';
+
+CREATE TRIGGER IF NOT EXISTS block_update_messages
+    BEFORE UPDATE ON messages BEGIN
+        SELECT RAISE(FAIL, "UPDATES NOT ALLOWED");
+    END;

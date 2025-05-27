@@ -6,8 +6,12 @@ from counterpartycore.test.integrations.locustrunner import run_locust
 
 
 def test_load():
-    sh_counterparty_server, db_file, api_url = reparsetest.prepare("mainnet")
-    sh_counterparty_server("bootstrap")
+    sh_counterparty_server, db_file, _api_url = reparsetest.prepare("mainnet")
+    sh_counterparty_server(
+        "bootstrap",
+        "--bootstrap-url",
+        "https://storage.googleapis.com/counterparty-bootstrap/counterparty.db.v11.0.0.zst",
+    )
 
     try:
         out = StringIO()

@@ -6,7 +6,7 @@ x-bitcoind-common: &bitcoind-common
   restart: unless-stopped
 
 x-counterparty-common: &counterparty-common
-  image: counterparty/counterparty:v10.10.1
+  image: counterparty/counterparty:v11.0.0
   stop_grace_period: 1m
   volumes:
     - data:/root/.bitcoin
@@ -43,7 +43,6 @@ services:
       - "-txindex=1"
       - "-prune=0"
       - "-dbcache=4000"
-      - "-mempoolfullrbf=1"
       - "-zmqpubrawtx=tcp://0.0.0.0:9332"
       - "-zmqpubhashtx=tcp://0.0.0.0:9332"
       - "-zmqpubsequence=tcp://0.0.0.0:9332"
@@ -91,7 +90,6 @@ services:
       - "-txindex=1"
       - "-prune=0"
       - "-dbcache=4000"
-      - "-mempoolfullrbf=1"
       - "-zmqpubrawtx=tcp://0.0.0.0:19332"
       - "-zmqpubhashtx=tcp://0.0.0.0:19332"
       - "-zmqpubsequence=tcp://0.0.0.0:19332"
@@ -140,7 +138,6 @@ services:
       - "-txindex=1"
       - "-prune=0"
       - "-dbcache=4000"
-      - "-mempoolfullrbf=1"
       - "-zmqpubrawtx=tcp://0.0.0.0:49332"
       - "-zmqpubhashtx=tcp://0.0.0.0:49332"
       - "-zmqpubsequence=tcp://0.0.0.0:49332"
@@ -190,7 +187,6 @@ services:
       - "-txindex=1"
       - "-prune=0"
       - "-dbcache=4000"
-      - "-mempoolfullrbf=1"
       - "-zmqpubrawtx=tcp://0.0.0.0:29332"
       - "-zmqpubhashtx=tcp://0.0.0.0:29332"
       - "-zmqpubsequence=tcp://0.0.0.0:29332"

@@ -35,7 +35,7 @@ def generate_mainnet_fixtures(db_file):
             "SELECT * FROM broadcasts ORDER BY rowid DESC LIMIT 1"
         ).fetchone()
         last_fairminter = db.execute(
-            "SELECT * FROM fairminters ORDER BY rowid DESC LIMIT 1"
+            "SELECT * FROM fairminters WHERE status = 'open' ORDER BY rowid DESC LIMIT 1"
         ).fetchone()
         last_fairmint = db.execute("SELECT * FROM fairmints ORDER BY rowid DESC LIMIT 1").fetchone()
         asset, asset1, asset2 = "XCP", "PEPECASH", "FAIREST"
@@ -313,7 +313,7 @@ if __name__ == "__main__":
     run_locust(
         os.path.expanduser("~/.local/share/counterparty/counterparty.db"),
         duration=None,
-        wait_time=locust.between(0.1, 0.3),
-        user_count=5,
+        wait_time=locust.between(0.3, 0.6),
+        user_count=1,
         stats_printer=False,
     )

@@ -11,6 +11,7 @@ import time
 import urllib.parse
 from io import StringIO
 
+import requests
 import sh
 from arc4 import ARC4
 from bitcoinutils.keys import P2wpkhAddress
@@ -23,6 +24,35 @@ from counterpartycore.lib.utils import database
 setup("regtest")
 
 WALLET_NAME = "xcpwallet"
+
+
+class SignTransactionError(Exception):
+    def __init__(self, message, result):
+        super().__init__(message)
+        self.result = result
+
+
+class NoUTXOError(Exception):
+    pass
+
+
+def rpc_call(method, params):
+    headers = {"content-type": "application/json"}
+    payload = {
+        "method": method,
+        "params": params,
+        "jsonrpc": "2.0",
+        "id": 0,
+    }
+    response = requests.post(
+        "http://localhost:18443/",
+        data=json.dumps(payload),
+        headers=headers,
+        auth=("rpc", "rpc"),
+        timeout=20,
+    )
+    result = response.json()
+    return result
 
 
 class RegtestNode:
@@ -73,10 +103,17 @@ class RegtestNode:
         self.electrs_process_2_pid = None
         self.second_node_started = False
 
-    def api_call(self, url):
-        result = sh.curl(f"http://localhost:24000/v2/{url}").strip()
-        # print(result)
-        return json.loads(result)
+    def api_call(self, url, data=None):
+        if data is not None:
+            result = requests.post(
+                f"http://localhost:24000/v2/{url}",
+                data=data,
+                timeout=20,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+        else:
+            result = requests.get(f"http://localhost:24000/v2/{url}", timeout=20)
+        return result.json()
 
     def get_mempool_event_count(self):
         result = self.api_call("mempool/events")
@@ -105,10 +142,23 @@ class RegtestNode:
             os.remove(regtest_protocole_file)
 
     def broadcast_transaction(
-        self, signed_transaction, no_confirmation=False, dont_wait_mempool=False, retry=0
+        self,
+        signed_transaction,
+        no_confirmation=False,
+        dont_wait_mempool=False,
+        retry=0,
+        use_rpc=False,
     ):
         mempool_event_count_before = self.get_mempool_event_count()
-        tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction, 0).strip()
+        if not use_rpc:
+            tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction, 0).strip()
+        else:
+            result = rpc_call("sendrawtransaction", [signed_transaction])
+            try:
+                tx_hash = result["result"]
+            except KeyError as e:
+                print(result)
+                raise ValueError(result["error"]["message"]) from e
         if not no_confirmation:
             block_hash, block_time = self.mine_blocks(1)
         else:
@@ -130,6 +180,8 @@ class RegtestNode:
             self.bitcoin_cli("listunspent", 0, 9999999, json.dumps([source])).strip()
         )
         sorted(list_unspent, key=lambda x: -x["amount"])
+        if len(list_unspent) == 0:
+            raise NoUTXOError("No UTXO available")
         utxo = list_unspent[0]
 
         tx_inputs = [TxInput(utxo["txid"], utxo["vout"])]
@@ -166,7 +218,11 @@ class RegtestNode:
 
     def compose(self, source, tx_name, params):
         query_string = []
+        data = None
         for key, value in params.items():
+            if key == "description":
+                data = {key: value}
+                continue
             if not isinstance(value, list):
                 query_string.append(urllib.parse.urlencode({key: value}))
             else:
@@ -178,7 +234,8 @@ class RegtestNode:
             compose_url = f"utxos/{source}/compose/{tx_name}?{query_string}"
         else:
             compose_url = f"addresses/{source}/compose/{tx_name}?{query_string}"
-        return self.api_call(compose_url)
+        print("Compose URL:", compose_url, data)
+        return self.api_call(compose_url, data=data)
 
     def send_transaction(
         self,
@@ -188,7 +245,9 @@ class RegtestNode:
         return_only_data=False,
         no_confirmation=False,
         dont_wait_mempool=False,
+        return_result=False,
         retry=0,
+        use_rpc=False,
     ):
         self.wait_for_counterparty_server()
 
@@ -218,15 +277,27 @@ class RegtestNode:
             raise exceptions.ComposeError(result["error"])
         if return_only_data:
             return result["result"]["data"]
+        if return_result:
+            return result["result"]
         raw_transaction = result["result"]["rawtransaction"]
         # print(f"Raw transaction: {raw_transaction}")
-        signed_transaction_json = self.bitcoin_wallet(
-            "signrawtransactionwithwallet", raw_transaction
-        ).strip()
-        signed_transaction = json.loads(signed_transaction_json)["hex"]
+        # signed_transaction_json = self.bitcoin_wallet(
+        #    "signrawtransactionwithwallet", raw_transaction
+        # ).strip()
+        signed_transaction_json = rpc_call("signrawtransactionwithwallet", [raw_transaction])[
+            "result"
+        ]
+
+        if signed_transaction_json["complete"] is False:
+            raise SignTransactionError("Sign transaction error", result)
+
+        signed_transaction = signed_transaction_json["hex"]
         try:
             tx_hash, block_hash, block_time = self.broadcast_transaction(
-                signed_transaction, no_confirmation, dont_wait_mempool=dont_wait_mempool
+                signed_transaction,
+                no_confirmation,
+                dont_wait_mempool=dont_wait_mempool,
+                use_rpc=use_rpc,
             )
         except sh.ErrorReturnCode_25 as e:
             if retry < 6:
@@ -245,7 +316,8 @@ class RegtestNode:
             else:
                 raise e
         print(f"Transaction sent: {tx_name} {params} ({tx_hash})")
-        return tx_hash, block_hash, block_time, result["result"]["data"]
+
+        return tx_hash, block_hash, block_time, result
 
     def wait_for_counterparty_server(self, block=None):
         target_block = block or self.block_count
@@ -297,12 +369,13 @@ class RegtestNode:
         return block_hash, block_time
 
     def generate_addresses_with_btc(self):
-        for i in range(10):
+        for _i in range(10):
             address = self.bitcoin_wallet("getnewaddress", WALLET_NAME, "bech32").strip()
-            print(f"Address {i}: {address}")
             self.addresses.append(address)
             self.mine_blocks(1, address)
         self.addresses.sort()
+        for i in range(10):
+            print(f"Address {i}: {self.addresses[i]}")
         empty_address = self.bitcoin_wallet("getnewaddress", WALLET_NAME, "legacy").strip()
         self.addresses.append(empty_address)
         print(f"Empty address: {empty_address}")

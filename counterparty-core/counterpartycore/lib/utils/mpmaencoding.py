@@ -32,7 +32,8 @@ def _encode_construct_lut(sends):
 
 def _encode_compress_lut(lut):
     return b"".join(
-        [struct.pack(">H", len(lut["addrs"]))] + [address.pack(addr) for addr in lut["addrs"]]
+        [struct.pack(">H", len(lut["addrs"]))]
+        + [address.pack_legacy(addr) for addr in lut["addrs"]]
     )
 
 
@@ -164,7 +165,7 @@ def _decode_decode_lut(data):
     for _i in range(0, num_addresses):  # noqa: B007
         addr_raw = data[p : p + bytes_per_address]
 
-        address_list.append(address.unpack(addr_raw))
+        address_list.append(address.unpack_legacy(addr_raw))
         p += bytes_per_address
 
     lut_nbits = math.ceil(math.log2(num_addresses))

@@ -130,6 +130,7 @@ def initialise_config(
     electrs_url=None,
     api_only=False,
     profile=False,
+    enable_all_protocol_changes=False,
 ):
     # log config already initialized
 
@@ -501,6 +502,7 @@ def initialise_config(
 
     config.API_ONLY = api_only
     config.PROFILE = profile
+    config.ENABLE_ALL_PROTOCOL_CHANGES = enable_all_protocol_changes
 
 
 def initialise_log_and_config(args, api=False, log_stream=None):
@@ -547,6 +549,7 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "electrs_url": args.electrs_url,
         "api_only": args.api_only,
         "profile": args.profile,
+        "enable_all_protocol_changes": args.enable_all_protocol_changes,
     }
     # for tests
     if "database_file" in args:

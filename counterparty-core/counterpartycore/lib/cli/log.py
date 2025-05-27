@@ -25,6 +25,8 @@ logging.TRACE = logging.DEBUG - 5
 logging.addLevelName(logging.TRACE, "TRACE")
 logging.EVENT = logging.DEBUG - 4
 logging.addLevelName(logging.EVENT, "EVENT")
+logging.URGENT = logging.ERROR + 1
+logging.addLevelName(logging.URGENT, "URGENT")
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -44,6 +46,10 @@ def event(self, msg, *args, **kwargs):
 
 def debug(self, msg, *args, **kwargs):
     self._log(logging.DEBUG, msg, args, **kwargs)  # pylint: disable=protected-access
+
+
+def urgent(self, msg, *args, **kwargs):
+    self._log(logging.URGENT, msg, args, **kwargs)  # pylint: disable=protected-access
 
 
 def format_time(record, _datefmt=None):
@@ -80,6 +86,13 @@ def get_full_topic(record):
 
 class CustomFilter(logging.Filter):
     def filter(self, record):
+        if (
+            config.QUIET
+            and record.levelno < logging.WARNING
+            and CurrentState().state["CATCHING_UP"]
+        ):
+            return False
+
         full_topic = get_full_topic(record)
 
         if isinstance(config.LOG_EXCLUDE_FILTERS, list):
@@ -189,6 +202,7 @@ def set_up(
 ):
     logging.Logger.trace = trace
     logging.Logger.event = event
+    logging.Logger.urgent = urgent
 
     loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]  # pylint: disable=no-member
     for logger_item in loggers:
@@ -202,12 +216,8 @@ def set_up(
     sqlite_filter = SQLiteFilter()
     logger.addFilter(sqlite_filter)
 
-    log_level = logging.ERROR
-    if quiet:
-        log_level = logging.ERROR
-    elif verbose == 0:
-        log_level = logging.INFO
-    elif verbose == 1:
+    log_level = logging.INFO
+    if verbose == 1:
         log_level = logging.DEBUG
     elif verbose == 2:
         log_level = logging.EVENT

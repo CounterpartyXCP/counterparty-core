@@ -270,9 +270,7 @@ def test_edge_cases_and_errors(ledger_db, current_block_index, monkeypatch):
 
     assert issuances.value_output(1200000000, "foobar", True) == "12.0"
 
-    monkeypatch.setattr(
-        "counterpartycore.lib.parser.protocol.after_block_or_test_network", lambda x, y: False
-    )
+    monkeypatch.setattr("counterpartycore.lib.parser.protocol.enabled", lambda x, y=None: False)
     assert issuances.price(10, 3) == D(D(10) / D(3))
 
     with pytest.raises(exceptions.AssetError, match="No such asset: foobaz"):
@@ -309,8 +307,9 @@ def test_edge_cases_and_errors(ledger_db, current_block_index, monkeypatch):
         "source": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         "status": "valid",
         "transfer": False,
-        "tx_hash": "58d9b2b8eda2b46f478078a31939d919da185010bc6e110e2c97c7c351592857",
+        "tx_hash": "b0957c49e2356277156ca60f51314febce8aaf9483169040bccde7aa4e62e308",
         "tx_index": 2,
+        "mime_type": "text/plain",
     }
 
     assert issuances.get_fairmint_quantities(ledger_db, "dummmy_hash") == (0, 0)

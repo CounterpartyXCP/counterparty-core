@@ -138,6 +138,7 @@ class BlockchainWatcher:
                 blocks.catch_up(self.db)
             else:
                 blocks.parse_new_block(self.db, decoded_block)
+            CurrentState().set_ledger_state(self.db, "Following")
             if not config.NO_MEMPOOL:
                 mempool.clean_mempool(self.db)
             if not config.NO_TELEMETRY:
@@ -287,6 +288,7 @@ class BlockchainWatcher:
                     if late_since is not None and time.time() - late_since > 60:
                         logger.warning("ZMQ is late. Catching up...")
                         blocks.catch_up(self.db)
+                        CurrentState().set_ledger_state(self.db, "Following")
                         late_since = None
 
                 # Yield control to the event loop to allow other tasks to run

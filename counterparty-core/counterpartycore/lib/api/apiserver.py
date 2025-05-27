@@ -88,23 +88,16 @@ def api_root():
 
 
 def is_cachable(rule):
-    if rule.startswith("/v2/blocks"):
-        return True
-    if rule.startswith("/v2/transactions"):
-        return True
-    if rule.startswith("/v2/bitcoin"):
-        return True
-    return False
+    if config.DISABLE_API_CACHE or request.method == "POST":
+        return False
+    for no_cachable in ["/compose/", "/mempool/", "healthz"]:
+        if no_cachable in rule:
+            return False
+    return True
 
 
 def return_result_if_not_ready(rule):
-    return (
-        is_cachable(rule)
-        or rule == "/v2/"
-        or rule == "/"
-        or rule.startswith("/v1")
-        or rule.startswith("/rpc")
-    )
+    return rule == "/v2/" or rule == "/" or rule.startswith("/v1") or rule.startswith("/rpc")
 
 
 def get_log_prefix(query_args=None):
@@ -233,10 +226,8 @@ def execute_api_function(rule, route, function_args):
     with StateDBConnectionPool().connection() as state_db:
         current_block_index = apiwatcher.get_last_block_parsed(state_db)
     cache_key = f"{current_block_index}:{request.url}"
-    # except for blocks and transactions cached forever
-    if (
-        request.path.startswith("/v2/blocks/") or request.path.startswith("/v2/transactions/")
-    ) and not request.path.startswith("/v2/blocks/last"):
+    # except for blocks
+    if request.path.startswith("/v2/blocks/") and not request.path.startswith("/v2/blocks/last"):
         cache_key = request.url
 
     with start_sentry_span(op="cache.get") as sentry_get_span:
@@ -287,6 +278,8 @@ def get_transaction_name(rule):
 
 def query_params():
     params = request.args.to_dict(flat=False)
+    if request.method == "POST":
+        params = params | request.form.to_dict(flat=False)
     return {key: value[0] if len(value) == 1 else value for key, value in params.items()}
 
 
@@ -356,8 +349,10 @@ def handle_route(**kwargs):
             CBitcoinAddressError,
             exceptions.AddressError,
             exceptions.ElectrsError,
+            exceptions.DatabaseError,
             OverflowError,
             TypeError,
+            ValueError,
         ) as e:
             return return_result(400, error=str(e), start_time=start_time, query_args=query_args)
         except Exception as e:  # pylint: disable=broad-except
@@ -411,6 +406,8 @@ def handle_route(**kwargs):
             query_args=query_args,
         )
     except Exception as e:  # pylint: disable=broad-except
+        # import traceback
+        # print(traceback.format_exc())
         capture_exception(e)
         logger.error("Error in API: %s", e)
         return return_result(500, error="Internal server error")
@@ -459,7 +456,7 @@ def init_flask_app():
             methods = ["OPTIONS", "GET"]
             if path == "/v2/bitcoin/transactions":
                 methods = ["OPTIONS", "POST"]
-            if not path.startswith("/v2/"):
+            if not path.startswith("/v2/") or "/compose/" in path:
                 methods = ["OPTIONS", "GET", "POST"]
             app.add_url_rule(
                 path,
@@ -508,7 +505,16 @@ def run_apiserver(
         sentry.init()
         initialise_log_and_config(argparse.Namespace(**args), api=True, log_stream=log_stream)
 
-        database.apply_outstanding_migration(config.STATE_DATABASE, config.STATE_DB_MIGRATIONS_DIR)
+        if args["rebuild_state_db"]:
+            dbbuilder.build_state_db()
+        elif args["refresh_state_db"]:
+            state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
+            dbbuilder.refresh_state_db(state_db)
+            state_db.close()
+        else:
+            database.apply_outstanding_migration(
+                config.STATE_DATABASE, config.STATE_DB_MIGRATIONS_DIR
+            )
 
         state_db = database.get_db_connection(
             config.STATE_DATABASE, read_only=False, check_wal=False

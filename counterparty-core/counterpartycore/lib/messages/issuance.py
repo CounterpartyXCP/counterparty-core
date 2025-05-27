@@ -6,10 +6,12 @@ import decimal
 import logging
 import struct
 
+import cbor2
+
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
-from counterpartycore.lib.utils import assetnames
+from counterpartycore.lib.utils import assetnames, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -47,6 +49,7 @@ def validate(
     subasset_parent,
     subasset_longname,
     block_index,
+    mime_type="",
 ):
     problems = []
     fee = 0
@@ -90,10 +93,10 @@ def validate(
 
     # Callable, or not.
     if not callable_:
-        if protocol.after_block_or_test_network(block_index, 312500):  # Protocol change.
+        if protocol.enabled("default_values_for_callable"):  # Protocol change.
             call_date = 0
             call_price = 0.0
-        elif block_index >= 310000:  # Protocol change.
+        elif protocol.enabled("enable_rematch"):  # Protocol change.
             if call_date:
                 problems.append("call date for non‐callable asset")
             if call_price:
@@ -132,7 +135,11 @@ def validate(
         ) != bool(callable_):
             problems.append("cannot change callability")
         if last_issuance["call_date"] > call_date and (
-            call_date != 0 or (block_index < 312500 and not protocol.is_test_network())
+            call_date != 0
+            or (
+                not protocol.enabled("default_values_for_callable")
+                and not protocol.is_test_network()
+            )
         ):
             problems.append("cannot advance call date")
         if last_issuance["call_price"] > call_price:
@@ -181,9 +188,9 @@ def validate(
             problems.append("a subasset must be a numeric asset")
 
     # Check for existence of fee funds.
-    if quantity or protocol.after_block_or_test_network(block_index, 315000):  # Protocol change.
+    if quantity or protocol.enabled("pay_only_first_issuance"):  # Protocol change.
         if not reissuance or (
-            block_index < 310000 and not protocol.is_test_network()
+            not protocol.enabled("enable_rematch") and not protocol.is_test_network()
         ):  # Pay fee only upon first issuance. (Protocol change.)
             cursor = db.cursor()
             balance = ledger.balances.get_balance(db, source, config.XCP)
@@ -201,16 +208,16 @@ def validate(
                     fee = 0
                 else:
                     fee = int(0.5 * config.UNIT)
-            elif protocol.after_block_or_test_network(block_index, 291700):  # Protocol change.
+            elif protocol.enabled("issuance_fee_update_3"):  # Protocol change.
                 fee = int(0.5 * config.UNIT)
-            elif protocol.after_block_or_test_network(block_index, 286000):  # Protocol change.
+            elif protocol.enabled("issuance_fee_update_2"):  # Protocol change.
                 fee = 5 * config.UNIT
-            elif protocol.after_block_or_test_network(block_index, 281237):  # Protocol change.
+            elif protocol.enabled("issuance_fee_update_1"):  # Protocol change.
                 fee = 5
             if fee and (balance < fee):
                 problems.append("insufficient funds")
 
-    if not protocol.after_block_or_test_network(block_index, 317500):  # Protocol change.
+    if not protocol.enabled("no_zero_expiration"):  # Protocol change.
         if len(description) > 42:
             problems.append("description too long")
 
@@ -247,6 +254,9 @@ def validate(
     ):
         problems.append("integer overflow")
 
+    if protocol.enabled("taproot_support") and description is not None:
+        problems += helpers.check_content(mime_type, description)
+
     return (
         call_date,
         call_price,
@@ -261,6 +271,118 @@ def validate(
     )
 
 
+def _compose_issuance_data(
+    asset_format_length,
+    curr_format,
+    asset_id,
+    quantity,
+    divisible,
+    lock,
+    reset,
+    encoded_description,
+    callable_,
+    call_date,
+    call_price,
+):
+    data = b""
+    if asset_format_length <= 19:  # callbacks parameters were removed
+        data = struct.pack(
+            curr_format,
+            asset_id,
+            quantity,
+            1 if divisible else 0,
+            1 if lock else 0,
+            1 if reset else 0,
+            encoded_description,
+        )
+    elif asset_format_length <= 26:
+        data = struct.pack(
+            curr_format,
+            asset_id,
+            quantity,
+            1 if divisible else 0,
+            1 if callable_ else 0,
+            call_date or 0,
+            call_price or 0.0,
+            encoded_description,
+        )
+    elif asset_format_length <= 27:  # param reset was inserted
+        data = struct.pack(
+            curr_format,
+            asset_id,
+            quantity,
+            1 if divisible else 0,
+            1 if reset else 0,
+            1 if callable_ else 0,
+            call_date or 0,
+            call_price or 0.0,
+            encoded_description,
+        )
+    elif asset_format_length <= 28:  # param lock was inserted
+        data = struct.pack(
+            curr_format,
+            asset_id,
+            quantity,
+            1 if divisible else 0,
+            1 if lock else 0,
+            1 if reset else 0,
+            1 if callable_ else 0,
+            call_date or 0,
+            call_price or 0.0,
+            encoded_description,
+        )
+    return data
+
+
+def _compose_issuance_data_subasset(
+    subasset_format_length,
+    curr_format,
+    asset_id,
+    quantity,
+    divisible,
+    lock,
+    reset,
+    compacted_subasset_length,
+    compacted_subasset_longname,
+    encoded_description,
+):
+    data = b""
+    if subasset_format_length <= 18:
+        data += struct.pack(
+            curr_format,
+            asset_id,
+            quantity,
+            1 if divisible else 0,
+            compacted_subasset_length,
+            compacted_subasset_longname,
+            encoded_description,
+        )
+    elif subasset_format_length <= 19:  # param reset was inserted
+        data += struct.pack(
+            curr_format,
+            asset_id,
+            quantity,
+            1 if divisible else 0,
+            1 if reset else 0,
+            compacted_subasset_length,
+            compacted_subasset_longname,
+            encoded_description,
+        )
+    elif subasset_format_length <= 20:  # param lock was inserted
+        data += struct.pack(
+            curr_format,
+            asset_id,
+            quantity,
+            1 if divisible else 0,
+            1 if lock else 0,
+            1 if reset else 0,
+            compacted_subasset_length,
+            compacted_subasset_longname,
+            encoded_description,
+        )
+    return data
+
+
 def compose(
     db,
     source: str,
@@ -271,6 +393,7 @@ def compose(
     lock: bool = None,
     reset: bool = None,
     description: str = None,
+    mime_type: str = "",
     skip_validation: bool = False,
 ):
     # Callability is deprecated, so for re‐issuances set relevant parameters
@@ -341,16 +464,12 @@ def compose(
         subasset_parent,
         subasset_longname,
         CurrentState().current_block_index(),
+        mime_type,
     )
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     if subasset_longname is None or reissuance:
-        asset_format = protocol.get_value_by_block_index("issuance_asset_serialization_format")
-        asset_format_length = protocol.get_value_by_block_index(
-            "issuance_asset_serialization_length"
-        )
-
         # Type 20 standard issuance FORMAT_2 >QQ??If
         #   used for standard issuances and all reissuances
         if protocol.enabled("issuance_backwards_compatibility"):
@@ -358,74 +477,61 @@ def compose(
         else:
             data = messagetype.pack(ID)
 
-        if description is None and protocol.enabled("issuance_description_special_null"):
-            # a special message is created to be catched by the parse function
-            curr_format = (
-                asset_format + f"{len(DESCRIPTION_MARK_BYTE) + len(DESCRIPTION_NULL_ACTION)}s"
-            )
-            encoded_description = DESCRIPTION_MARK_BYTE + DESCRIPTION_NULL_ACTION.encode("utf-8")
-        else:
-            if (len(validated_description) <= 42) and not protocol.enabled("pascal_string_removed"):
-                curr_format = FORMAT_2 + f"{len(validated_description) + 1}p"
+        if protocol.enabled("taproot_support"):
+            data_array = [
+                asset_id,
+                quantity,
+                divisible,
+                lock,
+                reset,
+                mime_type,
+            ]
+            if validated_description is not None:
+                data_array.append(
+                    helpers.content_to_bytes(validated_description, mime_type or "text/plain")
+                )
             else:
-                curr_format = asset_format + f"{len(validated_description)}s"
+                data_array.append(None)
+            data += cbor2.dumps(data_array)
 
-            encoded_description = validated_description.encode("utf-8")
+        else:
+            asset_format = protocol.get_value_by_block_index("issuance_asset_serialization_format")
+            asset_format_length = protocol.get_value_by_block_index(
+                "issuance_asset_serialization_length"
+            )
 
-        if asset_format_length <= 19:  # callbacks parameters were removed
-            data += struct.pack(
+            if description is None and protocol.enabled("issuance_description_special_null"):
+                # a special message is created to be catched by the parse function
+                curr_format = (
+                    asset_format + f"{len(DESCRIPTION_MARK_BYTE) + len(DESCRIPTION_NULL_ACTION)}s"
+                )
+                encoded_description = DESCRIPTION_MARK_BYTE + DESCRIPTION_NULL_ACTION.encode(
+                    "utf-8"
+                )
+            else:
+                if (len(validated_description) <= 42) and not protocol.enabled(
+                    "pascal_string_removed"
+                ):
+                    curr_format = FORMAT_2 + f"{len(validated_description) + 1}p"
+                else:
+                    curr_format = asset_format + f"{len(validated_description)}s"
+
+                encoded_description = validated_description.encode("utf-8")
+
+            data += _compose_issuance_data(
+                asset_format_length,
                 curr_format,
                 asset_id,
                 quantity,
-                1 if divisible else 0,
-                1 if lock else 0,
-                1 if reset else 0,
+                divisible,
+                lock,
+                reset,
                 encoded_description,
-            )
-        elif asset_format_length <= 26:
-            data += struct.pack(
-                curr_format,
-                asset_id,
-                quantity,
-                1 if divisible else 0,
-                1 if callable_ else 0,
-                call_date or 0,
-                call_price or 0.0,
-                encoded_description,
-            )
-        elif asset_format_length <= 27:  # param reset was inserted
-            data += struct.pack(
-                curr_format,
-                asset_id,
-                quantity,
-                1 if divisible else 0,
-                1 if reset else 0,
-                1 if callable_ else 0,
-                call_date or 0,
-                call_price or 0.0,
-                encoded_description,
-            )
-        elif asset_format_length <= 28:  # param lock was inserted
-            data += struct.pack(
-                curr_format,
-                asset_id,
-                quantity,
-                1 if divisible else 0,
-                1 if lock else 0,
-                1 if reset else 0,
-                1 if callable_ else 0,
-                call_date or 0,
-                call_price or 0.0,
-                encoded_description,
+                callable_,
+                call_date,
+                call_price,
             )
     else:
-        subasset_format = protocol.get_value_by_block_index(
-            "issuance_subasset_serialization_format", CurrentState().current_block_index()
-        )
-        subasset_format_length = protocol.get_value_by_block_index(
-            "issuance_subasset_serialization_length", CurrentState().current_block_index()
-        )
-
         # Type 21 subasset issuance SUBASSET_FORMAT >QQ?B
         #   Used only for initial subasset issuance
         # compacts a subasset name to save space
@@ -436,49 +542,59 @@ def compose(
         else:
             data = messagetype.pack(SUBASSET_ID)
 
-        if description is None and protocol.enabled("issuance_description_special_null"):  # noqa: E711
-            # a special message is created to be catched by the parse function
-            curr_format = (
-                subasset_format
-                + f"{compacted_subasset_length}s"
-                + f"{len(DESCRIPTION_MARK_BYTE) + len(DESCRIPTION_NULL_ACTION)}s"
-            )
-            encoded_description = DESCRIPTION_MARK_BYTE + DESCRIPTION_NULL_ACTION.encode("utf-8")
-        else:
-            curr_format = (
-                subasset_format + f"{compacted_subasset_length}s" + f"{len(validated_description)}s"
-            )
-            encoded_description = validated_description.encode("utf-8")
-
-        if subasset_format_length <= 18:
-            data += struct.pack(
-                curr_format,
-                asset_id,
-                quantity,
-                1 if divisible else 0,
-                compacted_subasset_length,
-                compacted_subasset_longname,
-                encoded_description,
-            )
-        elif subasset_format_length <= 19:  # param reset was inserted
-            data += struct.pack(
-                curr_format,
-                asset_id,
-                quantity,
-                1 if divisible else 0,
-                1 if reset else 0,
-                compacted_subasset_length,
-                compacted_subasset_longname,
-                encoded_description,
-            )
-        elif subasset_format_length <= 20:  # param lock was inserted
-            data += struct.pack(
-                curr_format,
+        if protocol.enabled("taproot_support"):
+            data_array = [
                 asset_id,
                 quantity,
                 1 if divisible else 0,
                 1 if lock else 0,
                 1 if reset else 0,
+                compacted_subasset_length,
+                compacted_subasset_longname,
+                mime_type,
+            ]
+            if validated_description is not None:
+                data_array.append(
+                    helpers.content_to_bytes(validated_description, mime_type or "text/plain")
+                )
+            else:
+                data_array.append(None)
+            data += cbor2.dumps(data_array)
+
+        else:
+            subasset_format = protocol.get_value_by_block_index(
+                "issuance_subasset_serialization_format", CurrentState().current_block_index()
+            )
+            subasset_format_length = protocol.get_value_by_block_index(
+                "issuance_subasset_serialization_length", CurrentState().current_block_index()
+            )
+
+            if description is None and protocol.enabled("issuance_description_special_null"):  # noqa: E711
+                # a special message is created to be catched by the parse function
+                curr_format = (
+                    subasset_format
+                    + f"{compacted_subasset_length}s"
+                    + f"{len(DESCRIPTION_MARK_BYTE) + len(DESCRIPTION_NULL_ACTION)}s"
+                )
+                encoded_description = DESCRIPTION_MARK_BYTE + DESCRIPTION_NULL_ACTION.encode(
+                    "utf-8"
+                )
+            else:
+                curr_format = (
+                    subasset_format
+                    + f"{compacted_subasset_length}s"
+                    + f"{len(validated_description)}s"
+                )
+                encoded_description = validated_description.encode("utf-8")
+
+            data += _compose_issuance_data_subasset(
+                subasset_format_length,
+                curr_format,
+                asset_id,
+                quantity,
+                divisible,
+                lock,
+                reset,
                 compacted_subasset_length,
                 compacted_subasset_longname,
                 encoded_description,
@@ -513,7 +629,46 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
         divisible = None
         callable_ = None
         call_date = None
-        if message_type_id in [LR_SUBASSET_ID, SUBASSET_ID]:
+        mime_type = "text/plain"
+
+        if protocol.enabled("taproot_support"):
+            try:
+                if message_type_id in [ID, LR_ISSUANCE_ID]:
+                    (
+                        asset_id,
+                        quantity,
+                        divisible,
+                        lock,
+                        reset,
+                        mime_type,
+                        description,
+                    ) = cbor2.loads(message)
+                elif message_type_id in [SUBASSET_ID, LR_SUBASSET_ID]:
+                    (
+                        asset_id,
+                        quantity,
+                        divisible,
+                        lock,
+                        reset,
+                        compacted_subasset_length,
+                        compacted_subasset_longname,
+                        mime_type,
+                        description,
+                    ) = cbor2.loads(message)
+                    subasset_longname = assetnames.expand_subasset_longname(
+                        compacted_subasset_longname
+                    )
+                else:
+                    raise exceptions.UnpackError("Invalid message type ID")
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                raise exceptions.UnpackError from e
+
+            mime_type = mime_type or "text/plain"
+            if description is not None:
+                description = helpers.bytes_to_content(description, mime_type)
+            callable_, call_date, call_price = False, 0, 0.0
+
+        elif message_type_id in [LR_SUBASSET_ID, SUBASSET_ID]:
             if not protocol.enabled("subassets", block_index=block_index):
                 logger.warning("subassets are not enabled at block %s", block_index)
                 raise exceptions.UnpackError
@@ -544,8 +699,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
             compacted_subasset_longname, description = struct.unpack(
                 messages_format, message[subasset_format_length:]
             )
-            subasset_longname = assetnames.expand_subasset_longname(compacted_subasset_longname)
-            callable_, call_date, call_price = False, 0, 0.0
+
             try:
                 description = description.decode("utf-8")
             except UnicodeDecodeError:
@@ -557,9 +711,11 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                             description = None
                     except UnicodeDecodeError:
                         description = ""
+            subasset_longname = assetnames.expand_subasset_longname(compacted_subasset_longname)
+            callable_, call_date, call_price = False, 0, 0.0
+
         elif (
-            protocol.after_block_or_test_network(block_index, 283272)
-            and len(message) >= asset_format_length
+            protocol.enabled("issuance_format_update") and len(message) >= asset_format_length
         ):  # Protocol change.
             if (len(message) - asset_format_length <= 42) and not protocol.enabled(
                 "pascal_string_removed"
@@ -647,7 +803,8 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
         except exceptions.AssetIDError:
             asset = None
             status = "invalid: bad asset name"
-    except exceptions.UnpackError:
+    except exceptions.UnpackError as e:
+        logger.warning("unpack error: %s", e)
         (
             asset_id,
             asset,
@@ -660,7 +817,9 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
             call_date,
             call_price,
             description,
+            mime_type,
         ) = (
+            None,
             None,
             None,
             None,
@@ -688,6 +847,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
             "call_date": call_date,
             "call_price": call_price,
             "description": description,
+            "mime_type": mime_type,
             "status": status,
         }
     return (
@@ -702,6 +862,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
         call_date,
         call_price,
         description,
+        mime_type,
         status,
     )
 
@@ -729,6 +890,7 @@ def parse(db, tx, message, message_type_id):
         call_date,
         call_price,
         description,
+        mime_type,
         status,
     ) = unpack(db, message, message_type_id, tx["block_index"])
     # parse and validate the subasset from the message
@@ -774,6 +936,7 @@ def parse(db, tx, message, message_type_id):
             subasset_parent,
             subasset_longname,
             block_index=tx["block_index"],
+            mime_type=mime_type,
         )
 
         if problems:
@@ -838,6 +1001,7 @@ def parse(db, tx, message, message_type_id):
                     "call_date": call_date,
                     "call_price": call_price,
                     "description": description,
+                    "mime_type": mime_type,
                     "fee_paid": 0,
                     "locked": lock,
                     "status": status,
@@ -942,6 +1106,7 @@ def parse(db, tx, message, message_type_id):
             "call_date": call_date,
             "call_price": call_price,
             "description": description,
+            "mime_type": mime_type,
             "fee_paid": fee,
             "locked": lock,
             "description_locked": description_locked,
@@ -949,6 +1114,7 @@ def parse(db, tx, message, message_type_id):
             "status": status,
             "asset_longname": asset_longname,
             "asset_events": " ".join(asset_events),
+            "msg_index": ledger.other.get_issuance_msg_index(db, tx["tx_hash"]),
         }
         # ensure last issuance is locked when fair minting is active
         if "cannot issue during fair minting" in status:

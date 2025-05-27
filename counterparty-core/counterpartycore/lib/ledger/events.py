@@ -227,6 +227,10 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
         balance_cursor.execute(query, bindings)
 
 
+def append_to_ledger_hash(block_index, address, asset, quantity):
+    ConsensusHashBuilder().append_to_block_ledger(f"{block_index}{address}{asset}{quantity}")
+
+
 def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     """Debit given address by quantity of asset."""
     block_index = CurrentState().current_block_index()
@@ -269,7 +273,7 @@ def debit(db, address, asset, quantity, tx_index, action=None, event=None):
     }
     insert_record(db, "debits", bindings, "DEBIT")
 
-    ConsensusHashBuilder().append_to_block_ledger(f"{block_index}{address}{asset}{quantity}")
+    append_to_ledger_hash(block_index, address, asset, quantity)
 
     return utxo_address
 
@@ -347,7 +351,7 @@ def credit(db, address, asset, quantity, tx_index, action=None, event=None):
     }
     insert_record(db, "credits", bindings, "CREDIT")
 
-    ConsensusHashBuilder().append_to_block_ledger(f"{block_index}{address}{asset}{quantity}")
+    append_to_ledger_hash(block_index, address, asset, quantity)
 
     return utxo_address
 

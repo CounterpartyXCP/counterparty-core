@@ -2,24 +2,35 @@ import binascii
 import hashlib
 import inspect
 import logging
+import math
 import string
 import sys
 import time
 from collections import OrderedDict
 from decimal import Decimal as D
 
+import cbor2
 from arc4 import ARC4  # pylint: disable=no-name-in-module
-from bitcoinutils.keys import P2pkhAddress, P2shAddress, P2trAddress, P2wpkhAddress, PublicKey
+from bitcoinutils.keys import (
+    P2pkhAddress,
+    P2shAddress,
+    P2trAddress,
+    P2wpkhAddress,
+    PrivateKey,
+    PublicKey,
+)
 from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
+from bitcoinutils.utils import ControlBlock
 
 from counterpartycore.lib import (
     backend,
     config,
     exceptions,
     ledger,
+    messages,
 )
-from counterpartycore.lib.parser import deserialize, utxosinfo
+from counterpartycore.lib.parser import deserialize, messagetype, utxosinfo
 from counterpartycore.lib.utils import helpers, multisig, opcodes, script
 
 MAX_INPUTS_SET = 100
@@ -67,7 +78,7 @@ def is_address_script(address, script_pub_key):
         ]
         script_address = f"{asm[0]}_{'_'.join(addresses)}_{asm[-2]}"
     else:
-        script_address = script.script_to_address2(script_pub_key)
+        script_address = script.script_to_address(script_pub_key)
     return address == script_address
 
 
@@ -148,13 +159,13 @@ def dust_size(address, construct_params):
 
 def perpare_non_data_outputs(destinations, unspent_list, construct_params):
     outputs = []
-    for address, value in destinations:
-        output_value = value or dust_size(address, construct_params)
-        outputs.append(create_tx_output(output_value, address, unspent_list, construct_params))
+    for dest_address, value in destinations:
+        output_value = value or dust_size(dest_address, construct_params)
+        outputs.append(create_tx_output(output_value, dest_address, unspent_list, construct_params))
     return outputs
 
 
-def determine_encoding(data, construct_params):
+def determine_encoding(data, destinations, construct_params):
     desired_encoding = construct_params.get("encoding", "auto")
     if desired_encoding == "auto":
         if len(data) + len(config.PREFIX) <= config.OP_RETURN_MAX_SIZE:
@@ -163,8 +174,17 @@ def determine_encoding(data, construct_params):
             encoding = "multisig"
     else:
         encoding = desired_encoding
-    if encoding not in ("multisig", "opreturn"):
+    if encoding == "taproot":
+        if len(destinations) > 0:
+            raise exceptions.ComposeError(
+                "Cannot use `taproot` encoding for transactions with destinations"
+            )
+        message_type_id, _message = messagetype.unpack(data)
+        if message_type_id == messages.detach.ID:
+            raise exceptions.ComposeError("Cannot use `taproot` encoding for `detach` transaction")
+    if encoding not in ("multisig", "opreturn", "taproot"):
         raise exceptions.ComposeError(f"Not supported encoding: {encoding}")
+
     return encoding
 
 
@@ -256,7 +276,7 @@ def data_to_pubkey_pairs(data, arc4_key):
     return pubkey_pairs
 
 
-def prepare_multisig_output(source, data, arc4_key, unspent_list, construct_params):
+def get_source_pubkey(source, unspent_list, construct_params):
     # determine multisig pubkey
     multisig_pubkey = construct_params.get("multisig_pubkey")
     if multisig_pubkey is None:
@@ -267,6 +287,11 @@ def prepare_multisig_output(source, data, arc4_key, unspent_list, construct_para
         )
     if not is_valid_pubkey(multisig_pubkey):
         raise exceptions.ComposeError(f"Invalid multisig pubkey: {multisig_pubkey}")
+    return multisig_pubkey
+
+
+def prepare_multisig_output(source, data, arc4_key, unspent_list, construct_params):
+    multisig_pubkey = get_source_pubkey(source, unspent_list, construct_params)
     # generate pubkey pairs from data
     pubkey_pairs = data_to_pubkey_pairs(data, arc4_key)
     outputs = []
@@ -278,14 +303,206 @@ def prepare_multisig_output(source, data, arc4_key, unspent_list, construct_para
     return outputs
 
 
-def prepare_data_outputs(source, data, unspent_list, construct_params):
-    encoding = determine_encoding(data, construct_params)
+def string_to_hex(value):
+    """Convert a string to hex representation."""
+    return binascii.hexlify(value.encode("utf-8")).decode("utf-8")
+
+
+def generate_raw_reveal_tx(commit_txid, commit_vout, outputs):
+    tx_in = TxInput(commit_txid, commit_vout)
+    reveal_tx = Transaction([tx_in], outputs)
+    return reveal_tx.serialize()
+
+
+def is_ordinal_envelope_script(envelope_script):
+    return envelope_script.script[2] == string_to_hex("ord")
+
+
+def utxo_to_address(db, utxo):
+    # first try with the database
+    sql = "SELECT utxo_address FROM balances WHERE utxo = ? LIMIT 1"
+    balance = db.execute(sql, (utxo,)).fetchone()
+    if balance:
+        return balance["utxo_address"]
+    # then try with Bitcoin Core
+    txid, vout = utxo.split(":")
+    try:
+        tx = backend.bitcoind.getrawtransaction(txid, verbose=True)
+        vout = int(vout)
+        address = tx["vout"][vout]["scriptPubKey"]["address"]
+        return address
+    except Exception as e:  # pylint: disable=broad-except
+        raise exceptions.ComposeError(
+            f"invalid UTXOs: {utxo} (not found in the database or Bitcoin Core)"
+        ) from e
+
+
+def get_change_address(db, source, construct_params):
+    change_address = construct_params.get("change_address")
+    if change_address is None:
+        if utxosinfo.is_utxo_format(source):
+            change_address = utxo_to_address(db, source)
+        else:
+            change_address = source
+    return change_address
+
+
+def get_reveal_outputs(db, source, envelope_script, unspent_list, construct_params):
+    tx_out = TxOutput(0, Script(["OP_RETURN", binascii.hexlify(config.PREFIX).decode("ascii")]))
+    outputs = [tx_out]
+    if is_ordinal_envelope_script(envelope_script):
+        change_address = get_change_address(db, source, construct_params)
+        change_amount = regular_dust_size(construct_params)
+        outputs.append(
+            create_tx_output(change_amount, change_address, unspent_list, construct_params)
+        )
+    return outputs
+
+
+def get_signed_reveal_tx(inputs, outputs, commit_value, envelope_script, reveal_tx_pk):
+    # build transaction
+    reveal_tx = Transaction(inputs, outputs)
+    reveal_tx.has_segwit = True
+    # sign the input containing the inscription script
+    source_pubkey = reveal_tx_pk.get_public_key()
+    commit_address = source_pubkey.get_taproot_address([[envelope_script]])
+    sig = reveal_tx_pk.sign_taproot_input(
+        tx=reveal_tx,
+        txin_index=0,
+        utxo_scripts=[commit_address.to_script_pub_key()],
+        amounts=[commit_value],
+        script_path=True,
+        tapleaf_script=envelope_script,
+        tweak=False,
+    )
+    # generate the control block
+    control_block = ControlBlock(
+        source_pubkey,
+        scripts=[envelope_script],
+        index=0,
+        is_odd=commit_address.is_odd(),
+    )
+    # add the witness to the transaction
+    reveal_tx.witnesses.append(
+        TxWitnessInput([sig, envelope_script.to_hex(), control_block.to_hex()])
+    )
+    return reveal_tx
+
+
+def get_dummy_signed_reveal_tx(outputs, envelope_script, reveal_tx_pk):
+    inputs = [TxInput("F" * 64, 0)]
+    commit_value = config.DEFAULT_SEGWIT_DUST_SIZE
+    return get_signed_reveal_tx(inputs, outputs, commit_value, envelope_script, reveal_tx_pk)
+
+
+def get_reveal_transaction_vsize_and_value(outputs, envelope_script, reveal_tx_pk):
+    reveal_tx = get_dummy_signed_reveal_tx(outputs, envelope_script, reveal_tx_pk)
+    return reveal_tx.get_vsize()
+
+
+def generate_ordinal_envelope_script(message_data, message_type_id, content, source_pubkey):
+    mime_type = message_data.pop() or "text/plain"
+    # construct metadata
+    message_data = [message_type_id] + message_data
+    metadata = cbor2.dumps(message_data)
+    metadata_chunks = helpers.chunkify(metadata, 520)
+    metatdata_array = []
+    for chunk in metadata_chunks:
+        metatdata_array += ["05", binascii.hexlify(chunk).decode("utf-8")]
+    # construct content
+    content_chunks = helpers.chunkify(content, 520)
+    content_array = ["OP_0"]
+    content_array += [binascii.hexlify(chunk).decode("utf-8") for chunk in content_chunks]
+    # construct script
+    script_array = [
+        "OP_FALSE",
+        "OP_IF",
+        string_to_hex("ord"),
+        "07",
+        string_to_hex("xcp"),
+        "01",
+        string_to_hex(mime_type),
+        *metatdata_array,
+        *content_array,
+        "OP_ENDIF",
+        source_pubkey.to_x_only_hex(),
+        "OP_CHECKSIG",
+    ]
+    return Script(script_array)
+
+
+# for testing purposes
+def generate_random_private_key():
+    return PrivateKey()
+
+
+def generate_envelope_script(data, construct_params):
+    # generate random private key
+    private_key = generate_random_private_key()
+    source_pubkey = private_key.get_public_key()
+    envelope_script = None
+
+    message_type_id, message = messagetype.unpack(data)
+    if message_type_id in [
+        messages.fairminter.ID,
+        messages.issuance.ID,
+        messages.issuance.SUBASSET_ID,
+        messages.issuance.LR_ISSUANCE_ID,
+        messages.issuance.LR_SUBASSET_ID,
+        messages.broadcast.ID,
+    ] and construct_params.get("inscription", False):
+        message_data = cbor2.loads(message)
+        content = message_data.pop()
+        if content is not None and len(content) > 0:
+            envelope_script = generate_ordinal_envelope_script(
+                message_data, message_type_id, content, source_pubkey
+            )
+
+    if envelope_script is None:
+        # split the data in chunks of 520 bytes
+        datas = helpers.chunkify(data, 520)
+        datas = [binascii.hexlify(chunk).decode("utf-8") for chunk in datas]
+        # Build inscription envelope script
+        envelope_script = Script(
+            ["OP_FALSE", "OP_IF", *datas, "OP_ENDIF", source_pubkey.to_x_only_hex(), "OP_CHECKSIG"]
+        )
+
+    return envelope_script, private_key
+
+
+def prepare_taproot_output(db, source, data, unspent_list, construct_params):
+    # Build inscription envelope script
+    envelope_script, reveal_tx_pk = generate_envelope_script(data, construct_params)
+    source_pubkey = reveal_tx_pk.get_public_key()
+    # generate the reveal outputs
+    outputs = get_reveal_outputs(db, source, envelope_script, unspent_list, construct_params)
+    # get output values and tx size
+    outputs_value = sum(output.amount for output in outputs)
+    # commit value must pay fees for the reveal tx
+    reveal_tx_vsize = get_reveal_transaction_vsize_and_value(outputs, envelope_script, reveal_tx_pk)
+    reveal_tx_fees = math.ceil(reveal_tx_vsize * get_sat_per_vbyte(construct_params))
+    commit_value = reveal_tx_fees + outputs_value
+    commit_value = max(commit_value, config.DEFAULT_SEGWIT_DUST_SIZE)
+    # build output
+    commit_address = source_pubkey.get_taproot_address([[envelope_script]])
+    tx_out = TxOutput(commit_value, commit_address.to_script_pub_key())
+    return [tx_out], (outputs, envelope_script, reveal_tx_pk)
+
+
+def prepare_data_outputs(db, source, destinations, data, unspent_list, construct_params):
+    encoding = determine_encoding(data, destinations, construct_params)
     arc4_key = unspent_list[0]["txid"]
+    reveal_tx_info = None
+    outputs = []
     if encoding == "multisig":
-        return prepare_multisig_output(source, data, arc4_key, unspent_list, construct_params)
+        outputs = prepare_multisig_output(source, data, arc4_key, unspent_list, construct_params)
     if encoding == "opreturn":
-        return prepare_opreturn_output(data, arc4_key)
-    raise exceptions.ComposeError(f"Not supported encoding: {encoding}")
+        outputs = prepare_opreturn_output(data, arc4_key)
+    if encoding == "taproot":
+        outputs, reveal_tx_info = prepare_taproot_output(
+            db, source, data, unspent_list, construct_params
+        )
+    return outputs, reveal_tx_info
 
 
 def prepare_more_outputs(more_outputs, unspent_list, construct_params):
@@ -306,17 +523,21 @@ def prepare_more_outputs(more_outputs, unspent_list, construct_params):
     return outputs
 
 
-def prepare_outputs(source, destinations, data, unspent_list, construct_params):
+def prepare_outputs(db, source, destinations, data, unspent_list, construct_params):
     # prepare non-data outputs
     outputs = perpare_non_data_outputs(destinations, unspent_list, construct_params)
     # prepare data outputs
+    reveal_tx_info = None
     if data:
-        outputs += prepare_data_outputs(source, data, unspent_list, construct_params)
+        data_outputs, reveal_tx_info = prepare_data_outputs(
+            db, source, destinations, data, unspent_list, construct_params
+        )
+        outputs += data_outputs
     # Add more outputs if needed
     more_outputs = construct_params.get("more_outputs")
     if more_outputs:
         outputs += prepare_more_outputs(more_outputs, unspent_list, construct_params)
-    return outputs
+    return outputs, reveal_tx_info
 
 
 ################
@@ -390,7 +611,7 @@ def complete_unspent_list(unspent_list):
                     if "script_pub_key" not in utxo:
                         utxo["script_pub_key"] = vout["scriptPubKey"]["hex"]
                     if "value" not in utxo:
-                        utxo["value"] = int(vout["value"] * config.UNIT)
+                        utxo["value"] = int(D(str(vout["value"])) * D(config.UNIT))
                         utxo["amount"] = vout["value"]
         if "script_pub_key" not in utxo:
             raise exceptions.ComposeError(
@@ -450,25 +671,6 @@ def prepare_inputs_set(inputs_set):
     return unspent_list
 
 
-def utxo_to_address(db, utxo):
-    # first try with the database
-    sql = "SELECT utxo_address FROM balances WHERE utxo = ? LIMIT 1"
-    balance = db.execute(sql, (utxo,)).fetchone()
-    if balance:
-        return balance["utxo_address"]
-    # then try with Bitcoin Core
-    txid, vout = utxo.split(":")
-    try:
-        tx = backend.bitcoind.getrawtransaction(txid, verbose=True)
-        vout = int(vout)
-        address = tx["vout"][vout]["scriptPubKey"]["address"]
-        return address
-    except Exception as e:  # pylint: disable=broad-except
-        raise exceptions.ComposeError(
-            f"invalid UTXOs: {utxo} (not found in the database or Bitcoin Core)"
-        ) from e
-
-
 def ensure_utxo_is_first(utxo, unspent_list):
     txid, vout = utxo.split(":")
     vout = int(vout)
@@ -490,7 +692,7 @@ def ensure_utxo_is_first(utxo, unspent_list):
             {
                 "txid": txid,
                 "vout": vout,
-                "value": int(value * config.UNIT),
+                "value": int(D(str(value)) * D(config.UNIT)),
                 "amount": value,
             },
         )
@@ -609,7 +811,7 @@ OP_PUSHBYTES_73 = "49"
 DUMMY_DER_SIG = "3045" + "00" * 69 + "01"
 DUMMY_REEDEM_SCRIPT = OP_PUSHBYTES_72 + DUMMY_DER_SIG
 DUMMY_PUBKEY = "03" + 32 * "00"
-DUMMY_SCHNORR_SIG = "00" * 65
+DUMMY_SCHNORR_SIG = "00" * 64 + "01"
 
 
 # dummies script_sig from https://learnmeabitcoin.com/technical/script/
@@ -734,16 +936,22 @@ def prepare_fee_parameters(construct_params):
     return exact_fee, sat_per_vbyte, max_fee
 
 
+def get_sat_per_vbyte(construct_params):
+    _exact_fee, sat_per_vbyte, _max_fee = prepare_fee_parameters(construct_params)
+    if sat_per_vbyte is None:
+        confirmation_target = construct_params.get("confirmation_target")
+        if confirmation_target is not None:
+            sat_per_vbyte = backend.bitcoind.satoshis_per_vbyte(confirmation_target)
+        else:
+            sat_per_vbyte = backend.bitcoind.satoshis_per_vbyte()
+    return sat_per_vbyte
+
+
 def prepare_inputs_and_change(db, source, outputs, unspent_list, construct_params):
     # prepare fee parameters
     exact_fee, sat_per_vbyte, max_fee = prepare_fee_parameters(construct_params)
 
-    change_address = construct_params.get("change_address")
-    if change_address is None:
-        if utxosinfo.is_utxo_format(source):
-            change_address = utxo_to_address(db, source)
-        else:
-            change_address = source
+    change_address = get_change_address(db, source, construct_params)
 
     outputs_total = sum(output.amount for output in outputs)
 
@@ -855,7 +1063,9 @@ def construct(db, tx_info, construct_params):
     unspent_list = prepare_unspent_list(db, source, construct_params)
 
     # prepare outputs
-    outputs = prepare_outputs(source, destinations, data, unspent_list, construct_params)
+    outputs, reveal_tx_info = prepare_outputs(
+        db, source, destinations, data, unspent_list, construct_params
+    )
 
     # prepare inputs and change
     selected_utxos, btc_in, change_outputs = prepare_inputs_and_change(
@@ -875,7 +1085,7 @@ def construct(db, tx_info, construct_params):
     unsigned_tx_hex = tx.serialize()
     adjusted_vsize, virtual_size, sigops_count = get_size_info(tx, selected_utxos)
 
-    return {
+    result = {
         "rawtransaction": unsigned_tx_hex,
         "btc_in": btc_in,
         "btc_out": btc_out,
@@ -890,9 +1100,20 @@ def construct(db, tx_info, construct_params):
             "sigops_count": sigops_count,
         },
     }
+    if reveal_tx_info is not None:
+        inputs = [TxInput(tx.get_txid(), 0)]
+        outputs, envelope_script, reveal_tx_pk = reveal_tx_info
+        commit_value = tx.outputs[0].amount
+        signed_reveal_tx = get_signed_reveal_tx(
+            inputs, outputs, commit_value, envelope_script, reveal_tx_pk
+        )
+        result["signed_reveal_rawtransaction"] = signed_reveal_tx.to_hex()
+        result["envelope_script"] = envelope_script.to_hex()
+
+    return result, unspent_list
 
 
-def check_transaction_sanity(tx_info, composed_tx, construct_params):
+def check_transaction_sanity(tx_info, composed_tx, unspent_list, construct_params):
     tx_hex = composed_tx["rawtransaction"]
     source, destinations, data = tx_info
     decoded_tx = deserialize.deserialize_tx(tx_hex, parse_vouts=True)
@@ -943,13 +1164,26 @@ def check_transaction_sanity(tx_info, composed_tx, construct_params):
 
     # check if data matches the output data
     if data:
-        if isinstance(decoded_tx["parsed_vouts"], Exception):
-            raise exceptions.ComposeError(
-                f"Sanity check error: cannot parse the output data from the transaction ({decoded_tx['parsed_vouts']})"
-            )
-        _, _, _, tx_data, _ = decoded_tx["parsed_vouts"]
-        if tx_data != data:
-            raise exceptions.ComposeError("Sanity check error: data does not match the output data")
+        if "signed_reveal_rawtransaction" in composed_tx:
+            envelope_script, _reveal_tx_pk = generate_envelope_script(data, construct_params)
+            composed_envelope_script = Script.from_raw(composed_tx["envelope_script"])
+            # remove the random pubkey from the envelope script
+            envelope_script.script = envelope_script.script[0:-2]
+            composed_envelope_script.script = composed_envelope_script.script[0:-2]
+            if envelope_script.to_hex() != composed_envelope_script.to_hex():
+                raise exceptions.ComposeError(
+                    "Sanity check error: envelope script does not match the data"
+                )
+        else:
+            if isinstance(decoded_tx["parsed_vouts"], Exception):
+                raise exceptions.ComposeError(
+                    f"Sanity check error: cannot parse the output data from the transaction ({decoded_tx['parsed_vouts']})"
+                )
+            _, _, _, tx_data, _, _ = decoded_tx["parsed_vouts"]
+            if tx_data != data:
+                raise exceptions.ComposeError(
+                    "Sanity check error: data does not match the output data"
+                )
 
 
 CONSTRUCT_PARAMS = {
@@ -994,7 +1228,7 @@ CONSTRUCT_PARAMS = {
     ),
     "use_all_inputs_set": (bool, False, "Use all UTXOs provide with `inputs_set` parameter"),
     # outputs parameters
-    "mutlisig_pubkey": (
+    "multisig_pubkey": (
         str,
         None,
         "The reedem public key to use for multisig encoding, by default it is searched for the source address",
@@ -1017,11 +1251,13 @@ CONSTRUCT_PARAMS = {
         "Include additional information in the result including data and psbt",
     ),
     "return_only_data": (bool, False, "Return only the data part of the transaction"),
+    "segwit_dust_size": (int, None, "The dust size for segwit outputs (default is 330)"),
+    "inscription": (bool, False, "Use Ordinals inscription script when possible"),
     # deprecated parameters
     "fee_per_kb": (int, None, "Deprecated, use `sat_per_vbyte` instead"),
     "fee_provided": (int, None, "Deprecated, use `max_fee` instead"),
     "unspent_tx_hash": (str, None, "Deprecated, use `inputs_set` instead"),
-    "dust_return_pubkey": (str, None, "Deprecated, use `mutlisig_pubkey` instead"),
+    "dust_return_pubkey": (str, None, "Deprecated, use `multisig_pubkey` instead"),
     "return_psbt": (bool, False, "Deprecated, use `verbose` instead"),
     "regular_dust_size": (int, None, "Deprecated, automatically calculated"),
     "multisig_dust_size": (int, None, "Deprecated, automatically calculated"),
@@ -1057,7 +1293,7 @@ def prepare_construct_params(construct_params):
     for deprecated_param, new_param, copyer in [
         ("fee_per_kb", "sat_per_vbyte", fee_per_kb_to_sat_per_vbyte),
         ("fee_provided", "max_fee", lambda x: x),
-        ("dust_return_pubkey", "mutlisig_pubkey", lambda x: x),
+        ("dust_return_pubkey", "multisig_pubkey", lambda x: x),
         ("return_psbt", "verbose", lambda x: x),
     ]:
         if deprecated_param in construct_params:
@@ -1091,27 +1327,29 @@ def compose_transaction(db, name, params, construct_parameters):
         }
 
     # construct transaction
-    result = construct(db, tx_info, construct_params)
+    result, unspent_list = construct(db, tx_info, construct_params)
 
     # sanity check
     try:
-        check_transaction_sanity(tx_info, result, construct_params)
+        check_transaction_sanity(tx_info, result, unspent_list, construct_params)
     except Exception as e:  # pylint: disable=broad-except
         raise exceptions.ComposeError(str(e)) from e
 
     # return result
     if construct_params.get("verbose", False):
-        result = result | {
+        final_result = result | {
             "psbt": backend.bitcoind.convert_to_psbt(result["rawtransaction"]),
             "params": params,
             "name": name.split(".")[-1],
         }
     else:
-        result = {
-            "rawtransaction": result["rawtransaction"],
-        }
+        final_result = {}
+        if "signed_reveal_rawtransaction" in result:
+            final_result["signed_reveal_rawtransaction"] = result["signed_reveal_rawtransaction"]
+            final_result["envelope_script"] = result["envelope_script"]
+        final_result["rawtransaction"] = result["rawtransaction"]
 
     if len(warnings) > 0:
-        result["warnings"] = warnings
+        final_result["warnings"] = warnings
 
-    return result
+    return final_result

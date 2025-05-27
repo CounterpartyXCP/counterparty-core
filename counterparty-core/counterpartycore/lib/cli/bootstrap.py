@@ -25,14 +25,6 @@ def download_zst(data_dir, zst_url):
     return zst_filepath
 
 
-def get_zst_callbacl(input_file_size):
-    def print_decompression_progress(total_input, _total_output, _read_data, _write_data):
-        percent = 100 * total_input / input_file_size
-        print(f"Progress: {percent:.1f}%", end="\r")
-
-    return print_decompression_progress
-
-
 def decompress_zst(zst_filepath):
     print(f"Decompressing {zst_filepath}...")
     start_time = time.time()
@@ -58,21 +50,6 @@ def decompress_zst(zst_filepath):
     os.remove(zst_filepath)
     os.chmod(filepath, 0o660)  # nosec B103
     print(f"Decompressed {zst_filepath} in {time.time() - start_time:.2f}s")
-    return filepath
-
-
-def download_and_decompress(data_dir, zst_url):
-    # download and decompress .tar.zst file
-    print(f"Downloading and decompressing {zst_url}...")
-    start_time = time.time()
-    zst_filename = os.path.basename(zst_url)
-    filename = zst_filename.replace(".latest.zst", "")
-    filepath = os.path.join(data_dir, filename)
-    with urllib.request.urlopen(zst_url) as response:  # nosec B310  # noqa: S310
-        with io.open(filepath, "wb") as output_file:
-            pyzstd.decompress_stream(response, output_file, read_size=16 * 1024)  # pylint: disable=no-member
-    os.chmod(filepath, 0o660)  # nosec B103
-    print(f"Downloaded and decompressed {zst_url} in {time.time() - start_time:.2f}s")
     return filepath
 
 
@@ -112,12 +89,7 @@ def check_signature(filepath, sig_url):
         sys.exit(1)
 
 
-def decompress_and_verify(zst_filepath, sig_url):
-    filepath = decompress_zst(zst_filepath)
-    check_signature(filepath, sig_url)
-
-
-def verfif_and_decompress(zst_filepath, sig_url, decompressors_state):
+def verify_and_decompress(zst_filepath, sig_url, decompressors_state):
     try:
         check_signature(zst_filepath, sig_url)
         decompress_zst(zst_filepath)
@@ -153,7 +125,7 @@ def download_bootstrap_files(data_dir, files):
                 sys.exit(1)
 
         decompressor = Process(
-            target=verfif_and_decompress,
+            target=verify_and_decompress,
             args=(zst_filepath, sig_url, decompressors_state),
         )
         decompressor.start()
@@ -184,7 +156,7 @@ the `bootstrap` command should not be used for mission-critical, commercial or p
 
 
 def generate_urls(counterparty_zst_url):
-    state_zst_url = counterparty_zst_url.replace("/counterparty.db", "/state.db")
+    state_zst_url = counterparty_zst_url.replace("/counterparty.", "/state.")
     return [
         (
             counterparty_zst_url,

@@ -5,8 +5,9 @@ SCENARIO = [
         "source": "$ADDRESS_1",
         "params": {
             "asset": "FAIRMINTC",
-            "price": 1,
-            "quantity_by_price": 5,
+            "lot_price": 1,
+            "lot_size": 5,
+            "validate": False,
         },
         "set_variables": {
             "FAIRMINTC_TX_HASH": "$TX_HASH",
@@ -43,6 +44,7 @@ SCENARIO = [
                             "call_price": 0,
                             "callable": False,
                             "description": "",
+                            "mime_type": "text/plain",
                             "divisible": True,
                             "fair_minting": True,
                             "fee_paid": 50000000.0,
@@ -79,12 +81,14 @@ SCENARIO = [
                             "block_index": "$BLOCK_INDEX",
                             "burn_payment": False,
                             "description": "",
+                            "mime_type": "text/plain",
                             "divisible": True,
                             "end_block": 0,
                             "hard_cap": 0,
                             "lock_description": False,
                             "lock_quantity": False,
                             "max_mint_per_tx": 0,
+                            "max_mint_per_address": 0,
                             "minted_asset_commission_int": 0,
                             "pre_minted": False,
                             "premint_quantity": 0,
@@ -111,6 +115,7 @@ SCENARIO = [
         "params": {
             "asset": "FAIRMINTC",
             "quantity": 5,
+            "validate": False,
         },
         "controls": [
             {
@@ -128,6 +133,7 @@ SCENARIO = [
                             "call_price": 0.0,
                             "callable": False,
                             "description": "",
+                            "mime_type": "text/plain",
                             "description_locked": False,
                             "divisible": True,
                             "fair_minting": True,
@@ -221,6 +227,7 @@ SCENARIO = [
         "params": {
             "asset": "FAIRMINTC",
             "quantity": 3,
+            "validate": False,
         },
         "controls": [
             {
@@ -238,6 +245,7 @@ SCENARIO = [
                             "call_price": 0.0,
                             "callable": False,
                             "description": "",
+                            "mime_type": "text/plain",
                             "description_locked": False,
                             "divisible": True,
                             "fair_minting": True,
@@ -331,6 +339,7 @@ SCENARIO = [
         "params": {
             "asset": "FAIRMINTC",
             "quantity": 11,
+            "validate": False,
         },
         "controls": [
             {
@@ -348,6 +357,7 @@ SCENARIO = [
                             "call_price": 0.0,
                             "callable": False,
                             "description": "",
+                            "mime_type": "text/plain",
                             "description_locked": False,
                             "divisible": True,
                             "fair_minting": True,
@@ -478,6 +488,7 @@ SCENARIO = [
                             "call_price": 0,
                             "callable": False,
                             "description": "",
+                            "mime_type": "text/plain",
                             "divisible": True,
                             "fair_minting": True,
                             "fee_paid": 50000000.0,
@@ -514,12 +525,14 @@ SCENARIO = [
                             "block_index": "$BLOCK_INDEX",
                             "burn_payment": False,
                             "description": "",
+                            "mime_type": "text/plain",
                             "divisible": True,
                             "end_block": 0,
                             "hard_cap": 0,
                             "lock_description": False,
                             "lock_quantity": False,
                             "max_mint_per_tx": 0,
+                            "max_mint_per_address": 0,
                             "minted_asset_commission_int": 0,
                             "pre_minted": False,
                             "premint_quantity": 0,
@@ -546,6 +559,7 @@ SCENARIO = [
         "params": {
             "asset": "FAIRMINTD",
             "quantity": 40,
+            "validate": False,
         },
         "controls": [
             {
@@ -563,6 +577,7 @@ SCENARIO = [
                             "call_price": 0.0,
                             "callable": False,
                             "description": "",
+                            "mime_type": "text/plain",
                             "description_locked": False,
                             "divisible": True,
                             "fair_minting": True,

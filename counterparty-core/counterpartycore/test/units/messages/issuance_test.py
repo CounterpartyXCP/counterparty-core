@@ -793,7 +793,7 @@ def test_valid_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][0],
         [],
-        b"\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00",
+        b"\x16\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`@",
     )
 
     assert issuance.compose(
@@ -801,7 +801,7 @@ def test_valid_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][0],
         [],
-        b"\x16\x00\x00\x00\x00\x00\xbaOs\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00",
+        b"\x16\x87\x1a\x00\xbaOs\x19\x03\xe8\xf5\xf4\xf4`@",
     )
 
     assert issuance.compose(
@@ -809,7 +809,7 @@ def test_valid_compose(ledger_db, defaults):
     ) == (
         defaults["p2sh_addresses"][0],
         [],
-        b"\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00",
+        b"\x16\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`@",
     )
 
     assert issuance.compose(
@@ -825,7 +825,7 @@ def test_valid_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][0],
         [],
-        b"\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00description much much much longer than 42 letters",
+        b"\x16\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`X1description much much much longer than 42 letters",
     )
 
     assert issuance.compose(
@@ -841,7 +841,7 @@ def test_valid_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][0],
         [(defaults["addresses"][1], None)],
-        b"\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00",
+        b"\x16\x87\x1b\x00\x00\x00\xa2[\xe3Kf\x00\xf5\xf4\xf4`@",
     )
 
     assert issuance.compose(
@@ -849,7 +849,7 @@ def test_valid_compose(ledger_db, defaults):
     ) == (
         defaults["p2ms_addresses"][0],
         [],
-        b"\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00",
+        b"\x16\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`@",
     )
 
     assert issuance.compose(
@@ -870,7 +870,7 @@ def test_valid_compose(ledger_db, defaults):
                 None,
             )
         ],
-        b"\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00",
+        b"\x16\x87\x1b\x00\x00\x00\xa2[\xe3Kf\x00\xf5\xf4\xf4`@",
     )
 
     assert issuance.compose(
@@ -886,7 +886,7 @@ def test_valid_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][0],
         [],
-        b"\x16\x00\x00\x00\x00\xdd\x96\xd2t\x7f\xff\xff\xff\xff\xff\xff\xff\x01\x00\x00Maximum quantity",
+        b"\x16\x87\x1a\xdd\x96\xd2t\x1b\x7f\xff\xff\xff\xff\xff\xff\xff\xf5\xf4\xf4`PMaximum quantity",
     )
 
     assert issuance.compose(
@@ -894,7 +894,7 @@ def test_valid_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][0],
         [],
-        b"\x16\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\xc0NULL",
+        b"\x16\x87\x1b\xff\xff\xff\xff\xff\xff\xff\xff\x19\x03\xe8\xf5\xf4\xf4`@",
     )
 
     assert issuance.compose(
@@ -902,7 +902,7 @@ def test_valid_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][0],
         [],
-        b"\x17\x01S\x08!\xa2\xab/\x85\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\x00\x00\nW\xc6\xf3m\xe2:\x1f_LF",
+        b"\x17\x89\x1b\x01S\x08!\xa2\xab/\x85\x1a\x05\xf5\xe1\x00\x01\x00\x00\nJW\xc6\xf3m\xe2:\x1f_LF`@",
     )
 
     assert issuance.compose(
@@ -918,7 +918,7 @@ def test_valid_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][0],
         [],
-        b"\x17\x01S\x08!\xa2\xab/\x85\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\x00\x00\nW\xc6\xf3m\xe2:\x1f_LFhello world",
+        b"\x17\x89\x1b\x01S\x08!\xa2\xab/\x85\x1a\x05\xf5\xe1\x00\x01\x00\x00\nJW\xc6\xf3m\xe2:\x1f_LF`Khello world",
     )
 
     assert issuance.compose(
@@ -926,7 +926,7 @@ def test_valid_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][0],
         [],
-        b"\x17\x01S\x08!\xeb[\xcc\x88\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\n\x01Jt\x85aq\xca<U\x9f",
+        b"\x17\x89\x1b\x01S\x08!\xeb[\xcc\x88\x19\x03\xe8\x01\x00\x00\nJ\x01Jt\x85aq\xca<U\x9f`@",
     )
     assert issuance.compose(
         ledger_db,
@@ -941,7 +941,7 @@ def test_valid_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][0],
         [],
-        b"\x17\x01S\x08!\x8fXk\xb0\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x10\x8e\x90\xa5}\xba\x99\xd3\xa7{\n$p\xb1\x81n\xdb",
+        b"\x17\x89\x1b\x01S\x08!\x8fXk\xb0\x19\x03\xe8\x01\x00\x00\x10P\x8e\x90\xa5}\xba\x99\xd3\xa7{\n$p\xb1\x81n\xdb`@",
     )
 
     assert issuance.compose(
@@ -957,7 +957,7 @@ def test_valid_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][0],
         [],
-        b'\x16\x01S\x08"\x06\xe4c%\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00',
+        b'\x16\x87\x1b\x01S\x08"\x06\xe4c%\x19\x03\xe8\xf5\xf4\xf4`@',
     )
 
     # "mock_protocol_changes": {"short_tx_type_id": True},
@@ -966,7 +966,7 @@ def test_valid_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][0],
         [],
-        b"\x17\x01S\x08!\xa2\xab/\x85\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\x00\x00\nW\xc6\xf3m\xe2:\x1f_LF",
+        b"\x17\x89\x1b\x01S\x08!\xa2\xab/\x85\x1a\x05\xf5\xe1\x00\x01\x00\x00\nJW\xc6\xf3m\xe2:\x1f_LF`@",
     )
 
     assert issuance.compose(
@@ -982,7 +982,7 @@ def test_valid_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][0],
         [],
-        b"\x16\x01S\x08!g\x1b\x10e\x00\x00\x00\x00\x0b\xeb\xc2\x00\x01\x00\x00description",
+        b"\x16\x87\x1b\x01S\x08!g\x1b\x10e\x1a\x0b\xeb\xc2\x00\xf5\xf4\xf4`Kdescription",
     )
 
     assert issuance.compose(
@@ -998,7 +998,7 @@ def test_valid_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][0],
         [(defaults["addresses"][1], None)],
-        b"\x16\x00\x00\x10}U\x15\xa8]\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00second divisible asset",
+        b"\x16\x87\x1b\x00\x00\x10}U\x15\xa8]\x00\xf5\xf4\xf4`Vsecond divisible asset",
     )
 
     assert issuance.compose(
@@ -1014,7 +1014,7 @@ def test_valid_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][0],
         [],
-        b"\x16\x00\x00\x10}U\x15\xa8^\x00\x00\x00\x00\x00\x00\x00\x00\x01\x01\x00third divisible asset",
+        b"\x16\x87\x1b\x00\x00\x10}U\x15\xa8^\x00\xf5\xf5\xf4`Uthird divisible asset",
     )
 
 
@@ -1096,8 +1096,8 @@ def test_invalid_compose(ledger_db, defaults):
 
 
 def test_parse_basset(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    message = b"\x00\x00\x00\x00\x00\xbaOs\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00"
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
+    message = b"\x87\x1a\x00\xbaOs\x19\x03\xe8\xf5\xf4\xf4`@"
     issuance.parse(ledger_db, tx, message, issuance.ID)
 
     test_helpers.check_records(
@@ -1149,10 +1149,8 @@ def test_parse_basset(ledger_db, blockchain_mock, defaults, test_helpers, curren
 
 
 def test_parse_divisibleb(ledger_db, blockchain_mock, defaults, test_helpers):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    message = (
-        b"\x00\x00\x10}U\x15\xa8]\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00second divisible asset"
-    )
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
+    message = b"\x87\x1b\x00\x00\x10}U\x15\xa8]\x00\xf5\xf4\xf4`Vsecond divisible asset"
     issuance.parse(ledger_db, tx, message, issuance.ID)
 
     test_helpers.check_records(
@@ -1182,10 +1180,8 @@ def test_parse_divisibleb(ledger_db, blockchain_mock, defaults, test_helpers):
 
 
 def test_parse_divisiblec(ledger_db, blockchain_mock, defaults, test_helpers):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    message = (
-        b"\x00\x00\x10}U\x15\xa8^\x00\x00\x00\x00\x00\x00\x00\x00\x01\x01\x00third divisible asset"
-    )
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
+    message = b"\x87\x1b\x00\x00\x10}U\x15\xa8^\x00\xf5\xf5\xf4`Uthird divisible asset"
     issuance.parse(ledger_db, tx, message, issuance.ID)
 
     test_helpers.check_records(
@@ -1216,7 +1212,7 @@ def test_parse_divisiblec(ledger_db, blockchain_mock, defaults, test_helpers):
 
 def test_parse_bsset(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["p2ms_addresses"][0])
-    message = b"\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00"
+    message = b"\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`@"
     issuance.parse(ledger_db, tx, message, issuance.ID)
 
     test_helpers.check_records(
@@ -1269,9 +1265,9 @@ def test_parse_bsset(ledger_db, blockchain_mock, defaults, test_helpers, current
 
 def test_parse_divisible(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
     tx = blockchain_mock.dummy_tx(
-        ledger_db, defaults["addresses"][0], defaults["p2ms_addresses"][0]
+        ledger_db, defaults["addresses"][0], defaults["p2ms_addresses"][0], use_first_tx=True
     )
-    message = b"\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00"
+    message = b"\x87\x1b\x00\x00\x00\xa2[\xe3Kf\x00\xf5\xf4\xf4`@"
     issuance.parse(ledger_db, tx, message, issuance.ID)
 
     test_helpers.check_records(
@@ -1312,9 +1308,9 @@ def test_parse_divisible(ledger_db, blockchain_mock, defaults, test_helpers, cur
 
 
 def test_parse_maximum(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = (
-        b"\x00\x00\x00\x00\xdd\x96\xd2t\x7f\xff\xff\xff\xff\xff\xff\xff\x01\x00\x00Maximum quantity"
+        b"\x87\x1a\xdd\x96\xd2t\x1b\x7f\xff\xff\xff\xff\xff\xff\xff\xf5\xf4\xf4`PMaximum quantity"
     )
     issuance.parse(ledger_db, tx, message, issuance.ID)
 
@@ -1367,10 +1363,8 @@ def test_parse_maximum(ledger_db, blockchain_mock, defaults, test_helpers, curre
 
 
 def test_parse_numeric(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    message = (
-        b"\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\xc0NULL"
-    )
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
+    message = b"\x87\x1b\xff\xff\xff\xff\xff\xff\xff\xff\x19\x03\xe8\xf5\xf4\xf4`@"
     issuance.parse(ledger_db, tx, message, issuance.ID)
 
     test_helpers.check_records(
@@ -1422,7 +1416,7 @@ def test_parse_numeric(ledger_db, blockchain_mock, defaults, test_helpers, curre
 
 
 def test_parse_too_short(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = binascii.unhexlify("00000000000002bf0000000005f5e10001")
     issuance.parse(ledger_db, tx, message, issuance.ID)
 
@@ -1441,7 +1435,7 @@ def test_parse_too_short(ledger_db, blockchain_mock, defaults, test_helpers, cur
                     "locked": 0,
                     "quantity": None,
                     "source": defaults["addresses"][0],
-                    "status": "invalid: bad asset name",
+                    "status": "invalid: could not unpack",
                     "transfer": 0,
                     "divisible": None,
                     "tx_hash": tx["tx_hash"],
@@ -1455,8 +1449,8 @@ def test_parse_too_short(ledger_db, blockchain_mock, defaults, test_helpers, cur
 def test_parse_paid_subasset(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    message = b"\x01S\x08!\xa2\xab/\x85\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\x00\x00\nW\xc6\xf3m\xe2:\x1f_LF"
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
+    message = b"\x89\x1b\x01S\x08!\xa2\xab/\x85\x1a\x05\xf5\xe1\x00\x01\x00\x00\nJW\xc6\xf3m\xe2:\x1f_LF`@"
     with ProtocolChangesDisabled(["free_subassets"]):
         issuance.parse(ledger_db, tx, message, issuance.SUBASSET_ID)
 
@@ -1520,8 +1514,8 @@ def test_parse_paid_subasset(
 def test_parse_paid_subasset_with_description(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    message = b"\x01S\x08!\xa2\xab/\x85\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\x00\x00\nW\xc6\xf3m\xe2:\x1f_LFhello world"
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
+    message = b"\x89\x1b\x01S\x08!\xa2\xab/\x85\x1a\x05\xf5\xe1\x00\x01\x00\x00\nJW\xc6\xf3m\xe2:\x1f_LF`Khello world"
     with ProtocolChangesDisabled(["free_subassets"]):
         issuance.parse(ledger_db, tx, message, issuance.SUBASSET_ID)
 
@@ -1583,7 +1577,7 @@ def test_parse_paid_subasset_with_description(
 
 
 def test_parse_paid_subasset_before_activation(ledger_db, blockchain_mock, defaults, test_helpers):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = b"\x01S\x08!\xa2\xab/\x85\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\x00\x00\nW\xc6\xf3m\xe2:\x1f_LFhello world"
     with ProtocolChangesDisabled(["free_subassets", "subassets"]):
         issuance.parse(ledger_db, tx, message, issuance.SUBASSET_ID)
@@ -1615,7 +1609,7 @@ def test_parse_paid_subasset_before_activation(ledger_db, blockchain_mock, defau
 
 
 def test_parse_paid_subasset_invalid_length(ledger_db, blockchain_mock, defaults, test_helpers):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = (
         b"\x01S\x08!g\x1b\x10\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\xf0W\xc6\xf3m\xe2:\x1f_LF"
     )
@@ -1649,8 +1643,8 @@ def test_parse_paid_subasset_invalid_length(ledger_db, blockchain_mock, defaults
 
 
 def test_parse_paid_subasset_reissuance(ledger_db, blockchain_mock, defaults, test_helpers):
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    message = b'\x01S\x08"\x06\xe4c%\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00'
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
+    message = b'\x87\x1b\x01S\x08"\x06\xe4c%\x19\x03\xe8\xf5\xf4\xf4`@'
     with ProtocolChangesDisabled(["free_subassets"]):
         issuance.parse(ledger_db, tx, message, issuance.ID)
 
@@ -1703,7 +1697,7 @@ def test_reset_issuance(apiv2_client, ledger_db, state_db, defaults, blockchain_
             continue
         assert address_balance["addresses"][0]["quantity"] == balances[0]["quantity"]
 
-    data = b"\x16\x00\x00\x00\x03\xc5\x8e\\V\x00\x00\x00\x00\x00\x00\x01\xf4\x00\x00\x01reseted"
+    data = b"\x16\x87\x1b\x00\x00\x00\x03\xc5\x8e\\V\x19\x01\xf4\xf4\xf4\xf5`Greseted"
 
     assert issuance.compose(
         ledger_db,
@@ -1721,7 +1715,7 @@ def test_reset_issuance(apiv2_client, ledger_db, state_db, defaults, blockchain_
         data,
     )
     message = data[1:]
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     issuance.parse(ledger_db, tx, message, issuance.ID)
 
     test_helpers.check_records(
@@ -1769,3 +1763,359 @@ def test_reset_issuance(apiv2_client, ledger_db, state_db, defaults, blockchain_
         assert address_balance["addresses"][0]["quantity"] == balances[0]["quantity"]
 
     config.FORCE = False
+
+
+def test_valid_compose_legacy(ledger_db, defaults):
+    with ProtocolChangesDisabled(["taproot_support"]):
+        assert issuance.compose(
+            ledger_db, defaults["addresses"][0], "BSSET", 1000, None, True, False, None, ""
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00",
+        )
+
+        assert issuance.compose(
+            ledger_db, defaults["addresses"][0], "BASSET", 1000, None, True, False, None, ""
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x16\x00\x00\x00\x00\x00\xbaOs\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00",
+        )
+
+        assert issuance.compose(
+            ledger_db, defaults["p2sh_addresses"][0], "BSSET", 1000, None, True, False, None, ""
+        ) == (
+            defaults["p2sh_addresses"][0],
+            [],
+            b"\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00",
+        )
+
+        assert issuance.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            "BSSET",
+            1000,
+            None,
+            True,
+            False,
+            None,
+            "description much much much longer than 42 letters",
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00description much much much longer than 42 letters",
+        )
+
+        assert issuance.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            "DIVISIBLE",
+            0,
+            defaults["addresses"][1],
+            True,
+            False,
+            None,
+            "",
+        ) == (
+            defaults["addresses"][0],
+            [(defaults["addresses"][1], None)],
+            b"\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00",
+        )
+
+        assert issuance.compose(
+            ledger_db, defaults["p2ms_addresses"][0], "BSSET", 1000, None, True, False, None, ""
+        ) == (
+            defaults["p2ms_addresses"][0],
+            [],
+            b"\x16\x00\x00\x00\x00\x00\x0b\xfc\xe3\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00",
+        )
+
+        assert issuance.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            "DIVISIBLE",
+            0,
+            defaults["p2ms_addresses"][0],
+            True,
+            False,
+            None,
+            "",
+        ) == (
+            defaults["addresses"][0],
+            [
+                (
+                    defaults["p2ms_addresses"][0],
+                    None,
+                )
+            ],
+            b"\x16\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00",
+        )
+
+        assert issuance.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            "MAXIMUM",
+            2**63 - 1,
+            None,
+            True,
+            False,
+            None,
+            "Maximum quantity",
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x16\x00\x00\x00\x00\xdd\x96\xd2t\x7f\xff\xff\xff\xff\xff\xff\xff\x01\x00\x00Maximum quantity",
+        )
+
+        assert issuance.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            f"A{2**64 - 1}",
+            1000,
+            None,
+            None,
+            False,
+            None,
+            None,
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x16\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\xc0NULL",
+        )
+
+        assert issuance.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            "PARENT.child1",
+            100000000,
+            None,
+            True,
+            False,
+            None,
+            "",
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x17\x01S\x08!\xa2\xab/\x85\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\x00\x00\nW\xc6\xf3m\xe2:\x1f_LF",
+        )
+
+        assert issuance.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            "PARENT.child1",
+            100000000,
+            None,
+            True,
+            False,
+            None,
+            "hello world",
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x17\x01S\x08!\xa2\xab/\x85\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\x00\x00\nW\xc6\xf3m\xe2:\x1f_LFhello world",
+        )
+
+        assert issuance.compose(
+            ledger_db, defaults["addresses"][0], "PARENT.a.b.c", 1000, None, True, False, None, ""
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x17\x01S\x08!\xeb[\xcc\x88\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\n\x01Jt\x85aq\xca<U\x9f",
+        )
+        assert issuance.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            "PARENT.a-zA-Z0-9.-_@!",
+            1000,
+            None,
+            True,
+            False,
+            None,
+            "",
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x17\x01S\x08!\x8fXk\xb0\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00\x10\x8e\x90\xa5}\xba\x99\xd3\xa7{\n$p\xb1\x81n\xdb",
+        )
+
+        assert issuance.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            "PARENT.already.issued",
+            1000,
+            None,
+            True,
+            False,
+            None,
+            "",
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b'\x16\x01S\x08"\x06\xe4c%\x00\x00\x00\x00\x00\x00\x03\xe8\x01\x00\x00',
+        )
+
+        # "mock_protocol_changes": {"short_tx_type_id": True},
+        assert issuance.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            "PARENT.child1",
+            100000000,
+            None,
+            True,
+            False,
+            None,
+            "",
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x17\x01S\x08!\xa2\xab/\x85\x00\x00\x00\x00\x05\xf5\xe1\x00\x01\x00\x00\nW\xc6\xf3m\xe2:\x1f_LF",
+        )
+
+        assert issuance.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            f"A{26**12 + 101}",
+            200000000,
+            None,
+            True,
+            None,
+            None,
+            "description",
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x16\x01S\x08!g\x1b\x10e\x00\x00\x00\x00\x0b\xeb\xc2\x00\x01\x00\x00description",
+        )
+
+        assert issuance.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            "DIVISIBLEB",
+            0,
+            defaults["addresses"][1],
+            True,
+            False,
+            None,
+            "second divisible asset",
+        ) == (
+            defaults["addresses"][0],
+            [(defaults["addresses"][1], None)],
+            b"\x16\x00\x00\x10}U\x15\xa8]\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00second divisible asset",
+        )
+
+        assert issuance.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            "DIVISIBLEC",
+            0,
+            None,
+            True,
+            True,
+            None,
+            "third divisible asset",
+        ) == (
+            defaults["addresses"][0],
+            [],
+            b"\x16\x00\x00\x10}U\x15\xa8^\x00\x00\x00\x00\x00\x00\x00\x00\x01\x01\x00third divisible asset",
+        )
+
+
+def test_parse_divisible_legacy(
+    ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
+):
+    with ProtocolChangesDisabled(["taproot_support"]):
+        tx = blockchain_mock.dummy_tx(
+            ledger_db, defaults["addresses"][0], defaults["p2ms_addresses"][0], use_first_tx=True
+        )
+        message = b"\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00"
+        issuance.parse(ledger_db, tx, message, issuance.ID)
+
+        test_helpers.check_records(
+            ledger_db,
+            [
+                {
+                    "table": "issuances",
+                    "values": {
+                        "asset": "DIVISIBLE",
+                        "asset_longname": None,
+                        "block_index": tx["block_index"],
+                        "description": "",
+                        "divisible": 1,
+                        "fee_paid": 0,
+                        "issuer": defaults["p2ms_addresses"][0],
+                        "locked": 0,
+                        "quantity": 0,
+                        "source": defaults["addresses"][0],
+                        "status": "valid",
+                        "transfer": True,
+                        "tx_hash": tx["tx_hash"],
+                        "tx_index": tx["tx_index"],
+                    },
+                },
+                {
+                    "table": "debits",
+                    "values": {
+                        "action": "issuance fee",
+                        "address": defaults["addresses"][0],
+                        "asset": "XCP",
+                        "block_index": current_block_index,
+                        "event": tx["tx_hash"],
+                        "quantity": 0,
+                    },
+                },
+            ],
+        )
+
+
+def test_compose_issuance_data():
+    # Test branch 1: asset_format_length <= 19
+    fmt1 = ">QQ???s"
+    result1 = issuance._compose_issuance_data(
+        19, fmt1, issuance.ID, 1000, True, True, True, b"desc", False, 0, 0.0
+    )
+    assert result1 is not None
+
+    # Test branch 2: asset_format_length <= 26
+    fmt2 = ">QQ??Ifs"
+    result2 = issuance._compose_issuance_data(
+        26, fmt2, issuance.ID, 2000, False, True, False, b"desc", True, 1000, 5.0
+    )
+    assert result2 is not None
+
+    # Test branch 3: asset_format_length <= 27
+    fmt3 = ">QQ???Ifs"
+    result3 = issuance._compose_issuance_data(
+        27, fmt3, issuance.ID, 3000, True, False, True, b"desc", True, 2000, 10.0
+    )
+    assert result3 is not None
+
+    # Test branch 4: asset_format_length <= 28
+    fmt4 = ">QQ????Ifs"
+    result4 = issuance._compose_issuance_data(
+        28, fmt4, issuance.ID, 4000, False, True, True, b"desc", False, 0, 0.0
+    )
+    assert result4 is not None
+
+
+def test_compose_issuance_data_subasset():
+    # Test branch 1: subasset_format_length <= 18
+    fmt1 = ">QQ?Bss"
+    result1 = issuance._compose_issuance_data_subasset(
+        18, fmt1, issuance.SUBASSET_ID, 1000, True, False, False, 5, b"subname", b"desc"
+    )
+    assert result1 is not None
+
+    # Test branch 2: subasset_format_length <= 19
+    fmt2 = ">QQ??Bss"
+    result2 = issuance._compose_issuance_data_subasset(
+        19, fmt2, issuance.SUBASSET_ID, 2000, False, False, True, 6, b"subname", b"desc"
+    )
+    assert result2 is not None
+
+    # Test branch 3: subasset_format_length <= 20
+    fmt3 = ">QQ???Bss"
+    result3 = issuance._compose_issuance_data_subasset(
+        20, fmt3, issuance.SUBASSET_ID, 3000, True, True, False, 7, b"subname", b"desc"
+    )
+    assert result3 is not None

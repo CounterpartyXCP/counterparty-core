@@ -6,16 +6,16 @@ def test_blocks_functions(ledger_db, current_block_index):
     last_block = blocks.get_block(ledger_db, current_block_index)
     assert (
         last_block["block_hash"]
-        == "5f0d5c07accb0f04a59deb15b8e92524668c087f4678f11fe99bf29befc3a29d"
+        == "4b77f641741ee30f3d9b517b30e0c59b7622b6a4a6b4342348b6ceae2d351da6"
     )
     assert last_block["block_index"] == current_block_index
     assert (
         last_block["ledger_hash"]
-        == "cb226f571087a7585d9ef65ae98d36500e4d0abf3a6737923182d70bf3068e92"
+        == "3b2bef139d2b964e8833e42546016ba32481541b18d8c64cbc899e440d386f1f"
     )
     assert (
         last_block["txlist_hash"]
-        == "9536fafbb368aeb844b888af941fc5e314251c5ed63ca4d681c207a31864f5be"
+        == "8fba3ce017f4f6e87987d75218c16996961fce70ad4433f49d0715940ddb7f4e"
     )
 
     assert blocks.last_db_index(ledger_db) == current_block_index
@@ -23,28 +23,28 @@ def test_blocks_functions(ledger_db, current_block_index):
     last_block = blocks.get_block_by_hash(ledger_db, last_block["block_hash"])
     assert (
         last_block["block_hash"]
-        == "5f0d5c07accb0f04a59deb15b8e92524668c087f4678f11fe99bf29befc3a29d"
+        == "4b77f641741ee30f3d9b517b30e0c59b7622b6a4a6b4342348b6ceae2d351da6"
     )
     assert last_block["block_index"] == current_block_index
     assert (
         last_block["ledger_hash"]
-        == "cb226f571087a7585d9ef65ae98d36500e4d0abf3a6737923182d70bf3068e92"
+        == "3b2bef139d2b964e8833e42546016ba32481541b18d8c64cbc899e440d386f1f"
     )
     assert (
         last_block["txlist_hash"]
-        == "9536fafbb368aeb844b888af941fc5e314251c5ed63ca4d681c207a31864f5be"
+        == "8fba3ce017f4f6e87987d75218c16996961fce70ad4433f49d0715940ddb7f4e"
     )
 
     assert (
         blocks.get_block_hash(ledger_db, current_block_index)
-        == "5f0d5c07accb0f04a59deb15b8e92524668c087f4678f11fe99bf29befc3a29d"
+        == "4b77f641741ee30f3d9b517b30e0c59b7622b6a4a6b4342348b6ceae2d351da6"
     )
     assert blocks.get_block_hash(ledger_db, 999999999999999) is None
     assert blocks.get_vouts(ledger_db, "hash") == []
 
     all_txs = blocks.get_transactions(ledger_db)
     print(all_txs[0]["tx_hash"], all_txs[0]["tx_index"])
-    assert len(all_txs) == 64
+    assert len(all_txs) == 67
     assert (
         all_txs[0]["tx_hash"] == "5adde02c200e7959a453c2fc362e9baf20fe4ef3c8a37b9ce601be238ad4e6fa"
     )

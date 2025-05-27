@@ -4,7 +4,7 @@ use std::iter::repeat;
 use std::thread::JoinHandle;
 
 use crate::b58::b58_encode;
-use crate::utils::script_to_address;
+use crate::utils::{script_to_address, script_to_address_legacy};
 use bitcoin::{
     consensus::serialize,
     hashes::{hex::prelude::*, ripemd160, sha256, sha256d::Hash as Sha256dHash, Hash},
@@ -13,7 +13,7 @@ use bitcoin::{
         OP_PUSHNUM_3, OP_RETURN,
     },
     script::Instruction::{Op, PushBytes},
-    Block, BlockHash, Script, TxOut,
+    Block, BlockHash, Script, TxOut, Txid,
 };
 
 use crossbeam_channel::{bounded, select, unbounded, Receiver, Sender};
@@ -24,6 +24,8 @@ use crate::indexer::block::VinOutput;
 use crate::indexer::rpc_client::{BatchRpcClient, BATCH_CLIENT};
 
 use std::sync::Arc;
+
+use serde_cbor::Value;
 
 use super::{
     block::{
@@ -90,9 +92,27 @@ fn arc4_decrypt(key: &[u8], data: &[u8]) -> Vec<u8> {
     result
 }
 
-fn is_valid_segwit_script(script: &Script) -> bool {
+
+fn is_valid_segwit_script_legacy(script: &Script) -> bool {
     if let Some(Ok(PushBytes(pb))) = script.instructions().next() {
         return pb.is_empty();
+    }
+    false
+}
+
+fn is_valid_segwit_script(script: &Script) -> bool {
+    if let Some(instruction) = script.instructions().next() {
+        match instruction {
+            Ok(bitcoin::blockdata::script::Instruction::PushBytes(pb)) => {
+                return pb.is_empty();
+            },
+            Ok(inst) => {
+                return format!("{:?}", inst).contains("OP_PUSHNUM_1");
+            },
+            Err(_) => {
+                return false;
+            }
+        }
     }
     false
 }
@@ -131,6 +151,18 @@ fn parse_vout(
             .collect::<Vec<_>>()
             .as_slice()
         {
+            if config.taproot_support_enabled(height) {
+                let bytes = pb.as_bytes();
+                if bytes == b"CNTRPRTY" {
+                    return Ok((
+                        ParseOutput::Data(bytes.to_vec()),
+                        Some(PotentialDispenser {
+                            destination: None,
+                            value: None,
+                        }),
+                    ));
+                }
+            }
             let bytes = arc4_decrypt(&key, pb.as_bytes());
             if bytes.starts_with(&config.prefix) {
                 return Ok((
@@ -141,11 +173,12 @@ fn parse_vout(
                     }),
                 ));
             }
-        }
-        Err(Error::ParseVout(format!(
+        } 
+        return Err(Error::ParseVout(format!(
             "Encountered invalid OP_RETURN script | tx: {}, vout: {}",
             txid, vi
-        )))
+        )));
+
     } else if vout.script_pubkey.instructions().last() == Some(Ok(Op(OP_CHECKSIG))) {
         let instructions: Vec<_> = vout.script_pubkey.instructions().collect();
         if instructions.len() < 3 {
@@ -352,11 +385,21 @@ fn parse_vout(
             "Encountered invalid P2SH script | tx: {}, vout: {}",
             txid, vi
         )));
-    } else if config.segwit_supported(height) && is_valid_segwit_script(&vout.script_pubkey) {
-        let destination = script_to_address(
-            vout.script_pubkey.as_bytes().to_vec(),
-            config.network.to_string().as_str(),
-        )
+    } else if (config.segwit_supported(height) && is_valid_segwit_script_legacy(&vout.script_pubkey)) || 
+                (config.taproot_support_enabled(height) && is_valid_segwit_script(&vout.script_pubkey)) || 
+                (config.taproot_support_enabled(height) && vout.script_pubkey.is_p2tr()) {
+        
+         let destination = if config.taproot_support_enabled(height) {
+            script_to_address(
+                vout.script_pubkey.as_bytes().to_vec(),
+                config.network.to_string().as_str(),
+            )
+        } else {
+            script_to_address_legacy(
+                vout.script_pubkey.as_bytes().to_vec(),
+                config.network.to_string().as_str(),
+            )
+        }
         .map_err(|e| Error::ParseVout(format!("Segwit script to address failed: {}", e)))?;
         let mut potential_dispenser = Some(PotentialDispenser {
             destination: None,
@@ -377,6 +420,181 @@ fn parse_vout(
     }
 }
 
+fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
+    let instructions: Vec<_> = script.instructions().collect();
+    
+    // Check if we have enough instructions for a valid envelope script
+    if instructions.len() < 5 {
+        return Err(Error::ParseVout("Invalid witness script: too few instructions".to_string()));
+    }
+    
+    // Verify it's an envelope script with empty push bytes as equivalent to OP_FALSE
+    let is_envelope = match (&instructions[0], &instructions[1], instructions.last()) {
+        (Ok(PushBytes(pb)), Ok(Op(op2)), Some(Ok(Op(op3)))) if pb.is_empty() => {
+            format!("{:?}", op2).contains("OP_IF") && format!("{:?}", op3).contains("OP_CHECKSIG")
+        },
+        (Ok(Op(op1)), Ok(Op(op2)), Some(Ok(Op(op3)))) => {
+            (format!("{:?}", op1).contains("OP_FALSE") || format!("{:?}", op1).contains("OP_0")) && 
+            format!("{:?}", op2).contains("OP_IF") && 
+            format!("{:?}", op3).contains("OP_CHECKSIG")
+        },
+        _ => false
+    };
+    
+    if !is_envelope {
+        return Err(Error::ParseVout("Not an envelope script".to_string()));
+    }
+    
+    // Check if this is an "ord" inscription
+    let is_ord = instructions.len() >= 7 && 
+        match (&instructions.get(2), &instructions.get(3), &instructions.get(4)) {
+            (Some(Ok(PushBytes(pb1))), Some(Ok(PushBytes(pb2))), Some(Ok(PushBytes(pb3)))) => {
+                pb1.as_bytes() == b"ord" && 
+                (pb2.as_bytes().len() == 1 && pb2.as_bytes()[0] == 7) // 7 for metaprotocol
+            },
+            _ => false
+        };
+
+    if is_ord {
+        // Extract mime_type from the script (index 4)
+        let mime_type = match &instructions.get(6) {
+            Some(Ok(PushBytes(pb))) => {
+                match std::str::from_utf8(pb.as_bytes()) {
+                    Ok(mime) => mime.to_string(),
+                    Err(_) => "".to_string(), // Default to empty string if decoding fails
+                }
+            },
+            _ => "".to_string(), // Default to empty string if not found
+        };
+        
+        // For ord inscriptions, collect all metadata chunks and description chunks
+        let mut metadata_chunks = Vec::new();
+        let mut description_chunks = Vec::new();
+        
+        let mut i = 7; // Skip protocol prefix elements
+        let mut current_section = "none";
+        
+        // Process all instructions to collect metadata and description
+        while i < instructions.len() - 3 { // Skip last 3 instructions: op_endif and checksig
+            match &instructions[i] {
+                Ok(PushBytes(marker)) => {
+                    let marker_bytes = marker.as_bytes();
+                    if marker_bytes.len() == 1 && marker_bytes[0] == 5 {
+                        current_section = "metadata";
+                        i += 1;
+                        continue;
+                    } else if (marker_bytes.len() == 1 && marker_bytes[0] == 0) || marker_bytes.is_empty() {
+                        current_section = "description";
+                        i += 1;
+                        continue;
+                    }
+                },
+                Ok(Op(op)) => {
+                    // Vérifier si l'instruction est OP_0/OP_FALSE pour le marqueur de description
+                    if format!("{:?}", op).contains("OP_0") || format!("{:?}", op).contains("OP_FALSE") {
+                        current_section = "description";
+                        i += 1;
+                        continue;
+                    }
+                },
+                _ => {}
+            }
+
+            // Collect the chunk if we're in a data section
+            if current_section != "none" {
+                if let Ok(PushBytes(data)) = &instructions[i] {
+                    if current_section == "metadata" {
+                        metadata_chunks.push(data.as_bytes().to_vec());
+                    } else if current_section == "description" {
+                        description_chunks.push(data.as_bytes().to_vec());
+                    }
+                }
+            }
+            
+            i += 1;
+        }
+        
+        // Combine all metadata chunks
+        let mut combined_metadata = Vec::new();
+        for chunk in metadata_chunks {
+            combined_metadata.extend_from_slice(&chunk);
+        }
+        
+        // Combine all description chunks
+        let mut combined_description = Vec::new();
+        for chunk in &description_chunks {
+            combined_description.extend_from_slice(chunk);
+        }
+        
+        // Always store descriptions as raw bytes
+        let description_value = Value::Bytes(combined_description);
+        
+        // If we have metadata, use it directly
+        if !combined_metadata.is_empty() {
+            // First try to decode existing CBOR data
+            match serde_cbor::from_slice::<Value>(&combined_metadata) {
+                Ok(value) => {
+                    // Extract message_type_id and create a modified value in one step
+                    let (message_type_id, mut value_without_type_id) = match value {
+                        Value::Array(mut arr) => {
+                            if arr.is_empty() {
+                                return Err(Error::ParseVout("CBOR array is empty, missing message_type_id".to_string()));
+                            }
+                            let type_id = arr.remove(0);
+                            (type_id, Value::Array(arr))
+                        },
+                        _ => return Err(Error::ParseVout("Expected CBOR array, found different type".to_string())),
+                    };
+                    
+                    // Ensure message_type_id is an integer
+                    let type_id = match message_type_id {
+                        Value::Integer(id) => id as u8,
+                        _ => return Err(Error::ParseVout("message_type_id must be an integer".to_string())),
+                    };
+                    
+                    // If there's a description, add it back to the data structure
+                    if let Value::Array(ref mut arr) = value_without_type_id {
+                        // Add the mime_type before the description
+                        arr.push(Value::Text(mime_type));
+                        
+                        // Add the description if it's not empty
+                        if !description_chunks.is_empty() {
+                            arr.push(description_value);
+                        }
+                    }
+                    
+                    // Repack the message as CBOR
+                    match serde_cbor::to_vec(&value_without_type_id) {
+                        Ok(final_data) => {
+                            // Create a Vec with just the message_type_id byte
+                            let mut result = vec![type_id];
+                            // Append the rest of the CBOR data
+                            result.extend_from_slice(&final_data);
+                            Ok(result)
+                        },
+                        Err(e) => Err(Error::ParseVout(format!("Failed to encode CBOR data: {}", e))),
+                    }
+                },
+                Err(e) => {
+                   Err(Error::ParseVout(format!("CBOR decode error: {}", e)))
+                }
+            }
+        } else {
+            // Neither metadata nor description found
+            Err(Error::ParseVout("No data found in the ord inscription".to_string()))
+        }
+    } else {
+        // Generic inscription - collect all data between OP_IF and OP_ENDIF
+        let mut result_data = Vec::new();
+        for i in 2..instructions.len() - 3 {
+            if let Ok(PushBytes(bytes)) = &instructions[i] {
+                result_data.extend_from_slice(bytes.as_bytes());
+            }
+        }
+        return Ok(result_data);
+    }
+}
+
 pub fn parse_transaction(
     tx: &bitcoin::Transaction,
     config: &Config,
@@ -387,6 +605,21 @@ pub fn parse_transaction(
     let mut vins = Vec::new();
     let mut segwit = false;
     let mut vtxinwit: Vec<Vec<String>> = Vec::new();
+
+    // Always process all inputs
+    for (i, vin) in tx.input.iter().enumerate() {
+        if !vin.witness.is_empty() {
+            vtxinwit.push(
+                vin.witness
+                    .iter()
+                    .map(|w| w.as_hex().to_string())
+                    .collect::<Vec<_>>(),
+            );
+            segwit = true;
+        } else {
+            vtxinwit.push(Vec::new());
+        }
+    }
 
     let key = if !tx.input.is_empty() {
         let mut key = tx.input[0].previous_output.txid.to_byte_array().to_vec();
@@ -401,12 +634,16 @@ pub fn parse_transaction(
     let mut fee = 0;
     let mut btc_amount = 0;
     let mut data = Vec::new();
+    let mut is_reveal_tx = false;
+    let mut commit_parent_txid = Txid::from_raw_hash(Sha256dHash::all_zeros());
+    let mut commit_parent_vout = 0;
     let mut potential_dispensers = Vec::new();
     let mut err = None;
     for vout in tx.output.iter() {
         vouts.push(Vout {
             value: vout.value.to_sat(),
             script_pub_key: vout.script_pubkey.to_bytes(),
+            //is_segwit: vout.script_pubkey.is_witness_program(),
         });
     }
     let mut parsed_vouts: Result<ParsedVouts, String> = Err("Not Parsed".to_string());
@@ -423,7 +660,7 @@ pub fn parse_transaction(
                 height,
                 tx.compute_txid().to_string(),
                 vi,
-                vout,
+                &vout.clone(),
             );
             match result {
                 Err(e) => {
@@ -443,7 +680,34 @@ pub fn parse_transaction(
                     } else if parse_output.is_destination() {
                         break;
                     } else if let ParseOutput::Data(mut new_data) = parse_output {
-                        data.append(&mut new_data)
+                        // reveal transaction data
+                        if config.taproot_support_enabled(height) && new_data == b"CNTRPRTY" && !vtxinwit.is_empty() && vtxinwit[0].len() == 3 {
+                            if let Ok(bytes) = hex::decode(&vtxinwit[0][1]) {
+                                let script = Script::from_bytes(&bytes);
+                                match extract_data_from_witness(&script) {
+                                    Ok(mut inscription_data) => {
+                                        if !inscription_data.is_empty() {
+                                            is_reveal_tx = true;
+                                            data.append(&mut inscription_data);
+                                        }
+                                    },
+                                    Err(e) => {
+                                        err = Some(Error::ParseVout(format!(
+                                            "Failed to extract data from witness script: {} for tx: {}",
+                                            e,
+                                            tx.compute_txid().to_string()
+                                        )));
+                                    }
+                                }
+                            } else {
+                                err = Some(Error::ParseVout(format!(
+                                    "Failed to decode taproot witness hex for tx: {}",
+                                    tx.compute_txid().to_string()
+                                )));
+                            }
+                        } else {
+                            data.append(&mut new_data)
+                        }
                     }
                 }
             }
@@ -462,13 +726,16 @@ pub fn parse_transaction(
                 fee,
                 data: data.clone(),
                 potential_dispensers,
+                is_reveal_tx,
             })
         };
     }
 
     // Try to get previous transactions info if RPC is available and data is not empty
     let mut prev_txs = vec![None; tx.input.len()];
-    if !data.is_empty() {
+    if !data.is_empty() || 
+        parsed_vouts.as_ref().map_or(false, |p| p.destinations == vec![config.unspendable()]) {
+
         if BATCH_CLIENT.lock().unwrap().is_none() {
             *BATCH_CLIENT.lock().unwrap() = Some(
                 BatchRpcClient::new(
@@ -481,6 +748,7 @@ pub fn parse_transaction(
         }
 
         if let Some(batch_client) = BATCH_CLIENT.lock().unwrap().as_ref() {
+
             let input_txids: Vec<_> = tx
                 .input
                 .iter()
@@ -489,21 +757,20 @@ pub fn parse_transaction(
             prev_txs = batch_client
                 .get_transactions(&input_txids)
                 .unwrap_or_default();
-        }
-    }
 
-    // Always process all inputs
-    for (i, vin) in tx.input.iter().enumerate() {
-        if !vin.witness.is_empty() {
-            vtxinwit.push(
-                vin.witness
-                    .iter()
-                    .map(|w| w.as_hex().to_string())
-                    .collect::<Vec<_>>(),
-            );
-            segwit = true;
-        } else {
-            vtxinwit.push(Vec::new());
+            if is_reveal_tx && !prev_txs.is_empty() {
+                if let Some(prev_tx) = &prev_txs[0] {
+                    if !prev_tx.input.is_empty() {
+                        commit_parent_txid = prev_tx.input[0].previous_output.txid;
+                        commit_parent_vout = prev_tx.input[0].previous_output.vout as usize;
+                        if let Ok(fetched_txs) = batch_client.get_transactions(&[commit_parent_txid]) {
+                            if !fetched_txs.is_empty() {
+                                prev_txs[0] = fetched_txs[0].clone();
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -511,16 +778,23 @@ pub fn parse_transaction(
         let hash = vin.previous_output.txid.to_string();
         let vin_info = prev_txs.get(i).and_then(|prev_tx| {
             prev_tx.as_ref().and_then(|tx| {
-                let vout_idx = vin.previous_output.vout as usize;
+                let tx_id = tx.compute_txid();
+                let vout_idx = if tx_id == commit_parent_txid {
+                    commit_parent_vout
+                } else {
+                    vin.previous_output.vout as usize
+                };
 
-                let is_segwit = prev_tx.as_ref().map_or(false, |tx| {
-                    tx.compute_txid().to_string() != tx.compute_wtxid().to_string()
-                });
+                let is_segwit = tx_id.to_string() != tx.compute_wtxid().to_string();
 
                 tx.output.get(vout_idx).map(|output| VinOutput {
                     value: output.value.to_sat(),
                     script_pub_key: output.script_pubkey.to_bytes(),
-                    is_segwit: is_segwit,
+                    is_segwit: if config.fix_is_segwit_enabled(height) { 
+                        output.script_pubkey.is_witness_program()
+                    } else {
+                        is_segwit
+                    },
                 })
             })
         });

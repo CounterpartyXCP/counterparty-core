@@ -58,10 +58,11 @@ def compose_bet(
 def compose_broadcast(
     db,
     address: str,
-    timestamp: int,
-    value: float,
-    fee_fraction: float,
-    text: str,
+    timestamp: int = 0,
+    value: float = 0.0,
+    fee_fraction: float = 0.0,
+    text: str = "",
+    mime_type: str = "",
     **construct_params,
 ):
     """
@@ -71,6 +72,7 @@ def compose_broadcast(
     :param value: Numerical value of the broadcast (e.g. 100)
     :param fee_fraction: How much of every bet on this feed should go to its operator; a fraction of 1, (i.e. 0.05 is five percent) (e.g. 0.05)
     :param text: The textual part of the broadcast (e.g. "Hello, world!")
+    :param mime_type: The MIME type of the text. For binary MIME type, the `text` must be in hexadecimal format (default: text/plain).
     """
     params = {
         "source": address,
@@ -78,6 +80,7 @@ def compose_broadcast(
         "value": value,
         "fee_fraction": fee_fraction,
         "text": text,
+        "mime_type": mime_type,
     }
     return composer.compose_transaction(db, "broadcast", params, construct_params)
 
@@ -199,6 +202,7 @@ def compose_issuance(
     lock: bool = False,
     reset: bool = False,
     description: str = None,
+    mime_type: str = "",
     **construct_params,
 ):
     """
@@ -211,6 +215,7 @@ def compose_issuance(
     :param lock: Whether this issuance should lock supply of this asset forever
     :param reset: Wether this issuance should reset any existing supply
     :param description: A textual description for the asset
+    :param mime_type: The MIME type of the description. For binary MIME type, the `description` must be in hexadecimal format (default: text/plain).
     """
     params = {
         "source": address,
@@ -221,6 +226,7 @@ def compose_issuance(
         "lock": lock,
         "reset": reset,
         "description": description,
+        "mime_type": mime_type,
     }
     return composer.compose_transaction(db, "issuance", params, construct_params)
 
@@ -405,8 +411,8 @@ def compose_fairminter(
     address: str,
     asset: str,
     asset_parent: str = "",
-    price: int = 0,
-    quantity_by_price: int = 1,
+    lot_price: int = 0,
+    lot_size: int = 1,
     max_mint_per_tx: int = 0,
     hard_cap: int = 0,
     premint_quantity: int = 0,
@@ -420,6 +426,9 @@ def compose_fairminter(
     lock_quantity: bool = False,
     divisible: bool = True,
     description: str = "",
+    mime_type: str = "",
+    price: int = 0,
+    quantity_by_price: int = 1,
     **construct_params,
 ):
     """
@@ -427,8 +436,8 @@ def compose_fairminter(
     :param address: The address that will be issuing the asset (e.g. $ADDRESS_1)
     :param asset: The asset to issue (e.g. MYASSET)
     :param asset_parent: The parent asset of the asset to issue
-    :param price: The price in XCP of the asset to issue (e.g. 10)
-    :param quantity_by_price: The quantity of asset to mint per `price` paid
+    :param lot_price: Formerly `price`. The price in XCP of the asset to issue (e.g. 10)
+    :param lot_size: Formerly `quantity_by_price`. The quantity of asset to mint per `price` paid
     :param max_mint_per_tx: Amount minted if price is equal to 0; otherwise, maximum amount of asset that can be minted in a single transaction; if 0, there is no limit
     :param hard_cap: The maximum amount of asset that can be minted; if 0 there is no limit
     :param premint_quantity: Amount of asset to be minted when the sale starts, if 0, no premint; preminted assets are sent to the source of the transaction
@@ -442,13 +451,19 @@ def compose_fairminter(
     :param lock_quantity: If True, the quantity of the asset cannot be changed after the minting
     :param divisible: If True, the asset is divisible
     :param description: The description of the asset. Overrides the current description if the asset already exists.
+    :param mime_type: The MIME type of the description. For binary MIME type, the `description` must be in hexadecimal format (default: text/plain).
+    :param price: alias for `lot_price`
+    :param quantity_by_price: alias for `lot_size`
     """
+    price_arg = lot_price if lot_price > 0 else price
+    quantity_by_price_arg = lot_size if lot_size > 1 else quantity_by_price
+
     params = {
         "source": address,
         "asset": asset,
         "asset_parent": asset_parent,
-        "price": price,
-        "quantity_by_price": quantity_by_price,
+        "price": price_arg,
+        "quantity_by_price": quantity_by_price_arg,
         "max_mint_per_tx": max_mint_per_tx,
         "hard_cap": hard_cap,
         "premint_quantity": premint_quantity,
@@ -462,6 +477,7 @@ def compose_fairminter(
         "lock_quantity": lock_quantity,
         "divisible": divisible,
         "description": description,
+        "mime_type": mime_type,
     }
     return composer.compose_transaction(db, "fairminter", params, construct_params)
 

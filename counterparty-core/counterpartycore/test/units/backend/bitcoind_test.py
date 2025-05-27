@@ -7,7 +7,7 @@ from counterpartycore.lib import exceptions
 from counterpartycore.lib.backend import bitcoind
 from counterpartycore.lib.utils import helpers
 from counterpartycore.test.fixtures import decodedtxs
-from counterpartycore.test.mocks.bitcoind import original_get_vins_info
+from counterpartycore.test.mocks.bitcoind import original_get_vin_info
 
 
 class MockResponse:
@@ -62,24 +62,6 @@ def init_mock(monkeypatch):
     # config.BACKEND_URL = "http://localhost:14000"
     # config.BACKEND_SSL_NO_VERIFY = True
     # config.REQUESTS_TIMEOUT = 5
-
-
-def test_get_vins_info(monkeypatch):
-    def getrawtransaction_batch_mock(*args, **kwargs):
-        return {"e05a9501ac6f4cdc3f393a20e0e65a5079e6c346201722493294fe6033895219": "rawtx"}
-
-    monkeypatch.setattr(bitcoind, "getrawtransaction_batch", getrawtransaction_batch_mock)
-
-    def deserialize_mock(rawtx):
-        return decodedtxs.DECODED_TX_1
-
-    monkeypatch.setattr("counterpartycore.lib.parser.deserialize.deserialize_tx", deserialize_mock)
-
-    assert original_get_vins_info(
-        [{"hash": "e05a9501ac6f4cdc3f393a20e0e65a5079e6c346201722493294fe6033895219", "n": 0}]
-    ) == [
-        (0.00000676, "51208c9574b324f2b85c973d6f3f215c018108a88f9a7b9c124769c80c8abf758d69", False)
-    ]
 
 
 def test_rpc_call(init_mock):
@@ -421,3 +403,47 @@ def test_search_pubkey_in_transactions_p2pk(monkeypatch):
         is None
     )
     helpers.setup_bitcoinutils("regtest")
+
+
+def test_get_vin_info(monkeypatch):
+    monkeypatch.setattr(
+        bitcoind,
+        "get_decoded_transaction",
+        lambda *args, **kwargs: {
+            "vout": [
+                {"value": 1, "script_pub_key": "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac"}
+            ]
+        },
+    )
+    assert original_get_vin_info({"hash": "hash", "n": 0}) == (
+        1,
+        "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac",
+        False,
+    )
+
+
+def test_get_vin_info_legacy(monkeypatch):
+    monkeypatch.setattr(
+        bitcoind,
+        "get_decoded_transaction",
+        lambda *args, **kwargs: {
+            "vout": [
+                {"value": 1, "script_pub_key": "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac"}
+            ]
+        },
+    )
+    assert bitcoind.get_vin_info_legacy({"hash": "hash", "n": 0}) == (
+        1,
+        "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac",
+        False,
+    )
+
+
+def test_get_vin_info_legacy_error(monkeypatch):
+    def raise_error(*args, **kwargs):
+        raise exceptions.BitcoindRPCError
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+
+    with pytest.raises(exceptions.DecodeError, match="vin not found"):
+        bitcoind.get_vin_info_legacy({"hash": "hash", "n": 0})

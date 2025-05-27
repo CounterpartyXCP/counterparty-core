@@ -25,11 +25,6 @@ def get_pubkeyhash(scriptpubkey, block_index):
                 ):
                     return None, None
                 return asm[2], config.ADDRESSVERSION
-
-            if (asm[0] == opcodes.OP_HASH160) and protocol.enabled("p2sh_dispensers_support"):  # noqa: F405
-                if len(asm) != 3 or asm[-1] != opcodes.OP_EQUAL:  # noqa: F405
-                    return None, None
-                return asm[1], config.P2SH_ADDRESSVERSION
         return None, None
 
     if (
@@ -52,9 +47,6 @@ def is_witness_v0_keyhash(scriptpubkey):
 def get_address(scriptpubkey, block_index):
     if isinstance(scriptpubkey, str):
         scriptpubkey = binascii.unhexlify(scriptpubkey)
-    if protocol.enabled("correct_segwit_txids") and is_witness_v0_keyhash(scriptpubkey):
-        address = script.script_to_address(scriptpubkey)
-        return address
 
     pubkeyhash, address_version = get_pubkeyhash(scriptpubkey, block_index)
     if not pubkeyhash:
@@ -101,9 +93,7 @@ def get_tx_info_legacy(decoded_tx, block_index):
             data_chunk_length = data_pubkey[0]  # No ord() necessary.
             data_chunk = data_pubkey[1 : data_chunk_length + 1]
             data += data_chunk
-        elif len(asm) == 5 and protocol.after_block_or_test_network(
-            block_index, 293000
-        ):  # Protocol change.
+        elif len(asm) == 5 and protocol.enabled("data_in_pubkeyhash"):  # Protocol change.
             # Be strict.
             pubkeyhash, _address_version = get_pubkeyhash(script_pub_key, block_index)
             if not pubkeyhash:
@@ -140,11 +130,8 @@ def get_tx_info_legacy(decoded_tx, block_index):
 
     # Collect all possible source addresses; ignore coinbase transactions and anything but the simplest Pay‐to‐PubkeyHash inputs.
     source_list = []
-    decoded_tx = backend.bitcoind.complete_vins_info(
-        decoded_tx, no_retry=CurrentState().parsing_mempool()
-    )
     for vin in decoded_tx["vin"]:  # Loop through input transactions.
-        vout_value, script_pubkey, _is_segwit = backend.bitcoind.get_vin_info(
+        vout_value, script_pubkey, _is_segwit = backend.bitcoind.get_vin_info_legacy(
             vin, no_retry=CurrentState().parsing_mempool()
         )
         fee += vout_value

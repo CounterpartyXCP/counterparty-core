@@ -3,6 +3,8 @@ import logging
 import math
 import struct
 
+import cbor2
+
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages import fairminter as fairminter_mod
 from counterpartycore.lib.parser import protocol
@@ -36,6 +38,15 @@ def validate(
         problems.append(f"fairminter is not open for asset: `{asset}`")
 
     asset_supply = ledger.supplies.asset_supply(db, fairminter["asset"])
+
+    if fairminter["max_mint_per_address"] is not None and fairminter["max_mint_per_address"] > 0:
+        alread_minted = ledger.issuances.get_fairmint_by_address(db, fairminter["tx_hash"], source)
+        if fairminter["price"] > 0:
+            if alread_minted + quantity > fairminter["max_mint_per_address"]:
+                problems.append("quantity exceeds maximum allowed by address")
+        else:
+            if alread_minted + fairminter["max_mint_per_tx"] > fairminter["max_mint_per_address"]:
+                problems.append("quantity exceeds maximum allowed by address")
 
     if fairminter["price"] > 0:
         # if the fairminter is not free the quantity is mandatory
@@ -75,32 +86,43 @@ def compose(db, source: str, asset: str, quantity: int = 0, skip_validation: boo
     if len(problems) > 0 and not skip_validation:
         raise exceptions.ComposeError(problems)
 
-    if quantity != 0:
+    if quantity != 0 and not skip_validation:
         fairminter = ledger.issuances.get_fairminter_by_asset(db, asset)
         if fairminter["price"] == 0:
             raise exceptions.ComposeError("quantity is not allowed for free fairminters")
+        elif quantity % fairminter["quantity_by_price"] != 0:
+            raise exceptions.ComposeError("quantity is not a multiple of lot_size")
 
     # create message
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
-    # to optimize the data size (avoiding fixed sizes per parameter) we use a simple
-    # string of characters separated by `|`.
-    data_content = "|".join(
-        [
-            str(value)
-            for value in [
-                asset,
-                quantity,
+
+    if protocol.enabled("fairminter_v2"):
+        asset_id = ledger.issuances.generate_asset_id(asset)
+        data += cbor2.dumps([asset_id, quantity])
+    else:
+        data_content = "|".join(
+            [
+                str(value)
+                for value in [
+                    asset,
+                    quantity,
+                ]
             ]
-        ]
-    ).encode("utf-8")
-    data += struct.pack(f">{len(data_content)}s", data_content)
+        ).encode("utf-8")
+        data += struct.pack(f">{len(data_content)}s", data_content)
+
     return (source, [], data)
 
 
 def unpack(message, return_dict=False):
     try:
-        data_content = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8").split("|")
-        (asset, quantity) = data_content
+        if protocol.enabled("fairminter_v2"):
+            (asset_id, quantity) = cbor2.loads(message)  # pylint: disable=unbalanced-tuple-unpacking
+            asset = ledger.issuances.generate_asset_name(asset_id)
+        else:
+            data_content = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8").split("|")
+            (asset, quantity) = data_content
+
         if return_dict:
             return {"asset": asset, "quantity": int(quantity)}
 

@@ -30,8 +30,8 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     if asset == config.BTC:
         problems.append(f"cannot pay dividends to holders of {config.BTC}")
     if asset == config.XCP:
-        if block_index < 317500 or protocol.after_block_or_test_network(
-            block_index, 320000
+        if not protocol.enabled("no_zero_expiration") or protocol.enabled(
+            "no_xcp_dividends"
         ):  # Protocol change.
             problems.append(f"cannot pay dividends to holders of {config.XCP}")
 
@@ -50,7 +50,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
         return None, None, problems, 0
 
     # Only issuer can pay dividends.
-    if protocol.after_block_or_test_network(block_index, 320000):  # Protocol change.
+    if protocol.enabled("no_xcp_dividends"):  # Protocol change.
         issuer = ledger.issuances.get_asset_issuer(db, asset)
 
         if issuer != source:
@@ -73,14 +73,16 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     addresses = []
     dividend_total = 0
     for holder in asset_holders:
-        if block_index < 294500 and not protocol.is_test_network():  # Protocol change.
+        if (
+            not protocol.enabled("price_as_fraction") and not protocol.is_test_network()
+        ):  # Protocol change.
             if holder["escrow"]:
                 continue
 
         address = holder["address"]
         address_quantity = holder["address_quantity"]
 
-        if protocol.after_block_or_test_network(block_index, 296000):  # Protocol change.
+        if protocol.enabled("no_dividend_to_self"):  # Protocol change.
             if address == source:
                 continue
 
@@ -116,7 +118,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     fee = 0
     if not problems and dividend_asset != config.BTC:
         holder_count = len(set(addresses))
-        if protocol.after_block_or_test_network(block_index, 330000):  # Protocol change.
+        if protocol.enabled("dividend_fees"):  # Protocol change.
             fee = int(0.0002 * config.UNIT * holder_count)
         if fee:
             balance = ledger.balances.get_balance(db, source, config.XCP)
@@ -190,7 +192,7 @@ def compose(
 
 def unpack(db, message, block_index, return_dict=False):
     try:
-        if protocol.after_block_or_test_network(block_index, 288151) and len(message) == LENGTH_2:
+        if protocol.enabled("new_dividend_format") and len(message) == LENGTH_2:
             quantity_per_unit, asset_id, dividend_asset_id = struct.unpack(FORMAT_2, message)
             asset = ledger.issuances.get_asset_name(db, asset_id)
             dividend_asset = ledger.issuances.get_asset_name(db, dividend_asset_id)
@@ -253,7 +255,7 @@ def parse(db, tx, message):
             action="dividend",
             event=tx["tx_hash"],
         )
-        if protocol.after_block_or_test_network(tx["block_index"], 330000):  # Protocol change.
+        if protocol.enabled("dividend_fees"):  # Protocol change.
             ledger.events.debit(
                 db,
                 tx["source"],

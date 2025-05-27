@@ -177,18 +177,28 @@ def collect_sighash_flags(script_sig, witnesses):
             flags.append(flag)
         return flags
 
-    # P2TR key path spend
-    if len(witnesses) == 1:
-        flag = get_schnorr_signature_sighash_flag(witnesses[0])
-        if flag is not None:
-            flags.append(flag)
+    if protocol.enabled("taproot_support"):
+        # P2TR
+        if len(witnesses) == 1 or len(witnesses) > 2:
+            flag = get_schnorr_signature_sighash_flag(witnesses[0])
+            if flag is not None:
+                flags.append(flag)
+            return flags
+    else:
+        # P2TR key path spend
+        if len(witnesses) == 1:
+            flag = get_schnorr_signature_sighash_flag(witnesses[0])
+            if flag is not None:
+                flags.append(flag)
+            return flags
+
+        # Other cases
+        for item in witnesses:
+            flag = get_schnorr_signature_sighash_flag(item) or get_der_signature_sighash_flag(item)
+            if flag is not None:
+                flags.append(flag)
         return flags
 
-    # Other cases
-    for item in witnesses:
-        flag = get_schnorr_signature_sighash_flag(item) or get_der_signature_sighash_flag(item)
-        if flag is not None:
-            flags.append(flag)
     return flags
 
 
@@ -225,13 +235,15 @@ def check_signatures_sighash_flag(decoded_tx):
             raise SighashFlagError(error)
 
 
+def script_to_address(script_pubkey):
+    if protocol.enabled("taproot_support"):
+        return script.script_to_address(script_pubkey)
+    return script.script_to_address_legacy(script_pubkey)
+
+
 def get_transaction_sources(decoded_tx):
     sources = []
     outputs_value = 0
-
-    decoded_tx = backend.bitcoind.complete_vins_info(
-        decoded_tx, no_retry=CurrentState().parsing_mempool()
-    )
 
     for vin in decoded_tx["vin"]:  # Loop through inputs.
         vout_value, script_pubkey, _is_segwit = backend.bitcoind.get_vin_info(
@@ -239,6 +251,9 @@ def get_transaction_sources(decoded_tx):
         )
 
         outputs_value += vout_value
+
+        if protocol.enabled("first_input_is_source") and len(sources) > 0:
+            continue
 
         asm = script.script_to_asm(script_pubkey)
 
@@ -253,9 +268,11 @@ def get_transaction_sources(decoded_tx):
         elif asm[0] == opcodes.OP_HASH160 and asm[-1] == opcodes.OP_EQUAL and len(asm) == 3:  # noqa: F405
             new_source, new_data = decode_scripthash(asm)
             assert not new_data and new_source
-        elif protocol.enabled("segwit_support") and asm[0] == b"":
+        elif (protocol.enabled("segwit_support") and asm[0] == b"") or (
+            protocol.enabled("taproot_support") and asm[0] == b"\x01"
+        ):
             # Segwit output
-            new_source = script.script_to_address(script_pubkey)
+            new_source = script_to_address(script_pubkey)
             new_data = None
         else:
             raise DecodeError("unrecognised source type")
@@ -274,10 +291,6 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit):
     p2sh_encoding_source = None
     data = b""
     outputs_value = 0
-
-    decoded_tx = backend.bitcoind.complete_vins_info(
-        decoded_tx, no_retry=CurrentState().parsing_mempool()
-    )
 
     for vin in decoded_tx["vin"]:
         vout_value, _script_pubkey, is_segwit = backend.bitcoind.get_vin_info(
@@ -352,7 +365,6 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     The destinations, if they exists, always comes before the data output; the
     change, if it exists, always comes after.
     """
-
     # Ignore coinbase transactions.
     if decoded_tx["coinbase"]:
         raise DecodeError("coinbase transaction")
@@ -365,7 +377,9 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     if decoded_tx["parsed_vouts"] == "DecodeError":
         raise DecodeError("unrecognised output type")
 
-    destinations, btc_amount, fee, data, potential_dispensers = decoded_tx["parsed_vouts"]
+    destinations, btc_amount, fee, data, potential_dispensers, _is_reveal_tx = decoded_tx[
+        "parsed_vouts"
+    ]
 
     # source can be determined by parsing the p2sh_data transaction
     #   or from the first spent output
@@ -373,7 +387,11 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     fee_added = False
     # P2SH encoding signalling
     p2sh_encoding_source = None
-    if protocol.enabled("p2sh_encoding") and data == b"P2SH":
+    if (
+        protocol.enabled("p2sh_encoding")
+        and not protocol.enabled("p2sh_disabled")
+        and data == b"P2SH"
+    ):
         p2sh_encoding_source, data, outputs_value = get_transaction_source_from_p2sh(
             decoded_tx, p2sh_is_segwit
         )

@@ -3,11 +3,13 @@ import decimal
 import hashlib
 import itertools
 import json
+import mimetypes
 import os
 import string
 from operator import itemgetter
 from urllib.parse import urlparse
 
+import pygit2
 from bitcoinutils.setup import setup
 from counterpartycore.lib import config
 
@@ -139,3 +141,83 @@ def dhash(text):
 
 def dhash_string(text):
     return binascii.hexlify(dhash(text)).decode()
+
+
+def bytes_to_string(bytes_in: bytes) -> str:
+    try:
+        return bytes_in.decode("utf-8")
+    except UnicodeDecodeError:
+        return binascii.hexlify(bytes_in).decode("utf-8")
+
+
+def get_current_commit_hash(not_from_env=False):
+    if not not_from_env:
+        current_commit = os.environ.get("CURRENT_COMMIT")
+        if current_commit:
+            return current_commit
+
+    try:
+        repo = pygit2.Repository(pygit2.discover_repository("."))  # pylint: disable=E1101
+
+        commit_hash = str(repo.head.target)
+
+        branch_name = repo.head.shorthand
+        if repo.head_is_detached:
+            branch_name = "HEAD detached"
+
+        return f"{branch_name} - {commit_hash}"
+    except pygit2.GitError:  # pylint: disable=E1101
+        return None
+
+
+def classify_mime_type(mime_type):
+    # Types that start with "text/" are textual
+    if (
+        mime_type.startswith("text/")
+        or mime_type.startswith("message/")
+        or mime_type.endswith("+xml")
+    ):
+        return "text"
+
+    # List of application types that are textual
+    if mime_type in [
+        "application/xml",
+        "application/javascript",
+        "application/json",
+        "application/manifest+json",
+        "application/x-python-code",
+        "application/x-sh",
+        "application/x-csh",
+        "application/x-tex",
+        "application/x-latex",
+    ]:
+        return "text"
+
+    # By default, consider the MIME type as binary
+    return "binary"
+
+
+def content_to_bytes(content: str, mime_type: str) -> bytes:
+    file_type = classify_mime_type(mime_type)
+    if file_type == "text":
+        return content.encode("utf-8")
+    return binascii.unhexlify(content)
+
+
+def bytes_to_content(content: bytes, mime_type: str) -> str:
+    file_type = classify_mime_type(mime_type)
+    if file_type == "text":
+        return content.decode("utf-8")
+    return binascii.hexlify(content).decode("utf-8")
+
+
+def check_content(mime_type, content):
+    problems = []
+    content_mime_type = mime_type or "text/plain"
+    if content_mime_type not in mimetypes.types_map.values():
+        problems.append(f"Invalid mime type: {mime_type}")
+    try:
+        content_to_bytes(content, content_mime_type)
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        problems.append(f"Error converting description to bytes: {e}")
+    return problems

@@ -1,11 +1,9 @@
 import _thread
 import binascii
-import cProfile
 import decimal
 import logging
 import multiprocessing
 import os
-import pstats
 import threading
 import time
 
@@ -20,9 +18,11 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.api import apiserver as api_v2
 from counterpartycore.lib.api import apiv1, dbbuilder
+from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.cli import bootstrap, log
 from counterpartycore.lib.ledger.backendheight import BackendHeight
 from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.monitors import slack
 from counterpartycore.lib.parser import blocks, check, follow
 from counterpartycore.lib.utils import database, helpers
 
@@ -86,7 +86,7 @@ class CounterpartyServer(threading.Thread):
         self.api_stop_event = None
         self.backend_height_thread = None
         self.log_stream = log_stream
-        self.profiler = None
+        self.periodic_profiler = None
         self.stop_when_ready = stop_when_ready
         self.stopped = False
 
@@ -112,13 +112,6 @@ class CounterpartyServer(threading.Thread):
         CurrentState().set_current_block_index(ledger.blocks.last_db_index(self.db))
         blocks.check_database_version(self.db)
         database.optimize(self.db)
-
-        if self.args.rebuild_state_db:
-            dbbuilder.build_state_db()
-        elif self.args.refresh_state_db:
-            state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
-            dbbuilder.refresh_state_db(state_db)
-            state_db.close()
 
         # Check software version
         check.software_version()
@@ -172,21 +165,14 @@ class CounterpartyServer(threading.Thread):
         blocks.reset_rust_fetcher_database()
 
         # Catch Up
-        if config.PROFILE:
-            logger.info("Starting profiler before catchup...")
-            self.profiler = cProfile.Profile()
-            self.profiler.enable()
-            blocks.catch_up(self.db)
-            logger.info("Stopping profiler after catchup...")
-            self.profiler.disable()
-        else:
-            blocks.catch_up(self.db)
+        blocks.catch_up(self.db)
 
         if self.stop_when_ready:
             self.stop()  # stop here
             return
 
         # Blockchain Watcher
+        rsfetcher.RSFetcher()
         logger.info("Watching for new blocks...")
         self.follower_daemon = follow.start_blockchain_watcher(self.db)
         self.follower_daemon.start()
@@ -195,15 +181,18 @@ class CounterpartyServer(threading.Thread):
         try:
             self.run_server()
         except Exception as e:  # pylint: disable=broad-except
-            logger.error("Error in server thread: %s", e)
+            # import traceback
+            # print(traceback.format_exc())
+            logger.error("Error in server thread: %s", e, stack_info=True)
             _thread.interrupt_main()
 
     def stop(self):
         if self.stopped:
             return
         logger.info("Shutting down...")
-        if self.db:
-            CurrentState().set_ledger_state(self.db, "Stopping")
+
+        CurrentState().set_stopping()
+        rsfetcher.RSFetcher().stop()
 
         # Ensure all threads are stopped
         if self.follower_daemon:
@@ -221,19 +210,9 @@ class CounterpartyServer(threading.Thread):
         if self.apiserver_v2:
             self.apiserver_v2.stop()
 
-        # Dump profiling data
-        if config.PROFILE and self.profiler:
-            logger.info("Dumping profiling data...")
-            profile_path = os.path.join(config.CACHE_DIR, "catchup.prof")
-            try:
-                self.profiler.dump_stats(profile_path)
-                stats = pstats.Stats(self.profiler).sort_stats("cumtime")
-                stats.print_stats(20)
-                stats = pstats.Stats(self.profiler).sort_stats("tottime")
-                stats.print_stats(20)
-            except Exception as e:  # pylint: disable=broad-except
-                logger.error("Error dumping profiler stats: %s", e)
-            self.profiler = None
+        if self.periodic_profiler:
+            logger.info("Stopping periodic profiler...")
+            self.periodic_profiler.stop()
 
         self.stopped = True
         logger.info("Shutdown complete.")
@@ -255,13 +234,21 @@ def start_all(args, log_stream=None, stop_when_ready=False):
 
 
 def rebuild(args):
-    bootstrap.clean_data_dir(config.DATA_DIR)
-    start_all(args, stop_when_ready=True)
+    slack.send_slack_message("Starting new rebuild.")
+    try:
+        bootstrap.clean_data_dir(config.DATA_DIR)
+        start_all(args, stop_when_ready=True)
+    except Exception as e:  # pylint: disable=broad-except
+        slack.send_slack_message(f"Rebuild failed: {e}")
+        raise e
+    slack.send_slack_message("Rebuild complete.")
 
 
 def reparse(block_index):
+    database.apply_outstanding_migration(config.DATABASE, config.LEDGER_DB_MIGRATIONS_DIR)
     ledger_db = database.initialise_db()
     CurrentState().set_current_block_index(ledger.blocks.last_db_index(ledger_db))
+    blocks.check_database_version(ledger_db)
 
     last_block = ledger.blocks.get_last_block(ledger_db)
     if last_block is None or block_index > last_block["block_index"]:
@@ -281,8 +268,10 @@ def reparse(block_index):
 
 
 def rollback(block_index=None):
+    database.apply_outstanding_migration(config.DATABASE, config.LEDGER_DB_MIGRATIONS_DIR)
     ledger_db = database.initialise_db()
     CurrentState().set_current_block_index(ledger.blocks.last_db_index(ledger_db))
+    blocks.check_database_version(ledger_db)
 
     last_block = ledger.blocks.get_last_block(ledger_db)
     if last_block is None or block_index > last_block["block_index"]:

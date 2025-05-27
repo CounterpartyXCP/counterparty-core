@@ -151,7 +151,7 @@ def test_parse_detach_no_balance(ledger_db, blockchain_mock, defaults, test_help
                 "values": {
                     "tx_index": tx["tx_index"],
                     "tx_hash": tx["tx_hash"],
-                    "msg_index": 1,
+                    "msg_index": 0,
                     "block_index": tx["block_index"],
                     "status": "invalid: source must be a UTXO",
                     "send_type": "detach",

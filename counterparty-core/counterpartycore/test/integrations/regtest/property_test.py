@@ -7,7 +7,8 @@ from counterpartycore.lib import config
 from counterpartycore.lib.exceptions import ComposeError
 from counterpartycore.lib.utils import assetnames
 from hypothesis import settings
-from properytestnode import PropertyTestNode
+from propertytestnode import PropertyTestNode
+from regtestnode import NoUTXOError
 
 MESSAGE_IDS = [
     0,
@@ -43,6 +44,11 @@ def D(value):
 
 class UTXOSupportPropertyTest(PropertyTestNode):
     def run_tests(self):
+        print("ADDRESSES")
+        print(self.addresses)
+        print("BALANCES")
+        print(self.balances)
+
         # issue random assets
         self.asset_owners = {}
         self.test_with_given_data(
@@ -52,6 +58,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 alphabet="BCDEFGHIJKLMNOPQRSTUVWXYZ", min_size=5, max_size=8
             ),
             hypothesis.strategies.integers(min_value=10 * 1e8, max_value=1000 * 1e8),
+            hypothesis.strategies.booleans(),  # taproot encoding
         )
 
         # attach assets
@@ -86,6 +93,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             ),
             hypothesis.strategies.integers(min_value=10 * 1e8, max_value=1000 * 1e8),
             hypothesis.strategies.sampled_from(self.addresses),
+            hypothesis.strategies.booleans(),  # taproot encoding
         )
 
         # test move with counterparty data
@@ -114,6 +122,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             hypothesis.strategies.booleans(),  # soft_caped
             hypothesis.strategies.booleans(),  # with_commission
             hypothesis.strategies.integers(min_value=1, max_value=10),  # commission
+            hypothesis.strategies.booleans(),  # taproot encoding
         )
 
         # create fairmints
@@ -124,10 +133,20 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             hypothesis.strategies.sampled_from(self.balances),
             hypothesis.strategies.sampled_from(list(self.fairminters.keys())),
             hypothesis.strategies.integers(min_value=1, max_value=1000 * 1e8),  # quantity
+            hypothesis.strategies.booleans(),  # taproot encoding
+        )
+
+        # send asset with taproot encoding
+        self.already_used = []
+        self.in_mempool = {}
+        self.test_with_given_data(
+            self.send_asset_with_taproot_encoding,
+            hypothesis.strategies.sampled_from(self.balances),
+            hypothesis.strategies.sampled_from(self.addresses),
         )
 
     @settings(deadline=None)
-    def issue_assets(self, source, asset_name, quantity):
+    def issue_assets(self, source, asset_name, quantity, taproot_encoding):
         # don't issue the same asset twice
         # and don't issue twice from the same source
         for balance in self.balances:
@@ -141,6 +160,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "quantity": quantity,
                 "exact_fee": 0,
             },
+            taproot_encoding=True,
         )
         self.upsert_balance(source, asset_name, quantity)
         # issuance fee
@@ -190,9 +210,12 @@ class UTXOSupportPropertyTest(PropertyTestNode):
 
     @settings(deadline=None)
     def invalid_transaction(self, source, message_id, data):
-        utxo, tx_hash = self.node.compose_and_send_transaction(
-            source, message_id, data, no_confirmation=True, dont_wait_mempool=True
-        )
+        try:
+            utxo, tx_hash = self.node.compose_and_send_transaction(
+                source, message_id, data, no_confirmation=True, dont_wait_mempool=True
+            )
+        except NoUTXOError:
+            return
         upserts = []
         # check if no utxo moves
         for address_or_utxo, asset, quantity, utxo_address in self.balances:
@@ -203,7 +226,9 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             self.upsert_balance(*upsert)
 
     @settings(deadline=None, max_examples=20)
-    def issue_attach_move_detach_send(self, source, asset_name, quantity, destination):
+    def issue_attach_move_detach_send(
+        self, source, asset_name, quantity, destination, taproot_encoding
+    ):
         # don't issue the same asset twice
         # and don't issue twice from the same source
         if asset_name == "XCP":
@@ -224,6 +249,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "exact_fee": 0,
                 "exclude_utxos_with_balances": True,
             },
+            taproot_encoding,
         )
         tx_hash = self.send_transaction(
             source,
@@ -237,6 +263,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "inputs_set": f"{tx_hash}:1",
             },
         )
+        self.utxo_to_address[f"{tx_hash}:0"] = source
         tx_hash = self.send_transaction(
             f"{tx_hash}:0",
             "movetoutxo",
@@ -248,6 +275,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "inputs_set": f"{tx_hash}:0",
             },
         )
+        self.utxo_to_address[f"{tx_hash}:0"] = source
         tx_hash = self.send_transaction(
             f"{tx_hash}:0",
             "movetoutxo",
@@ -259,6 +287,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "inputs_set": f"{tx_hash}:0",
             },
         )
+        self.utxo_to_address[f"{tx_hash}:0"] = source
         tx_hash = self.send_transaction(
             f"{tx_hash}:0",
             "detach",
@@ -268,6 +297,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "inputs_set": f"{tx_hash}:0",
             },
         )
+        self.utxo_to_address[f"{tx_hash}:0"] = source
 
         # issuance fee
         self.upsert_balance(source, "XCP", -50000000, None)
@@ -334,6 +364,7 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "utxo_value": 10000,
             },
         )
+        self.utxo_to_address[f"{tx_hash}:0"] = utxo_address
         tx_hash = self.send_transaction(
             utxo_address,
             "order",
@@ -396,7 +427,14 @@ class UTXOSupportPropertyTest(PropertyTestNode):
 
     @settings(deadline=None)
     def create_fairminter(
-        self, source, price, quantity_by_price, soft_caped, with_commission, commission
+        self,
+        source,
+        price,
+        quantity_by_price,
+        soft_caped,
+        with_commission,
+        commission,
+        taproot_encoding,
     ):
         if source in self.fairminters:
             return
@@ -412,11 +450,12 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "soft_cap_deadline_block": 1000 if soft_caped else 0,
                 "minted_asset_commission": minted_asset_commission,
             },
+            taproot_encoding,
         )
         self.fairminters[source] = (price, quantity_by_price, soft_caped, minted_asset_commission)
 
     @settings(deadline=None)
-    def create_fairmints(self, balance_source, fairminter_source, quantity):
+    def create_fairmints(self, balance_source, fairminter_source, quantity, taproot_encoding):
         source, asset, balance, utxo_address = balance_source
         if (
             asset != "XCP"
@@ -429,14 +468,15 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             return
         if fairminter_source in self.fairminted:
             return
-
         price, quantity_by_price, soft_caped, minted_asset_commission = self.fairminters[
             fairminter_source
         ]
-
-        total_price = (D(quantity) / D(quantity_by_price)) * D(price)
+        fixed_quantity = (quantity // quantity_by_price) * quantity_by_price
+        if fixed_quantity == 0:
+            return
+        total_price = (D(fixed_quantity) / D(quantity_by_price)) * D(price)
         total_price = int(math.ceil(total_price))
-        earn_quantity = quantity
+        earn_quantity = fixed_quantity
         commission = 0
         if minted_asset_commission > 0:
             commission = int(D(minted_asset_commission) * D(earn_quantity))
@@ -452,8 +492,9 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                     "fairmint",
                     {
                         "asset": fairminer_asset,
-                        "quantity": quantity,
+                        "quantity": fixed_quantity,
                     },
+                    taproot_encoding,
                 )
             except ComposeError as e:
                 assert str(e) == "['insufficient XCP balance']"
@@ -465,10 +506,11 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                 "fairmint",
                 {
                     "asset": fairminer_asset,
-                    "quantity": quantity,
+                    "quantity": fixed_quantity,
                 },
+                taproot_encoding,
             )
-            print(f"Fairminted {quantity} {fairminer_asset} for {total_price} XCP")
+            print(f"Fairminted {fixed_quantity} {fairminer_asset} for {total_price} XCP")
             self.upsert_balance(source, "XCP", -total_price)
             if soft_caped:
                 self.upsert_balance(config.UNSPENDABLE_REGTEST, "XCP", total_price)
@@ -482,6 +524,53 @@ class UTXOSupportPropertyTest(PropertyTestNode):
                     self.upsert_balance(fairminter_source, fairminer_asset, commission)
             self.fairminted.append(fairminter_source)
             self.minters.append(source)
+
+    @settings(deadline=None)
+    def send_asset_with_taproot_encoding(self, balance, destination):
+        source, asset, quantity, utxo_address = balance
+        # don't detach assets not attached or with 0 quantity
+        if utxo_address is not None or quantity == 0:
+            return
+        if source in (self.already_used + [config.UNSPENDABLE_REGTEST, destination]):
+            return
+
+        self.already_used.append(source)
+
+        if source in self.in_mempool:
+            quantity -= self.in_mempool[source]
+
+        sent_quantity = int(quantity / 2)
+        if sent_quantity <= 0:
+            return
+
+        tx_hash = self.send_transaction(
+            source,
+            "send",
+            {
+                "destination": destination,
+                "quantity": sent_quantity,
+                "asset": asset,
+            },
+            taproot_encoding=True,
+        )
+        tx_hash = self.send_transaction(
+            source,
+            "broadcast",
+            {
+                "timestamp": 4003903984,
+                "value": 999,
+                "fee_fraction": 0.0,
+                "text": "Hello, world!",
+                "inputs_set": f"{tx_hash}:1",
+            },
+            taproot_encoding=True,
+        )
+        if destination in self.in_mempool:
+            self.in_mempool[destination] += sent_quantity
+        else:
+            self.in_mempool[destination] = sent_quantity
+        self.upsert_balance(source, asset, -sent_quantity, None)
+        self.upsert_balance(destination, asset, sent_quantity, None)
 
 
 def test_utxo_support():

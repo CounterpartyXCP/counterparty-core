@@ -1,10 +1,15 @@
+import logging
+
 import bitcoin
 from bitcoin.bech32 import CBech32Data
-from bitcoinutils.keys import P2pkhAddress, P2shAddress, P2wpkhAddress
+from bitcoinutils.keys import P2pkhAddress, P2shAddress, P2trAddress, P2wpkhAddress
+from counterparty_rs import utils  # pylint: disable=no-name-in-module
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.parser.protocol import enabled
 from counterpartycore.lib.utils import base58, helpers, multisig
+
+logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def is_pubkeyhash(monosig_address):
@@ -50,7 +55,12 @@ def validate(address, allow_p2sh=True):
     # Check validity by attempting to decode.
     for pubkeyhash in pubkeyhashes:
         try:
-            if protocol.enabled("segwit_support"):
+            if protocol.enabled("taproot_support"):
+                if not is_valid_address(pubkeyhash):
+                    raise exceptions.AddressError(
+                        f"The address {pubkeyhash} is not a valid bitcoin address ({config.NETWORK_NAME})"
+                    )
+            elif protocol.enabled("segwit_support"):
                 if not is_bech32(pubkeyhash):
                     base58.base58_check_decode(pubkeyhash, config.ADDRESSVERSION)
             else:
@@ -64,11 +74,7 @@ def validate(address, allow_p2sh=True):
                 raise e
 
 
-def pack(address):
-    """
-    Converts a base58 bitcoin address into a 21 byte bytes object
-    """
-
+def pack_legacy(address):
     if enabled("segwit_support"):
         try:
             bech32 = bitcoin.bech32.CBech32Data(address)
@@ -88,19 +94,30 @@ def pack(address):
                 raise exceptions.AddressError(  # noqa: B904
                     f"The address {address} is not a valid bitcoin address ({config.NETWORK_NAME})"
                 ) from e
-    else:
+
+    try:
+        short_address_bytes = bitcoin.base58.decode(address)[:-4]
+        return short_address_bytes
+    except bitcoin.base58.InvalidBase58Error as e:
+        raise e
+
+
+def pack(address):
+    """
+    Converts a base58 bitcoin address into a 21 byte bytes object
+    """
+    if enabled("taproot_support"):
         try:
-            short_address_bytes = bitcoin.base58.decode(address)[:-4]
-            return short_address_bytes
-        except bitcoin.base58.InvalidBase58Error as e:
-            raise e
+            return bytes(utils.pack_address(address, config.NETWORK_NAME))
+        except Exception as e:  # pylint: disable=broad-except  # noqa: F841
+            raise exceptions.AddressError(  # noqa: B904
+                f"The address {address} is not a valid bitcoin address ({config.NETWORK_NAME})"
+            ) from e
+
+    return pack_legacy(address)
 
 
-# retuns both the message type id and the remainder of the message data
-def unpack(short_address_bytes):
-    """
-    Converts a 21 byte prefix and public key hash into a full base58 bitcoin address
-    """
+def unpack_legacy(short_address_bytes):
     if short_address_bytes == b"":
         raise exceptions.UnpackError
 
@@ -118,14 +135,35 @@ def unpack(short_address_bytes):
     return bitcoin.base58.encode(short_address_bytes + check)
 
 
+# retuns both the message type id and the remainder of the message data
+def unpack(short_address_bytes):
+    """
+    Converts a 21 byte prefix and public key hash into a full base58 bitcoin address
+    """
+    if enabled("taproot_support"):
+        try:
+            return utils.unpack_address(short_address_bytes, config.NETWORK_NAME)
+        except Exception as e:  # pylint: disable=broad-except  # noqa: F841
+            raise exceptions.DecodeError(  # noqa: B904
+                f"{short_address_bytes} is not a valid packed bitcoin address ({config.NETWORK_NAME})"
+            ) from e
+
+    return unpack_legacy(short_address_bytes)
+
+
 def is_valid_address(address, network=None):
     helpers.setup_bitcoinutils(network)
     if multisig.is_multisig(address):
         return True
     try:
+        P2trAddress(address).to_script_pub_key()
+        return True
+    except (ValueError, TypeError):
+        pass
+    try:
         P2wpkhAddress(address).to_script_pub_key()
         return True
-    except ValueError:
+    except (ValueError, TypeError):
         pass
     try:
         P2pkhAddress(address).to_script_pub_key()

@@ -1946,6 +1946,7 @@ def get_balances_by_addresses(
     state_db,
     addresses: str,
     type: BalanceType = "all",  # pylint: disable=W0622
+    asset: str = None,
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
@@ -1955,32 +1956,36 @@ def get_balances_by_addresses(
     Returns the balances of several addresses
     :param str addresses: Comma separated list of addresses (e.g. $ADDRESS_1,$ADDRESS_2)
     :param str type: The type of balances to return
+    :param str asset: The asset to return (e.g. XCP)
     :param str cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the balances to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
-    where = [
-        {"address__in": addresses.split(","), "quantity__gt": 0},
-        {"utxo_address__in": addresses.split(","), "quantity__gt": 0},
-    ]
-    if type == "utxo":
-        where.pop(0)
-    elif type == "address":
-        where.pop(1)
+    if asset is None:
+        where = [
+            {"address__in": addresses.split(","), "quantity__gt": 0},
+            {"utxo_address__in": addresses.split(","), "quantity__gt": 0},
+        ]
+        if type == "utxo":
+            where.pop(0)
+        elif type == "address":
+            where.pop(1)
 
-    assets_result = select_rows(
-        state_db,
-        "balances",
-        select="DISTINCT asset AS asset",
-        where=where,
-        order="ASC",
-        cursor_field="asset",
-        last_cursor=cursor,
-        offset=offset,
-        limit=limit,
-    )
-    assets = [asset["asset"] for asset in assets_result.result]
+        assets_result = select_rows(
+            state_db,
+            "balances",
+            select="DISTINCT asset AS asset",
+            where=where,
+            order="ASC",
+            cursor_field="asset",
+            last_cursor=cursor,
+            offset=offset,
+            limit=limit,
+        )
+        assets = [asset["asset"] for asset in assets_result.result]
+    else:
+        assets = [asset]
 
     where = [
         {"address__in": addresses.split(","), "asset__in": assets, "quantity__gt": 0},
@@ -2028,8 +2033,11 @@ def get_balances_by_addresses(
                 }
             )
         result.append(current_balances)
-
-    return QueryResult(result, assets_result.next_cursor, "balances", assets_result.result_count)
+    if asset is None:
+        return QueryResult(
+            result, assets_result.next_cursor, "balances", assets_result.result_count
+        )
+    return QueryResult(result, None, "balances", 1)
 
 
 def get_balances_by_address_and_asset(

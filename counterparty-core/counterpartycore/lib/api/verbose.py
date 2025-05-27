@@ -17,9 +17,9 @@ D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
-def normalize_price(value):
+def normalize_price(value, precision=16):
     decimal.getcontext().prec = 32
-    return f"{D(value):.16f}"
+    return f"{D(value):.{precision}f}"
 
 
 def inject_issuances_and_block_times(ledger_db, state_db, result_list):
@@ -72,9 +72,17 @@ def inject_issuances_and_block_times(ledger_db, state_db, result_list):
         item = result_item
         if "params" in item:
             item = item["params"]
-            if "unpacked_data" in item and item["unpacked_data"]:
+            if (
+                "unpacked_data" in item
+                and item["unpacked_data"]
+                and "message_data" in item["unpacked_data"]
+            ):
                 item = item["unpacked_data"]["message_data"]
-        elif "unpacked_data" in item and item["unpacked_data"]:
+        elif (
+            "unpacked_data" in item
+            and item["unpacked_data"]
+            and "message_data" in item["unpacked_data"]
+        ):
             item = item["unpacked_data"]["message_data"]
         for field_name in asset_fields:
             if isinstance(item, list):
@@ -115,9 +123,17 @@ def inject_issuances_and_block_times(ledger_db, state_db, result_list):
                 item["params"][field_name_time] = block_times[item["params"][field_name]]
         if "params" in item:
             item = item["params"]
-            if "unpacked_data" in item and item["unpacked_data"]:
+            if (
+                "unpacked_data" in item
+                and item["unpacked_data"]
+                and "message_data" in item["unpacked_data"]
+            ):
                 item = item["unpacked_data"]["message_data"]
-        elif "unpacked_data" in item and item["unpacked_data"]:
+        elif (
+            "unpacked_data" in item
+            and item["unpacked_data"]
+            and "message_data" in item["unpacked_data"]
+        ):
             item = item["unpacked_data"]["message_data"]
         for field_name in asset_fields:
             if isinstance(item, list):
@@ -147,8 +163,13 @@ def inject_normalized_quantity(item, field_name, asset_info):
             # use 16 decimal places for prices
             item[field_name + "_normalized"] = normalize_price(item[field_name])
         elif field_name == "price":
-            if "satoshirate" in item:
+            if "satoshirate" in item:  # dispenser
                 price = D(item["satoshirate_normalized"]) / D(item["give_quantity_normalized"])
+                item[field_name + "_normalized"] = normalize_price(price)
+            elif "premint_quantity" in item:  # fairminter
+                price = D(item["price"]) / D(item["quantity_by_price"])
+                if not asset_info["divisible"]:
+                    price = price / D(10**8)
                 item[field_name + "_normalized"] = normalize_price(price)
             else:
                 item[field_name + "_normalized"] = normalize_price(item[field_name])
@@ -233,7 +254,11 @@ def inject_normalized_quantities(result_list):
                                 {"divisible": field_info["divisible"]},
                             )
                         )
-                if "unpacked_data" in item and item["unpacked_data"]:
+                if (
+                    "unpacked_data" in item
+                    and item["unpacked_data"]
+                    and "message_data" in item["unpacked_data"]
+                ):
                     item["unpacked_data"]["message_data"] = inject_normalized_quantity(
                         item["unpacked_data"]["message_data"],
                         field_name,
@@ -254,6 +279,7 @@ def inject_normalized_quantities(result_list):
             if (
                 "unpacked_data" in item
                 and item["unpacked_data"]
+                and "message_data" in item["unpacked_data"]
                 and isinstance(item["unpacked_data"]["message_data"], list)
             ):  # mpma send
                 for pos, sub_item in enumerate(item["unpacked_data"]["message_data"]):
@@ -267,6 +293,7 @@ def inject_normalized_quantities(result_list):
                 "params" in item
                 and "unpacked_data" in item["params"]
                 and item["params"]["unpacked_data"]
+                and "message_data" in item["unpacked_data"]
                 and isinstance(item["params"]["unpacked_data"]["message_data"], list)
             ):  # mpma send
                 for pos, sub_item in enumerate(item["params"]["unpacked_data"]["message_data"]):
@@ -285,6 +312,7 @@ def inject_normalized_quantities(result_list):
                 "params" in item
                 and "unpacked_data" in item["params"]
                 and item["params"]["unpacked_data"]
+                and "message_data" in item["unpacked_data"]
                 and field_info["asset_field"] in item["params"]["unpacked_data"]["message_data"]
             ):
                 asset_info = item["params"]["unpacked_data"]["message_data"][
@@ -293,6 +321,7 @@ def inject_normalized_quantities(result_list):
             elif (
                 "unpacked_data" in item
                 and item["unpacked_data"]
+                and "message_data" in item["unpacked_data"]
                 and field_info["asset_field"] in item["unpacked_data"]["message_data"]
             ):
                 asset_info = item["unpacked_data"]["message_data"][field_info["asset_field"]]
@@ -305,6 +334,7 @@ def inject_normalized_quantities(result_list):
             elif (
                 "unpacked_data" in item
                 and item["unpacked_data"]
+                and "message_data" in item["unpacked_data"]
                 and "divisible" in item["unpacked_data"]["message_data"]
             ):
                 asset_info = {"divisible": item["unpacked_data"]["message_data"]["divisible"]}
@@ -318,12 +348,14 @@ def inject_normalized_quantities(result_list):
                     "params" in item
                     and "unpacked_data" in item["params"]
                     and item["params"]["unpacked_data"]
+                    and "message_data" in item["unpacked_data"]
                     and "asset_info" in item["params"]["unpacked_data"]["message_data"]
                 ):
                     asset_info = item["params"]["unpacked_data"]["message_data"]["asset_info"]
                 elif (
                     "unpacked_data" in item
                     and item["unpacked_data"]
+                    and "message_data" in item["unpacked_data"]
                     and "asset_info" in item["unpacked_data"]["message_data"]
                 ):
                     asset_info = item["unpacked_data"]["message_data"]["asset_info"]
@@ -340,6 +372,7 @@ def inject_normalized_quantities(result_list):
                 "params" in item
                 and "unpacked_data" in item["params"]
                 and item["params"]["unpacked_data"]
+                and "message_data" in item["unpacked_data"]
                 and field_name in item["params"]["unpacked_data"]["message_data"]
             ):
                 item["params"]["unpacked_data"]["message_data"] = inject_normalized_quantity(  # noqa
@@ -348,6 +381,7 @@ def inject_normalized_quantities(result_list):
             if (
                 "unpacked_data" in item
                 and item["unpacked_data"]
+                and "message_data" in item["unpacked_data"]
                 and field_name in item["unpacked_data"]["message_data"]
             ):
                 item["unpacked_data"]["message_data"] = inject_normalized_quantity(  # noqa
@@ -440,7 +474,12 @@ def inject_unpacked_data_in_dict(ledger_db, item):
         data = binascii.hexlify(item["data"]) if isinstance(item["data"], bytes) else item["data"]
         if data:
             block_index = item.get("block_index")
-            item["unpacked_data"] = compose.unpack(ledger_db, data, block_index=block_index)
+            try:
+                item["unpacked_data"] = compose.unpack(ledger_db, data, block_index=block_index)
+            except Exception:  # pylint: disable=broad-exception-caught
+                item["unpacked_data"] = {
+                    "error": "Could not unpack data",
+                }
     return item
 
 
@@ -506,7 +545,7 @@ def inject_details(ledger_db, state_db, result, table=None):
         result_list = [result]
         result_is_dict = True
 
-    if table == "transactions":
+    if table in ["transactions", "all_transactions"]:
         result_list = inject_transactions_events(ledger_db, state_db, result_list)
         result_list = inject_unpacked_data(ledger_db, result_list)
 

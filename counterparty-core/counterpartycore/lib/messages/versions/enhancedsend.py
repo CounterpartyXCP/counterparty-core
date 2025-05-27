@@ -3,6 +3,8 @@
 import logging
 import struct
 
+import cbor2
+
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages.versions import send1
 from counterpartycore.lib.parser import messagetype, protocol
@@ -16,7 +18,30 @@ MAX_MEMO_LENGTH = 34
 ID = 2  # 0x02
 
 
+def new_unpack(message):
+    try:
+        (asset_id, quantity, short_address_bytes, memo_bytes) = cbor2.loads(message)
+        asset = ledger.issuances.generate_asset_name(asset_id)
+        if asset == config.BTC:
+            raise exceptions.AssetNameError(f"{config.BTC} not allowed")
+
+        full_address = address.unpack(short_address_bytes)
+
+        return {
+            "asset": asset,
+            "quantity": quantity,
+            "address": full_address,
+            "memo": None if memo_bytes == b"" else memo_bytes,
+        }
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error("enhanced send unpack error: %s", e)
+        raise exceptions.UnpackError(f"could not unpack: {e}") from e
+
+
 def unpack(message):
+    if protocol.enabled("taproot_support"):
+        return new_unpack(message)
+
     try:
         # account for memo bytes
         memo_bytes_length = len(message) - LENGTH
@@ -38,9 +63,9 @@ def unpack(message):
         if asset == config.BTC:
             raise exceptions.AssetNameError(f"{config.BTC} not allowed")
 
-    except struct.error as e:
+    except (struct.error, TypeError) as e:
         logger.trace(f"enhanced send unpack error: {e}")
-        raise exceptions.UnpackError("could not unpack")  # noqa: B904
+        raise exceptions.UnpackError(f"could not unpack: {e}")  # noqa: B904
 
     except (exceptions.AssetNameError, exceptions.AssetIDError) as e:
         logger.trace(f"enhanced send invalid asset id: {e}")
@@ -136,8 +161,8 @@ def compose(
     elif memo_is_hex:
         memo_bytes = bytes.fromhex(memo)
     else:
-        memo = memo.encode("utf-8")
-        memo_bytes = struct.pack(f">{len(memo)}s", memo)
+        memo_bytes = memo.encode("utf-8")
+        memo_bytes = struct.pack(f">{len(memo_bytes)}s", memo_bytes)
 
     problems = validate(db, destination, asset, quantity, memo_bytes)
     if problems and not skip_validation:
@@ -150,9 +175,20 @@ def compose(
 
     short_address_bytes = address.pack(destination)
 
-    data = messagetype.pack(ID)
-    data += struct.pack(FORMAT, asset_id, quantity, short_address_bytes)
-    data += memo_bytes
+    if protocol.enabled("taproot_support"):
+        data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
+        data += cbor2.dumps(
+            [
+                asset_id,
+                quantity,
+                short_address_bytes,
+                memo_bytes,
+            ]
+        )
+    else:
+        data = messagetype.pack(ID)
+        data += struct.pack(FORMAT, asset_id, quantity, short_address_bytes)
+        data += memo_bytes
 
     cursor.close()
     # return an empty array as the second argument because we don't need to send BTC dust to the recipient

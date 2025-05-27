@@ -46,6 +46,7 @@ from counterpartycore.lib.messages import (
     utxo,
 )
 from counterpartycore.lib.messages.versions import enhancedsend, mpma
+from counterpartycore.lib.monitors.profiler import Profiler
 from counterpartycore.lib.parser import check, deserialize, messagetype, protocol
 from counterpartycore.lib.parser.gettxinfo import get_tx_info
 from counterpartycore.lib.utils import database, helpers
@@ -159,7 +160,7 @@ def parse_tx(db, tx):
                 return supported
 
             # Protocol change.
-            rps_enabled = protocol.after_block_or_test_network(tx["block_index"], 308500)
+            rps_enabled = protocol.enabled("enable_rps", block_index=tx["block_index"])
 
             if message_type_id == send.ID:
                 send.parse(db, tx, message)
@@ -379,6 +380,8 @@ def parse_block(
             ledger.currentstate.ConsensusHashBuilder().block_journal(),
         )
 
+        # Update block
+
         update_block_query = """
             UPDATE blocks
             SET
@@ -418,7 +421,7 @@ def parse_block(
         return new_ledger_hash, new_txlist_hash, new_messages_hash
 
     cursor.close()
-    return None, None, None
+    return None, None, None, None
 
 
 def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_tx):
@@ -794,7 +797,11 @@ def parse_new_block(db, decoded_block, tx_index=None):
 
         duration = time.time() - start_time
 
-        log_message = "Block %(block_index)s - Parsing complete. L: %(ledger_hash)s, TX: %(txlist_hash)s, M: %(messages_hash)s (%(duration).2fs)"
+        log_message = "Block %(block_index)s - Parsing complete. "
+        log_message += "L: %(ledger_hash)s, "
+        log_message += "TX: %(txlist_hash)s, "
+        log_message += "M: %(messages_hash)s "
+        log_message += "(%(duration).2fs)"
         logger.info(
             log_message,
             {
@@ -909,11 +916,16 @@ def catch_up(db):
         start_time = time.time()
         parsed_blocks = 0
 
+        profiler = None
+        if config.PROFILE:
+            profiler = Profiler()
+            profiler.start()
+
         while CurrentState().current_block_index() < block_count:
-            if CurrentState().ledger_state() == "Stopping":
+            if CurrentState().stopping():
                 return
             # Get block information and transactions
-            fetch_time_start = time.time()
+            fetch_time_start = time.perf_counter_ns()
             if fetcher is None:
                 fetcher = start_rsfetcher()
 
@@ -930,8 +942,8 @@ def catch_up(db):
                 decoded_block = fetcher.get_block()
 
             block_height = decoded_block.get("height")
-            fetch_time_end = time.time()
-            fetch_duration = fetch_time_end - fetch_time_start
+            fetch_time_end = time.perf_counter_ns()
+            fetch_duration = (fetch_time_end - fetch_time_start) // 1_000_000
             logger.debug("Block %s fetched. (%.6fs)", block_height, fetch_duration)
 
             # Check for gaps in the blockchain
@@ -958,6 +970,16 @@ def catch_up(db):
                     "duration": formatted_duration,
                 },
             )
+            if config.QUIET and hasattr(logger, "urgent"):
+                formatted_duration = (time.perf_counter_ns() - fetch_time_start) // 1_000_000
+                logger.urgent(
+                    "Block %(current)s/%(total)s parsed in %(duration)sms.",
+                    {
+                        "current": CurrentState().current_block_index(),
+                        "total": block_count,
+                        "duration": formatted_duration,
+                    },
+                )
 
             # Refresh block count.
             if CurrentState().current_block_index() == block_count:
@@ -965,9 +987,14 @@ def catch_up(db):
                 if backend.bitcoind.get_blocks_behind() > 0:
                     backend.bitcoind.wait_for_block(CurrentState().current_block_index() + 1)
                 block_count = backend.bitcoind.getblockcount()
+
+            if profiler is not None:
+                profiler.gen_profile_if_needed()
     finally:
         if fetcher is not None:
             fetcher.stop()
+        if profiler is not None:
+            profiler.stop()
 
     create_events_indexes(db)
 

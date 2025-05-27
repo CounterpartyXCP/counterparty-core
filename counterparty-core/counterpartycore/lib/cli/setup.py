@@ -124,23 +124,6 @@ def read_config_file(default_config_file, config_file_path=None):
             os.makedirs(config_dir, mode=0o755)
         config_file_path = os.path.join(config_dir, default_config_file)
 
-    # clean BOM
-    bufsize = 4096
-    bomlen = len(codecs.BOM_UTF8)
-    with codecs.open(config_file_path, "r+b") as fp:
-        chunk = fp.read(bufsize)
-        if chunk.startswith(codecs.BOM_UTF8):
-            i = 0
-            chunk = chunk[bomlen:]
-            while chunk:
-                fp.seek(i)
-                fp.write(chunk)
-                i += len(chunk)
-                fp.seek(bomlen, os.SEEK_CUR)
-                chunk = fp.read(bufsize)
-            fp.seek(-bomlen, os.SEEK_CUR)
-            fp.truncate()
-
     logger.debug("Loading configuration file: `%s`", config_file_path)
     configfile = configparser.ConfigParser(allow_no_value=True, inline_comment_prefixes=("#", ";"))
     with codecs.open(config_file_path, "r", encoding="utf8") as fp:

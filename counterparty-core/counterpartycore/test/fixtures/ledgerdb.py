@@ -644,7 +644,7 @@ UNITTEST_FIXTURE = [
             "quantity_by_price": 1,
             "max_mint_per_tx": 10,
         },
-        {"encoding": "opreturn"},
+        {"encoding": "multisig"},
     ],
     [
         "fairminter",
@@ -770,5 +770,34 @@ UNITTEST_FIXTURE = [
         },
         {"encoding": "opreturn"},
     ],
-    ["mine_empty_blocks", 703],
+    [
+        "fairminter",
+        {
+            "source": DP["addresses"][0],
+            "asset": "SAIDFAIRMIN",
+            "asset_parent": "",
+            "price": 1,
+            "quantity_by_price": 1,
+            "max_mint_per_tx": 0,
+            "max_mint_per_address": 2,
+        },
+        {"encoding": "opreturn"},
+    ],
+    [
+        "fairminter",
+        {
+            "source": DP["addresses"][0],
+            "asset": "TAIDFAIRMIN",
+            "asset_parent": "",
+            "max_mint_per_tx": 1,
+            "max_mint_per_address": 1,
+        },
+        {"encoding": "opreturn"},
+    ],
+    [
+        "fairmint",
+        {"source": DP["addresses"][0], "asset": "TAIDFAIRMIN"},
+        {"encoding": "opreturn"},
+    ],
+    ["mine_empty_blocks", 701],
 ]

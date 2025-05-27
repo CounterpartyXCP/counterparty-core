@@ -58,6 +58,7 @@ SCENARIO = [
                             "call_price": 0.0,
                             "callable": False,
                             "description": "",
+                            "mime_type": "text/plain",
                             "divisible": True,
                             "fee_paid": 0,
                             "issuer": "$ADDRESS_10",

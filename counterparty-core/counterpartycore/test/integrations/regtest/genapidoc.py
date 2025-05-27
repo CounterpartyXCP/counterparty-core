@@ -110,7 +110,7 @@ EVENT_LIST = [
     #        "BET_MATCH_UPDATE",
     #        "BET_EXPIRATION",
     #        "BET_MATCH_EXPIRATION",
-    #        "BET_MATCH_RESOLUTON",
+    #        "BET_MATCH_RESOLUTION",
     #        "CANCEL_BET",
     #    ],
     # },

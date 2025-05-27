@@ -116,8 +116,12 @@ def test_all_routes(
         tx,
         b"\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x01",
     )
+
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    message = b"o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x01"
+    _source, _destination, data = sweep.compose(
+        ledger_db, defaults["addresses"][0], defaults["addresses"][1], 1, None, False
+    )
+    message = data[1:]
     sweep.parse(ledger_db, tx, message)
     apiwatcher.catch_up(ledger_db, state_db)
 
@@ -189,6 +193,7 @@ def test_new_get_asset_info(apiv2_client):
         "asset_id": "1911882621324134",
         "owner": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
         "supply": 1000,
+        "mime_type": "text/plain",
     }
 
 
@@ -202,7 +207,7 @@ def test_invalid_hash(apiv2_client):
     )
 
 
-def test_get_dispense(ledger_db, apiv2_client, blockchain_mock, defaults):
+def test_get_dispense(ledger_db, apiv2_client, blockchain_mock, defaults, current_block_index):
     tx = blockchain_mock.dummy_tx(
         ledger_db, defaults["addresses"][0], defaults["addresses"][5], btc_amount=100
     )
@@ -218,7 +223,7 @@ def test_get_dispense(ledger_db, apiv2_client, blockchain_mock, defaults):
         "tx_index": dispenses["tx_index"],
         "dispense_index": 1,
         "tx_hash": dispenses["tx_hash"],
-        "block_index": 1225,
+        "block_index": dispenses["block_index"],
         "source": defaults["addresses"][5],
         "destination": defaults["addresses"][0],
         "asset": "XCP",
@@ -345,3 +350,83 @@ def test_ledger_state(apiv2_client, current_block_index, ledger_db):
             "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
         }
     }
+
+
+def test_get_transactions(apiv2_client, monkeypatch):
+    url = "/v2/transactions?limit=1&verbose=true"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) == 1
+    assert "unpacked_data" in result[0]
+    assert "message_data" in result[0]["unpacked_data"]
+
+    def unpack_mock(*args):
+        raise Exception("Unpack error")
+
+    monkeypatch.setattr("counterpartycore.lib.api.compose.unpack", unpack_mock)
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) == 1
+    assert "unpacked_data" in result[0]
+    assert "error" in result[0]["unpacked_data"]
+    assert result[0]["unpacked_data"]["error"] == "Could not unpack data"
+
+
+def test_get_all_transactions_verbose(apiv2_client):
+    url = "/v2/transactions?verbose=true&show_unconfirmed=true"
+    result = apiv2_client.get(url).json["result"]
+    for tx in result:
+        assert "unpacked_data" in tx
+        assert "message_data" in tx["unpacked_data"]
+
+
+def test_get_balances_by_addresses(apiv2_client, defaults):
+    url = f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&verbose=true"
+    result = apiv2_client.get(url).json["result"]
+
+    assert result[0]["asset"] == "A95428959342453541"
+    assert result[1]["asset"] == "CALLABLE"
+    assert result[2]["asset"] == "DIVISIBLE"
+    assert result[3]["asset"] == "FREEFAIRMIN"
+    assert result[4]["asset"] == "LOCKED"
+    assert result[5]["asset"] == "MAXI"
+    assert result[6]["asset"] == "NODIVISIBLE"
+    assert result[7]["asset"] == "PARENT"
+    assert result[8]["asset"] == "RAIDFAIRMIN"
+    assert result[9]["asset"] == "TAIDFAIRMIN"
+    assert result[10]["asset"] == "XCP"
+
+    for balance in result[9]["addresses"]:
+        assert (
+            balance["address"] == defaults["addresses"][0]
+            or balance["utxo_address"] == defaults["addresses"][0]
+        )
+
+    url = f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&verbose=true&asset=A95428959342453541"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) == 1
+    assert result[0]["asset"] == "A95428959342453541"
+    for balance in result[0]["addresses"]:
+        assert (
+            balance["address"] == defaults["addresses"][0]
+            or balance["utxo_address"] == defaults["addresses"][0]
+        )
+
+    url = f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&verbose=true&asset=NODIVISIBLE"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) == 1
+    assert result[0]["asset"] == "NODIVISIBLE"
+    for balance in result[0]["addresses"]:
+        assert (
+            balance["address"] == defaults["addresses"][0]
+            or balance["utxo_address"] == defaults["addresses"][0]
+        )
+
+    url = f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&verbose=true&asset=A95428959342453541&type=address"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) == 1
+    assert result[0]["asset"] == "A95428959342453541"
+    for balance in result[0]["addresses"]:
+        assert balance["address"] == defaults["addresses"][0]
+
+    url = f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&verbose=true&asset=A95428959342453541&type=utxo"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) == 0

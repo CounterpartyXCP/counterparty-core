@@ -21,12 +21,12 @@ itsdangerous==2.1.2
 arc4==0.4.0
 halo==0.0.31
 termcolor==2.4.0
-sentry-sdk==2.10.0
+sentry-sdk==2.22.0
 docstring_parser==0.16
 psutil==5.9.8
 influxdb-client==1.42.0
 python-gnupg==0.5.2
-pyzmq==26.0.3
+pyzmq==26.3.0
 gevent==24.11.1
 JSON-log-formatter==1.0
 yoyo-migrations==8.2.0
@@ -40,4 +40,6 @@ sh==2.0.6
 PyYAML==6.0.2
 multiprocessing-logging==0.3.4
 locust==2.32.8
-counterparty-rs==10.10.1
+pygit2==1.17.0
+cbor2==5.6.5
+counterparty-rs==11.0.0

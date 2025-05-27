@@ -90,6 +90,8 @@ pub struct Heights {
     pub p2sh_dispensers: u32,
     pub correct_segwit_txids: u32,
     pub multisig_addresses: u32,
+    pub taproot_support: u32,
+    pub fix_is_segwit: u32,
 }
 
 impl Heights {
@@ -101,6 +103,8 @@ impl Heights {
                 p2sh_dispensers: 724000,
                 correct_segwit_txids: 662000,
                 multisig_addresses: 333500,
+                taproot_support: 902000,
+                fix_is_segwit: 902000,
             },
             Network::Testnet3 => Heights {
                 segwit: 1440200,
@@ -108,6 +112,8 @@ impl Heights {
                 p2sh_dispensers: 2163328,
                 correct_segwit_txids: 1666625,
                 multisig_addresses: 0,
+                taproot_support: 4410000,
+                fix_is_segwit: 4410000,
             },
             Network::Testnet4 => Heights {
                 segwit: 0,
@@ -115,6 +121,8 @@ impl Heights {
                 p2sh_dispensers: 0,
                 correct_segwit_txids: 0,
                 multisig_addresses: 0,
+                taproot_support: 85000,
+                fix_is_segwit: 85000,
             },
             Network::Regtest => Heights {
                 segwit: 0,
@@ -122,6 +130,8 @@ impl Heights {
                 p2sh_dispensers: 0,
                 correct_segwit_txids: 0,
                 multisig_addresses: 0,
+                taproot_support: 0,
+                fix_is_segwit: 0,
             },
         }
     }
@@ -145,27 +155,36 @@ pub struct Config {
     pub heights: Heights,
     pub json_format: bool,
     pub only_write_in_reorg_window: bool,
+    pub enable_all_protocol_changes: bool,
 }
 
 impl Config {
     pub fn segwit_supported(&self, height: u32) -> bool {
-        height >= self.heights.segwit
+        height >= self.heights.segwit || self.enable_all_protocol_changes
     }
 
     pub fn p2sh_address_supported(&self, height: u32) -> bool {
-        height >= self.heights.p2sh_addresses
+        height >= self.heights.p2sh_addresses || self.enable_all_protocol_changes
     }
 
     pub fn p2sh_dispensers_supported(&self, height: u32) -> bool {
-        height >= self.heights.p2sh_dispensers
+        height >= self.heights.p2sh_dispensers || self.enable_all_protocol_changes
     }
 
     pub fn correct_segwit_txids_enabled(&self, height: u32) -> bool {
-        height >= self.heights.correct_segwit_txids
+        height >= self.heights.correct_segwit_txids || self.enable_all_protocol_changes
     }
 
     pub fn multisig_addresses_enabled(&self, height: u32) -> bool {
-        height >= self.heights.multisig_addresses
+        height >= self.heights.multisig_addresses || self.enable_all_protocol_changes
+    }
+
+    pub fn taproot_support_enabled(&self, height: u32) -> bool {
+        height >= self.heights.taproot_support || self.enable_all_protocol_changes
+    }
+
+    pub fn fix_is_segwit_enabled(&self, height: u32) -> bool {
+        height >= self.heights.fix_is_segwit || self.enable_all_protocol_changes
     }
 
     pub fn unspendable(&self) -> String {
@@ -243,6 +262,11 @@ impl<'source> FromPyObject<'source> for Config {
             _ => Network::Mainnet, // Default to Mainnet if not provided or in case of an error
         };
 
+        let enable_all_protocol_changes = match dict.get_item("enable_all_protocol_changes") {
+            Ok(Some(item)) => item.extract()?,
+            _ => false,
+        };
+
         let heights = Heights::new(network.clone());
 
         let address_version = match dict.get_item("address_version") {
@@ -282,6 +306,7 @@ impl<'source> FromPyObject<'source> for Config {
             heights,
             json_format,
             only_write_in_reorg_window,
+            enable_all_protocol_changes,
         })
     }
 }
