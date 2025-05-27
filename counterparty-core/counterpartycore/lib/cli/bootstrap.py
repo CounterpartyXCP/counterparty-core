@@ -89,7 +89,7 @@ def check_signature(filepath, sig_url):
         sys.exit(1)
 
 
-def verfif_and_decompress(zst_filepath, sig_url, decompressors_state):
+def verify_and_decompress(zst_filepath, sig_url, decompressors_state):
     try:
         check_signature(zst_filepath, sig_url)
         decompress_zst(zst_filepath)
@@ -125,7 +125,7 @@ def download_bootstrap_files(data_dir, files):
                 sys.exit(1)
 
         decompressor = Process(
-            target=verfif_and_decompress,
+            target=verify_and_decompress,
             args=(zst_filepath, sig_url, decompressors_state),
         )
         decompressor.start()
