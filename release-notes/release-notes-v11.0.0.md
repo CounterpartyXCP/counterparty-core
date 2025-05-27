@@ -3,9 +3,9 @@
 Counterparty Core v11.0.0 is a large release with numerous protocol upgrades and many miscellaneous improvements to the API, CLI and codebase, including significantly increased test coverage.
 
 **Protocol Upgrades:**
-- Fix Bech32 address handling—now support P2WSH and P2TR
-- Support for Taproot envelope data encoding, which will significantly reduce transaction fees for larger transactions (and removal of support for P2SH data encoding, which is strictly worse than Taproot)
-- Support for Ordinals Inscription creation when composing an Issuance, Fairminter or Broadcast (API parameters: `inscription`, `mime_type`)
+- Fix Bech32 address handling---finally support P2WSH and P2TR
+- Add support for Taproot envelope data encoding, which will significantly reduce transaction fees for larger transactions (and remove support for P2SH data encoding, which is strictly worse than Taproot)
+- Support simultaneous Ordinals Inscription creation when composing an Issuance, Fairminter or Broadcast (API parameters: `inscription`, `mime_type`)
 - Allow `soft_cap` to be equal to `hard_cap` with Fairminters
 - Add `max_mint_per_address` parameter to Fairminters (API parameter: `max_mint_per_address`)
 
