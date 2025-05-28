@@ -544,6 +544,13 @@ def test_parse_order(ledger_db, blockchain_mock, defaults, test_helpers, current
                     "quantity": 0,
                 },
             },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )
 
@@ -817,7 +824,14 @@ def test_parse_order_invalid_data(ledger_db, blockchain_mock, defaults, test_hel
                     "tx_hash": tx["tx_hash"],
                     "tx_index": tx["tx_index"],
                 },
-            }
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": False,
+                },
+            },
         ],
     )
 

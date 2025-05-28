@@ -647,6 +647,13 @@ def test_parse_fairminter_start_block(
                     "event": tx["tx_hash"],
                 },
             },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )
 
@@ -752,6 +759,13 @@ def test_parse_fairminter_no_start(
                         "quantity": 100,
                         "calling_function": "premint",
                         "event": tx["tx_hash"],
+                    },
+                },
+                {
+                    "table": "transactions_status",
+                    "values": {
+                        "tx_index": tx["tx_index"],
+                        "valid": True,
                     },
                 },
             ],

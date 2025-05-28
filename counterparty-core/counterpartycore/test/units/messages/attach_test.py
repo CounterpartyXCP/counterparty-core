@@ -178,7 +178,14 @@ def test_parse_with_destination(
                     ),
                     "event": "ATTACH_TO_UTXO",
                 },
-            }
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )
 
@@ -212,7 +219,14 @@ def test_parse_with_op_return_destination(
                     ),
                     "event": "ATTACH_TO_UTXO",
                 },
-            }
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": False,
+                },
+            },
         ],
     )
 
