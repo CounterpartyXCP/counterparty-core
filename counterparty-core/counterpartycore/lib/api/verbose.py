@@ -575,6 +575,8 @@ def clean_rowids_and_confirmed_fields(query_result):
                 row["block_index"] = None
                 if "tx_index" in row:
                     row["tx_index"] = None
+            if "valid" in row:
+                row["valid"] = bool(row["valid"])
             filtered_results.append(row)
         return filtered_results
     if isinstance(query_result, dict):
@@ -590,5 +592,7 @@ def clean_rowids_and_confirmed_fields(query_result):
             filtered_results["block_index"] = None
             if "tx_index" in filtered_results:
                 filtered_results["tx_index"] = None
+        if "valid" in filtered_results:
+            filtered_results["valid"] = bool(filtered_results["valid"])
         return filtered_results
     return query_result

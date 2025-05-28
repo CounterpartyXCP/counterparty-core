@@ -191,13 +191,6 @@ def parse(db, tx, message):
         destination = f"{tx['tx_hash']}:{destination_vout}"
 
     status = "valid"
-
-    ledger.blocks.set_transaction_status(
-        db,
-        tx["tx_index"],
-        status == "valid",
-    )
-
     if problems:
         status = "invalid: " + "; ".join(problems)
         # store the invalid transaction without potentially invalid parameters
@@ -210,6 +203,14 @@ def parse(db, tx, message):
             "send_type": "attach",
         }
         ledger.events.insert_record(db, "sends", bindings, "ATTACH_TO_UTXO")
+
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )
+
+    if problems:
         # return here to avoid further processing
         return
 
