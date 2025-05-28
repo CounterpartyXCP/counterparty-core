@@ -446,3 +446,13 @@ def test_get_transactions_valid(apiv2_client, monkeypatch):
     url = "/v2/transactions?valid=false"
     result = apiv2_client.get(url).json["result"]
     assert len(result) == 0
+
+    url = "/v2/transactions?show_unconfirmed=true"
+    result = apiv2_client.get(url).json["result"]
+
+    for tx in result:
+        assert tx["valid"]
+
+    url = "/v2/transactions?valid=false&show_unconfirmed=true"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) == 0
