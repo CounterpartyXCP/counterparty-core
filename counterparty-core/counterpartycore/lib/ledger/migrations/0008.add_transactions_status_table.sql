@@ -1,9 +1,9 @@
-CREATE TABLE transactions_status (
+CREATE TABLE IF NOT EXISTS transactions_status (
     tx_index INTEGER UNIQUE,
     valid BOOLEAN NOT NULL
 );
 
-CREATE VIEW transactions_with_status AS
+CREATE VIEW IF NOT EXISTS transactions_with_status AS
 SELECT 
     t.tx_index as rowid,
     t.tx_index,
@@ -23,7 +23,7 @@ SELECT
 FROM transactions t
 LEFT JOIN transactions_status ts ON t.tx_index = ts.tx_index;
 
-CREATE VIEW all_transactions_with_status AS
+CREATE VIEW IF NOT EXISTS all_transactions_with_status AS
 SELECT 
     t.tx_index as rowid,
     t.tx_index,
