@@ -291,6 +291,12 @@ def parse(db, tx, message):
 
     logger.info("Broadcast from %(source)s (%(tx_hash)s) [%(status)s]", bindings)
 
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )
+
     # stop processing if broadcast is invalid for any reason
     if protocol.enabled("broadcast_invalid_check") and status != "valid":
         return

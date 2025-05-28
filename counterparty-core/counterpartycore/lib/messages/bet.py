@@ -308,6 +308,8 @@ def parse(db, tx, message):
 
     odds, fee_fraction = 0, 0
     feed_address = tx["destination"]
+    tx_valid = True
+
     if status == "open":
         try:
             odds = ledger.issuances.price(wager_quantity, counterwager_quantity)
@@ -339,6 +341,7 @@ def parse(db, tx, message):
         )
         if problems:
             status = "invalid: " + "; ".join(problems)
+            tx_valid = False
 
     # Debit quantity wagered. (Escrow.)
     if status == "open":
@@ -382,6 +385,8 @@ def parse(db, tx, message):
         match(db, tx)
 
     bet_parse_cursor.close()
+
+    ledger.blocks.set_transaction_status(db, tx["tx_index"], tx_valid)
 
 
 def match(db, tx):
