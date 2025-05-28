@@ -545,7 +545,7 @@ def inject_details(ledger_db, state_db, result, table=None):
         result_list = [result]
         result_is_dict = True
 
-    if table in ["transactions", "all_transactions"]:
+    if table in ["transactions_with_status", "all_transactions_with_status"]:
         result_list = inject_transactions_events(ledger_db, state_db, result_list)
         result_list = inject_unpacked_data(ledger_db, result_list)
 
