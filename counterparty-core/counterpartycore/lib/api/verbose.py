@@ -545,7 +545,7 @@ def inject_details(ledger_db, state_db, result, table=None):
         result_list = [result]
         result_is_dict = True
 
-    if table in ["transactions", "all_transactions"]:
+    if table in ["transactions_with_status", "all_transactions_with_status"]:
         result_list = inject_transactions_events(ledger_db, state_db, result_list)
         result_list = inject_unpacked_data(ledger_db, result_list)
 
@@ -575,6 +575,8 @@ def clean_rowids_and_confirmed_fields(query_result):
                 row["block_index"] = None
                 if "tx_index" in row:
                     row["tx_index"] = None
+            if "valid" in row:
+                row["valid"] = bool(row["valid"])
             filtered_results.append(row)
         return filtered_results
     if isinstance(query_result, dict):
@@ -590,5 +592,7 @@ def clean_rowids_and_confirmed_fields(query_result):
             filtered_results["block_index"] = None
             if "tx_index" in filtered_results:
                 filtered_results["tx_index"] = None
+        if "valid" in filtered_results:
+            filtered_results["valid"] = bool(filtered_results["valid"])
         return filtered_results
     return query_result

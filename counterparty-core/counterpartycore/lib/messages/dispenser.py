@@ -692,6 +692,12 @@ def parse(db, tx, message):
             },
         )
 
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )
+
     cursor.close()
 
 

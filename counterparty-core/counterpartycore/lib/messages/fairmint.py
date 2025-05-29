@@ -148,6 +148,15 @@ def parse(db, tx, message):
         }
         ledger.events.insert_record(db, "fairmints", bindings, "NEW_FAIRMINT")
         logger.info("Fairmint %s  is invalid: %s", tx["tx_hash"], status)
+
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )
+
+    if problems:
+        # stop here to avoid further processing
         return
 
     # get corresponding fairminter

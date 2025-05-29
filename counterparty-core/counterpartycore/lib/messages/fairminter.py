@@ -468,6 +468,7 @@ def parse(db, tx, message):
         problems.append("Soft cap deadline block must be > start block.")
 
     # if problems, insert into fairminters table with status invalid and return
+    status = "valid"
     if problems:
         status = "invalid: " + "; ".join(problems)
         bindings = {
@@ -479,6 +480,14 @@ def parse(db, tx, message):
         }
         ledger.events.insert_record(db, "fairminters", bindings, "NEW_FAIRMINTER")
         logger.info("Fair minter %s is invalid: %s", tx["tx_hash"], status)
+
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )
+
+    if problems:
         return
 
     # determine status
