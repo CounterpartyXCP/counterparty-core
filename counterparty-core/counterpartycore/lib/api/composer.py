@@ -1101,6 +1101,14 @@ def construct(db, tx_info, construct_params):
         },
     }
     if reveal_tx_info is not None:
+        # we need to be sure that the txid will not change after signing
+        # in order to be able to generate the reveal tx
+        for utxo in selected_utxos:
+            if not is_segwit_output(utxo["script_pub_key"]):
+                raise exceptions.ComposeError(
+                    "Reveal transaction is not supported for legacy inputs"
+                )
+
         inputs = [TxInput(tx.get_txid(), 0)]
         outputs, envelope_script, reveal_tx_pk = reveal_tx_info
         commit_value = tx.outputs[0].amount
