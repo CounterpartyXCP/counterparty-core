@@ -30,6 +30,7 @@ def test_fetcher_singleton():
     config.REGTEST = False
     config.TESTNET3 = False
     config.TESTNET4 = False
+    config.SIGNET = False
 
     try:
         # Initialize fetcher and start at specific height
