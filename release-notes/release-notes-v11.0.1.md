@@ -35,6 +35,8 @@ counterparty-server start
 
 ## Codebase
 
+- Add Signet Support
+
 ## API
 
 ## CLI

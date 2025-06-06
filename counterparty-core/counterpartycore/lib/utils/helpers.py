@@ -112,7 +112,7 @@ def divide(value1, value2):
 
 def setup_bitcoinutils(network=None):
     current_network = network or config.NETWORK_NAME
-    if current_network.startswith("testnet"):
+    if current_network.startswith("testnet") or current_network == "signet":
         current_network = "testnet"
     setup(current_network)
 
