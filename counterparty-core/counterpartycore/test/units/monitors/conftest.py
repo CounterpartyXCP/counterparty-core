@@ -74,6 +74,7 @@ def reset_config_attributes():
     for attr in [
         "TESTNET3",
         "TESTNET4",
+        "SIGNET",
         "FORCE",
         "INFLUX_DB_URL",
         "INFLUX_DB_TOKEN",

@@ -43,6 +43,8 @@ def consensus_hash(db, field, previous_consensus_hash, content):
         consensus_hash_version = checkpoints.CONSENSUS_HASH_VERSION_TESTNET4
     elif config.REGTEST:
         consensus_hash_version = checkpoints.CONSENSUS_HASH_VERSION_REGTEST
+    elif config.SIGNET:
+        consensus_hash_version = checkpoints.CONSENSUS_HASH_VERSION_SIGNET
     else:
         consensus_hash_version = checkpoints.CONSENSUS_HASH_VERSION_MAINNET
 
@@ -72,6 +74,8 @@ def consensus_hash(db, field, previous_consensus_hash, content):
         network_checkpoints = checkpoints.CHECKPOINTS_TESTNET4
     elif config.REGTEST:
         network_checkpoints = checkpoints.CHECKPOINTS_REGTEST
+    elif config.SIGNET:
+        network_checkpoints = checkpoints.CHECKPOINTS_SIGNET
     else:
         network_checkpoints = checkpoints.CHECKPOINTS_MAINNET
 

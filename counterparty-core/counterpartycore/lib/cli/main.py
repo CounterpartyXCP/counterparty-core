@@ -83,6 +83,14 @@ CONFIG_ARGS = [
         },
     ],
     [
+        ("--signet",),
+        {
+            "action": "store_true",
+            "default": False,
+            "help": f"use {config.BTC_NAME} signet addresses and block numbers",
+        },
+    ],
+    [
         ("--api-limit-rows",),
         {
             "type": int,

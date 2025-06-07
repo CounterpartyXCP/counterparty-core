@@ -895,3 +895,11 @@ CHECKPOINTS_TESTNET4 = {
         "txlist_hash": "17af3a72503c8911a047d370da48ccce881c8dffa558f6287cfccbcde7e45c2b",
     },
 }
+
+CONSENSUS_HASH_VERSION_SIGNET = 1
+CHECKPOINTS_SIGNET = {
+    config.BLOCK_FIRST_SIGNET: {
+        "ledger_hash": "33cf0669a0d309d7e6b1bf79494613b69262b58c0ea03c9c221d955eb4c84fe5",
+        "txlist_hash": "33cf0669a0d309d7e6b1bf79494613b69262b58c0ea03c9c221d955eb4c84fe5",
+    },
+}
