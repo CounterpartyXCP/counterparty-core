@@ -81,12 +81,16 @@ def test_unpack(ledger_db, defaults):
         "memo": b"\xab\xcd\xef",
     }
 
-    with pytest.raises(exceptions.UnpackError, match="could not unpack"):
-        enhancedsend.unpack(
-            b'x02\xe8\x03"\x03\x01qe0u\xb3n\xe3\xd25\x1bU\x81\xd9\xb9\x90W!\xcb\xfe`\xb7\x1c\xe2%\x01\xe1\xb4N\xd0:\x96'
-        )
+    assert enhancedsend.unpack(
+        b'x02\xe8\x03"\x03\x01qe0u\xb3n\xe3\xd25\x1bU\x81\xd9\xb9\x90W!\xcb\xfe`\xb7\x1c\xe2%\x01\xe1\xb4N\xd0:\x96'
+    ) == {
+        "address": "NNQVs5hJBSVwDH4nY4A1LMHDviwwCbXPCV",
+        "asset": "A8660478055499825921",
+        "memo": b":\x96",
+        "quantity": 8170990381013328850,
+    }
 
-    with pytest.raises(exceptions.UnpackError, match="could not unpack: BTC not allowed"):
+    with pytest.raises(exceptions.UnpackError, match="invalid message length"):
         enhancedsend.unpack(
             b"\x84\x00\x19\x03\xe8U\x01\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xecDmemo"
         )

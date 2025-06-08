@@ -1435,7 +1435,7 @@ def test_parse_too_short(ledger_db, blockchain_mock, defaults, test_helpers, cur
                     "locked": 0,
                     "quantity": None,
                     "source": defaults["addresses"][0],
-                    "status": "invalid: could not unpack",
+                    "status": "invalid: bad asset name",
                     "transfer": 0,
                     "divisible": None,
                     "tx_hash": tx["tx_hash"],
