@@ -29,9 +29,12 @@ counterparty-server start
 
 ## Protocol
 
+- Add backward-compatibility to CBOR format (Sweep, Enhanced Send, Fairminter, Fairmint, Issuance and Broadcast)
+
 ## Bugfixes
 
 - No taproot encoding for legacy inputs
+- Handle correctly unpack error in issuances
 
 ## Codebase
 
