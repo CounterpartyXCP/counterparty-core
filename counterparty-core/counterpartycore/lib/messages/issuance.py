@@ -660,13 +660,14 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                     )
                 else:
                     raise exceptions.UnpackError("Invalid message type ID")
+
+                mime_type = mime_type or "text/plain"
+                if description is not None:
+                    description = helpers.bytes_to_content(description, mime_type)
+                callable_, call_date, call_price = False, 0, 0.0
+
             except Exception as e:  # pylint: disable=broad-exception-caught
                 raise exceptions.UnpackError from e
-
-            mime_type = mime_type or "text/plain"
-            if description is not None:
-                description = helpers.bytes_to_content(description, mime_type)
-            callable_, call_date, call_price = False, 0, 0.0
 
         elif message_type_id in [LR_SUBASSET_ID, SUBASSET_ID]:
             if not protocol.enabled("subassets", block_index=block_index):
