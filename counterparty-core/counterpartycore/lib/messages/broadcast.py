@@ -224,7 +224,12 @@ def unpack(message, block_index, return_dict=False):
         mime_type = "text/plain"
         if protocol.enabled("taproot_support"):
             # Unpack the message using cbor2
-            timestamp, value, fee_fraction_int, mime_type, text = load_cbor(message)
+            try:
+                timestamp, value, fee_fraction_int, mime_type, text = load_cbor(message)
+            except struct.error:
+                timestamp, value, fee_fraction_int, mime_type, text = load_data_legacy(
+                    message, block_index
+                )  # fallback to legacy unpacking
         else:
             timestamp, value, fee_fraction_int, mime_type, text = load_data_legacy(
                 message, block_index
