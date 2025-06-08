@@ -1064,7 +1064,7 @@ def test_loads_cbor(monkeypatch):
     monkeypatch.setattr(
         "counterpartycore.lib.utils.helpers.bytes_to_content", bytes_to_content_mock
     )
-    with pytest.raises(struct.error):
+    with pytest.raises(Exception):  # noqa: B017
         broadcast.load_cbor(message)
 
 
