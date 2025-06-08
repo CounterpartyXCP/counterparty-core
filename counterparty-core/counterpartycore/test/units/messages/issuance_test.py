@@ -2021,6 +2021,52 @@ def test_valid_compose_legacy(ledger_db, defaults):
         )
 
 
+def test_parse_divisible_legacy_taproot_acivated(
+    ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
+):
+    tx = blockchain_mock.dummy_tx(
+        ledger_db, defaults["addresses"][0], defaults["p2ms_addresses"][0], use_first_tx=True
+    )
+    message = b"\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00"
+    issuance.parse(ledger_db, tx, message, issuance.ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "asset": "DIVISIBLE",
+                    "asset_longname": None,
+                    "block_index": tx["block_index"],
+                    "description": "",
+                    "divisible": 1,
+                    "fee_paid": 0,
+                    "issuer": defaults["p2ms_addresses"][0],
+                    "locked": 0,
+                    "quantity": 0,
+                    "source": defaults["addresses"][0],
+                    "status": "valid",
+                    "transfer": True,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                },
+            },
+            {
+                "table": "debits",
+                "values": {
+                    "action": "issuance fee",
+                    "address": defaults["addresses"][0],
+                    "asset": "XCP",
+                    "block_index": current_block_index,
+                    "event": tx["tx_hash"],
+                    "quantity": 0,
+                },
+            },
+        ],
+    )
+
+
 def test_parse_divisible_legacy(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
