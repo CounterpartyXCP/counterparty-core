@@ -4,6 +4,9 @@
 # Upgrading
 
 **Upgrade Instructions:**
+
+Note: A full reparse is optionally required if you want to use the new `valid` parameter to retrieve transactions with the API
+
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
 
 With Docker Compose:
@@ -34,10 +37,12 @@ counterparty-server start
 ## Codebase
 
 - Add `current_commit` tag in Sentry reports and JSON logs
+- Add `transactions_status` table filled by the `parse()` functions of each contract
 
 ## API
 
 - Add `current_commit` field in API root endpoint
+- Add `valid` parameter for transactions endpoints
 
 ## CLI
 

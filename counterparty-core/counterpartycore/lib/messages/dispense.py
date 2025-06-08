@@ -102,6 +102,7 @@ def parse(db, tx):
     # assert len(outs) > 0 ?
 
     dispense_index = 0
+    tx_valid = False
 
     for next_out in outs:
         dispensers = []
@@ -206,6 +207,7 @@ def parse(db, tx):
                 }
                 ledger.events.insert_record(db, "dispenses", bindings, "DISPENSE")
                 dispense_index += 1
+                tx_valid = True
 
                 logger.info(
                     "Dispense %(dispense_quantity)s %(asset)s from %(source)s to %(destination)s (%(tx_hash)s) [valid]",
@@ -213,3 +215,9 @@ def parse(db, tx):
                 )
 
     cursor.close()
+
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        tx_valid,
+    )
