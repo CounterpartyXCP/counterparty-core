@@ -2,6 +2,9 @@
 # Upgrading
 
 **Upgrade Instructions:**
+
+**This release is a protocol upgrade. All nodes must upgrade by block 902000.**
+
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
 
 With Docker Compose:
