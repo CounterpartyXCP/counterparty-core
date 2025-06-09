@@ -114,14 +114,26 @@ def compose(db, source: str, asset: str, quantity: int = 0, skip_validation: boo
     return (source, [], data)
 
 
+def unpack_legacy(message):
+    return struct.unpack(f">{len(message)}s", message)[0].decode("utf-8").split("|")
+
+
+def unpack_new(message):
+    (asset_id, quantity) = cbor2.loads(message)  # pylint: disable=unbalanced-tuple-unpacking
+    asset = ledger.issuances.generate_asset_name(asset_id)
+    return (asset, quantity)
+
+
 def unpack(message, return_dict=False):
     try:
         if protocol.enabled("fairminter_v2"):
-            (asset_id, quantity) = cbor2.loads(message)  # pylint: disable=unbalanced-tuple-unpacking
-            asset = ledger.issuances.generate_asset_name(asset_id)
+            try:
+                (asset, quantity) = unpack_new(message)
+            except Exception:  # pylint: disable=broad-exception-caught
+                # fallback to legacy unpacking
+                (asset, quantity) = unpack_legacy(message)
         else:
-            data_content = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8").split("|")
-            (asset, quantity) = data_content
+            (asset, quantity) = unpack_legacy(message)
 
         if return_dict:
             return {"asset": asset, "quantity": int(quantity)}

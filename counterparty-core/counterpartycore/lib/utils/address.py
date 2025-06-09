@@ -109,10 +109,9 @@ def pack(address):
     if enabled("taproot_support"):
         try:
             return bytes(utils.pack_address(address, config.NETWORK_NAME))
-        except Exception as e:  # pylint: disable=broad-except  # noqa: F841
-            raise exceptions.AddressError(  # noqa: B904
-                f"The address {address} is not a valid bitcoin address ({config.NETWORK_NAME})"
-            ) from e
+        except Exception:  # pylint: disable=broad-except  # noqa: F841, S110
+            # fallback to legacy packing
+            pass  # noqa: B110
 
     return pack_legacy(address)
 
@@ -143,10 +142,9 @@ def unpack(short_address_bytes):
     if enabled("taproot_support"):
         try:
             return utils.unpack_address(short_address_bytes, config.NETWORK_NAME)
-        except Exception as e:  # pylint: disable=broad-except  # noqa: F841
-            raise exceptions.DecodeError(  # noqa: B904
-                f"{short_address_bytes} is not a valid packed bitcoin address ({config.NETWORK_NAME})"
-            ) from e
+        except Exception:  # pylint: disable=broad-except  # noqa: F841, S110
+            # fallback to legacy unpacking
+            pass  # noqa: B110
 
     return unpack_legacy(short_address_bytes)
 

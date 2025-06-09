@@ -305,61 +305,123 @@ def compose(
 
 
 def unpack(message, return_dict=False):
+    if protocol.enabled("fairminter_v2"):
+        try:
+            return unpack_new(message, return_dict)
+        except Exception:  # pylint: disable=broad-exception-caught
+            # Fallback to legacy unpacking
+            return unpack_legacy(message, return_dict)
+    else:
+        return unpack_legacy(message, return_dict)
+
+
+def unpack_new(message, return_dict=False):
     try:
-        if protocol.enabled("fairminter_v2"):
-            (
-                asset_id,
-                asset_parent_id,
-                price,
-                quantity_by_price,
-                max_mint_per_tx,
-                max_mint_per_address,
-                hard_cap,
-                premint_quantity,
-                start_block,
-                end_block,
-                soft_cap,
-                soft_cap_deadline_block,
-                minted_asset_commission_int,
-                burn_payment,
-                lock_description,
-                lock_quantity,
-                divisible,
-                mime_type,
-                description,
-            ) = cbor2.loads(message)
-            description = helpers.bytes_to_content(description, mime_type or "text/plain")
-            asset = ledger.issuances.generate_asset_name(asset_id)
-            asset_parent = (
-                ledger.issuances.generate_asset_name(asset_parent_id)
-                if asset_parent_id != 0
-                else ""
-            )
-        else:
-            data_content = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8").split("|")
-            arg_count = len(data_content)
-            (
-                asset,
-                asset_parent,
-                price,
-                quantity_by_price,
-                max_mint_per_tx,
-                hard_cap,
-                premint_quantity,
-                start_block,
-                end_block,
-                soft_cap,
-                soft_cap_deadline_block,
-                minted_asset_commission_int,
-                burn_payment,
-                lock_description,
-                lock_quantity,
-                divisible,
-            ) = data_content[0 : arg_count - 1]
-            # The description is placed last to be able to contain `|`.
-            description = "|".join(data_content[arg_count - 1 :])
-            max_mint_per_address = 0
-            mime_type = ""
+        (
+            asset_id,
+            asset_parent_id,
+            price,
+            quantity_by_price,
+            max_mint_per_tx,
+            max_mint_per_address,
+            hard_cap,
+            premint_quantity,
+            start_block,
+            end_block,
+            soft_cap,
+            soft_cap_deadline_block,
+            minted_asset_commission_int,
+            burn_payment,
+            lock_description,
+            lock_quantity,
+            divisible,
+            mime_type,
+            description,
+        ) = cbor2.loads(message)
+        description = helpers.bytes_to_content(description, mime_type or "text/plain")
+        asset = ledger.issuances.generate_asset_name(asset_id)
+        asset_parent = (
+            ledger.issuances.generate_asset_name(asset_parent_id) if asset_parent_id != 0 else ""
+        )
+
+        minted_asset_commission = D(minted_asset_commission_int) / D(1e8)
+
+        mime_type = mime_type or "text/plain"
+
+        if return_dict:
+            return {
+                "asset": asset,
+                "asset_parent": asset_parent,
+                "price": int(price),
+                "quantity_by_price": int(quantity_by_price),
+                "max_mint_per_tx": int(max_mint_per_tx),
+                "max_mint_per_address": int(max_mint_per_address),
+                "hard_cap": int(hard_cap),
+                "premint_quantity": int(premint_quantity),
+                "start_block": int(start_block),
+                "end_block": int(end_block),
+                "soft_cap": int(soft_cap),
+                "soft_cap_deadline_block": int(soft_cap_deadline_block),
+                "minted_asset_commission": minted_asset_commission,
+                "burn_payment": bool(int(burn_payment)),
+                "lock_description": bool(int(lock_description)),
+                "lock_quantity": bool(int(lock_quantity)),
+                "divisible": bool(int(divisible)),
+                "mime_type": mime_type,
+                "description": description,
+            }
+
+        return (
+            asset,
+            asset_parent,
+            int(price),
+            int(quantity_by_price),
+            int(max_mint_per_tx),
+            int(max_mint_per_address),
+            int(hard_cap),
+            int(premint_quantity),
+            int(start_block),
+            int(end_block),
+            int(soft_cap),
+            int(soft_cap_deadline_block),
+            minted_asset_commission,
+            bool(int(burn_payment)),
+            bool(int(lock_description)),
+            bool(int(lock_quantity)),
+            bool(int(divisible)),
+            mime_type,
+            description,
+        )
+    except Exception:  # pylint: disable=broad-exception-caught
+        return "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, "", ""
+
+
+def unpack_legacy(message, return_dict=False):
+    try:
+        data_content = struct.unpack(f">{len(message)}s", message)[0].decode("utf-8").split("|")
+        arg_count = len(data_content)
+        (
+            asset,
+            asset_parent,
+            price,
+            quantity_by_price,
+            max_mint_per_tx,
+            hard_cap,
+            premint_quantity,
+            start_block,
+            end_block,
+            soft_cap,
+            soft_cap_deadline_block,
+            minted_asset_commission_int,
+            burn_payment,
+            lock_description,
+            lock_quantity,
+            divisible,
+        ) = data_content[0 : arg_count - 1]
+        # The description is placed last to be able to contain `|`.
+        description = "|".join(data_content[arg_count - 1 :])
+        max_mint_per_address = 0
+        mime_type = ""
 
         minted_asset_commission = D(minted_asset_commission_int) / D(1e8)
 
