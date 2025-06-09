@@ -204,6 +204,26 @@ def test_validate(ledger_db, defaults):
         ledger_db,
         defaults["addresses"][0],  # source
         "SUBASSET",  # asset
+        "XCP",  # asset_parent,
+        0,  # price=0,
+        1,  # quantity_by_price,
+        10,  # max_mint_per_tx,
+    ) == ["Asset parent does not exist"]
+
+    assert fairminter.validate(
+        ledger_db,
+        defaults["addresses"][0],  # source
+        "SUBASSET",  # asset
+        "BTC",  # asset_parent,
+        0,  # price=0,
+        1,  # quantity_by_price,
+        10,  # max_mint_per_tx,
+    ) == ["Asset parent does not exist"]
+
+    assert fairminter.validate(
+        ledger_db,
+        defaults["addresses"][0],  # source
+        "SUBASSET",  # asset
         "NOASSET",  # asset_parent,
         0,  # price=0,
         1,  # quantity_by_price,
