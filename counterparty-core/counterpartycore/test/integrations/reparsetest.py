@@ -36,6 +36,17 @@ def prepare(network):
         ]
         db_file = "counterparty.testnet4.db"
         api_url = "http://localhost:44000/v2/"
+    elif network == "signet":
+        args += [
+            "--signet",
+            "--backend-connect",
+            "signet.counterparty.io",
+            "--backend-port",
+            "38332",
+            "--profile",
+        ]
+        db_file = "counterparty.signet.db"
+        api_url = "http://localhost:34000/v2/"
     else:
         args += ["--backend-connect", "api.counterparty.io", "--backend-port", "8332"]
         db_file = "counterparty.db"
@@ -47,11 +58,11 @@ def prepare(network):
     return sh_counterparty_server, db_file, api_url
 
 
-def bootstrap(sh_counterparty_server):
+def bootstrap(sh_counterparty_server, network="testnet4"):
     sh_counterparty_server(
         "bootstrap",
         "--bootstrap-url",
-        "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet4.db.v11.0.0.zst",
+        f"https://storage.googleapis.com/counterparty-bootstrap/counterparty.{network}.db.latest.zst",
     )
 
 
@@ -84,6 +95,8 @@ def reparse(sh_counterparty_server, db_file):
 def rolllback(sh_counterparty_server, network):
     if network == "testnet4":
         network_checkpoints = checkpoints.CHECKPOINTS_TESTNET4
+    elif network == "signet":
+        network_checkpoints = checkpoints.CHECKPOINTS_SIGNET
     else:
         network_checkpoints = checkpoints.CHECKPOINTS_MAINNET
     rollback_from = max(0, list(network_checkpoints.keys())[-1] - 200000)
@@ -124,7 +137,7 @@ def cleanup():
 def bootstrap_reparse_rollback_and_catchup(network):
     sh_counterparty_server, db_file, api_url = prepare(network)
 
-    bootstrap(sh_counterparty_server)
+    bootstrap(sh_counterparty_server, network)
     reparse(sh_counterparty_server, db_file)
     rolllback(sh_counterparty_server, network)
     catchup(sh_counterparty_server, api_url)
