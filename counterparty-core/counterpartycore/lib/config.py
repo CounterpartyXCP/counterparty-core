@@ -50,6 +50,7 @@ UPGRADE_ACTIONS = {
         "11.0.0": [("refresh_state_db", 0)],
         "11.0.1": [("rollback", 85000)],
     },
+    "signet": {},
 }
 
 
