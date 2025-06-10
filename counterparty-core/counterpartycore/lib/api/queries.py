@@ -183,7 +183,7 @@ def select_rows(
     if offset is not None or sort is not None:
         last_cursor = None
 
-    if table == "all_transactions":
+    if table == "all_transactions_with_status":
         cursor_field = "tx_index"
 
     cursor = db.cursor()
@@ -262,7 +262,15 @@ def select_rows(
     elif cursor_field not in select:
         select = f"{select}, {cursor_field} AS {cursor_field}"
     if (
-        table in ["all_transactions", "transactions", "sends", "btcpays", "sweeps", "dispenses"]
+        table
+        in [
+            "all_transactions_with_status",
+            "transactions_with_status",
+            "sends",
+            "btcpays",
+            "sweeps",
+            "dispenses",
+        ]
         and "COUNT(*)" not in select
     ):
         select += ", NULLIF(destination, '') AS destination"
@@ -299,7 +307,7 @@ def select_rows(
                 sort_order = "ASC"
             if sort_name in SUPPORTED_SORT_FIELDS.get(table, []):
                 order_by.append(f"{sort_name} {sort_order.upper()}")
-    elif table == "all_transactions":
+    elif table == "all_transactions_with_status":
         order_by.append("confirmed ASC")
         order_by.append(f"{cursor_field} {order}")
     if len(order_by) == 0:
@@ -334,7 +342,7 @@ def select_rows(
                 break
             row["params"] = json.loads(row["params"])
 
-    if table == "all_transactions":
+    if table == "all_transactions_with_status":
         for row in result:
             row["confirmed"] = bool(row["confirmed"])
 
@@ -417,6 +425,7 @@ def get_transactions(
     ledger_db,
     type: TransactionType = "all",  # pylint: disable=W0622
     show_unconfirmed: bool = False,
+    valid: bool = None,
     cursor: int = None,
     limit: int = 10,
     offset: int = None,
@@ -425,11 +434,15 @@ def get_transactions(
     Returns the list of the last ten transactions
     :param str type: The type of the transaction to return
     :param bool show_unconfirmed: Show unconfirmed transactions
+    :param bool valid: If True, only return valid transactions
     :param int cursor: The index of the most recent transactions to return (e.g. $LAST_TX_INDEX)
     :param int limit: The number of transactions to return (e.g. 2)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    table_name = "all_transactions" if show_unconfirmed else "transactions"
+    table_name = "all_transactions_with_status" if show_unconfirmed else "transactions_with_status"
+    where = None
+    if valid is not None:
+        where = {"valid": valid}
     return select_rows(
         ledger_db,
         table_name,
@@ -437,7 +450,7 @@ def get_transactions(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        where=prepare_transactions_where(type),
+        where=prepare_transactions_where(type, where),
     )
 
 
@@ -446,6 +459,7 @@ def get_transactions_by_block(
     block_index: int,
     type: TransactionType = "all",  # pylint: disable=W0622
     show_unconfirmed: bool = False,
+    valid: bool = None,
     cursor: int = None,
     limit: int = 10,
     offset: int = None,
@@ -455,12 +469,15 @@ def get_transactions_by_block(
     :param int block_index: The index of the block to return (e.g. $LAST_BLOCK_INDEX)
     :param str type: The type of the transaction to return
     :param bool show_unconfirmed: Show unconfirmed transactions
+    :param bool valid: If True, only return valid transactions
     :param int cursor: The last transaction index to return (e.g. $LAST_TX_INDEX)
     :param int limit: The maximum number of transactions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    table_name = "all_transactions" if show_unconfirmed else "transactions"
+    table_name = "all_transactions_with_status" if show_unconfirmed else "transactions_with_status"
     where = {"block_index": block_index}
+    if valid is not None:
+        where["valid"] = valid
     return select_rows(
         ledger_db,
         table_name,
@@ -477,6 +494,7 @@ def get_transactions_by_address(
     address: str,
     type: TransactionType = "all",  # pylint: disable=W0622
     show_unconfirmed: bool = False,
+    valid: bool = None,
     cursor: int = None,
     limit: int = 10,
     offset: int = None,
@@ -486,12 +504,15 @@ def get_transactions_by_address(
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str type: The type of the transaction to return
     :param bool show_unconfirmed: Show unconfirmed transactions
+    :param bool valid: If True, only return valid transactions
     :param int cursor: The last transaction index to return (e.g. $LAST_TX_INDEX)
     :param int limit: The maximum number of transactions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     where = {"source": address}
-    table_name = "all_transactions" if show_unconfirmed else "transactions"
+    if valid is not None:
+        where["valid"] = valid
+    table_name = "all_transactions_with_status" if show_unconfirmed else "transactions_with_status"
     return select_rows(
         ledger_db,
         table_name,
@@ -508,6 +529,7 @@ def get_transactions_by_addresses(
     addresses: str,
     type: TransactionType = "all",  # pylint: disable=W0622
     show_unconfirmed: bool = False,
+    valid: bool = None,
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
@@ -517,12 +539,15 @@ def get_transactions_by_addresses(
     :param str addresses: Comma separated list of addresses to return (e.g. $ADDRESS_1,$ADDRESS_2)
     :param str type: The type of the transaction to return
     :param bool show_unconfirmed: Show unconfirmed transactions
+    :param bool valid: If True, only return valid transactions
     :param int cursor: The last transaction index to return (e.g. $LAST_TX_INDEX)
     :param int limit: The maximum number of transactions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     where = {"source__in": addresses.split(",")}
-    table_name = "all_transactions" if show_unconfirmed else "transactions"
+    if valid is not None:
+        where["valid"] = valid
+    table_name = "all_transactions_with_status" if show_unconfirmed else "transactions_with_status"
     return select_rows(
         ledger_db,
         table_name,
@@ -555,7 +580,7 @@ def get_transaction_types_count_by_block(
     :param int block_index: The index of the block to return (e.g. $LAST_TX_INDEX)
     :param bool count_unconfirmed: Count unconfirmed transactions
     """
-    table_name = "all_transactions" if count_unconfirmed else "transactions"
+    table_name = "all_transactions_with_status" if count_unconfirmed else "transactions_with_status"
     return select_rows(
         ledger_db,
         table_name,
@@ -575,7 +600,7 @@ def get_transaction_types_count_by_address(
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param bool count_unconfirmed: Count unconfirmed transactions
     """
-    table_name = "all_transactions" if count_unconfirmed else "transactions"
+    table_name = "all_transactions_with_status" if count_unconfirmed else "transactions_with_status"
     return select_rows(
         ledger_db,
         table_name,
@@ -594,7 +619,7 @@ def get_transaction_by_hash(ledger_db, tx_hash: str):
     """
     return select_row(
         ledger_db,
-        "all_transactions",
+        "all_transactions_with_status",
         where={"tx_hash": tx_hash},
     )
 
@@ -606,7 +631,7 @@ def get_transaction_by_tx_index(ledger_db, tx_index: int):
     """
     return select_row(
         ledger_db,
-        "all_transactions",
+        "all_transactions_with_status",
         where={"tx_index": tx_index},
     )
 
@@ -737,7 +762,7 @@ def get_events_by_transaction_index(
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    query_result = select_row(ledger_db, "transactions", where={"tx_index": tx_index})
+    query_result = select_row(ledger_db, "transactions_with_status", where={"tx_index": tx_index})
     if query_result:
         return get_events_by_transaction_hash(
             ledger_db,
@@ -761,7 +786,7 @@ def get_events_by_transaction_index_and_event(
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    query_result = select_row(ledger_db, "transactions", where={"tx_index": tx_index})
+    query_result = select_row(ledger_db, "transactions_with_status", where={"tx_index": tx_index})
     if query_result:
         return get_events_by_transaction_hash_and_event(
             ledger_db,

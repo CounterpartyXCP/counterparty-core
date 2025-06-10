@@ -1015,6 +1015,13 @@ def test_packing_52_chars_legcay(ledger_db, blockchain_mock, defaults, test_help
                         "value": 1.0,
                     },
                 },
+                {
+                    "table": "transactions_status",
+                    "values": {
+                        "tx_index": tx["tx_index"],
+                        "valid": True,
+                    },
+                },
             ],
         )
 
@@ -1041,6 +1048,13 @@ def test_parse_invalid_message_legacy(ledger_db, blockchain_mock, defaults, test
                         "tx_hash": tx["tx_hash"],
                         "tx_index": tx["tx_index"],
                         "value": None,
+                    },
+                },
+                {
+                    "table": "transactions_status",
+                    "values": {
+                        "tx_index": tx["tx_index"],
+                        "valid": False,
                     },
                 },
             ],

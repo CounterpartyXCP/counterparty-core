@@ -3,6 +3,7 @@ from counterpartycore.lib.api import apiserver, apiwatcher, composer
 from counterpartycore.lib.api.routes import ALL_ROUTES
 from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.lib.parser import blocks
+from counterpartycore.lib.utils import helpers
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
@@ -20,6 +21,7 @@ def test_apiserver_root(apiv2_client, current_block_index):
             "documentation": "https://counterpartycore.docs.apiary.io/",
             "routes": "http://localhost/v2/routes",
             "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
+            "current_commit": helpers.get_current_commit_hash(),
         }
     }
 
@@ -331,6 +333,7 @@ def test_ledger_state(apiv2_client, current_block_index, ledger_db):
             "documentation": "https://counterpartycore.docs.apiary.io/",
             "routes": "http://localhost/v2/routes",
             "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
+            "current_commit": helpers.get_current_commit_hash(),
         }
     }
 
@@ -348,6 +351,7 @@ def test_ledger_state(apiv2_client, current_block_index, ledger_db):
             "documentation": "https://counterpartycore.docs.apiary.io/",
             "routes": "http://localhost/v2/routes",
             "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
+            "current_commit": helpers.get_current_commit_hash(),
         }
     }
 
@@ -428,5 +432,27 @@ def test_get_balances_by_addresses(apiv2_client, defaults):
         assert balance["address"] == defaults["addresses"][0]
 
     url = f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&verbose=true&asset=A95428959342453541&type=utxo"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) == 0
+
+
+def test_get_transactions_valid(apiv2_client, monkeypatch):
+    url = "/v2/transactions"
+    result = apiv2_client.get(url).json["result"]
+
+    for tx in result:
+        assert tx["valid"]
+
+    url = "/v2/transactions?valid=false"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) == 0
+
+    url = "/v2/transactions?show_unconfirmed=true"
+    result = apiv2_client.get(url).json["result"]
+
+    for tx in result:
+        assert tx["valid"]
+
+    url = "/v2/transactions?valid=false&show_unconfirmed=true"
     result = apiv2_client.get(url).json["result"]
     assert len(result) == 0

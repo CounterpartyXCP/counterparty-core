@@ -288,5 +288,7 @@ LEDGER_DB_MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "ledger", "migrations")
 STATE_DB_MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "api", "migrations")
 
 PROFILE_INTERVAL_MINUTES = 15
+
+CURRENT_COMMIT = "Unknown"
 ENABLE_ALL_PROTOCOL_CHANGES = False
 DISABLE_API_CACHE = False

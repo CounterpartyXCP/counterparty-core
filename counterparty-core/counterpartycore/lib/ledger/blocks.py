@@ -124,3 +124,18 @@ def get_transaction(db, tx_hash: str):
     if transactions:
         return transactions[0]
     return None
+
+
+def set_transaction_status(db, tx_index, valid):
+    """
+    Sets the status of a transaction
+    :param int tx_index: The index of the transaction to set the status for
+    :param bool valid: True if the transaction is valid, False otherwise
+    """
+    cursor = db.cursor()
+    query = """
+        INSERT OR REPLACE INTO transactions_status (tx_index, valid)
+        VALUES (?, ?)
+    """
+    bindings = (tx_index, valid)
+    cursor.execute(query, bindings)

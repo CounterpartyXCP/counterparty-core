@@ -1144,6 +1144,13 @@ def test_parse_basset(ledger_db, blockchain_mock, defaults, test_helpers, curren
                     "quantity": 50000000,
                 },
             },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )
 
@@ -1441,7 +1448,14 @@ def test_parse_too_short(ledger_db, blockchain_mock, defaults, test_helpers, cur
                     "tx_hash": tx["tx_hash"],
                     "tx_index": tx["tx_index"],
                 },
-            }
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": False,
+                },
+            },
         ],
     )
 

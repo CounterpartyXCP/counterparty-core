@@ -29,7 +29,7 @@ python-gnupg==0.5.2
 pyzmq==26.3.0
 gevent==24.11.1
 JSON-log-formatter==1.0
-yoyo-migrations==8.2.0
+yoyo-migrations==9
 gunicorn==23.0.0
 waitress==3.0.1
 hypothesis==6.116.0

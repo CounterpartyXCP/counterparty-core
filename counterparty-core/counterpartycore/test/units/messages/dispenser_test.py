@@ -269,6 +269,13 @@ def test_parse_open_dispenser(
                     "quantity": 100,
                 },
             },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )
 
@@ -306,6 +313,13 @@ def test_parse_close_dispenser(
                     "status": 11,
                 },
             },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )
 
@@ -317,6 +331,19 @@ def test_parse_integer_overflow(ledger_db, blockchain_mock, defaults, caplog, te
     error = "invalid: address doesn't have enough balance of XCP (92949974273 < 9223372036854775809); integer overflow"
     with test_helpers.capture_log(caplog, error):
         dispenser.parse(ledger_db, tx, message)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": False,
+                },
+            },
+        ],
+    )
 
 
 def test_parse_not_source_address(ledger_db, blockchain_mock, defaults, caplog, test_helpers):

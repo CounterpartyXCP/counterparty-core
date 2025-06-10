@@ -126,5 +126,11 @@ def parse(db, tx, message):
         "Destroy of %(quantity)s %(asset)s by %(source)s (%(tx_hash)s) [%(status)s]", bindings
     )
 
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )
+
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

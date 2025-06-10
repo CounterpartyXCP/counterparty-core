@@ -168,5 +168,12 @@ def test_parse_burn_multisig_address(
                     "quantity": 74999811833,
                 },
             },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )

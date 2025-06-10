@@ -203,6 +203,14 @@ def parse(db, tx, message):
             "send_type": "attach",
         }
         ledger.events.insert_record(db, "sends", bindings, "ATTACH_TO_UTXO")
+
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )
+
+    if problems:
         # return here to avoid further processing
         return
 

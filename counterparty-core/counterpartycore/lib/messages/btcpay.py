@@ -181,3 +181,9 @@ def parse(db, tx, message):
     logger.info("BTC Pay for order match %(order_match_id)s (%(tx_hash)s) [%(status)s]", bindings)
 
     cursor.close()
+
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )

@@ -82,6 +82,14 @@ def detach_assets(db, tx, source, destination=None):
             "send_type": "detach",
         }
         ledger.events.insert_record(db, "sends", bindings, "DETACH_FROM_UTXO")
+
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )
+
+    if problems:
         # stop here to avoid further processing
         return
 

@@ -301,3 +301,9 @@ def parse(db, tx, message):
     )
 
     dividend_parse_cursor.close()
+
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )

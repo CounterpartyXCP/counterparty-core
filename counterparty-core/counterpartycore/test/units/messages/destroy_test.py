@@ -84,7 +84,14 @@ def test_parse_wastee(ledger_db, blockchain_mock, defaults, test_helpers):
                     "tx_hash": tx["tx_hash"],
                     "tx_index": tx["tx_index"],
                 },
-            }
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )
 
@@ -109,6 +116,13 @@ def test_parse_wastee2(ledger_db, blockchain_mock, defaults, test_helpers):
                     "tx_hash": tx["tx_hash"],
                     "tx_index": tx["tx_index"],
                 },
-            }
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )
