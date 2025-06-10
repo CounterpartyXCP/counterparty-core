@@ -1,4 +1,10 @@
-# Release Notes - Counterparty Core v11.0.1 (2025-06-??)
+# Release Notes - Counterparty Core v11.0.1 (2025-06-10)
+
+This release is a patch on the v11.0.0 protocol upgrade with the same activation block (902,000). It allows for backwards-compatibility in the transaction encoding format so that CBOR is no longer required for transaction data packing. It also adds support for Bitcoin `signet` and fixes a few bugs---including one critical bug in the new issuance decoding logic.
+
+NOTE: If a CBOR transaction is incorrectly constructed so that it is invalid, it will be parsed automatically with the original transaction decoding logic, which may lead to unpredictable results.
+
+
 # Upgrading
 
 **Upgrade Instructions:**
@@ -32,16 +38,16 @@ counterparty-server start
 
 ## Protocol
 
-- Add backward-compatibility to CBOR format (Sweep, Enhanced Send, Fairminter, Fairmint, Issuance and Broadcast)
+- Add backward-compatibility to CBOR format (Enhanced Send, Sweep, Fairminter, Fairmint, Issuance and Broadcast)
 
 ## Bugfixes
 
-- No taproot encoding for legacy inputs
-- Handle correctly unpack error in issuances
+- No Taproot encoding for legacy inputs
+- Handle unpack error for issuances correctly
 
 ## Codebase
 
-- Add Signet Support
+- Add `signet` Support
 
 ## API
 
