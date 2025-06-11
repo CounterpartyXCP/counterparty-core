@@ -840,6 +840,7 @@ def create_app():
             "running_testnet": config.TESTNET3,
             "running_testnet4": config.TESTNET4,
             "running_regtest": config.REGTEST,
+            "running_signet": config.SIGNET,
             "version_major": config.VERSION_MAJOR,
             "version_minor": config.VERSION_MINOR,
             "version_revision": config.VERSION_REVISION,

@@ -59,6 +59,12 @@ jobs:
           - name: Testnet4 Rebuild
             test-path: integrations/rebuild_test.py
 
+            # Signet tests
+
+          # bootstrap, rollback and reparse,
+          - name: Signet Bootstrap And Catchup
+            test-path: integrations/signet_test.py
+
           # Other tests
 
           # run the docker-compose tests

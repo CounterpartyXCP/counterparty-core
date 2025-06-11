@@ -22,6 +22,7 @@ def download_zst(data_dir, zst_url):
     zst_filepath = os.path.join(data_dir, zst_filename)
     urllib.request.urlretrieve(zst_url, zst_filepath)  # nosec B310  # noqa: S310
     print(f"Downloaded {zst_url} in {time.time() - start_time:.2f}s")
+    assert os.path.exists(zst_filepath), f"Failed to download {zst_url}"
     return zst_filepath
 
 
@@ -34,10 +35,12 @@ def decompress_zst(zst_filepath):
         .replace("counterparty.testnet.db.", "")
         .replace("counterparty.testnet4.db.", "")
         .replace("counterparty.testnet3.db.", "")
+        .replace("counterparty.signet.db.", "")
         .replace("state.db.", "")
         .replace("state.testnet.db.", "")
         .replace("state.testnet4.db.", "")
         .replace("state.testnet3.db.", "")
+        .replace("state.signet.db.", "")
         .replace(".zst", "")
     )
     filename = zst_filepath.replace(f".{version}.zst", "")

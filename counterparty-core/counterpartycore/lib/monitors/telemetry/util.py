@@ -39,6 +39,8 @@ def get_network():
         return "TESTNET4"
     if __read_config_with_default("TESTNET3", False):
         return "TESTNET3"
+    if __read_config_with_default("SIGNET", False):
+        return "SIGNET"
     return "MAINNET"
 
 

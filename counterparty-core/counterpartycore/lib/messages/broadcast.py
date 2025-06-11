@@ -182,12 +182,9 @@ def compose(
 
 
 def load_cbor(message):
-    try:
-        timestamp, value, fee_fraction_int, mime_type, text = cbor2.loads(message)
-        mime_type = mime_type or "text/plain"
-        text = helpers.bytes_to_content(text, mime_type)
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        raise struct.error from e
+    timestamp, value, fee_fraction_int, mime_type, text = cbor2.loads(message)
+    mime_type = mime_type or "text/plain"
+    text = helpers.bytes_to_content(text, mime_type)
     return timestamp, value, fee_fraction_int, mime_type, text
 
 
@@ -224,7 +221,12 @@ def unpack(message, block_index, return_dict=False):
         mime_type = "text/plain"
         if protocol.enabled("taproot_support"):
             # Unpack the message using cbor2
-            timestamp, value, fee_fraction_int, mime_type, text = load_cbor(message)
+            try:
+                timestamp, value, fee_fraction_int, mime_type, text = load_cbor(message)
+            except Exception:
+                timestamp, value, fee_fraction_int, mime_type, text = load_data_legacy(
+                    message, block_index
+                )  # fallback to legacy unpacking
         else:
             timestamp, value, fee_fraction_int, mime_type, text = load_data_legacy(
                 message, block_index

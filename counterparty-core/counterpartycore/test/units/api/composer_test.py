@@ -1696,7 +1696,7 @@ def test_compose_issuance_tparoot(ledger_db, defaults, monkeypatch):
     )
 
     params = {
-        "source": defaults["addresses"][0],
+        "source": defaults["p2wpkh_addresses"][0],
         "transfer_destination": None,
         "asset": "BSSET",
         "quantity": 1000,
@@ -1708,9 +1708,9 @@ def test_compose_issuance_tparoot(ledger_db, defaults, monkeypatch):
     construct_params = {"encoding": "taproot", "inscription": True}
 
     expected = {
-        "rawtransaction": "020000000147155f17ac58e707b326ec914d00bcce2f0ee527830c291bc02cdeb47c4ef7ed0000000000ffffffff024e030000000000002251208772088df30ddead2ebd37a6fedda94084592ac8e5ae42e3fbcda24152f746b4dcc49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "rawtransaction": "020000000171fe07c4136829d75f41307f3c2ea52d156393fa54c90280f165272bc6dfa3d40000000000ffffffff0248030000000000002251208772088df30ddead2ebd37a6fedda94084592ac8e5ae42e3fbcda24152f746b486c59a3b000000001600144f5d14e864f9653aa69f79bc06e30627cea84f6e00000000",
         "envelope_script": "0063036f7264010703786370010109696d6167652f706e6701050d86161a000bfce31903e8f5f4f40004aaffaaff682079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ac",
-        "signed_reveal_rawtransaction": "0200000000010141b6943f0ff11638d7b18f3c619fb9f83969f263be76c7d358971db4afa82dbe0000000000ffffffff0200000000000000000a6a08434e54525052545922020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac034023aa035ac6fdfe0d9225ac8e4d4151c9590a1600bc5362eb97313b778ebdaa30f8bc99af26530aaae3aac2a244262b31efdbfb9e4112ed20c5a303e6987f0cb3510063036f7264010703786370010109696d6167652f706e6701050d86161a000bfce31903e8f5f4f40004aaffaaff682079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ac21c079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f8179800000000",
+        "signed_reveal_rawtransaction": "02000000000101d0fdf53dc9f4ea0231ae574e15ddbf9e6e81996c4e02d92e6d1af711a0ab9fc50000000000ffffffff0200000000000000000a6a08434e54525052545922020000000000001600144f5d14e864f9653aa69f79bc06e30627cea84f6e0340e01d14b1863afbe4944ba3954bcba90755e450016f079d1c819420cd42b86435723f92f4180ac937f71e242dd7b92a07d58055efc1d1ad3c189ecbd8b2f3dbb3510063036f7264010703786370010109696d6167652f706e6701050d86161a000bfce31903e8f5f4f40004aaffaaff682079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ac21c079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f8179800000000",
     }
 
     result = composer.compose_transaction(ledger_db, "issuance", params, construct_params)
@@ -1729,7 +1729,7 @@ def test_compose_fairminter_taproot(ledger_db, defaults, monkeypatch):
     )
 
     params = {
-        "source": defaults["addresses"][0],
+        "source": defaults["p2wpkh_addresses"][0],
         "asset": "FAIRMANT",
         "max_mint_per_tx": 10,
         "description": "ff00ff00",
@@ -1739,9 +1739,9 @@ def test_compose_fairminter_taproot(ledger_db, defaults, monkeypatch):
     construct_params = {"encoding": "taproot", "inscription": True}
 
     expected = {
-        "rawtransaction": "0200000001f4b46f0fa251a8802e0823d95573525bc918a395f3f8d4e0694f7d3cbe1329100000000000ffffffff02560300000000000022512020f67b48adda58a8468150f599777f144a4bf95954f7e85c8a9e823b39a02cc8d4c49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
+        "rawtransaction": "02000000015ab502e2c483ba8f43aa4a81bc7d3c1bbc1ac055aa18a008464a3073c93902110000000000ffffffff02500300000000000022512020f67b48adda58a8468150f599777f144a4bf95954f7e85c8a9e823b39a02cc87ec59a3b000000001600144f5d14e864f9653aa69f79bc06e30627cea84f6e00000000",
         "envelope_script": "0063036f7264010703786370010109696d6167652f706e6701051c92185a1b000000095fce9cd50000010a0000000000000000f4f4f4f50004ff00ff00682079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ac",
-        "signed_reveal_rawtransaction": "020000000001012fd7ac78f697b9d3038fb8b4a72337ec978ded54b5d2b6230bed93d31a7bebe70000000000ffffffff0200000000000000000a6a08434e54525052545922020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac0340abcad756341edcd36c09cc1bdf6c69fe193afde5682b2d3250377effa7c0e38337afe044d0126a99100cb8cb8453174a59ff3b9f22e11a2648c75201b4fabbe0600063036f7264010703786370010109696d6167652f706e6701051c92185a1b000000095fce9cd50000010a0000000000000000f4f4f4f50004ff00ff00682079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ac21c079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f8179800000000",
+        "signed_reveal_rawtransaction": "02000000000101822ce617aee88a464ef6bc7f1bf82306cb96979bacb977b88459b0f9751ab1b60000000000ffffffff0200000000000000000a6a08434e54525052545922020000000000001600144f5d14e864f9653aa69f79bc06e30627cea84f6e03406a3fb936204d76f7fd8bcbd8e45765b0d3a2a7866df5845fa91ba5e78a09da3c51091e0e7701a96b4767464cb4ae6acd59a7d16485dbf658db2f3aa0ea339516600063036f7264010703786370010109696d6167652f706e6701051c92185a1b000000095fce9cd50000010a0000000000000000f4f4f4f50004ff00ff00682079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ac21c079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f8179800000000",
     }
 
     result = composer.compose_transaction(ledger_db, "fairminter", params, construct_params)
@@ -1754,13 +1754,35 @@ def test_compose_fairminter_taproot(ledger_db, defaults, monkeypatch):
     )
 
 
-def test_compose_broadcast_taproot(ledger_db, defaults, monkeypatch):
+def test_compose_fairminter_taproot_legacy_source(ledger_db, defaults, monkeypatch):
     monkeypatch.setattr(
         composer, "generate_random_private_key", lambda: PrivateKey(secret_exponent=1)
     )
 
     params = {
         "source": defaults["addresses"][0],
+        "asset": "FAIRMANT",
+        "max_mint_per_tx": 10,
+        "description": "ff00ff00",
+        "mime_type": "image/png",
+    }
+
+    construct_params = {"encoding": "taproot", "inscription": True}
+
+    with pytest.raises(
+        exceptions.ComposeError,
+        match="Reveal transaction is not supported for legacy inputs",
+    ):
+        composer.compose_transaction(ledger_db, "fairminter", params, construct_params)
+
+
+def test_compose_broadcast_taproot(ledger_db, defaults, monkeypatch):
+    monkeypatch.setattr(
+        composer, "generate_random_private_key", lambda: PrivateKey(secret_exponent=1)
+    )
+
+    params = {
+        "source": defaults["p2wpkh_addresses"][0],
         "text": "ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00",
         "mime_type": "image/png",
     }
@@ -1768,9 +1790,9 @@ def test_compose_broadcast_taproot(ledger_db, defaults, monkeypatch):
     construct_params = {"encoding": "taproot", "inscription": True}
 
     expected = {
-        "rawtransaction": "02000000014f4851c5dc2eff52025d7d337748c9bfa1e12ab43ee3523ba5dbbadffb6a31bb0000000000ffffffff026003000000000000225120e9df4f0de24c7c547f48d54eed3aab381c4e790c241949671f67f27a6ecaced0cac49a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
-        "envelope_script": "0063036f7264010703786370010109696d6167652f706e6701051284181e1a52bb3303fb0000000000000000000020ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00682079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ac",
-        "signed_reveal_rawtransaction": "0200000000010165c01cacf8c84570e65a1b7ff2718cf9ef00bf1dd736c02dc69705211c1c10a50000000000ffffffff0200000000000000000a6a08434e54525052545922020000000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac03408399f5ae19be35137a562a5e6169380b59df9e7139fc81299b4d40fa9672326aee8602629d649a1bbd7ac9fc33dec8c703fb0214221eac725581253ed849635b720063036f7264010703786370010109696d6167652f706e6701051284181e1a52bb3303fb0000000000000000000020ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00682079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ac21c079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f8179800000000",
+        "rawtransaction": "0200000001e1072947861861aff10876e05b01ea535f5e36aa690dca21a8d51db97e07f8b50000000000ffffffff0258030000000000002251200bb36e89efc2b8c9a3804c78c70d87b3a3d5bf05a19c982c2a513aef2f2d306d76c59a3b000000001600144f5d14e864f9653aa69f79bc06e30627cea84f6e00000000",
+        "envelope_script": "0063036f7264010703786370010109696d6167652f706e6701050e84181e00fb0000000000000000000020ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00682079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ac",
+        "signed_reveal_rawtransaction": "0200000000010161187276bb68dcace2b77169e40b9420009d25d301513671fea4f3f4f468de300000000000ffffffff0200000000000000000a6a08434e54525052545922020000000000001600144f5d14e864f9653aa69f79bc06e30627cea84f6e03400b7d08d59ef3650008ca08347eec9162190d96c5859a74c3c909a9193bb7c180829d4f198dc8f1bca3ab8fc6c20503d527e97fcde786e5113734137b98bbc4886e0063036f7264010703786370010109696d6167652f706e6701050e84181e00fb0000000000000000000020ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00682079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ac21c079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f8179800000000",
     }
 
     result = composer.compose_transaction(ledger_db, "broadcast", params, construct_params)
@@ -1779,7 +1801,7 @@ def test_compose_broadcast_taproot(ledger_db, defaults, monkeypatch):
     envelope_script = Script.from_raw(result["envelope_script"])
     assert (
         str(envelope_script)
-        == "['OP_0', 'OP_IF', '6f7264', '07', '786370', '01', '696d6167652f706e67', '05', '84181e1a52bb3303fb000000000000000000', 'OP_0', 'ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00', 'OP_ENDIF', '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798', 'OP_CHECKSIG']"
+        == "['OP_0', 'OP_IF', '6f7264', '07', '786370', '01', '696d6167652f706e67', '05', '84181e00fb000000000000000000', 'OP_0', 'ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00', 'OP_ENDIF', '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798', 'OP_CHECKSIG']"
     )
 
 
@@ -1788,7 +1810,7 @@ def test_compose_broadcast_taproot_no_ordinals(ledger_db, defaults, monkeypatch)
         composer, "generate_random_private_key", lambda: PrivateKey(secret_exponent=1)
     )
     params = {
-        "source": defaults["addresses"][0],
+        "source": defaults["p2wpkh_addresses"][0],
         "text": "ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00",
         "mime_type": "image/png",
     }
@@ -1796,9 +1818,9 @@ def test_compose_broadcast_taproot_no_ordinals(ledger_db, defaults, monkeypatch)
     construct_params = {"encoding": "taproot", "inscription": False}
 
     expected = {
-        "rawtransaction": "0200000001af72db3a5a121119973198c962cc1a4464633a7bb4d14ed8e4d76eae1fac43a40000000000ffffffff024a010000000000002251201f75c66fb96d9bc81a0f15cd8abd48481e260770c4a2e0ef734d8df2650cf4a7e0c69a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
-        "envelope_script": "00633d1e851a52bb3303fb00000000000000000069696d6167652f706e675820ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00682079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ac",
-        "signed_reveal_rawtransaction": "020000000001019084ab110f2a0338074b63678afffae437f0f19b94a4c1b45723d73ceb451b7f0000000000ffffffff0100000000000000000a6a08434e5452505254590340e74e1a297335e7eb7365729892bc12ebe0a75bd7ade0618a9b0eb7807b9477ed7b0661bcb742dc4da827d2269e742db4f0486f9ae121c0540c34eb4d780da8236300633d1e851a52bb3303fb00000000000000000069696d6167652f706e675820ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00682079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ac21c079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f8179800000000",
+        "rawtransaction": "02000000014a4ea42f29caeb4a1b9b84d7cb4fa30a0596c1f2fae962e84e8d0f7a015399e70000000000ffffffff024a01000000000000225120033e05691f7b82130930bb01f437ab090f1abc19be1b08bb0dad49f60ab2fef284c79a3b000000001600144f5d14e864f9653aa69f79bc06e30627cea84f6e00000000",
+        "envelope_script": "0063391e8500fb00000000000000000069696d6167652f706e675820ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00682079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ac",
+        "signed_reveal_rawtransaction": "020000000001017605d6b46fa532f6192ad18aa5bb478e977691dce2361969c6078200d7d0dc340000000000ffffffff0100000000000000000a6a08434e54525052545903404413f34af6cc00c20a8f01376678e548e2366265702f74fe8f16ee166addb613c7b3b45055e33d435387426c391d9299ef3c4f734c2d5503483b356fd5156e0c5f0063391e8500fb00000000000000000069696d6167652f706e675820ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00682079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ac21c179be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f8179800000000",
     }
 
     result = composer.compose_transaction(ledger_db, "broadcast", params, construct_params)
@@ -1807,7 +1829,7 @@ def test_compose_broadcast_taproot_no_ordinals(ledger_db, defaults, monkeypatch)
     envelope_script = Script.from_raw(result["envelope_script"])
     assert (
         str(envelope_script)
-        == "['OP_0', 'OP_IF', '1e851a52bb3303fb00000000000000000069696d6167652f706e675820ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00', 'OP_ENDIF', '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798', 'OP_CHECKSIG']"
+        == "['OP_0', 'OP_IF', '1e8500fb00000000000000000069696d6167652f706e675820ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00', 'OP_ENDIF', '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798', 'OP_CHECKSIG']"
     )
 
 

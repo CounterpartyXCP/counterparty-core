@@ -35,10 +35,12 @@ def test_get_network():
     # Test MAINNET (the simplest case)
     original_testnet3 = getattr(config, "TESTNET3", None)
     original_testnet4 = getattr(config, "TESTNET4", None)
+    original_signet = getattr(config, "SIGNET", None)
 
     # Set to False to test MAINNET
     config.TESTNET3 = False
     config.TESTNET4 = False
+    config.SIGNET = False
 
     assert util.get_network() == "MAINNET"
 
@@ -52,6 +54,11 @@ def test_get_network():
         delattr(config, "TESTNET4")
     else:
         config.TESTNET4 = original_testnet4
+
+    if original_signet is None:
+        delattr(config, "SIGNET")
+    else:
+        config.SIGNET = original_signet
 
 
 def test_is_force_enabled():

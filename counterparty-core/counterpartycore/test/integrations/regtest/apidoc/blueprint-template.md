@@ -166,7 +166,7 @@ Returns server information and the list of documented routes in JSON format.
         "result": {
             "server_ready": true,
             "network": "mainnet",
-            "version": "11.0.0",
+            "version": "11.0.1",
             "backend_height": 850214,
             "counterparty_height": 850214,
             "ledger_state": "following",

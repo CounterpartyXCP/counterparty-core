@@ -22,6 +22,7 @@ def initialise_log_config(
     testnet3=False,
     testnet4=False,
     regtest=False,
+    signet=False,
     action=None,
     json_logs=False,
     max_log_file_size=40 * 1024 * 1024,
@@ -52,6 +53,8 @@ def initialise_log_config(
         network += ".regtest"
     if testnet4:
         network += ".testnet4"
+    if signet:
+        network += ".signet"
 
     # Log
     if no_log_files:
@@ -89,6 +92,7 @@ def initialise_config(
     testnet3=False,
     testnet4=False,
     regtest=False,
+    signet=False,
     api_limit_rows=1000,
     backend_connect=None,
     backend_port=None,
@@ -166,7 +170,12 @@ def initialise_config(
     else:
         config.REGTEST = False
 
-    if config.TESTNET3 or config.TESTNET4:
+    if signet:
+        config.SIGNET = signet
+    else:
+        config.SIGNET = False
+
+    if config.TESTNET3 or config.TESTNET4 or config.SIGNET:
         bitcoinlib.SelectParams("testnet")
     elif config.REGTEST:
         bitcoinlib.SelectParams("regtest")
@@ -180,6 +189,8 @@ def initialise_config(
         config.NETWORK_NAME = "testnet4"
     if config.REGTEST:
         config.NETWORK_NAME = "regtest"
+    if config.SIGNET:
+        config.NETWORK_NAME = "signet"
 
     network = f".{config.NETWORK_NAME}" if config.NETWORK_NAME != "mainnet" else ""
 
@@ -233,6 +244,8 @@ def initialise_config(
             config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_TESTNET4
         elif config.REGTEST:
             config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_REGTEST
+        elif config.SIGNET:
+            config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT_SIGNET
         else:
             config.BACKEND_PORT = config.DEFAULT_BACKEND_PORT
 
@@ -323,6 +336,8 @@ def initialise_config(
             config.RPC_PORT = config.DEFAULT_RPC_PORT_TESTNET4
         elif config.REGTEST:
             config.RPC_PORT = config.DEFAULT_RPC_PORT_REGTEST
+        elif config.SIGNET:
+            config.RPC_PORT = config.DEFAULT_RPC_PORT_SIGNET
         else:
             config.RPC_PORT = config.DEFAULT_RPC_PORT
     try:
@@ -373,6 +388,8 @@ def initialise_config(
             config.API_PORT = config.DEFAULT_API_PORT_TESTNET4
         elif config.REGTEST:
             config.API_PORT = config.DEFAULT_API_PORT_REGTEST
+        elif config.SIGNET:
+            config.API_PORT = config.DEFAULT_API_PORT_SIGNET
         else:
             config.API_PORT = config.DEFAULT_API_PORT
     try:
@@ -396,6 +413,8 @@ def initialise_config(
             config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET4
         elif config.REGTEST:
             config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_REGTEST
+        elif config.SIGNET:
+            config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT_SIGNET
         else:
             config.ZMQ_PUBLISHER_PORT = config.DEFAULT_ZMQ_PUBLISHER_PORT
     try:
@@ -457,6 +476,14 @@ def initialise_config(
         config.BURN_START = config.BURN_START_REGTEST
         config.BURN_END = config.BURN_END_REGTEST
         config.UNSPENDABLE = config.UNSPENDABLE_REGTEST
+    elif config.SIGNET:
+        config.MAGIC_BYTES = config.MAGIC_BYTES_SIGNET
+        config.ADDRESSVERSION = config.ADDRESSVERSION_SIGNET
+        config.P2SH_ADDRESSVERSION = config.P2SH_ADDRESSVERSION_SIGNET
+        config.BLOCK_FIRST = config.BLOCK_FIRST_SIGNET
+        config.BURN_START = config.BURN_START_SIGNET
+        config.BURN_END = config.BURN_END_SIGNET
+        config.UNSPENDABLE = config.UNSPENDABLE_SIGNET
     else:
         config.MAGIC_BYTES = config.MAGIC_BYTES_MAINNET
         config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
@@ -497,6 +524,8 @@ def initialise_config(
             config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_TESTNET4
         elif config.NETWORK_NAME == "mainnet":
             config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_MAINNET
+        elif config.NETWORK_NAME == "signet":
+            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_SIGNET
         else:
             config.ELECTRS_URL = None
 
@@ -512,6 +541,7 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "testnet3": args.testnet3,
         "testnet4": args.testnet4,
         "regtest": args.regtest,
+        "signet": args.signet,
         "api_limit_rows": args.api_limit_rows,
         "backend_connect": args.backend_connect,
         "backend_port": args.backend_port,
@@ -564,6 +594,7 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         testnet3=args.testnet3,
         testnet4=args.testnet4,
         regtest=args.regtest,
+        signet=args.signet,
         action=args.action,
         json_logs=args.json_logs,
         log_exclude_filters=args.log_exclude_filters,
