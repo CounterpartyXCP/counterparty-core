@@ -34,6 +34,8 @@ counterparty-server start
 
 ## Bugfixes
 
+- Fix `mime_type` field in `assets_info` table
+
 ## Codebase
 
 - Add `current_commit` tag in Sentry reports and JSON logs
