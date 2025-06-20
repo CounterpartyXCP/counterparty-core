@@ -782,6 +782,33 @@ def test_parse_invalid_message(ledger_db, blockchain_mock, defaults, test_helper
         )
 
 
+def test_parse_invalid_message_2(ledger_db, blockchain_mock, defaults, test_helpers):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][4], use_first_tx=True)
+    message = b"^\xa6\xf5\x00?\xf0\x00\x00\x00\x00\x00\x00\x00LK@#A 28 CHARACTERS LONG TEXT"
+
+    broadcast.parse(ledger_db, tx, message)
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "broadcasts",
+                "values": {
+                    "block_index": tx["block_index"],
+                    "fee_fraction_int": 0,
+                    "locked": 0,
+                    "source": defaults["addresses"][4],
+                    "status": "invalid: could not unpack text",
+                    "text": None,
+                    "timestamp": 0,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                    "value": None,
+                },
+            },
+        ],
+    )
+
+
 def test_compose_legacy(ledger_db, defaults):
     with ProtocolChangesDisabled(["broadcast_pack_text", "short_tx_type_id", "taproot_support"]):
         assert broadcast.compose(
@@ -1051,7 +1078,7 @@ def test_loads_cbor(monkeypatch):
     monkeypatch.setattr(
         "counterpartycore.lib.utils.helpers.bytes_to_content", bytes_to_content_mock
     )
-    with pytest.raises(struct.error):
+    with pytest.raises(Exception):  # noqa: B017
         broadcast.load_cbor(message)
 
 

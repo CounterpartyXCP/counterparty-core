@@ -22,6 +22,7 @@ def download_zst(data_dir, zst_url):
     zst_filepath = os.path.join(data_dir, zst_filename)
     urllib.request.urlretrieve(zst_url, zst_filepath)  # nosec B310  # noqa: S310
     print(f"Downloaded {zst_url} in {time.time() - start_time:.2f}s")
+    assert os.path.exists(zst_filepath), f"Failed to download {zst_url}"
     return zst_filepath
 
 
@@ -34,10 +35,12 @@ def decompress_zst(zst_filepath):
         .replace("counterparty.testnet.db.", "")
         .replace("counterparty.testnet4.db.", "")
         .replace("counterparty.testnet3.db.", "")
+        .replace("counterparty.signet.db.", "")
         .replace("state.db.", "")
         .replace("state.testnet.db.", "")
         .replace("state.testnet4.db.", "")
         .replace("state.testnet3.db.", "")
+        .replace("state.signet.db.", "")
         .replace(".zst", "")
     )
     filename = zst_filepath.replace(f".{version}.zst", "")
@@ -89,7 +92,7 @@ def check_signature(filepath, sig_url):
         sys.exit(1)
 
 
-def verfif_and_decompress(zst_filepath, sig_url, decompressors_state):
+def verify_and_decompress(zst_filepath, sig_url, decompressors_state):
     try:
         check_signature(zst_filepath, sig_url)
         decompress_zst(zst_filepath)
@@ -125,7 +128,7 @@ def download_bootstrap_files(data_dir, files):
                 sys.exit(1)
 
         decompressor = Process(
-            target=verfif_and_decompress,
+            target=verify_and_decompress,
             args=(zst_filepath, sig_url, decompressors_state),
         )
         decompressor.start()

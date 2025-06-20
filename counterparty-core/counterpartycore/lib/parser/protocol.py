@@ -33,6 +33,8 @@ def enabled(change_name, block_index=None):
         index_name = "testnet3_block_index"
     elif config.TESTNET4:
         index_name = "testnet4_block_index"
+    elif config.SIGNET:
+        index_name = "signet_block_index"
     else:
         index_name = "block_index"
 
@@ -52,6 +54,10 @@ def get_change_block_index(change_name):
 
     if config.TESTNET3:
         index_name = "testnet3_block_index"
+    elif config.TESTNET4:
+        index_name = "testnet4_block_index"
+    elif config.SIGNET:
+        index_name = "signet_block_index"
     else:
         index_name = "block_index"
 
@@ -76,6 +82,8 @@ def get_value_by_block_index(change_name, block_index=None):
         index_name = "testnet3"
     elif config.TESTNET4:
         index_name = "testnet4"
+    elif config.SIGNET:
+        index_name = "signet"
     else:
         index_name = "mainnet"
 
@@ -87,7 +95,7 @@ def get_value_by_block_index(change_name, block_index=None):
 
 
 def is_test_network():
-    return config.TESTNET3 or config.TESTNET4 or config.REGTEST
+    return config.TESTNET3 or config.TESTNET4 or config.REGTEST or config.SIGNET
 
 
 def after_block_or_test_network(tx_block_index, target_block_index):

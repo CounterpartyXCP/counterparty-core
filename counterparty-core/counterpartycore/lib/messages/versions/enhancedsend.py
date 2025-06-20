@@ -40,7 +40,10 @@ def new_unpack(message):
 
 def unpack(message):
     if protocol.enabled("taproot_support"):
-        return new_unpack(message)
+        try:
+            return new_unpack(message)
+        except exceptions.UnpackError:
+            pass  # fallback to legacy unpacking
 
     try:
         # account for memo bytes

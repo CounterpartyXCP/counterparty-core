@@ -11,7 +11,7 @@ safe-pysha3==1.0.4
 pytest==7.4.4
 pytest-cov==4.1.0
 python-bitcoinlib==0.12.2
-requests==2.32.2
+requests==2.32.4
 tendo==0.3.0
 xmltodict==0.13.0
 cachetools==5.3.2
@@ -42,4 +42,4 @@ multiprocessing-logging==0.3.4
 locust==2.32.8
 pygit2==1.17.0
 cbor2==5.6.5
-counterparty-rs==11.0.0
+counterparty-rs==11.0.1

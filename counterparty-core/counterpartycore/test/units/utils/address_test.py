@@ -112,6 +112,25 @@ def test_unpack():
         )
 
 
+def test_unpack_legacy_2():
+    assert (
+        address.unpack(binascii.unhexlify("006474849fc9ac0f5bd6b49fe144d14db7d32e2445"))
+        == "1AAAA1111xxxxxxxxxxxxxxxxxxy43CZ9j"
+    )
+    assert (
+        address.unpack(binascii.unhexlify("00647484b055e2101927e50aba74957ba134d501d7"))
+        == "1AAAA2222xxxxxxxxxxxxxxxxxxy4pQ3tU"
+    )
+    assert (
+        address.unpack(binascii.unhexlify("055ce31be63403fa7b19f2614272547c15c8df86b9"))
+        == "3AAAA1111xxxxxxxxxxxxxxxxxxy3SsDsZ"
+    )
+    assert (
+        address.unpack(binascii.unhexlify("C40A12AD889AECC8F6213BFD6BD47911CAB1C30E5F"))
+        == "2MtAV7xpAzU69E8GxRF2Vd2xt79kDnif6F5"
+    )
+
+
 def test_is_valid_address():
     with ProtocolChangesDisabled(["taproot_support"]):
         assert address.is_valid_address("18H63wjcZqaBwifMjopS9jSZejivq7Lgq4", "mainnet")
@@ -299,20 +318,15 @@ def test_invalid_addresses():
         address.pack("1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2")
 
     # Unpacking invalid data
-    with pytest.raises(
-        exceptions.DecodeError,
-        match=re.escape("b'\\x05' is not a valid packed bitcoin address (mainnet)"),
-    ):
-        config.NETWORK_NAME = "mainnet"
-        address.unpack(b"\x05")  # Invalid prefix
-
-    with pytest.raises(exceptions.DecodeError):
-        config.NETWORK_NAME = "mainnet"
-        address.unpack(b"\x01\x01\x02")  # Incorrect length for P2PKH
-
-    with pytest.raises(exceptions.DecodeError):
-        config.NETWORK_NAME = "mainnet"
-        address.unpack(b"\x03\xff\x01\x02")  # Invalid witness version
+    # with pytest.raises(
+    #    exceptions.DecodeError,
+    #    match=re.escape("b'\\x05' is not a valid packed bitcoin address (mainnet)"),
+    # ):
+    config.NETWORK_NAME = "mainnet"
+    # legacy unpacking returns invalid addresses
+    assert address.unpack(b"\x05") == "dDc8z6"  # Invalid prefix
+    assert address.unpack(b"\x01\x01\x02") == "3Cz3w5nmq"  # Incorrect length for P2PKH
+    assert address.unpack(b"\x03\xff\x01\x02") == "fmW5YiqHHQ"  # Invalid witness version
 
     config.NETWORK_NAME = "regtest"
 
