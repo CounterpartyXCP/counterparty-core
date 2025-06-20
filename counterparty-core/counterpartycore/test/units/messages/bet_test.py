@@ -412,7 +412,14 @@ def test_parse_bet_type_0(ledger_db, blockchain_mock, defaults, test_helpers):
                     "fee_fraction_int": 5000000.0,
                     "status": "open",
                 },
-            }
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )
 
@@ -446,7 +453,14 @@ def test_parse_invalid(ledger_db, blockchain_mock, defaults, test_helpers):
                     "fee_fraction_int": 5000000.0,
                     "status": "invalid: non‐positive counterwager",
                 },
-            }
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": False,
+                },
+            },
         ],
     )
 

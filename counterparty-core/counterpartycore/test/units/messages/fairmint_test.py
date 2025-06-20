@@ -198,6 +198,13 @@ def tes_parse_freefairmint_legacy(
                         "event": tx["tx_hash"],
                     },
                 },
+                {
+                    "table": "transactions_status",
+                    "values": {
+                        "tx_index": tx["tx_index"],
+                        "valid": True,
+                    },
+                },
             ],
         )
 

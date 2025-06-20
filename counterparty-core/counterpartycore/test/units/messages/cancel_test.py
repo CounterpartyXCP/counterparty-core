@@ -65,5 +65,12 @@ def test_parse_cancel_order(ledger_db, blockchain_mock, test_helpers, current_bl
                     "block_index": current_block_index,
                 },
             },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )

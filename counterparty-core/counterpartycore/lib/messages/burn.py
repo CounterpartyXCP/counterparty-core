@@ -125,6 +125,11 @@ def parse(db, tx):
         try:
             row = MAINNET_BURNS[tx["tx_hash"]]
         except KeyError:
+            ledger.blocks.set_transaction_status(
+                db,
+                tx["tx_index"],
+                False,
+            )
             return
 
         ledger.events.credit(
@@ -163,6 +168,12 @@ def parse(db, tx):
     )
 
     burn_parse_cursor.close()
+
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

@@ -267,6 +267,13 @@ def test_parse_flag_1(ledger_db, blockchain_mock, defaults, test_helpers, curren
                         "quantity": 1000,
                     },
                 },
+                {
+                    "table": "transactions_status",
+                    "values": {
+                        "tx_index": tx["tx_index"],
+                        "valid": True,
+                    },
+                },
             ],
         )
 
@@ -312,6 +319,13 @@ def test_parse_flag_2(ledger_db, blockchain_mock, defaults, test_helpers):
                         "block_index": tx["block_index"],
                         "tx_index": tx["tx_index"],
                         "transfer": True,
+                    },
+                },
+                {
+                    "table": "transactions_status",
+                    "values": {
+                        "tx_index": tx["tx_index"],
+                        "valid": True,
                     },
                 },
             ],

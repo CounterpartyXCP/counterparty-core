@@ -323,6 +323,7 @@ def update_assets_info(state_db, event):
         set_data = []
         set_data.append("divisible = :divisible")
         set_data.append("description = :description")
+        set_data.append("mime_type = :mime_type")
         set_data.append("owner = :issuer")
         set_data.append("supply = supply + :quantity")
         set_data.append("last_issuance_block_index = :block_index")

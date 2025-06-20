@@ -1144,3 +1144,9 @@ def parse(db, tx, message, message_type_id):
                 action="issuance",
                 event=tx["tx_hash"],
             )
+
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )

@@ -50,6 +50,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                 "only_write_in_reorg_window": True,
                 "enable_all_protocol_changes": config.ENABLE_ALL_PROTOCOL_CHANGES,
             }
+
             if (
                 isinstance(config.LOG_EXCLUDE_FILTERS, list)
                 and "RSFETCHER" in config.LOG_EXCLUDE_FILTERS

@@ -67,6 +67,13 @@ def test_move_assets_xcp(ledger_db, defaults, blockchain_mock, test_helpers, cur
                     "fee_paid": 0,
                 },
             },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )
 
@@ -123,6 +130,13 @@ def test_move_assets_divisible(
                     "asset": "DIVISIBLE",
                     "quantity": 1,
                     "fee_paid": 0,
+                },
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
                 },
             },
         ],

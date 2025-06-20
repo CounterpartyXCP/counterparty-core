@@ -333,6 +333,13 @@ def test_parse_send1(ledger_db, blockchain_mock, defaults, test_helpers, current
                     "quantity": 100000000,
                 },
             },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )
 
@@ -380,6 +387,13 @@ def test_parse_send2(ledger_db, blockchain_mock, defaults, test_helpers, current
                     "block_index": current_block_index,
                     "event": tx["tx_hash"],
                     "quantity": 500,
+                },
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
                 },
             },
         ],
@@ -430,6 +444,13 @@ def test_parse_send3(ledger_db, blockchain_mock, defaults, test_helpers, current
                     "quantity": 300000000,
                 },
             },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )
 
@@ -476,6 +497,13 @@ def test_parse_send4(ledger_db, blockchain_mock, defaults, test_helpers, current
                     "block_index": current_block_index,
                     "event": tx["tx_hash"],
                     "quantity": 100000000,
+                },
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
                 },
             },
         ],
@@ -526,6 +554,13 @@ def test_parse_send5(ledger_db, blockchain_mock, defaults, test_helpers, current
                     "quantity": 100000000,
                 },
             },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )
 
@@ -572,11 +607,24 @@ def test_parse_send6(ledger_db, blockchain_mock, defaults, test_helpers, current
                     "quantity": 9223372036854775807,
                 },
             },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )
 
 
-def test_parse_send7(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
+def test_parse_send7(
+    ledger_db, blockchain_mock, defaults, test_helpers, current_block_index, apiv2_client
+):
+    url = "/v2/transactions?valid=false"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) == 0
+
     insert_required_option(ledger_db, current_block_index, defaults)
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], defaults["addresses"][6])
     send1.parse(ledger_db, tx, b"\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x02\xfa\xf0\x80")
@@ -596,9 +644,20 @@ def test_parse_send7(ledger_db, blockchain_mock, defaults, test_helpers, current
                     "tx_hash": tx["tx_hash"],
                     "tx_index": tx["tx_index"],
                 },
-            }
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": False,
+                },
+            },
         ],
     )
+
+    url = "/v2/transactions?valid=false"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) == 1
 
 
 def test_parse_send8(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
@@ -621,6 +680,13 @@ def test_parse_send8(ledger_db, blockchain_mock, defaults, test_helpers, current
                     "tx_hash": tx["tx_hash"],
                     "tx_index": tx["tx_index"],
                 },
-            }
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )

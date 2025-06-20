@@ -538,6 +538,7 @@ def check_fairminter2(node, source_private_key, utxo):
             "price": 1,
             "hard_cap": 100 * 10**8,
             "description": "a" * 400000,
+            "mime_type": "image/gif",
             "premint_quantity": 100,
             "start_block": last_block + 1,
             "soft_cap": 90 * 10**8,
@@ -549,6 +550,9 @@ def check_fairminter2(node, source_private_key, utxo):
     result = node.api_call(f"addresses/{source_address}/fairminters")
     assert len(result["result"]) == 1
     assert result["result"][0]["asset"] == "A95428959745315389"
+
+    result = node.api_call("assets/A95428959745315389")
+    assert result["result"]["mime_type"] == "image/gif"
 
     return new_utxo
 

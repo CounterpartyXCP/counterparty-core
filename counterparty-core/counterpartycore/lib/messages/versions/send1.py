@@ -188,3 +188,9 @@ def parse(db, tx, message):
     )
 
     cursor.close()
+
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )

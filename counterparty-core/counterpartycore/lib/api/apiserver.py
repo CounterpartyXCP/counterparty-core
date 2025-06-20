@@ -84,6 +84,7 @@ def api_root():
         "documentation": "https://counterpartycore.docs.apiary.io/",
         "routes": f"{request.url_root}v2/routes",
         "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
+        "current_commit": config.CURRENT_COMMIT,
     }
 
 

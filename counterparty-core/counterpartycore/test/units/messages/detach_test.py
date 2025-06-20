@@ -73,7 +73,14 @@ def test_parse_detach_to_destination(ledger_db, blockchain_mock, defaults, test_
                     "fee_paid": 0,
                     "send_type": "detach",
                 },
-            }
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )
 
@@ -156,6 +163,13 @@ def test_parse_detach_no_balance(ledger_db, blockchain_mock, defaults, test_help
                     "status": "invalid: source must be a UTXO",
                     "send_type": "detach",
                 },
-            }
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": False,
+                },
+            },
         ],
     )

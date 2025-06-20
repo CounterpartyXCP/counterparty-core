@@ -192,6 +192,13 @@ def test_parse_dividend(ledger_db, blockchain_mock, defaults, test_helpers, curr
                     "quantity": 80000,
                 },
             },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )
 
@@ -262,6 +269,13 @@ def test_parse_dividend_no_divisible(
                     "block_index": current_block_index,
                     "event": tx["tx_hash"],
                     "quantity": 40000,
+                },
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
                 },
             },
         ],
