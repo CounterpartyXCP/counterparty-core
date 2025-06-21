@@ -393,6 +393,14 @@ def handle_route(**kwargs):
         # inject details
         is_verbose = request.args.get("verbose", "False")
         if is_verbose.lower() in ["true", "1"]:
+            # Add a safety check for verbose mode with large result sets
+            if isinstance(result, list) and len(result) > 100:
+                return return_result(
+                    413, 
+                    error="Response too large for verbose mode. Please use verbose=false or reduce the limit parameter to 100 or less.",
+                    start_time=start_time,
+                    query_args=query_args
+                )
             with LedgerDBConnectionPool().connection() as ledger_db:
                 with StateDBConnectionPool().connection() as state_db:
                     result = verbose.inject_details(ledger_db, state_db, result, table)

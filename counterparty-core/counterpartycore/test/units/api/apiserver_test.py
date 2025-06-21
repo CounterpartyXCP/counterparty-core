@@ -430,3 +430,34 @@ def test_get_balances_by_addresses(apiv2_client, defaults):
     url = f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&verbose=true&asset=A95428959342453541&type=utxo"
     result = apiv2_client.get(url).json["result"]
     assert len(result) == 0
+
+
+def test_verbose_mode_limit(apiv2_client, ledger_db):
+    # Test that verbose mode is limited to 100 results
+    # First, check that non-verbose mode works with large limits
+    url = "/v2/transactions?limit=150&verbose=false"
+    response = apiv2_client.get(url)
+    assert response.status_code == 200
+    
+    # Now test that verbose mode with more than 100 results returns an error
+    url = "/v2/transactions?limit=150&verbose=true"
+    response = apiv2_client.get(url)
+    assert response.status_code == 413
+    assert "Response too large for verbose mode" in response.json["error"]
+    
+    # Test that verbose mode works with 100 or fewer results
+    url = "/v2/transactions?limit=100&verbose=true"
+    response = apiv2_client.get(url)
+    assert response.status_code == 200
+    
+    # Test that verbose mode works with blocks transactions endpoint
+    # Find a block with transactions
+    last_block = ledger_db.execute(
+        "SELECT block_index FROM transactions GROUP BY block_index ORDER BY block_index DESC LIMIT 1"
+    ).fetchone()
+    
+    if last_block:
+        block_index = last_block["block_index"]
+        url = f"/v2/blocks/{block_index}/transactions?limit=50&verbose=true"
+        response = apiv2_client.get(url)
+        assert response.status_code == 200
