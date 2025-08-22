@@ -35,6 +35,7 @@ counterparty-server start
 ## Bugfixes
 
 - Fix `mime_type` field in `assets_info` table
+- Fix issuance composition when description is None
 
 ## Codebase
 
