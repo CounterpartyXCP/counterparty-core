@@ -2179,3 +2179,76 @@ def test_compose_issuance_data_subasset():
         20, fmt3, issuance.SUBASSET_ID, 3000, True, True, False, 7, b"subname", b"desc"
     )
     assert result3 is not None
+
+
+def test_issuance_with_none_description(
+    ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
+):
+    # issuance with description = ""
+    assert issuance.compose(
+        ledger_db, defaults["addresses"][0], "BSSET", 1000, None, True, False, None, description=""
+    ) == (
+        defaults["addresses"][0],
+        [],
+        b"\x16\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`@",
+    )
+
+    assert issuance.unpack(
+        ledger_db, b"\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`@", 20, 9999999
+    ) == (785635, "BSSET", None, 1000, True, False, False, False, 0, 0.0, "", "text/plain", "valid")
+
+    # issuance with description = None
+    assert issuance.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        "BSSET",
+        1000,
+        None,
+        True,
+        False,
+        None,
+        description=None,
+    ) == (
+        defaults["addresses"][0],
+        [],
+        b"\x16\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`\xf6",
+    )
+    # new asset, description is None means empty string
+    assert issuance.unpack(
+        ledger_db, b"\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`\xf6", 20, 9999999
+    ) == (785635, "BSSET", None, 1000, True, False, False, False, 0, 0.0, "", "text/plain", "valid")
+
+    # lock issuance with description = None
+    assert issuance.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        "DIVISIBLE",
+        0,
+        None,
+        True,
+        lock=True,
+        reset=None,
+        description=None,
+    ) == (
+        defaults["addresses"][0],
+        [],
+        b"\x16\x87\x1b\x00\x00\x00\xa2[\xe3Kf\x00\xf5\xf5\xf4`\xf6",
+    )
+    # existing asset, description is None means existing description
+    assert issuance.unpack(
+        ledger_db, b"\x87\x1b\x00\x00\x00\xa2[\xe3Kf\x00\xf5\xf5\xf4`\xf6", 20, 9999999
+    ) == (
+        697326324582,
+        "DIVISIBLE",
+        None,
+        0,
+        True,
+        True,
+        False,
+        False,
+        0,
+        0.0,
+        "Divisible asset",
+        "text/plain",
+        "valid",
+    )
