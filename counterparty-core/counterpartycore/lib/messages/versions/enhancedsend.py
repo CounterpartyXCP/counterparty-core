@@ -34,7 +34,6 @@ def new_unpack(message):
             "memo": None if memo_bytes == b"" else memo_bytes,
         }
     except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error("enhanced send unpack error: %s", e)
         raise exceptions.UnpackError(f"could not unpack: {e}") from e
 
 
