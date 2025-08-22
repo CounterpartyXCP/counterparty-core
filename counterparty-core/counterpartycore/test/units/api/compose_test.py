@@ -892,6 +892,22 @@ def test_unpack_taproot_support(apiv2_client):
         },
     )
 
+    check_unpack(
+        apiv2_client,
+        {
+            "datahex": "0480bf37348af3d14ffaefcabb3fcf094293b8cc1c8e0273776565656565656570",
+            "result": {
+                "message_type": "sweep",
+                "message_type_id": 4,
+                "message_data": {
+                    "destination": "bcrt1qhumnfzhn698l4m72hvlu7z2zjwuvc8ywywg0e4",
+                    "flags": 2,
+                    "memo": "sweeeeeeep",
+                },
+            },
+        },
+    )
+
 
 def test_unpack_old(apiv2_client):
     # 3f63237449ff4e8acf9f19e24b6a7760893d61e00c69036381b5fee291a613ac
