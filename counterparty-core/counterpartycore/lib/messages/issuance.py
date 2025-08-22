@@ -486,10 +486,8 @@ def compose(
                 reset,
                 mime_type,
             ]
-            if validated_description is not None:
-                data_array.append(
-                    helpers.content_to_bytes(validated_description, mime_type or "text/plain")
-                )
+            if description is not None:
+                data_array.append(helpers.content_to_bytes(description, mime_type or "text/plain"))
             else:
                 data_array.append(None)
             data += cbor2.dumps(data_array)
