@@ -2,7 +2,7 @@ from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def check_unpack(client, data):
-    result = client.get("/v2/transactions/unpack?datahex=" + data["datahex"])
+    result = client.get("/v2/transactions/unpack?block_index=784320&datahex=" + data["datahex"])
     assert result.status_code == 200
     assert "result" in result.json
     assert result.json["result"] == data["result"]
@@ -891,3 +891,57 @@ def test_unpack_taproot_support(apiv2_client):
             },
         },
     )
+
+
+def test_unpack_old(apiv2_client):
+    # 3f63237449ff4e8acf9f19e24b6a7760893d61e00c69036381b5fee291a613ac
+    data = "14a9e4545303ba895000000000000000010000005354414d503a6956424f5277304b47676f414141414e535568455567414141426741414141594341594141414467647a33344141414166556c4551565234326d4e674741576a5948694151444f652f3967775451326e69695745444b6649456e52444375316c4d5444564c4d426d4f4c496c4646735170735941787367477738544973674464395543682f30586d6e436757774d536f59674856673268414c5141467a64443177566d473033424d555435417936563458553831433941744176477037674d51473459704b6f767742524846686d4d42474261516f686b41586e4d6d3775756468445141414141415355564f524b35435949493d"
+    result = apiv2_client.get("/v2/transactions/unpack?datahex=" + data)
+    assert result.status_code == 200
+    assert result.json == {
+        "result": {
+            "message_type": "issuance",
+            "message_type_id": 20,
+            "message_data": {
+                "asset_id": [4],
+                "asset": None,
+                "subasset_longname": None,
+                "quantity": "3a6956424f5277304b47676f41414141",
+                "divisible": "59",
+                "lock": "41",
+                "reset": -21,
+                "callable": False,
+                "call_date": 0,
+                "call_price": 0.0,
+                "description": "326e69695745444b6649456e5244437531",
+                "mime_type": "NgGAWjYHiAQDO",
+                "status": "invalid: bad asset name",
+            },
+        }
+    }
+
+    with ProtocolChangesDisabled(["taproot_support"]):
+        data = "14a9e4545303ba895000000000000000010000005354414d503a6956424f5277304b47676f414141414e535568455567414141426741414141594341594141414467647a33344141414166556c4551565234326d4e674741576a5948694151444f652f3967775451326e69695745444b6649456e52444375316c4d5444564c4d426d4f4c496c4646735170735941787367477738544973674464395543682f30586d6e436757774d536f59674856673268414c5141467a64443177566d473033424d555435417936563458553831433941744176477037674d51473459704b6f767742524846686d4d42474261516f686b41586e4d6d3775756468445141414141415355564f524b35435949493d"
+        result = apiv2_client.get("/v2/transactions/unpack?datahex=" + data + "&block_index=784320")
+        assert result.status_code == 200
+        assert result.json == {
+            "result": {
+                "message_type": "issuance",
+                "message_type_id": 20,
+                "message_data": {
+                    "asset_id": 12242002402621426000,
+                    "asset": "A12242002402621426000",
+                    "subasset_longname": None,
+                    "quantity": 1,
+                    "divisible": False,
+                    "lock": False,
+                    "reset": False,
+                    "callable": False,
+                    "call_date": 0,
+                    "call_price": 0.0,
+                    "description": "STAMP:iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAfUlEQVR42mNgGAWjYHiAQDOe/9gwTQ2niiWEDKfIEnRDCu1lMTDVLMBmOLIlFFsQpsYAxsgGw8TIsgDd9UCh/0XmnCgWwMSoYgHVg2hALQAFzdD1wVmG03BMUT5Ay6V4XU81C9AtAvGp7gMQG4YpKovwBRHFhmMBGBaQohkAXnMm7uudhDQAAAAASUVORK5CYII=",
+                    "mime_type": "text/plain",
+                    "status": "valid",
+                },
+            }
+        }
