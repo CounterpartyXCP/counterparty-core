@@ -631,7 +631,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
 
         unpacked = False
 
-        if protocol.enabled("taproot_support"):
+        if protocol.enabled("taproot_support", block_index=block_index):
             try:
                 if message_type_id in [ID, LR_ISSUANCE_ID]:
                     (
@@ -720,7 +720,8 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                 callable_, call_date, call_price = False, 0, 0.0
 
             elif (
-                protocol.enabled("issuance_format_update") and len(message) >= asset_format_length
+                protocol.enabled("issuance_format_update", block_index=block_index)
+                and len(message) >= asset_format_length
             ):  # Protocol change.
                 if (len(message) - asset_format_length <= 42) and not protocol.enabled(
                     "pascal_string_removed"
