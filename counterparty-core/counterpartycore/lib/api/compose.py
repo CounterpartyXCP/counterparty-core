@@ -666,7 +666,9 @@ def unpack(db, datahex: str, block_index: int = None):
         # Dispenser
         elif message_type_id == messages.dispenser.ID:
             message_type_name = "dispenser"
-            message_data = messages.dispenser.unpack(message, return_dict=True)
+            message_data = messages.dispenser.unpack(
+                message, return_dict=True, block_index=block_index
+            )
         elif message_type_id == messages.dispenser.DISPENSE_ID:
             message_type_name = "dispense"
             message_data = messages.dispense.unpack(message, return_dict=True)
@@ -691,7 +693,7 @@ def unpack(db, datahex: str, block_index: int = None):
         # Enhanced send
         elif message_type_id == messages.versions.enhancedsend.ID:
             message_type_name = "enhanced_send"
-            message_data = messages.versions.enhancedsend.unpack(message)
+            message_data = messages.versions.enhancedsend.unpack(message, block_index)
         # MPMA send
         elif message_type_id == messages.versions.mpma.ID:
             message_type_name = "mpma_send"
@@ -718,15 +720,19 @@ def unpack(db, datahex: str, block_index: int = None):
         # Sweep
         elif message_type_id == messages.sweep.ID:
             message_type_name = "sweep"
-            message_data = messages.sweep.unpack(message)
+            message_data = messages.sweep.unpack(message, block_index=block_index)
         # Fair Minter
         elif message_type_id == messages.fairminter.ID:
             message_type_name = "fairminter"
-            message_data = messages.fairminter.unpack(message, return_dict=True)
+            message_data = messages.fairminter.unpack(
+                message, return_dict=True, block_index=block_index
+            )
         # Fair Mint
         elif message_type_id == messages.fairmint.ID:
             message_type_name = "fairmint"
-            message_data = messages.fairmint.unpack(message, return_dict=True)
+            message_data = messages.fairmint.unpack(
+                message, return_dict=True, block_index=block_index
+            )
         # utxo
         elif message_type_id == messages.utxo.ID:
             message_type_name = "utxo"

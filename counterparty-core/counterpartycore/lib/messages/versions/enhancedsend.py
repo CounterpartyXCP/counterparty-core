@@ -37,8 +37,8 @@ def new_unpack(message):
         raise exceptions.UnpackError(f"could not unpack: {e}") from e
 
 
-def unpack(message):
-    if protocol.enabled("taproot_support"):
+def unpack(message, block_index=None):
+    if protocol.enabled("taproot_support", block_index=block_index):
         try:
             return new_unpack(message)
         except exceptions.UnpackError:
