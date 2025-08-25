@@ -20,7 +20,7 @@ def apply(db):
     db.execute("""
         CREATE VIEW orders_info AS 
         SELECT 
-            orders.*,
+            orders.*, orders.rowid AS rowid,
             get_assets.divisible AS get_asset_divisible,
             give_assets.divisible AS give_asset_divisible,
             CASE 
