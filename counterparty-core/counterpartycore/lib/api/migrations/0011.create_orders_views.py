@@ -48,7 +48,7 @@ def apply(db):
 
 
 def rollback(db):
-    db.execute("DROP VIEW orders_info")
+    db.execute("DROP VIEW IF EXISTS orders_info")
 
 
 if not __name__.startswith("apsw_"):

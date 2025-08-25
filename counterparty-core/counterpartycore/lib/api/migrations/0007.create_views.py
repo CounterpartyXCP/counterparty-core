@@ -83,8 +83,8 @@ def apply(db):
 
 
 def rollback(db):
-    db.execute("DROP VIEW asset_holders")
-    db.execute("DROP VIEW xcp_holders")
+    db.execute("DROP VIEW IF EXISTS asset_holders")
+    db.execute("DROP VIEW IF EXISTS xcp_holders")
 
 
 if not __name__.startswith("apsw_"):
