@@ -571,7 +571,7 @@ FIELDS_TO_REMOVE = {"rowid", "MAX(rowid)"}
 BOOLEAN_FIELDS = {"valid", "divisible", "lock", "reset", "callable"}
 
 
-def _apply_field_transformations(key, value, original_data):
+def _apply_field_transformations(key, value):
     """Apply specific transformations to field values."""
     if key in BOOLEAN_FIELDS:
         return bool(value)
@@ -591,7 +591,7 @@ def _clean_dictionary(data):
         cleaned_value = clean_rowids_and_confirmed_fields(value)
 
         # Apply specific field transformations
-        transformed_value = _apply_field_transformations(key, cleaned_value, data)
+        transformed_value = _apply_field_transformations(key, cleaned_value)
         cleaned[key] = transformed_value
 
         # Special case: nullify tx_index when block_index is nullified
