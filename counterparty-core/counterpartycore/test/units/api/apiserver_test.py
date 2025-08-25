@@ -456,3 +456,9 @@ def test_get_transactions_valid(apiv2_client, monkeypatch):
     url = "/v2/transactions?valid=false&show_unconfirmed=true"
     result = apiv2_client.get(url).json["result"]
     assert len(result) == 0
+
+
+def test_unpacking_old_transactions(apiv2_client, ledger_db, defaults, current_block_index):
+    url = "v2/transactions/unpack?datahex=434e54525052545916871b8ec1e58c32b0ce0600f5f5f460f6"
+    result = apiv2_client.get(url).json["result"]
+    print(result)

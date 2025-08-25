@@ -219,7 +219,7 @@ def load_data_legacy(message, block_index):
 def unpack(message, block_index, return_dict=False):
     try:
         mime_type = "text/plain"
-        if protocol.enabled("taproot_support"):
+        if protocol.enabled("taproot_support", block_index=block_index):
             # Unpack the message using cbor2
             try:
                 timestamp, value, fee_fraction_int, mime_type, text = load_cbor(message)

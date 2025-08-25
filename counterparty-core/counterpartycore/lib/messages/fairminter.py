@@ -304,8 +304,8 @@ def compose(
     return (source, [], data)
 
 
-def unpack(message, return_dict=False):
-    if protocol.enabled("fairminter_v2"):
+def unpack(message, return_dict=False, block_index=None):
+    if protocol.enabled("fairminter_v2", block_index=block_index):
         try:
             return unpack_new(message, return_dict)
         except Exception:  # pylint: disable=broad-exception-caught

@@ -124,9 +124,9 @@ def unpack_new(message):
     return (asset, quantity)
 
 
-def unpack(message, return_dict=False):
+def unpack(message, return_dict=False, block_index=None):
     try:
-        if protocol.enabled("fairminter_v2"):
+        if protocol.enabled("fairminter_v2", block_index=block_index):
             try:
                 (asset, quantity) = unpack_new(message)
             except Exception:  # pylint: disable=broad-exception-caught

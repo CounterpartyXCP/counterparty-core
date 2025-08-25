@@ -35,6 +35,9 @@ counterparty-server start
 ## Bugfixes
 
 - Fix `mime_type` field in `assets_info` table
+- Fix issuance composition when description is None
+- Fix API issue when unpacking old transactions
+- Remove unnecessary `logger.error` from Enhanced Send unpacking
 
 ## Codebase
 
