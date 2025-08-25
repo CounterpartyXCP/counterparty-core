@@ -42,6 +42,7 @@ counterparty-server start
 - Fix give/get_price in orders API
 - Fix boolean fields in issuances API
 - Fix bootstrap: exit with error when a subprocess fails
+- Disable taproot encoding for legacy source
 
 ## Codebase
 
