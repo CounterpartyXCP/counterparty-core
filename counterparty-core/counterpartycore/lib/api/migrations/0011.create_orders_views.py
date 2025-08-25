@@ -18,7 +18,7 @@ def apply(db):
     logger.debug("Building view orders_info ...")
 
     db.execute("""
-        CREATE VIEW orders_info AS 
+        CREATE VIEW IF NOT EXISTS orders_info AS 
         SELECT 
             orders.*, orders.rowid AS rowid,
             get_assets.divisible AS get_asset_divisible,

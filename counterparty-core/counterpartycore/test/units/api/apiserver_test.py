@@ -458,7 +458,35 @@ def test_get_transactions_valid(apiv2_client, monkeypatch):
     assert len(result) == 0
 
 
-def test_unpacking_old_transactions(apiv2_client, ledger_db, defaults, current_block_index):
-    url = "v2/transactions/unpack?datahex=434e54525052545916871b8ec1e58c32b0ce0600f5f5f460f6"
+def test_order_prices(apiv2_client, defaults):
+    url = "/v2/assets/NODIVISIBLE/orders"
     result = apiv2_client.get(url).json["result"]
-    print(result)
+    assert result[0]["give_price"] == 100000000
+    assert result[0]["get_price"] == 0.00000001
+
+    url = "/v2/assets/DIVISIBLE/orders"
+    result = apiv2_client.get(url).json["result"]
+    assert result[0]["give_price"] == 1
+    assert result[0]["get_price"] == 1
+
+
+def test_issuances_boolean_fields(apiv2_client):
+    url = "/v2/issuances?verbose=true"
+    result = apiv2_client.get(url).json["result"]
+    assert isinstance(result[0]["divisible"], bool)
+    assert isinstance(result[0]["locked"], bool)
+    assert isinstance(result[0]["reset"], bool)
+    assert isinstance(result[0]["callable"], bool)
+    assert result[0]["divisible"]
+    assert not result[0]["locked"]
+    assert not result[0]["reset"]
+    assert not result[0]["callable"]
+
+    assert isinstance(result[1]["divisible"], bool)
+    assert isinstance(result[1]["locked"], bool)
+    assert isinstance(result[1]["reset"], bool)
+    assert isinstance(result[1]["callable"], bool)
+    assert result[1]["divisible"]
+    assert not result[1]["locked"]
+    assert not result[1]["reset"]
+    assert not result[1]["callable"]
