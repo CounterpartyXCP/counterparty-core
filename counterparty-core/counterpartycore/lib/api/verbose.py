@@ -559,40 +559,62 @@ def inject_details(ledger_db, state_db, result, table=None):
     else:
         result = result_list
 
+    result = clean_rowids_and_confirmed_fields(result)
+
     return result
 
 
+# Fields to remove from query results
+FIELDS_TO_REMOVE = {"rowid", "MAX(rowid)"}
+
+# Fields to convert to boolean
+BOOLEAN_FIELDS = {"valid", "divisible", "lock", "reset", "callable"}
+
+
+def _apply_field_transformations(key, value, original_data):
+    """Apply specific transformations to field values."""
+    if key == "block_index" and value in [0, config.MEMPOOL_BLOCK_INDEX]:
+        return None
+    elif key in BOOLEAN_FIELDS:
+        return bool(value)
+    else:
+        return value
+
+
+def _clean_dictionary(data):
+    """Clean a dictionary by applying all transformations."""
+    cleaned = {}
+
+    for key, value in data.items():
+        # Skip fields that should be removed
+        if key in FIELDS_TO_REMOVE:
+            continue
+
+        # Recursively clean nested structures
+        cleaned_value = clean_rowids_and_confirmed_fields(value)
+
+        # Apply specific field transformations
+        transformed_value = _apply_field_transformations(key, cleaned_value, data)
+        cleaned[key] = transformed_value
+
+        # Special case: nullify tx_index when block_index is nullified
+        if key == "block_index" and transformed_value is None and "tx_index" in data:
+            cleaned["tx_index"] = None
+
+    return cleaned
+
+
 def clean_rowids_and_confirmed_fields(query_result):
-    """Remove the rowid field from the query result."""
-    if isinstance(query_result, list):
-        filtered_results = []
-        for row in list(query_result):
-            if "rowid" in row:
-                del row["rowid"]
-            if "MAX(rowid)" in row:
-                del row["MAX(rowid)"]
-            if "block_index" in row and row["block_index"] in [0, config.MEMPOOL_BLOCK_INDEX]:
-                row["block_index"] = None
-                if "tx_index" in row:
-                    row["tx_index"] = None
-            if "valid" in row:
-                row["valid"] = bool(row["valid"])
-            filtered_results.append(row)
-        return filtered_results
+    """
+    Recursively clean query results by removing rowid fields, normalizing indexes,
+    and converting specific fields to boolean values.
+
+    Supports nested dictionaries and lists.
+    """
     if isinstance(query_result, dict):
-        filtered_results = query_result
-        if "rowid" in filtered_results:
-            del filtered_results["rowid"]
-        if "MAX(rowid)" in filtered_results:
-            del filtered_results["MAX(rowid)"]
-        if "block_index" in filtered_results and filtered_results["block_index"] in [
-            0,
-            config.MEMPOOL_BLOCK_INDEX,
-        ]:
-            filtered_results["block_index"] = None
-            if "tx_index" in filtered_results:
-                filtered_results["tx_index"] = None
-        if "valid" in filtered_results:
-            filtered_results["valid"] = bool(filtered_results["valid"])
-        return filtered_results
-    return query_result
+        return _clean_dictionary(query_result)
+    elif isinstance(query_result, list):
+        return [clean_rowids_and_confirmed_fields(item) for item in query_result]
+    else:
+        # Return primitive types as-is
+        return query_result
