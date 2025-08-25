@@ -573,12 +573,9 @@ BOOLEAN_FIELDS = {"valid", "divisible", "lock", "reset", "callable"}
 
 def _apply_field_transformations(key, value, original_data):
     """Apply specific transformations to field values."""
-    if key == "block_index" and value in [0, config.MEMPOOL_BLOCK_INDEX]:
-        return None
-    elif key in BOOLEAN_FIELDS:
+    if key in BOOLEAN_FIELDS:
         return bool(value)
-    else:
-        return value
+    return value
 
 
 def _clean_dictionary(data):
