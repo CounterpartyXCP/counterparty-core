@@ -2827,7 +2827,6 @@ def prepare_order_matches_where(status, other_conditions=None):
 SELECT_ORDERS = "*, "
 SELECT_ORDERS += "COALESCE((get_quantity * 1.0) / (give_quantity * 1.0), 0) AS give_price, "
 SELECT_ORDERS += "COALESCE((give_quantity * 1.0) / (get_quantity * 1.0), 0) AS get_price"
-
 SELECT_ORDER_MATCHES = SELECT_ORDERS.replace("get_", "forward_").replace("give_", "backward_")
 
 
@@ -2858,14 +2857,13 @@ def get_orders(
         where["give_asset"] = give_asset.upper()
     return select_rows(
         state_db,
-        "orders",
+        "orders_info",
         cursor_field="tx_index",
         where=prepare_order_where(status, where),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
         sort=sort,
-        select=SELECT_ORDERS,
     )
 
 
@@ -2906,14 +2904,13 @@ def get_orders_by_asset(
 
     return select_rows(
         state_db,
-        "orders",
+        "orders_info",
         cursor_field="tx_index",
         where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
         sort=sort,
-        select=SELECT_ORDERS,
     )
 
 
@@ -2937,14 +2934,13 @@ def get_orders_by_address(
     """
     return select_rows(
         state_db,
-        "orders",
+        "orders_info",
         cursor_field="tx_index",
         where=prepare_order_where(status, {"source": address}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
         sort=sort,
-        select=SELECT_ORDERS,
     )
 
 
@@ -2973,7 +2969,7 @@ def get_orders_by_two_assets(
     ) + prepare_order_where(status, {"give_asset": asset2.upper(), "get_asset": asset1.upper()})
     query_result = select_rows(
         state_db,
-        "orders",
+        "orders_info",
         cursor_field="tx_index",
         where=where,
         last_cursor=cursor,
@@ -3026,9 +3022,8 @@ def get_order(state_db, order_hash: str):
     """
     return select_row(
         state_db,
-        "orders",
+        "orders_info",
         where={"tx_hash": order_hash},
-        select=SELECT_ORDERS,
     )
 
 
