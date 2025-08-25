@@ -38,6 +38,10 @@ counterparty-server start
 - Fix issuance composition when description is None
 - Fix API issue when unpacking old transactions
 - Remove unnecessary `logger.error` from Enhanced Send unpacking
+- Fix typo in docker-compose.yml
+- Fix give/get_price in orders API
+- Fix boolean fields in issuances API
+- Fix bootstrap: exit with error when a subprocess fails
 
 ## Codebase
 
