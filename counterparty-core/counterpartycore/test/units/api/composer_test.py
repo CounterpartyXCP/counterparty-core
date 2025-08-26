@@ -178,6 +178,16 @@ def test_determine_encoding(defaults):
         )
 
     with pytest.raises(
+        exceptions.ComposeError, match="Cannot use `taproot` encoding for UTXO transactions"
+    ):
+        composer.determine_encoding(
+            "385fb08da23ded23532819f058508ccea50e65426b4f1f8bbc3d71b500ae0870:0",
+            b"Hello, World!",
+            [],
+            {"encoding": "taproot"},
+        )
+
+    with pytest.raises(
         exceptions.ComposeError,
         match="Cannot use `taproot` encoding for transactions with destinations",
     ):
