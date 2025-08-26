@@ -559,49 +559,32 @@ def inject_details(ledger_db, state_db, result, table=None):
     else:
         result = result_list
 
-    result = clean_rowids_and_confirmed_fields(result)
+    result = clean_api_result(result)
 
     return result
 
 
-# Fields to remove from query results
-FIELDS_TO_REMOVE = {"rowid", "MAX(rowid)"}
-
-# Fields to convert to boolean
-BOOLEAN_FIELDS = {"valid", "divisible", "lock", "reset", "callable"}
-
-
-def _apply_field_transformations(key, value):
-    """Apply specific transformations to field values."""
-    if key in BOOLEAN_FIELDS:
-        return bool(value)
-    return value
-
-
-def _clean_dictionary(data):
+def clean_dictionary(data):
     """Clean a dictionary by applying all transformations."""
     cleaned = {}
 
     for key, value in data.items():
         # Skip fields that should be removed
-        if key in FIELDS_TO_REMOVE:
+        if key in {"rowid", "MAX(rowid)"}:
             continue
 
         # Recursively clean nested structures
-        cleaned_value = clean_rowids_and_confirmed_fields(value)
+        cleaned_value = clean_api_result(value)
 
-        # Apply specific field transformations
-        transformed_value = _apply_field_transformations(key, cleaned_value)
-        cleaned[key] = transformed_value
+        if key in {"divisible", "locked", "reset", "callable"}:
+            cleaned_value = bool(cleaned_value)
 
-        # Special case: nullify tx_index when block_index is nullified
-        if key == "block_index" and transformed_value is None and "tx_index" in data:
-            cleaned["tx_index"] = None
+        cleaned[key] = cleaned_value
 
     return cleaned
 
 
-def clean_rowids_and_confirmed_fields(query_result):
+def clean_api_result(query_result):
     """
     Recursively clean query results by removing rowid fields, normalizing indexes,
     and converting specific fields to boolean values.
@@ -609,9 +592,9 @@ def clean_rowids_and_confirmed_fields(query_result):
     Supports nested dictionaries and lists.
     """
     if isinstance(query_result, dict):
-        return _clean_dictionary(query_result)
+        return clean_dictionary(query_result)
     elif isinstance(query_result, list):
-        return [clean_rowids_and_confirmed_fields(item) for item in query_result]
+        return [clean_api_result(item) for item in query_result]
     else:
         # Return primitive types as-is
         return query_result

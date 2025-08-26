@@ -189,6 +189,13 @@ def test_determine_encoding(defaults):
         )
 
 
+def test_is_segwit_address(defaults):
+    assert composer.is_segwit_address(defaults["p2wpkh_addresses"][0]) is True
+    assert composer.is_segwit_address(defaults["p2sh_addresses"][0]) is False
+    assert composer.is_segwit_address(defaults["p2ms_addresses"][0]) is False
+    assert composer.is_segwit_address(defaults["addresses"][0]) is False
+
+
 def test_encrypt_data():
     assert composer.encrypt_data(b"Hello, World!", ARC4_KEY) == b"\x96}\xe5-\xcc\x1b}m\xe5tr\x03v"
 
