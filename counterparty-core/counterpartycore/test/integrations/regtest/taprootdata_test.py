@@ -518,7 +518,6 @@ def check_sweep(node, source_private_key, utxo):
 
     source_address = source_private_key.get_public_key().get_taproot_address().to_string()
     result = node.api_call(f"addresses/{source_address}/sweeps")
-    print(result)
     assert len(result["result"]) == 1
     assert result["result"][0]["destination"] == node.addresses[2]
     assert result["result"][0]["memo"] == "sweep sweep"
