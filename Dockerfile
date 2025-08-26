@@ -57,7 +57,8 @@ RUN apk add --no-cache python3 leveldb libstdc++ \
     httpie \
     busybox-extras \
     netcat-openbsd \
-    htop
+    htop \
+    gnupg
 
 # Copy virtual environment from builder stage
 COPY --from=builder /venv /venv
