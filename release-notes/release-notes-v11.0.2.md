@@ -9,7 +9,7 @@ This version is a small-ish release. Most importantly, it fixed a regression in 
 
 Note: A full reparse is required iff you would like to use the new `valid` parameter to retrieve transactions with the API. Existing databases will show `valid=null` for historical transactions until re-parsed.
 
-⚠️ There is a **breaking API change**: API booleans `divisible`, `locked`, `reset`, and `callable` now return proper JSON booleans (`true`/`false`) instead of integers.
+⚠️ There was another accidental regression in v11.01: API booleans `divisible`, `locked`, `reset`, and `callable` were returning integers instead of proper JSON booleans (`true`/`false`). This regression has been reverted in v11.0.2.
 
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
 
