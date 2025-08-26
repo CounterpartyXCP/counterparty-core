@@ -182,6 +182,8 @@ def determine_encoding(source, data, destinations, construct_params):
     else:
         encoding = desired_encoding
     if encoding == "taproot":
+        if ":" in source:
+            raise exceptions.ComposeError("Cannot use `taproot` encoding for UTXO transactions")
         if not is_segwit_address(source):
             raise exceptions.ComposeError("Cannot use `taproot` encoding for non-segwit address")
         if len(destinations) > 0:

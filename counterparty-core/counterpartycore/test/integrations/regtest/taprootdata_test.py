@@ -607,7 +607,7 @@ def test_p2ptr_inscription():
         utxo = check_dispensers(node, source_private_key, utxo)
         attached_utxo = send_funds_to_utxo(node, source_private_key)
         with pytest.raises(
-            exceptions.ComposeError, match="Cannot use `taproot` encoding for `detach` transaction"
+            exceptions.ComposeError, match="Cannot use `taproot` encoding for UTXO transactions"
         ):
             check_detach(node, source_private_key, attached_utxo)
 
