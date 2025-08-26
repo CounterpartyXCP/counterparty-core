@@ -54,6 +54,7 @@ pub enum Network {
     Testnet3,
     Testnet4,
     Regtest,
+    Signet,
 }
 
 impl<'source> FromPyObject<'source> for Network {
@@ -64,8 +65,9 @@ impl<'source> FromPyObject<'source> for Network {
             "testnet3" => Ok(Network::Testnet3),
             "testnet4" => Ok(Network::Testnet4),
             "regtest" => Ok(Network::Regtest),
+            "signet" => Ok(Network::Signet),
             _ => Err(PyErr::new::<PyValueError, _>(
-                "'network' must be either 'mainnet', 'testnet' or 'testnet4'",
+                "'network' must be either 'mainnet', 'testnet', 'testnet4' or 'signet'",
             )),
         }
     }
@@ -78,6 +80,7 @@ impl Display for Network {
             Network::Testnet3 => "testnet3",
             Network::Testnet4 => "testnet4",
             Network::Regtest => "regtest",
+            Network::Signet => "signet",
         };
         write!(f, "{}", s)
     }
@@ -125,6 +128,15 @@ impl Heights {
                 fix_is_segwit: 85000,
             },
             Network::Regtest => Heights {
+                segwit: 0,
+                p2sh_addresses: 0,
+                p2sh_dispensers: 0,
+                correct_segwit_txids: 0,
+                multisig_addresses: 0,
+                taproot_support: 0,
+                fix_is_segwit: 0,
+            },
+            Network::Signet => Heights {
                 segwit: 0,
                 p2sh_addresses: 0,
                 p2sh_dispensers: 0,
@@ -193,6 +205,7 @@ impl Config {
             Network::Testnet3 => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
             Network::Testnet4 => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
             Network::Regtest => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
+            Network::Signet => "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
         }
         .into()
     }
@@ -276,6 +289,7 @@ impl<'source> FromPyObject<'source> for Config {
                 Network::Testnet3 => vec![0x6F],
                 Network::Testnet4 => vec![0x6F],
                 Network::Regtest => vec![0x6F],
+                Network::Signet => vec![0x6F],
             },
         };
 
@@ -286,6 +300,7 @@ impl<'source> FromPyObject<'source> for Config {
                 Network::Testnet3 => vec![0xC4],
                 Network::Testnet4 => vec![0xC4],
                 Network::Regtest => vec![0xC4],
+                Network::Signet => vec![0xC4],
             },
         };
 

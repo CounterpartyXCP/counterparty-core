@@ -22,6 +22,7 @@ def download_zst(data_dir, zst_url):
     zst_filepath = os.path.join(data_dir, zst_filename)
     urllib.request.urlretrieve(zst_url, zst_filepath)  # nosec B310  # noqa: S310
     print(f"Downloaded {zst_url} in {time.time() - start_time:.2f}s")
+    assert os.path.exists(zst_filepath), f"Failed to download {zst_url}"
     return zst_filepath
 
 
@@ -34,10 +35,12 @@ def decompress_zst(zst_filepath):
         .replace("counterparty.testnet.db.", "")
         .replace("counterparty.testnet4.db.", "")
         .replace("counterparty.testnet3.db.", "")
+        .replace("counterparty.signet.db.", "")
         .replace("state.db.", "")
         .replace("state.testnet.db.", "")
         .replace("state.testnet4.db.", "")
         .replace("state.testnet3.db.", "")
+        .replace("state.signet.db.", "")
         .replace(".zst", "")
     )
     filename = zst_filepath.replace(f".{version}.zst", "")
@@ -89,13 +92,14 @@ def check_signature(filepath, sig_url):
         sys.exit(1)
 
 
-def verfif_and_decompress(zst_filepath, sig_url, decompressors_state):
+def verify_and_decompress(zst_filepath, sig_url, decompressors_state):
     try:
         check_signature(zst_filepath, sig_url)
         decompress_zst(zst_filepath)
     except Exception as e:  # pylint: disable=broad-except
         cprint(f"Failed to verify and decompress {zst_filepath}: {e}", "red")
         decompressors_state.value = 1
+        sys.exit(1)
 
 
 def clean_data_dir(data_dir):
@@ -122,23 +126,40 @@ def download_bootstrap_files(data_dir, files):
             cprint(f"Failed to download {zst_url}: {e}", "red")
             for decompressor in decompressors:
                 decompressor.kill()
-                sys.exit(1)
+            sys.exit(1)
 
         decompressor = Process(
-            target=verfif_and_decompress,
+            target=verify_and_decompress,
             args=(zst_filepath, sig_url, decompressors_state),
         )
         decompressor.start()
         decompressors.append(decompressor)
 
     while True:
-        if not any(decompressor.is_alive() for decompressor in decompressors):
-            break
+        # Check for failed processes by examining exit codes
+        for decompressor in decompressors:
+            decompressor.join(timeout=0)  # Non-blocking join to check if finished
+            if decompressor.exitcode is not None and decompressor.exitcode != 0:
+                cprint(
+                    f"Decompression process failed with exit code {decompressor.exitcode}", "red"
+                )
+                for other_decompressor in decompressors:
+                    if other_decompressor.is_alive():
+                        other_decompressor.kill()
+                sys.exit(1)
+
+        # Check shared state as backup error detection mechanism
         if decompressors_state.value == 1:
             cprint("Failed to decompress and verify bootstrap files.", "red")
             for decompressor in decompressors:
-                decompressor.kill()
+                if decompressor.is_alive():
+                    decompressor.kill()
             sys.exit(1)
+
+        # Check if all processes are finished
+        if not any(decompressor.is_alive() for decompressor in decompressors):
+            break
+
         time.sleep(0.1)
 
 

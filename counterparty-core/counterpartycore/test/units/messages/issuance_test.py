@@ -894,7 +894,7 @@ def test_valid_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][0],
         [],
-        b"\x16\x87\x1b\xff\xff\xff\xff\xff\xff\xff\xff\x19\x03\xe8\xf5\xf4\xf4`@",
+        b"\x16\x87\x1b\xff\xff\xff\xff\xff\xff\xff\xff\x19\x03\xe8\xf5\xf4\xf4`\xf6",
     )
 
     assert issuance.compose(
@@ -1442,7 +1442,7 @@ def test_parse_too_short(ledger_db, blockchain_mock, defaults, test_helpers, cur
                     "locked": 0,
                     "quantity": None,
                     "source": defaults["addresses"][0],
-                    "status": "invalid: could not unpack",
+                    "status": "invalid: bad asset name",
                     "transfer": 0,
                     "divisible": None,
                     "tx_hash": tx["tx_hash"],
@@ -2035,6 +2035,52 @@ def test_valid_compose_legacy(ledger_db, defaults):
         )
 
 
+def test_parse_divisible_legacy_taproot_acivated(
+    ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
+):
+    tx = blockchain_mock.dummy_tx(
+        ledger_db, defaults["addresses"][0], defaults["p2ms_addresses"][0], use_first_tx=True
+    )
+    message = b"\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00"
+    issuance.parse(ledger_db, tx, message, issuance.ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "asset": "DIVISIBLE",
+                    "asset_longname": None,
+                    "block_index": tx["block_index"],
+                    "description": "",
+                    "divisible": 1,
+                    "fee_paid": 0,
+                    "issuer": defaults["p2ms_addresses"][0],
+                    "locked": 0,
+                    "quantity": 0,
+                    "source": defaults["addresses"][0],
+                    "status": "valid",
+                    "transfer": True,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                },
+            },
+            {
+                "table": "debits",
+                "values": {
+                    "action": "issuance fee",
+                    "address": defaults["addresses"][0],
+                    "asset": "XCP",
+                    "block_index": current_block_index,
+                    "event": tx["tx_hash"],
+                    "quantity": 0,
+                },
+            },
+        ],
+    )
+
+
 def test_parse_divisible_legacy(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
@@ -2133,3 +2179,76 @@ def test_compose_issuance_data_subasset():
         20, fmt3, issuance.SUBASSET_ID, 3000, True, True, False, 7, b"subname", b"desc"
     )
     assert result3 is not None
+
+
+def test_issuance_with_none_description(
+    ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
+):
+    # issuance with description = ""
+    assert issuance.compose(
+        ledger_db, defaults["addresses"][0], "BSSET", 1000, None, True, False, None, description=""
+    ) == (
+        defaults["addresses"][0],
+        [],
+        b"\x16\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`@",
+    )
+
+    assert issuance.unpack(
+        ledger_db, b"\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`@", 20, 9999999
+    ) == (785635, "BSSET", None, 1000, True, False, False, False, 0, 0.0, "", "text/plain", "valid")
+
+    # issuance with description = None
+    assert issuance.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        "BSSET",
+        1000,
+        None,
+        True,
+        False,
+        None,
+        description=None,
+    ) == (
+        defaults["addresses"][0],
+        [],
+        b"\x16\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`\xf6",
+    )
+    # new asset, description is None means empty string
+    assert issuance.unpack(
+        ledger_db, b"\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`\xf6", 20, 9999999
+    ) == (785635, "BSSET", None, 1000, True, False, False, False, 0, 0.0, "", "text/plain", "valid")
+
+    # lock issuance with description = None
+    assert issuance.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        "DIVISIBLE",
+        0,
+        None,
+        True,
+        lock=True,
+        reset=None,
+        description=None,
+    ) == (
+        defaults["addresses"][0],
+        [],
+        b"\x16\x87\x1b\x00\x00\x00\xa2[\xe3Kf\x00\xf5\xf5\xf4`\xf6",
+    )
+    # existing asset, description is None means existing description
+    assert issuance.unpack(
+        ledger_db, b"\x87\x1b\x00\x00\x00\xa2[\xe3Kf\x00\xf5\xf5\xf4`\xf6", 20, 9999999
+    ) == (
+        697326324582,
+        "DIVISIBLE",
+        None,
+        0,
+        True,
+        True,
+        False,
+        False,
+        0,
+        0.0,
+        "Divisible asset",
+        "text/plain",
+        "valid",
+    )

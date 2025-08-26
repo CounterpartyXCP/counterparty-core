@@ -389,14 +389,14 @@ def handle_route(**kwargs):
             table = result.table
             result = result.result
 
-        result = verbose.clean_rowids_and_confirmed_fields(result)
-
         # inject details
         is_verbose = request.args.get("verbose", "False")
         if is_verbose.lower() in ["true", "1"]:
             with LedgerDBConnectionPool().connection() as ledger_db:
                 with StateDBConnectionPool().connection() as state_db:
                     result = verbose.inject_details(ledger_db, state_db, result, table)
+        else:
+            result = verbose.clean_api_result(result)
 
         return return_result(
             200,

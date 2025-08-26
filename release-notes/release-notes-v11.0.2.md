@@ -34,6 +34,16 @@ counterparty-server start
 
 ## Bugfixes
 
+- Fix `mime_type` field in `assets_info` table
+- Fix issuance composition when description is None
+- Fix API issue when unpacking old transactions
+- Remove unnecessary `logger.error` from Enhanced Send unpacking
+- Fix typo in docker-compose.yml
+- Fix give/get_price in orders API
+- Fix boolean fields in issuances API
+- Fix bootstrap: exit with error when a subprocess fails
+- Disable taproot encoding for legacy source
+
 ## Codebase
 
 - Add `current_commit` tag in Sentry reports and JSON logs
@@ -43,12 +53,14 @@ counterparty-server start
 
 - Add `current_commit` field in API root endpoint
 - Add `valid` parameter for transactions endpoints
+- Optimize get balances by addresses endpoint
 
 ## CLI
 
 - New Docker image based on Alpine Linux and using multi stage building 
 - Cleaner error on unknown CLI argument
 - Add `--backend-cookie-file` flag to connect to Bitcoin Core with cookie
+- Specific message when Bitcoin Core has not yet reached the first Counterparty block
 
 # Credits
 

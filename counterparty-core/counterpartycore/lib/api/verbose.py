@@ -559,40 +559,42 @@ def inject_details(ledger_db, state_db, result, table=None):
     else:
         result = result_list
 
+    result = clean_api_result(result)
+
     return result
 
 
-def clean_rowids_and_confirmed_fields(query_result):
-    """Remove the rowid field from the query result."""
-    if isinstance(query_result, list):
-        filtered_results = []
-        for row in list(query_result):
-            if "rowid" in row:
-                del row["rowid"]
-            if "MAX(rowid)" in row:
-                del row["MAX(rowid)"]
-            if "block_index" in row and row["block_index"] in [0, config.MEMPOOL_BLOCK_INDEX]:
-                row["block_index"] = None
-                if "tx_index" in row:
-                    row["tx_index"] = None
-            if "valid" in row:
-                row["valid"] = bool(row["valid"])
-            filtered_results.append(row)
-        return filtered_results
+def clean_dictionary(data):
+    """Clean a dictionary by applying all transformations."""
+    cleaned = {}
+
+    for key, value in data.items():
+        # Skip fields that should be removed
+        if key in {"rowid", "MAX(rowid)"}:
+            continue
+
+        # Recursively clean nested structures
+        cleaned_value = clean_api_result(value)
+
+        if key in {"divisible", "locked", "reset", "callable"}:
+            cleaned_value = bool(cleaned_value)
+
+        cleaned[key] = cleaned_value
+
+    return cleaned
+
+
+def clean_api_result(query_result):
+    """
+    Recursively clean query results by removing rowid fields, normalizing indexes,
+    and converting specific fields to boolean values.
+
+    Supports nested dictionaries and lists.
+    """
     if isinstance(query_result, dict):
-        filtered_results = query_result
-        if "rowid" in filtered_results:
-            del filtered_results["rowid"]
-        if "MAX(rowid)" in filtered_results:
-            del filtered_results["MAX(rowid)"]
-        if "block_index" in filtered_results and filtered_results["block_index"] in [
-            0,
-            config.MEMPOOL_BLOCK_INDEX,
-        ]:
-            filtered_results["block_index"] = None
-            if "tx_index" in filtered_results:
-                filtered_results["tx_index"] = None
-        if "valid" in filtered_results:
-            filtered_results["valid"] = bool(filtered_results["valid"])
-        return filtered_results
-    return query_result
+        return clean_dictionary(query_result)
+    elif isinstance(query_result, list):
+        return [clean_api_result(item) for item in query_result]
+    else:
+        # Return primitive types as-is
+        return query_result

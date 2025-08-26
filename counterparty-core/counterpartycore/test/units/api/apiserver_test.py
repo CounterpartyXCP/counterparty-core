@@ -456,3 +456,79 @@ def test_get_transactions_valid(apiv2_client, monkeypatch):
     url = "/v2/transactions?valid=false&show_unconfirmed=true"
     result = apiv2_client.get(url).json["result"]
     assert len(result) == 0
+
+
+def test_order_prices(apiv2_client, defaults):
+    url = "/v2/assets/NODIVISIBLE/orders"
+    result = apiv2_client.get(url).json["result"]
+    assert result[0]["give_price"] == 100000000
+    assert result[0]["get_price"] == 0.00000001
+
+    url = "/v2/assets/DIVISIBLE/orders"
+    result = apiv2_client.get(url).json["result"]
+    assert result[0]["give_price"] == 1
+    assert result[0]["get_price"] == 1
+
+
+def test_issuances_boolean_fields(apiv2_client):
+    url = "/v2/issuances?verbose=true"
+    result = apiv2_client.get(url).json["result"]
+    assert isinstance(result[0]["divisible"], bool)
+    assert isinstance(result[0]["locked"], bool)
+    assert isinstance(result[0]["reset"], bool)
+    assert isinstance(result[0]["callable"], bool)
+    assert result[0]["divisible"]
+    assert not result[0]["locked"]
+    assert not result[0]["reset"]
+    assert not result[0]["callable"]
+
+    assert isinstance(result[1]["divisible"], bool)
+    assert isinstance(result[1]["locked"], bool)
+    assert isinstance(result[1]["reset"], bool)
+    assert isinstance(result[1]["callable"], bool)
+    assert result[1]["divisible"]
+    assert not result[1]["locked"]
+    assert not result[1]["reset"]
+    assert not result[1]["callable"]
+
+
+def test_get_balances_by_addresses_pagination(apiv2_client, defaults):
+    # Test basic functionality
+    addresses = f"{defaults['addresses'][0]},{defaults['addresses'][1]}"
+    url = f"/v2/addresses/balances?addresses={addresses}&verbose=true"
+    response = apiv2_client.get(url)
+    assert response.status_code == 200
+    result = response.json["result"]
+    assert len(result) > 0
+    assert "next_cursor" in response.json
+    assert "result_count" in response.json
+
+    # Test pagination with limit
+    url_paginated = f"/v2/addresses/balances?addresses={addresses}&limit=3&verbose=true"
+    response_paginated = apiv2_client.get(url_paginated)
+    assert response_paginated.status_code == 200
+    paginated_result = response_paginated.json["result"]
+    assert len(paginated_result) == 3
+    assert response_paginated.json["next_cursor"] is not None
+
+    # Test pagination with cursor
+    cursor = response_paginated.json["next_cursor"]
+    url_cursor = (
+        f"/v2/addresses/balances?addresses={addresses}&limit=3&cursor={cursor}&verbose=true"
+    )
+    response_cursor = apiv2_client.get(url_cursor)
+    assert response_cursor.status_code == 200
+    cursor_result = response_cursor.json["result"]
+    assert len(cursor_result) > 0
+    # First asset should be >= cursor asset
+    assert cursor_result[0]["asset"] >= cursor
+
+    # Test asset filtering
+    url_asset = f"/v2/addresses/balances?addresses={addresses}&asset=XCP&verbose=true"
+    response_asset = apiv2_client.get(url_asset)
+    assert response_asset.status_code == 200
+    asset_result = response_asset.json["result"]
+    assert len(asset_result) == 1
+    assert asset_result[0]["asset"] == "XCP"
+    assert response_asset.json["next_cursor"] is None
+    assert response_asset.json["result_count"] == 1

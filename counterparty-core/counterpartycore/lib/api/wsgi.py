@@ -49,6 +49,15 @@ def refresh_current_state(state_db, shared_backend_height):
     if config.API_ONLY:
         return
 
+    if current_backend_height < config.BLOCK_FIRST:
+        LazyLogger().debug(
+            "Bitcoin Core has not yet reached the first Counterparty block: %s. (Counterparty Block Height = %s, Bitcoin Core Block Height = %s, Network Block Height = %s)",
+            config.BLOCK_FIRST,
+            current_block_index,
+            current_block_count,
+            current_backend_height,
+        )
+
     if current_backend_height > current_block_index:
         LazyLogger().debug(
             "Counterparty is currently behind Bitcoin Core. (Counterparty Block Height = %s, Bitcoin Core Block Height = %s, Network Block Height = %s)",

@@ -447,8 +447,8 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
     
     // Check if this is an "ord" inscription
     let is_ord = instructions.len() >= 7 && 
-        match (&instructions.get(2), &instructions.get(3), &instructions.get(4)) {
-            (Some(Ok(PushBytes(pb1))), Some(Ok(PushBytes(pb2))), Some(Ok(PushBytes(pb3)))) => {
+        match (&instructions.get(2), &instructions.get(3)) {
+            (Some(Ok(PushBytes(pb1))), Some(Ok(PushBytes(pb2)))) => {
                 pb1.as_bytes() == b"ord" && 
                 (pb2.as_bytes().len() == 1 && pb2.as_bytes()[0] == 7) // 7 for metaprotocol
             },

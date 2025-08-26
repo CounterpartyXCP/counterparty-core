@@ -486,10 +486,8 @@ def compose(
                 reset,
                 mime_type,
             ]
-            if validated_description is not None:
-                data_array.append(
-                    helpers.content_to_bytes(validated_description, mime_type or "text/plain")
-                )
+            if description is not None:
+                data_array.append(helpers.content_to_bytes(description, mime_type or "text/plain"))
             else:
                 data_array.append(None)
             data += cbor2.dumps(data_array)
@@ -627,11 +625,15 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
         asset_id = None
         quantity = None
         divisible = None
+        lock = None
+        reset = None
         callable_ = None
         call_date = None
         mime_type = "text/plain"
 
-        if protocol.enabled("taproot_support"):
+        unpacked = False
+
+        if protocol.enabled("taproot_support", block_index=block_index):
             try:
                 if message_type_id in [ID, LR_ISSUANCE_ID]:
                     (
@@ -660,129 +662,135 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                     )
                 else:
                     raise exceptions.UnpackError("Invalid message type ID")
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                raise exceptions.UnpackError from e
 
-            mime_type = mime_type or "text/plain"
-            if description is not None:
-                description = helpers.bytes_to_content(description, mime_type)
-            callable_, call_date, call_price = False, 0, 0.0
-
-        elif message_type_id in [LR_SUBASSET_ID, SUBASSET_ID]:
-            if not protocol.enabled("subassets", block_index=block_index):
-                logger.warning("subassets are not enabled at block %s", block_index)
-                raise exceptions.UnpackError
-
-            # parse a subasset original issuance message
-            lock = None
-            reset = None
-            compacted_subasset_length = 0
-
-            if subasset_format_length <= 18:
-                asset_id, quantity, divisible, compacted_subasset_length = struct.unpack(
-                    subasset_format, message[0:subasset_format_length]
-                )
-            elif subasset_format_length <= 19:  # param reset was inserted
-                asset_id, quantity, divisible, reset, compacted_subasset_length = struct.unpack(
-                    subasset_format, message[0:subasset_format_length]
-                )
-            elif subasset_format_length <= 20:  # param lock was inserted
-                asset_id, quantity, divisible, lock, reset, compacted_subasset_length = (
-                    struct.unpack(subasset_format, message[0:subasset_format_length])
-                )
-
-            description_length = len(message) - subasset_format_length - compacted_subasset_length
-            if description_length < 0:
-                logger.warning("invalid subasset length: %s", compacted_subasset_length)
-                raise exceptions.UnpackError
-            messages_format = f">{compacted_subasset_length}s{description_length}s"
-            compacted_subasset_longname, description = struct.unpack(
-                messages_format, message[subasset_format_length:]
-            )
-
-            try:
-                description = description.decode("utf-8")
-            except UnicodeDecodeError:
-                description_data = description
-                description = ""
-                if description_data[0:1] == DESCRIPTION_MARK_BYTE:
-                    try:
-                        if description_data[1:].decode("utf-8") == DESCRIPTION_NULL_ACTION:
-                            description = None
-                    except UnicodeDecodeError:
-                        description = ""
-            subasset_longname = assetnames.expand_subasset_longname(compacted_subasset_longname)
-            callable_, call_date, call_price = False, 0, 0.0
-
-        elif (
-            protocol.enabled("issuance_format_update") and len(message) >= asset_format_length
-        ):  # Protocol change.
-            if (len(message) - asset_format_length <= 42) and not protocol.enabled(
-                "pascal_string_removed"
-            ):
-                curr_format = asset_format + f"{len(message) - asset_format_length}p"
-            else:
-                curr_format = asset_format + f"{len(message) - asset_format_length}s"
-
-            lock = None
-            reset = None
-            if asset_format_length <= 19:  # callbacks parameters were removed
-                asset_id, quantity, divisible, lock, reset, description = struct.unpack(
-                    curr_format, message
-                )
+                mime_type = mime_type or "text/plain"
+                if description is not None:
+                    description = helpers.bytes_to_content(description, mime_type)
                 callable_, call_date, call_price = False, 0, 0.0
-            elif asset_format_length <= 26:  # the reset param didn't even exist
-                asset_id, quantity, divisible, callable_, call_date, call_price, description = (
-                    struct.unpack(curr_format, message)
-                )
-            elif asset_format_length <= 27:  # param reset was inserted
-                (
-                    asset_id,
-                    quantity,
-                    divisible,
-                    reset,
-                    callable_,
-                    call_date,
-                    call_price,
-                    description,
-                ) = struct.unpack(curr_format, message)
-            elif asset_format_length <= 28:  # param lock was inserted
-                (
-                    asset_id,
-                    quantity,
-                    divisible,
-                    lock,
-                    reset,
-                    callable_,
-                    call_date,
-                    call_price,
-                    description,
-                ) = struct.unpack(curr_format, message)
 
-            call_price = round(call_price, 6)
-            try:
-                description = description.decode("utf-8")
-            except UnicodeDecodeError:
-                description_data = description
-                description = ""
-                if description_data[0:1] == DESCRIPTION_MARK_BYTE:
-                    try:
-                        if description_data[1:].decode("utf-8") == DESCRIPTION_NULL_ACTION:
-                            description = None
-                    except UnicodeDecodeError:
-                        description = ""
-        else:
-            if len(message) != LENGTH_1:
-                raise exceptions.UnpackError
-            asset_id, quantity, divisible = struct.unpack(FORMAT_1, message)
-            lock, reset, callable_, call_date, call_price, description = (
-                False,
-                False,
-                False,
-                0,
-                0.0,
-                "",
-            )
+                unpacked = True
+            except Exception:  # pylint: disable=broad-exception-caught
+                unpacked = False  # Fallback to legacy unpacking
+
+        if not unpacked:
+            if message_type_id in [LR_SUBASSET_ID, SUBASSET_ID]:
+                if not protocol.enabled("subassets", block_index=block_index):
+                    logger.warning("subassets are not enabled at block %s", block_index)
+                    raise exceptions.UnpackError
+
+                # parse a subasset original issuance message
+                lock = None
+                reset = None
+                compacted_subasset_length = 0
+
+                if subasset_format_length <= 18:
+                    asset_id, quantity, divisible, compacted_subasset_length = struct.unpack(
+                        subasset_format, message[0:subasset_format_length]
+                    )
+                elif subasset_format_length <= 19:  # param reset was inserted
+                    asset_id, quantity, divisible, reset, compacted_subasset_length = struct.unpack(
+                        subasset_format, message[0:subasset_format_length]
+                    )
+                elif subasset_format_length <= 20:  # param lock was inserted
+                    asset_id, quantity, divisible, lock, reset, compacted_subasset_length = (
+                        struct.unpack(subasset_format, message[0:subasset_format_length])
+                    )
+
+                description_length = (
+                    len(message) - subasset_format_length - compacted_subasset_length
+                )
+                if description_length < 0:
+                    logger.warning("invalid subasset length: %s", compacted_subasset_length)
+                    raise exceptions.UnpackError
+                messages_format = f">{compacted_subasset_length}s{description_length}s"
+                compacted_subasset_longname, description = struct.unpack(
+                    messages_format, message[subasset_format_length:]
+                )
+
+                try:
+                    description = description.decode("utf-8")
+                except UnicodeDecodeError:
+                    description_data = description
+                    description = ""
+                    if description_data[0:1] == DESCRIPTION_MARK_BYTE:
+                        try:
+                            if description_data[1:].decode("utf-8") == DESCRIPTION_NULL_ACTION:
+                                description = None
+                        except UnicodeDecodeError:
+                            description = ""
+                subasset_longname = assetnames.expand_subasset_longname(compacted_subasset_longname)
+                callable_, call_date, call_price = False, 0, 0.0
+
+            elif (
+                protocol.enabled("issuance_format_update", block_index=block_index)
+                and len(message) >= asset_format_length
+            ):  # Protocol change.
+                if (len(message) - asset_format_length <= 42) and not protocol.enabled(
+                    "pascal_string_removed"
+                ):
+                    curr_format = asset_format + f"{len(message) - asset_format_length}p"
+                else:
+                    curr_format = asset_format + f"{len(message) - asset_format_length}s"
+
+                lock = None
+                reset = None
+                if asset_format_length <= 19:  # callbacks parameters were removed
+                    asset_id, quantity, divisible, lock, reset, description = struct.unpack(
+                        curr_format, message
+                    )
+                    callable_, call_date, call_price = False, 0, 0.0
+                elif asset_format_length <= 26:  # the reset param didn't even exist
+                    asset_id, quantity, divisible, callable_, call_date, call_price, description = (
+                        struct.unpack(curr_format, message)
+                    )
+                elif asset_format_length <= 27:  # param reset was inserted
+                    (
+                        asset_id,
+                        quantity,
+                        divisible,
+                        reset,
+                        callable_,
+                        call_date,
+                        call_price,
+                        description,
+                    ) = struct.unpack(curr_format, message)
+                elif asset_format_length <= 28:  # param lock was inserted
+                    (
+                        asset_id,
+                        quantity,
+                        divisible,
+                        lock,
+                        reset,
+                        callable_,
+                        call_date,
+                        call_price,
+                        description,
+                    ) = struct.unpack(curr_format, message)
+
+                call_price = round(call_price, 6)
+                try:
+                    description = description.decode("utf-8")
+                except UnicodeDecodeError:
+                    description_data = description
+                    description = ""
+                    if description_data[0:1] == DESCRIPTION_MARK_BYTE:
+                        try:
+                            if description_data[1:].decode("utf-8") == DESCRIPTION_NULL_ACTION:
+                                description = None
+                        except UnicodeDecodeError:
+                            description = ""
+            else:
+                if len(message) != LENGTH_1:
+                    raise exceptions.UnpackError
+                asset_id, quantity, divisible = struct.unpack(FORMAT_1, message)
+                lock, reset, callable_, call_date, call_price, description = (
+                    False,
+                    False,
+                    False,
+                    0,
+                    0.0,
+                    "",
+                )
         try:
             asset = ledger.issuances.generate_asset_name(asset_id)
 
@@ -840,10 +848,10 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
             "asset": asset,
             "subasset_longname": subasset_longname,
             "quantity": quantity,
-            "divisible": divisible,
-            "lock": lock,
-            "reset": reset,
-            "callable": callable_,
+            "divisible": bool(divisible),
+            "lock": bool(lock),
+            "reset": bool(reset),
+            "callable": bool(callable_),
             "call_date": call_date,
             "call_price": call_price,
             "description": description,
@@ -855,10 +863,10 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
         asset,
         subasset_longname,
         quantity,
-        divisible,
-        lock,
-        reset,
-        callable_,
+        bool(divisible),
+        bool(lock),
+        bool(reset),
+        bool(callable_),
         call_date,
         call_price,
         description,

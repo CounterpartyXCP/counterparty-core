@@ -518,7 +518,6 @@ def check_sweep(node, source_private_key, utxo):
 
     source_address = source_private_key.get_public_key().get_taproot_address().to_string()
     result = node.api_call(f"addresses/{source_address}/sweeps")
-    print(result)
     assert len(result["result"]) == 1
     assert result["result"][0]["destination"] == node.addresses[2]
     assert result["result"][0]["memo"] == "sweep sweep"
@@ -538,6 +537,7 @@ def check_fairminter2(node, source_private_key, utxo):
             "price": 1,
             "hard_cap": 100 * 10**8,
             "description": "a" * 400000,
+            "mime_type": "image/gif",
             "premint_quantity": 100,
             "start_block": last_block + 1,
             "soft_cap": 90 * 10**8,
@@ -549,6 +549,9 @@ def check_fairminter2(node, source_private_key, utxo):
     result = node.api_call(f"addresses/{source_address}/fairminters")
     assert len(result["result"]) == 1
     assert result["result"][0]["asset"] == "A95428959745315389"
+
+    result = node.api_call("assets/A95428959745315389")
+    assert result["result"]["mime_type"] == "image/gif"
 
     return new_utxo
 
@@ -603,7 +606,7 @@ def test_p2ptr_inscription():
         utxo = check_dispensers(node, source_private_key, utxo)
         attached_utxo = send_funds_to_utxo(node, source_private_key)
         with pytest.raises(
-            exceptions.ComposeError, match="Cannot use `taproot` encoding for `detach` transaction"
+            exceptions.ComposeError, match="Cannot use `taproot` encoding for UTXO transactions"
         ):
             check_detach(node, source_private_key, attached_utxo)
 

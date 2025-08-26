@@ -7,7 +7,7 @@ UNIT = 100000000  # The same across assets.
 
 
 # Semantic Version
-__version__ = "11.0.0"  # for hatch
+__version__ = "11.0.1"  # for hatch
 VERSION_STRING = __version__
 version = VERSION_STRING.split("-", maxsplit=1)[0].split(".")
 VERSION_MAJOR = int(version[0])
@@ -18,6 +18,7 @@ VERSION_PRE_RELEASE = "-".join(VERSION_STRING.split("-")[1:])
 DEFAULT_ELECTRS_URL_MAINNET = "https://blockstream.info/api"
 DEFAULT_ELECTRS_URL_TESTNET3 = "https://blockstream.info/testnet/api"
 DEFAULT_ELECTRS_URL_TESTNET4 = "https://mempool.space/testnet4/api"
+DEFAULT_ELECTRS_URL_SIGNET = "https://mempool.space/signet/api"
 
 
 UPGRADE_ACTIONS = {
@@ -30,6 +31,8 @@ UPGRADE_ACTIONS = {
         "10.9.0-rc.1": [("rollback", 871780)],
         "10.9.0": [("rollback", 871780)],
         "11.0.0": [("refresh_state_db", 0)],
+        "11.0.1": [("rollback", 902000)],
+        "11.0.2": [("refresh_state_db", 0)],
     },
     "testnet3": {
         "10.3.0": [("reparse", 0)],
@@ -41,10 +44,17 @@ UPGRADE_ACTIONS = {
         "10.9.0": [("rollback", 3522632)],
         "10.10.0": [("rollback", 3522632)],
         "11.0.0": [("refresh_state_db", 0)],
+        "11.0.1": [("rollback", 4410000)],
+        "11.0.2": [("refresh_state_db", 0)],
     },
     "testnet4": {
         "10.10.0": [("rollback", 64492)],
         "11.0.0": [("refresh_state_db", 0)],
+        "11.0.1": [("rollback", 85000)],
+        "11.0.2": [("refresh_state_db", 0)],
+    },
+    "signet": {
+        "11.0.2": [("refresh_state_db", 0)],
     },
 }
 
@@ -81,36 +91,43 @@ LOGGER_NAME = APP_NAME
 DEFAULT_API_PORT_REGTEST = 24000
 DEFAULT_API_PORT_TESTNET3 = 14000
 DEFAULT_API_PORT_TESTNET4 = 44000
+DEFAULT_API_PORT_SIGNET = 34000
 DEFAULT_API_PORT = 4000
 
 DEFAULT_RPC_PORT_REGTEST = 24100
 DEFAULT_RPC_PORT_TESTNET3 = 14100
 DEFAULT_RPC_PORT_TESTNET4 = 44100
+DEFAULT_RPC_PORT_SIGNET = 34100
 DEFAULT_RPC_PORT = 4100
 
 DEFAULT_BACKEND_PORT_REGTEST = 18443
 DEFAULT_BACKEND_PORT_TESTNET3 = 18332
 DEFAULT_BACKEND_PORT_TESTNET4 = 48332
+DEFAULT_BACKEND_PORT_SIGNET = 38332
 DEFAULT_BACKEND_PORT = 8332
 
 DEFAULT_ZMQ_SEQUENCE_PORT_REGTEST = 29332
 DEFAULT_ZMQ_SEQUENCE_PORT_TESTNET3 = 19332
 DEFAULT_ZMQ_SEQUENCE_PORT_TESTNET4 = 49332
+DEFAULT_ZMQ_SEQUENCE_PORT_SIGNET = 39332
 DEFAULT_ZMQ_SEQUENCE_PORT = 9332
 
 DEFAULT_ZMQ_RAWBLOCK_PORT_REGTEST = 29333
 DEFAULT_ZMQ_RAWBLOCK_PORT_TESTNET3 = 19333
 DEFAULT_ZMQ_RAWBLOCK_PORT_TESTNET4 = 49333
+DEFAULT_ZMQ_RAWBLOCK_PORT_SIGNET = 39333
 DEFAULT_ZMQ_RAWBLOCK_PORT = 9333
 
 DEFAULT_ZMQ_PUBLISHER_PORT_REGTEST = 24001
 DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET3 = 14001
 DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET4 = 44001
+DEFAULT_ZMQ_PUBLISHER_PORT_SIGNET = 34001
 DEFAULT_ZMQ_PUBLISHER_PORT = 4001
 
 UNSPENDABLE_REGTEST = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"
 UNSPENDABLE_TESTNET3 = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"
 UNSPENDABLE_TESTNET4 = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"
+UNSPENDABLE_SIGNET = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"
 UNSPENDABLE_MAINNET = "1CounterpartyXXXXXXXXXXXXXXXUWLpVr"
 
 ADDRESSVERSION_TESTNET3 = b"\x6f"
@@ -133,15 +150,20 @@ P2SH_ADDRESSVERSION_REGTEST = b"\xc4"
 PRIVATEKEY_VERSION_REGTEST = b"\xef"
 MAGIC_BYTES_REGTEST = b"\xda\xb5\xbf\xfa"
 
+ADDRESSVERSION_SIGNET = b"\x6f"
+P2SH_ADDRESSVERSION_SIGNET = b"\xc4"
+PRIVATEKEY_VERSION_SIGNET = b"\xef"
+MAGIC_BYTES_SIGNET = b"\x0a\x03\xcf\x40"  # For bip-0010
+
 BLOCK_FIRST_TESTNET3 = 310000
 BLOCK_FIRST_TESTNET3_HASH = "000000001f605ec6ee8d2c0d21bf3d3ded0a31ca837acc98893876213828989d"
 BURN_START_TESTNET3 = 310000
-BURN_END_TESTNET3 = 4017708  # Fifty years, at ten minutes per block.
+BURN_END_TESTNET3 = 4017708  # in a very long time...
 
 BLOCK_FIRST_TESTNET4 = 63240
 BLOCK_FIRST_TESTNET4_HASH = "00000000ffa7082b07d16d8ee02d275ad80a4450350e53835f0f264d72b36cd7"
 BURN_START_TESTNET4 = 63240
-BURN_END_TESTNET4 = 4017708  # Fifty years, at ten minutes per block.
+BURN_END_TESTNET4 = 4017708
 
 BLOCK_FIRST_MAINNET = 278270
 BLOCK_FIRST_MAINNET_HASH = "00000000000000017bac9a8e85660ad348050c789922d5f8fe544d473368be1a"
@@ -152,6 +174,11 @@ BLOCK_FIRST_REGTEST = 101
 BLOCK_FIRST_REGTEST_HASH = "0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"
 BURN_START_REGTEST = 101
 BURN_END_REGTEST = 150000000
+
+BLOCK_FIRST_SIGNET = 255100
+BLOCK_FIRST_SIGNET_HASH = "00000000ffa7082b07d16d8ee02d275ad80a4450350e53835f0f264d72b36cd7"
+BURN_START_SIGNET = 255110
+BURN_END_SIGNET = 999999999
 
 
 # Protocol defaults
@@ -227,6 +254,16 @@ BOOTSTRAP_URLS = {
         (
             "https://storage.googleapis.com/counterparty-bootstrap/state.testnet4.db.latest.zst",
             "https://storage.googleapis.com/counterparty-bootstrap/state.testnet4.db.latest.sig",
+        ),
+    ],
+    "signet": [
+        (
+            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.signet.db.latest.zst",
+            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.signet.db.latest.sig",
+        ),
+        (
+            "https://storage.googleapis.com/counterparty-bootstrap/state.signet.db.latest.zst",
+            "https://storage.googleapis.com/counterparty-bootstrap/state.signet.db.latest.sig",
         ),
     ],
 }

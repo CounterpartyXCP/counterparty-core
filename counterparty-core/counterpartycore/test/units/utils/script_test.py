@@ -9,7 +9,7 @@ from counterparty_rs import utils
 from counterpartycore.lib import config
 from counterpartycore.lib.parser import gettxinfo
 from counterpartycore.lib.parser.gettxinfo import get_checksig
-from counterpartycore.lib.utils import script
+from counterpartycore.lib.utils import helpers, script
 from counterpartycore.lib.utils.opcodes import *  # noqa: F403
 from counterpartycore.lib.utils.script import script_to_asm
 
@@ -202,6 +202,9 @@ def test_decode_p2w():
 
 
 def test_taproot_script_to_address():
+    config.NETWORK_NAME = "regtest"
+    helpers.setup_bitcoinutils("regtest")
+
     random = os.urandom(32)
     source_private_key = PrivateKey(b=random)
     source_pubkey = source_private_key.get_public_key()

@@ -184,6 +184,24 @@ def test_unpack(defaults):
         ) == {"destination": defaults["addresses"][5], "flags": 7, "memo": b"\xca\xfe\xba\xbe"}
 
 
+def test_legacy_unpack_taproot_activated(defaults):
+    assert sweep.unpack(
+        b"o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x01"
+    ) == {"destination": defaults["addresses"][5], "flags": 1, "memo": None}
+
+    assert sweep.unpack(
+        b"o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x02"
+    ) == {"destination": defaults["addresses"][5], "flags": 2, "memo": None}
+
+    assert sweep.unpack(
+        b"o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x03test"
+    ) == {"destination": defaults["addresses"][5], "flags": 3, "memo": "test"}
+
+    assert sweep.unpack(
+        b"o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x07\xca\xfe\xba\xbe"
+    ) == {"destination": defaults["addresses"][5], "flags": 7, "memo": b"\xca\xfe\xba\xbe"}
+
+
 def test_parse_flag_1(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
     with ProtocolChangesDisabled("taproot_support"):
         tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
@@ -213,7 +231,7 @@ def test_parse_flag_1(ledger_db, blockchain_mock, defaults, test_helpers, curren
                         "block_index": current_block_index,
                         "calling_function": "sweep",
                         "event": tx["tx_hash"],
-                        "quantity": 91592599693,
+                        "quantity": 91492599693,
                     },
                 },
                 {
@@ -224,7 +242,7 @@ def test_parse_flag_1(ledger_db, blockchain_mock, defaults, test_helpers, curren
                         "asset": "XCP",
                         "block_index": current_block_index,
                         "event": tx["tx_hash"],
-                        "quantity": 91592599693,
+                        "quantity": 91492599693,
                     },
                 },
                 {

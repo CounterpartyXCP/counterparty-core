@@ -334,7 +334,7 @@ def test_compose_transaction(ledger_db, defaults):
     params = {
         "memo": "0102030405",
         "memo_is_hex": True,
-        "source": defaults["addresses"][0],
+        "source": defaults["p2wpkh_addresses"][0],
         "destination": defaults["addresses"][1],
         "asset": "XCP",
         "quantity": defaults["small"],
@@ -360,7 +360,7 @@ def test_check_transaction_sanity(ledger_db, defaults):
     params = {
         "memo": "0102030405",
         "memo_is_hex": True,
-        "source": defaults["addresses"][0],
+        "source": defaults["p2wpkh_addresses"][0],
         "destination": defaults["addresses"][1],
         "asset": "XCP",
         "quantity": defaults["small"],
@@ -370,7 +370,7 @@ def test_check_transaction_sanity(ledger_db, defaults):
         "verbose": True,
     }
     tx_info = (
-        defaults["addresses"][0],
+        defaults["p2wpkh_addresses"][0],
         [],
         b"\x02\x01\x01\x04\x80\xf0\xfa\x02\x15\x01\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec\x05\x01\x02\x03\x04\x05",
     )
