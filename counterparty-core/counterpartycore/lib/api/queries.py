@@ -1997,13 +1997,13 @@ def get_balances_by_addresses(
     # Address conditions based on type
     if type in ["all", "address"]:
         where_conditions.append(
-            "(address IN ({}) AND quantity > 0)".format(",".join(["?"] * len(address_list)))
+            f"(address IN ({','.join(['?'] * len(address_list))}) AND quantity > 0)"
         )
         bindings.extend(address_list)
 
     if type in ["all", "utxo"]:
         where_conditions.append(
-            "(utxo_address IN ({}) AND quantity > 0)".format(",".join(["?"] * len(address_list)))
+            f"(utxo_address IN ({','.join(['?'] * len(address_list))}) AND quantity > 0)"
         )
         bindings.extend(address_list)
 
@@ -2046,7 +2046,7 @@ def get_balances_by_addresses(
         WHERE {final_where_clause}
         GROUP BY asset, asset_longname
         ORDER BY asset ASC
-    """  # noqa: S608
+    """  # nosec B608  # noqa: S608
 
     # Calculate next_cursor and result_count when asset is None
     next_cursor = None
@@ -2072,7 +2072,7 @@ def get_balances_by_addresses(
             SELECT COUNT(DISTINCT asset) as count
             FROM balances
             WHERE ({where_clause})
-        """  # noqa: S608
+        """  # nosec B608  # noqa: S608
         count_bindings = (
             bindings[:-1] if cursor is not None else bindings
         )  # Remove cursor binding for count

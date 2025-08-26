@@ -53,6 +53,7 @@ counterparty-server start
 
 - Add `current_commit` field in API root endpoint
 - Add `valid` parameter for transactions endpoints
+- Optimize get balances by addresses endpoint
 
 ## CLI
 
