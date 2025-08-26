@@ -1987,82 +1987,122 @@ def get_balances_by_addresses(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the balances to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
-    if asset is None:
-        where = [
-            {"address__in": addresses.split(","), "quantity__gt": 0},
-            {"utxo_address__in": addresses.split(","), "quantity__gt": 0},
-        ]
-        if type == "utxo":
-            where.pop(0)
-        elif type == "address":
-            where.pop(1)
+    address_list = addresses.split(",")
+    cursor_db = state_db.cursor()
 
-        assets_result = select_rows(
-            state_db,
-            "balances",
-            select="DISTINCT asset AS asset",
-            where=where,
-            order="ASC",
-            cursor_field="asset",
-            last_cursor=cursor,
-            offset=offset,
-            limit=limit,
+    # Build WHERE conditions based on type and asset filters
+    where_conditions = []
+    bindings = []
+
+    # Address conditions based on type
+    if type in ["all", "address"]:
+        where_conditions.append(
+            "(address IN ({}) AND quantity > 0)".format(",".join(["?"] * len(address_list)))
         )
-        assets = [asset["asset"] for asset in assets_result.result]
+        bindings.extend(address_list)
+
+    if type in ["all", "utxo"]:
+        where_conditions.append(
+            "(utxo_address IN ({}) AND quantity > 0)".format(",".join(["?"] * len(address_list)))
+        )
+        bindings.extend(address_list)
+
+    # Asset condition
+    asset_condition = ""
+    if asset is not None:
+        asset_condition = " AND (asset = ? OR asset_longname = ?)"
+        bindings.extend([asset, asset])
+
+    # Combine WHERE conditions
+    where_clause = " OR ".join(where_conditions)
+    if asset_condition:
+        where_clause = f"({where_clause}){asset_condition}"
+
+    # Handle cursor for pagination (only when asset is None)
+    cursor_condition = ""
+    if asset is None and offset is None and cursor is not None:
+        cursor_condition = " AND asset >= ?"
+        bindings.append(cursor)
+
+    # Build the main query with JSON aggregation
+    final_where_clause = f"({where_clause})"
+    if cursor_condition:
+        final_where_clause = f"({where_clause}){cursor_condition}"
+
+    sql = f"""
+        SELECT 
+            asset,
+            asset_longname,
+            SUM(quantity) as total,
+            json_group_array(
+                json_object(
+                    'address', address,
+                    'utxo', utxo,
+                    'utxo_address', utxo_address,
+                    'quantity', quantity
+                )
+            ) as addresses
+        FROM balances
+        WHERE {final_where_clause}
+        GROUP BY asset, asset_longname
+        ORDER BY asset ASC
+    """  # noqa: S608
+
+    # Calculate next_cursor and result_count when asset is None
+    next_cursor = None
+    result_count = 0
+
+    if asset is None:
+        # Use limit + 1 to check if there are more results for pagination
+        query_limit = limit + 1
+        sql += f" LIMIT {query_limit}"
+        if offset:
+            sql += f" OFFSET {offset}"
+
+        cursor_db.execute(sql, bindings)
+        results = cursor_db.fetchall()
+
+        # Check if we have more results than the limit
+        if len(results) > limit:
+            next_cursor = results[-1]["asset"]  # Last asset name becomes next cursor
+            results = results[:-1]  # Remove the extra result
+
+        # Count total results for result_count (without cursor condition)
+        count_sql = f"""
+            SELECT COUNT(DISTINCT asset) as count
+            FROM balances
+            WHERE ({where_clause})
+        """  # noqa: S608
+        count_bindings = (
+            bindings[:-1] if cursor is not None else bindings
+        )  # Remove cursor binding for count
+        cursor_db.execute(count_sql, count_bindings)
+        result_count = cursor_db.fetchone()["count"]
     else:
-        assets = [asset]
+        # When specific asset is provided, no pagination
+        if limit:
+            sql += f" LIMIT {limit}"
+        if offset:
+            sql += f" OFFSET {offset}"
 
-    where = [
-        {"address__in": addresses.split(","), "asset__in": assets, "quantity__gt": 0},
-        {"utxo_address__in": addresses.split(","), "asset__in": assets, "quantity__gt": 0},
-    ]
-    if type == "utxo":
-        where.pop(0)
-    elif type == "address":
-        where.pop(1)
+        cursor_db.execute(sql, bindings)
+        results = cursor_db.fetchall()
+        result_count = 1 if results else 0
 
-    balances = select_rows(
-        state_db,
-        "balances",
-        where=where,
-        select="address, asset, asset_longname, quantity, utxo, utxo_address",
-        order="ASC",
-        cursor_field="asset",
-        sort=sort,
-    ).result
-
+    # Process results to match the expected format
     result = []
-    if len(balances) > 0:
-        current_balances = {
-            "asset": balances[0]["asset"],
-            "asset_longname": balances[0]["asset_longname"],
-            "total": 0,
-            "addresses": [],
-        }
-        for balance in balances:
-            if balance["asset"] != current_balances["asset"]:
-                result.append(current_balances)
-                current_balances = {
-                    "asset": balance["asset"],
-                    "asset_longname": balances[0]["asset_longname"],
-                    "total": 0,
-                    "addresses": [],
-                }
-            current_balances["total"] += balance["quantity"]
-            current_balances["addresses"].append(
-                {
-                    "address": balance["address"],
-                    "utxo": balance["utxo"],
-                    "utxo_address": balance["utxo_address"],
-                    "quantity": balance["quantity"],
-                }
-            )
-        result.append(current_balances)
-    if asset is None:
-        return QueryResult(
-            result, assets_result.next_cursor, "balances", assets_result.result_count
+    for row in results:
+        addresses_data = json.loads(row["addresses"])
+        result.append(
+            {
+                "asset": row["asset"],
+                "asset_longname": row["asset_longname"],
+                "total": row["total"],
+                "addresses": addresses_data,
+            }
         )
-    return QueryResult(result, None, "balances", 1)
+
+    return QueryResult(result, next_cursor, "balances", result_count)
 
 
 def get_balances_by_address_and_asset(
