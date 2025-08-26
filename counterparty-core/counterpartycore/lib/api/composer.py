@@ -120,6 +120,13 @@ def address_to_script_pub_key(address, unspent_list=None, construct_params=None,
         raise exceptions.ComposeError(f"Invalid address: {address}") from e
 
 
+def is_segwit_address(address):
+    if multisig.is_multisig(address):
+        return False
+    script_pub_key = address_to_script_pub_key(address)
+    return is_segwit_output(script_pub_key.to_hex())
+
+
 def create_tx_output(value, address_or_script, unspent_list, construct_params):
     try:
         # if hex string we assume it is a script
@@ -165,7 +172,7 @@ def perpare_non_data_outputs(destinations, unspent_list, construct_params):
     return outputs
 
 
-def determine_encoding(data, destinations, construct_params):
+def determine_encoding(source, data, destinations, construct_params):
     desired_encoding = construct_params.get("encoding", "auto")
     if desired_encoding == "auto":
         if len(data) + len(config.PREFIX) <= config.OP_RETURN_MAX_SIZE:
@@ -175,6 +182,10 @@ def determine_encoding(data, destinations, construct_params):
     else:
         encoding = desired_encoding
     if encoding == "taproot":
+        if ":" in source:
+            raise exceptions.ComposeError("Cannot use `taproot` encoding for UTXO transactions")
+        if not is_segwit_address(source):
+            raise exceptions.ComposeError("Cannot use `taproot` encoding for non-segwit address")
         if len(destinations) > 0:
             raise exceptions.ComposeError(
                 "Cannot use `taproot` encoding for transactions with destinations"
@@ -490,7 +501,7 @@ def prepare_taproot_output(db, source, data, unspent_list, construct_params):
 
 
 def prepare_data_outputs(db, source, destinations, data, unspent_list, construct_params):
-    encoding = determine_encoding(data, destinations, construct_params)
+    encoding = determine_encoding(source, data, destinations, construct_params)
     arc4_key = unspent_list[0]["txid"]
     reveal_tx_info = None
     outputs = []

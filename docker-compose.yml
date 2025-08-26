@@ -143,7 +143,7 @@ services:
       - "-zmqpubsequence=tcp://0.0.0.0:49332"
       - "-zmqpubrawblock=tcp://0.0.0.0:49333"
 
-  counterparty-core-testne4:
+  counterparty-core-testnet4:
     <<: *counterparty-common
     profiles:
       - testnet4

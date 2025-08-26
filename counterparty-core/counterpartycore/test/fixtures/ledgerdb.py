@@ -799,5 +799,18 @@ UNITTEST_FIXTURE = [
         {"source": DP["addresses"][0], "asset": "TAIDFAIRMIN"},
         {"encoding": "opreturn"},
     ],
+    [
+        "order",
+        {
+            "source": DP["addresses"][0],
+            "give_asset": "XCP",
+            "give_quantity": DP["quantity"],
+            "get_asset": "NODIVISIBLE",
+            "get_quantity": DP["quantity"],
+            "expiration": 2000,
+            "fee_required": 0,
+        },
+        {"encoding": "multisig"},
+    ],
     ["mine_empty_blocks", 701],
 ]

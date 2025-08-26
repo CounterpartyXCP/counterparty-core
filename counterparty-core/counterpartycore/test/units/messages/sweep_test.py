@@ -231,7 +231,7 @@ def test_parse_flag_1(ledger_db, blockchain_mock, defaults, test_helpers, curren
                         "block_index": current_block_index,
                         "calling_function": "sweep",
                         "event": tx["tx_hash"],
-                        "quantity": 91592599693,
+                        "quantity": 91492599693,
                     },
                 },
                 {
@@ -242,7 +242,7 @@ def test_parse_flag_1(ledger_db, blockchain_mock, defaults, test_helpers, curren
                         "asset": "XCP",
                         "block_index": current_block_index,
                         "event": tx["tx_hash"],
-                        "quantity": 91592599693,
+                        "quantity": 91492599693,
                     },
                 },
                 {

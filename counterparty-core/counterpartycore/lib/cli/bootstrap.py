@@ -99,6 +99,7 @@ def verify_and_decompress(zst_filepath, sig_url, decompressors_state):
     except Exception as e:  # pylint: disable=broad-except
         cprint(f"Failed to verify and decompress {zst_filepath}: {e}", "red")
         decompressors_state.value = 1
+        sys.exit(1)
 
 
 def clean_data_dir(data_dir):
@@ -125,7 +126,7 @@ def download_bootstrap_files(data_dir, files):
             cprint(f"Failed to download {zst_url}: {e}", "red")
             for decompressor in decompressors:
                 decompressor.kill()
-                sys.exit(1)
+            sys.exit(1)
 
         decompressor = Process(
             target=verify_and_decompress,
@@ -135,13 +136,30 @@ def download_bootstrap_files(data_dir, files):
         decompressors.append(decompressor)
 
     while True:
-        if not any(decompressor.is_alive() for decompressor in decompressors):
-            break
+        # Check for failed processes by examining exit codes
+        for decompressor in decompressors:
+            decompressor.join(timeout=0)  # Non-blocking join to check if finished
+            if decompressor.exitcode is not None and decompressor.exitcode != 0:
+                cprint(
+                    f"Decompression process failed with exit code {decompressor.exitcode}", "red"
+                )
+                for other_decompressor in decompressors:
+                    if other_decompressor.is_alive():
+                        other_decompressor.kill()
+                sys.exit(1)
+
+        # Check shared state as backup error detection mechanism
         if decompressors_state.value == 1:
             cprint("Failed to decompress and verify bootstrap files.", "red")
             for decompressor in decompressors:
-                decompressor.kill()
+                if decompressor.is_alive():
+                    decompressor.kill()
             sys.exit(1)
+
+        # Check if all processes are finished
+        if not any(decompressor.is_alive() for decompressor in decompressors):
+            break
+
         time.sleep(0.1)
 
 

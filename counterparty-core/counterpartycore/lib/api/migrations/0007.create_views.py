@@ -18,7 +18,7 @@ def apply(db):
     logger.debug("Building views...")
 
     db.execute("""
-         CREATE VIEW asset_holders AS 
+         CREATE VIEW IF NOT EXISTS asset_holders AS 
             SELECT asset, address, quantity, NULL AS escrow,
                 ('balances_' || CAST(rowid AS VARCAHR)) AS cursor_id, 'balances' AS holding_type, NULL AS status
             FROM balances
@@ -45,7 +45,7 @@ def apply(db):
       """)
 
     db.execute("""
-         CREATE VIEW xcp_holders AS
+         CREATE VIEW IF NOT EXISTS xcp_holders AS
             SELECT * FROM asset_holders
          UNION ALL 
             SELECT 'XCP' AS asset, source AS address, wager_remaining AS quantity,
@@ -83,8 +83,8 @@ def apply(db):
 
 
 def rollback(db):
-    db.execute("DROP VIEW asset_holders")
-    db.execute("DROP VIEW xcp_holders")
+    db.execute("DROP VIEW IF EXISTS asset_holders")
+    db.execute("DROP VIEW IF EXISTS xcp_holders")
 
 
 if not __name__.startswith("apsw_"):

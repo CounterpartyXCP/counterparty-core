@@ -625,6 +625,8 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
         asset_id = None
         quantity = None
         divisible = None
+        lock = None
+        reset = None
         callable_ = None
         call_date = None
         mime_type = "text/plain"
@@ -846,10 +848,10 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
             "asset": asset,
             "subasset_longname": subasset_longname,
             "quantity": quantity,
-            "divisible": divisible,
-            "lock": lock,
-            "reset": reset,
-            "callable": callable_,
+            "divisible": bool(divisible),
+            "lock": bool(lock),
+            "reset": bool(reset),
+            "callable": bool(callable_),
             "call_date": call_date,
             "call_price": call_price,
             "description": description,
@@ -861,10 +863,10 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
         asset,
         subasset_longname,
         quantity,
-        divisible,
-        lock,
-        reset,
-        callable_,
+        bool(divisible),
+        bool(lock),
+        bool(reset),
+        bool(callable_),
         call_date,
         call_price,
         description,
