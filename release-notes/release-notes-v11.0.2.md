@@ -46,6 +46,7 @@ counterparty-server start
 - Fix give/get_price in orders API
 - Fix bootstrap: exit with error when a subprocess fails
 - Disable taproot encoding for legacy source
+- Fix `UTXOBalancesCache` initialization: restore also invalid `attach`
 
 ## Codebase
 
