@@ -52,6 +52,7 @@ counterparty-server start
 
 - Add `current_commit` tag in Sentry reports and JSON logs
 - Add `transactions_status` table filled by the `parse()` functions of each contract
+- Add testnet4, signet and mainnet checkpoints
 
 ## API
 
