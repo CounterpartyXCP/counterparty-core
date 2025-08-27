@@ -42,4 +42,4 @@ multiprocessing-logging==0.3.4
 locust==2.32.8
 pygit2==1.17.0
 cbor2==5.6.5
-counterparty-rs==11.0.1
+counterparty-rs==11.0.2
