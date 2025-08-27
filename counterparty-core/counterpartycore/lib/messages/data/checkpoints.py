@@ -910,4 +910,8 @@ CHECKPOINTS_SIGNET = {
         "ledger_hash": "33cf0669a0d309d7e6b1bf79494613b69262b58c0ea03c9c221d955eb4c84fe5",
         "txlist_hash": "33cf0669a0d309d7e6b1bf79494613b69262b58c0ea03c9c221d955eb4c84fe5",
     },
+    266993: {
+        "ledger_hash": "9ea6fb6b6dbbd359a6e6e9a9448803584ee06d2c6ebe5e48d099ad713b40bc54",
+        "txlist_hash": "a6f8973fc062b0f7facba7d0d899ee4d5891f1529d6a017df8da6eeb194c9bf0",
+    },
 }
