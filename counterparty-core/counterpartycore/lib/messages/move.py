@@ -36,6 +36,7 @@ def move_balances(db, tx, source, destination):
     action = "utxo move"
     msg_index = ledger.other.get_send_msg_index(db, tx["tx_hash"])
     balances = ledger.balances.get_utxo_balances(db, source)
+    tx_valid = False
     for balance in balances:
         if balance["quantity"] == 0:
             continue
@@ -77,6 +78,7 @@ def move_balances(db, tx, source, destination):
 
         ledger.events.insert_record(db, "sends", bindings, "UTXO_MOVE")
         msg_index += 1
+        tx_valid = True
 
         # log the move
         logger.info(
@@ -87,6 +89,12 @@ def move_balances(db, tx, source, destination):
             destination,
             tx["tx_hash"],
         )
+
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        tx_valid,
+    )
 
 
 # call on each transaction

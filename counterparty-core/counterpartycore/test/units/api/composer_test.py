@@ -150,21 +150,60 @@ def test_prepare_non_data_outputs(defaults):
     ) == str([TxOutput(2024, P2pkhAddress(defaults["addresses"][0]).to_script_pub_key())])
 
 
-def test_determine_encoding():
-    assert composer.determine_encoding(b"Hello, World!", [], {}) == "opreturn"
-    assert composer.determine_encoding(b"Hello, World!" * 100, [], {}) == "multisig"
+def test_determine_encoding(defaults):
+    assert (
+        composer.determine_encoding(defaults["p2wpkh_addresses"][0], b"Hello, World!", [], {})
+        == "opreturn"
+    )
+    assert (
+        composer.determine_encoding(defaults["p2wpkh_addresses"][0], b"Hello, World!" * 100, [], {})
+        == "multisig"
+    )
+
+    with pytest.raises(
+        exceptions.ComposeError, match="Cannot use `taproot` encoding for non-segwit address"
+    ):
+        assert composer.determine_encoding(
+            defaults["addresses"][0], b"Hello, World!", [], {"encoding": "taproot"}
+        )
 
     with pytest.raises(exceptions.ComposeError, match="Not supported encoding: p2sh"):
-        composer.determine_encoding(b"Hello, World!", [], {"encoding": "p2sh"})
+        composer.determine_encoding(
+            defaults["p2wpkh_addresses"][0], b"Hello, World!", [], {"encoding": "p2sh"}
+        )
 
     with pytest.raises(exceptions.ComposeError, match="Not supported encoding: toto"):
-        composer.determine_encoding(b"Hello, World!", [], {"encoding": "toto"})
+        composer.determine_encoding(
+            defaults["p2wpkh_addresses"][0], b"Hello, World!", [], {"encoding": "toto"}
+        )
+
+    with pytest.raises(
+        exceptions.ComposeError, match="Cannot use `taproot` encoding for UTXO transactions"
+    ):
+        composer.determine_encoding(
+            "385fb08da23ded23532819f058508ccea50e65426b4f1f8bbc3d71b500ae0870:0",
+            b"Hello, World!",
+            [],
+            {"encoding": "taproot"},
+        )
 
     with pytest.raises(
         exceptions.ComposeError,
         match="Cannot use `taproot` encoding for transactions with destinations",
     ):
-        composer.determine_encoding(b"Hello, World!", ["destination_1"], {"encoding": "taproot"})
+        composer.determine_encoding(
+            defaults["p2wpkh_addresses"][0],
+            b"Hello, World!",
+            ["destination_1"],
+            {"encoding": "taproot"},
+        )
+
+
+def test_is_segwit_address(defaults):
+    assert composer.is_segwit_address(defaults["p2wpkh_addresses"][0]) is True
+    assert composer.is_segwit_address(defaults["p2sh_addresses"][0]) is False
+    assert composer.is_segwit_address(defaults["p2ms_addresses"][0]) is False
+    assert composer.is_segwit_address(defaults["addresses"][0]) is False
 
 
 def test_encrypt_data():
@@ -1771,7 +1810,7 @@ def test_compose_fairminter_taproot_legacy_source(ledger_db, defaults, monkeypat
 
     with pytest.raises(
         exceptions.ComposeError,
-        match="Reveal transaction is not supported for legacy inputs",
+        match="Cannot use `taproot` encoding for non-segwit address",
     ):
         composer.compose_transaction(ledger_db, "fairminter", params, construct_params)
 

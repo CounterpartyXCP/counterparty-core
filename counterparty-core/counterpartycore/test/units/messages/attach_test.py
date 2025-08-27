@@ -1,6 +1,8 @@
 import pytest
 from counterpartycore.lib import config, exceptions
+from counterpartycore.lib.ledger import blocks, caches
 from counterpartycore.lib.messages import attach
+from counterpartycore.lib.parser import gettxinfo
 
 DUMMY_UTXO = 64 * "0" + ":1"
 
@@ -178,7 +180,14 @@ def test_parse_with_destination(
                     ),
                     "event": "ATTACH_TO_UTXO",
                 },
-            }
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )
 
@@ -212,7 +221,14 @@ def test_parse_with_op_return_destination(
                     ),
                     "event": "ATTACH_TO_UTXO",
                 },
-            }
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": False,
+                },
+            },
         ],
     )
 
@@ -285,3 +301,25 @@ def test_parse_with_no_destination(
             }
         ],
     )
+
+
+def test_cache_invalid_attach(
+    ledger_db, blockchain_mock, current_block_index, test_helpers, defaults
+):
+    # Simulate invalid attach transaction
+    address_0 = defaults["addresses"][0]
+    data = b"eDIVISIBLE|99999999999999|"
+    tx = blockchain_mock.dummy_tx(
+        ledger_db, address_0, op_return_position=0, transaction_type="attach"
+    )
+    utxo = f"{tx['tx_hash']}:0"
+    blocks.set_transaction_status(ledger_db, tx["tx_index"], False)
+    gettxinfo.update_utxo_balances_cache(
+        ledger_db, ["", utxo], data, address_0, current_block_index
+    )
+    # check if the utxo is in the cache
+    assert caches.UTXOBalancesCache(ledger_db).has_balance(utxo)
+    # reset the cache
+    caches.UTXOBalancesCache.reset_instance()
+    # check if the utxo is still in the cache
+    assert caches.UTXOBalancesCache(ledger_db).has_balance(utxo)

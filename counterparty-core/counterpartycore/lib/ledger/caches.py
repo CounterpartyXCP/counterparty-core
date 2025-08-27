@@ -89,6 +89,15 @@ class UTXOBalancesCache(metaclass=helpers.SingletonMeta):
         self.utxos_with_balance = {}
         for utxo_balance in utxo_balances:
             self.utxos_with_balance[utxo_balance["utxo"]] = True
+        # to not breack `txlist_hash`es we rebuild the cache in the same way it is built during transaction parsing:
+        # invalid attachs are added to the cache (see gettxinfo.update_utxo_balances_cache())
+        sql = "SELECT tx_hash, utxos_info FROM transactions_with_status WHERE valid IS FALSE AND transaction_type = ?"
+        cursor.execute(sql, ("attach",))
+        invalid_attach_transactions = cursor.fetchall()
+        for transaction in invalid_attach_transactions:
+            utxos_info = transaction["utxos_info"].split(" ")
+            if utxos_info[1] != "":
+                self.utxos_with_balance[utxos_info[1]] = True
 
     def has_balance(self, utxo):
         return utxo in self.utxos_with_balance

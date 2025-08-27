@@ -219,7 +219,7 @@ def load_data_legacy(message, block_index):
 def unpack(message, block_index, return_dict=False):
     try:
         mime_type = "text/plain"
-        if protocol.enabled("taproot_support"):
+        if protocol.enabled("taproot_support", block_index=block_index):
             # Unpack the message using cbor2
             try:
                 timestamp, value, fee_fraction_int, mime_type, text = load_cbor(message)
@@ -292,6 +292,12 @@ def parse(db, tx, message):
         ledger.events.insert_record(db, "broadcasts", bindings, "BROADCAST")
 
     logger.info("Broadcast from %(source)s (%(tx_hash)s) [%(status)s]", bindings)
+
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )
 
     # stop processing if broadcast is invalid for any reason
     if protocol.enabled("broadcast_invalid_check") and status != "valid":

@@ -55,7 +55,7 @@ def test_supplies_functions(ledger_db, defaults):
     assert supplies.holders(ledger_db, "XCP") == [
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "address_quantity": 91599999693,
+            "address_quantity": 91499999693,
             "escrow": None,
         },
         {
@@ -133,6 +133,11 @@ def test_supplies_functions(ledger_db, defaults):
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "address_quantity": 100000000,
             "escrow": "fc504d4f75c1c0bd98618c6f59c99ba61dad9b6a88e7b0009f9bb42f3e7e6730",
+        },
+        {
+            "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
+            "address_quantity": 100000000,
+            "escrow": "830976c616ccf2d8a2e157bb85adcada03fe0aea40d69e50227482c9955686d7",
         },
         {"address": "munimLLHjPhGeSU5rYB2HN79LJa8bRZr5b", "address_quantity": 100, "escrow": None},
     ]

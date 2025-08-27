@@ -706,6 +706,10 @@ CHECKPOINTS_MAINNET = {
         "ledger_hash": "aa7a4b3080fe9d5fa1692816e9f8de2f7583132c92889d5542b405e46c1634a8",
         "txlist_hash": "8a0172a7433e5e2e4563596eac4fb976a2f28ccd1d085a7f4f6d1da139c8d4b0",
     },
+    911955: {
+        "ledger_hash": "6a4e17a0c12800d681c2dfd03391ce840fc788f5421216d4fcb734fb2946b0fe",
+        "txlist_hash": "a125a34048b2b2293a56b14f84321f859b31c92625b6ede18261fcf19d0b1d42",
+    },
 }
 
 CONSENSUS_HASH_VERSION_TESTNET3 = 7
@@ -894,6 +898,10 @@ CHECKPOINTS_TESTNET4 = {
         "ledger_hash": "f36214245193fe4e2ff273afb9d9a09fd536bcd86f795782bd99026b54a66843",
         "txlist_hash": "17af3a72503c8911a047d370da48ccce881c8dffa558f6287cfccbcde7e45c2b",
     },
+    99290: {
+        "ledger_hash": "16c1a4f419279d1ea09e593afcd0e978e31800996979ff75771e46690443a2a3",
+        "txlist_hash": "2571d12f5be6ce7775224d60a3c245c93d6caf6956be0f9496ff89a8b3ff1f7b",
+    },
 }
 
 CONSENSUS_HASH_VERSION_SIGNET = 1
@@ -901,5 +909,9 @@ CHECKPOINTS_SIGNET = {
     config.BLOCK_FIRST_SIGNET: {
         "ledger_hash": "33cf0669a0d309d7e6b1bf79494613b69262b58c0ea03c9c221d955eb4c84fe5",
         "txlist_hash": "33cf0669a0d309d7e6b1bf79494613b69262b58c0ea03c9c221d955eb4c84fe5",
+    },
+    266993: {
+        "ledger_hash": "9ea6fb6b6dbbd359a6e6e9a9448803584ee06d2c6ebe5e48d099ad713b40bc54",
+        "txlist_hash": "a6f8973fc062b0f7facba7d0d899ee4d5891f1529d6a017df8da6eeb194c9bf0",
     },
 }

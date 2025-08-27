@@ -34,12 +34,11 @@ def new_unpack(message):
             "memo": None if memo_bytes == b"" else memo_bytes,
         }
     except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error("enhanced send unpack error: %s", e)
         raise exceptions.UnpackError(f"could not unpack: {e}") from e
 
 
-def unpack(message):
-    if protocol.enabled("taproot_support"):
+def unpack(message, block_index=None):
+    if protocol.enabled("taproot_support", block_index=block_index):
         try:
             return new_unpack(message)
         except exceptions.UnpackError:
@@ -268,6 +267,12 @@ def parse(db, tx, message):
     )
 
     cursor.close()
+
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )
 
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

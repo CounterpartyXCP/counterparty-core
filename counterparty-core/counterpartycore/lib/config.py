@@ -7,7 +7,7 @@ UNIT = 100000000  # The same across assets.
 
 
 # Semantic Version
-__version__ = "11.0.1"  # for hatch
+__version__ = "11.0.2"  # for hatch
 VERSION_STRING = __version__
 version = VERSION_STRING.split("-", maxsplit=1)[0].split(".")
 VERSION_MAJOR = int(version[0])
@@ -32,6 +32,7 @@ UPGRADE_ACTIONS = {
         "10.9.0": [("rollback", 871780)],
         "11.0.0": [("refresh_state_db", 0)],
         "11.0.1": [("rollback", 902000)],
+        "11.0.2": [("refresh_state_db", 0)],
     },
     "testnet3": {
         "10.3.0": [("reparse", 0)],
@@ -44,13 +45,17 @@ UPGRADE_ACTIONS = {
         "10.10.0": [("rollback", 3522632)],
         "11.0.0": [("refresh_state_db", 0)],
         "11.0.1": [("rollback", 4410000)],
+        "11.0.2": [("refresh_state_db", 0)],
     },
     "testnet4": {
         "10.10.0": [("rollback", 64492)],
         "11.0.0": [("refresh_state_db", 0)],
         "11.0.1": [("rollback", 85000)],
+        "11.0.2": [("refresh_state_db", 0)],
     },
-    "signet": {},
+    "signet": {
+        "11.0.2": [("refresh_state_db", 0)],
+    },
 }
 
 
@@ -288,5 +293,7 @@ LEDGER_DB_MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "ledger", "migrations")
 STATE_DB_MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "api", "migrations")
 
 PROFILE_INTERVAL_MINUTES = 15
+
+CURRENT_COMMIT = "Unknown"
 ENABLE_ALL_PROTOCOL_CHANGES = False
 DISABLE_API_CACHE = False

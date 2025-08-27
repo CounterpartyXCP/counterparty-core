@@ -183,7 +183,7 @@ def select_rows(
     if offset is not None or sort is not None:
         last_cursor = None
 
-    if table == "all_transactions":
+    if table == "all_transactions_with_status":
         cursor_field = "tx_index"
 
     cursor = db.cursor()
@@ -262,7 +262,15 @@ def select_rows(
     elif cursor_field not in select:
         select = f"{select}, {cursor_field} AS {cursor_field}"
     if (
-        table in ["all_transactions", "transactions", "sends", "btcpays", "sweeps", "dispenses"]
+        table
+        in [
+            "all_transactions_with_status",
+            "transactions_with_status",
+            "sends",
+            "btcpays",
+            "sweeps",
+            "dispenses",
+        ]
         and "COUNT(*)" not in select
     ):
         select += ", NULLIF(destination, '') AS destination"
@@ -299,7 +307,7 @@ def select_rows(
                 sort_order = "ASC"
             if sort_name in SUPPORTED_SORT_FIELDS.get(table, []):
                 order_by.append(f"{sort_name} {sort_order.upper()}")
-    elif table == "all_transactions":
+    elif table == "all_transactions_with_status":
         order_by.append("confirmed ASC")
         order_by.append(f"{cursor_field} {order}")
     if len(order_by) == 0:
@@ -334,7 +342,7 @@ def select_rows(
                 break
             row["params"] = json.loads(row["params"])
 
-    if table == "all_transactions":
+    if table == "all_transactions_with_status":
         for row in result:
             row["confirmed"] = bool(row["confirmed"])
 
@@ -417,6 +425,7 @@ def get_transactions(
     ledger_db,
     type: TransactionType = "all",  # pylint: disable=W0622
     show_unconfirmed: bool = False,
+    valid: bool = None,
     cursor: int = None,
     limit: int = 10,
     offset: int = None,
@@ -425,11 +434,15 @@ def get_transactions(
     Returns the list of the last ten transactions
     :param str type: The type of the transaction to return
     :param bool show_unconfirmed: Show unconfirmed transactions
+    :param bool valid: If True, only return valid transactions
     :param int cursor: The index of the most recent transactions to return (e.g. $LAST_TX_INDEX)
     :param int limit: The number of transactions to return (e.g. 2)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    table_name = "all_transactions" if show_unconfirmed else "transactions"
+    table_name = "all_transactions_with_status" if show_unconfirmed else "transactions_with_status"
+    where = None
+    if valid is not None:
+        where = {"valid": valid}
     return select_rows(
         ledger_db,
         table_name,
@@ -437,7 +450,7 @@ def get_transactions(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        where=prepare_transactions_where(type),
+        where=prepare_transactions_where(type, where),
     )
 
 
@@ -446,6 +459,7 @@ def get_transactions_by_block(
     block_index: int,
     type: TransactionType = "all",  # pylint: disable=W0622
     show_unconfirmed: bool = False,
+    valid: bool = None,
     cursor: int = None,
     limit: int = 10,
     offset: int = None,
@@ -455,12 +469,15 @@ def get_transactions_by_block(
     :param int block_index: The index of the block to return (e.g. $LAST_BLOCK_INDEX)
     :param str type: The type of the transaction to return
     :param bool show_unconfirmed: Show unconfirmed transactions
+    :param bool valid: If True, only return valid transactions
     :param int cursor: The last transaction index to return (e.g. $LAST_TX_INDEX)
     :param int limit: The maximum number of transactions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    table_name = "all_transactions" if show_unconfirmed else "transactions"
+    table_name = "all_transactions_with_status" if show_unconfirmed else "transactions_with_status"
     where = {"block_index": block_index}
+    if valid is not None:
+        where["valid"] = valid
     return select_rows(
         ledger_db,
         table_name,
@@ -477,6 +494,7 @@ def get_transactions_by_address(
     address: str,
     type: TransactionType = "all",  # pylint: disable=W0622
     show_unconfirmed: bool = False,
+    valid: bool = None,
     cursor: int = None,
     limit: int = 10,
     offset: int = None,
@@ -486,12 +504,15 @@ def get_transactions_by_address(
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param str type: The type of the transaction to return
     :param bool show_unconfirmed: Show unconfirmed transactions
+    :param bool valid: If True, only return valid transactions
     :param int cursor: The last transaction index to return (e.g. $LAST_TX_INDEX)
     :param int limit: The maximum number of transactions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     where = {"source": address}
-    table_name = "all_transactions" if show_unconfirmed else "transactions"
+    if valid is not None:
+        where["valid"] = valid
+    table_name = "all_transactions_with_status" if show_unconfirmed else "transactions_with_status"
     return select_rows(
         ledger_db,
         table_name,
@@ -508,6 +529,7 @@ def get_transactions_by_addresses(
     addresses: str,
     type: TransactionType = "all",  # pylint: disable=W0622
     show_unconfirmed: bool = False,
+    valid: bool = None,
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
@@ -517,12 +539,15 @@ def get_transactions_by_addresses(
     :param str addresses: Comma separated list of addresses to return (e.g. $ADDRESS_1,$ADDRESS_2)
     :param str type: The type of the transaction to return
     :param bool show_unconfirmed: Show unconfirmed transactions
+    :param bool valid: If True, only return valid transactions
     :param int cursor: The last transaction index to return (e.g. $LAST_TX_INDEX)
     :param int limit: The maximum number of transactions to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     where = {"source__in": addresses.split(",")}
-    table_name = "all_transactions" if show_unconfirmed else "transactions"
+    if valid is not None:
+        where["valid"] = valid
+    table_name = "all_transactions_with_status" if show_unconfirmed else "transactions_with_status"
     return select_rows(
         ledger_db,
         table_name,
@@ -555,7 +580,7 @@ def get_transaction_types_count_by_block(
     :param int block_index: The index of the block to return (e.g. $LAST_TX_INDEX)
     :param bool count_unconfirmed: Count unconfirmed transactions
     """
-    table_name = "all_transactions" if count_unconfirmed else "transactions"
+    table_name = "all_transactions_with_status" if count_unconfirmed else "transactions_with_status"
     return select_rows(
         ledger_db,
         table_name,
@@ -575,7 +600,7 @@ def get_transaction_types_count_by_address(
     :param str address: The address to return (e.g. $ADDRESS_1)
     :param bool count_unconfirmed: Count unconfirmed transactions
     """
-    table_name = "all_transactions" if count_unconfirmed else "transactions"
+    table_name = "all_transactions_with_status" if count_unconfirmed else "transactions_with_status"
     return select_rows(
         ledger_db,
         table_name,
@@ -594,7 +619,7 @@ def get_transaction_by_hash(ledger_db, tx_hash: str):
     """
     return select_row(
         ledger_db,
-        "all_transactions",
+        "all_transactions_with_status",
         where={"tx_hash": tx_hash},
     )
 
@@ -606,7 +631,7 @@ def get_transaction_by_tx_index(ledger_db, tx_index: int):
     """
     return select_row(
         ledger_db,
-        "all_transactions",
+        "all_transactions_with_status",
         where={"tx_index": tx_index},
     )
 
@@ -737,7 +762,7 @@ def get_events_by_transaction_index(
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    query_result = select_row(ledger_db, "transactions", where={"tx_index": tx_index})
+    query_result = select_row(ledger_db, "transactions_with_status", where={"tx_index": tx_index})
     if query_result:
         return get_events_by_transaction_hash(
             ledger_db,
@@ -761,7 +786,7 @@ def get_events_by_transaction_index_and_event(
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    query_result = select_row(ledger_db, "transactions", where={"tx_index": tx_index})
+    query_result = select_row(ledger_db, "transactions_with_status", where={"tx_index": tx_index})
     if query_result:
         return get_events_by_transaction_hash_and_event(
             ledger_db,
@@ -1962,82 +1987,122 @@ def get_balances_by_addresses(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the balances to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
-    if asset is None:
-        where = [
-            {"address__in": addresses.split(","), "quantity__gt": 0},
-            {"utxo_address__in": addresses.split(","), "quantity__gt": 0},
-        ]
-        if type == "utxo":
-            where.pop(0)
-        elif type == "address":
-            where.pop(1)
+    address_list = addresses.split(",")
+    cursor_db = state_db.cursor()
 
-        assets_result = select_rows(
-            state_db,
-            "balances",
-            select="DISTINCT asset AS asset",
-            where=where,
-            order="ASC",
-            cursor_field="asset",
-            last_cursor=cursor,
-            offset=offset,
-            limit=limit,
+    # Build WHERE conditions based on type and asset filters
+    where_conditions = []
+    bindings = []
+
+    # Address conditions based on type
+    if type in ["all", "address"]:
+        where_conditions.append(
+            f"(address IN ({','.join(['?'] * len(address_list))}) AND quantity > 0)"
         )
-        assets = [asset["asset"] for asset in assets_result.result]
+        bindings.extend(address_list)
+
+    if type in ["all", "utxo"]:
+        where_conditions.append(
+            f"(utxo_address IN ({','.join(['?'] * len(address_list))}) AND quantity > 0)"
+        )
+        bindings.extend(address_list)
+
+    # Asset condition
+    asset_condition = ""
+    if asset is not None:
+        asset_condition = " AND (asset = ? OR asset_longname = ?)"
+        bindings.extend([asset, asset])
+
+    # Combine WHERE conditions
+    where_clause = " OR ".join(where_conditions)
+    if asset_condition:
+        where_clause = f"({where_clause}){asset_condition}"
+
+    # Handle cursor for pagination (only when asset is None)
+    cursor_condition = ""
+    if asset is None and offset is None and cursor is not None:
+        cursor_condition = " AND asset >= ?"
+        bindings.append(cursor)
+
+    # Build the main query with JSON aggregation
+    final_where_clause = f"({where_clause})"
+    if cursor_condition:
+        final_where_clause = f"({where_clause}){cursor_condition}"
+
+    sql = f"""
+        SELECT 
+            asset,
+            asset_longname,
+            SUM(quantity) as total,
+            json_group_array(
+                json_object(
+                    'address', address,
+                    'utxo', utxo,
+                    'utxo_address', utxo_address,
+                    'quantity', quantity
+                )
+            ) as addresses
+        FROM balances
+        WHERE {final_where_clause}
+        GROUP BY asset, asset_longname
+        ORDER BY asset ASC
+    """  # nosec B608  # noqa: S608
+
+    # Calculate next_cursor and result_count when asset is None
+    next_cursor = None
+    result_count = 0
+
+    if asset is None:
+        # Use limit + 1 to check if there are more results for pagination
+        query_limit = limit + 1
+        sql += f" LIMIT {query_limit}"
+        if offset:
+            sql += f" OFFSET {offset}"
+
+        cursor_db.execute(sql, bindings)
+        results = cursor_db.fetchall()
+
+        # Check if we have more results than the limit
+        if len(results) > limit:
+            next_cursor = results[-1]["asset"]  # Last asset name becomes next cursor
+            results = results[:-1]  # Remove the extra result
+
+        # Count total results for result_count (without cursor condition)
+        count_sql = f"""
+            SELECT COUNT(DISTINCT asset) as count
+            FROM balances
+            WHERE ({where_clause})
+        """  # nosec B608  # noqa: S608
+        count_bindings = (
+            bindings[:-1] if cursor is not None else bindings
+        )  # Remove cursor binding for count
+        cursor_db.execute(count_sql, count_bindings)
+        result_count = cursor_db.fetchone()["count"]
     else:
-        assets = [asset]
+        # When specific asset is provided, no pagination
+        if limit:
+            sql += f" LIMIT {limit}"
+        if offset:
+            sql += f" OFFSET {offset}"
 
-    where = [
-        {"address__in": addresses.split(","), "asset__in": assets, "quantity__gt": 0},
-        {"utxo_address__in": addresses.split(","), "asset__in": assets, "quantity__gt": 0},
-    ]
-    if type == "utxo":
-        where.pop(0)
-    elif type == "address":
-        where.pop(1)
+        cursor_db.execute(sql, bindings)
+        results = cursor_db.fetchall()
+        result_count = 1 if results else 0
 
-    balances = select_rows(
-        state_db,
-        "balances",
-        where=where,
-        select="address, asset, asset_longname, quantity, utxo, utxo_address",
-        order="ASC",
-        cursor_field="asset",
-        sort=sort,
-    ).result
-
+    # Process results to match the expected format
     result = []
-    if len(balances) > 0:
-        current_balances = {
-            "asset": balances[0]["asset"],
-            "asset_longname": balances[0]["asset_longname"],
-            "total": 0,
-            "addresses": [],
-        }
-        for balance in balances:
-            if balance["asset"] != current_balances["asset"]:
-                result.append(current_balances)
-                current_balances = {
-                    "asset": balance["asset"],
-                    "asset_longname": balances[0]["asset_longname"],
-                    "total": 0,
-                    "addresses": [],
-                }
-            current_balances["total"] += balance["quantity"]
-            current_balances["addresses"].append(
-                {
-                    "address": balance["address"],
-                    "utxo": balance["utxo"],
-                    "utxo_address": balance["utxo_address"],
-                    "quantity": balance["quantity"],
-                }
-            )
-        result.append(current_balances)
-    if asset is None:
-        return QueryResult(
-            result, assets_result.next_cursor, "balances", assets_result.result_count
+    for row in results:
+        addresses_data = json.loads(row["addresses"])
+        result.append(
+            {
+                "asset": row["asset"],
+                "asset_longname": row["asset_longname"],
+                "total": row["total"],
+                "addresses": addresses_data,
+            }
         )
-    return QueryResult(result, None, "balances", 1)
+
+    return QueryResult(result, next_cursor, "balances", result_count)
 
 
 def get_balances_by_address_and_asset(
@@ -2802,7 +2867,6 @@ def prepare_order_matches_where(status, other_conditions=None):
 SELECT_ORDERS = "*, "
 SELECT_ORDERS += "COALESCE((get_quantity * 1.0) / (give_quantity * 1.0), 0) AS give_price, "
 SELECT_ORDERS += "COALESCE((give_quantity * 1.0) / (get_quantity * 1.0), 0) AS get_price"
-
 SELECT_ORDER_MATCHES = SELECT_ORDERS.replace("get_", "forward_").replace("give_", "backward_")
 
 
@@ -2833,14 +2897,13 @@ def get_orders(
         where["give_asset"] = give_asset.upper()
     return select_rows(
         state_db,
-        "orders",
+        "orders_info",
         cursor_field="tx_index",
         where=prepare_order_where(status, where),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
         sort=sort,
-        select=SELECT_ORDERS,
     )
 
 
@@ -2881,14 +2944,13 @@ def get_orders_by_asset(
 
     return select_rows(
         state_db,
-        "orders",
+        "orders_info",
         cursor_field="tx_index",
         where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
         sort=sort,
-        select=SELECT_ORDERS,
     )
 
 
@@ -2912,14 +2974,13 @@ def get_orders_by_address(
     """
     return select_rows(
         state_db,
-        "orders",
+        "orders_info",
         cursor_field="tx_index",
         where=prepare_order_where(status, {"source": address}),
         last_cursor=cursor,
         limit=limit,
         offset=offset,
         sort=sort,
-        select=SELECT_ORDERS,
     )
 
 
@@ -2948,7 +3009,7 @@ def get_orders_by_two_assets(
     ) + prepare_order_where(status, {"give_asset": asset2.upper(), "get_asset": asset1.upper()})
     query_result = select_rows(
         state_db,
-        "orders",
+        "orders_info",
         cursor_field="tx_index",
         where=where,
         last_cursor=cursor,
@@ -3001,9 +3062,8 @@ def get_order(state_db, order_hash: str):
     """
     return select_row(
         state_db,
-        "orders",
+        "orders_info",
         where={"tx_hash": order_hash},
-        select=SELECT_ORDERS,
     )
 
 

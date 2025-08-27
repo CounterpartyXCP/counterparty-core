@@ -304,8 +304,8 @@ def compose(
     return (source, [], data)
 
 
-def unpack(message, return_dict=False):
-    if protocol.enabled("fairminter_v2"):
+def unpack(message, return_dict=False, block_index=None):
+    if protocol.enabled("fairminter_v2", block_index=block_index):
         try:
             return unpack_new(message, return_dict)
         except Exception:  # pylint: disable=broad-exception-caught
@@ -530,6 +530,7 @@ def parse(db, tx, message):
         problems.append("Soft cap deadline block must be > start block.")
 
     # if problems, insert into fairminters table with status invalid and return
+    status = "valid"
     if problems:
         status = "invalid: " + "; ".join(problems)
         bindings = {
@@ -541,6 +542,14 @@ def parse(db, tx, message):
         }
         ledger.events.insert_record(db, "fairminters", bindings, "NEW_FAIRMINTER")
         logger.info("Fair minter %s is invalid: %s", tx["tx_hash"], status)
+
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )
+
+    if problems:
         return
 
     # determine status

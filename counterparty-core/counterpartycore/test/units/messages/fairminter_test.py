@@ -667,6 +667,13 @@ def test_parse_fairminter_start_block(
                     "event": tx["tx_hash"],
                 },
             },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )
 
@@ -772,6 +779,13 @@ def test_parse_fairminter_no_start(
                         "quantity": 100,
                         "calling_function": "premint",
                         "event": tx["tx_hash"],
+                    },
+                },
+                {
+                    "table": "transactions_status",
+                    "values": {
+                        "tx_index": tx["tx_index"],
+                        "valid": True,
                     },
                 },
             ],
@@ -884,7 +898,7 @@ def test_compose_2(ledger_db, defaults, current_block_index):
     ) == (
         defaults["addresses"][1],
         [],
-        b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x03\n\x00\x00\x00\x00\x19\x07\x8b\x00\x00\x00\xf4\xf4\xf4\xf5`@",
+        b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x03\n\x00\x00\x00\x00\x19\x07\x8c\x00\x00\x00\xf4\xf4\xf4\xf5`@",
     )
 
     assert fairminter.compose(
@@ -903,5 +917,5 @@ def test_compose_2(ledger_db, defaults, current_block_index):
     ) == (
         defaults["addresses"][1],
         [],
-        b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x03\n\x00\x00\x00\x19\x07\x8b\x00\x00\x00\x00\xf4\xf4\xf4\xf5`@",
+        b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x03\n\x00\x00\x00\x19\x07\x8c\x00\x00\x00\x00\xf4\xf4\xf4\xf5`@",
     )

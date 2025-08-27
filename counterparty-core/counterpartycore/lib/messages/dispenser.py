@@ -313,7 +313,7 @@ def calculate_oracle_fee(
     return oracle_fee_btc
 
 
-def unpack(message, return_dict=False):
+def unpack(message, return_dict=False, block_index=None):
     try:
         action_address = None
         oracle_address = None
@@ -322,7 +322,7 @@ def unpack(message, return_dict=False):
         )
         read = LENGTH
         if dispenser_status == STATUS_OPEN_EMPTY_ADDRESS or (
-            protocol.enabled("dispenser_origin_permission_extended")
+            protocol.enabled("dispenser_origin_permission_extended", block_index=block_index)
             and dispenser_status == STATUS_CLOSED
             and len(message) > read
         ):
@@ -691,6 +691,12 @@ def parse(db, tx, message):
                 "status": status,
             },
         )
+
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )
 
     cursor.close()
 
