@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v11.0.0 (2025-03-??)
+# Release Notes - Counterparty Core v11.0.2 (2025-08-28)
 
 This version is a small-ish release. Most importantly, it fixed a regression in transaction handling where empty descriptions could be incorrectly encoded into issuance transactions of various types (including locking, e.g.) and addressed a bug whereby using the `verbose=true` parameter could cause the node API to hang. This version also introduces a transaction validity flag and new API filters, improving clarity and queryability; it (finally) adds Bitcoin Core cookie authentication (which is now the recommended method) and updates the official Docker image to use Alpine rather than Ubuntu, which reduces the image size from 1.1 GB to 126 MB.
 
