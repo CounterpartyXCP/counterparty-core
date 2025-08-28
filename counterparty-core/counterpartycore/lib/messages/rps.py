@@ -51,6 +51,12 @@ def parse(db, tx):
     )
     replay_events(db, tx["tx_hash"])
 
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        True,  # always valid for replay events
+    )
+
 
 def expire(db, block_index):
     logger.trace(

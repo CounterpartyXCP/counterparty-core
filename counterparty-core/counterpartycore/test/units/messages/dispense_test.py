@@ -113,5 +113,12 @@ def test_parse_lost_found(ledger_db, blockchain_mock, defaults, test_helpers, cu
                     "quantity": 100,
                 },
             },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": True,
+                },
+            },
         ],
     )

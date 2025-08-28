@@ -167,6 +167,7 @@ class CustomisedJSONFormatter(JSONFormatter):
             extra["stack_info"] = None
         extra["thread"] = record.thread
         extra["threadName"] = record.threadName
+        extra["current_commit"] = config.CURRENT_COMMIT
 
         if (
             record.levelno != logging.EVENT

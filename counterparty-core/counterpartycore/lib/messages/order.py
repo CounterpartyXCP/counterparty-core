@@ -470,6 +470,12 @@ def parse(db, tx, message):
 
     order_parse_cursor.close()
 
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        "invalid" not in status,
+    )
+
 
 def match(db, tx, block_index=None):
     cursor = db.cursor()

@@ -115,3 +115,9 @@ def parse(db, tx, message):
     logger.info("Cancel %(offer_type)s %(offer_hash)s (%(tx_hash)s) [%(status)s]", log_data)
 
     cursor.close()
+
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )

@@ -124,9 +124,9 @@ def unpack_new(message):
     return (asset, quantity)
 
 
-def unpack(message, return_dict=False):
+def unpack(message, return_dict=False, block_index=None):
     try:
-        if protocol.enabled("fairminter_v2"):
+        if protocol.enabled("fairminter_v2", block_index=block_index):
             try:
                 (asset, quantity) = unpack_new(message)
             except Exception:  # pylint: disable=broad-exception-caught
@@ -160,6 +160,15 @@ def parse(db, tx, message):
         }
         ledger.events.insert_record(db, "fairmints", bindings, "NEW_FAIRMINT")
         logger.info("Fairmint %s  is invalid: %s", tx["tx_hash"], status)
+
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )
+
+    if problems:
+        # stop here to avoid further processing
         return
 
     # get corresponding fairminter

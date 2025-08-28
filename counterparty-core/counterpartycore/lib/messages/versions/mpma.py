@@ -273,5 +273,11 @@ def parse(db, tx, message):
 
     cursor.close()
 
+    ledger.blocks.set_transaction_status(
+        db,
+        tx["tx_index"],
+        status == "valid",
+    )
+
 
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
