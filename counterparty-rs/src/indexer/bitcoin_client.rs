@@ -647,6 +647,7 @@ pub fn parse_transaction(
         });
     }
     let mut parsed_vouts: Result<ParsedVouts, String> = Err("Not Parsed".to_string());
+    let mut has_potential_dispensers = false;
     if parse_vouts {
         for (vi, vout) in tx.output.iter().enumerate() {
             if !config.multisig_addresses_enabled(height) {
@@ -717,6 +718,11 @@ pub fn parse_transaction(
                 "Multisig addresses are not enabled".to_string(),
             ));
         }
+        // Check if there are potential dispensers (transactions that could trigger a dispenser)
+        // before moving potential_dispensers into ParsedVouts
+        has_potential_dispensers = potential_dispensers.iter().any(|pd| {
+            pd.as_ref().map_or(false, |p| p.destination.is_some() && p.value.is_some())
+        });
         parsed_vouts = if let Some(e) = err {
             Err(e.to_string())
         } else {
@@ -733,8 +739,9 @@ pub fn parse_transaction(
 
     // Try to get previous transactions info if RPC is available and data is not empty
     let mut prev_txs = vec![None; tx.input.len()];
+
     if !data.is_empty() || 
-        parsed_vouts.as_ref().map_or(false, |p| p.destinations == vec![config.unspendable()]) {
+        parsed_vouts.as_ref().map_or(false, |p| p.destinations == vec![config.unspendable()]) || has_potential_dispensers {
 
         if BATCH_CLIENT.lock().unwrap().is_none() {
             *BATCH_CLIENT.lock().unwrap() = Some(

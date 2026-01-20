@@ -20,6 +20,7 @@ dependencies = [
 
 [tool.maturin]
 strip = true
+profile = "release"
 
 [tool.hatch.version]
 path = "../counterparty-core/counterpartycore/lib/config.py"
