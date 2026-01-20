@@ -21,7 +21,7 @@ use crypto::rc4::Rc4;
 use crypto::symmetriccipher::SynchronousStreamCipher;
 
 use crate::indexer::block::VinOutput;
-use crate::indexer::rpc_client::{BatchRpcClient, BATCH_CLIENT};
+use crate::indexer::rpc_client::{BatchRpcClient, GLOBAL_TX_CACHE, THREAD_BATCH_CLIENT};
 
 use std::sync::Arc;
 
@@ -595,19 +595,69 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
     }
 }
 
-pub fn parse_transaction(
+/// Result of preliminary vout parsing - used to determine which transactions need input fetching
+pub struct PreliminaryParseResult {
+    pub needs_inputs: bool,
+    pub input_txids: Vec<Txid>,
+    pub parsed_vouts: Result<ParsedVouts, String>,
+    pub data: Vec<u8>,
+    pub is_reveal_tx: bool,
+    pub has_potential_dispensers: bool,
+}
+
+/// Collect all input txids needed for a block in a single pass
+pub fn collect_block_input_txids(
+    block: &Block,
+    config: &Config,
+    height: u32,
+) -> (Vec<PreliminaryParseResult>, Vec<Txid>) {
+    let mut all_results = Vec::with_capacity(block.txdata.len());
+    let mut all_txids_to_fetch = Vec::new();
+    
+    for tx in block.txdata.iter() {
+        let result = preliminary_parse_transaction(tx, config, height);
+        if result.needs_inputs {
+            for txid in &result.input_txids {
+                all_txids_to_fetch.push(*txid);
+            }
+        }
+        all_results.push(result);
+    }
+    
+    (all_results, all_txids_to_fetch)
+}
+
+/// Collect required input txids for a block, filtering those already cached.
+pub fn collect_required_input_txids(
+    block: &Block,
+    config: &Config,
+    height: u32,
+) -> (Vec<PreliminaryParseResult>, Vec<Txid>, Vec<Txid>) {
+    let (preliminary_results, all_txids) = collect_block_input_txids(block, config, height);
+    let mut unique_txids = all_txids;
+    unique_txids.sort();
+    unique_txids.dedup();
+    let mut missing_txids = Vec::new();
+    {
+        let mut cache = GLOBAL_TX_CACHE.lock().unwrap();
+        for txid in unique_txids.iter() {
+            if cache.get(txid).is_none() {
+                missing_txids.push(*txid);
+            }
+        }
+    }
+    (preliminary_results, unique_txids, missing_txids)
+}
+
+/// Preliminary parsing: parse vouts to determine if we need to fetch inputs
+fn preliminary_parse_transaction(
     tx: &bitcoin::Transaction,
     config: &Config,
     height: u32,
-    parse_vouts: bool,
-) -> Transaction {
-    let tx_bytes = serialize(tx);
-    let mut vins = Vec::new();
-    let mut segwit = false;
+) -> PreliminaryParseResult {
     let mut vtxinwit: Vec<Vec<String>> = Vec::new();
-
-    // Always process all inputs
-    for (i, vin) in tx.input.iter().enumerate() {
+    
+    for vin in tx.input.iter() {
         if !vin.witness.is_empty() {
             vtxinwit.push(
                 vin.witness
@@ -615,7 +665,6 @@ pub fn parse_transaction(
                     .map(|w| w.as_hex().to_string())
                     .collect::<Vec<_>>(),
             );
-            segwit = true;
         } else {
             vtxinwit.push(Vec::new());
         }
@@ -629,152 +678,296 @@ pub fn parse_transaction(
         Vec::new()
     };
 
-    let mut vouts = Vec::new();
     let mut destinations = Vec::new();
-    let mut fee = 0;
-    let mut btc_amount = 0;
     let mut data = Vec::new();
     let mut is_reveal_tx = false;
-    let mut commit_parent_txid = Txid::from_raw_hash(Sha256dHash::all_zeros());
-    let mut commit_parent_vout = 0;
     let mut potential_dispensers = Vec::new();
     let mut err = None;
-    for vout in tx.output.iter() {
-        vouts.push(Vout {
-            value: vout.value.to_sat(),
-            script_pub_key: vout.script_pubkey.to_bytes(),
-            //is_segwit: vout.script_pubkey.is_witness_program(),
-        });
-    }
-    let mut parsed_vouts: Result<ParsedVouts, String> = Err("Not Parsed".to_string());
-    let mut has_potential_dispensers = false;
-    if parse_vouts {
-        for (vi, vout) in tx.output.iter().enumerate() {
-            if !config.multisig_addresses_enabled(height) {
-                continue;
+    let mut fee = 0;
+    let mut btc_amount = 0;
+
+    for (vi, vout) in tx.output.iter().enumerate() {
+        if !config.multisig_addresses_enabled(height) {
+            continue;
+        }
+        let output_value = vout.value.to_sat() as i64;
+        fee -= output_value;
+        let result = parse_vout(
+            config,
+            key.clone(),
+            height,
+            tx.compute_txid().to_string(),
+            vi,
+            &vout.clone(),
+        );
+        match result {
+            Err(e) => {
+                err = Some(e);
+                break;
             }
-            let output_value = vout.value.to_sat() as i64;
-            fee -= output_value;
-            let result = parse_vout(
-                &config,
-                key.clone(),
-                height,
-                tx.compute_txid().to_string(),
-                vi,
-                &vout.clone(),
-            );
-            match result {
-                Err(e) => {
-                    err = Some(e);
+            Ok((parse_output, potential_dispenser)) => {
+                potential_dispensers.push(potential_dispenser);
+                if data.is_empty()
+                    && parse_output.is_destination()
+                    && destinations != vec![config.unspendable()]
+                {
+                    if let ParseOutput::Destination(destination) = parse_output {
+                        destinations.push(destination);
+                    }
+                    btc_amount += output_value;
+                } else if parse_output.is_destination() {
                     break;
-                }
-                Ok((parse_output, potential_dispenser)) => {
-                    potential_dispensers.push(potential_dispenser);
-                    if data.is_empty()
-                        && parse_output.is_destination()
-                        && destinations != vec![config.unspendable()]
-                    {
-                        if let ParseOutput::Destination(destination) = parse_output {
-                            destinations.push(destination);
-                        }
-                        btc_amount += output_value;
-                    } else if parse_output.is_destination() {
-                        break;
-                    } else if let ParseOutput::Data(mut new_data) = parse_output {
-                        // reveal transaction data
-                        if config.taproot_support_enabled(height) && new_data == b"CNTRPRTY" && !vtxinwit.is_empty() && vtxinwit[0].len() == 3 {
-                            if let Ok(bytes) = hex::decode(&vtxinwit[0][1]) {
-                                let script = Script::from_bytes(&bytes);
-                                match extract_data_from_witness(&script) {
-                                    Ok(mut inscription_data) => {
-                                        if !inscription_data.is_empty() {
-                                            is_reveal_tx = true;
-                                            data.append(&mut inscription_data);
-                                        }
-                                    },
-                                    Err(e) => {
-                                        err = Some(Error::ParseVout(format!(
-                                            "Failed to extract data from witness script: {} for tx: {}",
-                                            e,
-                                            tx.compute_txid().to_string()
-                                        )));
+                } else if let ParseOutput::Data(mut new_data) = parse_output {
+                    if config.taproot_support_enabled(height) && new_data == b"CNTRPRTY" && !vtxinwit.is_empty() && vtxinwit[0].len() == 3 {
+                        if let Ok(bytes) = hex::decode(&vtxinwit[0][1]) {
+                            let script = Script::from_bytes(&bytes);
+                            match extract_data_from_witness(script) {
+                                Ok(mut inscription_data) => {
+                                    if !inscription_data.is_empty() {
+                                        is_reveal_tx = true;
+                                        data.append(&mut inscription_data);
                                     }
+                                },
+                                Err(e) => {
+                                    err = Some(Error::ParseVout(format!(
+                                        "Failed to extract data from witness script: {} for tx: {}",
+                                        e,
+                                        tx.compute_txid().to_string()
+                                    )));
                                 }
-                            } else {
-                                err = Some(Error::ParseVout(format!(
-                                    "Failed to decode taproot witness hex for tx: {}",
-                                    tx.compute_txid().to_string()
-                                )));
                             }
                         } else {
-                            data.append(&mut new_data)
+                            err = Some(Error::ParseVout(format!(
+                                "Failed to decode taproot witness hex for tx: {}",
+                                tx.compute_txid().to_string()
+                            )));
                         }
+                    } else {
+                        data.append(&mut new_data)
                     }
                 }
             }
         }
-        if !config.multisig_addresses_enabled(height) {
-            err = Some(Error::ParseVout(
-                "Multisig addresses are not enabled".to_string(),
-            ));
-        }
-        // Check if there are potential dispensers (transactions that could trigger a dispenser)
-        // before moving potential_dispensers into ParsedVouts
-        has_potential_dispensers = potential_dispensers.iter().any(|pd| {
-            pd.as_ref().map_or(false, |p| p.destination.is_some() && p.value.is_some())
-        });
-        parsed_vouts = if let Some(e) = err {
-            Err(e.to_string())
-        } else {
-            Ok(ParsedVouts {
-                destinations,
-                btc_amount,
-                fee,
-                data: data.clone(),
-                potential_dispensers,
-                is_reveal_tx,
-            })
-        };
     }
 
-    // Try to get previous transactions info if RPC is available and data is not empty
-    let mut prev_txs = vec![None; tx.input.len()];
+    if !config.multisig_addresses_enabled(height) {
+        err = Some(Error::ParseVout(
+            "Multisig addresses are not enabled".to_string(),
+        ));
+    }
 
-    if !data.is_empty() || 
-        parsed_vouts.as_ref().map_or(false, |p| p.destinations == vec![config.unspendable()]) || has_potential_dispensers {
+    let has_potential_dispensers = potential_dispensers.iter().any(|pd| {
+        pd.as_ref().map_or(false, |p| p.destination.is_some() && p.value.is_some())
+    });
 
-        if BATCH_CLIENT.lock().unwrap().is_none() {
-            *BATCH_CLIENT.lock().unwrap() = Some(
-                BatchRpcClient::new(
-                    config.rpc_address.clone(),
-                    config.rpc_user.clone(),
-                    config.rpc_password.clone(),
-                )
-                .unwrap(),
+    let parsed_vouts = if let Some(e) = err {
+        Err(e.to_string())
+    } else {
+        Ok(ParsedVouts {
+            destinations: destinations.clone(),
+            btc_amount,
+            fee,
+            data: data.clone(),
+            potential_dispensers,
+            is_reveal_tx,
+        })
+    };
+
+    // Determine if we need to fetch inputs
+    let needs_inputs = !data.is_empty() 
+        || parsed_vouts.as_ref().map_or(false, |p| p.destinations == vec![config.unspendable()])
+        || has_potential_dispensers;
+
+    // Collect input txids if needed
+    let input_txids: Vec<Txid> = if needs_inputs {
+        tx.input.iter().map(|vin| vin.previous_output.txid).collect()
+    } else {
+        Vec::new()
+    };
+
+    PreliminaryParseResult {
+        needs_inputs,
+        input_txids,
+        parsed_vouts,
+        data,
+        is_reveal_tx,
+        has_potential_dispensers,
+    }
+}
+
+pub fn parse_transaction(
+    tx: &bitcoin::Transaction,
+    config: &Config,
+    height: u32,
+    parse_vouts: bool,
+) -> Transaction {
+    parse_transaction_with_cache(tx, config, height, parse_vouts, None, None)
+}
+
+pub fn parse_transaction_with_cache(
+    tx: &bitcoin::Transaction,
+    config: &Config,
+    height: u32,
+    parse_vouts: bool,
+    preliminary: Option<&PreliminaryParseResult>,
+    prev_txs_cache: Option<&HashMap<Txid, Option<bitcoin::Transaction>>>,
+) -> Transaction {
+    let tx_bytes = serialize(tx);
+    let mut vins = Vec::new();
+    let mut segwit = false;
+    let mut vtxinwit: Vec<Vec<String>> = Vec::new();
+
+    // Always process all inputs
+    for vin in tx.input.iter() {
+        if !vin.witness.is_empty() {
+            vtxinwit.push(
+                vin.witness
+                    .iter()
+                    .map(|w| w.as_hex().to_string())
+                    .collect::<Vec<_>>(),
             );
+            segwit = true;
+        } else {
+            vtxinwit.push(Vec::new());
+        }
+    }
+
+    let mut vouts = Vec::new();
+    for vout in tx.output.iter() {
+        vouts.push(Vout {
+            value: vout.value.to_sat(),
+            script_pub_key: vout.script_pubkey.to_bytes(),
+        });
+    }
+
+    // Use preliminary results if available, otherwise parse vouts
+    let (parsed_vouts, _data, is_reveal_tx, _has_potential_dispensers, needs_inputs) = 
+        if let Some(prelim) = preliminary {
+            (
+                prelim.parsed_vouts.clone(),
+                prelim.data.clone(),
+                prelim.is_reveal_tx,
+                prelim.has_potential_dispensers,
+                prelim.needs_inputs,
+            )
+        } else if parse_vouts {
+            // Fall back to parsing vouts if no preliminary results
+            let prelim = preliminary_parse_transaction(tx, config, height);
+            (
+                prelim.parsed_vouts,
+                prelim.data,
+                prelim.is_reveal_tx,
+                prelim.has_potential_dispensers,
+                prelim.needs_inputs,
+            )
+        } else {
+            (Err("Not Parsed".to_string()), Vec::new(), false, false, false)
+        };
+
+    // Try to get previous transactions info
+    let mut prev_txs: Vec<Option<bitcoin::Transaction>> = vec![None; tx.input.len()];
+    let mut commit_parent_txid = Txid::from_raw_hash(Sha256dHash::all_zeros());
+    let mut commit_parent_vout = 0;
+
+    if needs_inputs {
+        if let Some(cache) = prev_txs_cache {
+            for (i, vin) in tx.input.iter().enumerate() {
+                let txid = vin.previous_output.txid;
+                if let Some(cached_tx) = cache.get(&txid) {
+                    prev_txs[i] = cached_tx.clone();
+                }
+            }
         }
 
-        if let Some(batch_client) = BATCH_CLIENT.lock().unwrap().as_ref() {
+        {
+            let mut cache = GLOBAL_TX_CACHE.lock().unwrap();
+            for (i, vin) in tx.input.iter().enumerate() {
+                if prev_txs[i].is_some() {
+                    continue;
+                }
+                let txid = vin.previous_output.txid;
+                if let Some(cached_tx) = cache.get(&txid) {
+                    prev_txs[i] = cached_tx.clone();
+                }
+            }
+        }
 
-            let input_txids: Vec<_> = tx
-                .input
-                .iter()
-                .map(|vin| vin.previous_output.txid)
-                .collect();
-            prev_txs = batch_client
-                .get_transactions(&input_txids)
-                .unwrap_or_default();
+        let mut missing_txids = Vec::new();
+        for (i, vin) in tx.input.iter().enumerate() {
+            if prev_txs[i].is_none() {
+                missing_txids.push(vin.previous_output.txid);
+            }
+        }
 
-            if is_reveal_tx && !prev_txs.is_empty() {
-                if let Some(prev_tx) = &prev_txs[0] {
-                    if !prev_tx.input.is_empty() {
-                        commit_parent_txid = prev_tx.input[0].previous_output.txid;
-                        commit_parent_vout = prev_tx.input[0].previous_output.vout as usize;
-                        if let Ok(fetched_txs) = batch_client.get_transactions(&[commit_parent_txid]) {
-                            if !fetched_txs.is_empty() {
-                                prev_txs[0] = fetched_txs[0].clone();
-                            }
+        if !missing_txids.is_empty() {
+            THREAD_BATCH_CLIENT.with(|client_cell| {
+                let mut client_ref = client_cell.borrow_mut();
+                if client_ref.is_none() {
+                    *client_ref = Some(
+                        BatchRpcClient::new(
+                            config.rpc_address.clone(),
+                            config.rpc_user.clone(),
+                            config.rpc_password.clone(),
+                        )
+                        .unwrap(),
+                    );
+                }
+
+                let batch_client = client_ref.as_ref().unwrap();
+                let fetched_prev_txs = batch_client
+                    .get_transactions(&missing_txids)
+                    .unwrap_or_default();
+
+                for (txid, fetched_tx) in missing_txids.iter().zip(fetched_prev_txs.iter()) {
+                    for (i, vin) in tx.input.iter().enumerate() {
+                        if vin.previous_output.txid == *txid {
+                            prev_txs[i] = fetched_tx.clone();
                         }
+                    }
+                }
+            });
+        }
+
+        if is_reveal_tx && !prev_txs.is_empty() {
+            if let Some(prev_tx) = &prev_txs[0] {
+                if !prev_tx.input.is_empty() {
+                    commit_parent_txid = prev_tx.input[0].previous_output.txid;
+                    commit_parent_vout = prev_tx.input[0].previous_output.vout as usize;
+                    let mut parent_tx = None;
+                    if let Some(cache) = prev_txs_cache {
+                        if let Some(cached_tx) = cache.get(&commit_parent_txid) {
+                            parent_tx = cached_tx.clone();
+                        }
+                    }
+                    if parent_tx.is_none() {
+                        let mut cache = GLOBAL_TX_CACHE.lock().unwrap();
+                        if let Some(cached_tx) = cache.get(&commit_parent_txid) {
+                            parent_tx = cached_tx.clone();
+                        }
+                    }
+                    if parent_tx.is_none() {
+                        THREAD_BATCH_CLIENT.with(|client_cell| {
+                            let mut client_ref = client_cell.borrow_mut();
+                            if client_ref.is_none() {
+                                *client_ref = Some(
+                                    BatchRpcClient::new(
+                                        config.rpc_address.clone(),
+                                        config.rpc_user.clone(),
+                                        config.rpc_password.clone(),
+                                    )
+                                    .unwrap(),
+                                );
+                            }
+                            let batch_client = client_ref.as_ref().unwrap();
+                            if let Ok(parent_txs) = batch_client.get_transactions(&[commit_parent_txid]) {
+                                if let Some(cached_tx) = parent_txs.get(0) {
+                                    parent_tx = cached_tx.clone();
+                                }
+                            }
+                        });
+                    }
+                    if parent_tx.is_some() {
+                        prev_txs[0] = parent_tx;
                     }
                 }
             }
@@ -837,11 +1030,145 @@ pub fn parse_transaction(
     }
 }
 
+pub fn parse_block_with_cache(
+    block: &Block,
+    config: &Config,
+    height: u32,
+    prev_txs_cache: &HashMap<Txid, Option<bitcoin::Transaction>>,
+) -> CrateBlock {
+    let (preliminary_results, _all_txids) = collect_block_input_txids(block, config, height);
+    let mut transactions = Vec::new();
+    for (i, tx) in block.txdata.iter().enumerate() {
+        transactions.push(parse_transaction_with_cache(
+            tx,
+            config,
+            height,
+            true,
+            Some(&preliminary_results[i]),
+            Some(prev_txs_cache),
+        ));
+    }
+    CrateBlock {
+        height,
+        version: block.header.version.to_consensus(),
+        hash_prev: block.header.prev_blockhash.to_string(),
+        hash_merkle_root: block.header.merkle_root.to_string(),
+        block_time: block.header.time,
+        bits: block.header.bits.to_consensus(),
+        nonce: block.header.nonce,
+        block_hash: block.block_hash().to_string(),
+        transaction_count: block.txdata.len(),
+        transactions,
+    }
+}
+
+/// Fetch all needed previous transactions for a block in a single batch RPC call
+fn batch_fetch_prev_transactions(
+    config: &Config,
+    preliminary_results: &[PreliminaryParseResult],
+    block: &Block,
+) -> HashMap<Txid, Option<bitcoin::Transaction>> {
+    // Collect all unique txids needed
+    let mut all_txids: Vec<Txid> = Vec::new();
+    for (i, prelim) in preliminary_results.iter().enumerate() {
+        if prelim.needs_inputs {
+            for txid in &prelim.input_txids {
+                all_txids.push(*txid);
+            }
+        }
+        // For reveal transactions, we also need to fetch the parent of the commit tx
+        // This will be handled in a second pass after we get the first batch
+        let _ = i; // suppress unused warning
+    }
+
+    if all_txids.is_empty() {
+        return HashMap::new();
+    }
+
+    // Deduplicate txids
+    all_txids.sort();
+    all_txids.dedup();
+
+    // Use thread-local client for parallel execution across workers
+    THREAD_BATCH_CLIENT.with(|client_cell| {
+        let mut client_ref = client_cell.borrow_mut();
+        if client_ref.is_none() {
+            *client_ref = Some(
+                BatchRpcClient::new(
+                    config.rpc_address.clone(),
+                    config.rpc_user.clone(),
+                    config.rpc_password.clone(),
+                )
+                .unwrap(),
+            );
+        }
+
+        let batch_client = client_ref.as_ref().unwrap();
+        let mut result_map: HashMap<Txid, Option<bitcoin::Transaction>> = HashMap::new();
+
+        // First batch: fetch all direct input txids
+        let fetched_txs = batch_client.get_transactions(&all_txids).unwrap_or_default();
+        for (i, txid) in all_txids.iter().enumerate() {
+            if let Some(tx_opt) = fetched_txs.get(i) {
+                result_map.insert(*txid, tx_opt.clone());
+            }
+        }
+
+        // Second pass: collect reveal tx parent txids that we need
+        let mut reveal_parent_txids: Vec<Txid> = Vec::new();
+        for (tx_idx, prelim) in preliminary_results.iter().enumerate() {
+            if prelim.is_reveal_tx && prelim.needs_inputs {
+                let tx = &block.txdata[tx_idx];
+                if !tx.input.is_empty() {
+                    let first_input_txid = tx.input[0].previous_output.txid;
+                    if let Some(Some(prev_tx)) = result_map.get(&first_input_txid) {
+                        if !prev_tx.input.is_empty() {
+                            let parent_txid = prev_tx.input[0].previous_output.txid;
+                            if !result_map.contains_key(&parent_txid) {
+                                reveal_parent_txids.push(parent_txid);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Deduplicate and fetch reveal parent txids if any
+        if !reveal_parent_txids.is_empty() {
+            reveal_parent_txids.sort();
+            reveal_parent_txids.dedup();
+            
+            let parent_txs = batch_client.get_transactions(&reveal_parent_txids).unwrap_or_default();
+            for (i, txid) in reveal_parent_txids.iter().enumerate() {
+                if let Some(tx_opt) = parent_txs.get(i) {
+                    result_map.insert(*txid, tx_opt.clone());
+                }
+            }
+        }
+
+        result_map
+    })
+}
+
 impl ToBlock for Block {
     fn to_block(&self, config: Config, height: u32) -> CrateBlock {
+        // Phase 1: Preliminary parse to identify transactions needing inputs
+        let (preliminary_results, _all_txids) = collect_block_input_txids(self, &config, height);
+        
+        // Phase 2: Batch fetch all needed previous transactions
+        let prev_txs_cache = batch_fetch_prev_transactions(&config, &preliminary_results, self);
+        
+        // Phase 3: Full parse with cached transactions
         let mut transactions = Vec::new();
-        for tx in self.txdata.iter() {
-            transactions.push(parse_transaction(tx, &config, height, true));
+        for (i, tx) in self.txdata.iter().enumerate() {
+            transactions.push(parse_transaction_with_cache(
+                tx,
+                &config,
+                height,
+                true,
+                Some(&preliminary_results[i]),
+                Some(&prev_txs_cache),
+            ));
         }
         CrateBlock {
             height,
@@ -864,10 +1191,45 @@ pub fn parse_block(
     height: u32,
     parse_vouts: bool,
 ) -> Result<CrateBlock, Error> {
-    let mut transactions = Vec::new();
-    for tx in block.txdata.iter() {
-        transactions.push(parse_transaction(tx, config, height, parse_vouts));
+    if !parse_vouts {
+        // If not parsing vouts, no need for batch optimization
+        let mut transactions = Vec::new();
+        for tx in block.txdata.iter() {
+            transactions.push(parse_transaction(tx, config, height, parse_vouts));
+        }
+        return Ok(CrateBlock {
+            height,
+            version: block.header.version.to_consensus(),
+            hash_prev: block.header.prev_blockhash.to_string(),
+            hash_merkle_root: block.header.merkle_root.to_string(),
+            block_time: block.header.time,
+            bits: block.header.bits.to_consensus(),
+            nonce: block.header.nonce,
+            block_hash: block.block_hash().to_string(),
+            transaction_count: block.txdata.len(),
+            transactions,
+        });
     }
+
+    // Phase 1: Preliminary parse to identify transactions needing inputs
+    let (preliminary_results, _all_txids) = collect_block_input_txids(&block, config, height);
+    
+    // Phase 2: Batch fetch all needed previous transactions
+    let prev_txs_cache = batch_fetch_prev_transactions(config, &preliminary_results, &block);
+    
+    // Phase 3: Full parse with cached transactions
+    let mut transactions = Vec::new();
+    for (i, tx) in block.txdata.iter().enumerate() {
+        transactions.push(parse_transaction_with_cache(
+            tx,
+            config,
+            height,
+            true,
+            Some(&preliminary_results[i]),
+            Some(&prev_txs_cache),
+        ));
+    }
+    
     Ok(CrateBlock {
         height,
         version: block.header.version.to_consensus(),

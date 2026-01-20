@@ -1,6 +1,8 @@
-use bitcoin::BlockHash;
+use bitcoin::{Block as BitcoinBlock, BlockHash, Transaction as BitcoinTransaction, Txid};
 use crossbeam_channel::{Receiver, Sender};
+use std::collections::HashMap;
 
+use crate::indexer::bitcoin_client::parse_block_with_cache;
 use crate::indexer::block::{Block, ToBlock};
 use crate::indexer::config::{Config, Mode};
 
@@ -91,6 +93,52 @@ impl<B> HasHeight for PipelineDataWithBlock<B> {
 impl<B> HasHash for PipelineDataWithBlock<B> {
     fn get_hash(&self) -> &BlockHash {
         &self.hash
+    }
+}
+
+pub struct PipelineDataWithPrefetchedTxs<B> {
+    pub prev: Box<PipelineDataWithBlock<B>>,
+    pub prev_txs_cache: HashMap<Txid, Option<BitcoinTransaction>>,
+}
+
+impl<B> HasHeight for PipelineDataWithPrefetchedTxs<B> {
+    fn get_height(&self) -> u32 {
+        self.prev.get_height()
+    }
+
+    fn get_target_height(&self) -> u32 {
+        self.prev.get_target_height()
+    }
+
+    fn get_rollback_height(&self) -> Option<u32> {
+        self.prev.get_rollback_height()
+    }
+}
+
+impl<B> HasHash for PipelineDataWithPrefetchedTxs<B> {
+    fn get_hash(&self) -> &BlockHash {
+        self.prev.get_hash()
+    }
+}
+
+impl Transition<Box<PipelineDataWithEntries<BitcoinBlock>>, Config, ()>
+    for PipelineDataWithPrefetchedTxs<BitcoinBlock>
+{
+    fn transition(
+        self: Box<Self>,
+        config: Config,
+    ) -> Result<((), Box<PipelineDataWithEntries<BitcoinBlock>>), Error> {
+        let height = self.get_height();
+        let entries = self.prev.block.get_entries(config.mode, height);
+        let block = parse_block_with_cache(&self.prev.block, &config, height, &self.prev_txs_cache);
+        Ok((
+            (),
+            Box::new(PipelineDataWithEntries {
+                prev: self.prev,
+                entries,
+                block: Box::new(block),
+            }),
+        ))
     }
 }
 

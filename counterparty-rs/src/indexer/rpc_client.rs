@@ -7,12 +7,44 @@ use reqwest::blocking::Client as HttpClient;
 use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use lru::LruCache;
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::num::NonZeroUsize;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
+// Thread-local client - each worker thread gets its own connection
+thread_local! {
+    pub static THREAD_BATCH_CLIENT: RefCell<Option<BatchRpcClient>> = const { RefCell::new(None) };
+}
+
 lazy_static! {
-    pub(crate) static ref BATCH_CLIENT: Mutex<Option<BatchRpcClient>> = Mutex::new(None);
+    pub static ref GLOBAL_TX_CACHE: Mutex<LruCache<Txid, Option<Transaction>>> =
+        Mutex::new(LruCache::new(NonZeroUsize::new(100_000).unwrap()));
+}
+
+pub fn get_cached_transaction(txid: &Txid) -> Option<Option<Transaction>> {
+    let mut cache = GLOBAL_TX_CACHE.lock().unwrap();
+    cache.get(txid).cloned()
+}
+
+pub fn build_cached_transactions_map(txids: &[Txid]) -> HashMap<Txid, Option<Transaction>> {
+    let mut cache = GLOBAL_TX_CACHE.lock().unwrap();
+    let mut result = HashMap::new();
+    for txid in txids {
+        if let Some(tx) = cache.get(txid) {
+            result.insert(*txid, tx.clone());
+        }
+    }
+    result
+}
+
+pub fn insert_cached_transactions(pairs: Vec<(Txid, Option<Transaction>)>) {
+    let mut cache = GLOBAL_TX_CACHE.lock().unwrap();
+    for (txid, tx) in pairs {
+        cache.put(txid, tx);
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -20,7 +52,6 @@ pub struct BatchRpcClient {
     client: Arc<HttpClient>,
     url: String,
     auth: String,
-    cache: Arc<Mutex<HashMap<Txid, Option<Transaction>>>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -85,11 +116,11 @@ impl BatchRpcClient {
             client: Arc::new(client),
             url,
             auth,
-            cache: Arc::new(Mutex::new(HashMap::new())),
         })
     }
 
-    // Le reste du code reste inchangé...
+    /// Fetch transactions by txids with cache.
+    /// Lock is released before HTTP call to avoid thread serialization on the mutex.
     pub fn get_transactions(
         &self,
         txids: &[Txid],
@@ -98,18 +129,23 @@ impl BatchRpcClient {
             return Ok(vec![]);
         }
 
-        let mut cache = self.cache.lock().unwrap();
-        let mut uncached_txids = Vec::new();
-        let mut result_map = HashMap::new();
-
-        for txid in txids {
-            if let Some(tx) = cache.get(txid) {
-                result_map.insert(*txid, tx.clone());
-            } else {
-                uncached_txids.push(*txid);
+        // Phase 1: Read cache under lock, collect uncached txids
+        let uncached_txids: Vec<Txid>;
+        let mut result_map: HashMap<Txid, Option<Transaction>> = HashMap::new();
+        {
+            let mut cache = GLOBAL_TX_CACHE.lock().unwrap();
+            let mut uncached = Vec::new();
+            for txid in txids {
+                if let Some(tx) = cache.get(txid) {
+                    result_map.insert(*txid, tx.clone());
+                } else {
+                    uncached.push(*txid);
+                }
             }
-        }
+            uncached_txids = uncached;
+        } // Lock released here before HTTP call
 
+        // All cached - return early
         if uncached_txids.is_empty() {
             return Ok(txids
                 .iter()
@@ -117,6 +153,7 @@ impl BatchRpcClient {
                 .collect());
         }
 
+        // Phase 2: HTTP call without holding the lock
         let requests: Vec<RpcRequest> = uncached_txids
             .iter()
             .enumerate()
@@ -147,6 +184,8 @@ impl BatchRpcClient {
 
         let responses: Vec<RpcResponse> = response.json()?;
 
+        // Phase 3: Parse responses and collect results
+        let mut fetched: Vec<(Txid, Option<Transaction>)> = Vec::with_capacity(uncached_txids.len());
         for (txid, response) in uncached_txids.iter().zip(responses.into_iter()) {
             let tx = match response {
                 RpcResponse {
@@ -174,9 +213,15 @@ impl BatchRpcClient {
                 }
                 _ => None,
             };
+            fetched.push((*txid, tx));
+        }
 
-            cache.insert(*txid, tx.clone());
-            result_map.insert(*txid, tx);
+        // Phase 4: Update cache under lock
+        insert_cached_transactions(fetched.clone());
+
+        // Merge into result_map
+        for (txid, tx) in fetched {
+            result_map.insert(txid, tx);
         }
 
         Ok(txids

@@ -8,6 +8,7 @@ use super::{stopper::Stopper, types::error::Error};
 pub mod consumer;
 pub mod extractor;
 pub mod fetcher;
+pub mod prefetcher;
 pub mod orderer;
 pub mod producer;
 pub mod reporter;

@@ -182,7 +182,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                         "Waiting to prefetch block %s...(%.1fs)", expected_height, retry / 10
                     )
                     # Use Event's wait method instead of time.sleep for better responsiveness
-                    self.stopped_event.wait(retry / 10)  # noqa: S311
+                    self.stopped_event.wait(0.05)  # noqa: S311
             except Exception as e:  # pylint: disable=broad-except
                 if str(e) == "Stopped error":
                     logger.warning(

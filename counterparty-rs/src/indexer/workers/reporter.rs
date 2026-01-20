@@ -17,7 +17,7 @@ use crate::indexer::{
 };
 
 #[allow(clippy::too_many_arguments)]
-pub fn new<C, D, E, F, G, H, T>(
+pub fn new<C, D, E, F, G, H, I, T>(
     start: Instant,
     start_height: u32,
     rx_c1: Receiver<C>,
@@ -26,6 +26,7 @@ pub fn new<C, D, E, F, G, H, T>(
     rx_c4: Receiver<F>,
     rx_c5: Receiver<G>,
     rx_c6: Receiver<H>,
+    rx_c7: Receiver<I>,
 ) -> impl Fn(Receiver<Box<PipelineDataBatch<T>>>, Sender<Box<Block>>, Stopper) -> Result<(), Error> + Clone
 where
     T: HasHeight + Transition<(), (), Box<Block>>,
@@ -113,11 +114,12 @@ where
                       total_elapsed = total_elapsed_formatted,
                       remaining_hrs = remaining_hrs_formatted,
                       f_c_len = rx_c1.len(),
-                      e_c_len = rx_c2.len(),
-                      o_c_len = rx_c3.len(),
-                      w_c_len = rx_c4.len(),
-                      r_c_len = rx_c5.len(),
-                      c_c_len = rx_c6.len(),
+                      p_c_len = rx_c2.len(),
+                      e_c_len = rx_c3.len(),
+                      o_c_len = rx_c4.len(),
+                      w_c_len = rx_c5.len(),
+                      r_c_len = rx_c6.len(),
+                      c_c_len = rx_c7.len(),
                       total_num_entries = total_num_entries,
                       "Write"
                   );
