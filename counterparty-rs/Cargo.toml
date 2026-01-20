@@ -19,10 +19,10 @@ sha256 = "1.5.0"
 bitcoin = "0.32.4"
 par-map = "0.1.4"
 tracing = "0.1.40"
-crossbeam-channel = "0.5.13"
+crossbeam-channel = "0.5.15"
 thiserror = "1.0.58"
 derive_more = "0.99.17"
-tracing-subscriber = { version = "0.3.18", features = [
+tracing-subscriber = { version = "0.3.20", features = [
   "env-filter",
   "fmt",
   "chrono",
