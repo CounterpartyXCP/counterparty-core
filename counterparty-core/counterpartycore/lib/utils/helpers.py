@@ -171,16 +171,19 @@ def get_current_commit_hash(not_from_env=False):
 
 
 def classify_mime_type(mime_type):
+    # Extract base MIME type (remove parameters like codecs)
+    base_mime_type = mime_type.split(";")[0].strip()
+    
     # Types that start with "text/" are textual
     if (
-        mime_type.startswith("text/")
-        or mime_type.startswith("message/")
-        or mime_type.endswith("+xml")
+        base_mime_type.startswith("text/")
+        or base_mime_type.startswith("message/")
+        or base_mime_type.endswith("+xml")
     ):
         return "text"
 
     # List of application types that are textual
-    if mime_type in [
+    if base_mime_type in [
         "application/xml",
         "application/javascript",
         "application/json",
@@ -214,7 +217,9 @@ def bytes_to_content(content: bytes, mime_type: str) -> str:
 def check_content(mime_type, content):
     problems = []
     content_mime_type = mime_type or "text/plain"
-    if content_mime_type not in mimetypes.types_map.values():
+    # Extract base MIME type (remove parameters like codecs)
+    base_mime_type = content_mime_type.split(";")[0].strip()
+    if base_mime_type not in mimetypes.types_map.values():
         problems.append(f"Invalid mime type: {mime_type}")
     try:
         content_to_bytes(content, content_mime_type)
