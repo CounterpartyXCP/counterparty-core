@@ -388,7 +388,8 @@ CONFIG_ARGS = [
     [
         ("--electrs-url",),
         {
-            "help": "the complete URL of the Electrs API, possibly including a specific port, for example: `https://mempool.space/api`",
+            "action": "append",
+            "help": "the complete URL of an Electrs API. Can be specified multiple times for failover. Example: `https://mempool.space/api`",
         },
     ],
     [
@@ -481,6 +482,13 @@ def welcome_message(action, server_configfile):
         cprint(f"API Access Log: {config.API_LOG}", "light_grey")
     else:
         cprint("Warning: API access log disabled", "yellow")
+
+    if getattr(config, "ELECTRS_URLS_IS_DEFAULT", False):
+        cprint(
+            "Warning: Using default Electrs URLs; not recommended for production. "
+            "Set --electrs-url to your own Electrs server.",
+            "yellow",
+        )
 
     cprint(f"Python version: {sys.version}", "light_grey")
 

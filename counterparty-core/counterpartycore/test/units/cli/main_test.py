@@ -3,6 +3,32 @@ import os
 from counterpartycore.lib import cli
 
 
+def test_argparser_multiple_electrs_urls():
+    """Test that --electrs-url can be specified multiple times."""
+    parser = cli.main.arg_parser(no_config_file=True, app_name="counterparty-test")
+    args = parser.parse_args(
+        [
+            "--regtest",
+            "--electrs-url=http://first:3000",
+            "--electrs-url=http://second:3000",
+            "start",
+        ]
+    )
+    assert vars(args)["electrs_url"] == ["http://first:3000", "http://second:3000"]
+
+
+def test_argparser_no_electrs_url():
+    """Test that omitting --electrs-url results in None."""
+    parser = cli.main.arg_parser(no_config_file=True, app_name="counterparty-test")
+    args = parser.parse_args(
+        [
+            "--regtest",
+            "start",
+        ]
+    )
+    assert vars(args)["electrs_url"] is None
+
+
 def test_argparser():
     parser = cli.main.arg_parser(no_config_file=True, app_name="counterparty-test")
     args = parser.parse_args(
@@ -75,7 +101,7 @@ def test_argparser():
         "gunicorn_workers": 2,
         "gunicorn_threads_per_worker": 2,
         "bootstrap_url": None,
-        "electrs_url": "http://localhost:3002",
+        "electrs_url": ["http://localhost:3002"],
         "refresh_state_db": False,
         "rebuild_state_db": False,
         "action": "start",
