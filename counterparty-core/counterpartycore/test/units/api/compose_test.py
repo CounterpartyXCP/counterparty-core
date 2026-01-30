@@ -224,6 +224,7 @@ def test_compose_fairminter(apiv2_client, defaults):
         f"&lot_price=10"
         f"&lot_size=5"
         f"&max_mint_per_tx=100"
+        f"&max_mint_per_address=500"
         f"&hard_cap=10000"
         f"&divisible=true"
         f"&description=Fair minter test"
