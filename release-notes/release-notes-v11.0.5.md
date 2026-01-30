@@ -36,6 +36,7 @@ counterparty-server start
 
 - `excludes_utxos` supports now `<txid>:<vout>` and `<txid>` alone
 - Add missing `max_mint_per_address` parameter in `compose_fairminter()`
+- Fix shutdown during rate limit backoff
 
 ## Codebase
 
