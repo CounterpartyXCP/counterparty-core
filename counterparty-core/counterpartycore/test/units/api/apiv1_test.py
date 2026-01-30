@@ -486,28 +486,28 @@ def test_get_rows(ledger_db, state_db):
     ]
 
     with pytest.raises(exceptions.APIError, match=re.escape("Invalid filter operator (OR, AND)")):
-        apiv1.get_rows("balances", None, "barfoo", None, None, None, None, None, 1000, 0, True)
+        apiv1.get_rows("balances", None, "barfoo", None, None, None, None, None, 500, 0, True)
 
     with pytest.raises(exceptions.APIError, match="Unknown table"):
-        apiv1.get_rows(None, None, "AND", None, None, None, None, None, 1000, 0, True)
+        apiv1.get_rows(None, None, "AND", None, None, None, None, None, 500, 0, True)
 
     with pytest.raises(exceptions.APIError, match=re.escape("Invalid order direction (ASC, DESC)")):
-        apiv1.get_rows("balances", None, "AND", None, "barfoo", None, None, None, 1000, 0, True)
+        apiv1.get_rows("balances", None, "AND", None, "barfoo", None, None, None, 500, 0, True)
 
     with pytest.raises(exceptions.APIError, match="Invalid limit"):
-        apiv1.get_rows("balances", None, "AND", None, None, None, None, None, 1000.0, 0, True)
+        apiv1.get_rows("balances", None, "AND", None, None, None, None, None, 500.0, 0, True)
 
-    with pytest.raises(exceptions.APIError, match="Limit should be lower or equal to 1000"):
-        apiv1.get_rows("balances", None, "AND", None, None, None, None, None, 1001, 0, True)
+    with pytest.raises(exceptions.APIError, match="Limit should be lower or equal to 500"):
+        apiv1.get_rows("balances", None, "AND", None, None, None, None, None, 501, 0, True)
 
     with pytest.raises(exceptions.APIError, match="Invalid offset"):
-        apiv1.get_rows("balances", None, "AND", None, None, None, None, None, 1000, 0.0, True)
+        apiv1.get_rows("balances", None, "AND", None, None, None, None, None, 500, 0.0, True)
 
     with pytest.raises(exceptions.APIError, match="Invalid order_by, must be a field name"):
-        apiv1.get_rows("balances", None, "AND", "*", None, None, None, None, 1000, 0, True)
+        apiv1.get_rows("balances", None, "AND", "*", None, None, None, None, 500, 0, True)
 
     with pytest.raises(exceptions.APIError, match="Unknown filter type"):
-        apiv1.get_rows("balances", [0], "AND", None, None, None, None, None, 1000, 0, True)
+        apiv1.get_rows("balances", [0], "AND", None, None, None, None, None, 500, 0, True)
 
     with pytest.raises(
         exceptions.APIError, match="A specified filter is missing the 'value' field"
@@ -521,7 +521,7 @@ def test_get_rows(ledger_db, state_db):
             None,
             None,
             None,
-            1000,
+            500,
             0,
             True,
         )
@@ -536,7 +536,7 @@ def test_get_rows(ledger_db, state_db):
             None,
             None,
             None,
-            1000,
+            500,
             0,
             True,
         )
@@ -551,7 +551,7 @@ def test_get_rows(ledger_db, state_db):
             None,
             None,
             None,
-            1000,
+            500,
             0,
             True,
         )
@@ -566,7 +566,7 @@ def test_get_rows(ledger_db, state_db):
             None,
             None,
             None,
-            1000,
+            500,
             0,
             True,
         )
@@ -581,7 +581,7 @@ def test_get_rows(ledger_db, state_db):
             None,
             None,
             None,
-            1000,
+            500,
             0,
             True,
         )
@@ -596,7 +596,7 @@ def test_get_rows(ledger_db, state_db):
             None,
             None,
             None,
-            1000,
+            500,
             0,
             True,
         )
@@ -610,7 +610,7 @@ def test_get_rows(ledger_db, state_db):
         None,
         None,
         None,
-        1000,
+        500,
         0,
         True,
     ) == [
@@ -642,7 +642,7 @@ def test_get_rows(ledger_db, state_db):
         None,
         None,
         None,
-        1000,
+        500,
         0,
         True,
     ) == [
@@ -674,7 +674,7 @@ def test_get_rows(ledger_db, state_db):
         None,
         None,
         None,
-        1000,
+        500,
         0,
         True,
     ) == [
@@ -706,7 +706,7 @@ def test_get_rows(ledger_db, state_db):
         None,
         None,
         None,
-        1000,
+        500,
         0,
         True,
     ) == [
@@ -738,7 +738,7 @@ def test_get_rows(ledger_db, state_db):
         None,
         None,
         None,
-        1000,
+        500,
         0,
         True,
     ) == [
@@ -770,7 +770,7 @@ def test_get_rows(ledger_db, state_db):
         None,
         None,
         None,
-        1000,
+        500,
         0,
         True,
     ) == [
@@ -802,7 +802,7 @@ def test_get_rows(ledger_db, state_db):
         None,
         None,
         None,
-        1000,
+        500,
         0,
         True,
     ) == [

@@ -94,8 +94,8 @@ CONFIG_ARGS = [
         ("--api-limit-rows",),
         {
             "type": int,
-            "default": 1000,
-            "help": "limit api calls to the set results (defaults to 1000). Setting to 0 removes the limit.",
+            "default": 500,
+            "help": "limit api calls to the set results (defaults to 500). Setting to 0 removes the limit.",
         },
     ],
     [("--backend-name",), {"default": "addrindex", "help": "the backend name to connect to"}],
