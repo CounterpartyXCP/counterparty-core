@@ -1,6 +1,9 @@
+import configparser
 import os
+import unittest.mock as mock
 
-from counterpartycore.lib import cli
+from counterpartycore.lib import cli, config
+from counterpartycore.lib.cli import initialise, main, setup
 
 
 def test_argparser_multiple_electrs_urls():
@@ -112,3 +115,137 @@ def test_argparser():
         "memory_profile": False,
         "enable_all_protocol_changes": False,
     }
+
+
+WELCOME_MSG_CONFIG_STUBS = [
+    ("VERBOSE", 0),
+    ("QUIET", False),
+    ("NETWORK_NAME", "mainnet"),
+    ("DATABASE", "test.db"),
+    ("STATE_DATABASE", "state.db"),
+    ("FETCHER_DB", "fetcher.db"),
+    ("LOG", "test.log"),
+    ("API_LOG", "api.log"),
+]
+
+
+def test_welcome_message_default_urls_warning():
+    """Test that welcome_message prints a warning when using default Electrs URLs."""
+    original = getattr(config, "ELECTRS_URLS_IS_DEFAULT", None)
+    config.ELECTRS_URLS_IS_DEFAULT = True
+    for attr, val in WELCOME_MSG_CONFIG_STUBS:
+        if not hasattr(config, attr):
+            setattr(config, attr, val)
+
+    with mock.patch("counterpartycore.lib.cli.main.cprint") as mock_cprint:
+        main.welcome_message("start", "server.conf")
+        warning_calls = [c for c in mock_cprint.call_args_list if "default Electrs URLs" in str(c)]
+        assert len(warning_calls) == 1
+        assert warning_calls[0][0][1] == "yellow"
+
+    if original is None:
+        del config.ELECTRS_URLS_IS_DEFAULT
+    else:
+        config.ELECTRS_URLS_IS_DEFAULT = original
+
+
+def test_welcome_message_no_warning_when_custom_urls():
+    """Test that welcome_message does not warn when user provided custom URLs."""
+    original = getattr(config, "ELECTRS_URLS_IS_DEFAULT", None)
+    config.ELECTRS_URLS_IS_DEFAULT = False
+    for attr, val in WELCOME_MSG_CONFIG_STUBS:
+        if not hasattr(config, attr):
+            setattr(config, attr, val)
+
+    with mock.patch("counterpartycore.lib.cli.main.cprint") as mock_cprint:
+        main.welcome_message("start", "server.conf")
+        warning_calls = [c for c in mock_cprint.call_args_list if "default Electrs URLs" in str(c)]
+        assert len(warning_calls) == 0
+
+    if original is None:
+        del config.ELECTRS_URLS_IS_DEFAULT
+    else:
+        config.ELECTRS_URLS_IS_DEFAULT = original
+
+
+INITIALISE_DEFAULTS = {
+    "backend_password": "rpc",
+    "backend_connect": "localhost",
+}
+
+
+def test_initialise_config_electrs_mainnet_defaults():
+    """Test that mainnet defaults set ELECTRS_URLS and IS_DEFAULT correctly."""
+    original_urls = getattr(config, "ELECTRS_URLS", None)
+    original_default = getattr(config, "ELECTRS_URLS_IS_DEFAULT", None)
+
+    initialise.initialise_config(electrs_url=None, **INITIALISE_DEFAULTS)
+
+    assert config.ELECTRS_URLS == config.DEFAULT_ELECTRS_URLS_MAINNET
+    assert config.ELECTRS_URLS_IS_DEFAULT is True
+
+    config.ELECTRS_URLS = original_urls
+    config.ELECTRS_URLS_IS_DEFAULT = original_default
+
+
+def test_initialise_config_electrs_custom_list():
+    """Test that a custom URL list sets IS_DEFAULT to False."""
+    original_urls = getattr(config, "ELECTRS_URLS", None)
+    original_default = getattr(config, "ELECTRS_URLS_IS_DEFAULT", None)
+
+    initialise.initialise_config(electrs_url=["http://my-server:3000"], **INITIALISE_DEFAULTS)
+
+    assert config.ELECTRS_URLS == ["http://my-server:3000"]
+    assert config.ELECTRS_URLS_IS_DEFAULT is False
+
+    config.ELECTRS_URLS = original_urls
+    config.ELECTRS_URLS_IS_DEFAULT = original_default
+
+
+def test_initialise_config_electrs_string_coerced_to_list():
+    """Test that a plain string electrs_url is coerced to a list."""
+    original_urls = getattr(config, "ELECTRS_URLS", None)
+    original_default = getattr(config, "ELECTRS_URLS_IS_DEFAULT", None)
+
+    initialise.initialise_config(electrs_url="http://my-server:3000", **INITIALISE_DEFAULTS)
+
+    assert config.ELECTRS_URLS == ["http://my-server:3000"]
+    assert config.ELECTRS_URLS_IS_DEFAULT is False
+
+    config.ELECTRS_URLS = original_urls
+    config.ELECTRS_URLS_IS_DEFAULT = original_default
+
+
+def test_initialise_config_electrs_regtest_none():
+    """Test that regtest with no electrs_url sets ELECTRS_URLS to None."""
+    original_urls = getattr(config, "ELECTRS_URLS", None)
+    original_default = getattr(config, "ELECTRS_URLS_IS_DEFAULT", None)
+
+    initialise.initialise_config(electrs_url=None, regtest=True, **INITIALISE_DEFAULTS)
+
+    assert config.ELECTRS_URLS is None
+    assert config.ELECTRS_URLS_IS_DEFAULT is False
+
+    config.ELECTRS_URLS = original_urls
+    config.ELECTRS_URLS_IS_DEFAULT = original_default
+
+
+def test_add_config_arguments_append_action():
+    """Test that add_config_arguments wraps append-action values from config file in a list."""
+    parser = cli.main.argparse.ArgumentParser()
+    configfile = configparser.ConfigParser()
+    configfile["Default"] = {"electrs-url": "http://from-config:3000"}
+
+    config_args = [
+        [
+            ("--electrs-url",),
+            {
+                "action": "append",
+                "help": "test",
+            },
+        ],
+    ]
+
+    setup.add_config_arguments(parser, config_args, configfile, add_default=True)
+    args = parser.parse_args([])
+    assert args.electrs_url == ["http://from-config:3000"]
