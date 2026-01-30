@@ -46,8 +46,6 @@ counterparty-server start
 
 ## API
 
-- The `limit` parameter is now capped to 500 (reduced from 1000); requests with higher values will silently return 500 results
-
 ## CLI
 
 # Credits

@@ -497,8 +497,8 @@ def test_get_rows(ledger_db, state_db):
     with pytest.raises(exceptions.APIError, match="Invalid limit"):
         apiv1.get_rows("balances", None, "AND", None, None, None, None, None, 500.0, 0, True)
 
-    with pytest.raises(exceptions.APIError, match="Limit should be lower or equal to 500"):
-        apiv1.get_rows("balances", None, "AND", None, None, None, None, None, 501, 0, True)
+    with pytest.raises(exceptions.APIError, match="Limit should be lower or equal to 1000"):
+        apiv1.get_rows("balances", None, "AND", None, None, None, None, None, 1001, 0, True)
 
     with pytest.raises(exceptions.APIError, match="Invalid offset"):
         apiv1.get_rows("balances", None, "AND", None, None, None, None, None, 500, 0.0, True)

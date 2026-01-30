@@ -95,7 +95,7 @@ def initialise_config(
     testnet4=False,
     regtest=False,
     signet=False,
-    api_limit_rows=500,
+    api_limit_rows=1000,
     backend_connect=None,
     backend_port=None,
     backend_user=None,

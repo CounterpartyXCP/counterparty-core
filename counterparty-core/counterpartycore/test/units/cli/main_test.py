@@ -26,7 +26,7 @@ def test_argparser():
         "testnet4": False,
         "regtest": True,
         "signet": False,
-        "api_limit_rows": 500,
+        "api_limit_rows": 1000,
         "backend_name": "addrindex",
         "backend_connect": "localhost",
         "backend_port": None,
