@@ -763,10 +763,14 @@ def prepare_unspent_list(db, source, construct_params):
     exclude_utxos = construct_params.get("exclude_utxos")
     if exclude_utxos is not None:
         exclude_utxos_list = exclude_utxos.split(",")
+        # support both txid and txid:vout formats
+        exclude_txids = [item for item in exclude_utxos_list if ":" not in item]
+        exclude_utxo_ids = [item for item in exclude_utxos_list if ":" in item]
         unspent_list = [
             utxo
             for utxo in unspent_list
-            if f"{utxo['txid']}:{utxo['vout']}" not in exclude_utxos_list
+            if utxo["txid"] not in exclude_txids
+            and f"{utxo['txid']}:{utxo['vout']}" not in exclude_utxo_ids
         ]
 
     # include only tx_hash if explicitly requested
@@ -1232,7 +1236,7 @@ CONSTRUCT_PARAMS = {
     "exclude_utxos": (
         str,
         None,
-        "A comma-separated list of UTXO txids to exclude when selecting UTXOs to use as inputs for the transaction being created",
+        "A comma-separated list of UTXOs to exclude when selecting inputs for the transaction. Supports two formats: `<txid>` to exclude all UTXOs from a transaction, or `<txid>:<vout>` to exclude a specific UTXO",
     ),
     "use_utxos_with_balances": (bool, False, "Use UTXO with balances"),
     "exclude_utxos_with_balances": (

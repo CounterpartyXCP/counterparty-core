@@ -228,6 +228,13 @@ def prepare_args(route, **kwargs):
             elif arg_name.endswith("_hash") and not helpers.is_valid_tx_hash(str_arg):
                 raise ValueError(f"Invalid transaction hash: {str_arg}")
 
+    # Cap limit parameter to API_LIMIT_ROWS
+    if "limit" in function_args and function_args["limit"] is not None:
+        if function_args["limit"] <= 0:
+            raise ValueError("Limit must be greater than 0")
+        if config.API_LIMIT_ROWS > 0 and function_args["limit"] > config.API_LIMIT_ROWS:
+            function_args["limit"] = config.API_LIMIT_ROWS
+
     return function_args
 
 

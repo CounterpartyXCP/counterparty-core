@@ -997,7 +997,18 @@ def test_prepare_unspent_list(ledger_db, defaults, monkeypatch):
                     },
                 }
             ]
-        }
+        },
+        "b5a7c328c75b122325d2e6ed64774e9b37cefbfca6370872931597368ff7cecd": {
+            "vout": [
+                {
+                    "n": 0,
+                    "value": 10,
+                    "scriptPubKey": {
+                        "hex": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                    },
+                }
+            ]
+        },
     }
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.getrawtransaction_batch", lambda *args, **kwargs: txs
@@ -1031,7 +1042,7 @@ def test_prepare_unspent_list(ledger_db, defaults, monkeypatch):
         }
     ]
 
-    # Test case 3: With exclude_utxos parameter
+    # Test case 3: With exclude_utxos parameter (txid:vout format) - excludes all UTXOs
     with pytest.raises(
         exceptions.ComposeError,
         match=re.escape(
@@ -1044,6 +1055,74 @@ def test_prepare_unspent_list(ledger_db, defaults, monkeypatch):
             {"exclude_utxos": "676b03b94f43d4a23db55f2ac95e6aff6bfcbc4fdf855cbe3ee80d9a312e576a:0"},
         )
         print(result)
+
+    # Test case 3b: With exclude_utxos parameter (txid only format) - excludes all UTXOs
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(
+            f"No UTXOs found for {defaults['addresses'][0]}, provide UTXOs with the `inputs_set` parameter"
+        ),
+    ):
+        composer.prepare_unspent_list(
+            ledger_db,
+            defaults["addresses"][0],
+            {
+                "inputs_set": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0",
+                "exclude_utxos": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+            },
+        )
+
+    # Test case 3c: With exclude_utxos (txid:vout format) - partial exclusion with inputs_set
+    result = composer.prepare_unspent_list(
+        ledger_db,
+        defaults["addresses"][0],
+        {
+            "inputs_set": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0,b5a7c328c75b122325d2e6ed64774e9b37cefbfca6370872931597368ff7cecd:0",
+            "exclude_utxos": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0",
+        },
+    )
+    assert len(result) == 1
+    assert result[0]["txid"] == "b5a7c328c75b122325d2e6ed64774e9b37cefbfca6370872931597368ff7cecd"
+
+    # Test case 3d: With exclude_utxos (txid only format) - partial exclusion with inputs_set
+    result = composer.prepare_unspent_list(
+        ledger_db,
+        defaults["addresses"][0],
+        {
+            "inputs_set": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0,b5a7c328c75b122325d2e6ed64774e9b37cefbfca6370872931597368ff7cecd:0",
+            "exclude_utxos": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+        },
+    )
+    assert len(result) == 1
+    assert result[0]["txid"] == "b5a7c328c75b122325d2e6ed64774e9b37cefbfca6370872931597368ff7cecd"
+
+    # Test case 3e: With exclude_utxos - mixed formats (txid and txid:vout) excludes all
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(
+            f"No UTXOs found for {defaults['addresses'][0]}, provide UTXOs with the `inputs_set` parameter"
+        ),
+    ):
+        composer.prepare_unspent_list(
+            ledger_db,
+            defaults["addresses"][0],
+            {
+                "inputs_set": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0,b5a7c328c75b122325d2e6ed64774e9b37cefbfca6370872931597368ff7cecd:0",
+                "exclude_utxos": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0,b5a7c328c75b122325d2e6ed64774e9b37cefbfca6370872931597368ff7cecd",
+            },
+        )
+
+    # Test case 3f: txid:vout format does NOT exclude different vout
+    result = composer.prepare_unspent_list(
+        ledger_db,
+        defaults["addresses"][0],
+        {
+            "inputs_set": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0",
+            "exclude_utxos": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:1",  # Different vout
+        },
+    )
+    assert len(result) == 1
+    assert result[0]["txid"] == "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1"
 
     # Test case 4: With unspent_tx_hash parameter
     with pytest.raises(

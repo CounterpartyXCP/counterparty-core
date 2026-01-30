@@ -414,6 +414,7 @@ def compose_fairminter(
     lot_price: int = 0,
     lot_size: int = 1,
     max_mint_per_tx: int = 0,
+    max_mint_per_address: int = 0,
     hard_cap: int = 0,
     premint_quantity: int = 0,
     start_block: int = 0,
@@ -439,6 +440,7 @@ def compose_fairminter(
     :param lot_price: Formerly `price`. The price in XCP of the asset to issue (e.g. 10)
     :param lot_size: Formerly `quantity_by_price`. The quantity of asset to mint per `price` paid
     :param max_mint_per_tx: Amount minted if price is equal to 0; otherwise, maximum amount of asset that can be minted in a single transaction; if 0, there is no limit
+    :param max_mint_per_address: Maximum amount of asset that can be minted by a single address; if 0, there is no limit
     :param hard_cap: The maximum amount of asset that can be minted; if 0 there is no limit
     :param premint_quantity: Amount of asset to be minted when the sale starts, if 0, no premint; preminted assets are sent to the source of the transaction
     :param start_block: The block at which the sale starts
@@ -465,6 +467,7 @@ def compose_fairminter(
         "price": price_arg,
         "quantity_by_price": quantity_by_price_arg,
         "max_mint_per_tx": max_mint_per_tx,
+        "max_mint_per_address": max_mint_per_address,
         "hard_cap": hard_cap,
         "premint_quantity": premint_quantity,
         "start_block": start_block,
