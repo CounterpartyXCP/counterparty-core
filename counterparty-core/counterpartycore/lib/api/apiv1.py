@@ -181,7 +181,7 @@ def get_rows(
     start_block=None,
     end_block=None,
     status=None,
-    limit=1000,
+    limit=500,
     offset=0,
     show_expired=True,
 ):

@@ -37,6 +37,7 @@ counterparty-server start
 - `excludes_utxos` supports now `<txid>:<vout>` and `<txid>` alone
 - Add missing `max_mint_per_address` parameter in `compose_fairminter()`
 - Fix shutdown during rate limit backoff
+- Fix missing `limit` parameter validation in API v2 (was not enforced unlike API v1)
 
 ## Codebase
 
@@ -45,6 +46,7 @@ counterparty-server start
 
 ## API
 
+- The `limit` parameter is now capped to 500 (reduced from 1000); requests with higher values will silently return 500 results
 
 ## CLI
 
