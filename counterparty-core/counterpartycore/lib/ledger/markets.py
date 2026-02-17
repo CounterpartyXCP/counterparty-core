@@ -129,6 +129,22 @@ def get_open_btc_orders(db, address):
     return cursor.fetchall()
 
 
+def get_open_orders_by_source(db, source):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM (
+            SELECT *, MAX(rowid)
+            FROM orders
+            WHERE source = ?
+            GROUP BY tx_hash
+        ) WHERE status = ?
+        ORDER BY tx_index, tx_hash
+    """
+    bindings = (source, "open")
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
 def get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset):
     cursor = db.cursor()
     query = """

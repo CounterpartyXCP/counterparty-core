@@ -246,6 +246,22 @@ def get_bet_by_feed(db, address: str, status: str = "open"):
     return cursor.fetchall()
 
 
+def get_open_bets_by_source(db, source):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM (
+            SELECT *, MAX(rowid)
+            FROM bets
+            WHERE source = ?
+            GROUP BY tx_hash
+        ) WHERE status = ?
+        ORDER BY tx_index, tx_hash
+    """
+    bindings = (source, "open")
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
 ### UPDATES ###
 
 

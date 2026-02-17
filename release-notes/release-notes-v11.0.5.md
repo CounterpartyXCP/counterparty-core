@@ -32,6 +32,8 @@ counterparty-server start
 
 ## Features
 
+- Add cancel-all mode to the `cancel` message (type 70): omit `offer_hash` to cancel all open orders and bets for the source address in a single transaction. Gated behind the `cancel_all_offers` protocol change. An anti-spam fee of 0.0002 XCP per cancelled offer is charged.
+
 ## Bugfixes
 
 - `excludes_utxos` supports now `<txid>:<vout>` and `<txid>` alone

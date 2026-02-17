@@ -1185,5 +1185,14 @@
         "testnet3_block_index": 4410000,
         "testnet4_block_index": 85000,
         "signet_block_index": 0
+    },
+    "cancel_all_offers": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 0,
+        "minimum_version_revision": 0,
+        "block_index": 902000,
+        "testnet3_block_index": 4410000,
+        "testnet4_block_index": 85000,
+        "signet_block_index": 0
     }
 }
