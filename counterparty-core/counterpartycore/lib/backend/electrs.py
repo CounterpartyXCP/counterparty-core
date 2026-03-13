@@ -3,6 +3,7 @@ import logging
 
 import requests
 from bitcoinutils.keys import PublicKey
+from ecdsa.ellipticcurve import MalformedPointError
 
 from counterpartycore.lib import config, exceptions
 
@@ -77,7 +78,7 @@ def pubkey_from_tx(tx, pubkeyhash):
                     pubkey = vin["witness"][1]
                     if pubkeyhash == PublicKey.from_hex(pubkey).get_segwit_address().to_string():
                         return pubkey
-                except binascii.Error:
+                except (binascii.Error, MalformedPointError):
                     pass
         elif "is_coinbase" not in vin or not vin["is_coinbase"]:
             asm = vin["scriptsig_asm"].split(" ")
@@ -95,7 +96,7 @@ def pubkey_from_tx(tx, pubkeyhash):
                         == PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
                     ):
                         return pubkey
-                except binascii.Error:
+                except (binascii.Error, MalformedPointError):
                     pass
     for vout in tx["vout"]:
         asm = vout["scriptpubkey_asm"].split(" ")
@@ -112,7 +113,7 @@ def pubkey_from_tx(tx, pubkeyhash):
                     == PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
                 ):
                     return pubkey
-            except binascii.Error:
+            except (binascii.Error, MalformedPointError):
                 pass
     return None
 

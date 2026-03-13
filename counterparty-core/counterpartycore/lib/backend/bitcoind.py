@@ -10,6 +10,7 @@ from threading import current_thread
 
 import requests
 from bitcoinutils.keys import PublicKey
+from ecdsa.ellipticcurve import MalformedPointError
 from requests.exceptions import (  # pylint: disable=redefined-builtin
     ChunkedEncodingError,
     ConnectionError,
@@ -517,7 +518,7 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                             == PublicKey.from_hex(pubkey).get_segwit_address().to_string()
                         ):
                             return pubkey
-                    except binascii.Error:
+                    except (binascii.Error, MalformedPointError):
                         pass
             elif "coinbase" not in vin:
                 scriptsig = vin["scriptSig"]
@@ -536,7 +537,7 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                             == PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
                         ):
                             return pubkey
-                    except binascii.Error:
+                    except (binascii.Error, MalformedPointError):
                         pass
         for vout in tx["vout"]:
             asm = vout["scriptPubKey"]["asm"].split(" ")
@@ -548,7 +549,7 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                         == PublicKey.from_hex(pubkey).get_address(compressed=False).to_string()
                     ):
                         return pubkey
-                except (binascii.Error, AttributeError):
+                except (binascii.Error, AttributeError, MalformedPointError):
                     pass
                 try:
                     if (
@@ -556,7 +557,7 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                         == PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
                     ):
                         return pubkey
-                except (binascii.Error, AttributeError):
+                except (binascii.Error, AttributeError, MalformedPointError):
                     pass
     return None
 
