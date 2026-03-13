@@ -263,6 +263,58 @@ def test_search_pubkey_in_transactions_bech32(monkeypatch):
     helpers.setup_bitcoinutils("regtest")
 
 
+def test_search_pubkey_in_transactions_p2wsh_multisig(monkeypatch):
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.getrawtransaction",
+        lambda x, y: {
+            "txid": "d4387de0bb04a9952e421caab34104e007f9776ffc3bbff023695f2fdd74b1ce",
+            "hash": "fa6c4b77b577ec45ed56cbf0fdb575fdda574f5935bbef7366f2cb58d6346f87",
+            "version": 1,
+            "size": 382,
+            "locktime": 0,
+            "vin": [
+                {
+                    "txid": "f274037b92cd0a90d7cf6f34be025d02065e7d032980edf955a3f2c66c278bfb",
+                    "vout": 1,
+                    "scriptSig": {"asm": "", "hex": ""},
+                    "txinwitness": [
+                        "",
+                        "30440220776030e83ebd30b9461169df4e6b9e4ff63f940564fdc5691db220a7c12387720220639257fe96ea4fb64128a110f16a5b3e6fab84cd843f4686cd405be9fe783e9f01",
+                        "3044022042e06cf65a08aac0ee6d4db4eb1bae5518628583ca9e942120bb22c99c6b070e02204011dddbe64e8f14a23c8182dfe78e814d3deb3ac704d94ef19b38507a200d4701",
+                        "52210209d604337bcb785d1fba1fec16556e6ed914d12ee08bc8a87e7fe4f81607c3fd210387d133ae86d83ae28c6615882b88e53cbcf9cad9aaeaf55816dfba9b55ee4f3a21024cc0c0ec7d678c70606cf07c373f1b7db86d0f41f404cea48512b37379395a6f53ae",
+                    ],
+                    "sequence": 4294967293,
+                }
+            ],
+            "vout": [
+                {
+                    "value": 0.00102146,
+                    "n": 0,
+                    "scriptPubKey": {
+                        "address": "14xyFwHGmrGJjGtMbjJoJHqrLZvf6MibYU",
+                        "asm": "OP_DUP OP_HASH160 2b7e3776eb8e160e2fd628e8d1cacbe44cec013e OP_EQUALVERIFY OP_CHECKSIG",
+                        "hex": "76a9142b7e3776eb8e160e2fd628e8d1cacbe44cec013e88ac",
+                        "type": "pubkeyhash",
+                    },
+                },
+            ],
+            "hex": "01000000000101fb8b276cc6f2a355f9ed8029037d5e06025d02be346fcfd7900acd927b0374f20100000000fdffffff02028f0100000000001976a9142b7e3776eb8e160e2fd628e8d1cacbe44cec013e88ac152d2800000000002200203722913c3426c12d25a4747f93f351e4f00c96a1514b2d6f7c46cef1a463808c04004730440220776030e83ebd30b9461169df4e6b9e4ff63f940564fdc5691db220a7c12387720220639257fe96ea4fb64128a110f16a5b3e6fab84cd843f4686cd405be9fe783e9f01473044022042e06cf65a08aac0ee6d4db4eb1bae5518628583ca9e942120bb22c99c6b070e02204011dddbe64e8f14a23c8182dfe78e814d3deb3ac704d94ef19b38507a200d47016952210209d604337bcb785d1fba1fec16556e6ed914d12ee08bc8a87e7fe4f81607c3fd210387d133ae86d83ae28c6615882b88e53cbcf9cad9aaeaf55816dfba9b55ee4f3a21024cc0c0ec7d678c70606cf07c373f1b7db86d0f41f404cea48512b37379395a6f53ae00000000",
+        },
+    )
+
+    helpers.setup_bitcoinutils("mainnet")
+
+    assert (
+        bitcoind.search_pubkey_in_transactions(
+            "14xyFwHGmrGJjGtMbjJoJHqrLZvf6MibYU",
+            ["d4387de0bb04a9952e421caab34104e007f9776ffc3bbff023695f2fdd74b1ce"],
+        )
+        is None
+    )
+
+    helpers.setup_bitcoinutils("regtest")
+
+
 def test_search_pubkey_in_transactions_p2pkh(monkeypatch):
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.getrawtransaction",

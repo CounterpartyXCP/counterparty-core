@@ -410,6 +410,20 @@ def test_pubkey_from_tx_witness_binascii_error():
         assert result is None
 
 
+def test_pubkey_from_tx_witness_malformed_point():
+    """Test pubkey_from_tx with P2WSH multisig where witness[1] is a DER signature, not a pubkey"""
+    from ecdsa.ellipticcurve import MalformedPointError
+
+    with mock.patch("counterpartycore.lib.backend.electrs.PublicKey") as mock_pubkey:
+        mock_pubkey.from_hex.side_effect = MalformedPointError()
+
+        tx = {"vin": [{"witness": ["", "30440220deadbeef01"]}], "vout": []}
+
+        result = electrum_connector.pubkey_from_tx(tx, "test_pubkeyhash")
+
+        assert result is None
+
+
 def test_pubkey_from_tx_witness_short():
     """Test pubkey_from_tx with a witness that's too short"""
     tx = {
