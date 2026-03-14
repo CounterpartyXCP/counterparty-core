@@ -605,6 +605,11 @@ def get_vin_info_legacy(vin, no_retry=False):
             composer.is_segwit_output(vout["script_pub_key"]),
         )
     except exceptions.BitcoindRPCError as e:
+        logger.warning(
+            "Failed to lookup parent transaction %s for VIN resolution. "
+            "This transaction will be skipped. Is `txindex` enabled in Bitcoin Core?",
+            vin["hash"],
+        )
         raise exceptions.DecodeError("vin not found") from e
 
 
