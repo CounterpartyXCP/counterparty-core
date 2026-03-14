@@ -38,6 +38,7 @@ counterparty-server start
 - Add missing `max_mint_per_address` parameter in `compose_fairminter()`
 - Fix shutdown during rate limit backoff
 - Fix missing `limit` parameter validation in API v2 (was not enforced unlike API v1)
+- Fix `MalformedPointError` when searching for pubkey in P2WSH multisig witness data
 
 ## Codebase
 
