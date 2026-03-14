@@ -529,7 +529,10 @@ def test_get_vin_info_falls_back_to_legacy(monkeypatch):
         "get_decoded_transaction",
         lambda *args, **kwargs: {
             "vout": [
-                {"value": 10554, "script_pub_key": "76a9140132c2887759f123166b3048b5ec599ea0d5b8f988ac"}
+                {
+                    "value": 10554,
+                    "script_pub_key": "76a9140132c2887759f123166b3048b5ec599ea0d5b8f988ac",
+                }
             ]
         },
     )
