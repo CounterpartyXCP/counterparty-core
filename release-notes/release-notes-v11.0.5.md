@@ -39,6 +39,8 @@ counterparty-server start
 - Fix shutdown during rate limit backoff
 - Fix missing `limit` parameter validation in API v2 (was not enforced unlike API v1)
 - Fix `MalformedPointError` when searching for pubkey in P2WSH multisig witness data
+- Fix Rust `BATCH_CLIENT` permanently caching failed parent transaction lookups, which could cause valid Counterparty transactions to be silently skipped
+- Add warning log when a parent transaction cannot be found during VIN resolution
 
 ## Codebase
 

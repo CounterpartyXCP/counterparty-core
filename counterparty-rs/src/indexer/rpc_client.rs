@@ -175,7 +175,9 @@ impl BatchRpcClient {
                 _ => None,
             };
 
-            cache.insert(*txid, tx.clone());
+            if tx.is_some() {
+                cache.insert(*txid, tx.clone());
+            }
             result_map.insert(*txid, tx);
         }
 

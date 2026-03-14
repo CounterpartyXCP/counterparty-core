@@ -499,3 +499,69 @@ def test_get_vin_info_legacy_error(monkeypatch):
 
     with pytest.raises(exceptions.DecodeError, match="vin not found"):
         bitcoind.get_vin_info_legacy({"hash": "hash", "n": 0})
+
+
+def test_get_vin_info_legacy_error_logs_warning(monkeypatch):
+    """When a parent transaction cannot be found, a warning must be logged
+    so operators can diagnose why a Counterparty transaction was skipped."""
+    from unittest.mock import patch
+
+    def raise_error(*args, **kwargs):
+        raise exceptions.BitcoindRPCError
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+
+    parent_txid = "fba2aa8d334a6c74eaa8b0998be6c29477ff4d927449e9a07efa0ec374fc73bf"
+    with patch.object(bitcoind.logger, "warning") as mock_warning:
+        with pytest.raises(exceptions.DecodeError, match="vin not found"):
+            bitcoind.get_vin_info_legacy({"hash": parent_txid, "n": 1})
+
+    mock_warning.assert_called_once()
+    logged_message = mock_warning.call_args[0][0] % mock_warning.call_args[0][1:]
+    assert parent_txid in logged_message
+    assert "txindex" in logged_message
+
+
+def test_get_vin_info_falls_back_to_legacy(monkeypatch):
+    """When Rust VIN info is None, get_vin_info falls back to legacy lookup."""
+    monkeypatch.setattr(
+        bitcoind,
+        "get_decoded_transaction",
+        lambda *args, **kwargs: {
+            "vout": [
+                {"value": 10554, "script_pub_key": "76a9140132c2887759f123166b3048b5ec599ea0d5b8f988ac"}
+            ]
+        },
+    )
+    vin = {
+        "hash": "01f38776b07990118cb3720b9143adbde3725af12e0394cdd02c36458c6b3a03",
+        "n": 0,
+        "info": None,
+    }
+    value, script_pub_key, is_segwit = original_get_vin_info(vin)
+    assert value == 10554
+    assert script_pub_key == "76a9140132c2887759f123166b3048b5ec599ea0d5b8f988ac"
+    assert is_segwit is False
+
+
+def test_get_vin_info_fallback_also_fails(monkeypatch):
+    """When Rust VIN info is None AND the legacy fallback also fails,
+    a warning is logged and DecodeError is raised. This is the scenario
+    that caused a transaction to be silently skipped on a user's server."""
+    from unittest.mock import patch
+
+    def raise_error(*args, **kwargs):
+        raise exceptions.BitcoindRPCError("No such mempool or blockchain transaction")
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+
+    parent_txid = "01f38776b07990118cb3720b9143adbde3725af12e0394cdd02c36458c6b3a03"
+    vin_without_info = {"hash": parent_txid, "n": 1, "info": None}
+
+    with patch.object(bitcoind.logger, "warning") as mock_warning:
+        with pytest.raises(exceptions.DecodeError, match="vin not found"):
+            original_get_vin_info(vin_without_info)
+
+    mock_warning.assert_called_once()
+    logged_message = mock_warning.call_args[0][0] % mock_warning.call_args[0][1:]
+    assert parent_txid in logged_message
