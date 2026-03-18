@@ -1,5 +1,5 @@
 # Type 120: add liquidity to an AMM pool. First deposit creates the pool and
-# LP token; subsequent deposits must match the current reserve ratio.
+# LP token; subsequent deposits mint LP tokens proportional to contribution.
 import logging
 import struct
 
@@ -44,48 +44,27 @@ def validate(db, source, asset_a, asset_b, quantity_a, quantity_b):
         elif param_value > config.MAX_INT:
             problems.append(f"{param_name} exceeds maximum value")
 
-    # k = quantity_a * quantity_b must fit in SQLite INTEGER (64-bit signed)
-    if not problems and quantity_a * quantity_b > config.MAX_INT:
-        problems.append("deposit quantities product exceeds maximum")
-
     if problems:
         return problems
 
-    # Sort and check existing pool ratio
-    sorted_a, sorted_b = pool_mod.sort_pair(asset_a, asset_b)
-    existing_pool = pool_mod.get_pool(db, sorted_a, sorted_b)
-
-    if existing_pool and existing_pool["reserve_a"] > 0:
-        if asset_a == sorted_a:
-            qa, qb = quantity_a, quantity_b
-        else:
-            qa, qb = quantity_b, quantity_a
-
-        expected_qb = qa * existing_pool["reserve_b"] // existing_pool["reserve_a"]
-        if abs(qb - expected_qb) > 1:
-            problems.append(
-                f"deposit ratio mismatch: expected ~{expected_qb} of {sorted_b}, got {qb}"
-            )
-
     # Check balances and gas fee
-    if not problems:
-        fee = gas.get_transaction_fee(db, ID, CurrentState().current_block_index())
-        balance_a = ledger.balances.get_balance(db, source, asset_a)
-        if balance_a < quantity_a:
-            problems.append(f"insufficient balance of {asset_a}")
-        balance_b = ledger.balances.get_balance(db, source, asset_b)
-        if balance_b < quantity_b:
-            problems.append(f"insufficient balance of {asset_b}")
-        # fee is always paid in XCP
-        if fee > 0:
-            xcp_needed = fee
-            if asset_a == config.XCP:
-                xcp_needed += quantity_a
-            if asset_b == config.XCP:
-                xcp_needed += quantity_b
-            xcp_balance = ledger.balances.get_balance(db, source, config.XCP)
-            if xcp_balance < xcp_needed:
-                problems.append("insufficient XCP for fee")
+    fee = gas.get_transaction_fee(db, ID, CurrentState().current_block_index())
+    balance_a = ledger.balances.get_balance(db, source, asset_a)
+    if balance_a < quantity_a:
+        problems.append(f"insufficient balance of {asset_a}")
+    balance_b = ledger.balances.get_balance(db, source, asset_b)
+    if balance_b < quantity_b:
+        problems.append(f"insufficient balance of {asset_b}")
+    # fee is always paid in XCP
+    if fee > 0:
+        xcp_needed = fee
+        if asset_a == config.XCP:
+            xcp_needed += quantity_a
+        if asset_b == config.XCP:
+            xcp_needed += quantity_b
+        xcp_balance = ledger.balances.get_balance(db, source, config.XCP)
+        if xcp_balance < xcp_needed:
+            problems.append("insufficient XCP for fee")
 
     return problems
 
@@ -239,7 +218,7 @@ def make_lp_issuance_bindings(db, tx, lp_asset, quantity, asset_a, asset_b, asse
     }
 
 def first_deposit(db, tx, asset_a, asset_b, qty_a, qty_b):
-    """Create pool, LP token, burn minimum liquidity, mint rest to depositor."""
+    """Create pool and LP token, mint all LP tokens to depositor."""
     source = tx["source"]
 
     # Debit both assets from source (escrow into pool)

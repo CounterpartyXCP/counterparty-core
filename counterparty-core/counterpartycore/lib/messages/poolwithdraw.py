@@ -1,4 +1,4 @@
-# Type 121: remove liquidity from an AMM pool. Burns LP tokens and returns
+# Type 121: remove liquidity from an AMM pool. Destroys LP tokens and returns
 # proportional share of both reserve assets to the source address.
 import logging
 import struct
@@ -137,7 +137,7 @@ def parse(db, tx, message):
     # execute withdrawal
     sorted_a, sorted_b = pool_mod.sort_pair(asset_a, asset_b)
     pool = pool_mod.get_pool(db, sorted_a, sorted_b)
-    if pool is None or pool["reserve_a"] == 0:
+    if pool is None or pool["reserve_a"] == 0 or pool["reserve_b"] == 0:
         raise exceptions.MessageError("pool state changed during execution")
     lp_asset = pool["lp_asset"]
 
@@ -150,7 +150,7 @@ def parse(db, tx, message):
     quantity_a = quantity * pool["reserve_a"] // total_lp_supply
     quantity_b = quantity * pool["reserve_b"] // total_lp_supply
 
-    # Burn LP tokens: debit from source
+    # Destroy LP tokens: debit from source
     ledger.events.debit(db, tx["source"], lp_asset, quantity,
                         tx["tx_index"], action="pool withdraw",
                         event=tx["tx_hash"])

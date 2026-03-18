@@ -268,6 +268,60 @@ def test_get_attach_estimate_xcp_fee_no_address(apiv2_client):
     assert "result" in response.json
 
 
+# =============================================================================
+# Tests for pool compose and quote functions
+# =============================================================================
+
+
+def test_compose_pooldeposit(apiv2_client, defaults):
+    """Test compose_pooldeposit function via API."""
+    address = defaults["addresses"][0]
+    response = apiv2_client.get(
+        f"/v2/addresses/{address}/compose/pooldeposit"
+        f"?asset_a=XCP&asset_b=DIVISIBLE&quantity_a=100000000&quantity_b=100000000"
+    )
+    assert response.status_code in [200, 400]
+
+
+def test_compose_poolwithdraw(apiv2_client, defaults):
+    """Test compose_poolwithdraw function via API."""
+    address = defaults["addresses"][0]
+    response = apiv2_client.get(
+        f"/v2/addresses/{address}/compose/poolwithdraw"
+        f"?asset_a=XCP&asset_b=DIVISIBLE&quantity=1000"
+    )
+    assert response.status_code in [200, 400]
+
+
+def test_get_pool_quote_deposit(apiv2_client):
+    """Test get_pool_quote_deposit function via API."""
+    response = apiv2_client.get(
+        "/v2/pools/XCP/DIVISIBLE/quote/deposit?quantity_a=100000000"
+    )
+    assert response.status_code == 200
+    assert "result" in response.json
+    result = response.json["result"]
+    assert "first_deposit" in result
+
+
+def test_get_pool_quote_swap(apiv2_client):
+    """Test get_pool_quote_swap function via API."""
+    response = apiv2_client.get(
+        "/v2/pools/XCP/DIVISIBLE/quote/swap?give_quantity=100000000"
+    )
+    assert response.status_code == 200
+    assert "result" in response.json
+
+
+def test_get_pool_quote_withdraw(apiv2_client):
+    """Test get_pool_quote_withdraw function via API."""
+    response = apiv2_client.get(
+        "/v2/pools/XCP/DIVISIBLE/quote/withdraw?quantity=1000"
+    )
+    assert response.status_code == 200
+    assert "result" in response.json
+
+
 def test_compose_detach(ledger_db, defaults):
     """Test compose_detach function directly."""
     # Test compose_detach function directly to cover the code path

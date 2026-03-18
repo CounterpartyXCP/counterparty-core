@@ -152,6 +152,16 @@ SUPPORTED_SORT_FIELDS = {
         "holding_type",
         "status",
     ],
+    "pools": [
+        "block_index",
+        "reserve_a",
+        "reserve_b",
+    ],
+    "pool_matches": [
+        "block_index",
+        "forward_quantity",
+        "backward_quantity",
+    ],
 }
 
 ADDRESS_FIELDS = ["source", "address", "issuer", "destination"]
@@ -3573,12 +3583,14 @@ def get_pools(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
-    Returns all AMM liquidity pools with non-zero reserves
+    Returns all AMM liquidity pools
     :param int cursor: The last index of the pools to return
     :param int limit: The maximum number of pools to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the pools to return (e.g. reserve_a:desc)
     """
     return select_rows(
         state_db,
@@ -3587,6 +3599,7 @@ def get_pools(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -3732,8 +3745,12 @@ def get_pool_deposits_by_block(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     return select_rows(
-        ledger_db, "pool_deposits",
-        where={"block_index": block_index}, last_cursor=cursor, limit=limit, offset=offset,
+        ledger_db,
+        "pool_deposits",
+        where={"block_index": block_index},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -3748,8 +3765,12 @@ def get_pool_withdrawals_by_block(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     return select_rows(
-        ledger_db, "pool_withdrawals",
-        where={"block_index": block_index}, last_cursor=cursor, limit=limit, offset=offset,
+        ledger_db,
+        "pool_withdrawals",
+        where={"block_index": block_index},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -3764,8 +3785,12 @@ def get_pool_matches_by_block(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     return select_rows(
-        ledger_db, "pool_matches",
-        where={"block_index": block_index}, last_cursor=cursor, limit=limit, offset=offset,
+        ledger_db,
+        "pool_matches",
+        where={"block_index": block_index},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -3780,9 +3805,13 @@ def get_pool_deposits_by_address(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     return select_rows(
-        state_db, "pool_deposits",
+        state_db,
+        "pool_deposits",
         where={"source": address, "status": "valid"},
-        cursor_field="tx_index", last_cursor=cursor, limit=limit, offset=offset,
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -3797,22 +3826,31 @@ def get_pool_withdrawals_by_address(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     return select_rows(
-        state_db, "pool_withdrawals",
+        state_db,
+        "pool_withdrawals",
         where={"source": address, "status": "valid"},
-        cursor_field="tx_index", last_cursor=cursor, limit=limit, offset=offset,
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
     )
 
 
 def get_pool_positions_by_address(
     state_db,
     address: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
-    Returns all AMM pool LP positions for a given address.
-    Returns raw pool data and LP balance — client computes share and underlying.
+    Returns all AMM pool LP positions for a given address
     :param str address: The address to query LP positions for (e.g. $ADDRESS_1)
+    :param int cursor: The last index of the positions to return
+    :param int limit: The maximum number of positions to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    cursor = state_db.cursor()
+    db_cursor = state_db.cursor()
     query = """
         SELECT
             p.asset_a,
@@ -3825,11 +3863,21 @@ def get_pool_positions_by_address(
         JOIN pools p ON b.asset = p.lp_asset
         WHERE b.address = ?
           AND b.quantity > 0
-    """
-    cursor.execute(query, (address,))
-    rows = cursor.fetchall()
-    cursor.close()
-    return rows
+        ORDER BY p.asset_a, p.asset_b
+        LIMIT ? OFFSET ?
+    """  # noqa S608 # nosec B608
+    query_offset = offset if offset is not None else 0
+    db_cursor.execute(query, (address, limit + 1, query_offset))
+    rows = db_cursor.fetchall()
+    db_cursor.close()
+
+    if len(rows) > limit:
+        next_cursor = query_offset + limit
+        rows = rows[:limit]
+    else:
+        next_cursor = None
+
+    return QueryResult(rows, next_cursor, "pools", len(rows))
 
 
 def get_pool_price_history(

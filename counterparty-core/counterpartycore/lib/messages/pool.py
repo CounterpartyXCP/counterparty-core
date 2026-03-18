@@ -1,5 +1,5 @@
-# AMM liquidity pool utilities: constant product (x*y=k) math,
-# pool match execution, and deposit-triggered order matching.
+# AMM liquidity pool utilities: constant product (x*y=k) math, pool match
+# execution, deposit-triggered order matching, and shared pool helpers.
 
 import logging
 import math
@@ -47,17 +47,6 @@ def compute_pool_output(reserve_in, reserve_out, input_qty, fee_bps):
     numerator = input_with_fee * reserve_out
     denominator = reserve_in * 10000 + input_with_fee
     return numerator // denominator
-
-
-def pool_marginal_price(reserve_in, reserve_out, fee_bps):
-    """Marginal price of the pool: units of input per 1 unit of output.
-
-    Includes fee.  Returns integer ratio scaled by 1e8 for precision.
-    price = reserve_in * 10000 / (reserve_out * (10000 - fee_bps))
-    """
-    if reserve_out <= 0:
-        return 0
-    return (reserve_in * 10000 * config.UNIT) // (reserve_out * (10000 - fee_bps))
 
 
 def compute_pool_input_for_target_price(reserve_in, reserve_out, target_price_num,
@@ -109,17 +98,6 @@ def compute_pool_input_for_target_price(reserve_in, reserve_out, target_price_nu
 
     dx = numerator // (2 * a)
     return max(dx, 0)
-
-
-def compute_pool_output_for_order(pool, give_asset, give_quantity, fee_bps):
-    """Compute how much get_asset a trader receives for give_quantity of give_asset.
-
-    Determines which reserve is 'in' and which is 'out' based on give_asset.
-    """
-    if give_asset == pool["asset_a"]:
-        return compute_pool_output(pool["reserve_a"], pool["reserve_b"], give_quantity, fee_bps)
-    else:
-        return compute_pool_output(pool["reserve_b"], pool["reserve_a"], give_quantity, fee_bps)
 
 
 def sort_pair(asset_a, asset_b):

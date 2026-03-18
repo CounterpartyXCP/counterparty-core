@@ -864,3 +864,67 @@ def test_get_fairminters_by_asset_with_longname(state_db):
         asset="PARENT.CHILD",
     )
     assert result is not None
+
+
+# =============================================================================
+# Tests for AMM pool queries
+# =============================================================================
+
+
+def test_get_pools(state_db):
+    """Test get_pools returns a result (may be empty pre-activation)."""
+    result = queries.get_pools(state_db)
+    assert result is not None
+
+
+def test_get_pool_by_pair_nonexistent(state_db):
+    """Test get_pool_by_pair for a pair with no pool."""
+    result = queries.get_pool_by_pair(state_db, "XCP", "DIVISIBLE")
+    # No pool exists in default test fixture — returns None
+    assert result is None
+
+
+def test_get_pool_deposits_by_pair(state_db):
+    """Test get_pool_deposits_by_pair (may be empty)."""
+    result = queries.get_pool_deposits_by_pair(state_db, "XCP", "DIVISIBLE")
+    assert result is not None
+
+
+def test_get_pool_withdrawals_by_pair(state_db):
+    """Test get_pool_withdrawals_by_pair (may be empty)."""
+    result = queries.get_pool_withdrawals_by_pair(state_db, "XCP", "DIVISIBLE")
+    assert result is not None
+
+
+def test_get_pool_matches_by_pair(state_db):
+    """Test get_pool_matches_by_pair (may be empty)."""
+    result = queries.get_pool_matches_by_pair(state_db, "XCP", "DIVISIBLE")
+    assert result is not None
+
+
+def test_get_all_pool_matches(state_db):
+    """Test get_all_pool_matches (may be empty)."""
+    result = queries.get_all_pool_matches(state_db)
+    assert result is not None
+
+
+def test_get_pool_deposits_by_address(state_db, defaults):
+    """Test get_pool_deposits_by_address (may be empty)."""
+    result = queries.get_pool_deposits_by_address(state_db, defaults["addresses"][0])
+    assert result is not None
+
+
+def test_get_pool_withdrawals_by_address(state_db, defaults):
+    """Test get_pool_withdrawals_by_address (may be empty)."""
+    result = queries.get_pool_withdrawals_by_address(state_db, defaults["addresses"][0])
+    assert result is not None
+
+
+def test_get_pool_positions_by_address(state_db, defaults):
+    """Test get_pool_positions_by_address returns paginated QueryResult."""
+    result = queries.get_pool_positions_by_address(state_db, defaults["addresses"][0])
+    assert result is not None
+    assert isinstance(result, queries.QueryResult)
+    assert isinstance(result.result, list)
+
+

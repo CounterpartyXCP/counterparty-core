@@ -509,13 +509,13 @@ def compose_pooldeposit(
     """
     Composes a transaction to deposit liquidity into an AMM pool.
     For the first deposit, both quantities set the initial price.
-    For subsequent deposits, quantities must match the current pool ratio.
-    Use the quote/deposit endpoint to get the required ratio before composing.
+    For subsequent deposits, LP tokens are minted proportional to the limiting side.
+    Use the quote/deposit endpoint to get the current ratio before composing.
     :param address: The address providing liquidity (e.g. $ADDRESS_1)
     :param asset_a: The first asset in the pair (e.g. XCP)
     :param asset_b: The second asset in the pair (e.g. $ASSET_1)
-    :param quantity_a: The quantity of asset_a to deposit (in satoshis) (e.g. 1000000)
-    :param quantity_b: The quantity of asset_b to deposit (in satoshis) (e.g. 1000000)
+    :param quantity_a: The quantity of asset_a to deposit (in satoshis, hence integer) (e.g. 1000000)
+    :param quantity_b: The quantity of asset_b to deposit (in satoshis, hence integer) (e.g. 1000000)
     """
     params = {
         "source": address,
@@ -620,7 +620,7 @@ def get_pool_quote_withdraw(db, asset1: str, asset2: str, quantity: int):
     Returns the estimated assets received for burning a given amount of LP tokens.
     :param asset1: The first asset in the pair (e.g. XCP)
     :param asset2: The second asset in the pair (e.g. $ASSET_1)
-    :param quantity: The quantity of LP tokens to burn (in satoshis) (e.g. 1000000)
+    :param quantity: The quantity of LP tokens to destroy (in satoshis) (e.g. 1000000)
     """
     from counterpartycore.lib.messages import pool as pool_mod
 
@@ -662,7 +662,7 @@ def compose_poolwithdraw(
     :param address: The address withdrawing liquidity (e.g. $ADDRESS_1)
     :param asset_a: The first asset in the pair (e.g. XCP)
     :param asset_b: The second asset in the pair (e.g. $ASSET_1)
-    :param quantity: The quantity of LP tokens to burn (in satoshis) (e.g. 1000000)
+    :param quantity: The quantity of LP tokens to destroy (in satoshis, hence integer) (e.g. 1000000)
     """
     params = {
         "source": address,
