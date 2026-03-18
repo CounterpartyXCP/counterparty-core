@@ -38,7 +38,8 @@ def build_table(state_db, table_name, group_by):
         SELECT sql, type FROM ledger_db.sqlite_master
         WHERE tbl_name='{table_name}'
         AND type != 'trigger'
-    """).fetchall():        if row["type"] == "index":
+    """).fetchall():
+        if row["type"] == "index":
             indexes.append(row["sql"])
         else:
             sqls.append(row["sql"])
