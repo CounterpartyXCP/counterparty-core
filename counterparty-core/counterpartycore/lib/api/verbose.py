@@ -217,7 +217,6 @@ def inject_normalized_quantities(result_list):
         "get_price": {"asset_field": "get_asset_info", "divisible": None},
         "forward_price": {"asset_field": "forward_asset_info", "divisible": None},
         "backward_price": {"asset_field": "backward_asset_info", "divisible": None},
-        # AMM pool fields
         "reserve_a": {"asset_field": "asset_a_info", "divisible": None},
         "reserve_b": {"asset_field": "asset_b_info", "divisible": None},
         "quantity_a": {"asset_field": "asset_a_info", "divisible": None},

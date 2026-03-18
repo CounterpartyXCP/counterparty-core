@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS pools(
     tx_index INTEGER,
     tx_hash TEXT,
     block_index INTEGER,
+    source TEXT,
     asset_a TEXT,
     asset_b TEXT,
     reserve_a INTEGER,

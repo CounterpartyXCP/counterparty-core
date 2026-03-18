@@ -5,7 +5,6 @@ from counterpartycore.lib import (
     backend,
     config,
     exceptions,
-    ledger,
     messages,
 )
 from counterpartycore.lib.api import composer
@@ -533,120 +532,6 @@ def get_pool_deposit_estimate_xcp_fee(db):
     """
     return gas.get_transaction_fee(db, 120, CurrentState().current_block_index())
 
-
-def get_pool_quote_deposit(db, asset1: str, asset2: str, quantity_a: int):
-    """
-    Returns the required quantity of the second asset and expected LP tokens for a deposit.
-    :param asset1: The first asset in the pair (e.g. XCP)
-    :param asset2: The second asset in the pair (e.g. $ASSET_1)
-    :param quantity_a: The quantity of asset1 to deposit (in satoshis) (e.g. 1000000)
-    """
-    from counterpartycore.lib.messages import pool as pool_mod
-
-    sorted_a, sorted_b = pool_mod.sort_pair(asset1, asset2)
-    pool = pool_mod.get_pool(db, sorted_a, sorted_b)
-
-    if pool is None or pool["reserve_a"] == 0:
-        return {
-            "first_deposit": True,
-            "quantity_b_required": None,
-            "quantity_minted_estimate": None,
-            "message": "First deposit: provide both quantities to set the initial price.",
-        }
-
-    if asset1 == sorted_a:
-        qty_b_required = quantity_a * pool["reserve_b"] // pool["reserve_a"]
-    else:
-        qty_b_required = quantity_a * pool["reserve_a"] // pool["reserve_b"]
-
-    total_supply = ledger.supplies.asset_supply(db, pool["lp_asset"])
-    if asset1 == sorted_a:
-        lp_estimate = quantity_a * total_supply // pool["reserve_a"]
-    else:
-        lp_estimate = quantity_a * total_supply // pool["reserve_b"]
-
-    return {
-        "first_deposit": False,
-        "quantity_b_required": qty_b_required,
-        "quantity_minted_estimate": lp_estimate,
-    }
-
-
-def get_pool_quote_swap(db, give_asset: str, give_quantity: int, get_asset: str):
-    """
-    Returns the estimated output, price impact, and effective price for a swap through the pool.
-    Use this to set the get_quantity on your order (with slippage tolerance subtracted).
-    :param give_asset: The asset you want to sell (e.g. XCP)
-    :param give_quantity: The quantity to sell (in satoshis) (e.g. 1000000)
-    :param get_asset: The asset you want to receive (e.g. $ASSET_1)
-    """
-    from counterpartycore.lib.messages import pool as pool_mod
-
-    pool = pool_mod.get_pool_for_pair(db, give_asset, get_asset)
-    if pool is None or not pool_mod.pool_has_liquidity(pool):
-        return {
-            "pool_exists": False,
-            "estimated_output": 0,
-            "message": "No pool exists for this pair.",
-        }
-
-    fee_bps = pool_mod.get_pool_fee_bps(pool)
-
-    if give_asset == pool["asset_a"]:
-        reserve_in, reserve_out = pool["reserve_a"], pool["reserve_b"]
-    else:
-        reserve_in, reserve_out = pool["reserve_b"], pool["reserve_a"]
-
-    estimated_output = pool_mod.compute_pool_output(reserve_in, reserve_out, give_quantity, fee_bps)
-
-    # Price impact: how much worse than marginal price
-    marginal_price = reserve_out / reserve_in if reserve_in > 0 else 0
-    effective_price = estimated_output / give_quantity if give_quantity > 0 else 0
-    price_impact = (1 - effective_price / marginal_price) * 100 if marginal_price > 0 else 0
-
-    return {
-        "pool_exists": True,
-        "estimated_output": estimated_output,
-        "fee_bps": fee_bps,
-        "fee_amount": give_quantity * fee_bps // 10000,
-        "marginal_price": marginal_price,
-        "effective_price": effective_price,
-        "price_impact": round(price_impact, 4),
-    }
-
-
-def get_pool_quote_withdraw(db, asset1: str, asset2: str, quantity: int):
-    """
-    Returns the estimated assets received for burning a given amount of LP tokens.
-    :param asset1: The first asset in the pair (e.g. XCP)
-    :param asset2: The second asset in the pair (e.g. $ASSET_1)
-    :param quantity: The quantity of LP tokens to destroy (in satoshis) (e.g. 1000000)
-    """
-    from counterpartycore.lib.messages import pool as pool_mod
-
-    sorted_a, sorted_b = pool_mod.sort_pair(asset1, asset2)
-    pool = pool_mod.get_pool(db, sorted_a, sorted_b)
-    if pool is None or pool["reserve_a"] == 0:
-        return {"pool_exists": False, "message": "Pool does not exist or is empty."}
-
-    total_supply = ledger.supplies.asset_supply(db, pool["lp_asset"])
-    if total_supply <= 0:
-        return {"pool_exists": False, "message": "No LP tokens in circulation."}
-
-    quantity_a = quantity * pool["reserve_a"] // total_supply
-    quantity_b = quantity * pool["reserve_b"] // total_supply
-
-    return {
-        "pool_exists": True,
-        "asset_a": sorted_a,
-        "asset_b": sorted_b,
-        "quantity": quantity,
-        "supply": total_supply,
-        "quantity_a_estimate": quantity_a,
-        "quantity_b_estimate": quantity_b,
-        "reserve_a": pool["reserve_a"],
-        "reserve_b": pool["reserve_b"],
-    }
 
 
 def compose_poolwithdraw(

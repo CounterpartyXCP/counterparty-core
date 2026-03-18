@@ -403,7 +403,6 @@ def update_dispenser(db, rowid, update_data, dispenser_info):
 
 
 def get_pool(db, asset_a, asset_b):
-    """Get pool by sorted asset pair."""
     cursor = db.cursor()
     query = """
         SELECT * FROM pools
@@ -420,7 +419,6 @@ def get_pool(db, asset_a, asset_b):
 
 
 def get_pool_by_lp_asset(db, lp_asset):
-    """Get pool by its LP token asset name."""
     cursor = db.cursor()
     query = """
         SELECT * FROM pools
@@ -437,7 +435,6 @@ def get_pool_by_lp_asset(db, lp_asset):
 
 
 def get_all_pools(db):
-    """Get all pools with non-zero reserves."""
     cursor = db.cursor()
     query = """
         SELECT * FROM (
@@ -452,7 +449,6 @@ def get_all_pools(db):
 
 
 def get_pool_deposits(db, asset_a, asset_b):
-    """Get all deposits for a pool."""
     cursor = db.cursor()
     query = """
         SELECT * FROM pool_deposits
@@ -464,7 +460,6 @@ def get_pool_deposits(db, asset_a, asset_b):
 
 
 def get_pool_withdrawals(db, asset_a, asset_b):
-    """Get all withdrawals for a pool."""
     cursor = db.cursor()
     query = """
         SELECT * FROM pool_withdrawals
@@ -476,7 +471,6 @@ def get_pool_withdrawals(db, asset_a, asset_b):
 
 
 def get_open_orders_for_pair(db, give_asset, get_asset):
-    """Get all open orders selling give_asset for get_asset."""
     cursor = db.cursor()
     query = """
         SELECT * FROM (
@@ -492,7 +486,6 @@ def get_open_orders_for_pair(db, give_asset, get_asset):
 
 
 def get_pool_matches_by_order(db, order_tx_hash):
-    """Get all pool matches for a given order."""
     cursor = db.cursor()
     query = """
         SELECT * FROM pool_matches
@@ -507,12 +500,10 @@ def get_pool_matches_by_order(db, order_tx_hash):
 
 
 def insert_pool(db, pool_data):
-    """Insert a new pool record."""
     insert_record(db, "pools", pool_data, "OPEN_POOL")
 
 
 def update_pool(db, asset_a, asset_b, new_reserve_a, new_reserve_b):
-    """Update pool reserves. Uses insert_update for proper state DB replication."""
     cursor = db.cursor()
     cursor.execute(
         "SELECT rowid FROM pools WHERE asset_a = ? AND asset_b = ? ORDER BY rowid DESC LIMIT 1",

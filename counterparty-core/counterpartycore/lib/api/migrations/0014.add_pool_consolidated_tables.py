@@ -11,7 +11,6 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 __depends__ = {"0013.add_performance_indexes"}
 
-# Same pattern as migration 0006 but for pool tables only.
 # group_by fields determine which columns identify a unique record
 # (used to get the latest version via MAX(rowid)).
 POOL_TABLES = {
@@ -39,8 +38,7 @@ def build_table(state_db, table_name, group_by):
         SELECT sql, type FROM ledger_db.sqlite_master
         WHERE tbl_name='{table_name}'
         AND type != 'trigger'
-    """).fetchall():  # noqa S608 # nosec B608
-        if row["type"] == "index":
+    """).fetchall():        if row["type"] == "index":
             indexes.append(row["sql"])
         else:
             sqls.append(row["sql"])
@@ -54,8 +52,7 @@ def build_table(state_db, table_name, group_by):
         SELECT {group_by}, MAX(rowid) as max_id
         FROM ledger_db.{table_name}
         GROUP BY {group_by}
-    """)  # noqa S608 # nosec B608
-
+    """)
     state_db.execute("CREATE INDEX temp.latest_ids_idx ON latest_ids(max_id)")
 
     columns = [
@@ -69,8 +66,7 @@ def build_table(state_db, table_name, group_by):
         SELECT {select_fields}
         FROM ledger_db.{table_name} b
         JOIN latest_ids l ON b.rowid = l.max_id
-    """)  # noqa S608 # nosec B608
-
+    """)
     state_db.execute("DROP TABLE latest_ids")
 
     for idx_sql in indexes:
@@ -125,8 +121,7 @@ def apply(db):
 
 def rollback(db):
     for table_name in POOL_TABLES:
-        db.execute(f"DROP TABLE IF EXISTS {table_name}")  # nosec B608
-
+        db.execute(f"DROP TABLE IF EXISTS {table_name}")
 
 if not __name__.startswith("apsw_"):
     steps = [step(apply, rollback)]

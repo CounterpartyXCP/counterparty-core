@@ -227,9 +227,8 @@ def first_deposit(db, tx, asset_a, asset_b, qty_a, qty_b):
     ledger.events.debit(db, source, asset_b, qty_b, tx["tx_index"],
                         action="pool deposit", event=tx["tx_hash"])
 
-    # Generate LP token name
-    seed = f"{asset_a}:{asset_b}:{tx['tx_hash']}"
-    lp_asset_name = assetnames.deterministic_random_asset_name(db, seed)
+    # Generate LP token name (deterministic in regtest, random in production)
+    lp_asset_name = assetnames.generate_random_asset(f"{asset_a}:{asset_b}")
     lp_asset_id = ledger.issuances.generate_asset_id(lp_asset_name)
 
     # Compute initial LP supply
@@ -259,6 +258,7 @@ def first_deposit(db, tx, asset_a, asset_b, qty_a, qty_b):
         "tx_index": tx["tx_index"],
         "tx_hash": tx["tx_hash"],
         "block_index": tx["block_index"],
+        "source": source,
         "asset_a": asset_a,
         "asset_b": asset_b,
         "reserve_a": qty_a,

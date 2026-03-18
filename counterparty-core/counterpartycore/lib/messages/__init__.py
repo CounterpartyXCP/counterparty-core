@@ -20,8 +20,8 @@
 # 90 fairminter
 # 100 utxo attach and dettach
 # 110 destroy
-# 120 pooldeposit (AMM liquidity deposit)
-# 121 poolwithdraw (AMM liquidity withdrawal)
+# 120 pooldeposit
+# 121 poolwithdraw
 #
 # Allocate each new type of message within the "logical" 10 number boundary
 # Only allocate a 10 number boundary if it makes sense
