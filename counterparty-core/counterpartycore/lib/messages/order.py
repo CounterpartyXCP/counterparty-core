@@ -10,6 +10,7 @@ from counterpartycore.lib import (
     ledger,
 )
 from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.messages import pool as pool_mod
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import helpers
 
@@ -513,6 +514,16 @@ def match(db, tx, block_index=None):
     tx1_fee_required_remaining = tx1["fee_required_remaining"]
     tx1_fee_provided_remaining = tx1["fee_provided_remaining"]
 
+    # ── AMM pool lookup (protocol-gated) ─────────────────────────────────
+    amm_pool = None
+    if (
+        protocol.enabled("amm_pools", block_index=tx["block_index"])
+        and config.BTC not in (tx1["give_asset"], tx1["get_asset"])
+    ):
+        amm_pool = pool_mod.get_pool_for_pair(db, tx1["give_asset"], tx1["get_asset"])
+        if amm_pool and not pool_mod.pool_has_liquidity(amm_pool):
+            amm_pool = None
+
     tx1_status = tx1["status"]
     for tx0 in order_matches:
         # Sanity check. Should never happen.
@@ -574,6 +585,52 @@ def match(db, tx, block_index=None):
                 if tx1_fee_required_remaining < 0:
                     logger.trace("Skipping: negative tx1 fee required remaining")
                     continue
+
+        # ── AMM pool interleave: fill from pool if its price beats this book order ──
+        # No try/except here — if pool match fails mid-operation, the exception
+        # must propagate to the outer `with db:` in blocks.py to roll back all
+        # state changes (credits, reserve updates). Catching here would leave
+        # inconsistent state (trader credited but order not decremented).
+        if amm_pool and pool_mod.pool_has_liquidity(amm_pool) and tx1_give_remaining > 0:
+            if tx1["give_asset"] == amm_pool["asset_a"]:
+                p_reserve_in, p_reserve_out = amm_pool["reserve_a"], amm_pool["reserve_b"]
+            else:
+                p_reserve_in, p_reserve_out = amm_pool["reserve_b"], amm_pool["reserve_a"]
+
+            pool_fee_bps = pool_mod.get_pool_fee_bps(amm_pool)
+            pool_fill_qty = pool_mod.compute_pool_input_for_target_price(
+                p_reserve_in, p_reserve_out,
+                tx0["get_quantity"], tx0["give_quantity"],
+                pool_fee_bps,
+            )
+            pool_fill_qty = min(pool_fill_qty, tx1_give_remaining)
+
+            if pool_fill_qty > 0:
+                pool_output = pool_mod.compute_pool_output(
+                    p_reserve_in, p_reserve_out, pool_fill_qty, pool_fee_bps
+                )
+                min_output = pool_fill_qty * tx1["get_quantity"] // tx1["give_quantity"]
+                if pool_output >= min_output and pool_output > 0:
+                    pool_mod.execute_pool_match(db, tx, tx1, amm_pool, pool_fill_qty, pool_output)
+
+                    tx1_give_remaining -= pool_fill_qty
+                    tx1_get_remaining -= pool_output
+                    amm_pool = pool_mod.get_pool_for_pair(db, tx1["give_asset"], tx1["get_asset"])
+
+                    if tx1_give_remaining <= 0:
+                        tx1_status = "filled"
+
+                    set_data = {
+                        "give_remaining": tx1_give_remaining,
+                        "get_remaining": tx1_get_remaining,
+                        "fee_required_remaining": tx1_fee_required_remaining,
+                        "fee_provided_remaining": tx1_fee_provided_remaining,
+                        "status": tx1_status,
+                    }
+                    ledger.markets.update_order(db, tx1["tx_hash"], set_data)
+
+                    if tx1_status == "filled":
+                        break
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
@@ -810,6 +867,38 @@ def match(db, tx, block_index=None):
 
             if tx1_status == "filled":
                 break
+
+    # ── AMM pool: fill any remaining quantity after book orders exhausted ────
+    if tx1_status == "open" and amm_pool and tx1_give_remaining > 0:
+        amm_pool = pool_mod.get_pool_for_pair(db, tx1["give_asset"], tx1["get_asset"])
+        if amm_pool and pool_mod.pool_has_liquidity(amm_pool):
+            if tx1["give_asset"] == amm_pool["asset_a"]:
+                p_reserve_in, p_reserve_out = amm_pool["reserve_a"], amm_pool["reserve_b"]
+            else:
+                p_reserve_in, p_reserve_out = amm_pool["reserve_b"], amm_pool["reserve_a"]
+
+            pool_fee_bps = pool_mod.get_pool_fee_bps(amm_pool)
+            pool_output = pool_mod.compute_pool_output(
+                p_reserve_in, p_reserve_out, tx1_give_remaining, pool_fee_bps
+            )
+
+            min_output = tx1_give_remaining * tx1["get_quantity"] // tx1["give_quantity"]
+            if pool_output >= min_output and pool_output > 0:
+                pool_mod.execute_pool_match(
+                    db, tx, tx1, amm_pool, tx1_give_remaining, pool_output
+                )
+                tx1_give_remaining = 0
+                tx1_get_remaining -= pool_output
+                tx1_status = "filled"
+
+                set_data = {
+                    "give_remaining": tx1_give_remaining,
+                    "get_remaining": tx1_get_remaining,
+                    "fee_required_remaining": tx1_fee_required_remaining,
+                    "fee_provided_remaining": tx1_fee_provided_remaining,
+                    "status": tx1_status,
+                }
+                ledger.markets.update_order(db, tx1["tx_hash"], set_data)
 
     cursor.close()
     return
