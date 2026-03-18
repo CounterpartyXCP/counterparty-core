@@ -3561,3 +3561,326 @@ def get_fairmints_by_block(
         limit=limit,
         offset=offset,
     )
+
+
+#####################
+#       POOLS       #
+#####################
+
+
+def get_pools(
+    state_db,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns all AMM liquidity pools with non-zero reserves
+    :param int cursor: The last index of the pools to return
+    :param int limit: The maximum number of pools to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        state_db,
+        "pools",
+        where=None,
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_by_pair(
+    state_db,
+    asset1: str,
+    asset2: str,
+):
+    """
+    Returns the AMM pool for a given asset pair
+    :param str asset1: The first asset in the pair (e.g. XCP)
+    :param str asset2: The second asset in the pair (e.g. PEPECASH)
+    """
+    a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
+    return select_row(
+        state_db,
+        "pools",
+        where={"asset_a": a, "asset_b": b},
+    )
+
+
+def get_pool_deposits_by_pair(
+    state_db,
+    asset1: str,
+    asset2: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns deposits for a given pool pair
+    :param str asset1: The first asset in the pair (e.g. XCP)
+    :param str asset2: The second asset in the pair (e.g. PEPECASH)
+    :param int cursor: The last index of the deposits to return
+    :param int limit: The maximum number of deposits to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
+    return select_rows(
+        state_db,
+        "pool_deposits",
+        where={"asset_a": a, "asset_b": b, "status": "valid"},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_withdrawals_by_pair(
+    state_db,
+    asset1: str,
+    asset2: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns withdrawals for a given pool pair
+    :param str asset1: The first asset in the pair (e.g. XCP)
+    :param str asset2: The second asset in the pair (e.g. PEPECASH)
+    :param int cursor: The last index of the withdrawals to return
+    :param int limit: The maximum number of withdrawals to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
+    return select_rows(
+        state_db,
+        "pool_withdrawals",
+        where={"asset_a": a, "asset_b": b, "status": "valid"},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_matches_by_pair(
+    state_db,
+    asset1: str,
+    asset2: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns pool matches (swaps) for a given pool pair
+    :param str asset1: The first asset in the pair (e.g. XCP)
+    :param str asset2: The second asset in the pair (e.g. PEPECASH)
+    :param int cursor: The last index of the pool matches to return
+    :param int limit: The maximum number of pool matches to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
+    return select_rows(
+        state_db,
+        "pool_matches",
+        where={"asset_a": a, "asset_b": b},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_all_pool_matches(
+    state_db,
+    block_index: int = None,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
+):
+    """
+    Returns all pool matches (swaps against AMM pools)
+    :param int block_index: The block index to filter by (e.g. 840000)
+    :param int cursor: The last index of the pool matches to return
+    :param int limit: The maximum number of pool matches to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the pool matches to return (e.g. forward_quantity:desc)
+    """
+    where = {"block_index": block_index} if block_index else {}
+    return select_rows(
+        state_db,
+        "pool_matches",
+        where=where or None,
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+        sort=sort,
+    )
+
+
+def get_pool_deposits_by_block(
+    ledger_db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns pool deposits in a given block
+    :param int block_index: The block index (e.g. 840000)
+    :param int cursor: The last index of the deposits to return
+    :param int limit: The maximum number of deposits to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db, "pool_deposits",
+        where={"block_index": block_index}, last_cursor=cursor, limit=limit, offset=offset,
+    )
+
+
+def get_pool_withdrawals_by_block(
+    ledger_db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns pool withdrawals in a given block
+    :param int block_index: The block index (e.g. 840000)
+    :param int cursor: The last index of the withdrawals to return
+    :param int limit: The maximum number of withdrawals to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db, "pool_withdrawals",
+        where={"block_index": block_index}, last_cursor=cursor, limit=limit, offset=offset,
+    )
+
+
+def get_pool_matches_by_block(
+    ledger_db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns pool matches (swaps) in a given block
+    :param int block_index: The block index (e.g. 840000)
+    :param int cursor: The last index of the pool matches to return
+    :param int limit: The maximum number of pool matches to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db, "pool_matches",
+        where={"block_index": block_index}, last_cursor=cursor, limit=limit, offset=offset,
+    )
+
+
+def get_pool_deposits_by_address(
+    state_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns pool deposits by a given address
+    :param str address: The address to query (e.g. $ADDRESS_1)
+    :param int cursor: The last index of the deposits to return
+    :param int limit: The maximum number of deposits to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        state_db, "pool_deposits",
+        where={"source": address, "status": "valid"},
+        cursor_field="tx_index", last_cursor=cursor, limit=limit, offset=offset,
+    )
+
+
+def get_pool_withdrawals_by_address(
+    state_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns pool withdrawals by a given address
+    :param str address: The address to query (e.g. $ADDRESS_1)
+    :param int cursor: The last index of the withdrawals to return
+    :param int limit: The maximum number of withdrawals to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        state_db, "pool_withdrawals",
+        where={"source": address, "status": "valid"},
+        cursor_field="tx_index", last_cursor=cursor, limit=limit, offset=offset,
+    )
+
+
+def get_pool_positions_by_address(
+    state_db,
+    address: str,
+):
+    """
+    Returns all AMM pool LP positions for a given address.
+    Returns raw pool data and LP balance — client computes share and underlying.
+    :param str address: The address to query LP positions for (e.g. $ADDRESS_1)
+    """
+    cursor = state_db.cursor()
+    query = """
+        SELECT
+            p.asset_a,
+            p.asset_b,
+            p.lp_asset,
+            p.reserve_a,
+            p.reserve_b,
+            b.quantity
+        FROM balances b
+        JOIN pools p ON b.asset = p.lp_asset
+        WHERE b.address = ?
+          AND b.quantity > 0
+    """
+    cursor.execute(query, (address,))
+    rows = cursor.fetchall()
+    cursor.close()
+    return rows
+
+
+def get_pool_price_history(
+    ledger_db,
+    asset1: str,
+    asset2: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns the price history for a pool pair (reserve snapshots at each state change).
+    Each entry includes block_index, reserves, and computed price.
+    Can be used to build price charts and compute TWAP.
+    :param str asset1: The first asset in the pair (e.g. XCP)
+    :param str asset2: The second asset in the pair (e.g. PEPECASH)
+    :param int cursor: The last index of the entries to return
+    :param int limit: The maximum number of entries to return (e.g. 100)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
+    return select_rows(
+        ledger_db,
+        "pools",
+        where={"asset_a": a, "asset_b": b},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_matches_by_order(
+    state_db,
+    order_hash: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns pool matches (swaps against the AMM) for a given order
+    :param str order_hash: The hash of the order transaction (e.g. $ORDER_WITH_MATCH_HASH)
+    :param int cursor: The last index of the pool matches to return
+    :param int limit: The maximum number of pool matches to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        state_db,
+        "pool_matches",
+        where={"order_tx_hash": order_hash},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )

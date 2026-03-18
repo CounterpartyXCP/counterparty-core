@@ -43,6 +43,9 @@ ALL_ROUTES = {
     "/v2/blocks/<int:block_index>/sweeps": (queries.get_sweeps_by_block, "blocks"),
     "/v2/blocks/<int:block_index>/fairminters": (queries.get_fairminters_by_block, "blocks"),
     "/v2/blocks/<int:block_index>/fairmints": (queries.get_fairmints_by_block, "blocks"),
+    "/v2/blocks/<int:block_index>/pool_deposits": (queries.get_pool_deposits_by_block, "blocks"),
+    "/v2/blocks/<int:block_index>/pool_withdrawals": (queries.get_pool_withdrawals_by_block, "blocks"),
+    "/v2/blocks/<int:block_index>/pool_matches": (queries.get_pool_matches_by_block, "blocks"),
     ### /transactions ###
     "/v2/transactions": (queries.get_transactions, "transactions"),
     "/v2/transactions/counts": (queries.get_transaction_types_count, "transactions"),
@@ -161,6 +164,19 @@ ALL_ROUTES = {
     "/v2/addresses/<address>/compose/dispense": (compose.compose_dispense, "compose"),
     "/v2/addresses/<address>/compose/fairminter": (compose.compose_fairminter, "compose"),
     "/v2/addresses/<address>/compose/fairmint": (compose.compose_fairmint, "compose"),
+    "/v2/addresses/<address>/compose/pooldeposit": (compose.compose_pooldeposit, "compose"),
+    "/v2/addresses/<address>/compose/pooldeposit/estimatexcpfees": (
+        compose.get_pool_deposit_estimate_xcp_fee,
+        "compose",
+    ),
+    "/v2/addresses/<address>/compose/poolwithdraw": (compose.compose_poolwithdraw, "compose"),
+    "/v2/addresses/<address>/compose/poolwithdraw/estimatexcpfees": (
+        compose.get_pool_withdraw_estimate_xcp_fee,
+        "compose",
+    ),
+    "/v2/pools/<asset1>/<asset2>/quote/deposit": (compose.get_pool_quote_deposit, "pools"),
+    "/v2/pools/<give_asset>/<get_asset>/quote/swap": (compose.get_pool_quote_swap, "pools"),
+    "/v2/pools/<asset1>/<asset2>/quote/withdraw": (compose.get_pool_quote_withdraw, "pools"),
     "/v2/addresses/<address>/compose/attach": (compose.compose_attach, "compose"),
     "/v2/addresses/<address>/compose/attach/estimatexcpfees": (
         compose.get_attach_estimate_xcp_fee,
@@ -204,6 +220,18 @@ ALL_ROUTES = {
     "/v2/orders/<asset1>/<asset2>": (queries.get_orders_by_two_assets, "orders"),
     "/v2/orders/<asset1>/<asset2>/matches": (queries.get_order_matches_by_two_assets, "orders"),
     "/v2/order_matches": (queries.get_all_order_matches, "orders"),
+    "/v2/orders/<order_hash>/pool_matches": (queries.get_pool_matches_by_order, "orders"),
+    "/v2/pool_matches": (queries.get_all_pool_matches, "pools"),
+    ### /pools ###
+    "/v2/pools": (queries.get_pools, "pools"),
+    "/v2/pools/<asset1>/<asset2>": (queries.get_pool_by_pair, "pools"),
+    "/v2/pools/<asset1>/<asset2>/deposits": (queries.get_pool_deposits_by_pair, "pools"),
+    "/v2/pools/<asset1>/<asset2>/withdrawals": (queries.get_pool_withdrawals_by_pair, "pools"),
+    "/v2/pools/<asset1>/<asset2>/matches": (queries.get_pool_matches_by_pair, "pools"),
+    "/v2/pools/<asset1>/<asset2>/price_history": (queries.get_pool_price_history, "pools"),
+    "/v2/addresses/<address>/pool_deposits": (queries.get_pool_deposits_by_address, "addresses"),
+    "/v2/addresses/<address>/pool_withdrawals": (queries.get_pool_withdrawals_by_address, "addresses"),
+    "/v2/addresses/<address>/pools": (queries.get_pool_positions_by_address, "addresses"),
     ### /bets ###
     "/v2/bets": (queries.get_bets, "bets"),
     "/v2/bets/<bet_hash>": (queries.get_bet, "bets"),
