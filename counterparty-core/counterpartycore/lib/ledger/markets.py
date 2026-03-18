@@ -393,3 +393,137 @@ def get_all_dispensables(db):
 
 def update_dispenser(db, rowid, update_data, dispenser_info):
     insert_update(db, "dispensers", "rowid", rowid, update_data, "DISPENSER_UPDATE", dispenser_info)
+
+
+#####################
+#       POOLS       #
+#####################
+
+### SELECTS ###
+
+
+def get_pool(db, asset_a, asset_b):
+    """Get pool by sorted asset pair."""
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM pools
+        WHERE asset_a = ? AND asset_b = ?
+        ORDER BY rowid DESC LIMIT 1
+    """
+    bindings = (asset_a, asset_b)
+    cursor.execute(query, bindings)
+    pools = cursor.fetchall()
+    cursor.close()
+    if pools:
+        return pools[0]
+    return None
+
+
+def get_pool_by_lp_asset(db, lp_asset):
+    """Get pool by its LP token asset name."""
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM pools
+        WHERE lp_asset = ?
+        ORDER BY rowid DESC LIMIT 1
+    """
+    bindings = (lp_asset,)
+    cursor.execute(query, bindings)
+    pools = cursor.fetchall()
+    cursor.close()
+    if pools:
+        return pools[0]
+    return None
+
+
+def get_all_pools(db):
+    """Get all pools with non-zero reserves."""
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM (
+            SELECT *, MAX(rowid)
+            FROM pools
+            GROUP BY asset_a, asset_b
+        ) WHERE reserve_a > 0 AND reserve_b > 0
+        ORDER BY asset_a, asset_b
+    """
+    cursor.execute(query)
+    return cursor.fetchall()
+
+
+def get_pool_deposits(db, asset_a, asset_b):
+    """Get all deposits for a pool."""
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM pool_deposits
+        WHERE asset_a = ? AND asset_b = ? AND status = 'valid'
+        ORDER BY block_index, tx_index
+    """
+    cursor.execute(query, (asset_a, asset_b))
+    return cursor.fetchall()
+
+
+def get_pool_withdrawals(db, asset_a, asset_b):
+    """Get all withdrawals for a pool."""
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM pool_withdrawals
+        WHERE asset_a = ? AND asset_b = ? AND status = 'valid'
+        ORDER BY block_index, tx_index
+    """
+    cursor.execute(query, (asset_a, asset_b))
+    return cursor.fetchall()
+
+
+def get_open_orders_for_pair(db, give_asset, get_asset):
+    """Get all open orders selling give_asset for get_asset."""
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM (
+            SELECT *, MAX(rowid)
+            FROM orders
+            WHERE give_asset = ? AND get_asset = ?
+            GROUP BY tx_hash
+        ) WHERE status = ?
+        ORDER BY tx_index, tx_hash
+    """
+    cursor.execute(query, (give_asset, get_asset, "open"))
+    return cursor.fetchall()
+
+
+def get_pool_matches_by_order(db, order_tx_hash):
+    """Get all pool matches for a given order."""
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM pool_matches
+        WHERE order_tx_hash = ?
+        ORDER BY block_index, tx_index
+    """
+    cursor.execute(query, (order_tx_hash,))
+    return cursor.fetchall()
+
+
+### UPDATES ###
+
+
+def insert_pool(db, pool_data):
+    """Insert a new pool record."""
+    insert_record(db, "pools", pool_data, "OPEN_POOL")
+
+
+def update_pool(db, asset_a, asset_b, new_reserve_a, new_reserve_b):
+    """Update pool reserves. Uses insert_update for proper state DB replication."""
+    cursor = db.cursor()
+    cursor.execute(
+        "SELECT rowid FROM pools WHERE asset_a = ? AND asset_b = ? ORDER BY rowid DESC LIMIT 1",
+        (asset_a, asset_b),
+    )
+    row = cursor.fetchone()
+    cursor.close()
+    if row is None:
+        return
+    update_data = {"reserve_a": new_reserve_a, "reserve_b": new_reserve_b}
+    insert_update(db, "pools", "rowid", row["rowid"], update_data, "POOL_UPDATE",
+                  {"asset_a": asset_a, "asset_b": asset_b})
+
+
