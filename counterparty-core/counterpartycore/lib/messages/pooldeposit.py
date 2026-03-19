@@ -15,6 +15,7 @@ ID = 120
 FORMAT = ">QQQQ"  # asset_a_id, asset_b_id, quantity_a, quantity_b
 LENGTH = 8 + 8 + 8 + 8  # 32 bytes
 
+
 def validate(db, source, asset_a, asset_b, quantity_a, quantity_b):
     problems = []
 
@@ -68,7 +69,16 @@ def validate(db, source, asset_a, asset_b, quantity_a, quantity_b):
 
     return problems
 
-def compose(db, source: str, asset_a: str, asset_b: str, quantity_a: int, quantity_b: int, skip_validation: bool = False):
+
+def compose(
+    db,
+    source: str,
+    asset_a: str,
+    asset_b: str,
+    quantity_a: int,
+    quantity_b: int,
+    skip_validation: bool = False,
+):
     # resolve subassets
     asset_a = ledger.issuances.resolve_subasset_longname(db, asset_a)
     asset_b = ledger.issuances.resolve_subasset_longname(db, asset_b)
@@ -83,6 +93,7 @@ def compose(db, source: str, asset_a: str, asset_b: str, quantity_a: int, quanti
     data += struct.pack(FORMAT, asset_a_id, asset_b_id, quantity_a, quantity_b)
 
     return (source, [], data)
+
 
 def unpack(db, message, return_dict=False):
     try:
@@ -105,6 +116,7 @@ def unpack(db, message, return_dict=False):
             return {"asset_a": "", "asset_b": "", "quantity_a": 0, "quantity_b": 0}
         return "", "", 0, 0
 
+
 def parse(db, tx, message):
     asset_a, asset_b, quantity_a, quantity_b = unpack(db, message)
 
@@ -118,7 +130,9 @@ def parse(db, tx, message):
 
     # if invalid, record and return early
     if status != "valid":
-        sorted_a, sorted_b = pool_mod.sort_pair(asset_a, asset_b) if asset_a and asset_b else (asset_a, asset_b)
+        sorted_a, sorted_b = (
+            pool_mod.sort_pair(asset_a, asset_b) if asset_a and asset_b else (asset_a, asset_b)
+        )
         bindings = {
             "tx_index": tx["tx_index"],
             "tx_hash": tx["tx_hash"],
@@ -140,8 +154,13 @@ def parse(db, tx, message):
     fee = gas.get_transaction_fee(db, ID, tx["block_index"])
     if fee > 0:
         ledger.events.debit(
-            db, tx["source"], config.XCP, fee, tx["tx_index"],
-            action="pool deposit fee", event=tx["tx_hash"],
+            db,
+            tx["source"],
+            config.XCP,
+            fee,
+            tx["tx_index"],
+            action="pool deposit fee",
+            event=tx["tx_hash"],
         )
     gas.increment_counter(db, ID, tx["block_index"])
 
@@ -157,9 +176,7 @@ def parse(db, tx, message):
     if existing_pool is None:
         quantity_minted = first_deposit(db, tx, sorted_a, sorted_b, qty_a, qty_b)
     elif existing_pool["reserve_a"] == 0:
-        quantity_minted = refund_empty_pool(
-            db, tx, existing_pool, sorted_a, sorted_b, qty_a, qty_b
-        )
+        quantity_minted = refund_empty_pool(db, tx, existing_pool, sorted_a, sorted_b, qty_a, qty_b)
     else:
         quantity_minted = subsequent_deposit(
             db, tx, existing_pool, sorted_a, sorted_b, qty_a, qty_b
@@ -189,6 +206,7 @@ def parse(db, tx, message):
     )
     ledger.blocks.set_transaction_status(db, tx["tx_index"], True)
 
+
 def make_lp_issuance_bindings(db, tx, lp_asset, quantity, asset_a, asset_b, asset_events):
     """Build the issuance record for LP token minting."""
     return {
@@ -217,15 +235,18 @@ def make_lp_issuance_bindings(db, tx, lp_asset, quantity, asset_a, asset_b, asse
         "mime_type": "text/plain",
     }
 
+
 def first_deposit(db, tx, asset_a, asset_b, qty_a, qty_b):
     """Create pool and LP token, mint all LP tokens to depositor."""
     source = tx["source"]
 
     # Debit both assets from source (escrow into pool)
-    ledger.events.debit(db, source, asset_a, qty_a, tx["tx_index"],
-                        action="pool deposit", event=tx["tx_hash"])
-    ledger.events.debit(db, source, asset_b, qty_b, tx["tx_index"],
-                        action="pool deposit", event=tx["tx_hash"])
+    ledger.events.debit(
+        db, source, asset_a, qty_a, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
+    )
+    ledger.events.debit(
+        db, source, asset_b, qty_b, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
+    )
 
     # Generate LP token name (deterministic in regtest, random in production)
     lp_asset_name = assetnames.generate_random_asset(f"{asset_a}:{asset_b}")
@@ -235,12 +256,17 @@ def first_deposit(db, tx, asset_a, asset_b, qty_a, qty_b):
     total_lp = pool_mod.isqrt(qty_a * qty_b)
 
     # Register LP token as asset
-    ledger.events.insert_record(db, "assets", {
-        "asset_id": str(lp_asset_id),
-        "asset_name": lp_asset_name,
-        "block_index": tx["block_index"],
-        "asset_longname": None,
-    }, "ASSET_CREATION")
+    ledger.events.insert_record(
+        db,
+        "assets",
+        {
+            "asset_id": str(lp_asset_id),
+            "asset_name": lp_asset_name,
+            "block_index": tx["block_index"],
+            "asset_longname": None,
+        },
+        "ASSET_CREATION",
+    )
 
     # Record issuance
     issuance_bindings = make_lp_issuance_bindings(
@@ -249,24 +275,34 @@ def first_deposit(db, tx, asset_a, asset_b, qty_a, qty_b):
     ledger.events.insert_record(db, "issuances", issuance_bindings, "ASSET_ISSUANCE")
 
     # Credit LP tokens to depositor
-    ledger.events.credit(db, source, lp_asset_name, total_lp,
-                         tx["tx_index"], action="pool deposit",
-                         event=tx["tx_hash"])
+    ledger.events.credit(
+        db,
+        source,
+        lp_asset_name,
+        total_lp,
+        tx["tx_index"],
+        action="pool deposit",
+        event=tx["tx_hash"],
+    )
 
     # Create pool record
-    pool_mod.insert_pool(db, {
-        "tx_index": tx["tx_index"],
-        "tx_hash": tx["tx_hash"],
-        "block_index": tx["block_index"],
-        "source": source,
-        "asset_a": asset_a,
-        "asset_b": asset_b,
-        "reserve_a": qty_a,
-        "reserve_b": qty_b,
-        "lp_asset": lp_asset_name,
-    })
+    pool_mod.insert_pool(
+        db,
+        {
+            "tx_index": tx["tx_index"],
+            "tx_hash": tx["tx_hash"],
+            "block_index": tx["block_index"],
+            "source": source,
+            "asset_a": asset_a,
+            "asset_b": asset_b,
+            "reserve_a": qty_a,
+            "reserve_b": qty_b,
+            "lp_asset": lp_asset_name,
+        },
+    )
 
     return total_lp
+
 
 def refund_empty_pool(db, tx, pool, asset_a, asset_b, qty_a, qty_b):
     """Re-fund a fully drained pool, reusing the existing LP token.
@@ -279,10 +315,12 @@ def refund_empty_pool(db, tx, pool, asset_a, asset_b, qty_a, qty_b):
     lp_asset = pool["lp_asset"]
 
     # Debit both assets
-    ledger.events.debit(db, source, asset_a, qty_a, tx["tx_index"],
-                        action="pool deposit", event=tx["tx_hash"])
-    ledger.events.debit(db, source, asset_b, qty_b, tx["tx_index"],
-                        action="pool deposit", event=tx["tx_hash"])
+    ledger.events.debit(
+        db, source, asset_a, qty_a, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
+    )
+    ledger.events.debit(
+        db, source, asset_b, qty_b, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
+    )
 
     # Compute LP supply (same as first deposit)
     total_lp = pool_mod.isqrt(qty_a * qty_b)
@@ -294,14 +332,15 @@ def refund_empty_pool(db, tx, pool, asset_a, asset_b, qty_a, qty_b):
     ledger.events.insert_record(db, "issuances", issuance_bindings, "ASSET_ISSUANCE")
 
     # Credit LP tokens to depositor
-    ledger.events.credit(db, source, lp_asset, total_lp,
-                         tx["tx_index"], action="pool deposit",
-                         event=tx["tx_hash"])
+    ledger.events.credit(
+        db, source, lp_asset, total_lp, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
+    )
 
     # Update pool reserves
     pool_mod.update_pool(db, asset_a, asset_b, qty_a, qty_b)
 
     return total_lp
+
 
 def subsequent_deposit(db, tx, pool, asset_a, asset_b, qty_a, qty_b):
     """Add liquidity to existing pool. Mint proportional LP tokens."""
@@ -319,10 +358,12 @@ def subsequent_deposit(db, tx, pool, asset_a, asset_b, qty_a, qty_b):
         raise exceptions.MessageError("deposit too small to mint LP tokens")
 
     # Debit both assets
-    ledger.events.debit(db, source, asset_a, qty_a, tx["tx_index"],
-                        action="pool deposit", event=tx["tx_hash"])
-    ledger.events.debit(db, source, asset_b, qty_b, tx["tx_index"],
-                        action="pool deposit", event=tx["tx_hash"])
+    ledger.events.debit(
+        db, source, asset_a, qty_a, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
+    )
+    ledger.events.debit(
+        db, source, asset_b, qty_b, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
+    )
 
     # Record issuance
     issuance_bindings = make_lp_issuance_bindings(
@@ -331,9 +372,15 @@ def subsequent_deposit(db, tx, pool, asset_a, asset_b, qty_a, qty_b):
     ledger.events.insert_record(db, "issuances", issuance_bindings, "ASSET_ISSUANCE")
 
     # Credit LP tokens to depositor
-    ledger.events.credit(db, source, lp_asset, quantity_minted,
-                         tx["tx_index"], action="pool deposit",
-                         event=tx["tx_hash"])
+    ledger.events.credit(
+        db,
+        source,
+        lp_asset,
+        quantity_minted,
+        tx["tx_index"],
+        action="pool deposit",
+        event=tx["tx_hash"],
+    )
 
     # Update pool reserves
     new_reserve_a = pool["reserve_a"] + qty_a

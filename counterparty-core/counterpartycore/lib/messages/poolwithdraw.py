@@ -14,6 +14,7 @@ ID = 121
 FORMAT = ">QQQ"  # asset_a_id, asset_b_id, quantity
 LENGTH = 8 + 8 + 8  # 24 bytes
 
+
 def validate(db, source, asset_a, asset_b, quantity):
     problems = []
 
@@ -62,7 +63,10 @@ def validate(db, source, asset_a, asset_b, quantity):
 
     return problems
 
-def compose(db, source: str, asset_a: str, asset_b: str, quantity: int, skip_validation: bool = False):
+
+def compose(
+    db, source: str, asset_a: str, asset_b: str, quantity: int, skip_validation: bool = False
+):
     # resolve subassets
     asset_a = ledger.issuances.resolve_subasset_longname(db, asset_a)
     asset_b = ledger.issuances.resolve_subasset_longname(db, asset_b)
@@ -77,6 +81,7 @@ def compose(db, source: str, asset_a: str, asset_b: str, quantity: int, skip_val
     data += struct.pack(FORMAT, asset_a_id, asset_b_id, quantity)
 
     return (source, [], data)
+
 
 def unpack(db, message, return_dict=False):
     try:
@@ -94,6 +99,7 @@ def unpack(db, message, return_dict=False):
             return {"asset_a": "", "asset_b": "", "quantity": 0}
         return "", "", 0
 
+
 def parse(db, tx, message):
     asset_a, asset_b, quantity = unpack(db, message)
 
@@ -107,7 +113,9 @@ def parse(db, tx, message):
 
     # if invalid, record and return early
     if status != "valid":
-        sorted_a, sorted_b = pool_mod.sort_pair(asset_a, asset_b) if asset_a and asset_b else (asset_a, asset_b)
+        sorted_a, sorted_b = (
+            pool_mod.sort_pair(asset_a, asset_b) if asset_a and asset_b else (asset_a, asset_b)
+        )
         bindings = {
             "tx_index": tx["tx_index"],
             "tx_hash": tx["tx_hash"],
@@ -129,8 +137,13 @@ def parse(db, tx, message):
     fee = gas.get_transaction_fee(db, ID, tx["block_index"])
     if fee > 0:
         ledger.events.debit(
-            db, tx["source"], config.XCP, fee, tx["tx_index"],
-            action="pool withdraw fee", event=tx["tx_hash"],
+            db,
+            tx["source"],
+            config.XCP,
+            fee,
+            tx["tx_index"],
+            action="pool withdraw fee",
+            event=tx["tx_hash"],
         )
     gas.increment_counter(db, ID, tx["block_index"])
 
@@ -151,31 +164,54 @@ def parse(db, tx, message):
     quantity_b = quantity * pool["reserve_b"] // total_lp_supply
 
     # Destroy LP tokens: debit from source
-    ledger.events.debit(db, tx["source"], lp_asset, quantity,
-                        tx["tx_index"], action="pool withdraw",
-                        event=tx["tx_hash"])
+    ledger.events.debit(
+        db,
+        tx["source"],
+        lp_asset,
+        quantity,
+        tx["tx_index"],
+        action="pool withdraw",
+        event=tx["tx_hash"],
+    )
 
     # Record destruction (keeps asset_supply() accurate)
-    ledger.events.insert_record(db, "destructions", {
-        "tx_index": tx["tx_index"],
-        "tx_hash": tx["tx_hash"],
-        "block_index": tx["block_index"],
-        "source": tx["source"],
-        "asset": lp_asset,
-        "quantity": quantity,
-        "tag": "pool_withdraw",
-        "status": "valid",
-    }, "ASSET_DESTRUCTION")
+    ledger.events.insert_record(
+        db,
+        "destructions",
+        {
+            "tx_index": tx["tx_index"],
+            "tx_hash": tx["tx_hash"],
+            "block_index": tx["block_index"],
+            "source": tx["source"],
+            "asset": lp_asset,
+            "quantity": quantity,
+            "tag": "pool_withdraw",
+            "status": "valid",
+        },
+        "ASSET_DESTRUCTION",
+    )
 
     # Credit both assets back to source
     if quantity_a > 0:
-        ledger.events.credit(db, tx["source"], sorted_a, quantity_a,
-                             tx["tx_index"], action="pool withdraw",
-                             event=tx["tx_hash"])
+        ledger.events.credit(
+            db,
+            tx["source"],
+            sorted_a,
+            quantity_a,
+            tx["tx_index"],
+            action="pool withdraw",
+            event=tx["tx_hash"],
+        )
     if quantity_b > 0:
-        ledger.events.credit(db, tx["source"], sorted_b, quantity_b,
-                             tx["tx_index"], action="pool withdraw",
-                             event=tx["tx_hash"])
+        ledger.events.credit(
+            db,
+            tx["source"],
+            sorted_b,
+            quantity_b,
+            tx["tx_index"],
+            action="pool withdraw",
+            event=tx["tx_hash"],
+        )
 
     # Update pool reserves
     new_reserve_a = pool["reserve_a"] - quantity_a

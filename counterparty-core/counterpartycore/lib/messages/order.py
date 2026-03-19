@@ -516,9 +516,9 @@ def match(db, tx, block_index=None):
 
     # AMM pool lookup.
     amm_pool = None
-    if (
-        protocol.enabled("amm_pools", block_index=tx["block_index"])
-        and config.BTC not in (tx1["give_asset"], tx1["get_asset"])
+    if protocol.enabled("amm_pools", block_index=tx["block_index"]) and config.BTC not in (
+        tx1["give_asset"],
+        tx1["get_asset"],
     ):
         amm_pool = pool_mod.get_pool_for_pair(db, tx1["give_asset"], tx1["get_asset"])
         if amm_pool and not pool_mod.pool_has_liquidity(amm_pool):
@@ -589,7 +589,10 @@ def match(db, tx, block_index=None):
         # Fill from AMM pool if its price beats this book order.
         if amm_pool and tx1_give_remaining > 0:
             pool_fill_qty, pool_output = pool_mod.try_pool_fill(
-                db, tx1, amm_pool, tx1_give_remaining,
+                db,
+                tx1,
+                amm_pool,
+                tx1_give_remaining,
                 target_price_num=tx0["get_quantity"],
                 target_price_den=tx0["give_quantity"],
             )
@@ -853,9 +856,7 @@ def match(db, tx, block_index=None):
     # Fill any remaining quantity from AMM pool after book orders exhausted.
     if tx1_status == "open" and amm_pool and tx1_give_remaining > 0:
         amm_pool = pool_mod.get_pool_for_pair(db, tx1["give_asset"], tx1["get_asset"])
-        pool_fill_qty, pool_output = pool_mod.try_pool_fill(
-            db, tx1, amm_pool, tx1_give_remaining
-        )
+        pool_fill_qty, pool_output = pool_mod.try_pool_fill(db, tx1, amm_pool, tx1_give_remaining)
         if pool_fill_qty > 0:
             pool_mod.execute_pool_match(db, tx, tx1, amm_pool, pool_fill_qty, pool_output)
             tx1_give_remaining = 0

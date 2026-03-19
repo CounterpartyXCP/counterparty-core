@@ -8,16 +8,19 @@ from counterpartycore.lib import config, ledger
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-XCP_POOL_FEE_BPS = 50   # 0.50% for XCP pairs
+XCP_POOL_FEE_BPS = 50  # 0.50% for XCP pairs
 OTHER_POOL_FEE_BPS = 100  # 1.00% for non-XCP pairs
+
 
 def get_pool_fee_bps(pool):
     if pool["asset_a"] == config.XCP or pool["asset_b"] == config.XCP:
         return XCP_POOL_FEE_BPS
     return OTHER_POOL_FEE_BPS
 
+
 def isqrt(n):
     return math.isqrt(n)
+
 
 def compute_pool_output(reserve_in, reserve_out, input_qty, fee_bps):
     """Constant-product swap with fee. Returns integer output quantity."""
@@ -28,8 +31,10 @@ def compute_pool_output(reserve_in, reserve_out, input_qty, fee_bps):
     denominator = reserve_in * 10000 + input_with_fee
     return numerator // denominator
 
-def compute_pool_input_for_target_price(reserve_in, reserve_out, target_price_num,
-                                         target_price_den, fee_bps):
+
+def compute_pool_input_for_target_price(
+    reserve_in, reserve_out, target_price_num, target_price_den, fee_bps
+):
     """Max input before pool marginal price reaches target. Returns 0 if already past."""
     if reserve_in <= 0 or reserve_out <= 0:
         return 0
@@ -60,28 +65,36 @@ def compute_pool_input_for_target_price(reserve_in, reserve_out, target_price_nu
     dx = numerator // (2 * a)
     return max(dx, 0)
 
+
 def sort_pair(asset_a, asset_b):
     if asset_a > asset_b:
         return asset_b, asset_a
     return asset_a, asset_b
 
+
 def get_pool(db, asset_a, asset_b):
     return ledger.markets.get_pool(db, *sort_pair(asset_a, asset_b))
+
 
 def get_pool_for_pair(db, give_asset, get_asset):
     return get_pool(db, give_asset, get_asset)
 
+
 def pool_has_liquidity(pool):
     return pool is not None and pool["reserve_a"] > 0 and pool["reserve_b"] > 0
+
 
 def get_lp_supply(db, pool):
     return ledger.supplies.asset_supply(db, pool["lp_asset"])
 
+
 def insert_pool(db, pool_data):
     ledger.markets.insert_pool(db, pool_data)
 
+
 def update_pool(db, asset_a, asset_b, new_reserve_a, new_reserve_b):
     ledger.markets.update_pool(db, *sort_pair(asset_a, asset_b), new_reserve_a, new_reserve_b)
+
 
 def try_pool_fill(db, tx1, pool, max_give, target_price_num=None, target_price_den=None):
     """Try to fill an order against the pool. Returns (fill_qty, output) or (0, 0)."""
@@ -112,6 +125,7 @@ def try_pool_fill(db, tx1, pool, max_give, target_price_num=None, target_price_d
         return 0, 0
 
     return fill_qty, output
+
 
 def execute_pool_match(db, tx, tx1, pool, give_quantity, get_quantity):
     """Fill part of tx1's order against the pool."""
@@ -162,6 +176,7 @@ def execute_pool_match(db, tx, tx1, pool, give_quantity, get_quantity):
         bindings,
     )
 
+
 def match_resting_orders_against_pool(db, tx, asset_a, asset_b):
     pool = get_pool(db, asset_a, asset_b)
     if not pool or not pool_has_liquidity(pool):
@@ -172,6 +187,7 @@ def match_resting_orders_against_pool(db, tx, asset_a, asset_b):
         if not pool or not pool_has_liquidity(pool):
             break
         fill_resting_orders(db, tx, pool, give_asset, get_asset)
+
 
 def fill_resting_orders(db, tx, pool, give_asset, get_asset):
     open_orders = ledger.markets.get_open_orders_for_pair(db, give_asset, get_asset)
@@ -199,8 +215,10 @@ def fill_resting_orders(db, tx, pool, give_asset, get_asset):
             reserve_in, reserve_out = pool["reserve_b"], pool["reserve_a"]
 
         max_fill = compute_pool_input_for_target_price(
-            reserve_in, reserve_out,
-            order["give_quantity"], order["get_quantity"],
+            reserve_in,
+            reserve_out,
+            order["give_quantity"],
+            order["get_quantity"],
             fee_bps,
         )
 

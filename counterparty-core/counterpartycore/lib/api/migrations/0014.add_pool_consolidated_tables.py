@@ -56,10 +56,7 @@ def build_table(state_db, table_name, group_by):
     """)
     state_db.execute("CREATE INDEX temp.latest_ids_idx ON latest_ids(max_id)")
 
-    columns = [
-        f"b.{col['name']}"
-        for col in state_db.execute(f"PRAGMA table_info({table_name})")
-    ]
+    columns = [f"b.{col['name']}" for col in state_db.execute(f"PRAGMA table_info({table_name})")]
     select_fields = ", ".join(columns)
 
     state_db.execute(f"""
@@ -76,7 +73,8 @@ def build_table(state_db, table_name, group_by):
 
     logger.debug(
         "Copied consolidated table `%s` in %.2f seconds",
-        table_name, time.time() - start_time,
+        table_name,
+        time.time() - start_time,
     )
 
 
@@ -123,6 +121,7 @@ def apply(db):
 def rollback(db):
     for table_name in POOL_TABLES:
         db.execute(f"DROP TABLE IF EXISTS {table_name}")
+
 
 if not __name__.startswith("apsw_"):
     steps = [step(apply, rollback)]

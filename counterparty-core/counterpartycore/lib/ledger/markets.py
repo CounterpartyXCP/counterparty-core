@@ -514,7 +514,12 @@ def update_pool(db, asset_a, asset_b, new_reserve_a, new_reserve_b):
     if row is None:
         return
     update_data = {"reserve_a": new_reserve_a, "reserve_b": new_reserve_b}
-    insert_update(db, "pools", "rowid", row["rowid"], update_data, "POOL_UPDATE",
-                  {"asset_a": asset_a, "asset_b": asset_b})
-
-
+    insert_update(
+        db,
+        "pools",
+        "rowid",
+        row["rowid"],
+        update_data,
+        "POOL_UPDATE",
+        {"asset_a": asset_a, "asset_b": asset_b},
+    )

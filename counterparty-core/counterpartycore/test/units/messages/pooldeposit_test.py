@@ -205,9 +205,7 @@ def test_parse_invalid_message(ledger_db, defaults, blockchain_mock, test_helper
     )
 
 
-def test_parse_valid_first_deposit(
-    ledger_db, defaults, blockchain_mock, test_helpers
-):
+def test_parse_valid_first_deposit(ledger_db, defaults, blockchain_mock, test_helpers):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     qty = defaults["quantity"]
     _, _, data = pooldeposit.compose(
@@ -274,9 +272,7 @@ def test_parse_valid_first_deposit(
     )
 
 
-def test_parse_subsequent_deposit(
-    ledger_db, defaults, blockchain_mock, test_helpers
-):
+def test_parse_subsequent_deposit(ledger_db, defaults, blockchain_mock, test_helpers):
     """Second deposit into existing pool mints proportional LP tokens."""
     qty = defaults["quantity"]
 
@@ -288,11 +284,10 @@ def test_parse_subsequent_deposit(
     pooldeposit.parse(ledger_db, tx1, data[1:])
 
     from counterpartycore.lib.messages import pool as pool_mod
+
     pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
     lp_asset = pool["lp_asset"]
-    lp_after_first = ledger.balances.get_balance(
-        ledger_db, defaults["addresses"][0], lp_asset
-    )
+    lp_after_first = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
     assert lp_after_first > 0
 
     # Second deposit — same amounts
@@ -302,9 +297,7 @@ def test_parse_subsequent_deposit(
     )
     pooldeposit.parse(ledger_db, tx2, data2[1:])
 
-    lp_after_second = ledger.balances.get_balance(
-        ledger_db, defaults["addresses"][0], lp_asset
-    )
+    lp_after_second = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
     # Should have roughly doubled LP tokens
     new_lp = lp_after_second - lp_after_first
     assert new_lp > 0
@@ -316,9 +309,7 @@ def test_parse_subsequent_deposit(
     assert pool_after["reserve_b"] == qty // 4 * 2
 
 
-def test_parse_mismatched_ratio(
-    ledger_db, defaults, blockchain_mock, test_helpers
-):
+def test_parse_mismatched_ratio(ledger_db, defaults, blockchain_mock, test_helpers):
     """Deposit with wrong ratio succeeds but mints LP capped by limiting side."""
     qty = defaults["quantity"]
 
@@ -330,11 +321,10 @@ def test_parse_mismatched_ratio(
     pooldeposit.parse(ledger_db, tx1, data[1:])
 
     from counterpartycore.lib.messages import pool as pool_mod
+
     pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
     lp_asset = pool["lp_asset"]
-    lp_before = ledger.balances.get_balance(
-        ledger_db, defaults["addresses"][0], lp_asset
-    )
+    lp_before = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
 
     # Second deposit with 2:1 ratio (double one side)
     sorted_a, sorted_b = pool_mod.sort_pair("XCP", "DIVISIBLE")
@@ -342,15 +332,17 @@ def test_parse_mismatched_ratio(
     dep_a = p["reserve_a"] // 10
     dep_b = p["reserve_b"] // 5  # double the ratio
     _, _, data2 = pooldeposit.compose(
-        ledger_db, defaults["addresses"][0], sorted_a, sorted_b,
-        dep_a, dep_b,
+        ledger_db,
+        defaults["addresses"][0],
+        sorted_a,
+        sorted_b,
+        dep_a,
+        dep_b,
     )
     tx2 = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     pooldeposit.parse(ledger_db, tx2, data2[1:])
 
-    lp_after = ledger.balances.get_balance(
-        ledger_db, defaults["addresses"][0], lp_asset
-    )
+    lp_after = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
     new_lp = lp_after - lp_before
 
     # LP minted should be based on limiting side (dep_a), not the larger dep_b

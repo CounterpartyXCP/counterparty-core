@@ -926,5 +926,3 @@ def test_get_pool_positions_by_address(state_db, defaults):
     assert result is not None
     assert isinstance(result, queries.QueryResult)
     assert isinstance(result.result, list)
-
-

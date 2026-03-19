@@ -44,7 +44,10 @@ ALL_ROUTES = {
     "/v2/blocks/<int:block_index>/fairminters": (queries.get_fairminters_by_block, "blocks"),
     "/v2/blocks/<int:block_index>/fairmints": (queries.get_fairmints_by_block, "blocks"),
     "/v2/blocks/<int:block_index>/pool_deposits": (queries.get_pool_deposits_by_block, "blocks"),
-    "/v2/blocks/<int:block_index>/pool_withdrawals": (queries.get_pool_withdrawals_by_block, "blocks"),
+    "/v2/blocks/<int:block_index>/pool_withdrawals": (
+        queries.get_pool_withdrawals_by_block,
+        "blocks",
+    ),
     "/v2/blocks/<int:block_index>/pool_matches": (queries.get_pool_matches_by_block, "blocks"),
     ### /transactions ###
     "/v2/transactions": (queries.get_transactions, "transactions"),
@@ -230,7 +233,10 @@ ALL_ROUTES = {
     "/v2/pools/<asset1>/<asset2>/matches": (queries.get_pool_matches_by_pair, "pools"),
     "/v2/pools/<asset1>/<asset2>/price_history": (queries.get_pool_price_history, "pools"),
     "/v2/addresses/<address>/pool_deposits": (queries.get_pool_deposits_by_address, "addresses"),
-    "/v2/addresses/<address>/pool_withdrawals": (queries.get_pool_withdrawals_by_address, "addresses"),
+    "/v2/addresses/<address>/pool_withdrawals": (
+        queries.get_pool_withdrawals_by_address,
+        "addresses",
+    ),
     "/v2/addresses/<address>/pools": (queries.get_pool_positions_by_address, "addresses"),
     ### /bets ###
     "/v2/bets": (queries.get_bets, "bets"),

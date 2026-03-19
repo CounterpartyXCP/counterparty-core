@@ -287,17 +287,14 @@ def test_compose_poolwithdraw(apiv2_client, defaults):
     """Test compose_poolwithdraw function via API."""
     address = defaults["addresses"][0]
     response = apiv2_client.get(
-        f"/v2/addresses/{address}/compose/poolwithdraw"
-        f"?asset_a=XCP&asset_b=DIVISIBLE&quantity=1000"
+        f"/v2/addresses/{address}/compose/poolwithdraw?asset_a=XCP&asset_b=DIVISIBLE&quantity=1000"
     )
     assert response.status_code in [200, 400]
 
 
 def test_get_pool_quote_deposit(apiv2_client):
     """Test get_pool_quote_deposit function via API."""
-    response = apiv2_client.get(
-        "/v2/pools/XCP/DIVISIBLE/quote/deposit?quantity_a=100000000"
-    )
+    response = apiv2_client.get("/v2/pools/XCP/DIVISIBLE/quote/deposit?quantity_a=100000000")
     assert response.status_code == 200
     assert "result" in response.json
     result = response.json["result"]
@@ -306,18 +303,14 @@ def test_get_pool_quote_deposit(apiv2_client):
 
 def test_get_pool_quote_swap(apiv2_client):
     """Test get_pool_quote_swap function via API."""
-    response = apiv2_client.get(
-        "/v2/pools/XCP/DIVISIBLE/quote/swap?give_quantity=100000000"
-    )
+    response = apiv2_client.get("/v2/pools/XCP/DIVISIBLE/quote/swap?give_quantity=100000000")
     assert response.status_code == 200
     assert "result" in response.json
 
 
 def test_get_pool_quote_withdraw(apiv2_client):
     """Test get_pool_quote_withdraw function via API."""
-    response = apiv2_client.get(
-        "/v2/pools/XCP/DIVISIBLE/quote/withdraw?quantity=1000"
-    )
+    response = apiv2_client.get("/v2/pools/XCP/DIVISIBLE/quote/withdraw?quantity=1000")
     assert response.status_code == 200
     assert "result" in response.json
 

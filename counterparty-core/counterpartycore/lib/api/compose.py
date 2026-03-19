@@ -533,7 +533,6 @@ def get_pool_deposit_estimate_xcp_fee(db):
     return gas.get_transaction_fee(db, 120, CurrentState().current_block_index())
 
 
-
 def compose_poolwithdraw(
     db,
     address: str,

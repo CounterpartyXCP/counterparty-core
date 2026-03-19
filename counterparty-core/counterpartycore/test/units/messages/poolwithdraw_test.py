@@ -6,21 +6,22 @@ from counterpartycore.lib.messages import pool as pool_mod, pooldeposit, poolwit
 def create_pool(ledger_db, blockchain_mock, source, qty_a, qty_b):
     """Helper: deposit to create a pool and return (tx, pool)."""
     tx = blockchain_mock.dummy_tx(ledger_db, source)
-    _, _, data = pooldeposit.compose(
-        ledger_db, source, "XCP", "DIVISIBLE", qty_a, qty_b
-    )
+    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", qty_a, qty_b)
     pooldeposit.parse(ledger_db, tx, data[1:])
     pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
     return tx, pool
 
 
 def test_validate_valid(ledger_db, defaults, blockchain_mock):
-    create_pool(ledger_db, blockchain_mock, defaults["addresses"][0],
-                defaults["quantity"], defaults["quantity"])
-    pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
-    lp_balance = ledger.balances.get_balance(
-        ledger_db, defaults["addresses"][0], pool["lp_asset"]
+    create_pool(
+        ledger_db,
+        blockchain_mock,
+        defaults["addresses"][0],
+        defaults["quantity"],
+        defaults["quantity"],
     )
+    pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    lp_balance = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], pool["lp_asset"])
     problems = poolwithdraw.validate(
         ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", lp_balance
     )
@@ -28,16 +29,12 @@ def test_validate_valid(ledger_db, defaults, blockchain_mock):
 
 
 def test_validate_btc_rejected(ledger_db, defaults):
-    problems = poolwithdraw.validate(
-        ledger_db, defaults["addresses"][0], "BTC", "XCP", 1000
-    )
+    problems = poolwithdraw.validate(ledger_db, defaults["addresses"][0], "BTC", "XCP", 1000)
     assert "BTC pairs are not supported" in problems[0]
 
 
 def test_validate_same_asset(ledger_db, defaults):
-    problems = poolwithdraw.validate(
-        ledger_db, defaults["addresses"][0], "XCP", "XCP", 1000
-    )
+    problems = poolwithdraw.validate(ledger_db, defaults["addresses"][0], "XCP", "XCP", 1000)
     assert "assets must be different" in problems[0]
 
 
@@ -49,37 +46,35 @@ def test_validate_nonexistent_asset(ledger_db, defaults):
 
 
 def test_validate_zero_quantity(ledger_db, defaults):
-    problems = poolwithdraw.validate(
-        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", 0
-    )
+    problems = poolwithdraw.validate(ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", 0)
     assert any("must be positive" in p for p in problems)
 
 
 def test_validate_negative_quantity(ledger_db, defaults):
-    problems = poolwithdraw.validate(
-        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", -100
-    )
+    problems = poolwithdraw.validate(ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", -100)
     assert any("must be positive" in p for p in problems)
 
 
 def test_validate_overflow_quantity(ledger_db, defaults):
     problems = poolwithdraw.validate(
-        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE",
-        config.MAX_INT + 1
+        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", config.MAX_INT + 1
     )
     assert any("exceeds maximum" in p for p in problems)
 
 
 def test_validate_no_pool(ledger_db, defaults):
-    problems = poolwithdraw.validate(
-        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", 1000
-    )
+    problems = poolwithdraw.validate(ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", 1000)
     assert any("pool does not exist" in p for p in problems)
 
 
 def test_validate_insufficient_lp_balance(ledger_db, defaults, blockchain_mock):
-    create_pool(ledger_db, blockchain_mock, defaults["addresses"][0],
-                defaults["quantity"], defaults["quantity"])
+    create_pool(
+        ledger_db,
+        blockchain_mock,
+        defaults["addresses"][0],
+        defaults["quantity"],
+        defaults["quantity"],
+    )
     # Try to withdraw more LP tokens than held
     problems = poolwithdraw.validate(
         ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", 10**18
@@ -88,12 +83,15 @@ def test_validate_insufficient_lp_balance(ledger_db, defaults, blockchain_mock):
 
 
 def test_compose_produces_correct_format(ledger_db, defaults, blockchain_mock):
-    create_pool(ledger_db, blockchain_mock, defaults["addresses"][0],
-                defaults["quantity"], defaults["quantity"])
-    pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
-    lp_balance = ledger.balances.get_balance(
-        ledger_db, defaults["addresses"][0], pool["lp_asset"]
+    create_pool(
+        ledger_db,
+        blockchain_mock,
+        defaults["addresses"][0],
+        defaults["quantity"],
+        defaults["quantity"],
     )
+    pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    lp_balance = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], pool["lp_asset"])
 
     source, destinations, data = poolwithdraw.compose(
         ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", lp_balance
@@ -106,12 +104,15 @@ def test_compose_produces_correct_format(ledger_db, defaults, blockchain_mock):
 
 
 def test_compose_and_unpack_roundtrip(ledger_db, defaults, blockchain_mock):
-    create_pool(ledger_db, blockchain_mock, defaults["addresses"][0],
-                defaults["quantity"], defaults["quantity"])
-    pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
-    lp_balance = ledger.balances.get_balance(
-        ledger_db, defaults["addresses"][0], pool["lp_asset"]
+    create_pool(
+        ledger_db,
+        blockchain_mock,
+        defaults["addresses"][0],
+        defaults["quantity"],
+        defaults["quantity"],
     )
+    pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    lp_balance = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], pool["lp_asset"])
 
     _, _, data = poolwithdraw.compose(
         ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", lp_balance
@@ -140,14 +141,16 @@ def test_unpack_return_dict(ledger_db):
 
 def test_compose_rejects_invalid(ledger_db, defaults):
     with pytest.raises(exceptions.ComposeError):
-        poolwithdraw.compose(
-            ledger_db, defaults["addresses"][0], "BTC", "XCP", 1000
-        )
+        poolwithdraw.compose(ledger_db, defaults["addresses"][0], "BTC", "XCP", 1000)
 
 
 def test_compose_skip_validation(ledger_db, defaults):
     source, _, data = poolwithdraw.compose(
-        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", 0,
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        0,
         skip_validation=True,
     )
     assert len(data) > 0
@@ -172,22 +175,21 @@ def test_parse_invalid_message(ledger_db, defaults, blockchain_mock, test_helper
 
 def test_parse_valid_withdrawal(ledger_db, defaults, blockchain_mock, test_helpers):
     # First create a pool
-    create_pool(ledger_db, blockchain_mock, defaults["addresses"][0],
-                defaults["quantity"], defaults["quantity"])
+    create_pool(
+        ledger_db,
+        blockchain_mock,
+        defaults["addresses"][0],
+        defaults["quantity"],
+        defaults["quantity"],
+    )
     pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
     lp_asset = pool["lp_asset"]
-    lp_balance = ledger.balances.get_balance(
-        ledger_db, defaults["addresses"][0], lp_asset
-    )
+    lp_balance = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
     assert lp_balance > 0
 
     # Record balances before withdrawal
-    xcp_before = ledger.balances.get_balance(
-        ledger_db, defaults["addresses"][0], "XCP"
-    )
-    div_before = ledger.balances.get_balance(
-        ledger_db, defaults["addresses"][0], "DIVISIBLE"
-    )
+    xcp_before = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], "XCP")
+    div_before = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], "DIVISIBLE")
 
     # Compose and parse withdrawal
     _, _, data = poolwithdraw.compose(
@@ -220,36 +222,37 @@ def test_parse_valid_withdrawal(ledger_db, defaults, blockchain_mock, test_helpe
     )
 
     # LP tokens should be fully burned
-    lp_after = ledger.balances.get_balance(
-        ledger_db, defaults["addresses"][0], lp_asset
-    )
+    lp_after = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
     assert lp_after == 0
 
     # Should have received assets back
-    xcp_after = ledger.balances.get_balance(
-        ledger_db, defaults["addresses"][0], "XCP"
-    )
-    div_after = ledger.balances.get_balance(
-        ledger_db, defaults["addresses"][0], "DIVISIBLE"
-    )
+    xcp_after = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], "XCP")
+    div_after = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], "DIVISIBLE")
     assert xcp_after > xcp_before
     assert div_after > div_before
 
 
 def test_parse_partial_withdrawal(ledger_db, defaults, blockchain_mock, test_helpers):
     # Create pool
-    create_pool(ledger_db, blockchain_mock, defaults["addresses"][0],
-                defaults["quantity"], defaults["quantity"])
+    create_pool(
+        ledger_db,
+        blockchain_mock,
+        defaults["addresses"][0],
+        defaults["quantity"],
+        defaults["quantity"],
+    )
     pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
     lp_asset = pool["lp_asset"]
-    lp_balance = ledger.balances.get_balance(
-        ledger_db, defaults["addresses"][0], lp_asset
-    )
+    lp_balance = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
 
     # Withdraw half
     half = lp_balance // 2
     _, _, data = poolwithdraw.compose(
-        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", half,
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        half,
     )
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     poolwithdraw.parse(ledger_db, tx, data[1:])
@@ -269,9 +272,7 @@ def test_parse_partial_withdrawal(ledger_db, defaults, blockchain_mock, test_hel
     )
 
     # Should still have half the LP tokens
-    lp_after = ledger.balances.get_balance(
-        ledger_db, defaults["addresses"][0], lp_asset
-    )
+    lp_after = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
     assert lp_after == lp_balance - half
 
     # Pool should still have reserves
@@ -285,13 +286,16 @@ def test_lp_destroy_benefits_remaining_holders(ledger_db, defaults, blockchain_m
     from counterpartycore.lib.messages import destroy
 
     # Create pool with addr0
-    create_pool(ledger_db, blockchain_mock, defaults["addresses"][0],
-                defaults["quantity"], defaults["quantity"])
+    create_pool(
+        ledger_db,
+        blockchain_mock,
+        defaults["addresses"][0],
+        defaults["quantity"],
+        defaults["quantity"],
+    )
     pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
     lp_asset = pool["lp_asset"]
-    total_lp = ledger.balances.get_balance(
-        ledger_db, defaults["addresses"][0], lp_asset
-    )
+    total_lp = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
 
     # Destroy half the LP tokens
     half = total_lp // 2
@@ -302,16 +306,18 @@ def test_lp_destroy_benefits_remaining_holders(ledger_db, defaults, blockchain_m
     destroy.parse(ledger_db, tx, data[1:])
 
     # Remaining LP balance
-    remaining_lp = ledger.balances.get_balance(
-        ledger_db, defaults["addresses"][0], lp_asset
-    )
+    remaining_lp = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
     assert remaining_lp == total_lp - half
 
     # Withdraw remaining — should get proportional share
     xcp_before = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], "XCP")
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     _, _, wdata = poolwithdraw.compose(
-        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", remaining_lp,
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        remaining_lp,
         skip_validation=True,
     )
     poolwithdraw.parse(ledger_db, tx, wdata[1:])
@@ -331,7 +337,11 @@ def test_lp_destroy_benefits_remaining_holders(ledger_db, defaults, blockchain_m
 def test_parse_no_pool(ledger_db, defaults, blockchain_mock, test_helpers):
     """Withdraw from non-existent pool should be invalid."""
     _, _, data = poolwithdraw.compose(
-        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", 1000,
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        1000,
         skip_validation=True,
     )
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
