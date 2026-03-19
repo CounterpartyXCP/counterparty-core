@@ -359,3 +359,24 @@ def test_parse_no_pool(ledger_db, defaults, blockchain_mock, test_helpers):
             },
         ],
     )
+
+
+def test_small_but_redeemable_withdrawal(ledger_db, defaults, blockchain_mock, test_helpers):
+    """Withdrawal that yields at least 1 sat of one asset should succeed."""
+    qty = defaults["quantity"]
+    source = defaults["addresses"][0]
+
+    create_pool(ledger_db, blockchain_mock, source, qty, qty)
+
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
+
+    # 2 LP tokens should yield at least 1 sat of each in a 1:1 pool
+    _, _, data = poolwithdraw.compose(
+        ledger_db, source, "XCP", "DIVISIBLE", 2, skip_validation=True
+    )
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    poolwithdraw.parse(ledger_db, tx, data[1:])
+
+    pool_after = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    assert pool_after["reserve_a"] < pool["reserve_a"]
+    assert pool_after["reserve_b"] < pool["reserve_b"]

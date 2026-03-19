@@ -165,6 +165,9 @@ def parse(db, tx, message):
     quantity_a = quantity * pool["reserve_a"] // total_lp_supply
     quantity_b = quantity * pool["reserve_b"] // total_lp_supply
 
+    if quantity_a <= 0 and quantity_b <= 0:
+        raise exceptions.MessageError("withdrawal too small to redeem any assets")
+
     # Destroy LP tokens: debit from source
     ledger.events.debit(
         db,
