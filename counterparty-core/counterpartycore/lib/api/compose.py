@@ -5,6 +5,7 @@ from counterpartycore.lib import (
     backend,
     config,
     exceptions,
+    ledger,
     messages,
 )
 from counterpartycore.lib.api import composer
@@ -519,9 +520,7 @@ def compose_pooldeposit(
     :param lp_asset: The LP token asset name (alternative to asset_a/asset_b for existing pools)
     """
     if lp_asset and not asset_a and not asset_b:
-        from counterpartycore.lib.ledger import markets
-
-        pool = markets.get_pool_by_lp_asset(db, lp_asset)
+        pool = ledger.markets.get_pool_by_lp_asset(db, lp_asset)
         if not pool:
             raise exceptions.ComposeError(f"no pool found for LP asset {lp_asset}")
         asset_a, asset_b = pool["asset_a"], pool["asset_b"]
@@ -560,9 +559,7 @@ def compose_poolwithdraw(
     :param lp_asset: The LP token asset name (alternative to asset_a/asset_b)
     """
     if lp_asset and not asset_a and not asset_b:
-        from counterpartycore.lib.ledger import markets
-
-        pool = markets.get_pool_by_lp_asset(db, lp_asset)
+        pool = ledger.markets.get_pool_by_lp_asset(db, lp_asset)
         if not pool:
             raise exceptions.ComposeError(f"no pool found for LP asset {lp_asset}")
         asset_a, asset_b = pool["asset_a"], pool["asset_b"]
