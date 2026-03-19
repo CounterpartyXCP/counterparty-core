@@ -321,7 +321,7 @@ def test_parse_subsequent_deposit(ledger_db, defaults, blockchain_mock, test_hel
 
 
 def test_parse_mismatched_ratio(ledger_db, defaults, blockchain_mock, test_helpers):
-    """Deposit with wrong ratio succeeds but mints LP capped by limiting side."""
+    """Off-ratio deposit takes only proportional amounts, leaves excess with user."""
     qty = defaults["quantity"]
 
     # Create 1:1 pool
@@ -331,13 +331,13 @@ def test_parse_mismatched_ratio(ledger_db, defaults, blockchain_mock, test_helpe
     )
     pooldeposit.parse(ledger_db, tx1, data[1:])
 
-    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
-    lp_asset = pool["lp_asset"]
-    lp_before = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
-
-    # Second deposit with 2:1 ratio (double one side)
     sorted_a, sorted_b = ledger.markets.sort_pair("XCP", "DIVISIBLE")
     p = ledger.markets.get_pool(ledger_db, sorted_a, sorted_b)
+    lp_asset = p["lp_asset"]
+    lp_before = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
+    bal_b_before = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], sorted_b)
+
+    # Second deposit with 2:1 ratio (double one side)
     dep_a = p["reserve_a"] // 10
     dep_b = p["reserve_b"] // 5  # double the ratio
     _, _, data2 = pooldeposit.compose(
@@ -353,23 +353,19 @@ def test_parse_mismatched_ratio(ledger_db, defaults, blockchain_mock, test_helpe
 
     lp_after = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
     new_lp = lp_after - lp_before
-
-    # LP minted should be based on limiting side (dep_a), not the larger dep_b
     assert new_lp > 0
 
-    # Both assets enter pool (reserves grow by full amounts, not just matched ratio)
+    # Only proportional amounts enter pool — ratio is preserved
     p_after = ledger.markets.get_pool(ledger_db, sorted_a, sorted_b)
     assert p_after["reserve_a"] == p["reserve_a"] + dep_a
-    assert p_after["reserve_b"] == p["reserve_b"] + dep_b
+    # reserve_b grows by the proportional amount, not the full dep_b
+    actual_b = dep_a * p["reserve_b"] // p["reserve_a"]
+    assert p_after["reserve_b"] == p["reserve_b"] + actual_b
+    assert actual_b < dep_b  # excess was NOT taken
 
-    # LP minted should equal the SMALLER proportional contribution
-    # subsequent_deposit uses supply BEFORE the deposit for calculation
-    supply_at_deposit = lp_before  # total supply when second deposit happened
-    expected_from_a = dep_a * supply_at_deposit // p["reserve_a"]
-    expected_from_b = dep_b * supply_at_deposit // p["reserve_b"]
-    assert new_lp == min(expected_from_a, expected_from_b)
-    # Smaller side caps the minting — larger side's excess enters reserves
-    assert expected_from_a < expected_from_b  # dep_a is the limiting side
+    # User's balance of the excess side should reflect only proportional debit
+    bal_b_after = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], sorted_b)
+    assert bal_b_after == bal_b_before - actual_b
 
 
 def test_slippage_protection_rejects_low_mint(ledger_db, defaults, blockchain_mock, test_helpers):

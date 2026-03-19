@@ -189,12 +189,13 @@ def parse(db, tx, message):
 
     existing_pool = ledger.markets.get_pool(db, sorted_a, sorted_b)
 
+    actual_a, actual_b = qty_a, qty_b
     if existing_pool is None:
         quantity_minted = first_deposit(db, tx, sorted_a, sorted_b, qty_a, qty_b)
     elif existing_pool["reserve_a"] == 0:
         quantity_minted = refund_empty_pool(db, tx, existing_pool, sorted_a, sorted_b, qty_a, qty_b)
     else:
-        quantity_minted = subsequent_deposit(
+        quantity_minted, actual_a, actual_b = subsequent_deposit(
             db, tx, existing_pool, sorted_a, sorted_b, qty_a, qty_b, min_lp_quantity
         )
 
@@ -209,8 +210,8 @@ def parse(db, tx, message):
         "source": tx["source"],
         "asset_a": sorted_a,
         "asset_b": sorted_b,
-        "quantity_a": qty_a,
-        "quantity_b": qty_b,
+        "quantity_a": actual_a,
+        "quantity_b": actual_b,
         "quantity_minted": quantity_minted,
         "status": "valid",
     }
@@ -361,10 +362,10 @@ def refund_empty_pool(db, tx, pool, asset_a, asset_b, qty_a, qty_b):
 def subsequent_deposit(db, tx, pool, asset_a, asset_b, qty_a, qty_b, min_lp_quantity=0):
     """Add liquidity to existing pool. Mint proportional LP tokens.
 
-    Off-ratio deposits are accepted: both full amounts enter reserves, but LP
-    tokens are minted based on the limiting side only. The excess implicitly
-    benefits all existing LP holders. Use min_lp_quantity to guard against
-    unexpected ratio shifts between quote and confirmation.
+    Provided quantities are maximums. The protocol calculates the largest
+    proportional deposit that fits within both, debits only those amounts,
+    and leaves any excess in the depositor's balance. Use min_lp_quantity
+    to guard against ratio shifts between quote and confirmation.
     """
     source = tx["source"]
 
@@ -372,10 +373,18 @@ def subsequent_deposit(db, tx, pool, asset_a, asset_b, qty_a, qty_b, min_lp_quan
     lp_asset = pool["lp_asset"]
     total_lp_supply = ledger.supplies.asset_supply(db, lp_asset)
 
-    # Pre-check: ensure deposit would mint at least 1 LP token
-    lp_from_a = qty_a * total_lp_supply // pool["reserve_a"]
-    lp_from_b = qty_b * total_lp_supply // pool["reserve_b"]
-    quantity_minted = min(lp_from_a, lp_from_b)
+    # Calculate proportional amounts (take only what matches the ratio)
+    ratio_a = qty_a * pool["reserve_b"]
+    ratio_b = qty_b * pool["reserve_a"]
+    if ratio_a <= ratio_b:
+        actual_a = qty_a
+        actual_b = qty_a * pool["reserve_b"] // pool["reserve_a"]
+    else:
+        actual_b = qty_b
+        actual_a = qty_b * pool["reserve_a"] // pool["reserve_b"]
+
+    # Mint LP tokens based on proportional contribution
+    quantity_minted = actual_a * total_lp_supply // pool["reserve_a"]
     if quantity_minted <= 0:
         raise exceptions.MessageError("deposit too small to mint LP tokens")
     if min_lp_quantity > 0 and quantity_minted < min_lp_quantity:
@@ -383,12 +392,12 @@ def subsequent_deposit(db, tx, pool, asset_a, asset_b, qty_a, qty_b, min_lp_quan
             f"slippage protection: would mint {quantity_minted} LP tokens, minimum is {min_lp_quantity}"
         )
 
-    # Debit both assets
+    # Debit only the proportional amounts
     ledger.events.debit(
-        db, source, asset_a, qty_a, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
+        db, source, asset_a, actual_a, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
     )
     ledger.events.debit(
-        db, source, asset_b, qty_b, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
+        db, source, asset_b, actual_b, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
     )
 
     # Record issuance
@@ -409,8 +418,8 @@ def subsequent_deposit(db, tx, pool, asset_a, asset_b, qty_a, qty_b, min_lp_quan
     )
 
     # Update pool reserves
-    new_reserve_a = pool["reserve_a"] + qty_a
-    new_reserve_b = pool["reserve_b"] + qty_b
+    new_reserve_a = pool["reserve_a"] + actual_a
+    new_reserve_b = pool["reserve_b"] + actual_b
     ledger.markets.update_pool(db, asset_a, asset_b, new_reserve_a, new_reserve_b)
 
-    return quantity_minted
+    return quantity_minted, actual_a, actual_b
