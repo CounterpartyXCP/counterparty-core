@@ -6,7 +6,6 @@ import struct
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import gas
-from counterpartycore.lib.messages import pool as pool_mod
 from counterpartycore.lib.parser import messagetype
 from counterpartycore.lib.utils import assetnames
 
@@ -198,9 +197,6 @@ def parse(db, tx, message):
         quantity_minted, actual_a, actual_b = subsequent_deposit(
             db, tx, existing_pool, sorted_a, sorted_b, qty_a, qty_b, min_lp_quantity
         )
-
-    # match resting orders against the new/updated pool
-    pool_mod.match_resting_orders_against_pool(db, tx, sorted_a, sorted_b)
 
     # record valid deposit
     bindings = {
