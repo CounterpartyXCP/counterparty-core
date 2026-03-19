@@ -13,8 +13,8 @@ from counterpartycore.lib.utils import assetnames
 logger = logging.getLogger(config.LOGGER_NAME)
 
 ID = 120
-FORMAT = ">QQQQ"  # asset_a_id, asset_b_id, quantity_a, quantity_b
-LENGTH = 8 + 8 + 8 + 8  # 32 bytes
+FORMAT = ">QQQQQ"  # asset_a_id, asset_b_id, quantity_a, quantity_b, min_lp_quantity
+LENGTH = 8 + 8 + 8 + 8 + 8  # 40 bytes
 
 
 def validate(db, source, asset_a, asset_b, quantity_a, quantity_b):
@@ -45,6 +45,9 @@ def validate(db, source, asset_a, asset_b, quantity_a, quantity_b):
             problems.append(f"{param_name} must be positive")
         elif param_value > config.MAX_INT:
             problems.append(f"{param_name} exceeds maximum value")
+
+    if not problems and quantity_a > 0 and quantity_b > config.MAX_INT // quantity_a:
+        problems.append("quantity_a * quantity_b exceeds maximum value")
 
     if problems:
         return problems
@@ -78,6 +81,7 @@ def compose(
     asset_b: str,
     quantity_a: int,
     quantity_b: int,
+    min_lp_quantity: int = 0,
     skip_validation: bool = False,
 ):
     # resolve subassets
@@ -91,7 +95,7 @@ def compose(
     asset_a_id = ledger.issuances.get_asset_id(db, asset_a)
     asset_b_id = ledger.issuances.get_asset_id(db, asset_b)
     data = messagetype.pack(ID)
-    data += struct.pack(FORMAT, asset_a_id, asset_b_id, quantity_a, quantity_b)
+    data += struct.pack(FORMAT, asset_a_id, asset_b_id, quantity_a, quantity_b, min_lp_quantity)
 
     return (source, [], data)
 
@@ -100,7 +104,9 @@ def unpack(db, message, return_dict=False):
     try:
         if len(message) != LENGTH:
             raise exceptions.UnpackError
-        asset_a_id, asset_b_id, quantity_a, quantity_b = struct.unpack(FORMAT, message)
+        asset_a_id, asset_b_id, quantity_a, quantity_b, min_lp_quantity = struct.unpack(
+            FORMAT, message
+        )
         asset_a = ledger.issuances.get_asset_name(db, asset_a_id)
         asset_b = ledger.issuances.get_asset_name(db, asset_b_id)
 
@@ -110,16 +116,23 @@ def unpack(db, message, return_dict=False):
                 "asset_b": asset_b,
                 "quantity_a": quantity_a,
                 "quantity_b": quantity_b,
+                "min_lp_quantity": min_lp_quantity,
             }
-        return asset_a, asset_b, quantity_a, quantity_b
+        return asset_a, asset_b, quantity_a, quantity_b, min_lp_quantity
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error):
         if return_dict:
-            return {"asset_a": "", "asset_b": "", "quantity_a": 0, "quantity_b": 0}
-        return "", "", 0, 0
+            return {
+                "asset_a": "",
+                "asset_b": "",
+                "quantity_a": 0,
+                "quantity_b": 0,
+                "min_lp_quantity": 0,
+            }
+        return "", "", 0, 0, 0
 
 
 def parse(db, tx, message):
-    asset_a, asset_b, quantity_a, quantity_b = unpack(db, message)
+    asset_a, asset_b, quantity_a, quantity_b, min_lp_quantity = unpack(db, message)
 
     status = "valid"
     if not asset_a or not asset_b or quantity_a <= 0 or quantity_b <= 0:
@@ -182,7 +195,7 @@ def parse(db, tx, message):
         quantity_minted = refund_empty_pool(db, tx, existing_pool, sorted_a, sorted_b, qty_a, qty_b)
     else:
         quantity_minted = subsequent_deposit(
-            db, tx, existing_pool, sorted_a, sorted_b, qty_a, qty_b
+            db, tx, existing_pool, sorted_a, sorted_b, qty_a, qty_b, min_lp_quantity
         )
 
     # match resting orders against the new/updated pool
@@ -345,8 +358,14 @@ def refund_empty_pool(db, tx, pool, asset_a, asset_b, qty_a, qty_b):
     return total_lp
 
 
-def subsequent_deposit(db, tx, pool, asset_a, asset_b, qty_a, qty_b):
-    """Add liquidity to existing pool. Mint proportional LP tokens."""
+def subsequent_deposit(db, tx, pool, asset_a, asset_b, qty_a, qty_b, min_lp_quantity=0):
+    """Add liquidity to existing pool. Mint proportional LP tokens.
+
+    Off-ratio deposits are accepted: both full amounts enter reserves, but LP
+    tokens are minted based on the limiting side only. The excess implicitly
+    benefits all existing LP holders. Use min_lp_quantity to guard against
+    unexpected ratio shifts between quote and confirmation.
+    """
     source = tx["source"]
 
     # Get current LP supply
@@ -359,6 +378,10 @@ def subsequent_deposit(db, tx, pool, asset_a, asset_b, qty_a, qty_b):
     quantity_minted = min(lp_from_a, lp_from_b)
     if quantity_minted <= 0:
         raise exceptions.MessageError("deposit too small to mint LP tokens")
+    if min_lp_quantity > 0 and quantity_minted < min_lp_quantity:
+        raise exceptions.MessageError(
+            f"slippage protection: would mint {quantity_minted} LP tokens, minimum is {min_lp_quantity}"
+        )
 
     # Debit both assets
     ledger.events.debit(

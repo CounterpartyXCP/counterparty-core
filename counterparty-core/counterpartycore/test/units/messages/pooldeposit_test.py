@@ -87,6 +87,19 @@ def test_validate_overflow_quantity(ledger_db, defaults):
     assert any("exceeds maximum" in p for p in problems)
 
 
+def test_validate_product_overflow(ledger_db, defaults):
+    qty = config.MAX_INT // 2 + 1
+    problems = pooldeposit.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        qty,
+        3,
+    )
+    assert any("quantity_a * quantity_b exceeds" in p for p in problems)
+
+
 def test_validate_insufficient_balance(ledger_db, defaults):
     # Large enough to exceed balance, small enough that product fits MAX_INT
     huge = config.MAX_INT // 2
@@ -113,7 +126,7 @@ def test_compose_produces_correct_format(ledger_db, defaults):
     assert source == defaults["addresses"][0]
     assert destinations == []
     # Data: 1 byte type ID + 32 bytes struct
-    assert len(data) == 1 + 32  # SHORT_TXTYPE (1) + QQQQ (32)
+    assert len(data) == 1 + 40  # SHORT_TXTYPE (1) + QQQQQ (40)
     # First byte is type ID 120
     assert data[0] == 120
 
@@ -133,7 +146,7 @@ def test_compose_and_unpack_roundtrip(ledger_db, defaults):
 
     # Strip the type ID byte
     message = data[1:]
-    asset_a, asset_b, q_a, q_b = pooldeposit.unpack(ledger_db, message)
+    asset_a, asset_b, q_a, q_b, min_lp = pooldeposit.unpack(ledger_db, message)
 
     assert asset_a == "XCP"
     assert asset_b == "DIVISIBLE"
@@ -142,7 +155,7 @@ def test_compose_and_unpack_roundtrip(ledger_db, defaults):
 
 
 def test_unpack_bad_data(ledger_db):
-    asset_a, asset_b, q_a, q_b = pooldeposit.unpack(ledger_db, b"\x00\x01\x02")
+    asset_a, asset_b, q_a, q_b, min_lp = pooldeposit.unpack(ledger_db, b"\x00\x01\x02")
     assert asset_a == ""
     assert asset_b == ""
     assert q_a == 0
@@ -150,7 +163,7 @@ def test_unpack_bad_data(ledger_db):
 
 
 def test_unpack_wrong_length(ledger_db):
-    asset_a, asset_b, q_a, q_b = pooldeposit.unpack(ledger_db, b"\x00" * 16)
+    asset_a, asset_b, q_a, q_b, min_lp = pooldeposit.unpack(ledger_db, b"\x00" * 16)
     assert asset_a == ""
 
 
@@ -357,3 +370,69 @@ def test_parse_mismatched_ratio(ledger_db, defaults, blockchain_mock, test_helpe
     assert new_lp == min(expected_from_a, expected_from_b)
     # Smaller side caps the minting — larger side's excess enters reserves
     assert expected_from_a < expected_from_b  # dep_a is the limiting side
+
+
+def test_slippage_protection_rejects_low_mint(ledger_db, defaults, blockchain_mock, test_helpers):
+    """Deposit with min_lp_quantity rejects if minted LP is below threshold."""
+    qty = defaults["quantity"]
+
+    # Create 1:1 pool
+    tx1 = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    _, _, data = pooldeposit.compose(
+        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", qty // 4, qty // 4
+    )
+    pooldeposit.parse(ledger_db, tx1, data[1:])
+
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    sorted_a, sorted_b = ledger.markets.sort_pair("XCP", "DIVISIBLE")
+
+    # Compose a second deposit with unreachably high min_lp_quantity
+    dep = pool["reserve_a"] // 10
+    _, _, data2 = pooldeposit.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        sorted_a,
+        sorted_b,
+        dep,
+        dep,
+        min_lp_quantity=qty * 999,  # impossible to mint this many
+    )
+    tx2 = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+
+    # parse should reject — slippage protection triggered
+    with pytest.raises(exceptions.MessageError, match="slippage protection"):
+        pooldeposit.parse(ledger_db, tx2, data2[1:])
+
+
+def test_slippage_protection_allows_when_met(ledger_db, defaults, blockchain_mock, test_helpers):
+    """Deposit succeeds when minted LP meets min_lp_quantity threshold."""
+    qty = defaults["quantity"]
+
+    # Create 1:1 pool
+    tx1 = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    _, _, data = pooldeposit.compose(
+        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", qty // 4, qty // 4
+    )
+    pooldeposit.parse(ledger_db, tx1, data[1:])
+
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    lp_asset = pool["lp_asset"]
+    lp_before = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
+    sorted_a, sorted_b = ledger.markets.sort_pair("XCP", "DIVISIBLE")
+
+    # Deposit same ratio with min_lp_quantity = 1 (easily met)
+    dep = pool["reserve_a"] // 10
+    _, _, data2 = pooldeposit.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        sorted_a,
+        sorted_b,
+        dep,
+        dep,
+        min_lp_quantity=1,
+    )
+    tx2 = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    pooldeposit.parse(ledger_db, tx2, data2[1:])
+
+    lp_after = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
+    assert lp_after > lp_before

@@ -715,7 +715,8 @@ SCENARIO = [
             {
                 "url": "pools/POOLTEST/XCP/quote/withdraw?quantity=10000000",
                 "result": {
-                    "pool_exists": False,
+                    "pool_exists": True,
+                    "supply": 0,
                     "message": "No LP tokens in circulation.",
                 },
             },

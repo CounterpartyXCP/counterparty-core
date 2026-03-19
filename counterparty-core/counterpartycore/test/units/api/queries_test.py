@@ -926,3 +926,13 @@ def test_get_pool_positions_by_address(state_db, defaults):
     assert result is not None
     assert isinstance(result, queries.QueryResult)
     assert isinstance(result.result, list)
+
+
+def test_get_pool_positions_result_count(state_db, defaults):
+    """result_count reflects total matching rows, not just page size."""
+    full = queries.get_pool_positions_by_address(state_db, defaults["addresses"][0], limit=100)
+    total = full.result_count
+    if total > 1:
+        page = queries.get_pool_positions_by_address(state_db, defaults["addresses"][0], limit=1)
+        assert len(page.result) <= 1
+        assert page.result_count == total

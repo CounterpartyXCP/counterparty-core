@@ -3866,9 +3866,18 @@ def get_pool_positions_by_address(
         ORDER BY p.asset_a, p.asset_b
         LIMIT ? OFFSET ?
     """  # noqa S608 # nosec B608
+    count_query = """
+        SELECT COUNT(*) AS count
+        FROM balances b
+        JOIN pools p ON b.asset = p.lp_asset
+        WHERE b.address = ?
+          AND b.quantity > 0
+    """  # noqa S608 # nosec B608
     query_offset = offset if offset is not None else 0
     db_cursor.execute(query, (address, limit + 1, query_offset))
     rows = db_cursor.fetchall()
+    db_cursor.execute(count_query, (address,))
+    result_count = db_cursor.fetchone()["count"]
     db_cursor.close()
 
     if len(rows) > limit:
@@ -3877,7 +3886,7 @@ def get_pool_positions_by_address(
     else:
         next_cursor = None
 
-    return QueryResult(rows, next_cursor, "pools", len(rows))
+    return QueryResult(rows, next_cursor, "pools", result_count)
 
 
 def get_pool_price_history(
@@ -3937,6 +3946,7 @@ def get_pool_matches_by_order(
 def get_pool_quote(state_db, give_asset: str, give_quantity: int, get_asset: str):
     """
     Returns the estimated swap output considering both AMM pool and resting order book.
+    Reflects current state only; actual execution may differ if trades confirm before yours.
     :param give_asset: The asset you want to sell (e.g. XCP)
     :param give_quantity: The quantity to sell (in satoshis) (e.g. 1000000)
     :param get_asset: The asset you want to receive (e.g. $ASSET_1)
@@ -4124,7 +4134,7 @@ def get_pool_quote_withdraw(state_db, asset1: str, asset2: str, quantity: int):
     total_supply = lp_info.result["supply"] if lp_info else 0
 
     if total_supply <= 0:
-        return {"pool_exists": False, "message": "No LP tokens in circulation."}
+        return {"pool_exists": True, "supply": 0, "message": "No LP tokens in circulation."}
 
     quantity_a = quantity * pool["reserve_a"] // total_supply
     quantity_b = quantity * pool["reserve_b"] // total_supply

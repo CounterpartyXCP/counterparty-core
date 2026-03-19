@@ -588,7 +588,10 @@ def match(db, tx, block_index=None):
                     logger.trace("Skipping: negative tx1 fee required remaining")
                     continue
 
-        # Fill from AMM pool if its price beats this book order.
+        # Routing rule: use pool liquidity while its marginal price
+        # beats the next book order's limit price, then fill the book
+        # order, then repeat. Remainder after all book orders goes to
+        # pool. This guarantees best-price execution for the taker.
         if amm_pool and tx1_give_remaining > 0:
             pool_fill_qty, pool_output = pool_mod.try_pool_fill(
                 db,
@@ -606,8 +609,21 @@ def match(db, tx, block_index=None):
                     db, *ledger.markets.sort_pair(tx1["give_asset"], tx1["get_asset"])
                 )
 
-                if tx1_give_remaining <= 0:
+                if tx1_give_remaining <= 0 or (
+                    tx1_get_remaining <= 0 and protocol.enabled("recredit_give_remaining")
+                ):
                     tx1_status = "filled"
+                    if tx1_give_remaining > 0:
+                        ledger.events.credit(
+                            db,
+                            tx1["source"],
+                            tx1["give_asset"],
+                            tx1_give_remaining,
+                            tx["block_index"],
+                            event=tx1["tx_hash"],
+                            action="filled",
+                        )
+                    tx1_give_remaining = 0
 
                 set_data = {
                     "give_remaining": tx1_give_remaining,

@@ -504,6 +504,7 @@ def compose_pooldeposit(
     asset_b: str = None,
     quantity_a: int = None,
     quantity_b: int = None,
+    min_lp_quantity: int = 0,
     lp_asset: str = None,
     **construct_params,
 ):
@@ -517,6 +518,7 @@ def compose_pooldeposit(
     :param asset_b: The second asset in the pair (e.g. POOLTEST)
     :param quantity_a: The quantity of asset_a to deposit (in satoshis, hence integer) (e.g. 1000000)
     :param quantity_b: The quantity of asset_b to deposit (in satoshis, hence integer) (e.g. 1000000)
+    :param min_lp_quantity: Minimum LP tokens to receive; reverts if slippage exceeds this (e.g. 0)
     :param lp_asset: The LP token asset name (alternative to asset_a/asset_b for existing pools)
     """
     if lp_asset and not asset_a and not asset_b:
@@ -530,6 +532,7 @@ def compose_pooldeposit(
         "asset_b": asset_b,
         "quantity_a": quantity_a,
         "quantity_b": quantity_b,
+        "min_lp_quantity": min_lp_quantity,
     }
     return composer.compose_transaction(db, "pooldeposit", params, construct_params)
 
@@ -831,6 +834,14 @@ def unpack(db, datahex: str, block_index: int = None):
         elif message_type_id == messages.detach.ID:
             message_type_name = "detach"
             message_data = messages.detach.unpack(message, return_dict=True)
+        # Pool Deposit
+        elif message_type_id == messages.pooldeposit.ID:
+            message_type_name = "pooldeposit"
+            message_data = messages.pooldeposit.unpack(db, message, return_dict=True)
+        # Pool Withdraw
+        elif message_type_id == messages.poolwithdraw.ID:
+            message_type_name = "poolwithdraw"
+            message_data = messages.poolwithdraw.unpack(db, message, return_dict=True)
     except (exceptions.UnpackError, UnicodeDecodeError) as e:
         message_data = {"error": str(e)}
 

@@ -263,6 +263,47 @@ def test_pool_fills_generous_order(ledger_db, defaults, blockchain_mock, test_he
     assert matches[0]["fee_bps"] == 50  # XCP pair = 0.5%
 
 
+def test_generous_limit_partial_pool_fill_marks_filled(
+    ledger_db, defaults, blockchain_mock, test_helpers
+):
+    """Order with generous limit + pool at better price + book order causing partial fill.
+
+    The partial pool fill should exhaust get_remaining before give_remaining.
+    The order must be marked filled (not left open with negative get_remaining).
+    """
+    source_lp = defaults["addresses"][0]
+    source_trader = defaults["addresses"][1]
+    qty = defaults["quantity"]
+
+    # 1. Create pool at 1:1 (much better than the trader's limit)
+    pool_size = qty // 2
+    create_pool(ledger_db, blockchain_mock, source_lp, "XCP", "DIVISIBLE", pool_size, pool_size)
+
+    # 2. Place a resting book order that will cap the pool fill via interleave.
+    #    This order sells DIVISIBLE wanting XCP at 2:1 rate.
+    place_order(ledger_db, blockchain_mock, source_lp, "DIVISIBLE", qty // 10, "XCP", qty // 5)
+
+    # 3. Trader places order with very generous limit: sell some XCP, want only 1 sat DIVISIBLE.
+    #    Pool at ~1:1 will give far more output than the 1 sat minimum,
+    #    so get_remaining goes deeply negative while give_remaining stays positive.
+    give_qty = qty // 4
+    get_qty = 1
+
+    tx = place_order(
+        ledger_db, blockchain_mock, source_trader, "XCP", give_qty, "DIVISIBLE", get_qty
+    )
+
+    cursor = ledger_db.cursor()
+    ord = cursor.execute(
+        "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1", (tx["tx_hash"],)
+    ).fetchone()
+
+    assert ord["status"] == "filled", (
+        f"Order should be filled but is {ord['status']} "
+        f"(give_remaining={ord['give_remaining']}, get_remaining={ord['get_remaining']})"
+    )
+
+
 def test_xcp_pair_lower_fee_than_non_xcp(ledger_db, defaults, blockchain_mock):
     """XCP pairs should have 50 bps fee, non-XCP should have 100 bps."""
     # XCP pair
