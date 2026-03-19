@@ -304,6 +304,61 @@ def test_generous_limit_partial_pool_fill_marks_filled(
     )
 
 
+def test_skewed_pool_arb_then_deposit(ledger_db, defaults, blockchain_mock, test_helpers):
+    """Skewed pool is corrected via arb swap, then depositor adds at corrected ratio."""
+    source_lp = defaults["addresses"][0]
+    source_arb = defaults["addresses"][1]
+    qty = defaults["quantity"]
+
+    # 1. Create pool with skewed ratio: 10:1 (DIVISIBLE is 10x overpriced vs XCP)
+    sorted_a, sorted_b = ledger.markets.sort_pair("XCP", "DIVISIBLE")
+    pool = create_pool(ledger_db, blockchain_mock, source_lp, "XCP", "DIVISIBLE", qty, qty // 10)
+    initial_ratio = (
+        pool["reserve_a"] / pool["reserve_b"]
+        if sorted_a == "DIVISIBLE"
+        else pool["reserve_b"] / pool["reserve_a"]
+    )
+
+    # 2. Arb buys cheap DIVISIBLE from pool by selling XCP
+    arb_qty = qty // 5
+    place_order(ledger_db, blockchain_mock, source_arb, "XCP", arb_qty, "DIVISIBLE", 1)
+
+    # 3. Pool ratio should have shifted — more XCP, less DIVISIBLE
+    pool_after_arb = ledger.markets.get_pool(ledger_db, sorted_a, sorted_b)
+    if sorted_a == "DIVISIBLE":
+        new_ratio = pool_after_arb["reserve_a"] / pool_after_arb["reserve_b"]
+    else:
+        new_ratio = pool_after_arb["reserve_b"] / pool_after_arb["reserve_a"]
+    # DIVISIBLE/XCP ratio decreased (DIVISIBLE got cheaper)
+    assert new_ratio < initial_ratio
+
+    # k should have grown (fees stay in pool)
+    k_before = pool["reserve_a"] * pool["reserve_b"]
+    k_after = pool_after_arb["reserve_a"] * pool_after_arb["reserve_b"]
+    assert k_after >= k_before
+
+    # 4. New LP deposits at the corrected ratio (proportional)
+    lp_asset = pool_after_arb["lp_asset"]
+    dep_a = pool_after_arb["reserve_a"] // 5
+    dep_b = pool_after_arb["reserve_b"] // 5
+    tx_dep = blockchain_mock.dummy_tx(ledger_db, source_lp)
+    _, _, data = pooldeposit.compose(ledger_db, source_lp, sorted_a, sorted_b, dep_a, dep_b)
+    pooldeposit.parse(ledger_db, tx_dep, data[1:])
+
+    # Deposit should succeed and mint LP tokens
+    lp_balance = ledger.balances.get_balance(ledger_db, source_lp, lp_asset)
+    assert lp_balance > 0
+
+    # Pool reserves grew and ratio is preserved (proportional deposit)
+    pool_final = ledger.markets.get_pool(ledger_db, sorted_a, sorted_b)
+    assert pool_final["reserve_a"] > pool_after_arb["reserve_a"]
+    assert pool_final["reserve_b"] > pool_after_arb["reserve_b"]
+    # Ratio should be unchanged (within integer rounding)
+    ratio_before = pool_after_arb["reserve_a"] * 10000 // pool_after_arb["reserve_b"]
+    ratio_after = pool_final["reserve_a"] * 10000 // pool_final["reserve_b"]
+    assert abs(ratio_before - ratio_after) <= 1
+
+
 def test_xcp_pair_lower_fee_than_non_xcp(ledger_db, defaults, blockchain_mock):
     """XCP pairs should have 50 bps fee, non-XCP should have 100 bps."""
     # XCP pair

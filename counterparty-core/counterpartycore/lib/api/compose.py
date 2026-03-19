@@ -505,13 +505,12 @@ def compose_pooldeposit(
     quantity_a: int = None,
     quantity_b: int = None,
     min_lp_quantity: int = 0,
-    lp_asset: str = None,
     **construct_params,
 ):
     """
     Composes a transaction to deposit liquidity into an AMM pool.
     For the first deposit, both quantities set the initial price.
-    For subsequent deposits, LP tokens are minted proportional to the limiting side.
+    For subsequent deposits, quantities are maximums; only proportional amounts are debited.
     Use the quote/deposit endpoint to get the current ratio before composing.
     :param address: The address providing liquidity (e.g. $ADDRESS_1)
     :param asset_a: The first asset in the pair (e.g. XCP)
@@ -519,13 +518,7 @@ def compose_pooldeposit(
     :param quantity_a: The quantity of asset_a to deposit (in satoshis, hence integer) (e.g. 1000000)
     :param quantity_b: The quantity of asset_b to deposit (in satoshis, hence integer) (e.g. 1000000)
     :param min_lp_quantity: Minimum LP tokens to receive; reverts if slippage exceeds this (e.g. 0)
-    :param lp_asset: The LP token asset name (alternative to asset_a/asset_b for existing pools)
     """
-    if lp_asset and not asset_a and not asset_b:
-        pool = ledger.markets.get_pool_by_lp_asset(db, lp_asset)
-        if not pool:
-            raise exceptions.ComposeError(f"no pool found for LP asset {lp_asset}")
-        asset_a, asset_b = pool["asset_a"], pool["asset_b"]
     params = {
         "source": address,
         "asset_a": asset_a,
