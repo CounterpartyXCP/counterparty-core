@@ -576,12 +576,14 @@ def get_pool_quote(db, give_asset: str, give_quantity: int, get_asset: str):
     pool = pool_mod.get_pool_for_pair(db, give_asset, get_asset)
     has_pool = pool is not None and pool_mod.pool_has_liquidity(pool)
 
-    # Get resting orders selling get_asset for give_asset (counterparty orders)
+    # Get resting orders selling get_asset for give_asset, excluding near-expiry
+    current_block = CurrentState().current_block_index()
     cursor = db.cursor()
     cursor.execute(
         "SELECT * FROM orders WHERE give_asset = ? AND get_asset = ? AND status = ? "
+        "AND expire_index > ? "
         "ORDER BY CAST(get_quantity AS REAL) / CAST(give_quantity AS REAL), tx_index",
-        (get_asset, give_asset, "open"),
+        (get_asset, give_asset, "open", current_block + 1),
     )
     book_orders = cursor.fetchall()
     cursor.close()
@@ -664,7 +666,13 @@ def get_pool_quote(db, give_asset: str, give_quantity: int, get_asset: str):
             give_remaining -= give_remaining
 
     total_output = pool_output + book_output
-    marginal_price = (sim_ro / sim_ri) if has_pool and sim_ri > 0 else 0
+    if has_pool and give_asset == pool["asset_a"]:
+        orig_ri, orig_ro = pool["reserve_a"], pool["reserve_b"]
+    elif has_pool:
+        orig_ri, orig_ro = pool["reserve_b"], pool["reserve_a"]
+    else:
+        orig_ri, orig_ro = 0, 0
+    marginal_price = orig_ro / orig_ri if orig_ri > 0 else 0
     effective_price = total_output / give_quantity if give_quantity > 0 else 0
     price_impact = (1 - effective_price / marginal_price) * 100 if marginal_price > 0 else 0
 

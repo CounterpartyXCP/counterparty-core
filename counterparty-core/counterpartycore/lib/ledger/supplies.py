@@ -473,6 +473,20 @@ def held(db):
             GROUP BY tx_hash
         ) WHERE status IN (0, 1, 11) GROUP BY asset
         """,
+        """
+        SELECT asset_a AS asset, SUM(reserve_a) AS total FROM (
+            SELECT asset_a, reserve_a, MAX(rowid)
+            FROM pools
+            GROUP BY asset_a, asset_b
+        ) WHERE reserve_a > 0 GROUP BY asset
+        """,
+        """
+        SELECT asset_b AS asset, SUM(reserve_b) AS total FROM (
+            SELECT asset_b, reserve_b, MAX(rowid)
+            FROM pools
+            GROUP BY asset_a, asset_b
+        ) WHERE reserve_b > 0 GROUP BY asset
+        """,
     ]
     # no sql injection here
     sql = (
