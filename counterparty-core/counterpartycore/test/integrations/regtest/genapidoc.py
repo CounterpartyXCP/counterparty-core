@@ -177,9 +177,7 @@ def include_in_dredd(group, path):
         return False
     if "/v2/bitcoin/addresses/" in path:
         return False
-    if "/compose/pooldeposit" in path or "/compose/poolwithdraw" in path:
-        return False
-    if "/estimatexcpfees" in path and "pool" in path:
+    if "pool" in path and "mempool" not in path:
         return False
     return True
 
