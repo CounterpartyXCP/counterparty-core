@@ -3611,7 +3611,7 @@ def get_pool_by_pair(
     """
     Returns the AMM pool for a given asset pair
     :param str asset1: The first asset in the pair (e.g. XCP)
-    :param str asset2: The second asset in the pair (e.g. $ASSET_1)
+    :param str asset2: The second asset in the pair (e.g. POOLTEST)
     """
     a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
     return select_row(

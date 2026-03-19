@@ -179,8 +179,6 @@ def include_in_dredd(group, path):
         return False
     if "/compose/pooldeposit" in path or "/compose/poolwithdraw" in path:
         return False
-    if path == "/v2/pools/{asset1}/{asset2}":
-        return False
     return True
 
 
