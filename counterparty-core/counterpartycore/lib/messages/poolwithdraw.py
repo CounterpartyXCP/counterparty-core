@@ -5,7 +5,8 @@ import struct
 
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.messages import gas, pool as pool_mod
+from counterpartycore.lib.messages import gas
+from counterpartycore.lib.messages import pool as pool_mod
 from counterpartycore.lib.parser import messagetype
 
 logger = logging.getLogger(config.LOGGER_NAME)

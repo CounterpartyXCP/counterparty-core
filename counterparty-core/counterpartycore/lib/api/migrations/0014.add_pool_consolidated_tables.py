@@ -38,7 +38,7 @@ def build_table(state_db, table_name, group_by):
         SELECT sql, type FROM ledger_db.sqlite_master
         WHERE tbl_name='{table_name}'
         AND type != 'trigger'
-    """).fetchall():
+    """).fetchall():  # noqa: S608
         if row["type"] == "index":
             indexes.append(row["sql"])
         else:
@@ -53,7 +53,7 @@ def build_table(state_db, table_name, group_by):
         SELECT {group_by}, MAX(rowid) as max_id
         FROM ledger_db.{table_name}
         GROUP BY {group_by}
-    """)
+    """)  # noqa: S608
     state_db.execute("CREATE INDEX temp.latest_ids_idx ON latest_ids(max_id)")
 
     columns = [f"b.{col['name']}" for col in state_db.execute(f"PRAGMA table_info({table_name})")]
@@ -64,7 +64,7 @@ def build_table(state_db, table_name, group_by):
         SELECT {select_fields}
         FROM ledger_db.{table_name} b
         JOIN latest_ids l ON b.rowid = l.max_id
-    """)
+    """)  # noqa: S608
     state_db.execute("DROP TABLE latest_ids")
 
     for idx_sql in indexes:
