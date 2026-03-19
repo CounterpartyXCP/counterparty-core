@@ -3611,7 +3611,7 @@ def get_pool_by_pair(
     """
     Returns the AMM pool for a given asset pair
     :param str asset1: The first asset in the pair (e.g. XCP)
-    :param str asset2: The second asset in the pair (e.g. PEPECASH)
+    :param str asset2: The second asset in the pair (e.g. $ASSET_1)
     """
     a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
     return select_row(
@@ -3632,7 +3632,7 @@ def get_pool_deposits_by_pair(
     """
     Returns deposits for a given pool pair
     :param str asset1: The first asset in the pair (e.g. XCP)
-    :param str asset2: The second asset in the pair (e.g. PEPECASH)
+    :param str asset2: The second asset in the pair (e.g. $ASSET_1)
     :param int cursor: The last index of the deposits to return
     :param int limit: The maximum number of deposits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -3660,7 +3660,7 @@ def get_pool_withdrawals_by_pair(
     """
     Returns withdrawals for a given pool pair
     :param str asset1: The first asset in the pair (e.g. XCP)
-    :param str asset2: The second asset in the pair (e.g. PEPECASH)
+    :param str asset2: The second asset in the pair (e.g. $ASSET_1)
     :param int cursor: The last index of the withdrawals to return
     :param int limit: The maximum number of withdrawals to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -3688,7 +3688,7 @@ def get_pool_matches_by_pair(
     """
     Returns pool matches (swaps) for a given pool pair
     :param str asset1: The first asset in the pair (e.g. XCP)
-    :param str asset2: The second asset in the pair (e.g. PEPECASH)
+    :param str asset2: The second asset in the pair (e.g. $ASSET_1)
     :param int cursor: The last index of the pool matches to return
     :param int limit: The maximum number of pool matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
@@ -3893,7 +3893,7 @@ def get_pool_price_history(
     Each entry includes block_index, reserves, and computed price.
     Can be used to build price charts and compute TWAP.
     :param str asset1: The first asset in the pair (e.g. XCP)
-    :param str asset2: The second asset in the pair (e.g. PEPECASH)
+    :param str asset2: The second asset in the pair (e.g. $ASSET_1)
     :param int cursor: The last index of the entries to return
     :param int limit: The maximum number of entries to return (e.g. 100)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
