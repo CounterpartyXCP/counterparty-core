@@ -3932,3 +3932,211 @@ def get_pool_matches_by_order(
         limit=limit,
         offset=offset,
     )
+
+
+def get_pool_quote(state_db, give_asset: str, give_quantity: int, get_asset: str):
+    """
+    Returns the estimated swap output considering both AMM pool and resting order book.
+    :param give_asset: The asset you want to sell (e.g. XCP)
+    :param give_quantity: The quantity to sell (in satoshis) (e.g. 1000000)
+    :param get_asset: The asset you want to receive (e.g. $ASSET_1)
+    """
+    from counterpartycore.lib.ledger.markets import (
+        compute_pool_input_for_target_price,
+        compute_pool_output,
+        get_pool_fee_bps,
+        pool_has_liquidity,
+        sort_pair,
+    )
+
+    sorted_a, sorted_b = sort_pair(give_asset, get_asset)
+    pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
+    pool = pool_row.result if pool_row else None
+    has_pool = pool is not None and pool_has_liquidity(pool)
+
+    orders_result = select_rows(
+        state_db,
+        "orders_info",
+        where={"give_asset": get_asset, "get_asset": give_asset, "status": "open"},
+        cursor_field="tx_index",
+        sort="give_price:asc",
+        limit=1000,
+    )
+    book_orders = orders_result.result if orders_result else []
+
+    if not has_pool and not book_orders:
+        return {
+            "pool_exists": False,
+            "estimated_output": 0,
+            "book_orders": 0,
+            "message": "No pool or orders exist for this pair.",
+        }
+
+    give_remaining = give_quantity
+    pool_input_total = 0
+    pool_output_total = 0
+    book_output = 0
+    book_orders_matched = 0
+
+    if has_pool:
+        fee_bps = get_pool_fee_bps(pool)
+        if give_asset == pool["asset_a"]:
+            sim_ri, sim_ro = pool["reserve_a"], pool["reserve_b"]
+        else:
+            sim_ri, sim_ro = pool["reserve_b"], pool["reserve_a"]
+    else:
+        fee_bps = 0
+        sim_ri, sim_ro = 0, 0
+
+    for order in book_orders:
+        if give_remaining <= 0:
+            break
+
+        order_give_remaining = order["give_remaining"]
+        if order_give_remaining <= 0:
+            continue
+
+        if has_pool and sim_ri > 0 and sim_ro > 0:
+            pool_fill = compute_pool_input_for_target_price(
+                sim_ri, sim_ro, order["get_quantity"], order["give_quantity"], fee_bps
+            )
+            pool_fill = min(pool_fill, give_remaining)
+
+            if pool_fill > 0:
+                pout = compute_pool_output(sim_ri, sim_ro, pool_fill, fee_bps)
+                if pout > 0:
+                    pool_output_total += pout
+                    pool_input_total += pool_fill
+                    give_remaining -= pool_fill
+                    sim_ri += pool_fill
+                    sim_ro -= pout
+
+        if give_remaining <= 0:
+            break
+
+        can_take = min(give_remaining, order["get_remaining"])
+        if can_take <= 0:
+            continue
+        get_from_order = can_take * order["give_quantity"] // order["get_quantity"]
+        if get_from_order > order_give_remaining:
+            get_from_order = order_give_remaining
+            can_take = get_from_order * order["get_quantity"] // order["give_quantity"]
+
+        if get_from_order > 0 and can_take > 0:
+            book_output += get_from_order
+            give_remaining -= can_take
+            book_orders_matched += 1
+
+    if give_remaining > 0 and has_pool and sim_ri > 0 and sim_ro > 0:
+        pout = compute_pool_output(sim_ri, sim_ro, give_remaining, fee_bps)
+        if pout > 0:
+            pool_output_total += pout
+            pool_input_total += give_remaining
+            give_remaining = 0
+
+    total_output = pool_output_total + book_output
+    if has_pool and give_asset == pool["asset_a"]:
+        orig_ri, orig_ro = pool["reserve_a"], pool["reserve_b"]
+    elif has_pool:
+        orig_ri, orig_ro = pool["reserve_b"], pool["reserve_a"]
+    else:
+        orig_ri, orig_ro = 0, 0
+    marginal_price = orig_ro / orig_ri if orig_ri > 0 else 0
+    effective_price = total_output / give_quantity if give_quantity > 0 else 0
+    price_impact = (1 - effective_price / marginal_price) * 100 if marginal_price > 0 else 0
+
+    result = {
+        "estimated_output": total_output,
+        "pool_output": pool_output_total,
+        "book_output": book_output,
+        "book_orders_matched": book_orders_matched,
+        "give_remaining": give_remaining,
+        "effective_price": effective_price,
+        "price_impact": round(price_impact, 4),
+    }
+    if has_pool:
+        result["pool_exists"] = True
+        result["fee_bps"] = fee_bps
+        result["fee_amount"] = pool_input_total * fee_bps // 10000 if fee_bps > 0 else 0
+    else:
+        result["pool_exists"] = False
+
+    return result
+
+
+def get_pool_quote_deposit(state_db, asset1: str, asset2: str, quantity_a: int):
+    """
+    Returns the required quantity of the second asset and expected LP tokens for a deposit.
+    :param asset1: The first asset in the pair (e.g. XCP)
+    :param asset2: The second asset in the pair (e.g. $ASSET_1)
+    :param quantity_a: The quantity of asset1 to deposit (in satoshis) (e.g. 1000000)
+    """
+    from counterpartycore.lib.ledger.markets import sort_pair
+
+    sorted_a, sorted_b = sort_pair(asset1, asset2)
+    pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
+    pool = pool_row.result if pool_row else None
+
+    if pool is None or pool["reserve_a"] == 0:
+        return {
+            "first_deposit": True,
+            "quantity_b_required": None,
+            "quantity_minted_estimate": None,
+            "message": "First deposit: provide both quantities to set the initial price.",
+        }
+
+    if asset1 == sorted_a:
+        qty_b_required = quantity_a * pool["reserve_b"] // pool["reserve_a"]
+    else:
+        qty_b_required = quantity_a * pool["reserve_a"] // pool["reserve_b"]
+
+    lp_info = select_row(state_db, "assets_info", where={"asset": pool["lp_asset"]})
+    total_supply = lp_info.result["supply"] if lp_info else 0
+
+    if asset1 == sorted_a:
+        lp_estimate = quantity_a * total_supply // pool["reserve_a"]
+    else:
+        lp_estimate = quantity_a * total_supply // pool["reserve_b"]
+
+    return {
+        "first_deposit": False,
+        "quantity_b_required": qty_b_required,
+        "quantity_minted_estimate": lp_estimate,
+    }
+
+
+def get_pool_quote_withdraw(state_db, asset1: str, asset2: str, quantity: int):
+    """
+    Returns the estimated assets received for burning a given amount of LP tokens.
+    :param asset1: The first asset in the pair (e.g. XCP)
+    :param asset2: The second asset in the pair (e.g. $ASSET_1)
+    :param quantity: The quantity of LP tokens to destroy (in satoshis) (e.g. 1000000)
+    """
+    from counterpartycore.lib.ledger.markets import sort_pair
+
+    sorted_a, sorted_b = sort_pair(asset1, asset2)
+    pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
+    pool = pool_row.result if pool_row else None
+    if pool is None or pool["reserve_a"] == 0:
+        return {"pool_exists": False, "message": "Pool does not exist or is empty."}
+
+    lp_info = select_row(state_db, "assets_info", where={"asset": pool["lp_asset"]})
+    total_supply = lp_info.result["supply"] if lp_info else 0
+
+    if total_supply <= 0:
+        return {"pool_exists": False, "message": "No LP tokens in circulation."}
+
+    quantity_a = quantity * pool["reserve_a"] // total_supply
+    quantity_b = quantity * pool["reserve_b"] // total_supply
+
+    return {
+        "pool_exists": True,
+        "asset_a": sorted_a,
+        "asset_b": sorted_b,
+        "quantity": quantity,
+        "supply": total_supply,
+        "quantity_a_estimate": quantity_a,
+        "quantity_b_estimate": quantity_b,
+        "reserve_a": pool["reserve_a"],
+        "reserve_b": pool["reserve_b"],
+    }

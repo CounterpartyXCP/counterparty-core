@@ -520,8 +520,10 @@ def match(db, tx, block_index=None):
         tx1["give_asset"],
         tx1["get_asset"],
     ):
-        amm_pool = pool_mod.get_pool_for_pair(db, tx1["give_asset"], tx1["get_asset"])
-        if amm_pool and not pool_mod.pool_has_liquidity(amm_pool):
+        amm_pool = ledger.markets.get_pool(
+            db, *ledger.markets.sort_pair(tx1["give_asset"], tx1["get_asset"])
+        )
+        if amm_pool and not ledger.markets.pool_has_liquidity(amm_pool):
             amm_pool = None
 
     tx1_status = tx1["status"]
@@ -600,7 +602,9 @@ def match(db, tx, block_index=None):
                 pool_mod.execute_pool_match(db, tx, tx1, amm_pool, pool_fill_qty, pool_output)
                 tx1_give_remaining -= pool_fill_qty
                 tx1_get_remaining -= pool_output
-                amm_pool = pool_mod.get_pool_for_pair(db, tx1["give_asset"], tx1["get_asset"])
+                amm_pool = ledger.markets.get_pool(
+                    db, *ledger.markets.sort_pair(tx1["give_asset"], tx1["get_asset"])
+                )
 
                 if tx1_give_remaining <= 0:
                     tx1_status = "filled"
@@ -855,7 +859,9 @@ def match(db, tx, block_index=None):
 
     # Fill any remaining quantity from AMM pool after book orders exhausted.
     if tx1_status == "open" and amm_pool and tx1_give_remaining > 0:
-        amm_pool = pool_mod.get_pool_for_pair(db, tx1["give_asset"], tx1["get_asset"])
+        amm_pool = ledger.markets.get_pool(
+            db, *ledger.markets.sort_pair(tx1["give_asset"], tx1["get_asset"])
+        )
         pool_fill_qty, pool_output = pool_mod.try_pool_fill(db, tx1, amm_pool, tx1_give_remaining)
         if pool_fill_qty > 0:
             pool_mod.execute_pool_match(db, tx, tx1, amm_pool, pool_fill_qty, pool_output)

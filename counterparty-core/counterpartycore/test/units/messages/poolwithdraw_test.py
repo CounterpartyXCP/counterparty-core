@@ -1,6 +1,5 @@
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.messages import pool as pool_mod
 from counterpartycore.lib.messages import pooldeposit, poolwithdraw
 
 
@@ -9,7 +8,7 @@ def create_pool(ledger_db, blockchain_mock, source, qty_a, qty_b):
     tx = blockchain_mock.dummy_tx(ledger_db, source)
     _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", qty_a, qty_b)
     pooldeposit.parse(ledger_db, tx, data[1:])
-    pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
     return tx, pool
 
 
@@ -21,7 +20,7 @@ def test_validate_valid(ledger_db, defaults, blockchain_mock):
         defaults["quantity"],
         defaults["quantity"],
     )
-    pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
     lp_balance = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], pool["lp_asset"])
     problems = poolwithdraw.validate(
         ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", lp_balance
@@ -91,7 +90,7 @@ def test_compose_produces_correct_format(ledger_db, defaults, blockchain_mock):
         defaults["quantity"],
         defaults["quantity"],
     )
-    pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
     lp_balance = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], pool["lp_asset"])
 
     source, destinations, data = poolwithdraw.compose(
@@ -112,7 +111,7 @@ def test_compose_and_unpack_roundtrip(ledger_db, defaults, blockchain_mock):
         defaults["quantity"],
         defaults["quantity"],
     )
-    pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
     lp_balance = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], pool["lp_asset"])
 
     _, _, data = poolwithdraw.compose(
@@ -183,7 +182,7 @@ def test_parse_valid_withdrawal(ledger_db, defaults, blockchain_mock, test_helpe
         defaults["quantity"],
         defaults["quantity"],
     )
-    pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
     lp_asset = pool["lp_asset"]
     lp_balance = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
     assert lp_balance > 0
@@ -242,7 +241,7 @@ def test_parse_partial_withdrawal(ledger_db, defaults, blockchain_mock, test_hel
         defaults["quantity"],
         defaults["quantity"],
     )
-    pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
     lp_asset = pool["lp_asset"]
     lp_balance = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
 
@@ -277,7 +276,7 @@ def test_parse_partial_withdrawal(ledger_db, defaults, blockchain_mock, test_hel
     assert lp_after == lp_balance - half
 
     # Pool should still have reserves
-    pool_after = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    pool_after = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
     assert pool_after["reserve_a"] > 0
     assert pool_after["reserve_b"] > 0
 
@@ -294,7 +293,7 @@ def test_lp_destroy_benefits_remaining_holders(ledger_db, defaults, blockchain_m
         defaults["quantity"],
         defaults["quantity"],
     )
-    pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
     lp_asset = pool["lp_asset"]
     total_lp = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
 
@@ -326,7 +325,7 @@ def test_lp_destroy_benefits_remaining_holders(ledger_db, defaults, blockchain_m
 
     # Remaining LP holder gets ALL reserves (destroying LP reduces supply,
     # making remaining tokens claim 100% of pool)
-    pool_after = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    pool_after = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
     assert pool_after["reserve_a"] == 0, "All reserves withdrawn by remaining holder"
     assert pool_after["reserve_b"] == 0, "All reserves withdrawn by remaining holder"
 

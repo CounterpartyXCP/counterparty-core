@@ -6,7 +6,6 @@ import struct
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import gas
-from counterpartycore.lib.messages import pool as pool_mod
 from counterpartycore.lib.parser import messagetype
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -41,8 +40,8 @@ def validate(db, source, asset_a, asset_b, quantity):
     if problems:
         return problems
 
-    sorted_a, sorted_b = pool_mod.sort_pair(asset_a, asset_b)
-    pool = pool_mod.get_pool(db, sorted_a, sorted_b)
+    sorted_a, sorted_b = ledger.markets.sort_pair(asset_a, asset_b)
+    pool = ledger.markets.get_pool(db, sorted_a, sorted_b)
 
     if pool is None:
         problems.append("pool does not exist")
@@ -115,7 +114,9 @@ def parse(db, tx, message):
     # if invalid, record and return early
     if status != "valid":
         sorted_a, sorted_b = (
-            pool_mod.sort_pair(asset_a, asset_b) if asset_a and asset_b else (asset_a, asset_b)
+            ledger.markets.sort_pair(asset_a, asset_b)
+            if asset_a and asset_b
+            else (asset_a, asset_b)
         )
         bindings = {
             "tx_index": tx["tx_index"],
@@ -149,8 +150,8 @@ def parse(db, tx, message):
     gas.increment_counter(db, ID, tx["block_index"])
 
     # execute withdrawal
-    sorted_a, sorted_b = pool_mod.sort_pair(asset_a, asset_b)
-    pool = pool_mod.get_pool(db, sorted_a, sorted_b)
+    sorted_a, sorted_b = ledger.markets.sort_pair(asset_a, asset_b)
+    pool = ledger.markets.get_pool(db, sorted_a, sorted_b)
     if pool is None or pool["reserve_a"] == 0 or pool["reserve_b"] == 0:
         raise exceptions.MessageError("pool state changed during execution")
     lp_asset = pool["lp_asset"]
@@ -217,7 +218,7 @@ def parse(db, tx, message):
     # Update pool reserves
     new_reserve_a = pool["reserve_a"] - quantity_a
     new_reserve_b = pool["reserve_b"] - quantity_b
-    pool_mod.update_pool(db, sorted_a, sorted_b, new_reserve_a, new_reserve_b)
+    ledger.markets.update_pool(db, sorted_a, sorted_b, new_reserve_a, new_reserve_b)
 
     # record valid withdrawal
     bindings = {

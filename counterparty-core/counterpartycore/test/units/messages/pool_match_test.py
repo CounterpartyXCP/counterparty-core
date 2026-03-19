@@ -1,6 +1,5 @@
 from counterpartycore.lib import ledger
 from counterpartycore.lib.messages import order, pooldeposit
-from counterpartycore.lib.messages import pool as pool_mod
 
 
 def create_pool(ledger_db, blockchain_mock, source, asset_a, asset_b, qty_a, qty_b):
@@ -8,8 +7,8 @@ def create_pool(ledger_db, blockchain_mock, source, asset_a, asset_b, qty_a, qty
     tx = blockchain_mock.dummy_tx(ledger_db, source)
     _, _, data = pooldeposit.compose(ledger_db, source, asset_a, asset_b, qty_a, qty_b)
     pooldeposit.parse(ledger_db, tx, data[1:])
-    sorted_a, sorted_b = pool_mod.sort_pair(asset_a, asset_b)
-    return pool_mod.get_pool(ledger_db, sorted_a, sorted_b)
+    sorted_a, sorted_b = ledger.markets.sort_pair(asset_a, asset_b)
+    return ledger.markets.get_pool(ledger_db, sorted_a, sorted_b)
 
 
 def place_order(
@@ -52,7 +51,7 @@ def test_order_fills_against_pool(ledger_db, defaults, blockchain_mock, test_hel
     assert pool is not None
     assert pool["reserve_a"] > 0
 
-    sorted_a, sorted_b = pool_mod.sort_pair("XCP", "DIVISIBLE")
+    sorted_a, sorted_b = ledger.markets.sort_pair("XCP", "DIVISIBLE")
 
     # Record trader balances before
     trader_div_before = ledger.balances.get_balance(ledger_db, source_trader, "DIVISIBLE")
@@ -85,7 +84,7 @@ def test_order_fills_against_pool(ledger_db, defaults, blockchain_mock, test_hel
     assert trader_div_after > trader_div_before
 
     # Pool reserves should have changed
-    pool_after = pool_mod.get_pool(ledger_db, sorted_a, sorted_b)
+    pool_after = ledger.markets.get_pool(ledger_db, sorted_a, sorted_b)
     assert pool_after["reserve_a"] != pool["reserve_a"]
     assert pool_after["reserve_b"] != pool["reserve_b"]
 
@@ -130,8 +129,8 @@ def test_pool_reserves_update_after_match(ledger_db, defaults, blockchain_mock):
 
     create_pool(ledger_db, blockchain_mock, source_lp, "XCP", "DIVISIBLE", qty, qty)
 
-    sorted_a, sorted_b = pool_mod.sort_pair("XCP", "DIVISIBLE")
-    pool_before = pool_mod.get_pool(ledger_db, sorted_a, sorted_b)
+    sorted_a, sorted_b = ledger.markets.sort_pair("XCP", "DIVISIBLE")
+    pool_before = ledger.markets.get_pool(ledger_db, sorted_a, sorted_b)
 
     # Small trade
     give_qty = qty // 20
@@ -139,7 +138,7 @@ def test_pool_reserves_update_after_match(ledger_db, defaults, blockchain_mock):
 
     place_order(ledger_db, blockchain_mock, source_trader, "XCP", give_qty, "DIVISIBLE", get_qty)
 
-    pool_after = pool_mod.get_pool(ledger_db, sorted_a, sorted_b)
+    pool_after = ledger.markets.get_pool(ledger_db, sorted_a, sorted_b)
 
     # XCP went into pool, DIVISIBLE came out
     if sorted_a == "DIVISIBLE":
@@ -266,12 +265,10 @@ def test_pool_fills_generous_order(ledger_db, defaults, blockchain_mock, test_he
 
 def test_xcp_pair_lower_fee_than_non_xcp(ledger_db, defaults, blockchain_mock):
     """XCP pairs should have 50 bps fee, non-XCP should have 100 bps."""
-    from counterpartycore.lib.messages import pool as pool_mod
-
     # XCP pair
     xcp_pool = {"asset_a": "DIVISIBLE", "asset_b": "XCP"}
-    assert pool_mod.get_pool_fee_bps(xcp_pool) == 50
+    assert ledger.markets.get_pool_fee_bps(xcp_pool) == 50
 
     # Non-XCP pair
     other_pool = {"asset_a": "ASSET_A", "asset_b": "ASSET_B"}
-    assert pool_mod.get_pool_fee_bps(other_pool) == 100
+    assert ledger.markets.get_pool_fee_bps(other_pool) == 100

@@ -132,7 +132,9 @@ def parse(db, tx, message):
     # if invalid, record and return early
     if status != "valid":
         sorted_a, sorted_b = (
-            pool_mod.sort_pair(asset_a, asset_b) if asset_a and asset_b else (asset_a, asset_b)
+            ledger.markets.sort_pair(asset_a, asset_b)
+            if asset_a and asset_b
+            else (asset_a, asset_b)
         )
         bindings = {
             "tx_index": tx["tx_index"],
@@ -166,13 +168,13 @@ def parse(db, tx, message):
     gas.increment_counter(db, ID, tx["block_index"])
 
     # execute deposit
-    sorted_a, sorted_b = pool_mod.sort_pair(asset_a, asset_b)
+    sorted_a, sorted_b = ledger.markets.sort_pair(asset_a, asset_b)
     if asset_a == sorted_a:
         qty_a, qty_b = quantity_a, quantity_b
     else:
         qty_a, qty_b = quantity_b, quantity_a
 
-    existing_pool = pool_mod.get_pool(db, sorted_a, sorted_b)
+    existing_pool = ledger.markets.get_pool(db, sorted_a, sorted_b)
 
     if existing_pool is None:
         quantity_minted = first_deposit(db, tx, sorted_a, sorted_b, qty_a, qty_b)
@@ -254,7 +256,7 @@ def first_deposit(db, tx, asset_a, asset_b, qty_a, qty_b):
     lp_asset_id = ledger.issuances.generate_asset_id(lp_asset_name)
 
     # Compute initial LP supply
-    total_lp = pool_mod.isqrt(qty_a * qty_b)
+    total_lp = ledger.markets.isqrt(qty_a * qty_b)
 
     # Register LP token as asset
     ledger.events.insert_record(
@@ -287,7 +289,7 @@ def first_deposit(db, tx, asset_a, asset_b, qty_a, qty_b):
     )
 
     # Create pool record
-    pool_mod.insert_pool(
+    ledger.markets.insert_pool(
         db,
         {
             "tx_index": tx["tx_index"],
@@ -324,7 +326,7 @@ def refund_empty_pool(db, tx, pool, asset_a, asset_b, qty_a, qty_b):
     )
 
     # Compute LP supply (same as first deposit)
-    total_lp = pool_mod.isqrt(qty_a * qty_b)
+    total_lp = ledger.markets.isqrt(qty_a * qty_b)
 
     # Record issuance for the new minted tokens
     issuance_bindings = make_lp_issuance_bindings(
@@ -338,7 +340,7 @@ def refund_empty_pool(db, tx, pool, asset_a, asset_b, qty_a, qty_b):
     )
 
     # Update pool reserves
-    pool_mod.update_pool(db, asset_a, asset_b, qty_a, qty_b)
+    ledger.markets.update_pool(db, asset_a, asset_b, qty_a, qty_b)
 
     return total_lp
 
@@ -386,6 +388,6 @@ def subsequent_deposit(db, tx, pool, asset_a, asset_b, qty_a, qty_b):
     # Update pool reserves
     new_reserve_a = pool["reserve_a"] + qty_a
     new_reserve_b = pool["reserve_b"] + qty_b
-    pool_mod.update_pool(db, asset_a, asset_b, new_reserve_a, new_reserve_b)
+    ledger.markets.update_pool(db, asset_a, asset_b, new_reserve_a, new_reserve_b)
 
     return quantity_minted

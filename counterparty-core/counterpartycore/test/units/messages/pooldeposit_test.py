@@ -283,9 +283,7 @@ def test_parse_subsequent_deposit(ledger_db, defaults, blockchain_mock, test_hel
     )
     pooldeposit.parse(ledger_db, tx1, data[1:])
 
-    from counterpartycore.lib.messages import pool as pool_mod
-
-    pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
     lp_asset = pool["lp_asset"]
     lp_after_first = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
     assert lp_after_first > 0
@@ -304,7 +302,7 @@ def test_parse_subsequent_deposit(ledger_db, defaults, blockchain_mock, test_hel
     assert new_lp == lp_after_first  # same amount deposited = same LP minted
 
     # Pool reserves should have doubled
-    pool_after = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    pool_after = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
     assert pool_after["reserve_a"] == qty // 4 * 2
     assert pool_after["reserve_b"] == qty // 4 * 2
 
@@ -320,15 +318,13 @@ def test_parse_mismatched_ratio(ledger_db, defaults, blockchain_mock, test_helpe
     )
     pooldeposit.parse(ledger_db, tx1, data[1:])
 
-    from counterpartycore.lib.messages import pool as pool_mod
-
-    pool = pool_mod.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
     lp_asset = pool["lp_asset"]
     lp_before = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
 
     # Second deposit with 2:1 ratio (double one side)
-    sorted_a, sorted_b = pool_mod.sort_pair("XCP", "DIVISIBLE")
-    p = pool_mod.get_pool(ledger_db, sorted_a, sorted_b)
+    sorted_a, sorted_b = ledger.markets.sort_pair("XCP", "DIVISIBLE")
+    p = ledger.markets.get_pool(ledger_db, sorted_a, sorted_b)
     dep_a = p["reserve_a"] // 10
     dep_b = p["reserve_b"] // 5  # double the ratio
     _, _, data2 = pooldeposit.compose(
@@ -349,7 +345,7 @@ def test_parse_mismatched_ratio(ledger_db, defaults, blockchain_mock, test_helpe
     assert new_lp > 0
 
     # Both assets enter pool (reserves grow by full amounts, not just matched ratio)
-    p_after = pool_mod.get_pool(ledger_db, sorted_a, sorted_b)
+    p_after = ledger.markets.get_pool(ledger_db, sorted_a, sorted_b)
     assert p_after["reserve_a"] == p["reserve_a"] + dep_a
     assert p_after["reserve_b"] == p["reserve_b"] + dep_b
 

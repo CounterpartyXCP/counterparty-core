@@ -1,7 +1,81 @@
+import math
+
 from counterpartycore.lib import config
 from counterpartycore.lib.ledger.caches import OrdersCache
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.ledger.events import insert_record, insert_update
+
+#####################
+#   POOL UTILITIES  #
+#####################
+
+XCP_POOL_FEE_BPS = 50
+OTHER_POOL_FEE_BPS = 100
+
+
+def sort_pair(asset_a, asset_b):
+    if asset_a > asset_b:
+        return asset_b, asset_a
+    return asset_a, asset_b
+
+
+def get_pool_fee_bps(pool):
+    if pool["asset_a"] == config.XCP or pool["asset_b"] == config.XCP:
+        return XCP_POOL_FEE_BPS
+    return OTHER_POOL_FEE_BPS
+
+
+def pool_has_liquidity(pool):
+    return pool is not None and pool["reserve_a"] > 0 and pool["reserve_b"] > 0
+
+
+def isqrt(n):
+    return math.isqrt(n)
+
+
+def compute_pool_output(reserve_in, reserve_out, input_qty, fee_bps):
+    """Constant-product swap with fee. Returns integer output quantity."""
+    if input_qty <= 0 or reserve_in <= 0 or reserve_out <= 0:
+        return 0
+    input_with_fee = input_qty * (10000 - fee_bps)
+    numerator = input_with_fee * reserve_out
+    denominator = reserve_in * 10000 + input_with_fee
+    return numerator // denominator
+
+
+def compute_pool_input_for_target_price(
+    reserve_in, reserve_out, target_price_num, target_price_den, fee_bps
+):
+    """Max input before pool marginal price reaches target. Returns 0 if already past."""
+    if reserve_in <= 0 or reserve_out <= 0:
+        return 0
+    if target_price_den <= 0 or target_price_num <= 0:
+        return 0
+
+    fee_factor = 10000 - fee_bps
+
+    current_price_lhs = reserve_in * 10000 * target_price_den
+    current_price_rhs = reserve_out * fee_factor * target_price_num
+    if current_price_lhs >= current_price_rhs:
+        return 0
+
+    a = fee_factor
+    b_coeff = reserve_in * (10000 + fee_factor)
+    c_target = reserve_in * reserve_out * fee_factor * target_price_num // target_price_den
+    constant = reserve_in * reserve_in * 10000 - c_target
+
+    discriminant = b_coeff * b_coeff - 4 * a * constant
+    if discriminant < 0:
+        return 0
+
+    sqrt_disc = isqrt(discriminant)
+    numerator = -b_coeff + sqrt_disc
+    if numerator <= 0:
+        return 0
+
+    dx = numerator // (2 * a)
+    return max(dx, 0)
+
 
 #####################
 #       ORDERS      #
