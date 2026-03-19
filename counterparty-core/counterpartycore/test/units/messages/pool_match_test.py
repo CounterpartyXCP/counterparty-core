@@ -1,5 +1,6 @@
-from counterpartycore.lib import config, ledger
-from counterpartycore.lib.messages import order, pool as pool_mod, pooldeposit
+from counterpartycore.lib import ledger
+from counterpartycore.lib.messages import order, pooldeposit
+from counterpartycore.lib.messages import pool as pool_mod
 
 
 def create_pool(ledger_db, blockchain_mock, source, asset_a, asset_b, qty_a, qty_b):
@@ -109,7 +110,7 @@ def test_order_respects_price_limit(ledger_db, defaults, blockchain_mock, test_h
 
     # Should NOT match against pool (price too demanding)
     cursor = ledger_db.cursor()
-    matches = cursor.execute(
+    cursor.execute(
         "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (tx["tx_hash"],)
     ).fetchall()
 

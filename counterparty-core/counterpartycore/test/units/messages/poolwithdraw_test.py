@@ -1,6 +1,7 @@
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.messages import pool as pool_mod, pooldeposit, poolwithdraw
+from counterpartycore.lib.messages import pool as pool_mod
+from counterpartycore.lib.messages import pooldeposit, poolwithdraw
 
 
 def create_pool(ledger_db, blockchain_mock, source, qty_a, qty_b):
