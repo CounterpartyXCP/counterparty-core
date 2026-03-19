@@ -499,10 +499,11 @@ def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construc
 def compose_pooldeposit(
     db,
     address: str,
-    asset_a: str,
-    asset_b: str,
-    quantity_a: int,
-    quantity_b: int,
+    asset_a: str = None,
+    asset_b: str = None,
+    quantity_a: int = None,
+    quantity_b: int = None,
+    lp_asset: str = None,
     **construct_params,
 ):
     """
@@ -515,7 +516,15 @@ def compose_pooldeposit(
     :param asset_b: The second asset in the pair (e.g. POOLTEST)
     :param quantity_a: The quantity of asset_a to deposit (in satoshis, hence integer) (e.g. 1000000)
     :param quantity_b: The quantity of asset_b to deposit (in satoshis, hence integer) (e.g. 1000000)
+    :param lp_asset: The LP token asset name (alternative to asset_a/asset_b for existing pools)
     """
+    if lp_asset and not asset_a and not asset_b:
+        from counterpartycore.lib.messages import pool as pool_mod
+
+        pool = pool_mod.get_pool_by_lp_asset(db, lp_asset)
+        if not pool:
+            raise exceptions.ComposeError(f"no pool found for LP asset {lp_asset}")
+        asset_a, asset_b = pool["asset_a"], pool["asset_b"]
     params = {
         "source": address,
         "asset_a": asset_a,
@@ -536,9 +545,10 @@ def get_pool_deposit_estimate_xcp_fee(db):
 def compose_poolwithdraw(
     db,
     address: str,
-    asset_a: str,
-    asset_b: str,
-    quantity: int,
+    asset_a: str = None,
+    asset_b: str = None,
+    quantity: int = None,
+    lp_asset: str = None,
     **construct_params,
 ):
     """
@@ -547,7 +557,15 @@ def compose_poolwithdraw(
     :param asset_a: The first asset in the pair (e.g. XCP)
     :param asset_b: The second asset in the pair (e.g. POOLTEST)
     :param quantity: The quantity of LP tokens to destroy (in satoshis, hence integer) (e.g. 1000000)
+    :param lp_asset: The LP token asset name (alternative to asset_a/asset_b)
     """
+    if lp_asset and not asset_a and not asset_b:
+        from counterpartycore.lib.messages import pool as pool_mod
+
+        pool = pool_mod.get_pool_by_lp_asset(db, lp_asset)
+        if not pool:
+            raise exceptions.ComposeError(f"no pool found for LP asset {lp_asset}")
+        asset_a, asset_b = pool["asset_a"], pool["asset_b"]
     params = {
         "source": address,
         "asset_a": asset_a,

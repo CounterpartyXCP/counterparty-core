@@ -84,6 +84,10 @@ def pool_has_liquidity(pool):
     return pool is not None and pool["reserve_a"] > 0 and pool["reserve_b"] > 0
 
 
+def get_pool_by_lp_asset(db, lp_asset):
+    return ledger.markets.get_pool_by_lp_asset(db, lp_asset)
+
+
 def get_lp_supply(db, pool):
     return ledger.supplies.asset_supply(db, pool["lp_asset"])
 
