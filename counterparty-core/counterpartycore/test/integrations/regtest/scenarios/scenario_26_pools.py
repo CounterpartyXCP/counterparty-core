@@ -250,13 +250,16 @@ SCENARIO = [
                 },
             },
             {
-                "url": "pools/XCP/POOLTEST/quote/swap?give_quantity=10000000",
+                "url": "pools/XCP/POOLTEST/quote?give_quantity=10000000",
                 "result": {
                     "pool_exists": True,
                     "estimated_output": 9049567,
+                    "pool_output": 9049567,
+                    "book_output": 0,
+                    "book_orders_matched": 0,
+                    "give_remaining": 0,
                     "fee_bps": 50,
                     "fee_amount": 50000,
-                    "marginal_price": 1.0,
                     "effective_price": 0.9049567,
                     "price_impact": 9.5043,
                 },
