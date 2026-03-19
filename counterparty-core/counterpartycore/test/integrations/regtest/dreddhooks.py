@@ -7,8 +7,5 @@ def my_before_all_hook(transaction):
         transaction["fullPath"] = transaction["fullPath"].replace(
             "exclude_utxos_with_balances=False", "exclude_utxos_with_balances=True"
         )
-        transaction["fullPath"] = transaction["fullPath"].replace(
-            "validate=True", "validate=False"
-        )
 
     return transaction

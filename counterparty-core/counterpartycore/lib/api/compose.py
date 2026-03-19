@@ -512,7 +512,7 @@ def compose_pooldeposit(
     Use the quote/deposit endpoint to get the current ratio before composing.
     :param address: The address providing liquidity (e.g. $ADDRESS_1)
     :param asset_a: The first asset in the pair (e.g. XCP)
-    :param asset_b: The second asset in the pair (e.g. $ASSET_1)
+    :param asset_b: The second asset in the pair (e.g. POOLTEST)
     :param quantity_a: The quantity of asset_a to deposit (in satoshis, hence integer) (e.g. 1000000)
     :param quantity_b: The quantity of asset_b to deposit (in satoshis, hence integer) (e.g. 1000000)
     """
@@ -545,7 +545,7 @@ def compose_poolwithdraw(
     Composes a transaction to withdraw liquidity from an AMM pool.
     :param address: The address withdrawing liquidity (e.g. $ADDRESS_1)
     :param asset_a: The first asset in the pair (e.g. XCP)
-    :param asset_b: The second asset in the pair (e.g. $ASSET_1)
+    :param asset_b: The second asset in the pair (e.g. POOLTEST)
     :param quantity: The quantity of LP tokens to destroy (in satoshis, hence integer) (e.g. 1000000)
     """
     params = {
