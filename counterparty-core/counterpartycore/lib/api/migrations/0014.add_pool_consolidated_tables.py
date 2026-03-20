@@ -114,7 +114,8 @@ def apply(db):
     if "pools" in ledger_tables:
         db.execute("DROP VIEW IF EXISTS xcp_holders")
         db.execute("DROP VIEW IF EXISTS asset_holders")
-        db.execute("""
+        unspendable = config.UNSPENDABLE
+        asset_holders_sql = """
             CREATE VIEW IF NOT EXISTS asset_holders AS
                 SELECT asset, address, quantity, NULL AS escrow,
                     ('balances_' || CAST(rowid AS VARCAHR)) AS cursor_id, 'balances' AS holding_type, NULL AS status
@@ -140,16 +141,21 @@ def apply(db):
                 'open_dispenser' AS holding_type, status
                 FROM dispensers WHERE status = 0
              UNION ALL
-                SELECT asset_a AS asset, '""" + config.UNSPENDABLE + """' AS address, reserve_a AS quantity,
+                SELECT asset_a AS asset, '"""
+        asset_holders_sql += unspendable
+        asset_holders_sql += """' AS address, reserve_a AS quantity,
                 tx_hash AS escrow, ('pool_reserve_a_' || CAST(rowid AS VARCAHR)) AS cursor_id,
                 'pool_reserve' AS holding_type, NULL AS status
                 FROM pools WHERE reserve_a > 0
              UNION ALL
-                SELECT asset_b AS asset, '""" + config.UNSPENDABLE + """' AS address, reserve_b AS quantity,
+                SELECT asset_b AS asset, '"""
+        asset_holders_sql += unspendable
+        asset_holders_sql += """' AS address, reserve_b AS quantity,
                 tx_hash AS escrow, ('pool_reserve_b_' || CAST(rowid AS VARCAHR)) AS cursor_id,
                 'pool_reserve' AS holding_type, NULL AS status
                 FROM pools WHERE reserve_b > 0;
-        """)
+        """
+        db.execute(asset_holders_sql)
         db.execute("""
             CREATE VIEW IF NOT EXISTS xcp_holders AS
                 SELECT * FROM asset_holders
