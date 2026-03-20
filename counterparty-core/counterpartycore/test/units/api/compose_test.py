@@ -303,7 +303,7 @@ def test_get_pool_quote_deposit(apiv2_client):
 
 def test_get_pool_quote_swap(apiv2_client):
     """Test get_pool_quote_swap function via API."""
-    response = apiv2_client.get("/v2/pools/XCP/DIVISIBLE/quote/swap?give_quantity=100000000")
+    response = apiv2_client.get("/v2/pools/XCP/DIVISIBLE/quote?give_quantity=100000000")
     assert response.status_code == 200
     assert "result" in response.json
 
