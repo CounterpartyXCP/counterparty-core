@@ -17,7 +17,8 @@ POOL_TABLES = {
     "pools": "asset_a, asset_b",
     "pool_deposits": "tx_hash",
     "pool_withdrawals": "tx_hash",
-    "pool_matches": "tx_hash, order_tx_hash",
+    # pool_matches is append-only; preserve every swap row
+    "pool_matches": "rowid",
 }
 
 
