@@ -51,21 +51,36 @@ def validate(db, source, asset_a, asset_b, quantity_a, quantity_b):
     if problems:
         return problems
 
+    required_a = quantity_a
+    required_b = quantity_b
+    sorted_a, sorted_b = ledger.markets.sort_pair(asset_a, asset_b)
+    existing_pool = ledger.markets.get_pool(db, sorted_a, sorted_b)
+    if ledger.markets.pool_has_liquidity(existing_pool):
+        if asset_a == sorted_a:
+            qty_a, qty_b = quantity_a, quantity_b
+        else:
+            qty_a, qty_b = quantity_b, quantity_a
+        actual_a, actual_b = calculate_actual_deposit_amounts(existing_pool, qty_a, qty_b)
+        if asset_a == sorted_a:
+            required_a, required_b = actual_a, actual_b
+        else:
+            required_a, required_b = actual_b, actual_a
+
     # Check balances and gas fee
     fee = gas.get_transaction_fee(db, ID, CurrentState().current_block_index())
     balance_a = ledger.balances.get_balance(db, source, asset_a)
-    if balance_a < quantity_a:
+    if balance_a < required_a:
         problems.append(f"insufficient balance of {asset_a}")
     balance_b = ledger.balances.get_balance(db, source, asset_b)
-    if balance_b < quantity_b:
+    if balance_b < required_b:
         problems.append(f"insufficient balance of {asset_b}")
     # fee is always paid in XCP
     if fee > 0:
         xcp_needed = fee
         if asset_a == config.XCP:
-            xcp_needed += quantity_a
+            xcp_needed += required_a
         if asset_b == config.XCP:
-            xcp_needed += quantity_b
+            xcp_needed += required_b
         xcp_balance = ledger.balances.get_balance(db, source, config.XCP)
         if xcp_balance < xcp_needed:
             problems.append("insufficient XCP for fee")
@@ -190,9 +205,20 @@ def parse(db, tx, message):
 
     actual_a, actual_b = qty_a, qty_b
     if existing_pool is None:
-        quantity_minted = first_deposit(db, tx, sorted_a, sorted_b, qty_a, qty_b)
+        quantity_minted = first_deposit(
+            db, tx, sorted_a, sorted_b, qty_a, qty_b, min_lp_quantity=min_lp_quantity
+        )
     elif existing_pool["reserve_a"] == 0:
-        quantity_minted = refund_empty_pool(db, tx, existing_pool, sorted_a, sorted_b, qty_a, qty_b)
+        quantity_minted = refund_empty_pool(
+            db,
+            tx,
+            existing_pool,
+            sorted_a,
+            sorted_b,
+            qty_a,
+            qty_b,
+            min_lp_quantity=min_lp_quantity,
+        )
     else:
         quantity_minted, actual_a, actual_b = subsequent_deposit(
             db, tx, existing_pool, sorted_a, sorted_b, qty_a, qty_b, min_lp_quantity
@@ -249,9 +275,27 @@ def make_lp_issuance_bindings(db, tx, lp_asset, quantity, asset_a, asset_b, asse
     }
 
 
-def first_deposit(db, tx, asset_a, asset_b, qty_a, qty_b):
+def validate_min_lp_quantity(quantity_minted, min_lp_quantity):
+    if min_lp_quantity > 0 and quantity_minted < min_lp_quantity:
+        raise exceptions.MessageError(
+            f"slippage protection: would mint {quantity_minted} LP tokens, minimum is {min_lp_quantity}"
+        )
+
+
+def calculate_actual_deposit_amounts(pool, qty_a, qty_b):
+    ratio_a = qty_a * pool["reserve_b"]
+    ratio_b = qty_b * pool["reserve_a"]
+    if ratio_a <= ratio_b:
+        return qty_a, qty_a * pool["reserve_b"] // pool["reserve_a"]
+    return qty_b * pool["reserve_a"] // pool["reserve_b"], qty_b
+
+
+def first_deposit(db, tx, asset_a, asset_b, qty_a, qty_b, min_lp_quantity=0):
     """Create pool and LP token, mint all LP tokens to depositor."""
     source = tx["source"]
+
+    total_lp = ledger.markets.isqrt(qty_a * qty_b)
+    validate_min_lp_quantity(total_lp, min_lp_quantity)
 
     # Debit both assets from source (escrow into pool)
     ledger.events.debit(
@@ -264,9 +308,6 @@ def first_deposit(db, tx, asset_a, asset_b, qty_a, qty_b):
     # Generate LP token name (deterministic in regtest, random in production)
     lp_asset_name = assetnames.generate_random_asset(f"{asset_a}:{asset_b}")
     lp_asset_id = ledger.issuances.generate_asset_id(lp_asset_name)
-
-    # Compute initial LP supply
-    total_lp = ledger.markets.isqrt(qty_a * qty_b)
 
     # Register LP token as asset
     ledger.events.insert_record(
@@ -317,7 +358,7 @@ def first_deposit(db, tx, asset_a, asset_b, qty_a, qty_b):
     return total_lp
 
 
-def refund_empty_pool(db, tx, pool, asset_a, asset_b, qty_a, qty_b):
+def refund_empty_pool(db, tx, pool, asset_a, asset_b, qty_a, qty_b, min_lp_quantity=0):
     """Re-fund a fully drained pool, reusing the existing LP token.
 
     Same logic as first_deposit but does NOT create a new LP token or
@@ -327,6 +368,9 @@ def refund_empty_pool(db, tx, pool, asset_a, asset_b, qty_a, qty_b):
     source = tx["source"]
     lp_asset = pool["lp_asset"]
 
+    total_lp = ledger.markets.isqrt(qty_a * qty_b)
+    validate_min_lp_quantity(total_lp, min_lp_quantity)
+
     # Debit both assets
     ledger.events.debit(
         db, source, asset_a, qty_a, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
@@ -334,9 +378,6 @@ def refund_empty_pool(db, tx, pool, asset_a, asset_b, qty_a, qty_b):
     ledger.events.debit(
         db, source, asset_b, qty_b, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
     )
-
-    # Compute LP supply (same as first deposit)
-    total_lp = ledger.markets.isqrt(qty_a * qty_b)
 
     # Record issuance for the new minted tokens
     issuance_bindings = make_lp_issuance_bindings(
@@ -370,23 +411,13 @@ def subsequent_deposit(db, tx, pool, asset_a, asset_b, qty_a, qty_b, min_lp_quan
     total_lp_supply = ledger.supplies.asset_supply(db, lp_asset)
 
     # Calculate proportional amounts (take only what matches the ratio)
-    ratio_a = qty_a * pool["reserve_b"]
-    ratio_b = qty_b * pool["reserve_a"]
-    if ratio_a <= ratio_b:
-        actual_a = qty_a
-        actual_b = qty_a * pool["reserve_b"] // pool["reserve_a"]
-    else:
-        actual_b = qty_b
-        actual_a = qty_b * pool["reserve_a"] // pool["reserve_b"]
+    actual_a, actual_b = calculate_actual_deposit_amounts(pool, qty_a, qty_b)
 
     # Mint LP tokens based on proportional contribution
     quantity_minted = actual_a * total_lp_supply // pool["reserve_a"]
     if quantity_minted <= 0:
         raise exceptions.MessageError("deposit too small to mint LP tokens")
-    if min_lp_quantity > 0 and quantity_minted < min_lp_quantity:
-        raise exceptions.MessageError(
-            f"slippage protection: would mint {quantity_minted} LP tokens, minimum is {min_lp_quantity}"
-        )
+    validate_min_lp_quantity(quantity_minted, min_lp_quantity)
 
     # Debit only the proportional amounts
     ledger.events.debit(
