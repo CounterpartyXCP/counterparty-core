@@ -39,6 +39,8 @@ from counterpartycore.lib.messages import (
     issuance,
     move,
     order,
+    pooldeposit,
+    poolwithdraw,
     rps,
     rpsresolve,
     send,
@@ -89,6 +91,10 @@ TABLES = ["balances", "credits", "debits", "messages"] + [
     "fairminters",
     "fairmints",
     "transaction_count",
+    "pools",
+    "pool_deposits",
+    "pool_withdrawals",
+    "pool_matches",
 ]
 
 
@@ -235,6 +241,14 @@ def parse_tx(db, tx):
                 attach.parse(db, tx, message)
             elif message_type_id == detach.ID and protocol.enabled("spend_utxo_to_detach"):
                 detach.parse(db, tx, message)
+            elif message_type_id == pooldeposit.ID and protocol.enabled(
+                "amm_pools", block_index=tx["block_index"]
+            ):
+                pooldeposit.parse(db, tx, message)
+            elif message_type_id == poolwithdraw.ID and protocol.enabled(
+                "amm_pools", block_index=tx["block_index"]
+            ):
+                poolwithdraw.parse(db, tx, message)
             else:
                 supported = False
 
