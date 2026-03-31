@@ -36,6 +36,10 @@ def prepare_url(db, current_block_index, defaults, rawtransaction, route):
         return None
     if "/dispenses/" in route:
         return None
+    if "/quote/" in route:
+        return None
+    if "/pools/" in route or route == "/v2/pools":
+        return None
 
     last_block = db.execute(
         "SELECT block_hash FROM blocks WHERE block_index = ? ORDER BY block_index DESC LIMIT 1",
