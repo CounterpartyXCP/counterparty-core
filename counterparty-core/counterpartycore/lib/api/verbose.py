@@ -30,6 +30,9 @@ def inject_issuances_and_block_times(ledger_db, state_db, result_list):
         "dividend_asset",
         "forward_asset",
         "backward_asset",
+        "asset_a",
+        "asset_b",
+        "lp_asset",
     ]
 
     # gather asset list and block indexes (use sets for O(1) deduplication)
@@ -214,6 +217,13 @@ def inject_normalized_quantities(result_list):
         "get_price": {"asset_field": "get_asset_info", "divisible": None},
         "forward_price": {"asset_field": "forward_asset_info", "divisible": None},
         "backward_price": {"asset_field": "backward_asset_info", "divisible": None},
+        "reserve_a": {"asset_field": "asset_a_info", "divisible": None},
+        "reserve_b": {"asset_field": "asset_b_info", "divisible": None},
+        "quantity_a": {"asset_field": "asset_a_info", "divisible": None},
+        "quantity_b": {"asset_field": "asset_b_info", "divisible": None},
+        "quantity_minted": {"asset_field": "lp_asset_info", "divisible": None},
+        "quantity_destroyed": {"asset_field": "lp_asset_info", "divisible": None},
+        "fee_quantity": {"asset_field": "backward_asset_info", "divisible": None},
     }
 
     enriched_result_list = []
