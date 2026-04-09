@@ -18,7 +18,7 @@ LENGTH = 8 + 8 + 8  # 24 bytes
 def validate(db, source, asset_a, asset_b, quantity):
     problems = []
 
-    if asset_a == config.BTC or asset_b == config.BTC:
+    if config.BTC in (asset_a, asset_b):
         problems.append("BTC pairs are not supported for AMM pools")
 
     if asset_a == asset_b:

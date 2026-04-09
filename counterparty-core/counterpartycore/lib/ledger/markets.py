@@ -20,7 +20,7 @@ def sort_pair(asset_a, asset_b):
 
 
 def get_pool_fee_bps(pool):
-    if pool["asset_a"] == config.XCP or pool["asset_b"] == config.XCP:
+    if config.XCP in (pool["asset_a"], pool["asset_b"]):
         return XCP_POOL_FEE_BPS
     return OTHER_POOL_FEE_BPS
 

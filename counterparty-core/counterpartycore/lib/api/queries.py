@@ -6,6 +6,13 @@ from typing import Literal
 
 from sentry_sdk import start_span as start_sentry_span
 
+from counterpartycore.lib.ledger.markets import (
+    compute_pool_input_for_target_price,
+    compute_pool_output,
+    get_pool_fee_bps,
+    pool_has_liquidity,
+    sort_pair,
+)
 from counterpartycore.lib.utils.helpers import divide
 
 OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
@@ -3851,21 +3858,32 @@ def get_pool_positions_by_address(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     db_cursor = state_db.cursor()
-    query = """
+    query_bindings = [address]
+    cursor_clause = ""
+    if offset is None and cursor is not None:
+        cursor_clause = "AND b.rowid <= ?"
+        query_bindings.append(cursor)
+    query = f"""
         SELECT
             p.asset_a,
             p.asset_b,
             p.lp_asset,
             p.reserve_a,
             p.reserve_b,
-            b.quantity
+            b.quantity,
+            b.rowid AS rowid
         FROM balances b
         JOIN pools p ON b.asset = p.lp_asset
         WHERE b.address = ?
           AND b.quantity > 0
-        ORDER BY p.asset_a, p.asset_b
-        LIMIT ? OFFSET ?
+          {cursor_clause}
+        ORDER BY b.rowid DESC
+        LIMIT ?
     """  # noqa S608 # nosec B608
+    query_bindings.append(limit + 1)
+    if offset is not None:
+        query += " OFFSET ?"
+        query_bindings.append(offset)
     count_query = """
         SELECT COUNT(*) AS count
         FROM balances b
@@ -3873,15 +3891,14 @@ def get_pool_positions_by_address(
         WHERE b.address = ?
           AND b.quantity > 0
     """  # noqa S608 # nosec B608
-    query_offset = offset if offset is not None else 0
-    db_cursor.execute(query, (address, limit + 1, query_offset))
+    db_cursor.execute(query, query_bindings)
     rows = db_cursor.fetchall()
     db_cursor.execute(count_query, (address,))
     result_count = db_cursor.fetchone()["count"]
     db_cursor.close()
 
     if len(rows) > limit:
-        next_cursor = query_offset + limit
+        next_cursor = None if offset is not None else rows[-1]["rowid"]
         rows = rows[:limit]
     else:
         next_cursor = None
@@ -3943,23 +3960,17 @@ def get_pool_matches_by_order(
     )
 
 
-def get_pool_quote(state_db, give_asset: str, give_quantity: int, get_asset: str):
+def get_pool_quote(state_db, asset1: str, asset2: str, quantity: int):
     """
     Returns the estimated swap output considering both AMM pool and resting order book.
     Reflects current state only; actual execution may differ if trades confirm before yours.
-    :param give_asset: The asset you want to sell (e.g. XCP)
-    :param give_quantity: The quantity to sell (in satoshis) (e.g. 1000000)
-    :param get_asset: The asset you want to receive (e.g. $ASSET_1)
+    :param asset1: The asset you want to sell (e.g. XCP)
+    :param asset2: The asset you want to receive (e.g. $ASSET_1)
+    :param quantity: The quantity of asset1 to sell (in satoshis) (e.g. 1000000)
     """
-    from counterpartycore.lib.ledger.markets import (
-        compute_pool_input_for_target_price,
-        compute_pool_output,
-        get_pool_fee_bps,
-        pool_has_liquidity,
-        sort_pair,
-    )
-
-    sorted_a, sorted_b = sort_pair(give_asset, get_asset)
+    give_asset = asset1
+    give_quantity = quantity
+    sorted_a, sorted_b = sort_pair(asset1, asset2)
     pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
     pool = pool_row.result if pool_row else None
     has_pool = pool is not None and pool_has_liquidity(pool)
@@ -3967,7 +3978,7 @@ def get_pool_quote(state_db, give_asset: str, give_quantity: int, get_asset: str
     orders_result = select_rows(
         state_db,
         "orders_info",
-        where={"give_asset": get_asset, "get_asset": give_asset, "status": "open"},
+        where={"give_asset": asset2, "get_asset": asset1, "status": "open"},
         cursor_field="tx_index",
         sort="give_price:asc",
         limit=1000,
@@ -4074,15 +4085,13 @@ def get_pool_quote(state_db, give_asset: str, give_quantity: int, get_asset: str
     return result
 
 
-def get_pool_quote_deposit(state_db, asset1: str, asset2: str, quantity_a: int):
+def get_pool_quote_deposit(state_db, asset1: str, asset2: str, quantity: int):
     """
-    Returns the required quantity of the second asset and expected LP tokens for a deposit.
+    Returns the required quantities of both assets and expected LP tokens for a deposit.
     :param asset1: The first asset in the pair (e.g. XCP)
     :param asset2: The second asset in the pair (e.g. $ASSET_1)
-    :param quantity_a: The quantity of asset1 to deposit (in satoshis) (e.g. 1000000)
+    :param quantity: The quantity of asset1 to deposit (in satoshis) (e.g. 1000000)
     """
-    from counterpartycore.lib.ledger.markets import sort_pair
-
     sorted_a, sorted_b = sort_pair(asset1, asset2)
     pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
     pool = pool_row.result if pool_row else None
@@ -4090,27 +4099,32 @@ def get_pool_quote_deposit(state_db, asset1: str, asset2: str, quantity_a: int):
     if pool is None or pool["reserve_a"] == 0:
         return {
             "first_deposit": True,
+            "asset_a": sorted_a,
+            "asset_b": sorted_b,
+            "quantity_a_required": None,
             "quantity_b_required": None,
             "quantity_minted_estimate": None,
             "message": "First deposit: provide both quantities to set the initial price.",
         }
 
-    if asset1 == sorted_a:
-        qty_b_required = quantity_a * pool["reserve_b"] // pool["reserve_a"]
-    else:
-        qty_b_required = quantity_a * pool["reserve_a"] // pool["reserve_b"]
-
     lp_info = select_row(state_db, "assets_info", where={"asset": pool["lp_asset"]})
     total_supply = lp_info.result["supply"] if lp_info else 0
 
     if asset1 == sorted_a:
-        lp_estimate = quantity_a * total_supply // pool["reserve_a"]
+        quantity_a_required = quantity
+        quantity_b_required = quantity * pool["reserve_b"] // pool["reserve_a"]
+        lp_estimate = quantity * total_supply // pool["reserve_a"] if total_supply else 0
     else:
-        lp_estimate = quantity_a * total_supply // pool["reserve_b"]
+        quantity_b_required = quantity
+        quantity_a_required = quantity * pool["reserve_a"] // pool["reserve_b"]
+        lp_estimate = quantity * total_supply // pool["reserve_b"] if total_supply else 0
 
     return {
         "first_deposit": False,
-        "quantity_b_required": qty_b_required,
+        "asset_a": sorted_a,
+        "asset_b": sorted_b,
+        "quantity_a_required": quantity_a_required,
+        "quantity_b_required": quantity_b_required,
         "quantity_minted_estimate": lp_estimate,
     }
 
@@ -4122,7 +4136,6 @@ def get_pool_quote_withdraw(state_db, asset1: str, asset2: str, quantity: int):
     :param asset2: The second asset in the pair (e.g. $ASSET_1)
     :param quantity: The quantity of LP tokens to destroy (in satoshis) (e.g. 1000000)
     """
-    from counterpartycore.lib.ledger.markets import sort_pair
 
     sorted_a, sorted_b = sort_pair(asset1, asset2)
     pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})

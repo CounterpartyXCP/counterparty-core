@@ -177,7 +177,7 @@ ALL_ROUTES = {
         compose.get_pool_withdraw_estimate_xcp_fee,
         "compose",
     ),
-    "/v2/pools/<give_asset>/<get_asset>/quote": (queries.get_pool_quote, "pools"),
+    "/v2/pools/<asset1>/<asset2>/quote": (queries.get_pool_quote, "pools"),
     "/v2/pools/<asset1>/<asset2>/quote/deposit": (queries.get_pool_quote_deposit, "pools"),
     "/v2/pools/<asset1>/<asset2>/quote/withdraw": (queries.get_pool_quote_withdraw, "pools"),
     "/v2/addresses/<address>/compose/attach": (compose.compose_attach, "compose"),

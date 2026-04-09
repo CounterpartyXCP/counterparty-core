@@ -250,7 +250,7 @@ SCENARIO = [
                 },
             },
             {
-                "url": "pools/XCP/POOLTEST/quote?give_quantity=10000000",
+                "url": "pools/XCP/POOLTEST/quote?quantity=10000000",
                 "result": {
                     "pool_exists": True,
                     "estimated_output": 9049567,
@@ -705,9 +705,12 @@ SCENARIO = [
                 ],
             },
             {
-                "url": "pools/POOLTEST/XCP/quote/deposit?quantity_a=10000000",
+                "url": "pools/POOLTEST/XCP/quote/deposit?quantity=10000000",
                 "result": {
                     "first_deposit": False,
+                    "asset_a": "POOLTEST",
+                    "asset_b": "XCP",
+                    "quantity_a_required": 10000000,
                     "quantity_b_required": 12094499,
                     "quantity_minted_estimate": 10994999,
                 },

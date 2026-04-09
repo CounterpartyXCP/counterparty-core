@@ -19,7 +19,7 @@ LENGTH = 8 + 8 + 8 + 8 + 8  # 40 bytes
 def validate(db, source, asset_a, asset_b, quantity_a, quantity_b):
     problems = []
 
-    if asset_a == config.BTC or asset_b == config.BTC:
+    if config.BTC in (asset_a, asset_b):
         problems.append("BTC pairs are not supported for AMM pools")
 
     if asset_a == asset_b:
@@ -57,13 +57,14 @@ def validate(db, source, asset_a, asset_b, quantity_a, quantity_b):
     existing_pool = ledger.markets.get_pool(db, sorted_a, sorted_b)
     if ledger.markets.pool_has_liquidity(existing_pool):
         if asset_a == sorted_a:
-            qty_a, qty_b = quantity_a, quantity_b
-        else:
-            qty_a, qty_b = quantity_b, quantity_a
-        actual_a, actual_b = calculate_actual_deposit_amounts(existing_pool, qty_a, qty_b)
-        if asset_a == sorted_a:
+            actual_a, actual_b = calculate_actual_deposit_amounts(
+                existing_pool, quantity_a, quantity_b
+            )
             required_a, required_b = actual_a, actual_b
         else:
+            actual_a, actual_b = calculate_actual_deposit_amounts(
+                existing_pool, quantity_b, quantity_a
+            )
             required_a, required_b = actual_b, actual_a
 
     # Check balances and gas fee
@@ -194,19 +195,17 @@ def parse(db, tx, message):
         )
     gas.increment_counter(db, ID, tx["block_index"])
 
-    # execute deposit
+    # execute deposit — remap to sorted pair order
     sorted_a, sorted_b = ledger.markets.sort_pair(asset_a, asset_b)
-    if asset_a == sorted_a:
-        qty_a, qty_b = quantity_a, quantity_b
-    else:
-        qty_a, qty_b = quantity_b, quantity_a
+    if asset_a != sorted_a:
+        quantity_a, quantity_b = quantity_b, quantity_a
 
     existing_pool = ledger.markets.get_pool(db, sorted_a, sorted_b)
 
-    actual_a, actual_b = qty_a, qty_b
+    actual_a, actual_b = quantity_a, quantity_b
     if existing_pool is None:
         quantity_minted = first_deposit(
-            db, tx, sorted_a, sorted_b, qty_a, qty_b, min_lp_quantity=min_lp_quantity
+            db, tx, sorted_a, sorted_b, quantity_a, quantity_b, min_lp_quantity=min_lp_quantity
         )
     elif existing_pool["reserve_a"] == 0:
         quantity_minted = refund_empty_pool(
@@ -215,13 +214,13 @@ def parse(db, tx, message):
             existing_pool,
             sorted_a,
             sorted_b,
-            qty_a,
-            qty_b,
+            quantity_a,
+            quantity_b,
             min_lp_quantity=min_lp_quantity,
         )
     else:
         quantity_minted, actual_a, actual_b = subsequent_deposit(
-            db, tx, existing_pool, sorted_a, sorted_b, qty_a, qty_b, min_lp_quantity
+            db, tx, existing_pool, sorted_a, sorted_b, quantity_a, quantity_b, min_lp_quantity
         )
 
     # record valid deposit
@@ -282,27 +281,27 @@ def validate_min_lp_quantity(quantity_minted, min_lp_quantity):
         )
 
 
-def calculate_actual_deposit_amounts(pool, qty_a, qty_b):
-    ratio_a = qty_a * pool["reserve_b"]
-    ratio_b = qty_b * pool["reserve_a"]
+def calculate_actual_deposit_amounts(pool, quantity_a, quantity_b):
+    ratio_a = quantity_a * pool["reserve_b"]
+    ratio_b = quantity_b * pool["reserve_a"]
     if ratio_a <= ratio_b:
-        return qty_a, qty_a * pool["reserve_b"] // pool["reserve_a"]
-    return qty_b * pool["reserve_a"] // pool["reserve_b"], qty_b
+        return quantity_a, quantity_a * pool["reserve_b"] // pool["reserve_a"]
+    return quantity_b * pool["reserve_a"] // pool["reserve_b"], quantity_b
 
 
-def first_deposit(db, tx, asset_a, asset_b, qty_a, qty_b, min_lp_quantity=0):
+def first_deposit(db, tx, asset_a, asset_b, quantity_a, quantity_b, min_lp_quantity=0):
     """Create pool and LP token, mint all LP tokens to depositor."""
     source = tx["source"]
 
-    total_lp = ledger.markets.isqrt(qty_a * qty_b)
+    total_lp = ledger.markets.isqrt(quantity_a * quantity_b)
     validate_min_lp_quantity(total_lp, min_lp_quantity)
 
     # Debit both assets from source (escrow into pool)
     ledger.events.debit(
-        db, source, asset_a, qty_a, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
+        db, source, asset_a, quantity_a, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
     )
     ledger.events.debit(
-        db, source, asset_b, qty_b, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
+        db, source, asset_b, quantity_b, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
     )
 
     # Generate LP token name (deterministic in regtest, random in production)
@@ -349,8 +348,8 @@ def first_deposit(db, tx, asset_a, asset_b, qty_a, qty_b, min_lp_quantity=0):
             "source": source,
             "asset_a": asset_a,
             "asset_b": asset_b,
-            "reserve_a": qty_a,
-            "reserve_b": qty_b,
+            "reserve_a": quantity_a,
+            "reserve_b": quantity_b,
             "lp_asset": lp_asset_name,
         },
     )
@@ -358,7 +357,7 @@ def first_deposit(db, tx, asset_a, asset_b, qty_a, qty_b, min_lp_quantity=0):
     return total_lp
 
 
-def refund_empty_pool(db, tx, pool, asset_a, asset_b, qty_a, qty_b, min_lp_quantity=0):
+def refund_empty_pool(db, tx, pool, asset_a, asset_b, quantity_a, quantity_b, min_lp_quantity=0):
     """Re-fund a fully drained pool, reusing the existing LP token.
 
     Same logic as first_deposit but does NOT create a new LP token or
@@ -368,15 +367,15 @@ def refund_empty_pool(db, tx, pool, asset_a, asset_b, qty_a, qty_b, min_lp_quant
     source = tx["source"]
     lp_asset = pool["lp_asset"]
 
-    total_lp = ledger.markets.isqrt(qty_a * qty_b)
+    total_lp = ledger.markets.isqrt(quantity_a * quantity_b)
     validate_min_lp_quantity(total_lp, min_lp_quantity)
 
     # Debit both assets
     ledger.events.debit(
-        db, source, asset_a, qty_a, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
+        db, source, asset_a, quantity_a, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
     )
     ledger.events.debit(
-        db, source, asset_b, qty_b, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
+        db, source, asset_b, quantity_b, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
     )
 
     # Record issuance for the new minted tokens
@@ -391,12 +390,12 @@ def refund_empty_pool(db, tx, pool, asset_a, asset_b, qty_a, qty_b, min_lp_quant
     )
 
     # Update pool reserves
-    ledger.markets.update_pool(db, asset_a, asset_b, qty_a, qty_b)
+    ledger.markets.update_pool(db, asset_a, asset_b, quantity_a, quantity_b)
 
     return total_lp
 
 
-def subsequent_deposit(db, tx, pool, asset_a, asset_b, qty_a, qty_b, min_lp_quantity=0):
+def subsequent_deposit(db, tx, pool, asset_a, asset_b, quantity_a, quantity_b, min_lp_quantity=0):
     """Add liquidity to existing pool. Mint proportional LP tokens.
 
     Provided quantities are maximums. The protocol calculates the largest
@@ -411,7 +410,7 @@ def subsequent_deposit(db, tx, pool, asset_a, asset_b, qty_a, qty_b, min_lp_quan
     total_lp_supply = ledger.supplies.asset_supply(db, lp_asset)
 
     # Calculate proportional amounts (take only what matches the ratio)
-    actual_a, actual_b = calculate_actual_deposit_amounts(pool, qty_a, qty_b)
+    actual_a, actual_b = calculate_actual_deposit_amounts(pool, quantity_a, quantity_b)
 
     # Mint LP tokens based on proportional contribution
     quantity_minted = actual_a * total_lp_supply // pool["reserve_a"]

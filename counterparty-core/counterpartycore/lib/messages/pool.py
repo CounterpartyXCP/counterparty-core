@@ -8,7 +8,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def try_pool_fill(db, tx1, pool, max_give, target_price_num=None, target_price_den=None):
-    """Try to fill an order against the pool. Returns (fill_qty, output) or (0, 0)."""
+    """Try to fill an order against the pool. Returns (fill_quantity, output) or (0, 0)."""
     if not pool or not ledger.markets.pool_has_liquidity(pool):
         return 0, 0
 
@@ -20,22 +20,22 @@ def try_pool_fill(db, tx1, pool, max_give, target_price_num=None, target_price_d
     fee_bps = ledger.markets.get_pool_fee_bps(pool)
 
     if target_price_num is not None:
-        fill_qty = ledger.markets.compute_pool_input_for_target_price(
+        fill_quantity = ledger.markets.compute_pool_input_for_target_price(
             reserve_in, reserve_out, target_price_num, target_price_den, fee_bps
         )
-        fill_qty = min(fill_qty, max_give)
+        fill_quantity = min(fill_quantity, max_give)
     else:
-        fill_qty = max_give
+        fill_quantity = max_give
 
-    if fill_qty <= 0:
+    if fill_quantity <= 0:
         return 0, 0
 
-    output = ledger.markets.compute_pool_output(reserve_in, reserve_out, fill_qty, fee_bps)
-    min_output = fill_qty * tx1["get_quantity"] // tx1["give_quantity"]
+    output = ledger.markets.compute_pool_output(reserve_in, reserve_out, fill_quantity, fee_bps)
+    min_output = fill_quantity * tx1["get_quantity"] // tx1["give_quantity"]
     if output < min_output or output <= 0:
         return 0, 0
 
-    return fill_qty, output
+    return fill_quantity, output
 
 
 def execute_pool_match(db, tx, tx1, pool, give_quantity, get_quantity):
