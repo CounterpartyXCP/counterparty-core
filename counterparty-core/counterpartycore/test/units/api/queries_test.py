@@ -936,3 +936,102 @@ def test_get_pool_positions_result_count(state_db, defaults):
         page = queries.get_pool_positions_by_address(state_db, defaults["addresses"][0], limit=1)
         assert len(page.result) <= 1
         assert page.result_count == total
+
+
+# =============================================================================
+# Tests for AMM pool quote functions — no-pool and edge-case paths
+# =============================================================================
+
+
+def test_get_pool_positions_by_address_with_cursor(state_db, defaults):
+    """get_pool_positions_by_address respects cursor parameter."""
+    result = queries.get_pool_positions_by_address(
+        state_db, defaults["addresses"][0], cursor=999999
+    )
+    assert result is not None
+    assert isinstance(result, queries.QueryResult)
+    assert isinstance(result.result, list)
+
+
+def test_get_pool_positions_by_address_with_offset(state_db, defaults):
+    """get_pool_positions_by_address respects offset parameter."""
+    result = queries.get_pool_positions_by_address(state_db, defaults["addresses"][0], offset=0)
+    assert result is not None
+    assert isinstance(result, queries.QueryResult)
+
+
+def test_get_pool_quote_deposit_with_pool(state_db):
+    """Deposit quote returns proportional amounts and LP estimate."""
+    result = queries.get_pool_quote_deposit(state_db, "POOLASSETA", "POOLASSETB", 10_000_000)
+    assert result["first_deposit"] is False
+    assert result["asset_a"] == "POOLASSETA"
+    assert result["asset_b"] == "POOLASSETB"
+    assert result["quantity_a_required"] == 10_000_000
+    assert result["quantity_b_required"] == 10_000_000
+    assert result["quantity_minted_estimate"] > 0
+
+
+def test_get_pool_quote_deposit_asset_order(state_db):
+    """Deposit quote works with assets in either URL order."""
+    result = queries.get_pool_quote_deposit(state_db, "POOLASSETB", "POOLASSETA", 10_000_000)
+    assert result["first_deposit"] is False
+    assert result["asset_a"] == "POOLASSETA"
+    assert result["asset_b"] == "POOLASSETB"
+
+
+def test_get_pool_quote_swap_with_pool(state_db):
+    """Swap quote routes through pool when no resting orders exist."""
+    result = queries.get_pool_quote(state_db, "POOLASSETA", "POOLASSETB", 1_000_000)
+    assert result["pool_exists"] is True
+    assert result["estimated_output"] > 0
+    assert result["pool_output"] > 0
+    assert result["book_output"] == 0
+    assert result["fee_bps"] == 100
+    assert result["fee_amount"] > 0
+    assert result["effective_price"] > 0
+    assert result["price_impact"] > 0
+    assert result["give_remaining"] == 0
+
+
+def test_get_pool_quote_withdraw_with_pool(state_db):
+    """Withdraw quote returns proportional reserve amounts."""
+    result = queries.get_pool_quote_withdraw(state_db, "POOLASSETA", "POOLASSETB", 1_000_000)
+    assert result["pool_exists"] is True
+    assert result["asset_a"] == "POOLASSETA"
+    assert result["asset_b"] == "POOLASSETB"
+    assert result["quantity_a_estimate"] > 0
+    assert result["quantity_b_estimate"] > 0
+    assert result["supply"] == 50_000_000
+
+
+def test_get_pool_by_pair_with_pool(state_db):
+    """get_pool_by_pair returns pool when it exists."""
+    result = queries.get_pool_by_pair(state_db, "POOLASSETA", "POOLASSETB")
+    assert result is not None
+    assert result.result["asset_a"] == "POOLASSETA"
+    assert result.result["asset_b"] == "POOLASSETB"
+    assert result.result["reserve_a"] == 50_000_000
+    assert result.result["reserve_b"] == 50_000_000
+
+
+def test_get_pool_positions_with_data(state_db, defaults):
+    """get_pool_positions_by_address returns LP position when pool exists."""
+    result = queries.get_pool_positions_by_address(state_db, defaults["addresses"][0])
+    assert result.result_count > 0
+    position = result.result[0]
+    assert position["asset_a"] == "POOLASSETA"
+    assert position["asset_b"] == "POOLASSETB"
+    assert position["quantity"] == 50_000_000
+
+
+def test_get_pool_quote_deposit_no_pool(state_db):
+    """Deposit quote for nonexistent pair returns first_deposit=True."""
+    result = queries.get_pool_quote_deposit(state_db, "XCP", "DIVISIBLE", 100_000_000)
+    assert result["first_deposit"] is True
+    assert result["quantity_minted_estimate"] is None
+
+
+def test_get_pool_quote_withdraw_no_pool(state_db):
+    """Withdraw quote for nonexistent pair returns pool_exists=False."""
+    result = queries.get_pool_quote_withdraw(state_db, "XCP", "DIVISIBLE", 1_000)
+    assert result["pool_exists"] is False

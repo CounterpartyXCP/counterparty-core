@@ -88,13 +88,13 @@ def test_validate_overflow_quantity(ledger_db, defaults):
 
 
 def test_validate_product_overflow(ledger_db, defaults):
-    qty = config.MAX_INT // 2 + 1
+    quantity = config.MAX_INT // 2 + 1
     problems = pooldeposit.validate(
         ledger_db,
         defaults["addresses"][0],
         "XCP",
         "DIVISIBLE",
-        qty,
+        quantity,
         3,
     )
     assert any("quantity_a * quantity_b exceeds" in p for p in problems)
@@ -115,11 +115,13 @@ def test_validate_insufficient_balance(ledger_db, defaults):
 
 
 def test_validate_off_ratio_deposit_uses_proportional_amounts(ledger_db, defaults, blockchain_mock):
-    qty = defaults["quantity"]
+    quantity = defaults["quantity"]
     source = defaults["addresses"][0]
 
     tx1 = blockchain_mock.dummy_tx(ledger_db, source)
-    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", qty // 4, qty // 4)
+    _, _, data = pooldeposit.compose(
+        ledger_db, source, "XCP", "DIVISIBLE", quantity // 4, quantity // 4
+    )
     pooldeposit.parse(ledger_db, tx1, data[1:])
 
     sorted_a, sorted_b = ledger.markets.sort_pair("XCP", "DIVISIBLE")
@@ -162,16 +164,16 @@ def test_compose_produces_correct_format(ledger_db, defaults):
 
 
 def test_compose_and_unpack_roundtrip(ledger_db, defaults):
-    qty_a = defaults["quantity"]
-    qty_b = defaults["quantity"] * 2
+    quantity_a = defaults["quantity"]
+    quantity_b = defaults["quantity"] * 2
 
     source, _, data = pooldeposit.compose(
         ledger_db,
         defaults["addresses"][0],
         "XCP",
         "DIVISIBLE",
-        qty_a,
-        qty_b,
+        quantity_a,
+        quantity_b,
     )
 
     # Strip the type ID byte
@@ -180,8 +182,8 @@ def test_compose_and_unpack_roundtrip(ledger_db, defaults):
 
     assert asset_a == "XCP"
     assert asset_b == "DIVISIBLE"
-    assert q_a == qty_a
-    assert q_b == qty_b
+    assert q_a == quantity_a
+    assert q_b == quantity_b
 
 
 def test_unpack_bad_data(ledger_db):
@@ -250,14 +252,14 @@ def test_parse_invalid_message(ledger_db, defaults, blockchain_mock, test_helper
 
 def test_parse_valid_first_deposit(ledger_db, defaults, blockchain_mock, test_helpers):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    qty = defaults["quantity"]
+    quantity = defaults["quantity"]
     _, _, data = pooldeposit.compose(
         ledger_db,
         defaults["addresses"][0],
         "XCP",
         "DIVISIBLE",
-        qty,
-        qty,
+        quantity,
+        quantity,
     )
     message = data[1:]  # strip type ID
 
@@ -272,6 +274,7 @@ def test_parse_valid_first_deposit(ledger_db, defaults, blockchain_mock, test_he
                     "tx_hash": tx["tx_hash"],
                     "block_index": tx["block_index"],
                     "source": defaults["addresses"][0],
+                    "asset_a": "DIVISIBLE",
                     "status": "valid",
                 },
             },
@@ -317,12 +320,12 @@ def test_parse_valid_first_deposit(ledger_db, defaults, blockchain_mock, test_he
 
 def test_parse_subsequent_deposit(ledger_db, defaults, blockchain_mock, test_helpers):
     """Second deposit into existing pool mints proportional LP tokens."""
-    qty = defaults["quantity"]
+    quantity = defaults["quantity"]
 
     # First deposit creates pool (use half of balance)
     tx1 = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     _, _, data = pooldeposit.compose(
-        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", qty // 4, qty // 4
+        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", quantity // 4, quantity // 4
     )
     pooldeposit.parse(ledger_db, tx1, data[1:])
 
@@ -334,7 +337,7 @@ def test_parse_subsequent_deposit(ledger_db, defaults, blockchain_mock, test_hel
     # Second deposit — same amounts
     tx2 = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     _, _, data2 = pooldeposit.compose(
-        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", qty // 4, qty // 4
+        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", quantity // 4, quantity // 4
     )
     pooldeposit.parse(ledger_db, tx2, data2[1:])
 
@@ -346,18 +349,18 @@ def test_parse_subsequent_deposit(ledger_db, defaults, blockchain_mock, test_hel
 
     # Pool reserves should have doubled
     pool_after = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
-    assert pool_after["reserve_a"] == qty // 4 * 2
-    assert pool_after["reserve_b"] == qty // 4 * 2
+    assert pool_after["reserve_a"] == quantity // 4 * 2
+    assert pool_after["reserve_b"] == quantity // 4 * 2
 
 
 def test_parse_mismatched_ratio(ledger_db, defaults, blockchain_mock, test_helpers):
     """Off-ratio deposit takes only proportional amounts, leaves excess with user."""
-    qty = defaults["quantity"]
+    quantity = defaults["quantity"]
 
     # Create 1:1 pool
     tx1 = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     _, _, data = pooldeposit.compose(
-        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", qty, qty
+        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", quantity, quantity
     )
     pooldeposit.parse(ledger_db, tx1, data[1:])
 
@@ -400,12 +403,12 @@ def test_parse_mismatched_ratio(ledger_db, defaults, blockchain_mock, test_helpe
 
 def test_slippage_protection_rejects_low_mint(ledger_db, defaults, blockchain_mock, test_helpers):
     """Deposit with min_lp_quantity rejects if minted LP is below threshold."""
-    qty = defaults["quantity"]
+    quantity = defaults["quantity"]
 
     # Create 1:1 pool
     tx1 = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     _, _, data = pooldeposit.compose(
-        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", qty // 4, qty // 4
+        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", quantity // 4, quantity // 4
     )
     pooldeposit.parse(ledger_db, tx1, data[1:])
 
@@ -421,7 +424,7 @@ def test_slippage_protection_rejects_low_mint(ledger_db, defaults, blockchain_mo
         sorted_b,
         dep,
         dep,
-        min_lp_quantity=qty * 999,  # impossible to mint this many
+        min_lp_quantity=quantity * 999,  # impossible to mint this many
     )
     tx2 = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
 
@@ -432,12 +435,12 @@ def test_slippage_protection_rejects_low_mint(ledger_db, defaults, blockchain_mo
 
 def test_slippage_protection_allows_when_met(ledger_db, defaults, blockchain_mock, test_helpers):
     """Deposit succeeds when minted LP meets min_lp_quantity threshold."""
-    qty = defaults["quantity"]
+    quantity = defaults["quantity"]
 
     # Create 1:1 pool
     tx1 = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     _, _, data = pooldeposit.compose(
-        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", qty // 4, qty // 4
+        ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", quantity // 4, quantity // 4
     )
     pooldeposit.parse(ledger_db, tx1, data[1:])
 
@@ -465,16 +468,16 @@ def test_slippage_protection_allows_when_met(ledger_db, defaults, blockchain_moc
 
 
 def test_first_deposit_respects_min_lp_quantity(ledger_db, defaults, blockchain_mock):
-    qty = defaults["quantity"] // 4
+    quantity = defaults["quantity"] // 4
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     _, _, data = pooldeposit.compose(
         ledger_db,
         defaults["addresses"][0],
         "XCP",
         "DIVISIBLE",
-        qty,
-        qty,
-        min_lp_quantity=qty * 10,
+        quantity,
+        quantity,
+        min_lp_quantity=quantity * 10,
     )
 
     with pytest.raises(exceptions.MessageError, match="slippage protection"):
@@ -482,17 +485,19 @@ def test_first_deposit_respects_min_lp_quantity(ledger_db, defaults, blockchain_
 
 
 def test_empty_pool_refund_respects_min_lp_quantity(ledger_db, defaults, blockchain_mock):
-    qty = defaults["quantity"] // 4
+    quantity = defaults["quantity"] // 4
     source = defaults["addresses"][0]
 
     tx1 = blockchain_mock.dummy_tx(ledger_db, source)
-    _, _, deposit_data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", qty, qty)
+    _, _, deposit_data = pooldeposit.compose(
+        ledger_db, source, "XCP", "DIVISIBLE", quantity, quantity
+    )
     pooldeposit.parse(ledger_db, tx1, deposit_data[1:])
 
     pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
     tx2 = blockchain_mock.dummy_tx(ledger_db, source)
     _, _, withdraw_data = poolwithdraw.compose(
-        ledger_db, source, pool["asset_a"], pool["asset_b"], qty
+        ledger_db, source, pool["asset_a"], pool["asset_b"], quantity
     )
     poolwithdraw.parse(ledger_db, tx2, withdraw_data[1:])
 
@@ -502,10 +507,74 @@ def test_empty_pool_refund_respects_min_lp_quantity(ledger_db, defaults, blockch
         source,
         "XCP",
         "DIVISIBLE",
-        qty,
-        qty,
-        min_lp_quantity=qty * 10,
+        quantity,
+        quantity,
+        min_lp_quantity=quantity * 10,
     )
 
     with pytest.raises(exceptions.MessageError, match="slippage protection"):
         pooldeposit.parse(ledger_db, tx3, refund_data[1:])
+
+
+def test_validate_lp_token_cannot_be_pooled(ledger_db, defaults, blockchain_mock):
+    """LP token from an existing pool cannot itself be deposited into a new pool."""
+    quantity = defaults["quantity"] // 4
+    source = defaults["addresses"][0]
+
+    # Create a pool and get its LP token
+    tx1 = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", quantity, quantity)
+    pooldeposit.parse(ledger_db, tx1, data[1:])
+
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    lp_asset = pool["lp_asset"]
+
+    # Try to create a pool using the LP token
+    problems = pooldeposit.validate(ledger_db, source, lp_asset, "XCP", 100, 100)
+    assert any("LP token" in p for p in problems)
+
+
+def test_validate_subsequent_deposit_too_small(ledger_db, defaults, blockchain_mock):
+    """Subsequent deposit with tiny amounts that would mint 0 LP tokens should fail in parse."""
+    quantity = defaults["quantity"]
+    source = defaults["addresses"][0]
+
+    # Create pool with asymmetric reserves so supply << reserve_a.
+    # isqrt(quantity * 1) ≈ 10000 LP tokens, but reserve_a = quantity = 100M.
+    # Then 1 sat deposit: minted = 1 * 10000 // 100M = 0.
+    sorted_a, sorted_b = ledger.markets.sort_pair("XCP", "DIVISIBLE")
+    tx1 = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data = pooldeposit.compose(ledger_db, source, sorted_a, sorted_b, quantity, 1)
+    pooldeposit.parse(ledger_db, tx1, data[1:])
+
+    _, _, data2 = pooldeposit.compose(
+        ledger_db, source, sorted_a, sorted_b, 1, 1, skip_validation=True
+    )
+    tx2 = blockchain_mock.dummy_tx(ledger_db, source)
+    with pytest.raises(exceptions.MessageError, match="deposit too small"):
+        pooldeposit.parse(ledger_db, tx2, data2[1:])
+
+
+def test_validate_xcp_fee_insufficient(ledger_db, defaults, blockchain_mock):
+    """When gas fee > 0 and XCP balance is too low for fee + quantity, validation should fail."""
+    from counterpartycore.lib.messages import gas
+
+    source = defaults["addresses"][0]
+    quantity = defaults["quantity"]
+
+    # Check actual fee — if fee is 0 (gas disabled for pools), this test is vacuous.
+    fee = gas.get_transaction_fee(ledger_db, pooldeposit.ID, 999999)
+    if fee > 0:
+        # Drain XCP to just below what's needed
+        xcp_balance = ledger.balances.get_balance(ledger_db, source, config.XCP)
+        # Need quantity for deposit + fee. If balance < quantity + fee, should get error.
+        needed = quantity + fee
+        if xcp_balance >= needed:
+            # Drain balance so that balance < needed
+            drain = xcp_balance - needed + 1
+            ledger.events.debit(
+                ledger_db, source, config.XCP, drain, 0, action="test", event="test"
+            )
+
+        problems = pooldeposit.validate(ledger_db, source, "XCP", "DIVISIBLE", quantity, 1)
+        assert any("insufficient XCP for fee" in p for p in problems)

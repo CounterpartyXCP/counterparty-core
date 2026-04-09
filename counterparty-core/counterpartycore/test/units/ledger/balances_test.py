@@ -9,12 +9,12 @@ DUMMY_UTXO = 64 * "0" + ":1"
 
 
 def test_balances_functions(ledger_db, defaults):
-    assert balances.get_balance(ledger_db, defaults["addresses"][0], "XCP") == 91499999693
+    assert balances.get_balance(ledger_db, defaults["addresses"][0], "XCP") == 91399999693
     assert balances.get_balance(ledger_db, defaults["addresses"][0], "foobar") == 0
 
 
 def test_balances_after_send(ledger_db, state_db, defaults, blockchain_mock):
-    assert balances.get_balance(ledger_db, defaults["addresses"][0], "XCP") == 91499999693
+    assert balances.get_balance(ledger_db, defaults["addresses"][0], "XCP") == 91399999693
     assert balances.get_balance(ledger_db, defaults["addresses"][1], "XCP") == 100000000
 
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
@@ -29,7 +29,7 @@ def test_balances_after_send(ledger_db, state_db, defaults, blockchain_mock):
     apiwatcher.catch_up(ledger_db, state_db)
 
     assert (
-        balances.get_balance(ledger_db, defaults["addresses"][0], "XCP") == 91499999693 - 100000000
+        balances.get_balance(ledger_db, defaults["addresses"][0], "XCP") == 91399999693 - 100000000
     )
     assert balances.get_balance(ledger_db, defaults["addresses"][1], "XCP") == 100000000 + 100000000
 
@@ -46,7 +46,7 @@ def test_balances_after_send(ledger_db, state_db, defaults, blockchain_mock):
 
     assert (
         balances.get_balance(ledger_db, defaults["addresses"][0], "XCP")
-        == 91499999693 - 100000000 + 500000
+        == 91399999693 - 100000000 + 500000
     )
     assert (
         balances.get_balance(ledger_db, defaults["addresses"][1], "XCP")
@@ -62,6 +62,7 @@ def test_balances_after_send(ledger_db, state_db, defaults, blockchain_mock):
 
 def test_get_address_assets(ledger_db, defaults):
     assert balances.get_address_assets(ledger_db, defaults["addresses"][0]) == [
+        {"asset": "A95428956773044873"},
         {"asset": "A95428959342453541"},
         {"asset": "CALLABLE"},
         {"asset": "DIVISIBLE"},
@@ -70,6 +71,8 @@ def test_get_address_assets(ledger_db, defaults):
         {"asset": "MAXI"},
         {"asset": "NODIVISIBLE"},
         {"asset": "PARENT"},
+        {"asset": "POOLASSETA"},
+        {"asset": "POOLASSETB"},
         {"asset": "RAIDFAIRMIN"},
         {"asset": "TAIDFAIRMIN"},
         {"asset": "XCP"},
@@ -77,7 +80,7 @@ def test_get_address_assets(ledger_db, defaults):
 
     assert balances.get_address_assets(ledger_db, DUMMY_UTXO) == []
 
-    assert balances.get_balances_count(ledger_db, defaults["addresses"][0]) == [{"cnt": 11}]
+    assert balances.get_balances_count(ledger_db, defaults["addresses"][0]) == [{"cnt": 14}]
     assert balances.get_balances_count(ledger_db, DUMMY_UTXO) == [{"cnt": 0}]
 
     check_balances = [
@@ -89,7 +92,7 @@ def test_get_address_assets(ledger_db, defaults):
             "quantity": 300000000,
         },
         {
-            "MAX(rowid)": 104,
+            "MAX(rowid)": 108,
             "address": "2MyJHMUenMWonC35Yi6PHC7i2tkS7PuomCy",
             "asset": "XCP",
             "quantity": 46449986773,
@@ -101,10 +104,10 @@ def test_get_address_assets(ledger_db, defaults):
             "quantity": 92999971893,
         },
         {
-            "MAX(rowid)": 103,
+            "MAX(rowid)": 106,
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
             "asset": "XCP",
-            "quantity": 91499999693,
+            "quantity": 91399999693,
         },
         {
             "MAX(rowid)": 63,
@@ -149,7 +152,7 @@ def test_get_address_assets(ledger_db, defaults):
             "quantity": 92949974167,
         },
         {
-            "MAX(rowid)": 105,
+            "MAX(rowid)": 112,
             "address": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM",
             "asset": "XCP",
             "quantity": 92999974580,

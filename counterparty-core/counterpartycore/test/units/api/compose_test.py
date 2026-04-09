@@ -294,7 +294,7 @@ def test_compose_poolwithdraw(apiv2_client, defaults):
 
 def test_get_pool_quote_deposit(apiv2_client):
     """Test get_pool_quote_deposit function via API."""
-    response = apiv2_client.get("/v2/pools/XCP/DIVISIBLE/quote/deposit?quantity_a=100000000")
+    response = apiv2_client.get("/v2/pools/XCP/DIVISIBLE/quote/deposit?quantity=100000000")
     assert response.status_code == 200
     assert "result" in response.json
     result = response.json["result"]
@@ -303,7 +303,7 @@ def test_get_pool_quote_deposit(apiv2_client):
 
 def test_get_pool_quote_swap(apiv2_client):
     """Test get_pool_quote_swap function via API."""
-    response = apiv2_client.get("/v2/pools/XCP/DIVISIBLE/quote?give_quantity=100000000")
+    response = apiv2_client.get("/v2/pools/XCP/DIVISIBLE/quote?quantity=100000000")
     assert response.status_code == 200
     assert "result" in response.json
 
@@ -313,6 +313,61 @@ def test_get_pool_quote_withdraw(apiv2_client):
     response = apiv2_client.get("/v2/pools/XCP/DIVISIBLE/quote/withdraw?quantity=1000")
     assert response.status_code == 200
     assert "result" in response.json
+
+
+def test_compose_poolwithdraw_with_lp_asset(apiv2_client, defaults):
+    """Test compose_poolwithdraw with lp_asset parameter instead of asset_a/asset_b."""
+    address = defaults["addresses"][0]
+    # Use a valid LP asset name. No pool will exist for it, so we expect an error,
+    # but the code path that resolves lp_asset -> asset_a/asset_b is exercised.
+    response = apiv2_client.get(
+        f"/v2/addresses/{address}/compose/poolwithdraw?lp_asset=NONEXISTENTLP&quantity=1000"
+    )
+    # Should return 400 because no pool found for LP asset
+    assert response.status_code == 400
+
+
+def test_compose_poolwithdraw_with_lp_asset_direct(ledger_db, defaults):
+    """Test compose_poolwithdraw with lp_asset parameter directly via compose module."""
+    from counterpartycore.lib.api import compose as api_compose
+
+    address = defaults["addresses"][0]
+    with pytest.raises(exceptions.ComposeError, match="no pool found for LP asset"):
+        api_compose.compose_poolwithdraw(
+            ledger_db,
+            address=address,
+            lp_asset="NONEXISTENTLP",
+            quantity=1000,
+        )
+
+
+def test_compose_poolwithdraw_with_lp_asset_success(ledger_db, defaults, blockchain_mock):
+    """Test compose_poolwithdraw with lp_asset resolves to asset_a/asset_b from existing pool."""
+    from counterpartycore.lib import ledger
+    from counterpartycore.lib.api import compose as api_compose
+    from counterpartycore.lib.messages import pooldeposit
+
+    source = defaults["addresses"][0]
+    quantity = defaults["quantity"]
+
+    # Create a real pool so lp_asset lookup succeeds
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", quantity, quantity)
+    pooldeposit.parse(ledger_db, tx, data[1:])
+
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    lp_asset = pool["lp_asset"]
+    lp_balance = ledger.balances.get_balance(ledger_db, source, lp_asset)
+    assert lp_balance > 0
+
+    # compose_poolwithdraw with lp_asset should resolve and succeed
+    result = api_compose.compose_poolwithdraw(
+        ledger_db,
+        address=source,
+        lp_asset=lp_asset,
+        quantity=lp_balance,
+    )
+    assert result is not None
 
 
 def test_compose_detach(ledger_db, defaults):

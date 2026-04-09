@@ -34,6 +34,7 @@ def test_state_db(state_db):
     ).fetchall()
     assert balances == [
         {"asset": "A160361285792733729", "quantity": 50},
+        {"asset": "A95428956773044873", "quantity": 50000000},
         {"asset": "A95428959342453541", "quantity": 100000000},
         {"asset": "CALLABLE", "quantity": 1000},
         {"asset": "DIVIDEND", "quantity": 100},
@@ -45,11 +46,13 @@ def test_state_db(state_db):
         {"asset": "NODIVISIBLE", "quantity": 1000},
         {"asset": "PARENT", "quantity": 100000000},
         {"asset": "PAYTOSCRIPT", "quantity": 1000},
+        {"asset": "POOLASSETA", "quantity": 50000000},
+        {"asset": "POOLASSETB", "quantity": 50000000},
         {"asset": "QAIDFAIRMIN", "quantity": 20},
         {"asset": "RAIDFAIRMIN", "quantity": 20},
         {"asset": "TAIDFAIRMIN", "quantity": 1},
         {"asset": "TESTDISP", "quantity": 900},
-        {"asset": "XCP", "quantity": 603214652282},
+        {"asset": "XCP", "quantity": 603114652282},
     ]
 
 
@@ -58,7 +61,7 @@ def test_state_db_2(state_db):
     balances = cursor.execute(
         "SELECT asset, SUM(quantity) AS quantity FROM balances GROUP BY asset"
     ).fetchall()
-    assert len(balances) == 17
+    assert len(balances) == 20
 
 
 def test_protocol_changes_disabled():

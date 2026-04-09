@@ -3,10 +3,10 @@ from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages import pooldeposit, poolwithdraw
 
 
-def create_pool(ledger_db, blockchain_mock, source, qty_a, qty_b):
+def create_pool(ledger_db, blockchain_mock, source, quantity_a, quantity_b):
     """Helper: deposit to create a pool and return (tx, pool)."""
     tx = blockchain_mock.dummy_tx(ledger_db, source)
-    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", qty_a, qty_b)
+    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", quantity_a, quantity_b)
     pooldeposit.parse(ledger_db, tx, data[1:])
     pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
     return tx, pool
@@ -363,10 +363,10 @@ def test_parse_no_pool(ledger_db, defaults, blockchain_mock, test_helpers):
 
 def test_small_but_redeemable_withdrawal(ledger_db, defaults, blockchain_mock, test_helpers):
     """Withdrawal that yields at least 1 sat of one asset should succeed."""
-    qty = defaults["quantity"]
+    quantity = defaults["quantity"]
     source = defaults["addresses"][0]
 
-    create_pool(ledger_db, blockchain_mock, source, qty, qty)
+    create_pool(ledger_db, blockchain_mock, source, quantity, quantity)
 
     pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
 

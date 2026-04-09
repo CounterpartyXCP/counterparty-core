@@ -423,17 +423,20 @@ def test_get_balances_by_addresses(apiv2_client, defaults):
     url = f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&verbose=true"
     result = apiv2_client.get(url).json["result"]
 
-    assert result[0]["asset"] == "A95428959342453541"
-    assert result[1]["asset"] == "CALLABLE"
-    assert result[2]["asset"] == "DIVISIBLE"
-    assert result[3]["asset"] == "FREEFAIRMIN"
-    assert result[4]["asset"] == "LOCKED"
-    assert result[5]["asset"] == "MAXI"
-    assert result[6]["asset"] == "NODIVISIBLE"
-    assert result[7]["asset"] == "PARENT"
-    assert result[8]["asset"] == "RAIDFAIRMIN"
-    assert result[9]["asset"] == "TAIDFAIRMIN"
-    assert result[10]["asset"] == "XCP"
+    assert result[0]["asset"] == "A95428956773044873"
+    assert result[1]["asset"] == "A95428959342453541"
+    assert result[2]["asset"] == "CALLABLE"
+    assert result[3]["asset"] == "DIVISIBLE"
+    assert result[4]["asset"] == "FREEFAIRMIN"
+    assert result[5]["asset"] == "LOCKED"
+    assert result[6]["asset"] == "MAXI"
+    assert result[7]["asset"] == "NODIVISIBLE"
+    assert result[8]["asset"] == "PARENT"
+    assert result[9]["asset"] == "POOLASSETA"
+    assert result[10]["asset"] == "POOLASSETB"
+    assert result[11]["asset"] == "RAIDFAIRMIN"
+    assert result[12]["asset"] == "TAIDFAIRMIN"
+    assert result[13]["asset"] == "XCP"
 
     for balance in result[9]["addresses"]:
         assert (

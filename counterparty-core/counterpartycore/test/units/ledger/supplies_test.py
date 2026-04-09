@@ -3,9 +3,9 @@ from counterpartycore.lib.ledger import supplies
 
 def test_supplies_functions(ledger_db, defaults):
     assert supplies.xcp_created(ledger_db) == 604514652382
-    assert supplies.xcp_destroyed(ledger_db) == 800000000
-    assert supplies.xcp_supply(ledger_db) == 603714652382
-    assert supplies.destructions(ledger_db) == {"XCP": 800000000}
+    assert supplies.xcp_destroyed(ledger_db) == 900000000
+    assert supplies.xcp_supply(ledger_db) == 603614652382
+    assert supplies.destructions(ledger_db) == {"XCP": 900000000}
     assert supplies.asset_supply(ledger_db, "DIVISIBLE") == 100000000000
 
     assert supplies.creations(ledger_db) == {
@@ -21,7 +21,10 @@ def test_supplies_functions(ledger_db, defaults):
         "PAIDFAIRMIN": 0,
         "PAYTOSCRIPT": 1000,
         "A95428959342453541": 100000000,
+        "A95428956773044873": 50000000,
         "PARENT": 100000000,
+        "POOLASSETA": 100000000,
+        "POOLASSETB": 100000000,
         "QAIDFAIRMIN": 20,
         "RAIDFAIRMIN": 20,
         "SAIDFAIRMIN": 0,
@@ -31,8 +34,9 @@ def test_supplies_functions(ledger_db, defaults):
     }
 
     assert supplies.supplies(ledger_db) == {
-        "XCP": 603714652382,
+        "XCP": 603614652382,
         "A95428959342453541": 100000000,
+        "A95428956773044873": 50000000,
         "CALLABLE": 1000,
         "DIVIDEND": 100,
         "DIVISIBLE": 100000000000,
@@ -44,6 +48,8 @@ def test_supplies_functions(ledger_db, defaults):
         "PAIDFAIRMIN": 0,
         "PARENT": 100000000,
         "PAYTOSCRIPT": 1000,
+        "POOLASSETA": 100000000,
+        "POOLASSETB": 100000000,
         "QAIDFAIRMIN": 20,
         "RAIDFAIRMIN": 20,
         "SAIDFAIRMIN": 0,
@@ -55,7 +61,7 @@ def test_supplies_functions(ledger_db, defaults):
     assert supplies.holders(ledger_db, "XCP") == [
         {
             "address": "mn6q3dS2EnDUx3bmyWc6D4szJNVGtaR7zc",
-            "address_quantity": 91499999693,
+            "address_quantity": 91399999693,
             "escrow": None,
         },
         {
@@ -185,6 +191,7 @@ def test_supplies_functions(ledger_db, defaults):
 
     assert supplies.held(ledger_db) == {
         "A160361285792733729": 50,
+        "A95428956773044873": 50000000,
         "A95428959342453541": 100000000,
         "BTC": 1466667,
         "CALLABLE": 1000,
@@ -197,9 +204,11 @@ def test_supplies_functions(ledger_db, defaults):
         "NODIVISIBLE": 1000,
         "PARENT": 100000000,
         "PAYTOSCRIPT": 1000,
+        "POOLASSETA": 100000000,
+        "POOLASSETB": 100000000,
         "QAIDFAIRMIN": 20,
         "RAIDFAIRMIN": 20,
         "TAIDFAIRMIN": 1,
         "TESTDISP": 1000,
-        "XCP": 603714652382,
+        "XCP": 603614652382,
     }
