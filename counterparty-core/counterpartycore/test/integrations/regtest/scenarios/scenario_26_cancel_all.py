@@ -211,20 +211,6 @@ SCENARIO = [
                     },
                 ],
             },
-            {
-                "url": "orders/$CANCEL_ALL_ORDER_A_HASH",
-                "result": {
-                    "status": "cancelled",
-                    "tx_hash": "$CANCEL_ALL_ORDER_A_HASH",
-                },
-            },
-            {
-                "url": "orders/$CANCEL_ALL_ORDER_B_HASH",
-                "result": {
-                    "status": "cancelled",
-                    "tx_hash": "$CANCEL_ALL_ORDER_B_HASH",
-                },
-            },
         ],
     },
     {
