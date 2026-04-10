@@ -19,6 +19,7 @@ D = decimal.Decimal
 FORMAT = ">QQQQHQ"
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
 ID = 10
+MAX_EXPIRATION_U16 = 2**16 - 1
 
 
 def exact_penalty(db, address, block_index, tx_index):
@@ -283,7 +284,10 @@ def validate(
         db, status="valid", asset=get_asset, current_block_index=block_index
     ):
         problems.append(f"no such asset to get ({get_asset})")
-    if expiration > config.MAX_EXPIRATION:
+    if protocol.enabled("indefinite_orders", block_index=block_index):
+        if expiration > MAX_EXPIRATION_U16:
+            problems.append("expiration overflow")
+    elif expiration > config.MAX_EXPIRATION:
         problems.append("expiration overflow")
 
     cursor.close()
@@ -449,7 +453,9 @@ def parse(db, tx, message):
         "get_quantity": get_quantity,
         "get_remaining": get_quantity,
         "expiration": expiration,
-        "expire_index": tx["block_index"] + expiration,
+        "expire_index": (None if expiration == 0 else tx["block_index"] + expiration - 1)
+        if protocol.enabled("indefinite_orders", block_index=tx["block_index"])
+        else tx["block_index"] + expiration,
         "fee_required": fee_required,
         "fee_required_remaining": fee_required,
         "fee_provided": tx["fee"],

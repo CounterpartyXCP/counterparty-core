@@ -15,7 +15,7 @@ SCENARIO = [
             "ORDER_1_HASH": "$TX_HASH",
             "ORDER_1_TX_INDEX": "$TX_INDEX",
             "ORDER_1_BLOCK_INDEX": "$BLOCK_INDEX",
-            "ORDER_1_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 21",
+            "ORDER_1_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 20",
         },
         "controls": [
             {
@@ -81,7 +81,8 @@ SCENARIO = [
             "ORDER_2_HASH": "$TX_HASH",
             "ORDER_2_TX_INDEX": "$TX_INDEX",
             "ORDER_2_BLOCK_INDEX": "$BLOCK_INDEX",
-            "ORDER_2_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 20",
+            "ORDER_2_EXPIRE_INDEX": "$BLOCK_INDEX + 19",
+            "ORDER_2_MATCH_EXPIRE_INDEX": "$BLOCK_INDEX + 20",
         },
         "controls": [
             {
@@ -98,7 +99,7 @@ SCENARIO = [
                             "forward_asset": "XCP",
                             "forward_quantity": 1000,
                             "id": "$ORDER_1_HASH_$TX_HASH",
-                            "match_expire_index": "$ORDER_2_EXPIRATION_BLOCK_INDEX",
+                            "match_expire_index": "$ORDER_2_MATCH_EXPIRE_INDEX",
                             "status": "pending",
                             "tx0_address": "$ADDRESS_1",
                             "tx0_block_index": "$ORDER_1_BLOCK_INDEX",
@@ -145,7 +146,7 @@ SCENARIO = [
                         "params": {
                             "block_index": "$BLOCK_INDEX",
                             "expiration": 20,
-                            "expire_index": "$ORDER_2_EXPIRATION_BLOCK_INDEX",
+                            "expire_index": "$ORDER_2_EXPIRE_INDEX",
                             "fee_provided": 10000,
                             "fee_provided_remaining": 10000,
                             "fee_required": 0,
@@ -176,7 +177,7 @@ SCENARIO = [
                         "forward_asset": "XCP",
                         "forward_quantity": 1000,
                         "id": "$ORDER_1_HASH_$TX_HASH",
-                        "match_expire_index": "$ORDER_2_EXPIRATION_BLOCK_INDEX",
+                        "match_expire_index": "$ORDER_2_MATCH_EXPIRE_INDEX",
                         "status": "pending",
                         "tx0_address": "$ADDRESS_1",
                         "tx0_block_index": "$ORDER_1_BLOCK_INDEX",
