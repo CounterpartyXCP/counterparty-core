@@ -107,13 +107,13 @@ def compose_burn(db, address: str, quantity: int, overburn: bool = False, **cons
     return composer.compose_transaction(db, "burn", params, construct_params)
 
 
-def compose_cancel(db, address: str, offer_hash: str = None, **construct_params):
+def compose_cancel(db, address: str, offer_hash: str = "", **construct_params):
     """
-    Composes a transaction to cancel an open order or bet. If offer_hash is omitted, cancels all open orders and bets for the address.
+    Composes a transaction to cancel an open order or bet. If offer_hash is empty, cancels all open orders and bets for the address.
     :param address: The address that placed the order/bet to be cancelled (e.g. $ADDRESS_6)
-    :param offer_hash: The hash of the order/bet to be cancelled (e.g. $LAST_OPEN_ORDER_TX_HASH). If not provided, all open orders and bets will be cancelled.
+    :param offer_hash: The hash of the order/bet to be cancelled (e.g. $LAST_OPEN_ORDER_TX_HASH). If empty, all open orders and bets will be cancelled.
     """
-    params = {"source": address, "offer_hash": offer_hash}
+    params = {"source": address, "offer_hash": offer_hash or None}
     return composer.compose_transaction(db, "cancel", params, construct_params)
 
 
