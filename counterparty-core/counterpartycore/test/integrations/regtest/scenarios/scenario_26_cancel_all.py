@@ -13,7 +13,7 @@ SCENARIO = [
         },
         "set_variables": {
             "CANCEL_ALL_ORDER_A_HASH": "$TX_HASH",
-            "CANCEL_ALL_ORDER_A_EXPIRATION": "$BLOCK_INDEX + 21",
+            "CANCEL_ALL_ORDER_A_EXPIRE_INDEX": "$BLOCK_INDEX + 21",
         },
         "controls": [
             {
@@ -25,7 +25,7 @@ SCENARIO = [
                         "params": {
                             "block_index": "$BLOCK_INDEX",
                             "expiration": 21,
-                            "expire_index": "$CANCEL_ALL_ORDER_A_EXPIRATION",
+                            "expire_index": "$CANCEL_ALL_ORDER_A_EXPIRE_INDEX",
                             "fee_provided": 10000,
                             "fee_provided_remaining": 10000,
                             "fee_required": 0,
@@ -77,7 +77,7 @@ SCENARIO = [
         },
         "set_variables": {
             "CANCEL_ALL_ORDER_B_HASH": "$TX_HASH",
-            "CANCEL_ALL_ORDER_B_EXPIRATION": "$BLOCK_INDEX + 21",
+            "CANCEL_ALL_ORDER_B_EXPIRE_INDEX": "$BLOCK_INDEX + 21",
         },
         "controls": [
             {
@@ -89,7 +89,7 @@ SCENARIO = [
                         "params": {
                             "block_index": "$BLOCK_INDEX",
                             "expiration": 21,
-                            "expire_index": "$CANCEL_ALL_ORDER_B_EXPIRATION",
+                            "expire_index": "$CANCEL_ALL_ORDER_B_EXPIRE_INDEX",
                             "fee_provided": 10000,
                             "fee_provided_remaining": 10000,
                             "fee_required": 0,
