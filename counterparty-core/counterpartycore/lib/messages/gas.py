@@ -25,9 +25,9 @@ def get_transaction_count_by_block(db, transaction_id, block_index):
     return count["count"]
 
 
-def increment_counter(db, transaction_id, block_index):
+def increment_counter(db, transaction_id, block_index, count=1):
     current_count = get_transaction_count_by_block(db, transaction_id, block_index)
-    new_count = current_count + 1
+    new_count = current_count + count
 
     bindings = {
         "block_index": block_index,

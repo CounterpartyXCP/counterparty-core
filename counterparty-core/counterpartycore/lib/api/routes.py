@@ -142,6 +142,10 @@ ALL_ROUTES = {
     "/v2/addresses/<address>/compose/btcpay": (compose.compose_btcpay, "compose"),
     "/v2/addresses/<address>/compose/burn": (compose.compose_burn, "compose"),
     "/v2/addresses/<address>/compose/cancel": (compose.compose_cancel, "compose"),
+    "/v2/addresses/<address>/compose/cancel/estimatexcpfees": (
+        compose.get_cancel_all_estimate_xcp_fee,
+        "compose",
+    ),
     "/v2/addresses/<address>/compose/destroy": (compose.compose_destroy, "compose"),
     "/v2/addresses/<address>/compose/dispenser": (compose.compose_dispenser, "compose"),
     "/v2/addresses/<address>/compose/dividend": (compose.compose_dividend, "compose"),

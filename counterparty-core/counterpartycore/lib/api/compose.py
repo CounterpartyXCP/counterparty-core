@@ -11,6 +11,7 @@ from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import gas
 from counterpartycore.lib.messages.attach import ID as UTXO_ID
+from counterpartycore.lib.messages.cancel import ID as CANCEL_ID
 from counterpartycore.lib.parser import deserialize, gettxinfo, messagetype
 
 D = decimal.Decimal
@@ -106,14 +107,22 @@ def compose_burn(db, address: str, quantity: int, overburn: bool = False, **cons
     return composer.compose_transaction(db, "burn", params, construct_params)
 
 
-def compose_cancel(db, address: str, offer_hash: str, **construct_params):
+def compose_cancel(db, address: str, offer_hash: str = None, **construct_params):
     """
-    Composes a transaction to cancel an open order or bet.
+    Composes a transaction to cancel an open order or bet. If offer_hash is omitted, cancels all open orders and bets for the address.
     :param address: The address that placed the order/bet to be cancelled (e.g. $ADDRESS_6)
-    :param offer_hash: The hash of the order/bet to be cancelled (e.g. $LAST_OPEN_ORDER_TX_HASH)
+    :param offer_hash: The hash of the order/bet to be cancelled (e.g. $LAST_OPEN_ORDER_TX_HASH). If not provided, all open orders and bets will be cancelled.
     """
     params = {"source": address, "offer_hash": offer_hash}
     return composer.compose_transaction(db, "cancel", params, construct_params)
+
+
+def get_cancel_all_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
+    """
+    Returns the estimated XCP fee for a cancel-all transaction.
+    :param address: The address that will be cancelling (e.g. $ADDRESS_1)
+    """
+    return gas.get_transaction_fee(db, CANCEL_ID, CurrentState().current_block_index())
 
 
 def compose_destroy(db, address: str, asset: str, quantity: int, tag: str, **construct_params):

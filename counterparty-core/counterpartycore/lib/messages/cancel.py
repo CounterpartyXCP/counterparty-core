@@ -1,5 +1,7 @@
 """
 offer_hash is the hash of either a bet or an order.
+When offer_hash is None (cancel-all mode), cancels all open orders and bets
+for the source address in a single transaction.
 """
 
 import binascii
@@ -7,7 +9,9 @@ import logging
 import struct
 
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.parser import messagetype
+from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.messages import gas
+from counterpartycore.lib.parser import messagetype, protocol
 
 from . import bet, order
 
@@ -16,10 +20,24 @@ logger = logging.getLogger(config.LOGGER_NAME)
 FORMAT = ">32s"
 LENGTH = 32
 ID = 70
+CANCEL_ALL_FLAG = b"\x01"
 
 
 def validate(db, source, offer_hash):
     problems = []
+
+    if offer_hash is None:
+        open_orders = ledger.markets.get_open_orders_by_source(db, source)
+        open_bets = ledger.other.get_open_bets_by_source(db, source)
+        if not open_orders and not open_bets:
+            problems.append("no open offers for this address")
+        if not problems:
+            fee = gas.get_transaction_fee(db, ID, CurrentState().current_block_index())
+            if fee > 0:
+                balance = ledger.balances.get_balance(db, source, config.XCP)
+                if balance < fee:
+                    problems.append("insufficient XCP for fee")
+        return problems
 
     orders = ledger.markets.get_order(db, order_hash=offer_hash)
     bets = ledger.other.get_bet(db, bet_hash=offer_hash)
@@ -44,7 +62,17 @@ def validate(db, source, offer_hash):
     return offer, offer_type, problems
 
 
-def compose(db, source: str, offer_hash: str, skip_validation: bool = False):
+def compose(db, source: str, offer_hash: str = None, skip_validation: bool = False):
+    if offer_hash is None:
+        if not protocol.enabled("cancel_all_offers"):
+            raise exceptions.ComposeError(["cancel all not yet enabled"])
+        problems = validate(db, source, None)
+        if problems and not skip_validation:
+            raise exceptions.ComposeError(problems)
+        data = messagetype.pack(ID)
+        data += CANCEL_ALL_FLAG
+        return (source, [], data)
+
     # Check that offer exists.
     _offer, _offer_type, problems = validate(db, source, offer_hash)
     if problems and not skip_validation:
@@ -58,6 +86,10 @@ def compose(db, source: str, offer_hash: str, skip_validation: bool = False):
 
 def unpack(message, return_dict=False):
     try:
+        if len(message) == 1 and message == CANCEL_ALL_FLAG:
+            if return_dict:
+                return {"offer_hash": None, "status": "valid"}
+            return None, "valid"
         if len(message) != LENGTH:
             raise exceptions.UnpackError
         offer_hash_bytes = struct.unpack(FORMAT, message)[0]
@@ -75,10 +107,62 @@ def unpack(message, return_dict=False):
 
 
 def parse(db, tx, message):
-    cursor = db.cursor()
-
     # Unpack message.
     offer_hash, status = unpack(message)
+
+    # Cancel-all mode
+    if offer_hash is None and status == "valid":
+        if not protocol.enabled("cancel_all_offers", block_index=tx["block_index"]):
+            status = "invalid: could not unpack"
+        else:
+            problems = validate(db, tx["source"], None)
+            if problems:
+                status = "invalid: " + "; ".join(problems)
+
+        if status == "valid":
+            open_orders = ledger.markets.get_open_orders_by_source(db, tx["source"])
+            open_bets = ledger.other.get_open_bets_by_source(db, tx["source"])
+            offer_count = len(open_orders) + len(open_bets)
+
+            fee = gas.get_transaction_fee(db, ID, tx["block_index"])
+            if fee > 0:
+                ledger.events.debit(
+                    db,
+                    tx["source"],
+                    config.XCP,
+                    fee,
+                    tx["tx_index"],
+                    action="cancel all fee",
+                    event=tx["tx_hash"],
+                )
+
+            gas.increment_counter(db, ID, tx["block_index"], count=offer_count)
+
+            for open_order in open_orders:
+                order.cancel_order(db, open_order, "cancelled", tx["block_index"], tx["tx_index"])
+            for open_bet in open_bets:
+                bet.cancel_bet(db, open_bet, "cancelled", tx["tx_index"])
+
+        bindings = {
+            "tx_index": tx["tx_index"],
+            "tx_hash": tx["tx_hash"],
+            "block_index": tx["block_index"],
+            "source": tx["source"],
+            "offer_hash": "cancel_all",
+            "status": status,
+        }
+        ledger.events.insert_record(
+            db, "cancels", bindings, "CANCEL_ALL" if status == "valid" else "INVALID_CANCEL"
+        )
+        logger.info(
+            "Cancel all open offers for %(source)s (%(tx_hash)s) [%(status)s]",
+            bindings,
+        )
+        ledger.blocks.set_transaction_status(db, tx["tx_index"], status == "valid")
+        return
+
+    # Single cancel — existing logic
+    offer_type = None
 
     if status == "valid":
         offer, offer_type, problems = validate(db, tx["source"], offer_hash)
@@ -113,8 +197,6 @@ def parse(db, tx, message):
         "offer_type": offer_type.capitalize() if offer_type else "Invalid",
     }
     logger.info("Cancel %(offer_type)s %(offer_hash)s (%(tx_hash)s) [%(status)s]", log_data)
-
-    cursor.close()
 
     ledger.blocks.set_transaction_status(
         db,
