@@ -218,7 +218,6 @@ SCENARIO = [
         "transaction": "cancel",
         "source": "$ADDRESS_2",
         "params": {},
-        "expected_error": "ComposeError",
-        "error_message": "no open offers for this address",
+        "expected_error": ["no open offers for this address"],
     },
 ]
