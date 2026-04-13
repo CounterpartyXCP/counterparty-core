@@ -28,13 +28,13 @@ SCENARIO = [
     {
         "title": "Mint 3 FAIRPOOL tokens with ADDRESS_2",
         "transaction": "fairmint",
-        "source": "$ADDRESS_2",
+        "source": "$ADDRESS_8",
         "params": {"asset": "FAIRPOOL", "quantity": 3 * 10**8},
     },
     {
         "title": "Mint 3 FAIRPOOL tokens with ADDRESS_3",
         "transaction": "fairmint",
-        "source": "$ADDRESS_3",
+        "source": "$ADDRESS_9",
         "params": {"asset": "FAIRPOOL", "quantity": 3 * 10**8},
     },
     {
@@ -78,7 +78,7 @@ SCENARIO = [
     {
         "title": "Mint only 2 FAIRFAIL tokens with ADDRESS_2 (not enough)",
         "transaction": "fairmint",
-        "source": "$ADDRESS_2",
+        "source": "$ADDRESS_8",
         "params": {"asset": "FAIRFAIL", "quantity": 2 * 10**8},
     },
     {
