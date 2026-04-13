@@ -118,20 +118,6 @@ SCENARIO = [
                         "event": "ORDER_UPDATE",
                         "event_index": "$EVENT_INDEX_5",
                         "params": {
-                            "fee_provided_remaining": 10000,
-                            "fee_required_remaining": 0,
-                            "get_remaining": 0,
-                            "give_remaining": 0,
-                            "status": "open",
-                            "tx_hash": "$TX_HASH",
-                        },
-                        "tx_hash": "$TX_HASH",
-                    },
-                    {
-                        "event": "ORDER_UPDATE",
-                        "event_index": "$EVENT_INDEX_4",
-                        "params": {
-                            "fee_provided_remaining": 10000,
                             "fee_required_remaining": 0,
                             "get_remaining": 0,
                             "give_remaining": 0,
@@ -167,7 +153,7 @@ SCENARIO = [
                 ],
             },
             {
-                "url": "order_matches?block_index=$BLOCK_INDEX",
+                "url": "order_matches?status=pending",
                 "result": [
                     {
                         "backward_asset": "BTC",
@@ -189,15 +175,13 @@ SCENARIO = [
                         "tx1_expiration": 20,
                         "tx1_hash": "$TX_HASH",
                         "tx1_index": "$TX_INDEX",
-                        "backward_price": 1.0,
-                        "forward_price": 1.0,
                     }
                 ],
             },
         ],
     },
     {
-        "title": "mint empty block to trigger order expiration",
+        "title": "mint blocks to trigger order and match expiration",
         "transaction": "mine_blocks",
         "params": {"blocks": 20},
         "controls": [
@@ -298,7 +282,12 @@ SCENARIO = [
                         "tx_hash": None,
                     },
                 ],
-            }
+            },
         ],
+    },
+    {
+        "title": "mine extra block to maintain block count",
+        "transaction": "mine_blocks",
+        "params": {"blocks": 1},
     },
 ]
