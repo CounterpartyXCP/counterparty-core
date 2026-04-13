@@ -779,7 +779,10 @@ def match(db, tx, block_index=None):
 
             # Calculate when the match will expire.
             if protocol.enabled("20_blocks_expiration"):  # Protocol change.
-                match_expire_index = block_index + 20
+                if protocol.enabled("indefinite_orders", block_index=block_index):
+                    match_expire_index = block_index + 20 - 1
+                else:
+                    match_expire_index = block_index + 20
             elif protocol.enabled("no_backwards_compatibility"):  # Protocol change.
                 match_expire_index = block_index + 10
             else:

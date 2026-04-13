@@ -82,7 +82,7 @@ SCENARIO = [
             "ORDER_4_TX_INDEX": "$TX_INDEX",
             "ORDER_4_BLOCK_INDEX": "$BLOCK_INDEX",
             "ORDER_4_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 20",
-            "ORDER_MATCH_1_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 20",
+            "ORDER_MATCH_1_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 19",
         },
         "controls": [
             {
@@ -252,7 +252,7 @@ SCENARIO = [
             "ORDER_5_TX_INDEX": "$TX_INDEX",
             "ORDER_5_BLOCK_INDEX": "$BLOCK_INDEX",
             "ORDER_5_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 20",
-            "ORDER_MATCH_2_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 20",
+            "ORDER_MATCH_2_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 19",
         },
         "controls": [
             {

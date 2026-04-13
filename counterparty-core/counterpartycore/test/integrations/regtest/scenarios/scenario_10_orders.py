@@ -82,7 +82,7 @@ SCENARIO = [
             "ORDER_2_TX_INDEX": "$TX_INDEX",
             "ORDER_2_BLOCK_INDEX": "$BLOCK_INDEX",
             "ORDER_2_EXPIRE_INDEX": "$BLOCK_INDEX + 19",
-            "ORDER_2_MATCH_EXPIRE_INDEX": "$BLOCK_INDEX + 20",
+            "ORDER_2_MATCH_EXPIRE_INDEX": "$BLOCK_INDEX + 19",
         },
         "controls": [
             {
@@ -199,7 +199,7 @@ SCENARIO = [
     {
         "title": "mint empty block to trigger order expiration",
         "transaction": "mine_blocks",
-        "params": {"blocks": 21},
+        "params": {"blocks": 20},
         "controls": [
             {
                 "url": "blocks/$BLOCK_INDEX/events?event_name=ORDER_EXPIRATION,ORDER_UPDATE,CREDIT,ORDER_MATCH_EXPIRATION,ORDER_MATCH_UPDATE,DEBIT",
