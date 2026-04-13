@@ -6,7 +6,7 @@ import cbor2
 
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.messages import gas
+from counterpartycore.lib.messages import gas, pooldeposit
 from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.utils import assetnames, helpers
 
@@ -205,8 +205,6 @@ def validate(
                 " when pool_quantity > 0"
             )
         # check issuer can afford pool deposit gas fee
-        from counterpartycore.lib.messages import pooldeposit
-
         pool_deposit_fee = gas.get_transaction_fee(
             db, pooldeposit.ID, CurrentState().current_block_index()
         )
@@ -816,8 +814,6 @@ def parse(db, tx, message):
 
     # pay pool deposit gas fee upfront
     if pool_quantity > 0:
-        from counterpartycore.lib.messages import pooldeposit
-
         pool_deposit_fee = gas.get_transaction_fee(db, pooldeposit.ID, tx["block_index"])
         if pool_deposit_fee > 0:
             ledger.events.debit(
@@ -1054,8 +1050,6 @@ def soft_cap_deadline_reached(db, fairminter, block_index):
 
         # create AMM pool if pool_quantity is set
         if pool_quantity > 0 and paid_quantity > 0:
-            from counterpartycore.lib.messages import pooldeposit
-
             pooldeposit.create_pool_from_fairminter(
                 db,
                 fairminter,
