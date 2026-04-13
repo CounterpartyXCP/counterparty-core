@@ -3,7 +3,7 @@ SCENARIO = [
     # TEST 1: Fairmint pool success
     # hard_cap=10, pool=4, mintable=6, soft_cap=6
     # lot_price=1, quantity_by_price=1 (1 sat per base unit)
-    # Minter 2: 3 tokens (3 XCP), Minter 3: 3 tokens (3 XCP)
+    # ADDRESS_1 mints twice: 3 + 3 tokens (6 XCP total)
     # Total: 6 XCP raised, pool gets 4*10^8 tokens + 6*10^8 XCP
     # ═══════════════════════════════════════════════════════════════════
     {
@@ -26,15 +26,15 @@ SCENARIO = [
         },
     },
     {
-        "title": "Mint 3 FAIRPOOL tokens with ADDRESS_2",
+        "title": "Mint 3 FAIRPOOL tokens (first mint)",
         "transaction": "fairmint",
-        "source": "$ADDRESS_8",
+        "source": "$ADDRESS_1",
         "params": {"asset": "FAIRPOOL", "quantity": 3 * 10**8},
     },
     {
-        "title": "Mint 3 FAIRPOOL tokens with ADDRESS_3",
+        "title": "Mint 3 FAIRPOOL tokens (second mint)",
         "transaction": "fairmint",
-        "source": "$ADDRESS_9",
+        "source": "$ADDRESS_1",
         "params": {"asset": "FAIRPOOL", "quantity": 3 * 10**8},
     },
     {
@@ -76,9 +76,9 @@ SCENARIO = [
         },
     },
     {
-        "title": "Mint only 2 FAIRFAIL tokens with ADDRESS_2 (not enough)",
+        "title": "Mint only 2 FAIRFAIL tokens (not enough for soft cap)",
         "transaction": "fairmint",
-        "source": "$ADDRESS_8",
+        "source": "$ADDRESS_1",
         "params": {"asset": "FAIRFAIL", "quantity": 2 * 10**8},
     },
     {
