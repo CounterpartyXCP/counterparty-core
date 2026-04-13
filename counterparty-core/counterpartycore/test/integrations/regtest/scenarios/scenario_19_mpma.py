@@ -43,7 +43,7 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "MPMA_SEND",
-                        "event_index": "$EVENT_INDEX_13",
+                        "event_index": "$EVENT_INDEX_10",
                         "params": {
                             "asset": "XCP",
                             "block_index": "$BLOCK_INDEX",
@@ -61,7 +61,7 @@ SCENARIO = [
                     },
                     {
                         "event": "MPMA_SEND",
-                        "event_index": "$EVENT_INDEX_12",
+                        "event_index": "$EVENT_INDEX_9",
                         "params": {
                             "asset": "MPMASSET",
                             "block_index": "$BLOCK_INDEX",
@@ -79,7 +79,7 @@ SCENARIO = [
                     },
                     {
                         "event": "MPMA_SEND",
-                        "event_index": "$EVENT_INDEX_11",
+                        "event_index": "$EVENT_INDEX_8",
                         "params": {
                             "asset": "MPMASSET",
                             "block_index": "$BLOCK_INDEX",
@@ -115,7 +115,7 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "MPMA_SEND",
-                        "event_index": "$EVENT_INDEX_10",
+                        "event_index": "$EVENT_INDEX_17",
                         "params": {
                             "asset": "XCP",
                             "block_index": "$BLOCK_INDEX",
@@ -133,7 +133,7 @@ SCENARIO = [
                     },
                     {
                         "event": "MPMA_SEND",
-                        "event_index": "$EVENT_INDEX_9",
+                        "event_index": "$EVENT_INDEX_16",
                         "params": {
                             "asset": "MPMASSET",
                             "block_index": "$BLOCK_INDEX",
@@ -151,7 +151,7 @@ SCENARIO = [
                     },
                     {
                         "event": "MPMA_SEND",
-                        "event_index": "$EVENT_INDEX_8",
+                        "event_index": "$EVENT_INDEX_15",
                         "params": {
                             "asset": "MPMASSET",
                             "block_index": "$BLOCK_INDEX",
@@ -188,7 +188,7 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "MPMA_SEND",
-                        "event_index": "$EVENT_INDEX_17",
+                        "event_index": "$EVENT_INDEX_12",
                         "params": {
                             "asset": "XCP",
                             "block_index": "$BLOCK_INDEX",
@@ -206,7 +206,7 @@ SCENARIO = [
                     },
                     {
                         "event": "MPMA_SEND",
-                        "event_index": "$EVENT_INDEX_16",
+                        "event_index": "$EVENT_INDEX_11",
                         "params": {
                             "asset": "MPMASSET",
                             "block_index": "$BLOCK_INDEX",
@@ -224,7 +224,7 @@ SCENARIO = [
                     },
                     {
                         "event": "MPMA_SEND",
-                        "event_index": "$EVENT_INDEX_15",
+                        "event_index": "$EVENT_INDEX_10",
                         "params": {
                             "asset": "MPMASSET",
                             "block_index": "$BLOCK_INDEX",
@@ -261,7 +261,7 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "MPMA_SEND",
-                        "event_index": "$EVENT_INDEX_12",
+                        "event_index": "$EVENT_INDEX_10",
                         "params": {
                             "asset": "XCP",
                             "block_index": "$BLOCK_INDEX",
@@ -279,7 +279,7 @@ SCENARIO = [
                     },
                     {
                         "event": "MPMA_SEND",
-                        "event_index": "$EVENT_INDEX_11",
+                        "event_index": "$EVENT_INDEX_9",
                         "params": {
                             "asset": "MPMASSET",
                             "block_index": "$BLOCK_INDEX",
@@ -297,7 +297,7 @@ SCENARIO = [
                     },
                     {
                         "event": "MPMA_SEND",
-                        "event_index": "$EVENT_INDEX_10",
+                        "event_index": "$EVENT_INDEX_8",
                         "params": {
                             "asset": "MPMASSET",
                             "block_index": "$BLOCK_INDEX",
