@@ -6,6 +6,7 @@ import cbor2
 
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.messages import gas
 from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.utils import assetnames, helpers
 
@@ -37,6 +38,7 @@ def validate(
     divisible=True,
     description="",
     mime_type="",
+    pool_quantity=0,
 ):
     problems = []
 
@@ -55,6 +57,7 @@ def validate(
         "end_block": end_block,
         "soft_cap": soft_cap,
         "soft_cap_deadline_block": soft_cap_deadline_block,
+        "pool_quantity": pool_quantity,
     }.items():
         if param_value != 0:
             if not isinstance(param_value, int):
@@ -122,7 +125,7 @@ def validate(
         ):
             problems.append(f"Description of asset `{asset_name}` is locked.")
         # check if hard cap is already reached
-        if hard_cap and existing_asset["supply"] + premint_quantity >= hard_cap:
+        if hard_cap and existing_asset["supply"] + premint_quantity + pool_quantity >= hard_cap:
             problems.append(f"Hard cap of asset `{asset_name}` is already reached.")
         if existing_asset["divisible"] != divisible:
             problems.append(f"Divisibility of asset `{asset_name}` is different.")
@@ -177,6 +180,49 @@ def validate(
         ):
             problems.append("Premint quantity + soft cap must be <= hard cap.")
 
+    # pool_quantity validation
+    if pool_quantity > 0 and not protocol.enabled("fairmint_pool"):
+        problems.append("pool_quantity is not yet enabled")
+    elif pool_quantity > 0:
+        if price <= 0:
+            problems.append("pool_quantity requires price > 0")
+        if soft_cap <= 0:
+            problems.append("pool_quantity requires soft_cap > 0")
+        if hard_cap <= 0:
+            problems.append("pool_quantity requires hard_cap > 0")
+        if burn_payment:
+            problems.append("pool_quantity is incompatible with burn_payment")
+        existing_supply = existing_asset["supply"] if existing_asset else 0
+        if hard_cap > 0 and existing_supply + premint_quantity + pool_quantity + soft_cap > hard_cap:
+            problems.append("existing supply + premint_quantity + pool_quantity + soft_cap exceeds hard_cap")
+        mintable = hard_cap - existing_supply - premint_quantity - pool_quantity
+        if hard_cap > 0 and mintable > 0 and soft_cap != mintable:
+            problems.append(
+                "soft_cap must equal mintable supply"
+                " (hard_cap - existing_supply - premint_quantity - pool_quantity)"
+                " when pool_quantity > 0"
+            )
+        # check issuer can afford pool deposit gas fee
+        from counterpartycore.lib.messages import pooldeposit
+
+        pool_deposit_fee = gas.get_transaction_fee(
+            db, pooldeposit.ID, CurrentState().current_block_index()
+        )
+        if pool_deposit_fee > 0:
+            asset_fee = 0
+            if existing_asset is None and asset_parent == "" and not asset.startswith("A"):
+                asset_fee = int(0.5 * config.UNIT)
+            xcp_balance = ledger.balances.get_balance(db, source, config.XCP)
+            if xcp_balance < asset_fee + pool_deposit_fee:
+                problems.append("insufficient XCP balance to pay pool deposit fee")
+        # check pool doesn't already exist
+        asset_to_check = f"{asset_parent}.{asset}" if asset_parent else asset
+        resolved = ledger.issuances.get_asset(db, asset_to_check)
+        pool_asset = resolved["asset"] if resolved else asset_to_check
+        sorted_a, sorted_b = ledger.markets.sort_pair(pool_asset, config.XCP)
+        if ledger.markets.get_pool(db, sorted_a, sorted_b) is not None:
+            problems.append(f"pool already exists for {pool_asset}/{config.XCP}")
+
     if protocol.enabled("fairminter_v2"):
         problems += helpers.check_content(mime_type, description)
 
@@ -205,6 +251,7 @@ def compose(
     divisible: bool = True,
     description: str = "",
     mime_type: str = "",
+    pool_quantity: int = 0,
     skip_validation: bool = False,
 ):
     # validate parameters
@@ -230,6 +277,7 @@ def compose(
         divisible,
         description,
         mime_type,
+        pool_quantity,
     )
     if len(problems) > 0 and not skip_validation:
         raise exceptions.ComposeError(problems)
@@ -275,6 +323,7 @@ def compose(
                 divisible,
                 mime_type,
                 helpers.content_to_bytes(description, mime_type or "text/plain"),
+                pool_quantity,
             ]
         )
     else:
@@ -337,7 +386,8 @@ def unpack_new(message, return_dict=False):
             divisible,
             mime_type,
             description,
-        ) = cbor2.loads(message)
+        ) = (fields := cbor2.loads(message))[:19]
+        pool_quantity = int(fields[19]) if len(fields) > 19 else 0
         description = helpers.bytes_to_content(description, mime_type or "text/plain")
         asset = ledger.issuances.generate_asset_name(asset_id)
         asset_parent = (
@@ -369,6 +419,7 @@ def unpack_new(message, return_dict=False):
                 "divisible": bool(int(divisible)),
                 "mime_type": mime_type,
                 "description": description,
+                "pool_quantity": pool_quantity,
             }
 
         return (
@@ -391,9 +442,31 @@ def unpack_new(message, return_dict=False):
             bool(int(divisible)),
             mime_type,
             description,
+            pool_quantity,
         )
     except Exception:  # pylint: disable=broad-exception-caught
-        return "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, "", ""
+        return (
+            "",
+            "",
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0.0,
+            False,
+            False,
+            False,
+            False,
+            "",
+            "",
+            0,
+        )
 
 
 def unpack_legacy(message, return_dict=False):
@@ -422,6 +495,7 @@ def unpack_legacy(message, return_dict=False):
         description = "|".join(data_content[arg_count - 1 :])
         max_mint_per_address = 0
         mime_type = ""
+        pool_quantity = 0
 
         minted_asset_commission = D(minted_asset_commission_int) / D(1e8)
 
@@ -448,6 +522,7 @@ def unpack_legacy(message, return_dict=False):
                 "divisible": bool(int(divisible)),
                 "mime_type": mime_type,
                 "description": description,
+                "pool_quantity": pool_quantity,
             }
 
         return (
@@ -470,9 +545,31 @@ def unpack_legacy(message, return_dict=False):
             bool(int(divisible)),
             mime_type,
             description,
+            pool_quantity,
         )
     except Exception:  # pylint: disable=broad-exception-caught
-        return "", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, "", ""
+        return (
+            "",
+            "",
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0.0,
+            False,
+            False,
+            False,
+            False,
+            "",
+            "",
+            0,
+        )
 
 
 def parse(db, tx, message):
@@ -496,6 +593,7 @@ def parse(db, tx, message):
         divisible,
         mime_type,
         description,
+        pool_quantity,
     ) = unpack(message)
 
     problems = validate(
@@ -520,6 +618,7 @@ def parse(db, tx, message):
         divisible,
         description,
         mime_type,
+        pool_quantity,
     )
 
     if (
@@ -624,6 +723,7 @@ def parse(db, tx, message):
         "status": status,
         "pre_minted": pre_minted,
         "mime_type": mime_type,
+        "pool_quantity": pool_quantity,
     }
     ledger.events.insert_record(db, "fairminters", bindings, "NEW_FAIRMINTER")
     logger.info("Fair minter opened for %s by %s.", asset_name, tx["source"])
@@ -645,7 +745,7 @@ def parse(db, tx, message):
         "tx_hash": tx["tx_hash"],
         "block_index": tx["block_index"],
         "asset": asset_name,
-        "quantity": premint_quantity,
+        "quantity": premint_quantity + pool_quantity,
         "divisible": divisible,
         "source": tx["source"],
         "issuer": tx["source"],
@@ -688,6 +788,18 @@ def parse(db, tx, message):
             event=tx["tx_hash"],
         )
 
+    # escrow pool tokens at UNSPENDABLE
+    if pool_quantity > 0:
+        ledger.events.credit(
+            db,
+            config.UNSPENDABLE,
+            asset_name,
+            pool_quantity,
+            tx["tx_index"],
+            action="escrowed pool liquidity",
+            event=tx["tx_hash"],
+        )
+
     # debit fees
     if fee > 0:
         ledger.events.debit(
@@ -699,6 +811,23 @@ def parse(db, tx, message):
             action="fairminter fee",
             event=tx["tx_hash"],
         )
+
+    # pay pool deposit gas fee upfront
+    if pool_quantity > 0:
+        from counterpartycore.lib.messages import pooldeposit
+
+        pool_deposit_fee = gas.get_transaction_fee(db, pooldeposit.ID, tx["block_index"])
+        if pool_deposit_fee > 0:
+            ledger.events.debit(
+                db,
+                tx["source"],
+                config.XCP,
+                pool_deposit_fee,
+                tx["tx_index"],
+                action="fairminter pool fee",
+                event=tx["tx_hash"],
+            )
+        gas.increment_counter(db, pooldeposit.ID, tx["block_index"])
 
 
 def unescrow_premint(db, fairminter, destroy=False):
@@ -769,6 +898,8 @@ def close_fairminters(db, block_index):
 
 
 def perform_fairmint_soft_cap_operations(db, fairmint, fairminter, fairmint_quantity, block_index):
+    pool_quantity = fairminter.get("pool_quantity") or 0
+
     # is the fairmint paid ?
     if fairmint["paid_quantity"] > 0:
         # soft cap not reached
@@ -776,6 +907,10 @@ def perform_fairmint_soft_cap_operations(db, fairmint, fairminter, fairmint_quan
             # reimburse paid quantity to minter
             xcp_destination = fairmint["source"]
             xcp_action = "fairmint refund"
+        # soft cap reached and pool_quantity: XCP goes to pool (handled in bulk)
+        elif pool_quantity > 0:
+            xcp_destination = None
+            xcp_action = None
         # soft cap reached but payment is burned
         elif fairminter["burn_payment"]:
             # burn paid quantity
@@ -786,8 +921,11 @@ def perform_fairmint_soft_cap_operations(db, fairmint, fairminter, fairmint_quan
             # send funds to issuer
             xcp_destination = fairminter["source"]
             xcp_action = "fairmint payment"
-        # credit paid quantity to issuer or minter...
-        if xcp_destination:
+
+        # pool_quantity: XCP stays for pool creation (handled in soft_cap_deadline_reached)
+        if pool_quantity > 0 and fairmint_quantity >= fairminter["soft_cap"]:
+            pass
+        elif xcp_destination:
             ledger.events.credit(
                 db,
                 xcp_destination,
@@ -846,7 +984,8 @@ def soft_cap_deadline_reached(db, fairminter, block_index):
     fairmint_quantity, paid_quantity = ledger.issuances.get_fairmint_quantities(
         db, fairminter["tx_hash"]
     )
-    fairminter_supply = fairmint_quantity + fairminter["premint_quantity"]
+    pool_quantity = fairminter.get("pool_quantity") or 0
+    fairminter_supply = fairmint_quantity + fairminter["premint_quantity"] + pool_quantity
     fairmints = ledger.issuances.get_valid_fairmints(db, fairminter["tx_hash"])
 
     # until the soft cap is reached, payments, commissions and assets
@@ -897,17 +1036,32 @@ def soft_cap_deadline_reached(db, fairminter, block_index):
                 "status": "valid",
             }
             ledger.events.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
-    elif fairminter["premint_quantity"] > 0:
-        # the premint is sent to the issuer
-        ledger.events.credit(
-            db,
-            fairminter["source"],
-            fairminter["asset"],
-            fairminter["premint_quantity"],
-            0,  # tx_index=0 for block actions
-            action="premint",
-            event=fairminter["tx_hash"],
-        )
+    else:
+        # soft cap reached
+        if fairminter["premint_quantity"] > 0:
+            # the premint is sent to the issuer
+            ledger.events.credit(
+                db,
+                fairminter["source"],
+                fairminter["asset"],
+                fairminter["premint_quantity"],
+                0,  # tx_index=0 for block actions
+                action="premint",
+                event=fairminter["tx_hash"],
+            )
+
+        # create AMM pool if pool_quantity is set
+        if pool_quantity > 0 and paid_quantity > 0:
+            from counterpartycore.lib.messages import pooldeposit
+
+            pooldeposit.create_pool_from_fairminter(
+                db,
+                fairminter,
+                block_index,
+                fairminter["asset"],
+                pool_quantity,
+                paid_quantity,
+            )
 
 
 def perform_fairminter_soft_cap_operations(db, block_index):

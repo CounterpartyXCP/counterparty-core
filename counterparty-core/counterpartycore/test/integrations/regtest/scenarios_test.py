@@ -38,6 +38,7 @@ from scenarios import (
     scenario_24_dispenser,
     scenario_25_issuance,
     scenario_26_pools,
+    scenario_27_fairminter_pool,
     scenario_last_mempool,
 )
 from termcolor import colored
@@ -69,13 +70,14 @@ SCENARIOS += scenario_23_detach.SCENARIO
 SCENARIOS += scenario_24_dispenser.SCENARIO
 SCENARIOS += scenario_25_issuance.SCENARIO
 SCENARIOS += scenario_26_pools.SCENARIO
+SCENARIOS += scenario_27_fairminter_pool.SCENARIO
 # more scenarios before this one
 SCENARIOS += scenario_last_mempool.SCENARIO
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../../")
 
-# SCENARIOS = scenario_25_issuance.SCENARIO
+# SCENARIOS = scenario_27_fairminter_pool.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -335,8 +337,10 @@ def run_item(node, item, context):
             .replace("$TX_INDEX", str(tx_index))
             .replace("$BLOCK_INDEX + 20", str(node.block_count + 20))
             .replace("$BLOCK_INDEX + 21", str(node.block_count + 21))
-            .replace("$BLOCK_INDEX + 1", str(node.block_count + 1))
+            .replace("$BLOCK_INDEX + 5", str(node.block_count + 5))
+            .replace("$BLOCK_INDEX + 3", str(node.block_count + 3))
             .replace("$BLOCK_INDEX + 2", str(node.block_count + 2))
+            .replace("$BLOCK_INDEX + 1", str(node.block_count + 1))
             .replace("$BLOCK_INDEX", str(node.block_count))
         )
         print(f"Set variable {name} to {context[name]}")
