@@ -224,6 +224,8 @@ class RegtestNode:
             if key == "description":
                 data = {key: value}
                 continue
+            if value is None:
+                continue
             if not isinstance(value, list):
                 query_string.append(urllib.parse.urlencode({key: value}))
             else:
