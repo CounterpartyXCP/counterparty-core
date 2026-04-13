@@ -421,7 +421,22 @@ def test_validate_pool(ledger_db, defaults):
         "NEWPOOL",
         "",
         0,  # price = 0
-        1, 10, 0, 100, 0, 0, 0, 60, 500, 0.0, False, False, False, True, "", "",
+        1,
+        10,
+        0,
+        100,
+        0,
+        0,
+        0,
+        60,
+        500,
+        0.0,
+        False,
+        False,
+        False,
+        True,
+        "",
+        "",
         40,  # pool_quantity
     )
 
@@ -431,9 +446,23 @@ def test_validate_pool(ledger_db, defaults):
         defaults["addresses"][1],
         "NEWPOOL",
         "",
-        1, 1, 0, 0, 100, 0, 0, 0,
+        1,
+        1,
+        0,
+        0,
+        100,
+        0,
+        0,
+        0,
         0,  # soft_cap = 0
-        0, 0.0, False, False, False, True, "", "",
+        0,
+        0.0,
+        False,
+        False,
+        False,
+        True,
+        "",
+        "",
         40,  # pool_quantity
     )
 
@@ -443,22 +472,53 @@ def test_validate_pool(ledger_db, defaults):
         defaults["addresses"][1],
         "NEWPOOL",
         "",
-        1, 1, 0, 0, 100, 0, 0, 0, 60, 500, 0.0,
+        1,
+        1,
+        0,
+        0,
+        100,
+        0,
+        0,
+        0,
+        60,
+        500,
+        0.0,
         True,  # burn_payment
-        False, False, True, "", "",
+        False,
+        False,
+        True,
+        "",
+        "",
         40,  # pool_quantity
     )
 
     # soft_cap must equal mintable (new asset, no existing supply)
-    assert "soft_cap must equal mintable supply (hard_cap - existing_supply - premint_quantity - pool_quantity) when pool_quantity > 0" in fairminter.validate(
-        ledger_db,
-        defaults["addresses"][1],
-        "NEWPOOL",
-        "",
-        1, 1, 0, 0, 100, 0, 0, 0,
-        50,  # soft_cap = 50 but mintable = 100 - 0 - 40 = 60
-        500, 0.0, False, False, False, True, "", "",
-        40,  # pool_quantity
+    assert (
+        "soft_cap must equal mintable supply (hard_cap - existing_supply - premint_quantity - pool_quantity) when pool_quantity > 0"
+        in fairminter.validate(
+            ledger_db,
+            defaults["addresses"][1],
+            "NEWPOOL",
+            "",
+            1,
+            1,
+            0,
+            0,
+            100,
+            0,
+            0,
+            0,
+            50,  # soft_cap = 50 but mintable = 100 - 0 - 40 = 60
+            500,
+            0.0,
+            False,
+            False,
+            False,
+            True,
+            "",
+            "",
+            40,  # pool_quantity
+        )
     )
 
     # Valid pool config with existing asset (DIVISIBLE, supply=100B)
@@ -473,42 +533,84 @@ def test_validate_pool(ledger_db, defaults):
             defaults["addresses"][0],  # issuer of DIVISIBLE
             "DIVISIBLE",
             "",
-            1, 1, 0, 0,
+            1,
+            1,
+            0,
+            0,
             hard_cap,
-            0, 0, 0,
+            0,
+            0,
+            0,
             mintable,  # soft_cap = mintable
-            500, 0.0, False, False, False, True, "", "",
+            500,
+            0.0,
+            False,
+            False,
+            False,
+            True,
+            "",
+            "",
             pool_q,
         )
         == []
     )
 
     # Existing asset: soft_cap ignoring existing supply should fail
-    assert "soft_cap must equal mintable supply (hard_cap - existing_supply - premint_quantity - pool_quantity) when pool_quantity > 0" in fairminter.validate(
-        ledger_db,
-        defaults["addresses"][0],
-        "DIVISIBLE",
-        "",
-        1, 1, 0, 0,
-        hard_cap,
-        0, 0, 0,
-        hard_cap - pool_q,  # wrong: doesn't subtract existing supply
-        500, 0.0, False, False, False, True, "", "",
-        pool_q,
+    assert (
+        "soft_cap must equal mintable supply (hard_cap - existing_supply - premint_quantity - pool_quantity) when pool_quantity > 0"
+        in fairminter.validate(
+            ledger_db,
+            defaults["addresses"][0],
+            "DIVISIBLE",
+            "",
+            1,
+            1,
+            0,
+            0,
+            hard_cap,
+            0,
+            0,
+            0,
+            hard_cap - pool_q,  # wrong: doesn't subtract existing supply
+            500,
+            0.0,
+            False,
+            False,
+            False,
+            True,
+            "",
+            "",
+            pool_q,
+        )
     )
 
     # overflow: existing supply + premint + pool + soft_cap > hard_cap
-    assert "existing supply + premint_quantity + pool_quantity + soft_cap exceeds hard_cap" in fairminter.validate(
-        ledger_db,
-        defaults["addresses"][0],
-        "DIVISIBLE",
-        "",
-        1, 1, 0, 0,
-        existing_supply + 50,  # hard_cap too small
-        0, 0, 0,
-        40,  # soft_cap
-        500, 0.0, False, False, False, True, "", "",
-        40,  # pool_quantity: 100B + 40 + 40 > 100B + 50
+    assert (
+        "existing supply + premint_quantity + pool_quantity + soft_cap exceeds hard_cap"
+        in fairminter.validate(
+            ledger_db,
+            defaults["addresses"][0],
+            "DIVISIBLE",
+            "",
+            1,
+            1,
+            0,
+            0,
+            existing_supply + 50,  # hard_cap too small
+            0,
+            0,
+            0,
+            40,  # soft_cap
+            500,
+            0.0,
+            False,
+            False,
+            False,
+            True,
+            "",
+            "",
+            40,  # pool_quantity: 100B + 40 + 40 > 100B + 50
+        )
     )
 
 

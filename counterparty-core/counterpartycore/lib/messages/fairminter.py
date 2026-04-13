@@ -193,8 +193,10 @@ def validate(
         if burn_payment:
             problems.append("pool_quantity is incompatible with burn_payment")
         existing_supply = existing_asset["supply"] if existing_asset else 0
-        if hard_cap > 0 and existing_supply + premint_quantity + pool_quantity + soft_cap > hard_cap:
-            problems.append("existing supply + premint_quantity + pool_quantity + soft_cap exceeds hard_cap")
+        if 0 < hard_cap < existing_supply + premint_quantity + pool_quantity + soft_cap:
+            problems.append(
+                "existing supply + premint_quantity + pool_quantity + soft_cap exceeds hard_cap"
+            )
         mintable = hard_cap - existing_supply - premint_quantity - pool_quantity
         if hard_cap > 0 and mintable > 0 and soft_cap != mintable:
             problems.append(
