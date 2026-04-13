@@ -44,6 +44,7 @@ SCENARIO = [
                         "lock_description": False,
                         "lock_quantity": False,
                         "divisible": True,
+                        "pool_quantity": 0,
                         "pre_minted": False,
                         "status": "open",
                         "earned_quantity": None,
