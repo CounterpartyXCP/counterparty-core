@@ -226,7 +226,7 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "ASSET_ISSUANCE",
-                        "event_index": "$EVENT_INDEX_7",
+                        "event_index": "$EVENT_INDEX_4",
                         "params": {
                             "asset": "A95428960545690062",
                             "asset_events": "open_fairminter",
@@ -254,7 +254,7 @@ SCENARIO = [
                     },
                     {
                         "event": "NEW_FAIRMINTER",
-                        "event_index": "$EVENT_INDEX_6",
+                        "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "asset": "A95428960545690062",
                             "asset_longname": "PARENTB.SUBASSETB",

@@ -612,7 +612,7 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "ASSET_ISSUANCE",
-                        "event_index": "$EVENT_INDEX_3",
+                        "event_index": "$EVENT_INDEX_6",
                         "params": {
                             "asset": "EXPANSIVE",
                             "asset_events": "close_fairminter",
@@ -642,7 +642,7 @@ SCENARIO = [
                     },
                     {
                         "event": "FAIRMINTER_UPDATE",
-                        "event_index": "$EVENT_INDEX_2",
+                        "event_index": "$EVENT_INDEX_5",
                         "params": {"status": "closed", "tx_hash": "$FAIRMINTER_EXPANSIVE_HASH"},
                         "tx_hash": None,
                     },
@@ -829,7 +829,7 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "ASSET_ISSUANCE",
-                        "event_index": "$EVENT_INDEX_3",
+                        "event_index": "$EVENT_INDEX_6",
                         "params": {
                             "asset": "STARTNOW",
                             "asset_events": "close_fairminter",
@@ -859,7 +859,7 @@ SCENARIO = [
                     },
                     {
                         "event": "FAIRMINTER_UPDATE",
-                        "event_index": "$EVENT_INDEX_2",
+                        "event_index": "$EVENT_INDEX_5",
                         "params": {"status": "closed", "tx_hash": "$FAIRMINTER_STARTNOW_HASH"},
                         "tx_hash": None,
                     },
@@ -1004,7 +1004,7 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "ASSET_DESTRUCTION",
-                        "event_index": "$EVENT_INDEX_5",
+                        "event_index": "$EVENT_INDEX_8",
                         "params": {
                             "asset": "PREMINT",
                             "block_index": "$BLOCK_INDEX",
@@ -1019,7 +1019,7 @@ SCENARIO = [
                     },
                     {
                         "event": "ASSET_ISSUANCE",
-                        "event_index": "$EVENT_INDEX_4",
+                        "event_index": "$EVENT_INDEX_7",
                         "params": {
                             "asset": "PREMINT",
                             "asset_events": "close_fairminter",
@@ -1049,13 +1049,13 @@ SCENARIO = [
                     },
                     {
                         "event": "FAIRMINTER_UPDATE",
-                        "event_index": "$EVENT_INDEX_3",
+                        "event_index": "$EVENT_INDEX_6",
                         "params": {"status": "closed", "tx_hash": "$FAIRMINTER_PREMINT_HASH"},
                         "tx_hash": None,
                     },
                     {
                         "event": "DEBIT",
-                        "event_index": "$EVENT_INDEX_2",
+                        "event_index": "$EVENT_INDEX_5",
                         "params": {
                             "action": "unescrowed fairmint",
                             "address": "mvCounterpartyXXXXXXXXXXXXXXW24Hef",
