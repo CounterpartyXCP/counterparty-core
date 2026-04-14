@@ -939,6 +939,52 @@ def test_parse_fairminter_start_block(
     )
 
 
+def test_parse_fairminter_pool(
+    ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
+):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
+    # FAIRMINTED with pool_quantity=40, hard_cap=100, soft_cap=60, price=1
+    message = b"\x94\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x01\x00\x00\x18d\x00\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x18<\x1a\x00\x0c\xf8P\x00\xf4\xf4\xf5\xf5`@\x18("
+    fairminter.parse(ledger_db, tx, message)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "fairminters",
+                "values": {
+                    "tx_hash": tx["tx_hash"],
+                    "asset": "FAIRMINTED",
+                    "pool_quantity": 40,
+                    "hard_cap": 100,
+                    "soft_cap": 60,
+                    "price": 1,
+                    "status": "pending",
+                },
+            },
+            {
+                "table": "issuances",
+                "values": {
+                    "tx_hash": tx["tx_hash"],
+                    "asset": "FAIRMINTED",
+                    "quantity": 40,  # premint(0) + pool_quantity(40)
+                    "fair_minting": True,
+                },
+            },
+            {
+                "table": "credits",
+                "values": {
+                    "address": defaults["unspendable"],
+                    "asset": "FAIRMINTED",
+                    "quantity": 40,
+                    "calling_function": "escrowed pool liquidity",
+                    "event": tx["tx_hash"],
+                },
+            },
+        ],
+    )
+
+
 def test_parse_fairminter_soft_cap(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
