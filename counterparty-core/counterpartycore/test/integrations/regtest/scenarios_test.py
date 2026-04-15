@@ -155,6 +155,8 @@ def control_result(
         for i in reversed(range(11)):
             address = node.addresses[i]
             control_url = control_url.replace(f"$ADDRESS_{i + 1}", address)
+        for name, value in context.items():
+            control_url = control_url.replace(f"${name}", value)
         result = node.api_call(control_url)
 
         if (
