@@ -545,6 +545,22 @@ def test_restart_after_external_lp_destroy(ledger_db, defaults, blockchain_mock)
     assert ledger.balances.get_balance(ledger_db, source, lp_asset) > 0
 
 
+def test_validate_blocks_pool_during_active_fairmint(ledger_db, defaults, blockchain_mock):
+    """Manual pool creation is blocked while a fairmint-pool is active for the asset."""
+    from counterpartycore.lib.messages import fairminter
+
+    source = defaults["addresses"][0]
+    # Create a fairminter with pool_quantity > 0
+    tx = blockchain_mock.dummy_tx(ledger_db, source, use_first_tx=True)
+    # CBOR: FAIRMINTED, price=1, hard_cap=100, soft_cap=60, pool_quantity=40
+    message = b"\x94\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x01\x00\x00\x18d\x00\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x18<\x1a\x00\x0c\xf8P\x00\xf4\xf4\xf5\xf5`@\x18("
+    fairminter.parse(ledger_db, tx, message)
+
+    # Now try to create a pool for FAIRMINTED/XCP — should be blocked
+    problems = pooldeposit.validate(ledger_db, source, "FAIRMINTED", "XCP", 100, 100)
+    assert any("fairminter with pool_quantity is active" in p for p in problems)
+
+
 def test_validate_lp_token_cannot_be_pooled(ledger_db, defaults, blockchain_mock):
     """LP token from an existing pool cannot itself be deposited into a new pool."""
     quantity = defaults["quantity"] // 4
