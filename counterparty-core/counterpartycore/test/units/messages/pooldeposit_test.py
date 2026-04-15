@@ -577,6 +577,60 @@ def test_validate_subsequent_deposit_too_small(ledger_db, defaults, blockchain_m
     assert any("deposit too small" in p for p in problems)
 
 
+def test_create_pool_from_fairminter(ledger_db, defaults, test_helpers):
+    """Test trustless pool creation from fairminter resolution."""
+    source = defaults["addresses"][0]
+    quantity = defaults["quantity"]
+
+    fairminter = {
+        "tx_hash": "a" * 64,
+        "tx_index": 999,
+        "source": source,
+    }
+
+    lp = pooldeposit.create_pool_from_fairminter(
+        ledger_db,
+        fairminter,
+        block_index=9999,
+        asset="NODIVISIBLE",
+        quantity_tokens=quantity,
+        quantity_xcp=quantity,
+    )
+    assert lp > 0
+
+    # Verify pool was created
+    sorted_a, sorted_b = ledger.markets.sort_pair("NODIVISIBLE", config.XCP)
+    pool = ledger.markets.get_pool(ledger_db, sorted_a, sorted_b)
+    assert pool is not None
+    assert pool["reserve_a"] == quantity
+    assert pool["reserve_b"] == quantity
+
+    # Verify LP tokens credited to UNSPENDABLE
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "credits",
+                "values": {
+                    "address": defaults["unspendable"],
+                    "asset": pool["lp_asset"],
+                    "quantity": lp,
+                    "calling_function": "fairminter pool deposit",
+                },
+            },
+            {
+                "table": "pool_deposits",
+                "values": {
+                    "tx_hash": "a" * 64,
+                    "asset_a": sorted_a,
+                    "asset_b": sorted_b,
+                    "status": "valid",
+                },
+            },
+        ],
+    )
+
+
 def test_validate_xcp_fee_insufficient(ledger_db, defaults, blockchain_mock):
     """When gas fee > 0 and XCP balance is too low for fee + quantity, validation should fail."""
     from counterpartycore.lib.messages import gas
