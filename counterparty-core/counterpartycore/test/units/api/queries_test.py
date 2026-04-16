@@ -1035,3 +1035,21 @@ def test_get_pool_quote_withdraw_no_pool(state_db):
     """Withdraw quote for nonexistent pair returns pool_exists=False."""
     result = queries.get_pool_quote_withdraw(state_db, "XCP", "DIVISIBLE", 1_000)
     assert result["pool_exists"] is False
+
+
+def test_get_pool_price_history(ledger_db):
+    """Pool price history returns results."""
+    result = queries.get_pool_price_history(ledger_db, "POOLASSETA", "POOLASSETB")
+    assert result is not None
+
+
+def test_get_all_pool_matches_empty(state_db):
+    """All pool matches returns results."""
+    result = queries.get_all_pool_matches(state_db)
+    assert result is not None
+
+
+def test_get_pool_matches_by_pair_empty(state_db):
+    """Pool matches for a pair returns results."""
+    result = queries.get_pool_matches_by_pair(state_db, "POOLASSETA", "POOLASSETB")
+    assert result is not None
