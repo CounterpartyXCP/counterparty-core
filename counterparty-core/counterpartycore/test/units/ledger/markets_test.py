@@ -83,3 +83,36 @@ def test_markets(ledger_db, defaults):
     )
     assert len(markets.get_dispensers(ledger_db, source_in=[dispensers[0]["source"]])) == 2
     assert len(markets.get_dispensers(ledger_db, origin=dispensers[0]["origin"])) == 2
+
+
+def test_pool_queries(ledger_db):
+    # Fixture has POOLASSETA/POOLASSETB pool
+    pools = markets.get_all_pools(ledger_db)
+    assert len(pools) >= 1
+    assert markets.get_pool(ledger_db, "POOLASSETA", "POOLASSETB") is not None
+    assert markets.get_pool(ledger_db, "XCP", "DIVISIBLE") is None
+    pool = markets.get_pool(ledger_db, "POOLASSETA", "POOLASSETB")
+    assert markets.get_pool_by_lp_asset(ledger_db, pool["lp_asset"]) is not None
+    assert markets.get_pool_by_lp_asset(ledger_db, "NONEXISTENT") is None
+    assert isinstance(markets.get_pool_deposits(ledger_db, "POOLASSETA", "POOLASSETB"), list)
+    assert markets.get_pool_withdrawals(ledger_db, "POOLASSETA", "POOLASSETB") == []
+    assert isinstance(markets.get_open_orders_for_pair(ledger_db, "XCP", "DIVISIBLE"), list)
+    assert markets.get_pool_matches_by_order(ledger_db, "a" * 64) == []
+
+
+def test_compute_pool_math(ledger_db):
+    # Exercise pool math functions
+    assert markets.isqrt(0) == 0
+    assert markets.isqrt(100) == 10
+    assert markets.isqrt(2) == 1
+
+    # compute_pool_output with known values
+    assert markets.compute_pool_output(1000, 1000, 100, 50) == 90
+
+    # compute_pool_input_for_target_price
+    result = markets.compute_pool_input_for_target_price(1000, 1000, 1000, 500, 50)
+    assert result >= 0
+
+    # get_pool_fee_bps
+    assert markets.get_pool_fee_bps({"asset_a": "XCP", "asset_b": "DIVISIBLE"}) == 50
+    assert markets.get_pool_fee_bps({"asset_a": "DIVISIBLE", "asset_b": "NODIVISIBLE"}) == 100
