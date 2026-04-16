@@ -584,6 +584,61 @@ def test_validate_pool(ledger_db, defaults):
         )
     )
 
+    # pool_quantity requires hard_cap > 0
+    assert "pool_quantity requires hard_cap > 0" in fairminter.validate(
+        ledger_db,
+        defaults["addresses"][1],
+        "NEWPOOL",
+        "",
+        1,
+        1,
+        0,
+        0,
+        0,  # hard_cap = 0
+        0,
+        0,
+        0,
+        60,
+        500,
+        0.0,
+        False,
+        False,
+        False,
+        True,
+        "",
+        "",
+        40,  # pool_quantity
+    )
+
+    # pool_quantity not yet enabled (protocol gate)
+    from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
+
+    with ProtocolChangesDisabled(["fairmint_pool"]):
+        assert "pool_quantity is not yet enabled" in fairminter.validate(
+            ledger_db,
+            defaults["addresses"][1],
+            "NEWPOOL",
+            "",
+            1,
+            1,
+            0,
+            0,
+            100,
+            0,
+            0,
+            0,
+            60,
+            500,
+            0.0,
+            False,
+            False,
+            False,
+            True,
+            "",
+            "",
+            40,  # pool_quantity
+        )
+
     # overflow: existing supply + premint + pool + soft_cap > hard_cap
     assert (
         "existing supply + premint_quantity + pool_quantity + soft_cap exceeds hard_cap"
