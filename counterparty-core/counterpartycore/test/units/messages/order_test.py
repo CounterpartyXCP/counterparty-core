@@ -1169,6 +1169,23 @@ def test_parse_expiration_n_means_n_blocks(ledger_db, blockchain_mock, defaults)
     assert record["expire_index"] == tx["block_index"] + 99
 
 
+def test_parse_expire_index_pre_activation(ledger_db, blockchain_mock, defaults):
+    """Before indefinite_orders activation, expire_index = block_index + expiration (no -1)."""
+    from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
+
+    source = defaults["addresses"][0]
+    _, _, data = order.compose(ledger_db, source, "XCP", 1000, "DIVISIBLE", 1000, 100, 0)
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    with ProtocolChangesDisabled(["indefinite_orders"]):
+        order.parse(ledger_db, tx, data[1:])
+
+    record = ledger_db.execute(
+        "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
+        (tx["tx_hash"],),
+    ).fetchone()
+    assert record["expire_index"] == tx["block_index"] + 100
+
+
 def test_indefinite_order_not_in_expiry_scan(ledger_db, blockchain_mock, defaults):
     """Indefinite order never appears in get_orders_to_expire."""
     from counterpartycore.lib.ledger.currentstate import CurrentState
