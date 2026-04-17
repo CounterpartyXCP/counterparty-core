@@ -53,10 +53,10 @@ def validate(db, source, asset_a, asset_b, quantity):
         if lp_balance < quantity:
             problems.append(f"insufficient LP token balance ({lp_balance} < {quantity})")
         else:
-            total_lp_supply = ledger.supplies.asset_supply(db, lp_asset)
-            if total_lp_supply <= 0:
-                problems.append("LP supply is zero")
-            else:
+            total_lp_supply = ledger.supplies.asset_issued_total_no_cache(
+                db, lp_asset
+            ) - ledger.supplies.asset_destroyed_total_no_cache(db, lp_asset)
+            if total_lp_supply > 0:
                 # OR, not AND: an asymmetric redemption would drain one
                 # reserve and leave the pool inconsistent with LP supply.
                 quantity_a = quantity * pool["reserve_a"] // total_lp_supply
@@ -167,7 +167,9 @@ def parse(db, tx, message):
     sorted_a, sorted_b = ledger.markets.sort_pair(asset_a, asset_b)
     pool = ledger.markets.get_pool(db, sorted_a, sorted_b)
     lp_asset = pool["lp_asset"]
-    total_lp_supply = ledger.supplies.asset_supply(db, lp_asset)
+    total_lp_supply = ledger.supplies.asset_issued_total_no_cache(
+        db, lp_asset
+    ) - ledger.supplies.asset_destroyed_total_no_cache(db, lp_asset)
 
     # Compute proportional shares
     quantity_a = quantity * pool["reserve_a"] // total_lp_supply

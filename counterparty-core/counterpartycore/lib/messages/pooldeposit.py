@@ -61,7 +61,10 @@ def validate(db, source, asset_a, asset_b, quantity_a, quantity_b, min_lp_quanti
 
     total_lp_supply = 0
     if existing_pool is not None:
-        total_lp_supply = ledger.supplies.asset_supply(db, existing_pool["lp_asset"])
+        lp_asset = existing_pool["lp_asset"]
+        total_lp_supply = ledger.supplies.asset_issued_total_no_cache(
+            db, lp_asset
+        ) - ledger.supplies.asset_destroyed_total_no_cache(db, lp_asset)
 
     if total_lp_supply == 0:
         actual_a_sorted = sorted_quantity_a
@@ -225,14 +228,19 @@ def parse(db, tx, message):
     actual_a, actual_b = quantity_a, quantity_b
     if existing_pool is None:
         quantity_minted = first_deposit(db, tx, sorted_a, sorted_b, quantity_a, quantity_b)
-    elif ledger.supplies.asset_supply(db, existing_pool["lp_asset"]) == 0:
-        quantity_minted = restart_pool(
-            db, tx, existing_pool, sorted_a, sorted_b, quantity_a, quantity_b
-        )
     else:
-        quantity_minted, actual_a, actual_b = subsequent_deposit(
-            db, tx, existing_pool, sorted_a, sorted_b, quantity_a, quantity_b
-        )
+        lp_asset = existing_pool["lp_asset"]
+        supply = ledger.supplies.asset_issued_total_no_cache(
+            db, lp_asset
+        ) - ledger.supplies.asset_destroyed_total_no_cache(db, lp_asset)
+        if supply == 0:
+            quantity_minted = restart_pool(
+                db, tx, existing_pool, sorted_a, sorted_b, quantity_a, quantity_b
+            )
+        else:
+            quantity_minted, actual_a, actual_b = subsequent_deposit(
+                db, tx, existing_pool, sorted_a, sorted_b, quantity_a, quantity_b
+            )
 
     # record valid deposit
     bindings = {
@@ -403,7 +411,9 @@ def subsequent_deposit(db, tx, pool, asset_a, asset_b, quantity_a, quantity_b):
     source = tx["source"]
 
     lp_asset = pool["lp_asset"]
-    total_lp_supply = ledger.supplies.asset_supply(db, lp_asset)
+    total_lp_supply = ledger.supplies.asset_issued_total_no_cache(
+        db, lp_asset
+    ) - ledger.supplies.asset_destroyed_total_no_cache(db, lp_asset)
 
     actual_a, actual_b = compute_actual_deposit_amounts(pool, quantity_a, quantity_b)
     quantity_minted = actual_a * total_lp_supply // pool["reserve_a"]
