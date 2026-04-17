@@ -851,5 +851,18 @@ UNITTEST_FIXTURE = [
         },
         {"encoding": "opreturn"},
     ],
+    [
+        "order",
+        {
+            "source": DP["addresses"][0],
+            "give_asset": "POOLASSETB",
+            "give_quantity": DP["quantity"] // 4,
+            "get_asset": "POOLASSETA",
+            "get_quantity": DP["quantity"] // 4,
+            "expiration": 2000,
+            "fee_required": 0,
+        },
+        {"encoding": "opreturn"},
+    ],
     ["mine_empty_blocks", 701],
 ]

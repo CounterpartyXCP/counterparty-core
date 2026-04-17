@@ -1009,6 +1009,16 @@ def test_get_pool_quote_swap_reversed_asset_order(state_db):
     assert result["pool_output"] > 0
 
 
+def test_get_pool_quote_swap_hybrid(state_db):
+    """Swap quote with both pool and resting book orders (hybrid routing)."""
+    result = queries.get_pool_quote(state_db, "POOLASSETA", "POOLASSETB", 10_000_000)
+    assert result["pool_exists"] is True
+    assert result["pool_output"] >= 0
+    assert result["book_output"] > 0
+    assert result["book_orders_matched"] >= 1
+    assert result["estimated_output"] > 0
+
+
 def test_get_pool_quote_withdraw_with_pool(state_db):
     """Withdraw quote returns proportional reserve amounts."""
     result = queries.get_pool_quote_withdraw(state_db, "POOLASSETA", "POOLASSETB", 1_000_000)
