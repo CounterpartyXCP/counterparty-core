@@ -47,7 +47,7 @@ def test_state_db(state_db):
         {"asset": "PARENT", "quantity": 100000000},
         {"asset": "PAYTOSCRIPT", "quantity": 1000},
         {"asset": "POOLASSETA", "quantity": 50000000},
-        {"asset": "POOLASSETB", "quantity": 50000000},
+        {"asset": "POOLASSETB", "quantity": 25000000},
         {"asset": "QAIDFAIRMIN", "quantity": 20},
         {"asset": "RAIDFAIRMIN", "quantity": 20},
         {"asset": "TAIDFAIRMIN", "quantity": 1},
