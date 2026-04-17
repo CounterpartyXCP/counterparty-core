@@ -1089,3 +1089,13 @@ def test_get_pool_matches_by_pair_empty(state_db):
     """Pool matches for a pair returns results."""
     result = queries.get_pool_matches_by_pair(state_db, "POOLASSETA", "POOLASSETB")
     assert result is not None
+
+
+def test_get_pool_quote_withdraw_zero_supply(state_db):
+    """Withdraw quote reports zero supply when LP supply is drained."""
+    pool = queries.get_pool_by_pair(state_db, "POOLASSETA", "POOLASSETB").result
+    state_db.execute("UPDATE assets_info SET supply = 0 WHERE asset = ?", (pool["lp_asset"],))
+    result = queries.get_pool_quote_withdraw(state_db, "POOLASSETA", "POOLASSETB", 1_000_000)
+    assert result["pool_exists"] is True
+    assert result["supply"] == 0
+    assert "No LP tokens" in result["message"]
