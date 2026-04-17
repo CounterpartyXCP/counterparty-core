@@ -593,6 +593,34 @@ def test_validate_subsequent_deposit_too_small(ledger_db, defaults, blockchain_m
     assert any("deposit too small" in p for p in problems)
 
 
+def test_create_pool_from_fairminter_pool_already_exists(ledger_db, defaults, blockchain_mock):
+    """If pool already exists, assets are credited back to the issuer."""
+    source = defaults["addresses"][0]
+    quantity = defaults["quantity"] // 4
+
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", quantity, quantity)
+    pooldeposit.parse(ledger_db, tx, data[1:])
+
+    fairminter = {"tx_hash": "b" * 64, "tx_index": 999, "source": source}
+    returned = pooldeposit.create_pool_from_fairminter(
+        ledger_db,
+        fairminter,
+        block_index=9999,
+        asset="DIVISIBLE",
+        quantity_tokens=quantity,
+        quantity_xcp=quantity,
+    )
+    assert returned == 0
+
+    credits = ledger_db.execute(
+        "SELECT calling_function FROM credits WHERE event = ? ORDER BY rowid",
+        ("b" * 64,),
+    ).fetchall()
+    functions = [c["calling_function"] for c in credits]
+    assert functions.count("fairminter pool fallback") == 2
+
+
 def test_create_pool_from_fairminter(ledger_db, defaults, test_helpers):
     """Test trustless pool creation from fairminter resolution."""
     source = defaults["addresses"][0]
