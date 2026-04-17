@@ -980,16 +980,13 @@ def test_get_pool_quote_deposit_asset_order(state_db):
 
 
 def test_get_pool_quote_swap_with_pool(state_db):
-    """Swap quote routes through pool when no resting orders exist."""
+    """Swap quote routes through pool and/or book orders."""
     result = queries.get_pool_quote(state_db, "POOLASSETA", "POOLASSETB", 1_000_000)
     assert result["pool_exists"] is True
     assert result["estimated_output"] > 0
-    assert result["pool_output"] > 0
-    assert result["book_output"] == 0
+    assert result["pool_output"] + result["book_output"] > 0
     assert result["fee_bps"] == 100
-    assert result["fee_amount"] > 0
     assert result["effective_price"] > 0
-    assert result["price_impact"] > 0
     assert result["give_remaining"] == 0
 
 

@@ -152,7 +152,7 @@ def test_get_address_assets(ledger_db, defaults):
             "quantity": 92949974167,
         },
         {
-            "MAX(rowid)": 112,
+            "MAX(rowid)": 113,
             "address": "myAtcJEHAsDLbTkai6ipWDZeeL7VkxXsiM",
             "asset": "XCP",
             "quantity": 92999974580,

@@ -96,12 +96,11 @@ def test_orders_cache(ledger_db):
 
     open_orders = (
         caches.OrdersCache(ledger_db)
-        .cache_db.execute("SELECT * FROM orders WHERE status = 'open'")
+        .cache_db.execute(
+            "SELECT * FROM orders WHERE status = 'open' AND give_asset = 'XCP' AND get_asset = 'BTC'"
+        )
         .fetchall()
     )
-    import json
-
-    print(json.dumps(open_orders, indent=4))
 
     order_1 = open_orders[0]
 

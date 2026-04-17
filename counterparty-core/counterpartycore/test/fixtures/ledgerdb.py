@@ -864,5 +864,5 @@ UNITTEST_FIXTURE = [
         },
         {"encoding": "opreturn"},
     ],
-    ["mine_empty_blocks", 701],
+    ["mine_empty_blocks", 700],
 ]
