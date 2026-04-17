@@ -593,7 +593,6 @@ def match(db, tx, block_index=None):
         # pool. This guarantees best-price execution for the taker.
         if amm_pool and tx1_give_remaining > 0:
             pool_fill_quantity, pool_output = ledger.markets.try_pool_fill(
-                db,
                 tx1,
                 amm_pool,
                 tx1_give_remaining,
@@ -880,7 +879,7 @@ def match(db, tx, block_index=None):
             db, *ledger.markets.sort_pair(tx1["give_asset"], tx1["get_asset"])
         )
         pool_fill_quantity, pool_output = ledger.markets.try_pool_fill(
-            db, tx1, amm_pool, tx1_give_remaining
+            tx1, amm_pool, tx1_give_remaining
         )
         if pool_fill_quantity > 0:
             ledger.markets.execute_pool_match(

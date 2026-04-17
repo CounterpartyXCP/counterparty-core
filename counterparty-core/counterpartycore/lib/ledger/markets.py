@@ -607,7 +607,7 @@ def update_pool(db, asset_a, asset_b, new_reserve_a, new_reserve_b):
 ### POOL SWAP EXECUTION ###
 
 
-def try_pool_fill(db, tx1, pool, max_give, target_price_num=None, target_price_den=None):
+def try_pool_fill(tx1, pool, max_give, target_price_num=None, target_price_den=None):
     """Try to fill an order against the pool. Returns (fill_quantity, output) or (0, 0)."""
     if not pool or not pool_has_liquidity(pool):
         return 0, 0
