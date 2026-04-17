@@ -1,4 +1,5 @@
 from counterpartycore.lib.ledger import currentstate, markets
+from counterpartycore.lib.messages import pool as pool_module
 
 
 def test_markets(ledger_db, defaults):
@@ -109,10 +110,95 @@ def test_compute_pool_math(ledger_db):
     # compute_pool_output with known values
     assert markets.compute_pool_output(1000, 1000, 100, 50) == 90
 
-    # compute_pool_input_for_target_price
+    # compute_pool_input_for_target_price — normal case
     result = markets.compute_pool_input_for_target_price(1000, 1000, 1000, 500, 50)
     assert result >= 0
+
+    # edge cases: early returns
+    assert markets.compute_pool_input_for_target_price(0, 1000, 1000, 500, 50) == 0  # reserve_in=0
+    assert markets.compute_pool_input_for_target_price(1000, 1000, 0, 500, 50) == 0  # target_den=0
+    assert markets.compute_pool_input_for_target_price(1000, 1000, 1000, 0, 50) == 0  # target_num=0
+    # price already past target (current >= target)
+    assert markets.compute_pool_input_for_target_price(1000, 1000, 1, 10000, 50) == 0
+
+    # get_pool_fee_bps
+    assert markets.compute_pool_input_for_target_price(10000, 1, 1, 9999, 50) == 0
 
     # get_pool_fee_bps
     assert markets.get_pool_fee_bps({"asset_a": "XCP", "asset_b": "DIVISIBLE"}) == 50
     assert markets.get_pool_fee_bps({"asset_a": "DIVISIBLE", "asset_b": "NODIVISIBLE"}) == 100
+
+    # pool_has_liquidity
+    assert markets.pool_has_liquidity({"reserve_a": 100, "reserve_b": 100}) is True
+    assert markets.pool_has_liquidity({"reserve_a": 0, "reserve_b": 100}) is False
+    assert markets.pool_has_liquidity({"reserve_a": 100, "reserve_b": 0}) is False
+    assert markets.pool_has_liquidity(None) is False
+
+    # compute_pool_output edge cases
+    assert markets.compute_pool_output(0, 1000, 100, 50) == 0
+    assert markets.compute_pool_output(1000, 0, 100, 50) == 0
+    assert markets.compute_pool_output(1000, 1000, 0, 50) == 0
+
+
+def test_try_pool_fill_early_returns(ledger_db):
+    """Exercise try_pool_fill early-return paths."""
+    tx1 = {
+        "give_asset": "POOLASSETA",
+        "get_asset": "POOLASSETB",
+        "give_quantity": 10000,
+        "get_quantity": 1,
+        "source": "test_source",
+        "tx_hash": "a" * 64,
+    }
+
+    # no pool
+    assert pool_module.try_pool_fill(ledger_db, tx1, None, 500) == (0, 0)
+
+    # pool with no liquidity
+    empty_pool = {
+        "asset_a": "POOLASSETA",
+        "asset_b": "POOLASSETB",
+        "reserve_a": 0,
+        "reserve_b": 0,
+    }
+    assert pool_module.try_pool_fill(ledger_db, tx1, empty_pool, 500) == (0, 0)
+
+    # pool where target price already past (fill_quantity = 0)
+    pool = {
+        "asset_a": "POOLASSETA",
+        "asset_b": "POOLASSETB",
+        "reserve_a": 10_000_000,
+        "reserve_b": 10_000_000,
+    }
+    assert pool_module.try_pool_fill(
+        ledger_db, tx1, pool, 500, target_price_num=1, target_price_den=100000
+    ) == (0, 0)
+
+    # pool where output < min_output (bad price for the order)
+    tx1_bad_price = {
+        "give_asset": "POOLASSETA",
+        "get_asset": "POOLASSETB",
+        "give_quantity": 1,
+        "get_quantity": 10_000_000,
+        "source": "test_source",
+        "tx_hash": "a" * 64,
+    }
+    assert pool_module.try_pool_fill(ledger_db, tx1_bad_price, pool, 1) == (0, 0)
+
+    # successful fill (no target price)
+    fill_qty, output = pool_module.try_pool_fill(ledger_db, tx1, pool, 500)
+    assert fill_qty == 500
+    assert output > 0
+
+    # asset_b as give_asset (reversed direction)
+    tx1_reversed = {
+        "give_asset": "POOLASSETB",
+        "get_asset": "POOLASSETA",
+        "give_quantity": 10000,
+        "get_quantity": 1,
+        "source": "test_source",
+        "tx_hash": "b" * 64,
+    }
+    fill_qty, output = pool_module.try_pool_fill(ledger_db, tx1_reversed, pool, 500)
+    assert fill_qty == 500
+    assert output > 0

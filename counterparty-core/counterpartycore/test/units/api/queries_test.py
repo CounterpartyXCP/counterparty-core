@@ -993,6 +993,22 @@ def test_get_pool_quote_swap_with_pool(state_db):
     assert result["give_remaining"] == 0
 
 
+def test_get_pool_quote_swap_no_pool_no_orders(state_db):
+    """Swap quote with no pool and no orders returns early."""
+    result = queries.get_pool_quote(state_db, "XCP", "DIVISIBLE", 1_000_000)
+    assert result["pool_exists"] is False
+    assert result["estimated_output"] == 0
+    assert result["message"] == "No pool or orders exist for this pair."
+
+
+def test_get_pool_quote_swap_reversed_asset_order(state_db):
+    """Swap quote with reversed asset order (asset2 < asset1)."""
+    result = queries.get_pool_quote(state_db, "POOLASSETB", "POOLASSETA", 1_000_000)
+    assert result["pool_exists"] is True
+    assert result["estimated_output"] > 0
+    assert result["pool_output"] > 0
+
+
 def test_get_pool_quote_withdraw_with_pool(state_db):
     """Withdraw quote returns proportional reserve amounts."""
     result = queries.get_pool_quote_withdraw(state_db, "POOLASSETA", "POOLASSETB", 1_000_000)
@@ -1012,6 +1028,13 @@ def test_get_pool_by_pair_with_pool(state_db):
     assert result.result["asset_b"] == "POOLASSETB"
     assert result.result["reserve_a"] == 50_000_000
     assert result.result["reserve_b"] == 50_000_000
+
+
+def test_get_pool_by_pair_reversed_order(state_db):
+    """get_pool_by_pair with reversed asset order still finds pool."""
+    result = queries.get_pool_by_pair(state_db, "POOLASSETB", "POOLASSETA")
+    assert result is not None
+    assert result.result["asset_a"] == "POOLASSETA"
 
 
 def test_get_pool_positions_with_data(state_db, defaults):
@@ -1046,6 +1069,12 @@ def test_get_pool_price_history(ledger_db):
 def test_get_all_pool_matches_empty(state_db):
     """All pool matches returns results."""
     result = queries.get_all_pool_matches(state_db)
+    assert result is not None
+
+
+def test_get_all_pool_matches_with_block_index(state_db):
+    """All pool matches filtered by block_index."""
+    result = queries.get_all_pool_matches(state_db, block_index=310000)
     assert result is not None
 
 
