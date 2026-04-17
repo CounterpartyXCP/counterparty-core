@@ -45,13 +45,27 @@ def validate(db, source, asset_a, asset_b, quantity):
 
     if pool is None:
         problems.append("pool does not exist")
-    elif pool["reserve_a"] == 0 or pool["reserve_b"] == 0:
+    elif not ledger.markets.pool_has_liquidity(pool):
         problems.append("pool has no liquidity")
     else:
         lp_asset = pool["lp_asset"]
         lp_balance = ledger.balances.get_balance(db, source, lp_asset)
         if lp_balance < quantity:
             problems.append(f"insufficient LP token balance ({lp_balance} < {quantity})")
+        else:
+            total_lp_supply = ledger.supplies.asset_supply(db, lp_asset)
+            if total_lp_supply <= 0:
+                problems.append("LP supply is zero")
+            else:
+                # OR, not AND: an asymmetric redemption would drain one
+                # reserve and leave the pool inconsistent with LP supply.
+                quantity_a = quantity * pool["reserve_a"] // total_lp_supply
+                quantity_b = quantity * pool["reserve_b"] // total_lp_supply
+                if quantity_a <= 0 or quantity_b <= 0:
+                    problems.append(
+                        "withdrawal too small: would redeem "
+                        f"{quantity_a} {sorted_a} + {quantity_b} {sorted_b}"
+                    )
 
     # gas fee is paid in XCP
     if not problems:
@@ -152,21 +166,12 @@ def parse(db, tx, message):
     # execute withdrawal
     sorted_a, sorted_b = ledger.markets.sort_pair(asset_a, asset_b)
     pool = ledger.markets.get_pool(db, sorted_a, sorted_b)
-    if pool is None or pool["reserve_a"] == 0 or pool["reserve_b"] == 0:
-        raise exceptions.MessageError("pool state changed during execution")
     lp_asset = pool["lp_asset"]
-
-    # Get total LP supply
     total_lp_supply = ledger.supplies.asset_supply(db, lp_asset)
-    if total_lp_supply <= 0:
-        raise exceptions.MessageError("LP supply is zero")
 
     # Compute proportional shares
     quantity_a = quantity * pool["reserve_a"] // total_lp_supply
     quantity_b = quantity * pool["reserve_b"] // total_lp_supply
-
-    if quantity_a <= 0 and quantity_b <= 0:
-        raise exceptions.MessageError("withdrawal too small to redeem any assets")
 
     # Destroy LP tokens: debit from source
     ledger.events.debit(

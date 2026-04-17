@@ -10,7 +10,6 @@ from counterpartycore.lib import (
     ledger,
 )
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.messages import pool as pool_mod
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import helpers
 
@@ -593,7 +592,7 @@ def match(db, tx, block_index=None):
         # order, then repeat. Remainder after all book orders goes to
         # pool. This guarantees best-price execution for the taker.
         if amm_pool and tx1_give_remaining > 0:
-            pool_fill_quantity, pool_output = pool_mod.try_pool_fill(
+            pool_fill_quantity, pool_output = ledger.markets.try_pool_fill(
                 db,
                 tx1,
                 amm_pool,
@@ -602,7 +601,9 @@ def match(db, tx, block_index=None):
                 target_price_den=tx0["give_quantity"],
             )
             if pool_fill_quantity > 0:
-                pool_mod.execute_pool_match(db, tx, tx1, amm_pool, pool_fill_quantity, pool_output)
+                ledger.markets.execute_pool_match(
+                    db, tx, tx1, amm_pool, pool_fill_quantity, pool_output
+                )
                 tx1_give_remaining -= pool_fill_quantity
                 tx1_get_remaining -= pool_output
                 amm_pool = ledger.markets.get_pool(
@@ -878,11 +879,13 @@ def match(db, tx, block_index=None):
         amm_pool = ledger.markets.get_pool(
             db, *ledger.markets.sort_pair(tx1["give_asset"], tx1["get_asset"])
         )
-        pool_fill_quantity, pool_output = pool_mod.try_pool_fill(
+        pool_fill_quantity, pool_output = ledger.markets.try_pool_fill(
             db, tx1, amm_pool, tx1_give_remaining
         )
         if pool_fill_quantity > 0:
-            pool_mod.execute_pool_match(db, tx, tx1, amm_pool, pool_fill_quantity, pool_output)
+            ledger.markets.execute_pool_match(
+                db, tx, tx1, amm_pool, pool_fill_quantity, pool_output
+            )
             tx1_give_remaining = 0
             tx1_get_remaining -= pool_output
             tx1_status = "filled"

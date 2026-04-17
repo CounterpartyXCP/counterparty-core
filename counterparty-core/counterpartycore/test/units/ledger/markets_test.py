@@ -1,5 +1,4 @@
 from counterpartycore.lib.ledger import currentstate, markets
-from counterpartycore.lib.messages import pool as pool_module
 
 
 def test_markets(ledger_db, defaults):
@@ -152,7 +151,7 @@ def test_try_pool_fill_early_returns(ledger_db):
     }
 
     # no pool
-    assert pool_module.try_pool_fill(ledger_db, tx1, None, 500) == (0, 0)
+    assert markets.try_pool_fill(ledger_db, tx1, None, 500) == (0, 0)
 
     # pool with no liquidity
     empty_pool = {
@@ -161,7 +160,7 @@ def test_try_pool_fill_early_returns(ledger_db):
         "reserve_a": 0,
         "reserve_b": 0,
     }
-    assert pool_module.try_pool_fill(ledger_db, tx1, empty_pool, 500) == (0, 0)
+    assert markets.try_pool_fill(ledger_db, tx1, empty_pool, 500) == (0, 0)
 
     # pool where target price already past (fill_quantity = 0)
     pool = {
@@ -170,7 +169,7 @@ def test_try_pool_fill_early_returns(ledger_db):
         "reserve_a": 10_000_000,
         "reserve_b": 10_000_000,
     }
-    assert pool_module.try_pool_fill(
+    assert markets.try_pool_fill(
         ledger_db, tx1, pool, 500, target_price_num=1, target_price_den=100000
     ) == (0, 0)
 
@@ -183,10 +182,10 @@ def test_try_pool_fill_early_returns(ledger_db):
         "source": "test_source",
         "tx_hash": "a" * 64,
     }
-    assert pool_module.try_pool_fill(ledger_db, tx1_bad_price, pool, 1) == (0, 0)
+    assert markets.try_pool_fill(ledger_db, tx1_bad_price, pool, 1) == (0, 0)
 
     # successful fill (no target price)
-    fill_qty, output = pool_module.try_pool_fill(ledger_db, tx1, pool, 500)
+    fill_qty, output = markets.try_pool_fill(ledger_db, tx1, pool, 500)
     assert fill_qty == 500
     assert output > 0
 
@@ -199,6 +198,6 @@ def test_try_pool_fill_early_returns(ledger_db):
         "source": "test_source",
         "tx_hash": "b" * 64,
     }
-    fill_qty, output = pool_module.try_pool_fill(ledger_db, tx1_reversed, pool, 500)
+    fill_qty, output = markets.try_pool_fill(ledger_db, tx1_reversed, pool, 500)
     assert fill_qty == 500
     assert output > 0

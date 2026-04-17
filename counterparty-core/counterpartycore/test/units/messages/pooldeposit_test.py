@@ -128,7 +128,7 @@ def test_validate_off_ratio_deposit_uses_proportional_amounts(ledger_db, default
     pool = ledger.markets.get_pool(ledger_db, sorted_a, sorted_b)
     dep_a = pool["reserve_a"] // 10
     dep_b = pool["reserve_b"] // 5
-    actual_a, actual_b = pooldeposit.calculate_actual_deposit_amounts(pool, dep_a, dep_b)
+    actual_a, actual_b = pooldeposit.compute_actual_deposit_amounts(pool, dep_a, dep_b)
 
     balance_b = ledger.balances.get_balance(ledger_db, source, sorted_b)
     ledger.events.debit(
@@ -401,11 +401,10 @@ def test_parse_mismatched_ratio(ledger_db, defaults, blockchain_mock, test_helpe
     assert bal_b_after == bal_b_before - actual_b
 
 
-def test_slippage_protection_rejects_low_mint(ledger_db, defaults, blockchain_mock, test_helpers):
-    """Deposit with min_lp_quantity rejects if minted LP is below threshold."""
+def test_slippage_protection_rejects_low_mint(ledger_db, defaults, blockchain_mock):
+    """Deposit with min_lp_quantity above achievable mint is rejected at compose."""
     quantity = defaults["quantity"]
 
-    # Create 1:1 pool
     tx1 = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     _, _, data = pooldeposit.compose(
         ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", quantity // 4, quantity // 4
@@ -414,23 +413,18 @@ def test_slippage_protection_rejects_low_mint(ledger_db, defaults, blockchain_mo
 
     pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
     sorted_a, sorted_b = ledger.markets.sort_pair("XCP", "DIVISIBLE")
-
-    # Compose a second deposit with unreachably high min_lp_quantity
     dep = pool["reserve_a"] // 10
-    _, _, data2 = pooldeposit.compose(
-        ledger_db,
-        defaults["addresses"][0],
-        sorted_a,
-        sorted_b,
-        dep,
-        dep,
-        min_lp_quantity=quantity * 999,  # impossible to mint this many
-    )
-    tx2 = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
 
-    # parse should reject — slippage protection triggered
-    with pytest.raises(exceptions.MessageError, match="slippage protection"):
-        pooldeposit.parse(ledger_db, tx2, data2[1:])
+    with pytest.raises(exceptions.ComposeError, match="slippage protection"):
+        pooldeposit.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            sorted_a,
+            sorted_b,
+            dep,
+            dep,
+            min_lp_quantity=quantity * 999,
+        )
 
 
 def test_slippage_protection_allows_when_met(ledger_db, defaults, blockchain_mock, test_helpers):
@@ -469,19 +463,16 @@ def test_slippage_protection_allows_when_met(ledger_db, defaults, blockchain_moc
 
 def test_first_deposit_respects_min_lp_quantity(ledger_db, defaults, blockchain_mock):
     quantity = defaults["quantity"] // 4
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    _, _, data = pooldeposit.compose(
-        ledger_db,
-        defaults["addresses"][0],
-        "XCP",
-        "DIVISIBLE",
-        quantity,
-        quantity,
-        min_lp_quantity=quantity * 10,
-    )
-
-    with pytest.raises(exceptions.MessageError, match="slippage protection"):
-        pooldeposit.parse(ledger_db, tx, data[1:])
+    with pytest.raises(exceptions.ComposeError, match="slippage protection"):
+        pooldeposit.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            "XCP",
+            "DIVISIBLE",
+            quantity,
+            quantity,
+            min_lp_quantity=quantity * 10,
+        )
 
 
 def test_empty_pool_refund_respects_min_lp_quantity(ledger_db, defaults, blockchain_mock):
@@ -501,19 +492,16 @@ def test_empty_pool_refund_respects_min_lp_quantity(ledger_db, defaults, blockch
     )
     poolwithdraw.parse(ledger_db, tx2, withdraw_data[1:])
 
-    tx3 = blockchain_mock.dummy_tx(ledger_db, source)
-    _, _, refund_data = pooldeposit.compose(
-        ledger_db,
-        source,
-        "XCP",
-        "DIVISIBLE",
-        quantity,
-        quantity,
-        min_lp_quantity=quantity * 10,
-    )
-
-    with pytest.raises(exceptions.MessageError, match="slippage protection"):
-        pooldeposit.parse(ledger_db, tx3, refund_data[1:])
+    with pytest.raises(exceptions.ComposeError, match="slippage protection"):
+        pooldeposit.compose(
+            ledger_db,
+            source,
+            "XCP",
+            "DIVISIBLE",
+            quantity,
+            quantity,
+            min_lp_quantity=quantity * 10,
+        )
 
 
 def test_validate_lp_token_cannot_be_pooled(ledger_db, defaults, blockchain_mock):
@@ -535,24 +523,17 @@ def test_validate_lp_token_cannot_be_pooled(ledger_db, defaults, blockchain_mock
 
 
 def test_validate_subsequent_deposit_too_small(ledger_db, defaults, blockchain_mock):
-    """Subsequent deposit with tiny amounts that would mint 0 LP tokens should fail in parse."""
+    """Tiny deposits into a skewed pool that would mint 0 LP are rejected."""
     quantity = defaults["quantity"]
     source = defaults["addresses"][0]
 
-    # Create pool with asymmetric reserves so supply << reserve_a.
-    # isqrt(quantity * 1) ≈ 10000 LP tokens, but reserve_a = quantity = 100M.
-    # Then 1 sat deposit: minted = 1 * 10000 // 100M = 0.
     sorted_a, sorted_b = ledger.markets.sort_pair("XCP", "DIVISIBLE")
     tx1 = blockchain_mock.dummy_tx(ledger_db, source)
     _, _, data = pooldeposit.compose(ledger_db, source, sorted_a, sorted_b, quantity, 1)
     pooldeposit.parse(ledger_db, tx1, data[1:])
 
-    _, _, data2 = pooldeposit.compose(
-        ledger_db, source, sorted_a, sorted_b, 1, 1, skip_validation=True
-    )
-    tx2 = blockchain_mock.dummy_tx(ledger_db, source)
-    with pytest.raises(exceptions.MessageError, match="deposit too small"):
-        pooldeposit.parse(ledger_db, tx2, data2[1:])
+    problems = pooldeposit.validate(ledger_db, source, sorted_a, sorted_b, 1, 1)
+    assert any("deposit too small" in p for p in problems)
 
 
 def test_validate_xcp_fee_insufficient(ledger_db, defaults, blockchain_mock):

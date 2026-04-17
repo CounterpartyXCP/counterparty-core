@@ -82,6 +82,17 @@ def test_validate_insufficient_lp_balance(ledger_db, defaults, blockchain_mock):
     assert any("insufficient LP token balance" in p for p in problems)
 
 
+def test_validate_rejects_asymmetric_drain(ledger_db, defaults, blockchain_mock):
+    """Withdrawals that would redeem zero of either side are rejected."""
+    source = defaults["addresses"][0]
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", 100_000_000, 4)
+    pooldeposit.parse(ledger_db, tx, data[1:])
+
+    problems = poolwithdraw.validate(ledger_db, source, "XCP", "DIVISIBLE", 1)
+    assert any("withdrawal too small" in p for p in problems)
+
+
 def test_compose_produces_correct_format(ledger_db, defaults, blockchain_mock):
     create_pool(
         ledger_db,
