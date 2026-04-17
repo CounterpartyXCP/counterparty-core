@@ -59,7 +59,11 @@ def validate(db, source, asset_a, asset_b, quantity_a, quantity_b, min_lp_quanti
     else:
         sorted_quantity_a, sorted_quantity_b = quantity_b, quantity_a
 
-    if existing_pool is None or not ledger.markets.pool_has_liquidity(existing_pool):
+    total_lp_supply = 0
+    if existing_pool is not None:
+        total_lp_supply = ledger.supplies.asset_supply(db, existing_pool["lp_asset"])
+
+    if total_lp_supply == 0:
         actual_a_sorted = sorted_quantity_a
         actual_b_sorted = sorted_quantity_b
         quantity_minted = ledger.markets.isqrt(sorted_quantity_a * sorted_quantity_b)
@@ -67,7 +71,6 @@ def validate(db, source, asset_a, asset_b, quantity_a, quantity_b, min_lp_quanti
         actual_a_sorted, actual_b_sorted = compute_actual_deposit_amounts(
             existing_pool, sorted_quantity_a, sorted_quantity_b
         )
-        total_lp_supply = ledger.supplies.asset_supply(db, existing_pool["lp_asset"])
         quantity_minted = actual_a_sorted * total_lp_supply // existing_pool["reserve_a"]
 
     if quantity_minted <= 0:
@@ -222,8 +225,8 @@ def parse(db, tx, message):
     actual_a, actual_b = quantity_a, quantity_b
     if existing_pool is None:
         quantity_minted = first_deposit(db, tx, sorted_a, sorted_b, quantity_a, quantity_b)
-    elif not ledger.markets.pool_has_liquidity(existing_pool):
-        quantity_minted = refund_empty_pool(
+    elif ledger.supplies.asset_supply(db, existing_pool["lp_asset"]) == 0:
+        quantity_minted = restart_pool(
             db, tx, existing_pool, sorted_a, sorted_b, quantity_a, quantity_b
         )
     else:
@@ -358,13 +361,8 @@ def first_deposit(db, tx, asset_a, asset_b, quantity_a, quantity_b):
     return total_lp
 
 
-def refund_empty_pool(db, tx, pool, asset_a, asset_b, quantity_a, quantity_b):
-    """Re-fund a fully drained pool, reusing the existing LP token.
-
-    Same logic as first_deposit but does NOT create a new LP token or
-    asset record — uses the pool's existing lp_asset.  Prevents orphaned
-    LP tokens from accumulating if a pool is repeatedly drained and re-funded.
-    """
+def restart_pool(db, tx, pool, asset_a, asset_b, quantity_a, quantity_b):
+    """Re-seed a pool whose LP supply is zero, reusing the existing LP asset."""
     source = tx["source"]
     lp_asset = pool["lp_asset"]
 
@@ -380,7 +378,7 @@ def refund_empty_pool(db, tx, pool, asset_a, asset_b, quantity_a, quantity_b):
 
     # Record issuance for the new minted tokens
     issuance_bindings = make_lp_issuance_bindings(
-        db, tx, lp_asset, total_lp, asset_a, asset_b, "pool_refund"
+        db, tx, lp_asset, total_lp, asset_a, asset_b, "pool_restart"
     )
     ledger.events.insert_record(db, "issuances", issuance_bindings, "ASSET_ISSUANCE")
 
@@ -389,8 +387,9 @@ def refund_empty_pool(db, tx, pool, asset_a, asset_b, quantity_a, quantity_b):
         db, source, lp_asset, total_lp, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
     )
 
-    # Update pool reserves
-    ledger.markets.update_pool(db, asset_a, asset_b, quantity_a, quantity_b)
+    new_reserve_a = pool["reserve_a"] + quantity_a
+    new_reserve_b = pool["reserve_b"] + quantity_b
+    ledger.markets.update_pool(db, asset_a, asset_b, new_reserve_a, new_reserve_b)
 
     return total_lp
 

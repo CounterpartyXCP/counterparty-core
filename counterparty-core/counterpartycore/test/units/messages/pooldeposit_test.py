@@ -504,6 +504,41 @@ def test_empty_pool_refund_respects_min_lp_quantity(ledger_db, defaults, blockch
         )
 
 
+def test_restart_after_external_lp_destroy(ledger_db, defaults, blockchain_mock):
+    """Pool is recoverable when every LP holder destroys their LP externally."""
+    from counterpartycore.lib.messages import destroy
+
+    quantity = defaults["quantity"] // 4
+    source = defaults["addresses"][0]
+
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", quantity, quantity)
+    pooldeposit.parse(ledger_db, tx, data[1:])
+
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    lp_asset = pool["lp_asset"]
+    lp_balance = ledger.balances.get_balance(ledger_db, source, lp_asset)
+
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, ddata = destroy.compose(ledger_db, source, lp_asset, lp_balance, b"brick")
+    destroy.parse(ledger_db, tx, ddata[1:])
+
+    assert ledger.supplies.asset_supply(ledger_db, lp_asset) == 0
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    stranded_a, stranded_b = pool["reserve_a"], pool["reserve_b"]
+    assert stranded_a > 0 and stranded_b > 0
+
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, rdata = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", quantity, quantity)
+    pooldeposit.parse(ledger_db, tx, rdata[1:])
+
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    assert pool["reserve_a"] == stranded_a + quantity
+    assert pool["reserve_b"] == stranded_b + quantity
+    assert ledger.supplies.asset_supply(ledger_db, lp_asset) > 0
+    assert ledger.balances.get_balance(ledger_db, source, lp_asset) > 0
+
+
 def test_validate_lp_token_cannot_be_pooled(ledger_db, defaults, blockchain_mock):
     """LP token from an existing pool cannot itself be deposited into a new pool."""
     quantity = defaults["quantity"] // 4
