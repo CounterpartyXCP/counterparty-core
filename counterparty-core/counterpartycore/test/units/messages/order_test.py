@@ -1169,6 +1169,31 @@ def test_parse_expiration_n_means_n_blocks(ledger_db, blockchain_mock, defaults)
     assert record["expire_index"] == tx["block_index"] + 99
 
 
+def test_match_expire_index_pre_activation(
+    ledger_db, blockchain_mock, defaults, current_block_index, test_helpers
+):
+    """Before indefinite_orders, match_expire_index = block_index + 20."""
+    from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
+
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][1], fee=10000)
+    message = b"\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00"
+    with ProtocolChangesDisabled(["indefinite_orders"]):
+        order.parse(ledger_db, tx, message)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "order_matches",
+                "values": {
+                    "match_expire_index": tx["block_index"] + 20,
+                    "tx1_hash": tx["tx_hash"],
+                },
+            },
+        ],
+    )
+
+
 def test_parse_expire_index_pre_activation(ledger_db, blockchain_mock, defaults):
     """Before indefinite_orders activation, expire_index = block_index + expiration (no -1)."""
     from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
