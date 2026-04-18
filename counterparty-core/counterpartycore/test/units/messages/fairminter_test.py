@@ -584,6 +584,43 @@ def test_validate_pool(ledger_db, defaults):
         )
     )
 
+    # pool already exists for asset/XCP
+    from counterpartycore.lib.messages import pooldeposit as pooldeposit_mod
+
+    source = defaults["addresses"][0]
+    pool_source, _, deposit_data = pooldeposit_mod.compose(
+        ledger_db, source, "XCP", "DIVISIBLE", defaults["quantity"] // 4, defaults["quantity"] // 4
+    )
+    from counterpartycore.test.mocks.bitcoind import BlockchainMock
+
+    tx = BlockchainMock().dummy_tx(ledger_db, source)
+    pooldeposit_mod.parse(ledger_db, tx, deposit_data[1:])
+
+    assert "pool already exists for DIVISIBLE/XCP" in fairminter.validate(
+        ledger_db,
+        source,
+        "DIVISIBLE",
+        "",
+        1,
+        1,
+        0,
+        0,
+        defaults["quantity"] * 1000 + 40 + 60,
+        0,
+        0,
+        0,
+        60,
+        500,
+        0.0,
+        False,
+        False,
+        False,
+        True,
+        "",
+        "",
+        40,  # pool_quantity
+    )
+
     # pool_quantity requires hard_cap > 0
     assert "pool_quantity requires hard_cap > 0" in fairminter.validate(
         ledger_db,
