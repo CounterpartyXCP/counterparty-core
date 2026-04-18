@@ -584,6 +584,46 @@ def test_validate_pool(ledger_db, defaults):
         )
     )
 
+    # insufficient XCP balance for pool deposit fee
+    from counterpartycore.lib.messages import gas, pooldeposit
+
+    real_get_fee = gas.get_transaction_fee
+
+    def mock_fee(db, transaction_id, block_index):
+        if transaction_id == pooldeposit.ID:
+            return 10**18  # huge fee, nobody has this
+        return real_get_fee(db, transaction_id, block_index)
+
+    orig = gas.get_transaction_fee
+    gas.get_transaction_fee = mock_fee
+    try:
+        assert "insufficient XCP balance to pay pool deposit fee" in fairminter.validate(
+            ledger_db,
+            defaults["addresses"][1],
+            "NEWPOOL",
+            "",
+            1,
+            1,
+            0,
+            0,
+            100,
+            0,
+            0,
+            0,
+            60,
+            500,
+            0.0,
+            False,
+            False,
+            False,
+            True,
+            "",
+            "",
+            40,
+        )
+    finally:
+        gas.get_transaction_fee = orig
+
     # pool already exists for asset/XCP
     from counterpartycore.lib.messages import pooldeposit as pooldeposit_mod
 
@@ -1025,6 +1065,45 @@ def test_parse_fairminter_start_block(
                 "values": {
                     "tx_index": tx["tx_index"],
                     "valid": True,
+                },
+            },
+        ],
+    )
+
+
+def test_parse_fairminter_pool_fee_debit(
+    ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
+):
+    """When pool_deposit_fee > 0, parse debits it upfront from the issuer."""
+    from counterpartycore.lib.messages import gas, pooldeposit
+
+    fake_fee = 12345
+    real_get_fee = gas.get_transaction_fee
+
+    def mock_fee(db, transaction_id, block_index):
+        if transaction_id == pooldeposit.ID:
+            return fake_fee
+        return real_get_fee(db, transaction_id, block_index)
+
+    gas.get_transaction_fee = mock_fee
+    try:
+        tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
+        message = b"\x94\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x01\x00\x00\x18d\x00\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x18<\x1a\x00\x0c\xf8P\x00\xf4\xf4\xf5\xf5`@\x18("
+        fairminter.parse(ledger_db, tx, message)
+    finally:
+        gas.get_transaction_fee = real_get_fee
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "debits",
+                "values": {
+                    "address": defaults["addresses"][0],
+                    "asset": "XCP",
+                    "quantity": fake_fee,
+                    "action": "fairminter pool fee",
+                    "event": tx["tx_hash"],
                 },
             },
         ],
