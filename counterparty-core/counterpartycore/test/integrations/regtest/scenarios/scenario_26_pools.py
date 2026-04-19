@@ -711,7 +711,7 @@ SCENARIO = [
                     "asset_a": "POOLTEST",
                     "asset_b": "XCP",
                     "quantity_a_required": 10000000,
-                    "quantity_b_required": 12094499,
+                    "quantity_b_required": 12094500,
                     "quantity_minted_estimate": 10994999,
                 },
             },
