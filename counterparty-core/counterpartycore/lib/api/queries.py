@@ -4110,13 +4110,15 @@ def get_pool_quote_deposit(state_db, asset1: str, asset2: str, quantity: int):
     lp_info = select_row(state_db, "assets_info", where={"asset": pool["lp_asset"]})
     total_supply = lp_info.result["supply"] if lp_info else 0
 
+    # ceil the partner so the user's pair lands on the A-constraint branch
+    # in compute_actual_deposit_amounts and mints the quoted LP exactly
     if asset1 == sorted_a:
         quantity_a_required = quantity
-        quantity_b_required = quantity * pool["reserve_b"] // pool["reserve_a"]
+        quantity_b_required = -(-quantity * pool["reserve_b"] // pool["reserve_a"])
         lp_estimate = quantity * total_supply // pool["reserve_a"] if total_supply else 0
     else:
         quantity_b_required = quantity
-        quantity_a_required = quantity * pool["reserve_a"] // pool["reserve_b"]
+        quantity_a_required = -(-quantity * pool["reserve_a"] // pool["reserve_b"])
         lp_estimate = quantity * total_supply // pool["reserve_b"] if total_supply else 0
 
     return {

@@ -529,3 +529,44 @@ def test_target_price_negative_discriminant():
     result = ledger.markets.compute_pool_input_for_target_price(1, 1, 10050, 10000, 50)
     # Should be 0 or a very small positive — either way no crash
     assert result >= 0
+
+
+def test_tail_pool_fill_recredits_unused_give(ledger_db, defaults, blockchain_mock):
+    # Taker's tight-price order triggers the tail-phase pool fill. Pool delivers
+    # the full get_quantity while leaving give_remaining > 0. Status flips to
+    # filled and the unused give must be credited back (mirrors the in-loop
+    # recredit branch).
+    source_lp = defaults["addresses"][0]
+    trader = defaults["addresses"][1]
+    q = defaults["quantity"]
+
+    create_pool(ledger_db, blockchain_mock, source_lp, "XCP", "DIVISIBLE", q, q)
+
+    give_quantity = 150_000
+    get_quantity = 148_805
+
+    xcp_before = ledger.balances.get_balance(ledger_db, trader, "XCP")
+
+    tx = place_order(
+        ledger_db, blockchain_mock, trader, "XCP", give_quantity, "DIVISIBLE", get_quantity
+    )
+
+    cursor = ledger_db.cursor()
+    order_row = cursor.execute(
+        "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1", (tx["tx_hash"],)
+    ).fetchone()
+
+    assert order_row["status"] == "filled"
+    assert order_row["give_remaining"] == 0
+
+    # Trader's XCP balance should be debited only by the actual consumed
+    # portion — the dust that would otherwise be stuck in escrow was credited
+    # back.
+    xcp_after = ledger.balances.get_balance(ledger_db, trader, "XCP")
+    matches = cursor.execute(
+        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (tx["tx_hash"],)
+    ).fetchall()
+    assert len(matches) == 1
+    actual_consumed = matches[0]["backward_quantity"]
+    assert xcp_before - xcp_after == actual_consumed
+    assert actual_consumed < give_quantity

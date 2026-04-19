@@ -104,6 +104,8 @@ def validate(
 
     if quantity_minted <= 0:
         problems.append("deposit too small to mint LP tokens")
+    elif quantity_minted > config.MAX_INT:
+        problems.append("quantity_minted exceeds maximum value")
     elif min_lp_quantity > 0 and quantity_minted < min_lp_quantity:
         problems.append(
             f"slippage protection: would mint {quantity_minted} LP tokens, minimum is {min_lp_quantity}"

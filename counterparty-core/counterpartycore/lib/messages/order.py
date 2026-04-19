@@ -891,8 +891,22 @@ def match(db, tx, block_index=None):
             )
             tx1_give_remaining -= pool_fill_quantity
             tx1_get_remaining -= pool_output
-            if tx1_give_remaining <= 0 or tx1_get_remaining <= 0:
+
+            if tx1_give_remaining <= 0 or (
+                tx1_get_remaining <= 0 and protocol.enabled("recredit_give_remaining")
+            ):
                 tx1_status = "filled"
+                if tx1_give_remaining > 0:
+                    ledger.events.credit(
+                        db,
+                        tx1["source"],
+                        tx1["give_asset"],
+                        tx1_give_remaining,
+                        tx["block_index"],
+                        event=tx1["tx_hash"],
+                        action="filled",
+                    )
+                tx1_give_remaining = 0
 
             set_data = {
                 "give_remaining": tx1_give_remaining,
