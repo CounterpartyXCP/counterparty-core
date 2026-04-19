@@ -925,8 +925,6 @@ def test_parse_subsequent_deposit_ignores_lp_asset_id(ledger_db, defaults, block
     pool = ledger.markets.get_pool(ledger_db, *ledger.markets.sort_pair("XCP", "DIVISIBLE"))
     reserve_a_before = pool["reserve_a"]
 
-    xcp_id = ledger.issuances.get_asset_id(ledger_db, "XCP")
-    div_id = ledger.issuances.get_asset_id(ledger_db, "DIVISIBLE")
     garbage_lp_id = 42
     sorted_a, sorted_b = ledger.markets.sort_pair("XCP", "DIVISIBLE")
     a_id = ledger.issuances.get_asset_id(ledger_db, sorted_a)
