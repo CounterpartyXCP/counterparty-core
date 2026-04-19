@@ -192,9 +192,7 @@ def test_compose_and_unpack_roundtrip(ledger_db, defaults):
 
 
 def test_unpack_bad_data(ledger_db):
-    asset_a, asset_b, q_a, q_b, min_lp, lp_asset_id = pooldeposit.unpack(
-        ledger_db, b"\x00\x01\x02"
-    )
+    asset_a, asset_b, q_a, q_b, min_lp, lp_asset_id = pooldeposit.unpack(ledger_db, b"\x00\x01\x02")
     assert asset_a == ""
     assert asset_b == ""
     assert q_a == 0
@@ -726,9 +724,7 @@ def test_compose_rejects_taken_lp_asset(ledger_db, defaults):
         )
 
 
-def test_compose_subsequent_deposit_packs_zero_lp_asset_id(
-    ledger_db, defaults, blockchain_mock
-):
+def test_compose_subsequent_deposit_packs_zero_lp_asset_id(ledger_db, defaults, blockchain_mock):
     source = defaults["addresses"][0]
     quantity = defaults["quantity"]
     # first deposit creates the pool
@@ -856,9 +852,7 @@ def test_parse_first_deposit_rejects_base26_lp_asset_id(
     )
 
 
-def test_compose_ignores_lp_asset_when_pool_exists(
-    ledger_db, defaults, blockchain_mock
-):
+def test_compose_ignores_lp_asset_when_pool_exists(ledger_db, defaults, blockchain_mock):
     source = defaults["addresses"][0]
     q = defaults["quantity"]
     # Create the pool first
@@ -921,9 +915,7 @@ def test_subsequent_deposit_mints_min_of_bases(ledger_db, defaults, blockchain_m
     assert minted <= b_basis
 
 
-def test_parse_subsequent_deposit_ignores_lp_asset_id(
-    ledger_db, defaults, blockchain_mock
-):
+def test_parse_subsequent_deposit_ignores_lp_asset_id(ledger_db, defaults, blockchain_mock):
     source = defaults["addresses"][0]
     q = defaults["quantity"]
     tx1 = blockchain_mock.dummy_tx(ledger_db, source)

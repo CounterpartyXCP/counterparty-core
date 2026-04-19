@@ -459,4 +459,3 @@ def test_validate_slippage_protection_min_b(ledger_db, defaults, blockchain_mock
         min_quantity_b=q * 10,
     )
     assert any("slippage protection" in p for p in problems)
-
