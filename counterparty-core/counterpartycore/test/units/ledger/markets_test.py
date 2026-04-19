@@ -139,6 +139,50 @@ def test_compute_pool_math(ledger_db):
     assert markets.compute_pool_output(1000, 1000, 0, 50) == 0
 
 
+def test_execute_pool_match_enforces_k_invariant(ledger_db, defaults, blockchain_mock):
+    import pytest
+    from counterpartycore.lib.messages import pooldeposit
+
+    source = defaults["addresses"][0]
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data = pooldeposit.compose(
+        ledger_db, source, "XCP", "DIVISIBLE", defaults["quantity"], defaults["quantity"]
+    )
+    pooldeposit.parse(ledger_db, tx, data[1:])
+    pool = markets.get_pool(ledger_db, *markets.sort_pair("XCP", "DIVISIBLE"))
+
+    bad_give = 1
+    bad_get = pool["reserve_b"] - 1
+    tx1 = {
+        "source": defaults["addresses"][1],
+        "tx_hash": "b" * 64,
+        "give_asset": pool["asset_a"],
+        "get_asset": pool["asset_b"],
+        "give_quantity": bad_give,
+        "get_quantity": bad_get,
+    }
+    tx2 = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][1])
+    with pytest.raises(AssertionError):
+        markets.execute_pool_match(ledger_db, tx2, tx1, pool, bad_give, bad_get)
+
+
+def test_compute_pool_input_never_overshoots_target():
+    """dx must never push the pool's marginal price past target."""
+    cases = [
+        (1_000_000, 1_000_000, 101, 100, 30),
+        (1_000_000, 2_000_000, 1, 1, 30),
+        (100_000_000, 1_000, 1000, 1, 100),
+        (1234, 5678, 7, 3, 0),
+        (10_000_000, 10_000, 105, 100, 50),
+    ]
+    for r_in, r_out, t_num, t_den, fee in cases:
+        dx = markets.compute_pool_input_for_target_price(r_in, r_out, t_num, t_den, fee)
+        if dx > 0:
+            fee_factor = 10000 - fee
+            y = r_out * dx * fee_factor // (r_in * 10000 + dx * fee_factor)
+            assert (r_in + dx) * 10000 * t_den <= (r_out - y) * fee_factor * t_num
+
+
 def test_try_pool_fill_early_returns(ledger_db):
     """Exercise try_pool_fill early-return paths."""
     tx1 = {

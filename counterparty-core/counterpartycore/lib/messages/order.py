@@ -879,15 +879,20 @@ def match(db, tx, block_index=None):
             db, *ledger.markets.sort_pair(tx1["give_asset"], tx1["get_asset"])
         )
         pool_fill_quantity, pool_output = ledger.markets.try_pool_fill(
-            tx1, amm_pool, tx1_give_remaining
+            tx1,
+            amm_pool,
+            tx1_give_remaining,
+            target_price_num=tx1["give_quantity"],
+            target_price_den=tx1["get_quantity"],
         )
         if pool_fill_quantity > 0:
             ledger.markets.execute_pool_match(
                 db, tx, tx1, amm_pool, pool_fill_quantity, pool_output
             )
-            tx1_give_remaining = 0
+            tx1_give_remaining -= pool_fill_quantity
             tx1_get_remaining -= pool_output
-            tx1_status = "filled"
+            if tx1_give_remaining <= 0 or tx1_get_remaining <= 0:
+                tx1_status = "filled"
 
             set_data = {
                 "give_remaining": tx1_give_remaining,

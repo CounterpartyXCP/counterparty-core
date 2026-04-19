@@ -653,6 +653,8 @@ def execute_pool_match(db, tx, tx1, pool, give_quantity, get_quantity):
         new_reserve_b = pool["reserve_b"] + give_quantity
         new_reserve_a = pool["reserve_a"] - get_quantity
 
+    assert new_reserve_a * new_reserve_b >= pool["reserve_a"] * pool["reserve_b"]
+
     credit(
         db,
         tx1["source"],

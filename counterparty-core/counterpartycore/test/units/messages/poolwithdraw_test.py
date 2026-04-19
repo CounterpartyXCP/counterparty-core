@@ -62,6 +62,30 @@ def test_validate_overflow_quantity(ledger_db, defaults):
     assert any("exceeds maximum" in p for p in problems)
 
 
+def test_validate_min_quantity_a_overflow(ledger_db, defaults):
+    problems = poolwithdraw.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        100,
+        min_quantity_a=config.MAX_INT + 1,
+    )
+    assert any("min_quantity_a exceeds maximum value" in p for p in problems)
+
+
+def test_validate_min_quantity_b_overflow(ledger_db, defaults):
+    problems = poolwithdraw.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        100,
+        min_quantity_b=config.MAX_INT + 1,
+    )
+    assert any("min_quantity_b exceeds maximum value" in p for p in problems)
+
+
 def test_validate_no_pool(ledger_db, defaults):
     problems = poolwithdraw.validate(ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", 1000)
     assert any("pool does not exist" in p for p in problems)
@@ -109,9 +133,8 @@ def test_compose_produces_correct_format(ledger_db, defaults, blockchain_mock):
     )
     assert source == defaults["addresses"][0]
     assert destinations == []
-    # Data: 1 byte type ID + 24 bytes struct
-    assert len(data) == 1 + 24
-    assert data[0] == 121
+    assert len(data) == 1 + poolwithdraw.LENGTH
+    assert data[0] == poolwithdraw.ID
 
 
 def test_compose_and_unpack_roundtrip(ledger_db, defaults, blockchain_mock):
@@ -129,18 +152,22 @@ def test_compose_and_unpack_roundtrip(ledger_db, defaults, blockchain_mock):
         ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", lp_balance
     )
     message = data[1:]
-    asset_a, asset_b, quantity = poolwithdraw.unpack(ledger_db, message)
+    asset_a, asset_b, quantity, min_a, min_b = poolwithdraw.unpack(ledger_db, message)
 
     assert asset_a == "XCP"
     assert asset_b == "DIVISIBLE"
     assert quantity == lp_balance
+    assert min_a == 0
+    assert min_b == 0
 
 
 def test_unpack_bad_data(ledger_db):
-    asset_a, asset_b, lp_qty = poolwithdraw.unpack(ledger_db, b"\x00\x01\x02")
+    asset_a, asset_b, lp_qty, min_a, min_b = poolwithdraw.unpack(ledger_db, b"\x00\x01\x02")
     assert asset_a == ""
     assert asset_b == ""
     assert lp_qty == 0
+    assert min_a == 0
+    assert min_b == 0
 
 
 def test_unpack_return_dict(ledger_db):
@@ -391,3 +418,45 @@ def test_small_but_redeemable_withdrawal(ledger_db, defaults, blockchain_mock, t
     pool_after = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
     assert pool_after["reserve_a"] < pool["reserve_a"]
     assert pool_after["reserve_b"] < pool["reserve_b"]
+
+
+def test_validate_slippage_protection_min_a(ledger_db, defaults, blockchain_mock):
+    source = defaults["addresses"][0]
+    q = defaults["quantity"]
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", q, q)
+    pooldeposit.parse(ledger_db, tx, data[1:])
+    pool = ledger.markets.get_pool(ledger_db, *ledger.markets.sort_pair("XCP", "DIVISIBLE"))
+    lp = ledger.balances.get_balance(ledger_db, source, pool["lp_asset"])
+
+    problems = poolwithdraw.validate(
+        ledger_db,
+        source,
+        "XCP",
+        "DIVISIBLE",
+        lp // 4,
+        min_quantity_a=q * 10,
+    )
+    assert any("slippage protection" in p for p in problems)
+
+
+def test_validate_slippage_protection_min_b(ledger_db, defaults, blockchain_mock):
+    source = defaults["addresses"][0]
+    q = defaults["quantity"]
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", q, q)
+    pooldeposit.parse(ledger_db, tx, data[1:])
+    pool = ledger.markets.get_pool(ledger_db, *ledger.markets.sort_pair("XCP", "DIVISIBLE"))
+    lp = ledger.balances.get_balance(ledger_db, source, pool["lp_asset"])
+
+    problems = poolwithdraw.validate(
+        ledger_db,
+        source,
+        "XCP",
+        "DIVISIBLE",
+        lp // 4,
+        min_quantity_a=0,
+        min_quantity_b=q * 10,
+    )
+    assert any("slippage protection" in p for p in problems)
+

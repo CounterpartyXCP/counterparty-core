@@ -283,11 +283,31 @@ def test_compose_pooldeposit(apiv2_client, defaults):
     assert response.status_code in [200, 400]
 
 
+def test_compose_pooldeposit_with_lp_asset(apiv2_client, defaults):
+    address = defaults["addresses"][0]
+    response = apiv2_client.get(
+        f"/v2/addresses/{address}/compose/pooldeposit"
+        f"?asset_a=XCP&asset_b=DIVISIBLE&quantity_a=100000000&quantity_b=100000000"
+        f"&lp_asset=A77777777777777777"
+    )
+    assert response.status_code in [200, 400]
+
+
 def test_compose_poolwithdraw(apiv2_client, defaults):
     """Test compose_poolwithdraw function via API."""
     address = defaults["addresses"][0]
     response = apiv2_client.get(
         f"/v2/addresses/{address}/compose/poolwithdraw?asset_a=XCP&asset_b=DIVISIBLE&quantity=1000"
+    )
+    assert response.status_code in [200, 400]
+
+
+def test_compose_poolwithdraw_with_slippage(apiv2_client, defaults):
+    address = defaults["addresses"][0]
+    response = apiv2_client.get(
+        f"/v2/addresses/{address}/compose/poolwithdraw"
+        f"?asset_a=XCP&asset_b=DIVISIBLE&quantity=1000"
+        f"&min_quantity_a=10&min_quantity_b=10"
     )
     assert response.status_code in [200, 400]
 

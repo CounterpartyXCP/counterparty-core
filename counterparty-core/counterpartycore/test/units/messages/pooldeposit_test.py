@@ -1,3 +1,5 @@
+import struct
+
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages import pooldeposit, poolwithdraw
@@ -11,6 +13,7 @@ def test_validate_valid(ledger_db, defaults):
         "DIVISIBLE",
         defaults["quantity"],
         defaults["quantity"],
+        lp_asset="A99999999999999999",
     )
     assert problems == []
 
@@ -157,10 +160,9 @@ def test_compose_produces_correct_format(ledger_db, defaults):
     )
     assert source == defaults["addresses"][0]
     assert destinations == []
-    # Data: 1 byte type ID + 32 bytes struct
-    assert len(data) == 1 + 40  # SHORT_TXTYPE (1) + QQQQQ (40)
-    # First byte is type ID 120
-    assert data[0] == 120
+    # 1 byte type ID + QQQQQQ (48 bytes)
+    assert len(data) == 1 + pooldeposit.LENGTH
+    assert data[0] == pooldeposit.ID
 
 
 def test_compose_and_unpack_roundtrip(ledger_db, defaults):
@@ -178,24 +180,30 @@ def test_compose_and_unpack_roundtrip(ledger_db, defaults):
 
     # Strip the type ID byte
     message = data[1:]
-    asset_a, asset_b, q_a, q_b, min_lp = pooldeposit.unpack(ledger_db, message)
+    asset_a, asset_b, q_a, q_b, min_lp, lp_asset_id = pooldeposit.unpack(ledger_db, message)
 
     assert asset_a == "XCP"
     assert asset_b == "DIVISIBLE"
     assert q_a == quantity_a
     assert q_b == quantity_b
+    # XCP:DIVISIBLE pool doesn't exist in the fixture, so compose must have
+    # selected an lp_asset_id for the first-deposit path.
+    assert lp_asset_id > 0
 
 
 def test_unpack_bad_data(ledger_db):
-    asset_a, asset_b, q_a, q_b, min_lp = pooldeposit.unpack(ledger_db, b"\x00\x01\x02")
+    asset_a, asset_b, q_a, q_b, min_lp, lp_asset_id = pooldeposit.unpack(
+        ledger_db, b"\x00\x01\x02"
+    )
     assert asset_a == ""
     assert asset_b == ""
     assert q_a == 0
     assert q_b == 0
+    assert lp_asset_id == 0
 
 
 def test_unpack_wrong_length(ledger_db):
-    asset_a, asset_b, q_a, q_b, min_lp = pooldeposit.unpack(ledger_db, b"\x00" * 16)
+    asset_a, asset_b, q_a, q_b, min_lp, lp_asset_id = pooldeposit.unpack(ledger_db, b"\x00" * 16)
     assert asset_a == ""
 
 
@@ -594,3 +602,349 @@ def test_validate_xcp_fee_insufficient(ledger_db, defaults, blockchain_mock):
 
         problems = pooldeposit.validate(ledger_db, source, "XCP", "DIVISIBLE", quantity, 1)
         assert any("insufficient XCP for fee" in p for p in problems)
+
+
+# lp_asset / lp_asset_id plumbing for first-deposit txs.
+
+
+def test_validate_first_deposit_requires_lp_asset(ledger_db, defaults):
+    problems = pooldeposit.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        defaults["quantity"],
+        defaults["quantity"],
+        lp_asset=None,
+    )
+    assert any("requires an lp_asset" in p for p in problems)
+
+
+def test_validate_min_lp_quantity_overflow(ledger_db, defaults):
+    problems = pooldeposit.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        defaults["quantity"],
+        defaults["quantity"],
+        min_lp_quantity=config.MAX_INT + 1,
+    )
+    assert any("min_lp_quantity exceeds maximum value" in p for p in problems)
+
+
+def test_validate_lp_asset_rejects_xcp(ledger_db, defaults):
+    problems = pooldeposit.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        defaults["quantity"],
+        defaults["quantity"],
+        lp_asset="XCP",
+    )
+    assert any("must be a numeric asset" in p for p in problems)
+
+
+def test_validate_lp_asset_rejects_btc(ledger_db, defaults):
+    problems = pooldeposit.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        defaults["quantity"],
+        defaults["quantity"],
+        lp_asset="BTC",
+    )
+    assert any("must be a numeric asset" in p for p in problems)
+
+
+def test_validate_lp_asset_rejects_taken_name(ledger_db, defaults):
+    # A160361285792733729 is a pre-existing numeric asset in the fixture
+    problems = pooldeposit.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        defaults["quantity"],
+        defaults["quantity"],
+        lp_asset="A160361285792733729",
+    )
+    assert any("already in use" in p for p in problems)
+
+
+def test_validate_lp_asset_rejects_base26_name(ledger_db, defaults):
+    problems = pooldeposit.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        defaults["quantity"],
+        defaults["quantity"],
+        lp_asset="DIVISIBLE",
+    )
+    assert any("must be a numeric asset" in p for p in problems)
+
+
+def test_compose_auto_generates_lp_asset_id(ledger_db, defaults):
+    _, _, data = pooldeposit.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        defaults["quantity"],
+        defaults["quantity"],
+    )
+    _, _, _, _, _, lp_asset_id = pooldeposit.unpack(ledger_db, data[1:])
+    assert lp_asset_id > 0
+
+
+def test_compose_accepts_explicit_lp_asset(ledger_db, defaults):
+    _, _, data = pooldeposit.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        defaults["quantity"],
+        defaults["quantity"],
+        lp_asset="A99999999999999999",
+    )
+    _, _, _, _, _, lp_asset_id = pooldeposit.unpack(ledger_db, data[1:])
+    assert lp_asset_id == 99999999999999999
+
+
+def test_compose_rejects_taken_lp_asset(ledger_db, defaults):
+    with pytest.raises(exceptions.ComposeError):
+        pooldeposit.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            "XCP",
+            "DIVISIBLE",
+            defaults["quantity"],
+            defaults["quantity"],
+            lp_asset="DIVISIBLE",
+        )
+
+
+def test_compose_subsequent_deposit_packs_zero_lp_asset_id(
+    ledger_db, defaults, blockchain_mock
+):
+    source = defaults["addresses"][0]
+    quantity = defaults["quantity"]
+    # first deposit creates the pool
+    tx1 = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data = pooldeposit.compose(
+        ledger_db, source, "XCP", "DIVISIBLE", quantity // 4, quantity // 4
+    )
+    pooldeposit.parse(ledger_db, tx1, data[1:])
+    # now the pool exists; compose should pack 0 for lp_asset_id
+    _, _, data2 = pooldeposit.compose(
+        ledger_db, source, "XCP", "DIVISIBLE", quantity // 4, quantity // 4
+    )
+    _, _, _, _, _, lp_asset_id = pooldeposit.unpack(ledger_db, data2[1:])
+    assert lp_asset_id == 0
+
+
+def _pack_message(asset_a_id, asset_b_id, q_a, q_b, min_lp, lp_asset_id):
+    return struct.pack(pooldeposit.FORMAT, asset_a_id, asset_b_id, q_a, q_b, min_lp, lp_asset_id)
+
+
+def test_parse_first_deposit_rejects_zero_lp_asset_id(
+    ledger_db, defaults, blockchain_mock, test_helpers
+):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    q = defaults["quantity"]
+    xcp_id = ledger.issuances.get_asset_id(ledger_db, "XCP")
+    div_id = ledger.issuances.get_asset_id(ledger_db, "DIVISIBLE")
+    message = _pack_message(xcp_id, div_id, q, q, 0, 0)
+
+    pooldeposit.parse(ledger_db, tx, message)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "pool_deposits",
+                "values": {
+                    "tx_hash": tx["tx_hash"],
+                    "status": "invalid: first pool deposit requires an lp_asset",
+                },
+            },
+        ],
+    )
+
+
+def test_parse_first_deposit_rejects_taken_lp_asset_id(
+    ledger_db, defaults, blockchain_mock, test_helpers
+):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    q = defaults["quantity"]
+    xcp_id = ledger.issuances.get_asset_id(ledger_db, "XCP")
+    div_id = ledger.issuances.get_asset_id(ledger_db, "DIVISIBLE")
+    # A160361285792733729 is a numeric asset already issued in the fixture
+    taken_id = ledger.issuances.get_asset_id(ledger_db, "A160361285792733729")
+    message = _pack_message(xcp_id, div_id, q, q, 0, taken_id)
+
+    pooldeposit.parse(ledger_db, tx, message)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "pool_deposits",
+                "values": {
+                    "tx_hash": tx["tx_hash"],
+                    "status": "invalid: lp_asset A160361285792733729 is already in use",
+                },
+            },
+        ],
+    )
+
+
+def test_parse_first_deposit_rejects_too_low_lp_asset_id(
+    ledger_db, defaults, blockchain_mock, test_helpers
+):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    q = defaults["quantity"]
+    xcp_id = ledger.issuances.get_asset_id(ledger_db, "XCP")
+    div_id = ledger.issuances.get_asset_id(ledger_db, "DIVISIBLE")
+    # An lp_asset_id in the sub-26^3 range raises AssetIDError in
+    # generate_asset_name, so lp_asset resolves to None and validate
+    # flags the missing lp_asset.
+    message = _pack_message(xcp_id, div_id, q, q, 0, 100)
+
+    pooldeposit.parse(ledger_db, tx, message)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "pool_deposits",
+                "values": {
+                    "tx_hash": tx["tx_hash"],
+                    "status": "invalid: first pool deposit requires an lp_asset",
+                },
+            },
+        ],
+    )
+
+
+def test_parse_first_deposit_rejects_base26_lp_asset_id(
+    ledger_db, defaults, blockchain_mock, test_helpers
+):
+    # 17576 = 26**3 decodes to the base-26 name "BAAA". Accepting this would
+    # squat a human-readable name under issuer=UNSPENDABLE.
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    q = defaults["quantity"]
+    xcp_id = ledger.issuances.get_asset_id(ledger_db, "XCP")
+    div_id = ledger.issuances.get_asset_id(ledger_db, "DIVISIBLE")
+    message = _pack_message(xcp_id, div_id, q, q, 0, 17576)
+
+    pooldeposit.parse(ledger_db, tx, message)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "pool_deposits",
+                "values": {
+                    "tx_hash": tx["tx_hash"],
+                    "status": "invalid: lp_asset must be a numeric asset",
+                },
+            },
+        ],
+    )
+
+
+def test_compose_ignores_lp_asset_when_pool_exists(
+    ledger_db, defaults, blockchain_mock
+):
+    source = defaults["addresses"][0]
+    q = defaults["quantity"]
+    # Create the pool first
+    tx1 = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", q // 4, q // 4)
+    pooldeposit.parse(ledger_db, tx1, data[1:])
+
+    # Compose a subsequent deposit, passing an explicit lp_asset that
+    # should be ignored (pool already has its own LP asset)
+    _, _, data2 = pooldeposit.compose(
+        ledger_db,
+        source,
+        "XCP",
+        "DIVISIBLE",
+        q // 4,
+        q // 4,
+        lp_asset="A88888888888888888",
+    )
+    _, _, _, _, _, lp_asset_id = pooldeposit.unpack(ledger_db, data2[1:])
+    assert lp_asset_id == 0
+
+
+def test_subsequent_deposit_mints_min_of_bases(ledger_db, defaults, blockchain_mock):
+    source = defaults["addresses"][0]
+    tx1 = blockchain_mock.dummy_tx(ledger_db, source)
+    q = defaults["quantity"]
+    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", q, q // 2)
+    pooldeposit.parse(ledger_db, tx1, data[1:])
+
+    pool = ledger.markets.get_pool(ledger_db, *ledger.markets.sort_pair("XCP", "DIVISIBLE"))
+    lp_asset = pool["lp_asset"]
+    supply = ledger.supplies.asset_issued_total_no_cache(
+        ledger_db, lp_asset
+    ) - ledger.supplies.asset_destroyed_total_no_cache(ledger_db, lp_asset)
+    reserve_a, reserve_b = pool["reserve_a"], pool["reserve_b"]
+
+    deposit_a = reserve_a * 3 // 7
+    deposit_b = reserve_b * 5 // 7
+    actual_a, actual_b = pooldeposit.compute_actual_deposit_amounts(pool, deposit_a, deposit_b)
+
+    a_basis = actual_a * supply // reserve_a
+    b_basis = actual_b * supply // reserve_b
+    expected = min(a_basis, b_basis)
+
+    lp_before = ledger.balances.get_balance(ledger_db, source, lp_asset)
+    tx2 = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data2 = pooldeposit.compose(
+        ledger_db,
+        source,
+        pool["asset_a"],
+        pool["asset_b"],
+        deposit_a,
+        deposit_b,
+    )
+    pooldeposit.parse(ledger_db, tx2, data2[1:])
+
+    minted = ledger.balances.get_balance(ledger_db, source, lp_asset) - lp_before
+    assert minted == expected
+    assert minted <= a_basis
+    assert minted <= b_basis
+
+
+def test_parse_subsequent_deposit_ignores_lp_asset_id(
+    ledger_db, defaults, blockchain_mock
+):
+    source = defaults["addresses"][0]
+    q = defaults["quantity"]
+    tx1 = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", q // 4, q // 4)
+    pooldeposit.parse(ledger_db, tx1, data[1:])
+
+    pool = ledger.markets.get_pool(ledger_db, *ledger.markets.sort_pair("XCP", "DIVISIBLE"))
+    reserve_a_before = pool["reserve_a"]
+
+    xcp_id = ledger.issuances.get_asset_id(ledger_db, "XCP")
+    div_id = ledger.issuances.get_asset_id(ledger_db, "DIVISIBLE")
+    garbage_lp_id = 42
+    sorted_a, sorted_b = ledger.markets.sort_pair("XCP", "DIVISIBLE")
+    a_id = ledger.issuances.get_asset_id(ledger_db, sorted_a)
+    b_id = ledger.issuances.get_asset_id(ledger_db, sorted_b)
+    message = _pack_message(a_id, b_id, q // 4, q // 4, 0, garbage_lp_id)
+
+    tx2 = blockchain_mock.dummy_tx(ledger_db, source)
+    pooldeposit.parse(ledger_db, tx2, message)
+
+    # Despite the garbage lp_asset_id, the second deposit is valid because
+    # the pool already exists (lp_asset_id is ignored on subsequent deposits).
+    pool_after = ledger.markets.get_pool(ledger_db, sorted_a, sorted_b)
+    assert pool_after["reserve_a"] > reserve_a_before

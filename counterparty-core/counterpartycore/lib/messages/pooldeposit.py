@@ -12,12 +12,24 @@ from counterpartycore.lib.utils import assetnames
 logger = logging.getLogger(config.LOGGER_NAME)
 
 ID = 120
-FORMAT = ">QQQQQ"  # asset_a_id, asset_b_id, quantity_a, quantity_b, min_lp_quantity
-LENGTH = 8 + 8 + 8 + 8 + 8  # 40 bytes
+FORMAT = ">QQQQQQ"  # asset_a_id, asset_b_id, quantity_a, quantity_b, min_lp_quantity, lp_asset_id
+LENGTH = 48
 
 
-def validate(db, source, asset_a, asset_b, quantity_a, quantity_b, min_lp_quantity=0):
+def validate(
+    db,
+    source,
+    asset_a,
+    asset_b,
+    quantity_a,
+    quantity_b,
+    min_lp_quantity=0,
+    lp_asset=None,
+    block_index=None,
+):
     problems = []
+    if block_index is None:
+        block_index = CurrentState().current_block_index()
 
     if config.BTC in (asset_a, asset_b):
         problems.append("BTC pairs are not supported for AMM pools")
@@ -45,6 +57,9 @@ def validate(db, source, asset_a, asset_b, quantity_a, quantity_b, min_lp_quanti
         elif param_value > config.MAX_INT:
             problems.append(f"{param_name} exceeds maximum value")
 
+    if min_lp_quantity > config.MAX_INT:
+        problems.append("min_lp_quantity exceeds maximum value")
+
     if not problems and quantity_a > 0 and quantity_b > config.MAX_INT // quantity_a:
         problems.append("quantity_a * quantity_b exceeds maximum value")
 
@@ -53,6 +68,14 @@ def validate(db, source, asset_a, asset_b, quantity_a, quantity_b, min_lp_quanti
 
     sorted_a, sorted_b = ledger.markets.sort_pair(asset_a, asset_b)
     existing_pool = ledger.markets.get_pool(db, sorted_a, sorted_b)
+
+    if existing_pool is None:
+        if not lp_asset:
+            problems.append("first pool deposit requires an lp_asset")
+        elif not assetnames.is_numeric(lp_asset):
+            problems.append("lp_asset must be a numeric asset")
+        elif ledger.issuances.get_issuances(db, asset=lp_asset, status="valid"):
+            problems.append(f"lp_asset {lp_asset} is already in use")
 
     if asset_a == sorted_a:
         sorted_quantity_a, sorted_quantity_b = quantity_a, quantity_b
@@ -74,7 +97,10 @@ def validate(db, source, asset_a, asset_b, quantity_a, quantity_b, min_lp_quanti
         actual_a_sorted, actual_b_sorted = compute_actual_deposit_amounts(
             existing_pool, sorted_quantity_a, sorted_quantity_b
         )
-        quantity_minted = actual_a_sorted * total_lp_supply // existing_pool["reserve_a"]
+        quantity_minted = min(
+            actual_a_sorted * total_lp_supply // existing_pool["reserve_a"],
+            actual_b_sorted * total_lp_supply // existing_pool["reserve_b"],
+        )
 
     if quantity_minted <= 0:
         problems.append("deposit too small to mint LP tokens")
@@ -89,7 +115,7 @@ def validate(db, source, asset_a, asset_b, quantity_a, quantity_b, min_lp_quanti
         required_a, required_b = actual_b_sorted, actual_a_sorted
 
     # Check balances and gas fee
-    fee = gas.get_transaction_fee(db, ID, CurrentState().current_block_index())
+    fee = gas.get_transaction_fee(db, ID, block_index)
     balance_a = ledger.balances.get_balance(db, source, asset_a)
     if balance_a < required_a:
         problems.append(f"insufficient balance of {asset_a}")
@@ -118,20 +144,34 @@ def compose(
     quantity_a: int,
     quantity_b: int,
     min_lp_quantity: int = 0,
+    lp_asset: str = None,
     skip_validation: bool = False,
 ):
     # resolve subassets
     asset_a = ledger.issuances.resolve_subasset_longname(db, asset_a)
     asset_b = ledger.issuances.resolve_subasset_longname(db, asset_b)
 
-    problems = validate(db, source, asset_a, asset_b, quantity_a, quantity_b, min_lp_quantity)
+    sorted_a, sorted_b = ledger.markets.sort_pair(asset_a, asset_b)
+    existing_pool = ledger.markets.get_pool(db, sorted_a, sorted_b)
+    if existing_pool is None and lp_asset is None:
+        lp_asset = assetnames.generate_random_asset(f"{sorted_a}:{sorted_b}")
+
+    problems = validate(
+        db, source, asset_a, asset_b, quantity_a, quantity_b, min_lp_quantity, lp_asset
+    )
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     asset_a_id = ledger.issuances.get_asset_id(db, asset_a)
     asset_b_id = ledger.issuances.get_asset_id(db, asset_b)
+    lp_asset_id = 0
+    if existing_pool is None and lp_asset:
+        lp_asset_id = ledger.issuances.generate_asset_id(lp_asset)
+
     data = messagetype.pack(ID)
-    data += struct.pack(FORMAT, asset_a_id, asset_b_id, quantity_a, quantity_b, min_lp_quantity)
+    data += struct.pack(
+        FORMAT, asset_a_id, asset_b_id, quantity_a, quantity_b, min_lp_quantity, lp_asset_id
+    )
 
     return (source, [], data)
 
@@ -140,9 +180,14 @@ def unpack(db, message, return_dict=False):
     try:
         if len(message) != LENGTH:
             raise exceptions.UnpackError
-        asset_a_id, asset_b_id, quantity_a, quantity_b, min_lp_quantity = struct.unpack(
-            FORMAT, message
-        )
+        (
+            asset_a_id,
+            asset_b_id,
+            quantity_a,
+            quantity_b,
+            min_lp_quantity,
+            lp_asset_id,
+        ) = struct.unpack(FORMAT, message)
         asset_a = ledger.issuances.get_asset_name(db, asset_a_id)
         asset_b = ledger.issuances.get_asset_name(db, asset_b_id)
 
@@ -153,8 +198,9 @@ def unpack(db, message, return_dict=False):
                 "quantity_a": quantity_a,
                 "quantity_b": quantity_b,
                 "min_lp_quantity": min_lp_quantity,
+                "lp_asset_id": lp_asset_id,
             }
-        return asset_a, asset_b, quantity_a, quantity_b, min_lp_quantity
+        return asset_a, asset_b, quantity_a, quantity_b, min_lp_quantity, lp_asset_id
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error):
         if return_dict:
             return {
@@ -163,19 +209,35 @@ def unpack(db, message, return_dict=False):
                 "quantity_a": 0,
                 "quantity_b": 0,
                 "min_lp_quantity": 0,
+                "lp_asset_id": 0,
             }
-        return "", "", 0, 0, 0
+        return "", "", 0, 0, 0, 0
 
 
 def parse(db, tx, message):
-    asset_a, asset_b, quantity_a, quantity_b, min_lp_quantity = unpack(db, message)
+    asset_a, asset_b, quantity_a, quantity_b, min_lp_quantity, lp_asset_id = unpack(db, message)
+
+    lp_asset = None
+    if lp_asset_id > 0:
+        try:
+            lp_asset = ledger.issuances.generate_asset_name(lp_asset_id)
+        except exceptions.AssetIDError:
+            lp_asset = None
 
     status = "valid"
     if not asset_a or not asset_b or quantity_a <= 0 or quantity_b <= 0:
         status = "invalid: could not unpack"
     else:
         problems = validate(
-            db, tx["source"], asset_a, asset_b, quantity_a, quantity_b, min_lp_quantity
+            db,
+            tx["source"],
+            asset_a,
+            asset_b,
+            quantity_a,
+            quantity_b,
+            min_lp_quantity,
+            lp_asset,
+            block_index=tx["block_index"],
         )
         if problems:
             status = "invalid: " + "; ".join(problems)
@@ -227,7 +289,9 @@ def parse(db, tx, message):
 
     actual_a, actual_b = quantity_a, quantity_b
     if existing_pool is None:
-        quantity_minted = first_deposit(db, tx, sorted_a, sorted_b, quantity_a, quantity_b)
+        quantity_minted = first_deposit(
+            db, tx, sorted_a, sorted_b, quantity_a, quantity_b, lp_asset
+        )
     else:
         lp_asset = existing_pool["lp_asset"]
         supply = ledger.supplies.asset_issued_total_no_cache(
@@ -302,7 +366,7 @@ def compute_actual_deposit_amounts(pool, quantity_a, quantity_b):
     return quantity_b * pool["reserve_a"] // pool["reserve_b"], quantity_b
 
 
-def first_deposit(db, tx, asset_a, asset_b, quantity_a, quantity_b):
+def first_deposit(db, tx, asset_a, asset_b, quantity_a, quantity_b, lp_asset):
     """Create pool and LP token, mint all LP tokens to depositor."""
     source = tx["source"]
 
@@ -316,9 +380,7 @@ def first_deposit(db, tx, asset_a, asset_b, quantity_a, quantity_b):
         db, source, asset_b, quantity_b, tx["tx_index"], action="pool deposit", event=tx["tx_hash"]
     )
 
-    # Generate LP token name (deterministic in regtest, random in production)
-    lp_asset_name = assetnames.generate_random_asset(f"{asset_a}:{asset_b}")
-    lp_asset_id = ledger.issuances.generate_asset_id(lp_asset_name)
+    lp_asset_id = ledger.issuances.generate_asset_id(lp_asset)
 
     # Register LP token as asset
     ledger.events.insert_record(
@@ -326,7 +388,7 @@ def first_deposit(db, tx, asset_a, asset_b, quantity_a, quantity_b):
         "assets",
         {
             "asset_id": str(lp_asset_id),
-            "asset_name": lp_asset_name,
+            "asset_name": lp_asset,
             "block_index": tx["block_index"],
             "asset_longname": None,
         },
@@ -335,7 +397,7 @@ def first_deposit(db, tx, asset_a, asset_b, quantity_a, quantity_b):
 
     # Record issuance
     issuance_bindings = make_lp_issuance_bindings(
-        db, tx, lp_asset_name, total_lp, asset_a, asset_b, "creation"
+        db, tx, lp_asset, total_lp, asset_a, asset_b, "creation"
     )
     ledger.events.insert_record(db, "issuances", issuance_bindings, "ASSET_ISSUANCE")
 
@@ -343,7 +405,7 @@ def first_deposit(db, tx, asset_a, asset_b, quantity_a, quantity_b):
     ledger.events.credit(
         db,
         source,
-        lp_asset_name,
+        lp_asset,
         total_lp,
         tx["tx_index"],
         action="pool deposit",
@@ -362,7 +424,7 @@ def first_deposit(db, tx, asset_a, asset_b, quantity_a, quantity_b):
             "asset_b": asset_b,
             "reserve_a": quantity_a,
             "reserve_b": quantity_b,
-            "lp_asset": lp_asset_name,
+            "lp_asset": lp_asset,
         },
     )
 
@@ -416,7 +478,12 @@ def subsequent_deposit(db, tx, pool, asset_a, asset_b, quantity_a, quantity_b):
     ) - ledger.supplies.asset_destroyed_total_no_cache(db, lp_asset)
 
     actual_a, actual_b = compute_actual_deposit_amounts(pool, quantity_a, quantity_b)
-    quantity_minted = actual_a * total_lp_supply // pool["reserve_a"]
+    # min of both bases: the partner side is floored, so A-basis alone would
+    # over-issue LP relative to the smaller contribution.
+    quantity_minted = min(
+        actual_a * total_lp_supply // pool["reserve_a"],
+        actual_b * total_lp_supply // pool["reserve_b"],
+    )
 
     # Debit only the proportional amounts
     ledger.events.debit(

@@ -91,6 +91,51 @@ def test_order_fills_against_pool(ledger_db, defaults, blockchain_mock, test_hel
     assert pool_after["reserve_b"] != pool["reserve_b"]
 
 
+def test_pool_tail_partial_fill_at_taker_limit(ledger_db, defaults, blockchain_mock):
+    source_lp = defaults["addresses"][0]
+    source_trader = defaults["addresses"][1]
+    quantity = defaults["quantity"]
+
+    pool = create_pool(
+        ledger_db, blockchain_mock, source_lp, "XCP", "DIVISIBLE", quantity, quantity
+    )
+    sorted_a, sorted_b = ledger.markets.sort_pair("XCP", "DIVISIBLE")
+    reserve_a_before = pool["reserve_a"]
+    reserve_b_before = pool["reserve_b"]
+
+    # Tight rate (give:get = 2:1) would overshoot if pool took the full give.
+    give_quantity = quantity
+    get_quantity = quantity // 2
+
+    trader_div_before = ledger.balances.get_balance(ledger_db, source_trader, "DIVISIBLE")
+
+    tx = place_order(
+        ledger_db, blockchain_mock, source_trader, "XCP", give_quantity, "DIVISIBLE", get_quantity
+    )
+
+    cursor = ledger_db.cursor()
+    matches = cursor.execute(
+        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (tx["tx_hash"],)
+    ).fetchall()
+    assert len(matches) > 0
+
+    trader_div_after = ledger.balances.get_balance(ledger_db, source_trader, "DIVISIBLE")
+    assert trader_div_after > trader_div_before
+
+    orders = cursor.execute(
+        "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1", (tx["tx_hash"],)
+    ).fetchall()
+    assert 0 < orders[0]["give_remaining"] < give_quantity
+
+    pool_after = ledger.markets.get_pool(ledger_db, sorted_a, sorted_b)
+    if sorted_a == "XCP":
+        assert pool_after["reserve_a"] > reserve_a_before
+        assert pool_after["reserve_b"] < reserve_b_before
+    else:
+        assert pool_after["reserve_b"] > reserve_b_before
+        assert pool_after["reserve_a"] < reserve_a_before
+
+
 def test_order_respects_price_limit(ledger_db, defaults, blockchain_mock, test_helpers):
     """An order with a strict price should not fill at a worse rate."""
     source_lp = defaults["addresses"][0]

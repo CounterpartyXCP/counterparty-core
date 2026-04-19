@@ -11,12 +11,23 @@ from counterpartycore.lib.parser import messagetype
 logger = logging.getLogger(config.LOGGER_NAME)
 
 ID = 121
-FORMAT = ">QQQ"  # asset_a_id, asset_b_id, quantity
-LENGTH = 8 + 8 + 8  # 24 bytes
+FORMAT = ">QQQQQ"  # asset_a_id, asset_b_id, quantity, min_quantity_a, min_quantity_b
+LENGTH = 40
 
 
-def validate(db, source, asset_a, asset_b, quantity):
+def validate(
+    db,
+    source,
+    asset_a,
+    asset_b,
+    quantity,
+    min_quantity_a=0,
+    min_quantity_b=0,
+    block_index=None,
+):
     problems = []
+    if block_index is None:
+        block_index = CurrentState().current_block_index()
 
     if config.BTC in (asset_a, asset_b):
         problems.append("BTC pairs are not supported for AMM pools")
@@ -37,10 +48,17 @@ def validate(db, source, asset_a, asset_b, quantity):
     elif quantity > config.MAX_INT:
         problems.append("quantity exceeds maximum value")
 
+    if min_quantity_a > config.MAX_INT:
+        problems.append("min_quantity_a exceeds maximum value")
+    if min_quantity_b > config.MAX_INT:
+        problems.append("min_quantity_b exceeds maximum value")
+
     if problems:
         return problems
 
     sorted_a, sorted_b = ledger.markets.sort_pair(asset_a, asset_b)
+    if asset_a != sorted_a:
+        min_quantity_a, min_quantity_b = min_quantity_b, min_quantity_a
     pool = ledger.markets.get_pool(db, sorted_a, sorted_b)
 
     if pool is None:
@@ -66,10 +84,20 @@ def validate(db, source, asset_a, asset_b, quantity):
                         "withdrawal too small: would redeem "
                         f"{quantity_a} {sorted_a} + {quantity_b} {sorted_b}"
                     )
+                elif min_quantity_a > 0 and quantity_a < min_quantity_a:
+                    problems.append(
+                        f"slippage protection: would redeem {quantity_a} {sorted_a}, "
+                        f"minimum is {min_quantity_a}"
+                    )
+                elif min_quantity_b > 0 and quantity_b < min_quantity_b:
+                    problems.append(
+                        f"slippage protection: would redeem {quantity_b} {sorted_b}, "
+                        f"minimum is {min_quantity_b}"
+                    )
 
     # gas fee is paid in XCP
     if not problems:
-        fee = gas.get_transaction_fee(db, ID, CurrentState().current_block_index())
+        fee = gas.get_transaction_fee(db, ID, block_index)
         if fee > 0:
             xcp_balance = ledger.balances.get_balance(db, source, config.XCP)
             if xcp_balance < fee:
@@ -79,20 +107,27 @@ def validate(db, source, asset_a, asset_b, quantity):
 
 
 def compose(
-    db, source: str, asset_a: str, asset_b: str, quantity: int, skip_validation: bool = False
+    db,
+    source: str,
+    asset_a: str,
+    asset_b: str,
+    quantity: int,
+    min_quantity_a: int = 0,
+    min_quantity_b: int = 0,
+    skip_validation: bool = False,
 ):
     # resolve subassets
     asset_a = ledger.issuances.resolve_subasset_longname(db, asset_a)
     asset_b = ledger.issuances.resolve_subasset_longname(db, asset_b)
 
-    problems = validate(db, source, asset_a, asset_b, quantity)
+    problems = validate(db, source, asset_a, asset_b, quantity, min_quantity_a, min_quantity_b)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     asset_a_id = ledger.issuances.get_asset_id(db, asset_a)
     asset_b_id = ledger.issuances.get_asset_id(db, asset_b)
     data = messagetype.pack(ID)
-    data += struct.pack(FORMAT, asset_a_id, asset_b_id, quantity)
+    data += struct.pack(FORMAT, asset_a_id, asset_b_id, quantity, min_quantity_a, min_quantity_b)
 
     return (source, [], data)
 
@@ -101,27 +136,50 @@ def unpack(db, message, return_dict=False):
     try:
         if len(message) != LENGTH:
             raise exceptions.UnpackError
-        asset_a_id, asset_b_id, quantity = struct.unpack(FORMAT, message)
+        asset_a_id, asset_b_id, quantity, min_quantity_a, min_quantity_b = struct.unpack(
+            FORMAT, message
+        )
         asset_a = ledger.issuances.get_asset_name(db, asset_a_id)
         asset_b = ledger.issuances.get_asset_name(db, asset_b_id)
 
         if return_dict:
-            return {"asset_a": asset_a, "asset_b": asset_b, "quantity": quantity}
-        return asset_a, asset_b, quantity
+            return {
+                "asset_a": asset_a,
+                "asset_b": asset_b,
+                "quantity": quantity,
+                "min_quantity_a": min_quantity_a,
+                "min_quantity_b": min_quantity_b,
+            }
+        return asset_a, asset_b, quantity, min_quantity_a, min_quantity_b
     except (exceptions.UnpackError, exceptions.AssetNameError, struct.error):
         if return_dict:
-            return {"asset_a": "", "asset_b": "", "quantity": 0}
-        return "", "", 0
+            return {
+                "asset_a": "",
+                "asset_b": "",
+                "quantity": 0,
+                "min_quantity_a": 0,
+                "min_quantity_b": 0,
+            }
+        return "", "", 0, 0, 0
 
 
 def parse(db, tx, message):
-    asset_a, asset_b, quantity = unpack(db, message)
+    asset_a, asset_b, quantity, min_quantity_a, min_quantity_b = unpack(db, message)
 
     status = "valid"
     if not asset_a or not asset_b or quantity <= 0:
         status = "invalid: could not unpack"
     else:
-        problems = validate(db, tx["source"], asset_a, asset_b, quantity)
+        problems = validate(
+            db,
+            tx["source"],
+            asset_a,
+            asset_b,
+            quantity,
+            min_quantity_a,
+            min_quantity_b,
+            block_index=tx["block_index"],
+        )
         if problems:
             status = "invalid: " + "; ".join(problems)
 

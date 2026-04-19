@@ -505,6 +505,7 @@ def compose_pooldeposit(
     quantity_a: int = None,
     quantity_b: int = None,
     min_lp_quantity: int = 0,
+    lp_asset: str = None,
     **construct_params,
 ):
     """
@@ -518,6 +519,7 @@ def compose_pooldeposit(
     :param quantity_a: The quantity of asset_a to deposit (in satoshis, hence integer) (e.g. 1000000)
     :param quantity_b: The quantity of asset_b to deposit (in satoshis, hence integer) (e.g. 1000000)
     :param min_lp_quantity: Minimum LP tokens to receive; reverts if slippage exceeds this (e.g. 0)
+    :param lp_asset: Optional LP asset name for first deposit; auto-generated if omitted
     """
     params = {
         "source": address,
@@ -526,6 +528,7 @@ def compose_pooldeposit(
         "quantity_a": quantity_a,
         "quantity_b": quantity_b,
         "min_lp_quantity": min_lp_quantity,
+        "lp_asset": lp_asset,
     }
     return composer.compose_transaction(db, "pooldeposit", params, construct_params)
 
@@ -543,6 +546,8 @@ def compose_poolwithdraw(
     asset_a: str = None,
     asset_b: str = None,
     quantity: int = None,
+    min_quantity_a: int = 0,
+    min_quantity_b: int = 0,
     lp_asset: str = None,
     **construct_params,
 ):
@@ -552,6 +557,8 @@ def compose_poolwithdraw(
     :param asset_a: The first asset in the pair (e.g. XCP)
     :param asset_b: The second asset in the pair (e.g. POOLTEST)
     :param quantity: The quantity of LP tokens to destroy (in satoshis, hence integer) (e.g. 1000000)
+    :param min_quantity_a: Minimum asset_a to receive; reverts if slippage exceeds this (e.g. 0)
+    :param min_quantity_b: Minimum asset_b to receive; reverts if slippage exceeds this (e.g. 0)
     :param lp_asset: The LP token asset name (alternative to asset_a/asset_b)
     """
     if lp_asset and not asset_a and not asset_b:
@@ -564,6 +571,8 @@ def compose_poolwithdraw(
         "asset_a": asset_a,
         "asset_b": asset_b,
         "quantity": quantity,
+        "min_quantity_a": min_quantity_a,
+        "min_quantity_b": min_quantity_b,
     }
     return composer.compose_transaction(db, "poolwithdraw", params, construct_params)
 
