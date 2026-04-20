@@ -430,6 +430,7 @@ def compose_fairminter(
     description: str = "",
     mime_type: str = "",
     pool_quantity: int = 0,
+    lp_asset: str = "",
     price: int = 0,
     quantity_by_price: int = 1,
     **construct_params,
@@ -457,6 +458,7 @@ def compose_fairminter(
     :param description: The description of the asset. Overrides the current description if the asset already exists.
     :param mime_type: The MIME type of the description. For binary MIME type, the `description` must be in hexadecimal format (default: text/plain).
     :param pool_quantity: Amount of asset reserved for the AMM pool; paired with all raised XCP at soft cap resolution to create a TOKEN/XCP pool (LP tokens are permanently locked)
+    :param lp_asset: The numeric asset name to use for the pool's LP token (e.g. A95428956661682177); if empty and pool_quantity > 0, one is generated automatically
     :param price: alias for `lot_price`
     :param quantity_by_price: alias for `lot_size`
     """
@@ -485,6 +487,7 @@ def compose_fairminter(
         "description": description,
         "mime_type": mime_type,
         "pool_quantity": pool_quantity,
+        "lp_asset": lp_asset,
     }
     return composer.compose_transaction(db, "fairminter", params, construct_params)
 

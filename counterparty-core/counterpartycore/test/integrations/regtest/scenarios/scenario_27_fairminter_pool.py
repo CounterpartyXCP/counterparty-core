@@ -1,11 +1,4 @@
 SCENARIO = [
-    # ═══════════════════════════════════════════════════════════════════
-    # TEST 1: Fairmint pool success
-    # hard_cap=10, pool=4, mintable=6, soft_cap=6
-    # lot_price=1, quantity_by_price=1 (1 sat per base unit)
-    # ADDRESS_1 mints twice: 3 + 3 tokens (6 XCP total)
-    # Total: 6 XCP raised, pool gets 4*10^8 tokens + 6*10^8 XCP
-    # ═══════════════════════════════════════════════════════════════════
     {
         "title": "Create FAIRPOOL fairminter with pool_quantity",
         "transaction": "fairminter",
@@ -58,9 +51,6 @@ SCENARIO = [
             },
         ],
     },
-    # ═══════════════════════════════════════════════════════════════════
-    # TEST 2: Fairmint pool failure (soft_cap not met -> refund)
-    # ═══════════════════════════════════════════════════════════════════
     {
         "title": "Create FAIRFAIL fairminter with pool_quantity",
         "transaction": "fairminter",
@@ -92,9 +82,6 @@ SCENARIO = [
             },
         ],
     },
-    # ═══════════════════════════════════════════════════════════════════
-    # Negative compose tests
-    # ═══════════════════════════════════════════════════════════════════
     {
         "title": "Try burn_payment + pool (should be rejected)",
         "transaction": "fairminter",
@@ -138,6 +125,109 @@ SCENARIO = [
         },
         "expected_error": [
             "soft_cap must equal mintable supply (hard_cap - existing_supply - premint_quantity - pool_quantity) when pool_quantity > 0"
+        ],
+    },
+    {
+        "title": "Open FAIRMULTI fairminter with explicit lp_asset",
+        "transaction": "fairminter",
+        "source": "$ADDRESS_1",
+        "params": {
+            "asset": "FAIRMULTI",
+            "lot_price": 1,
+            "hard_cap": 10 * 10**8,
+            "soft_cap": 6 * 10**8,
+            "soft_cap_deadline_block": "$CURRENT_BLOCK + 6",
+            "pool_quantity": 4 * 10**8,
+            "lp_asset": "A95428956661682177",
+            "lock_quantity": True,
+        },
+        "set_variables": {
+            "FAIRMULTI_DEADLINE": "$BLOCK_INDEX + 2",
+        },
+    },
+    {
+        "title": "ADDRESS_1 mints 2 FAIRMULTI",
+        "transaction": "fairmint",
+        "source": "$ADDRESS_1",
+        "params": {"asset": "FAIRMULTI", "quantity": 2 * 10**8},
+    },
+    {
+        "title": "ADDRESS_2 mints 4 FAIRMULTI (reaches soft cap)",
+        "transaction": "fairmint",
+        "source": "$ADDRESS_2",
+        "params": {"asset": "FAIRMULTI", "quantity": 4 * 10**8},
+    },
+    {
+        "title": "Mine to soft cap deadline - pool created with explicit lp_asset",
+        "transaction": "mine_blocks",
+        "params": {"blocks": 4},
+        "controls": [
+            {
+                "url": "pools/FAIRMULTI/XCP",
+                "result": {
+                    "asset_a": "FAIRMULTI",
+                    "asset_b": "XCP",
+                    "lp_asset": "A95428956661682177",
+                    "reserve_a": 400000000,
+                    "reserve_b": 600000000,
+                    "source": "$ADDRESS_1",
+                },
+            },
+            {
+                "url": "addresses/$UNSPENDABLE/balances/A95428956661682177",
+                "result": [
+                    {
+                        "address": "$UNSPENDABLE",
+                        "asset": "A95428956661682177",
+                        "quantity": 489897948,
+                    },
+                ],
+            },
+        ],
+    },
+    {
+        "title": "Open FAIRMARK to keep A95428956661682178 earmarked",
+        "transaction": "fairminter",
+        "source": "$ADDRESS_1",
+        "params": {
+            "asset": "FAIRMARK",
+            "lot_price": 1,
+            "hard_cap": 10 * 10**8,
+            "soft_cap": 6 * 10**8,
+            "soft_cap_deadline_block": "$CURRENT_BLOCK + 20",
+            "pool_quantity": 4 * 10**8,
+            "lp_asset": "A95428956661682178",
+            "lock_quantity": True,
+        },
+    },
+    {
+        "title": "Second fairminter with same lp_asset should be rejected",
+        "transaction": "fairminter",
+        "source": "$ADDRESS_1",
+        "params": {
+            "asset": "FAIRDUP",
+            "lot_price": 1,
+            "hard_cap": 10 * 10**8,
+            "soft_cap": 6 * 10**8,
+            "soft_cap_deadline_block": "$CURRENT_BLOCK + 5",
+            "pool_quantity": 4 * 10**8,
+            "lp_asset": "A95428956661682178",
+        },
+        "expected_error": [
+            "lp_asset A95428956661682178 is earmarked by an active fairminter"
+        ],
+    },
+    {
+        "title": "Issuing earmarked lp_asset directly should be rejected",
+        "transaction": "issuance",
+        "source": "$ADDRESS_2",
+        "params": {
+            "asset": "A95428956661682178",
+            "quantity": 1,
+            "divisible": True,
+        },
+        "expected_error": [
+            "A95428956661682178 is earmarked by an active fairminter"
         ],
     },
 ]
