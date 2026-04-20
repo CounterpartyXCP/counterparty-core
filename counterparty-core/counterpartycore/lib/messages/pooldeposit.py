@@ -574,7 +574,11 @@ def create_pool_from_fairminter(db, fairminter, block_index, asset, quantity_tok
         )
         fairmints = ledger.issuances.get_valid_fairmints(db, tx_hash)
         total_paid = sum(fm["paid_quantity"] for fm in fairmints)
-        # invariant: quantity_xcp == total_paid (both SUM(paid_quantity) of valid fairmints)
+        if total_paid == 0 and quantity_xcp > 0:
+            # should be unreachable: soft-cap-reached implies paid fairmints exist
+            raise exceptions.ParseTransactionError(
+                f"fairminter {tx_hash} has quantity_xcp > 0 but no paid fairmints to refund"
+            )
         refunded = 0
         if total_paid > 0:
             for fm in fairmints:
