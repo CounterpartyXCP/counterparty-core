@@ -541,9 +541,9 @@ def get_fairminters_by_soft_cap_deadline(db, block_index):
         SELECT * FROM (
             SELECT *, MAX(rowid) AS rowid
             FROM fairminters
-            WHERE soft_cap > 0 AND soft_cap_deadline_block = :block_index
+            WHERE soft_cap > 0
             GROUP BY tx_hash
-        ) WHERE status = :status
+        ) WHERE status = :status AND soft_cap_deadline_block = :block_index
         ORDER BY tx_index
     """
     bindings = {
