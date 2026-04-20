@@ -554,58 +554,12 @@ def create_pool_from_fairminter(db, fairminter, block_index, asset, quantity_tok
     else:
         quantity_a, quantity_b = quantity_xcp, quantity_tokens
 
-    # pool already exists: tokens to issuer, XCP refunded pro-rata to minters, dust to issuer
-    existing_pool = ledger.markets.get_pool(db, sorted_a, sorted_b)
-    if existing_pool is not None:
-        logger.warning(
-            "Pool %s/%s already exists; refunding fairminter pool assets [%s]",
-            sorted_a,
-            sorted_b,
-            tx_hash,
+    # unreachable: fairminter.validate rejects pool_quantity > 0 when pool exists,
+    # and pooldeposit.validate rejects manual creation during active fairmint-pool
+    if ledger.markets.get_pool(db, sorted_a, sorted_b) is not None:
+        raise exceptions.ParseTransactionError(
+            f"fairminter {tx_hash}: pool already exists at soft-cap close"
         )
-        ledger.events.credit(
-            db,
-            source,
-            asset,
-            quantity_tokens,
-            0,
-            action="fairminter pool fallback",
-            event=tx_hash,
-        )
-        fairmints = ledger.issuances.get_valid_fairmints(db, tx_hash)
-        total_paid = sum(fm["paid_quantity"] for fm in fairmints)
-        if total_paid == 0 and quantity_xcp > 0:
-            # should be unreachable: soft-cap-reached implies paid fairmints exist
-            raise exceptions.ParseTransactionError(
-                f"fairminter {tx_hash} has quantity_xcp > 0 but no paid fairmints to refund"
-            )
-        refunded = 0
-        if total_paid > 0:
-            for fm in fairmints:
-                share = quantity_xcp * fm["paid_quantity"] // total_paid
-                if share > 0:
-                    ledger.events.credit(
-                        db,
-                        fm["source"],
-                        config.XCP,
-                        share,
-                        0,
-                        action="fairminter pool refund",
-                        event=tx_hash,
-                    )
-                refunded += share
-        dust = quantity_xcp - refunded
-        if dust > 0:
-            ledger.events.credit(
-                db,
-                source,
-                config.XCP,
-                dust,
-                0,
-                action="fairminter pool fallback",
-                event=tx_hash,
-            )
-        return 0
 
     lp_asset_name = fairminter["lp_asset"] if "lp_asset" in fairminter.keys() else None
     if not lp_asset_name:

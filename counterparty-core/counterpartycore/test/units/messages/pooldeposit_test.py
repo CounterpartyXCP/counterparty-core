@@ -637,8 +637,9 @@ def test_validate_subsequent_deposit_too_small(ledger_db, defaults, blockchain_m
     assert any("deposit too small" in p for p in problems)
 
 
-def test_create_pool_from_fairminter_pool_already_exists(ledger_db, defaults, blockchain_mock):
-    """If pool already exists at soft-cap close, tokens go to issuer and XCP is refunded pro-rata to minters."""
+def test_create_pool_from_fairminter_halts_if_pool_exists(ledger_db, defaults, blockchain_mock):
+    """Reaching create_pool_from_fairminter with an existing pool is an invariant
+    violation (fairminter.validate and pooldeposit.validate both block it); halt cleanly."""
     source = defaults["addresses"][0]
     quantity = defaults["quantity"] // 4
 
@@ -646,52 +647,21 @@ def test_create_pool_from_fairminter_pool_already_exists(ledger_db, defaults, bl
     _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", quantity, quantity)
     pooldeposit.parse(ledger_db, tx, data[1:])
 
-    fairminter_tx_hash = "b" * 64
-    for i, (minter, paid) in enumerate(
-        [(defaults["addresses"][1], 300), (defaults["addresses"][2], 700)]
-    ):
-        ledger.events.insert_record(
+    fairminter = {
+        "tx_hash": "b" * 64,
+        "tx_index": 999,
+        "source": source,
+        "lp_asset": "A95428956661682177",
+    }
+    with pytest.raises(exceptions.ParseTransactionError, match="pool already exists at soft-cap close"):
+        pooldeposit.create_pool_from_fairminter(
             ledger_db,
-            "fairmints",
-            {
-                "tx_hash": f"c{i}" + "0" * 62,
-                "tx_index": 998 - i,
-                "block_index": 9998,
-                "source": minter,
-                "fairminter_tx_hash": fairminter_tx_hash,
-                "asset": "DIVISIBLE",
-                "earn_quantity": paid,
-                "paid_quantity": paid,
-                "commission": 0,
-                "status": "valid",
-            },
-            "NEW_FAIRMINT",
+            fairminter,
+            block_index=9999,
+            asset="DIVISIBLE",
+            quantity_tokens=quantity,
+            quantity_xcp=quantity,
         )
-
-    fairminter = {"tx_hash": fairminter_tx_hash, "tx_index": 999, "source": source}
-    returned = pooldeposit.create_pool_from_fairminter(
-        ledger_db,
-        fairminter,
-        block_index=9999,
-        asset="DIVISIBLE",
-        quantity_tokens=quantity,
-        quantity_xcp=1000,
-    )
-    assert returned == 0
-
-    credits = ledger_db.execute(
-        "SELECT calling_function, address, quantity FROM credits WHERE event = ? ORDER BY rowid",
-        (fairminter_tx_hash,),
-    ).fetchall()
-    fallback = [c for c in credits if c["calling_function"] == "fairminter pool fallback"]
-    refunds = [c for c in credits if c["calling_function"] == "fairminter pool refund"]
-    assert len(fallback) == 1
-    assert fallback[0]["address"] == source
-    assert fallback[0]["quantity"] == quantity
-    assert len(refunds) == 2
-    by_minter = {c["address"]: c["quantity"] for c in refunds}
-    assert by_minter[defaults["addresses"][1]] == 300
-    assert by_minter[defaults["addresses"][2]] == 700
 
 
 def test_create_pool_from_fairminter(ledger_db, defaults, test_helpers):
