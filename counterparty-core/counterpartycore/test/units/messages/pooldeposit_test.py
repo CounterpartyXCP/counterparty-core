@@ -653,7 +653,9 @@ def test_create_pool_from_fairminter_halts_if_pool_exists(ledger_db, defaults, b
         "source": source,
         "lp_asset": "A95428956661682177",
     }
-    with pytest.raises(exceptions.ParseTransactionError, match="pool already exists at soft-cap close"):
+    with pytest.raises(
+        exceptions.ParseTransactionError, match="pool already exists at soft-cap close"
+    ):
         pooldeposit.create_pool_from_fairminter(
             ledger_db,
             fairminter,

@@ -221,9 +221,7 @@ SCENARIO = [
             "pool_quantity": 4 * 10**8,
             "lp_asset": "A95428956661682178",
         },
-        "expected_error": [
-            "lp_asset A95428956661682178 is earmarked by an active fairminter"
-        ],
+        "expected_error": ["lp_asset A95428956661682178 is earmarked by an active fairminter"],
     },
     {
         "title": "Issuing earmarked lp_asset directly should be rejected",
@@ -234,8 +232,6 @@ SCENARIO = [
             "quantity": 1,
             "divisible": True,
         },
-        "expected_error": [
-            "A95428956661682178 is earmarked by an active fairminter"
-        ],
+        "expected_error": ["A95428956661682178 is earmarked by an active fairminter"],
     },
 ]

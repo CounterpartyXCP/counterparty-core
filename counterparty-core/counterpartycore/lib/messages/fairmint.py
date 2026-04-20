@@ -336,9 +336,7 @@ def parse(db, tx, message):
                         {"soft_cap_deadline_block": tx["block_index"]},
                     )
             else:
-                ledger.issuances.update_fairminter(
-                    db, fairminter["tx_hash"], {"status": "closed"}
-                )
+                ledger.issuances.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
 
     # we insert the new issuance
     ledger.events.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
