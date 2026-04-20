@@ -554,8 +554,6 @@ def create_pool_from_fairminter(db, fairminter, block_index, asset, quantity_tok
     else:
         quantity_a, quantity_b = quantity_xcp, quantity_tokens
 
-    # unreachable: fairminter.validate rejects pool_quantity > 0 when pool exists,
-    # and pooldeposit.validate rejects manual creation during active fairmint-pool
     if ledger.markets.get_pool(db, sorted_a, sorted_b) is not None:
         raise exceptions.ParseTransactionError(
             f"fairminter {tx_hash}: pool already exists at soft-cap close"
@@ -563,7 +561,6 @@ def create_pool_from_fairminter(db, fairminter, block_index, asset, quantity_tok
 
     lp_asset_name = fairminter["lp_asset"] if "lp_asset" in fairminter.keys() else None
     if not lp_asset_name:
-        # should be unreachable: validate enforces lp_asset when pool_quantity > 0
         raise exceptions.ParseTransactionError(
             f"fairminter {tx_hash} has pool_quantity>0 but missing lp_asset"
         )
