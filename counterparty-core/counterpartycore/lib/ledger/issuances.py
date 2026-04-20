@@ -493,6 +493,18 @@ def get_fairminter_by_asset(db, asset):
     return cursor.fetchone()
 
 
+def get_active_fairminter_by_lp_asset(db, lp_asset):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM fairminters
+        WHERE lp_asset = ? AND status IN ('open', 'pending')
+        ORDER BY rowid DESC LIMIT 1
+    """
+    bindings = (lp_asset,)
+    cursor.execute(query, bindings)
+    return cursor.fetchone()
+
+
 def get_fairmint_quantities(db, fairminter_tx_hash):
     cursor = db.cursor()
     query = """

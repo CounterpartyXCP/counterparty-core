@@ -39,6 +39,7 @@ def validate(
     description="",
     mime_type="",
     pool_quantity=0,
+    lp_asset="",
 ):
     problems = []
 
@@ -222,6 +223,15 @@ def validate(
         sorted_a, sorted_b = ledger.markets.sort_pair(pool_asset, config.XCP)
         if ledger.markets.get_pool(db, sorted_a, sorted_b) is not None:
             problems.append(f"pool already exists for {pool_asset}/{config.XCP}")
+        # lp_asset validation
+        if not lp_asset:
+            problems.append("pool_quantity requires lp_asset")
+        elif not assetnames.is_numeric(lp_asset):
+            problems.append("lp_asset must be a numeric asset")
+        elif ledger.issuances.get_issuances(db, asset=lp_asset, status="valid"):
+            problems.append(f"lp_asset {lp_asset} is already in use")
+        elif ledger.issuances.get_active_fairminter_by_lp_asset(db, lp_asset):
+            problems.append(f"lp_asset {lp_asset} is earmarked by an active fairminter")
 
     if protocol.enabled("fairminter_v2"):
         problems += helpers.check_content(mime_type, description)
@@ -252,8 +262,13 @@ def compose(
     description: str = "",
     mime_type: str = "",
     pool_quantity: int = 0,
+    lp_asset: str = "",
     skip_validation: bool = False,
 ):
+    if pool_quantity > 0 and not lp_asset:
+        sorted_a, sorted_b = ledger.markets.sort_pair(asset, config.XCP)
+        lp_asset = assetnames.generate_random_asset(f"{sorted_a}:{sorted_b}")
+
     # validate parameters
     problems = validate(
         db,
@@ -278,6 +293,7 @@ def compose(
         description,
         mime_type,
         pool_quantity,
+        lp_asset,
     )
     if len(problems) > 0 and not skip_validation:
         raise exceptions.ComposeError(problems)
@@ -302,6 +318,7 @@ def compose(
         asset_parent_id = (
             ledger.issuances.generate_asset_id(asset_parent) if asset_parent != "" else 0
         )
+        lp_asset_id = ledger.issuances.generate_asset_id(lp_asset) if lp_asset else 0
         data += cbor2.dumps(
             [
                 asset_id,
@@ -324,6 +341,7 @@ def compose(
                 mime_type,
                 helpers.content_to_bytes(description, mime_type or "text/plain"),
                 pool_quantity,
+                lp_asset_id,
             ]
         )
     else:
@@ -388,6 +406,8 @@ def unpack_new(message, return_dict=False):
             description,
         ) = (fields := cbor2.loads(message))[:19]
         pool_quantity = int(fields[19]) if len(fields) > 19 else 0
+        lp_asset_id = int(fields[20]) if len(fields) > 20 else 0
+        lp_asset = ledger.issuances.generate_asset_name(lp_asset_id) if lp_asset_id > 0 else None
         description = helpers.bytes_to_content(description, mime_type or "text/plain")
         asset = ledger.issuances.generate_asset_name(asset_id)
         asset_parent = (
@@ -420,6 +440,7 @@ def unpack_new(message, return_dict=False):
                 "mime_type": mime_type,
                 "description": description,
                 "pool_quantity": pool_quantity,
+                "lp_asset": lp_asset,
             }
 
         return (
@@ -443,6 +464,7 @@ def unpack_new(message, return_dict=False):
             mime_type,
             description,
             pool_quantity,
+            lp_asset,
         )
     except Exception:  # pylint: disable=broad-exception-caught
         return (
@@ -466,6 +488,7 @@ def unpack_new(message, return_dict=False):
             "",
             "",
             0,
+            None,
         )
 
 
@@ -496,6 +519,7 @@ def unpack_legacy(message, return_dict=False):
         max_mint_per_address = 0
         mime_type = ""
         pool_quantity = 0
+        lp_asset = None
 
         minted_asset_commission = D(minted_asset_commission_int) / D(1e8)
 
@@ -523,6 +547,7 @@ def unpack_legacy(message, return_dict=False):
                 "mime_type": mime_type,
                 "description": description,
                 "pool_quantity": pool_quantity,
+                "lp_asset": lp_asset,
             }
 
         return (
@@ -546,6 +571,7 @@ def unpack_legacy(message, return_dict=False):
             mime_type,
             description,
             pool_quantity,
+            lp_asset,
         )
     except Exception:  # pylint: disable=broad-exception-caught
         return (
@@ -569,6 +595,7 @@ def unpack_legacy(message, return_dict=False):
             "",
             "",
             0,
+            None,
         )
 
 
@@ -594,6 +621,7 @@ def parse(db, tx, message):
         mime_type,
         description,
         pool_quantity,
+        lp_asset,
     ) = unpack(message)
 
     problems = validate(
@@ -619,6 +647,7 @@ def parse(db, tx, message):
         description,
         mime_type,
         pool_quantity,
+        lp_asset,
     )
 
     if (
@@ -724,6 +753,7 @@ def parse(db, tx, message):
         "pre_minted": pre_minted,
         "mime_type": mime_type,
         "pool_quantity": pool_quantity,
+        "lp_asset": lp_asset or None,
     }
     ledger.events.insert_record(db, "fairminters", bindings, "NEW_FAIRMINTER")
     logger.info("Fair minter opened for %s by %s.", asset_name, tx["source"])

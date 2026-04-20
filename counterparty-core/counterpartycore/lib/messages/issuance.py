@@ -164,6 +164,10 @@ def validate(
         #    problems.append('cannot transfer a non‐existent asset')
         if reset:
             problems.append("cannot reset a non existent asset")
+        if protocol.enabled("fairmint_pool") and ledger.issuances.get_active_fairminter_by_lp_asset(
+            db, asset
+        ):
+            problems.append(f"{asset} is earmarked by an active fairminter")
 
     # validate parent ownership for subasset
     if subasset_longname is not None and not reissuance:

@@ -90,6 +90,8 @@ def validate(
             problems.append("lp_asset must be a numeric asset")
         elif ledger.issuances.get_issuances(db, asset=lp_asset, status="valid"):
             problems.append(f"lp_asset {lp_asset} is already in use")
+        elif ledger.issuances.get_active_fairminter_by_lp_asset(db, lp_asset):
+            problems.append(f"lp_asset {lp_asset} is earmarked by an active fairminter")
 
     if asset_a == sorted_a:
         sorted_quantity_a, sorted_quantity_b = quantity_a, quantity_b
@@ -552,14 +554,13 @@ def create_pool_from_fairminter(db, fairminter, block_index, asset, quantity_tok
     else:
         quantity_a, quantity_b = quantity_xcp, quantity_tokens
 
-    # Safety: if pool already exists, credit assets to issuer instead
+    # pool already exists: tokens to issuer, XCP refunded pro-rata to minters, dust to issuer
     existing_pool = ledger.markets.get_pool(db, sorted_a, sorted_b)
     if existing_pool is not None:
         logger.warning(
-            "Pool %s/%s already exists; crediting fairminter pool assets to %s [%s]",
+            "Pool %s/%s already exists; refunding fairminter pool assets [%s]",
             sorted_a,
             sorted_b,
-            source,
             tx_hash,
         )
         ledger.events.credit(
@@ -571,19 +572,43 @@ def create_pool_from_fairminter(db, fairminter, block_index, asset, quantity_tok
             action="fairminter pool fallback",
             event=tx_hash,
         )
-        ledger.events.credit(
-            db,
-            source,
-            config.XCP,
-            quantity_xcp,
-            0,
-            action="fairminter pool fallback",
-            event=tx_hash,
-        )
+        fairmints = ledger.issuances.get_valid_fairmints(db, tx_hash)
+        total_paid = sum(fm["paid_quantity"] for fm in fairmints)
+        # invariant: quantity_xcp == total_paid (both SUM(paid_quantity) of valid fairmints)
+        refunded = 0
+        if total_paid > 0:
+            for fm in fairmints:
+                share = quantity_xcp * fm["paid_quantity"] // total_paid
+                if share > 0:
+                    ledger.events.credit(
+                        db,
+                        fm["source"],
+                        config.XCP,
+                        share,
+                        0,
+                        action="fairminter pool refund",
+                        event=tx_hash,
+                    )
+                refunded += share
+        dust = quantity_xcp - refunded
+        if dust > 0:
+            ledger.events.credit(
+                db,
+                source,
+                config.XCP,
+                dust,
+                0,
+                action="fairminter pool fallback",
+                event=tx_hash,
+            )
         return 0
 
-    # Create new pool
-    lp_asset_name = assetnames.generate_random_asset(f"{sorted_a}:{sorted_b}")
+    lp_asset_name = fairminter["lp_asset"] if "lp_asset" in fairminter.keys() else None
+    if not lp_asset_name:
+        # should be unreachable: validate enforces lp_asset when pool_quantity > 0
+        raise exceptions.ParseTransactionError(
+            f"fairminter {tx_hash} has pool_quantity>0 but missing lp_asset"
+        )
     lp_asset_id = ledger.issuances.generate_asset_id(lp_asset_name)
     total_lp = ledger.markets.isqrt(quantity_a * quantity_b)
 

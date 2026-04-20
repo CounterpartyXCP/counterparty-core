@@ -410,6 +410,7 @@ def test_validate_pool(ledger_db, defaults):
             "",  # description
             "",  # mime_type
             40,  # pool_quantity
+            "A95428956661682177",  # lp_asset
         )
         == []
     )
@@ -438,6 +439,7 @@ def test_validate_pool(ledger_db, defaults):
         "",
         "",
         40,  # pool_quantity
+        "A95428956661682177",  # lp_asset
     )
 
     # pool_quantity requires soft_cap > 0
@@ -464,6 +466,7 @@ def test_validate_pool(ledger_db, defaults):
         "",
         "",
         40,  # pool_quantity
+        "A95428956661682177",  # lp_asset
     )
 
     # pool_quantity incompatible with burn_payment
@@ -490,6 +493,7 @@ def test_validate_pool(ledger_db, defaults):
         "",
         "",
         40,  # pool_quantity
+        "A95428956661682177",  # lp_asset
     )
 
     # soft_cap must equal mintable (new asset, no existing supply)
@@ -518,6 +522,7 @@ def test_validate_pool(ledger_db, defaults):
             "",
             "",
             40,  # pool_quantity
+            "A95428956661682177",  # lp_asset
         )
     )
 
@@ -551,6 +556,7 @@ def test_validate_pool(ledger_db, defaults):
             "",
             "",
             pool_q,
+            "A95428956661682177",  # lp_asset
         )
         == []
     )
@@ -581,6 +587,7 @@ def test_validate_pool(ledger_db, defaults):
             "",
             "",
             pool_q,
+            "A95428956661682177",  # lp_asset
         )
     )
 
@@ -659,6 +666,7 @@ def test_validate_pool(ledger_db, defaults):
         "",
         "",
         40,  # pool_quantity
+        "A95428956661682177",  # lp_asset
     )
 
     # pool_quantity requires hard_cap > 0
@@ -685,6 +693,7 @@ def test_validate_pool(ledger_db, defaults):
         "",
         "",
         40,  # pool_quantity
+        "A95428956661682177",  # lp_asset
     )
 
     # pool_quantity not yet enabled (protocol gate)
@@ -714,6 +723,7 @@ def test_validate_pool(ledger_db, defaults):
             "",
             "",
             40,  # pool_quantity
+            "A95428956661682177",  # lp_asset
         )
 
     # overflow: existing supply + premint + pool + soft_cap > hard_cap
@@ -742,6 +752,7 @@ def test_validate_pool(ledger_db, defaults):
             "",
             "",
             40,  # pool_quantity: 100B + 40 + 40 > 100B + 50
+            "A95428956661682177",  # lp_asset
         )
     )
 
@@ -758,7 +769,7 @@ def test_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][1],
         [],
-        b"Z\x94\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x00\x00\x00\x00\x00\x00\x00\xf4\xf4\xf4\xf5`@\x00",
+        b"Z\x95\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x00\x00\x00\x00\x00\x00\x00\xf4\xf4\xf4\xf5`@\x00\x00",
     )
 
     assert fairminter.compose(
@@ -785,7 +796,7 @@ def test_compose(ledger_db, defaults):
     ) == (
         defaults["addresses"][1],
         [],
-        b"Z\x94\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5`Sune asset super top\x00",
+        b"Z\x95\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5`Sune asset super top\x00\x00",
     )
 
     with ProtocolChangesDisabled(["fairminter_v2"]):
@@ -835,7 +846,7 @@ def test_compose_long_description(ledger_db, defaults):
     result = (
         defaults["addresses"][1],
         [],
-        b"Z\x94\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5`X\x1eaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\x00",
+        b"Z\x95\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5`X\x1eaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\x00\x00",
     )
     assert (
         fairminter.compose(
@@ -887,6 +898,7 @@ def test_compose_long_description(ledger_db, defaults):
         "text/plain",
         "a" * 30,  # description
         0,  # pool_quantity
+        None,  # lp_asset
     )
 
     result = fairminter.unpack(data)
@@ -920,6 +932,7 @@ def test_unpack():
         "mime_type": "text/plain",
         "description": "une asset super top",
         "pool_quantity": 0,
+        "lp_asset": None,
     }
 
     assert fairminter.unpack(
@@ -946,6 +959,7 @@ def test_unpack():
         "text/plain",
         "une asset super top",
         0,
+        None,
     )
 
     # Legacy 19-element array still unpacks (backwards compatible)
@@ -973,12 +987,13 @@ def test_unpack():
         "text/plain",
         "une asset super top",
         0,
+        None,
     )
 
     assert fairminter.unpack(
         b"\x06_\xeb\xcd\xfd\xc0\x18\x00\x00\x03\x01d\x03\x005\x0c\x03\xa0\xbb\r\x012\x03P\xf8\x0c\x03\x80\x96\x98\x01\x01\x01\x01\x13une asset super top",
         False,
-    ) == ("", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, "", "", 0)
+    ) == ("", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, "", "", 0, None)
 
 
 def test_parse_fairminter_start_block(
@@ -1088,7 +1103,7 @@ def test_parse_fairminter_pool_fee_debit(
     gas.get_transaction_fee = mock_fee
     try:
         tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
-        message = b"\x94\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x01\x00\x00\x18d\x00\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x18<\x1a\x00\x0c\xf8P\x00\xf4\xf4\xf5\xf5`@\x18("
+        message = b"\x95\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x01\x00\x00\x18d\x00\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x18<\x1a\x00\x0c\xf8P\x00\xf4\xf4\xf5\xf5`@\x18(\x1b\x01S\x08!g\x1b\x10\x01"
         fairminter.parse(ledger_db, tx, message)
     finally:
         gas.get_transaction_fee = real_get_fee
@@ -1115,7 +1130,7 @@ def test_parse_fairminter_pool(
 ):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     # FAIRMINTED with pool_quantity=40, hard_cap=100, soft_cap=60, price=1
-    message = b"\x94\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x01\x00\x00\x18d\x00\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x18<\x1a\x00\x0c\xf8P\x00\xf4\xf4\xf5\xf5`@\x18("
+    message = b"\x95\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x01\x00\x00\x18d\x00\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x18<\x1a\x00\x0c\xf8P\x00\xf4\xf4\xf5\xf5`@\x18(\x1b\x01S\x08!g\x1b\x10\x01"
     fairminter.parse(ledger_db, tx, message)
 
     test_helpers.check_records(
@@ -1376,7 +1391,7 @@ def test_compose_2(ledger_db, defaults, current_block_index):
     ) == (
         defaults["addresses"][1],
         [],
-        b"Z\x94\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x03\n\x00\x00\x00\x00\x19\x07\x8f\x00\x00\x00\xf4\xf4\xf4\xf5`@\x00",
+        b"Z\x95\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x03\n\x00\x00\x00\x00\x19\x07\x8f\x00\x00\x00\xf4\xf4\xf4\xf5`@\x00\x00",
     )
 
     assert fairminter.compose(
@@ -1395,5 +1410,5 @@ def test_compose_2(ledger_db, defaults, current_block_index):
     ) == (
         defaults["addresses"][1],
         [],
-        b"Z\x94\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x03\n\x00\x00\x00\x19\x07\x8f\x00\x00\x00\x00\xf4\xf4\xf4\xf5`@\x00",
+        b"Z\x95\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x03\n\x00\x00\x00\x19\x07\x8f\x00\x00\x00\x00\xf4\xf4\xf4\xf5`@\x00\x00",
     )
