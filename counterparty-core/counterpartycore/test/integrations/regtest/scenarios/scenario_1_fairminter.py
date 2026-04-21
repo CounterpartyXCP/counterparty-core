@@ -170,7 +170,7 @@ SCENARIO = [
                             "block_index": "$BLOCK_INDEX",
                             "block_time": "$BLOCK_TIME",
                             "btc_amount": 0,
-                            "data": "5a941b000000f3bafe12e200010100001b00000002540be4000000001a3b9aca00187300f4f4f4f5604000",
+                            "data": "5a951b000000f3bafe12e200010100001b00000002540be4000000001a3b9aca00187300f4f4f4f560400000",
                             "destination": "",
                             "fee": 10000,
                             "source": "$ADDRESS_1",
