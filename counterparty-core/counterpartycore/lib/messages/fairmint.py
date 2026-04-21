@@ -335,6 +335,10 @@ def parse(db, tx, message):
                         fairminter["tx_hash"],
                         {"soft_cap_deadline_block": tx["block_index"]},
                     )
+                elif fairminter["soft_cap_deadline_block"] < tx["block_index"]:
+                    ledger.issuances.update_fairminter(
+                        db, fairminter["tx_hash"], {"status": "closed"}
+                    )
             else:
                 ledger.issuances.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
 
