@@ -139,8 +139,19 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
                 )""",
                 tx,
             )
+    except exceptions.ParseTransactionError as e:
+        # A mempool tx that would halt the chain on confirmation must NOT
+        # halt the watcher pre-confirmation -- the `with db:` context already
+        # rolled back the speculative inserts. Log and drop this batch; the
+        # tx will halt the chain only if/when it actually confirms.
+        logger.warning("mempool parse skipped on halt-class tx: %s", e)
+    finally:
+        # Set unconditionally so a non-MempoolError exit doesn't leave the
+        # singleton stuck in mempool mode (which would silently disable UTXO
+        # cache eviction in subsequent block parsing).
+        CurrentState().set_parsing_mempool(False)
+
     logger.trace("Mempool transaction parsed successfully.")
-    CurrentState().set_parsing_mempool(False)
     return not_supported_txs
 
 
