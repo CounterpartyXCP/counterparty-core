@@ -134,12 +134,11 @@ def apply(db):
 
     db.execute("""
         CREATE TEMP TABLE supplies AS
-        SELECT 
-            issuances_quantity.asset, 
-            issuances_quantity.quantity - COALESCE(destructions_quantity.quantity, 0) AS supply 
+        SELECT
+            issuances_quantity.asset,
+            issuances_quantity.quantity - COALESCE(destructions_quantity.quantity, 0) AS supply
         FROM issuances_quantity
         LEFT JOIN destructions_quantity ON issuances_quantity.asset = destructions_quantity.asset
-        WHERE issuances_quantity.asset = destructions_quantity.asset
     """)
 
     db.execute("""
