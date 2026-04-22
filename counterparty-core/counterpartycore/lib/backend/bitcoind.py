@@ -464,6 +464,15 @@ def add_block_in_cache(block_index, block):
         add_transaction_in_cache(transaction["tx_hash"], transaction)
 
 
+def reset_caches():
+    """Clear in-memory backend caches that may hold data tied to a specific
+    block_index. TRANSACTIONS_CACHE holds `deserialize_tx` output which
+    honours protocol gates, so a cache hit after a reorg can return data
+    deserialised under the orphaned chain's gates. Called from rollback."""
+    TRANSACTIONS_CACHE.clear()
+    BLOCKS_CACHE.clear()
+
+
 def get_decoded_transaction(tx_hash, block_index=None, no_retry=False):
     if tx_hash in TRANSACTIONS_CACHE:
         return TRANSACTIONS_CACHE[tx_hash]

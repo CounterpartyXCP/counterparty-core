@@ -603,11 +603,7 @@ def rollback(db, block_index=0, force=False):
             cursor.close()
     CurrentState().set_current_block_index(block_index - 1)
     ledger.caches.reset_caches()
-    # Cached deserialised txs are produced by deserialize_tx(raw_tx, block_index=...)
-    # which honours protocol gates, so a cache hit after a reorg can return data
-    # deserialised under the gates of the orphaned chain's block_index. Clear
-    # to force fresh deserialisation against the new chain's block_index.
-    backend.bitcoind.TRANSACTIONS_CACHE.clear()
+    backend.bitcoind.reset_caches()
 
 
 def generate_progression_message(
