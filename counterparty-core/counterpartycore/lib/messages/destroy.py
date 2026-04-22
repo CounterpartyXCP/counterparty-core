@@ -109,13 +109,21 @@ def parse(db, tx, message):
     except (exceptions.ValidateError, exceptions.BalanceError) as e:  # noqa: F405
         status = "invalid: " + "".join(e.args)
 
+    # Clamp quantity to avoid OverflowError when validate rejected for a
+    # non-overflow reason (e.g., asset == BTC) but quantity still exceeds
+    # the signed 64-bit SQLite INTEGER range. The record is being inserted
+    # with invalid status anyway.
+    safe_quantity = quantity
+    if safe_quantity is not None and safe_quantity > config.MAX_INT:
+        safe_quantity = None
+
     bindings = {
         "tx_index": tx["tx_index"],
         "tx_hash": tx["tx_hash"],
         "block_index": tx["block_index"],
         "source": tx["source"],
         "asset": asset,
-        "quantity": quantity,
+        "quantity": safe_quantity,
         "tag": tag,
         "status": status,
     }

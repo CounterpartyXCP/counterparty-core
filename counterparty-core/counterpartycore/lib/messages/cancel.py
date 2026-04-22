@@ -79,6 +79,7 @@ def parse(db, tx, message):
 
     # Unpack message.
     offer_hash, status = unpack(message)
+    offer_type = None
 
     if status == "valid":
         offer, offer_type, problems = validate(db, tx["source"], offer_hash)
