@@ -197,8 +197,16 @@ fn parse_vout(
             None => vec![],
         };
         let bytes = arc4_decrypt(&key, &pb);
-        if bytes.len() >= config.prefix.len() && bytes[1..=config.prefix.len()] == config.prefix {
-            let data_len = bytes[0] as usize;
+        // bytes[1..=config.prefix.len()] needs bytes.len() > config.prefix.len()
+        // (strict inequality). Original `>=` off-by-one panics when equal.
+        if bytes.len() > config.prefix.len() && bytes[1..=config.prefix.len()] == config.prefix {
+            // Clamp data_len to a valid range so bytes[1..=data_len] cannot
+            // over-index, and ensure data is at least prefix.len() long so
+            // data[config.prefix.len()..] does not panic on short attacker input.
+            let data_len = min(bytes[0] as usize, bytes.len() - 1);
+            if data_len < config.prefix.len() {
+                return Ok((ParseOutput::Data(vec![]), None));
+            }
             let data = bytes[1..=data_len].to_vec();
             return Ok((
                 ParseOutput::Data(data[config.prefix.len()..].to_vec()),
@@ -311,8 +319,15 @@ fn parse_vout(
             enc_bytes.extend(chunk[1..chunk.len() - 1].to_vec()); // Skip sign byte and nonce byte.
         }
         let bytes = arc4_decrypt(&key, &enc_bytes);
-        if bytes.len() >= config.prefix.len() && bytes[1..=config.prefix.len()] == config.prefix {
+        // bytes[1..=config.prefix.len()] needs bytes.len() > config.prefix.len()
+        // (strict inequality). Original `>=` off-by-one panics when equal.
+        if bytes.len() > config.prefix.len() && bytes[1..=config.prefix.len()] == config.prefix {
             let chunk_len = min(bytes[0] as usize, bytes.len() - 1);
+            // chunk_len must be >= prefix.len() so chunk[prefix.len()..] does
+            // not panic when attacker supplies a small bytes[0].
+            if chunk_len < config.prefix.len() {
+                return Ok((ParseOutput::Data(vec![]), None));
+            }
             let chunk = bytes[1..=chunk_len].to_vec();
             return Ok((
                 ParseOutput::Data(chunk[config.prefix.len()..].to_vec()),
