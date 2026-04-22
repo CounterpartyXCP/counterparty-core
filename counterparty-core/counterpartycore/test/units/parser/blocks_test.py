@@ -161,6 +161,26 @@ def test_rollback(ledger_db, test_helpers, caplog):
     assert last_block["block_index"] == last_attach["block_index"] - 2
 
 
+def test_rollback_cleans_orphaned_transactions_status(ledger_db, test_helpers):
+    last_attach = ledger_db.execute(
+        "SELECT * FROM sends WHERE send_type='attach' ORDER BY rowid DESC LIMIT 1"
+    ).fetchone()
+    rollback_to = last_attach["block_index"] - 1
+
+    orphan_tx_indexes = [row["tx_index"] for row in ledger_db.execute(
+        "SELECT tx_index FROM transactions WHERE block_index >= ?", (rollback_to,)
+    ).fetchall()]
+    assert len(orphan_tx_indexes) > 0, "test prerequisite: need txs to be rolled back"
+
+    blocks.rollback(ledger_db, rollback_to)
+
+    leftover = ledger_db.execute(
+        """SELECT COUNT(*) AS cnt FROM transactions_status
+           WHERE tx_index NOT IN (SELECT tx_index FROM transactions)"""
+    ).fetchone()["cnt"]
+    assert leftover == 0
+
+
 def test_reparse(ledger_db, test_helpers, caplog):
     last_block = ledger_db.execute(
         "SELECT block_index, ledger_hash, txlist_hash FROM blocks ORDER BY block_index DESC LIMIT 1"

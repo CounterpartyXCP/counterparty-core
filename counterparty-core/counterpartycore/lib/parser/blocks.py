@@ -558,6 +558,13 @@ def clean_transactions_tables(cursor, block_index=0):
     cursor.execute("""PRAGMA foreign_keys=OFF""")
     for table in ["transaction_outputs", "transactions", "blocks"]:
         clean_table_from(cursor, table, block_index)
+    # transactions_status is keyed only on tx_index (no block_index column),
+    # so it cannot be cleaned by clean_table_from. Drop orphaned rows whose
+    # tx_index no longer exists in the (now-pruned) transactions table.
+    cursor.execute(
+        """DELETE FROM transactions_status
+           WHERE tx_index NOT IN (SELECT tx_index FROM transactions)"""
+    )
     cursor.execute("""PRAGMA foreign_keys=ON""")
 
 
@@ -566,7 +573,7 @@ def rebuild_database(db, include_transactions=True):
     cursor.execute("""PRAGMA foreign_keys=OFF""")
     tables_to_clean = list(TABLES)
     if include_transactions:
-        tables_to_clean += ["transaction_outputs", "transactions", "blocks"]
+        tables_to_clean += ["transaction_outputs", "transactions", "blocks", "transactions_status"]
     for table in tables_to_clean:
         cursor.execute(f"DROP TABLE IF EXISTS {table}")  # nosec B608
     cursor.execute("""PRAGMA foreign_keys=ON""")
