@@ -102,8 +102,11 @@ class CounterpartyServer(threading.Thread):
 
         # Log all config parameters, sorted by key
         # Filter out default values, these should be set in a different way
+        # Redact secrets so DEBUG logs / Sentry breadcrumbs don't leak the
+        # bitcoind RPC password, API password, or auth cookies.
+        secret_substrings = ("PASSWORD", "SECRET", "COOKIE", "TOKEN", "KEY")
         custom_config = {
-            k: v
+            k: ("***" if any(s in k.upper() for s in secret_substrings) and v else v)
             for k, v in sorted(config.__dict__.items())
             if not k.startswith("__") and not k.startswith("DEFAULT_")
         }
