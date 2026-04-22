@@ -602,6 +602,15 @@ def rollback(db, block_index=0, force=False):
             clean_transactions_tables(cursor, block_index=block_index)
             cursor.close()
     CurrentState().set_current_block_index(block_index - 1)
+    # Mempool tables aren't in the rollback table list (mempool has no
+    # block_index column) and clean_mempool only prunes hashes the chain
+    # already absorbed -- so post-reorg, mempool rows still reference
+    # ledger state from the orphaned chain. Truncate both so the next
+    # mempool poll rebuilds against the new tip.
+    cursor = db.cursor()
+    cursor.execute("DELETE FROM mempool")
+    cursor.execute("DELETE FROM mempool_transactions")
+    cursor.close()
     ledger.caches.reset_caches()
     backend.bitcoind.reset_caches()
 
@@ -641,6 +650,11 @@ def reparse(db, block_index=0):
         clean_messages_tables(db, block_index=block_index)
 
     ledger.caches.reset_caches()
+    # rollback() resets the bitcoind tx/block caches; reparse keeps blocks
+    # in place but still re-deserialises raw txs through gate-dependent
+    # paths, so stale TRANSACTIONS_CACHE entries from a prior run could
+    # leak into the new pass. Match the rollback hygiene.
+    backend.bitcoind.reset_caches()
 
     step = "Recalculating consensus hashes..."
     with log.Spinner("Recalculating consensus hashes..."):
@@ -731,6 +745,16 @@ def handle_reorg(db):
     # search last block with the correct hash
     previous_block_index = CurrentState().current_block_index() - 1
     while True:
+        if previous_block_index < config.BLOCK_FIRST:
+            # If we walked all the way back to genesis without matching, we
+            # are on the wrong network or the local DB is corrupt -- not a
+            # legitimate reorg. Without this guard the loop would underflow
+            # past genesis and eventually raise an obscure error from
+            # getblockhash on a negative height.
+            raise exceptions.ReorgError(
+                "handle_reorg walked back past BLOCK_FIRST without finding a matching hash; "
+                "ledger DB and bitcoind are not on the same chain"
+            )
         previous_block_hash = backend.bitcoind.getblockhash(previous_block_index)
 
         try:
