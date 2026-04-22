@@ -5,6 +5,7 @@ import logging
 import math
 import string
 import sys
+import threading
 import time
 from collections import OrderedDict
 from decimal import Decimal as D
@@ -557,13 +558,19 @@ def prepare_outputs(db, source, destinations, data, unspent_list, construct_para
 
 
 class UTXOLocks(metaclass=helpers.SingletonMeta):
+    # Singleton state is shared across threads in a single gunicorn worker;
+    # without this lock, two concurrent compose_transaction calls between
+    # filter_unspent_list and lock_inputs can both pick the same UTXO,
+    # producing an unsignable second tx the network rejects (UX bug). The
+    # lock does NOT cross processes -- multi-worker deployments still need
+    # a shared store (file/DB/redis) for cross-worker safety.
     def __init__(self):
         self.max_age = None
         self.max_size = None
+        self._mutex = threading.Lock()
         self.init()
 
     def init(self):
-        self.locks = OrderedDict()
         self.locks = OrderedDict()
         self.set_limits(config.UTXO_LOCKS_MAX_AGE, config.UTXO_LOCKS_MAX_ADDRESSES)
 
@@ -572,17 +579,19 @@ class UTXOLocks(metaclass=helpers.SingletonMeta):
         self.max_size = max_size
 
     def lock(self, utxo):
-        self.locks[utxo] = time.time()
-        if len(self.locks) > self.max_size:
-            self.locks.popitem(last=False)
+        with self._mutex:
+            self.locks[utxo] = time.time()
+            if len(self.locks) > self.max_size:
+                self.locks.popitem(last=False)
 
     def locked(self, utxo):
-        if utxo not in self.locks:
-            return False
-        if time.time() - self.locks[utxo] > self.max_age:
-            del self.locks[utxo]
-            return False
-        return True
+        with self._mutex:
+            if utxo not in self.locks:
+                return False
+            if time.time() - self.locks[utxo] > self.max_age:
+                del self.locks[utxo]
+                return False
+            return True
 
     def filter_unspent_list(self, unspent_list):
         return [utxo for utxo in unspent_list if not self.locked(f"{utxo['txid']}:{utxo['vout']}")]
