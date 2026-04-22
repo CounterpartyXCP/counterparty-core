@@ -4,7 +4,7 @@ import tempfile
 import time
 
 import pytest
-from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib import backend, config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import (
     cancel,
@@ -159,6 +159,15 @@ def test_rollback(ledger_db, test_helpers, caplog):
         "SELECT block_index, ledger_hash, txlist_hash FROM blocks ORDER BY block_index DESC LIMIT 1"
     ).fetchone()
     assert last_block["block_index"] == last_attach["block_index"] - 2
+
+
+def test_rollback_clears_bitcoind_caches(ledger_db, test_helpers):
+    backend.bitcoind.TRANSACTIONS_CACHE["deadbeef"] = {"sentinel": True}
+    last_attach = ledger_db.execute(
+        "SELECT * FROM sends WHERE send_type='attach' ORDER BY rowid DESC LIMIT 1"
+    ).fetchone()
+    blocks.rollback(ledger_db, last_attach["block_index"] - 1)
+    assert "deadbeef" not in backend.bitcoind.TRANSACTIONS_CACHE
 
 
 def test_rollback_cleans_orphaned_transactions_status(ledger_db, test_helpers):
