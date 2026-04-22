@@ -18,8 +18,9 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def normalize_price(value, precision=16):
-    decimal.getcontext().prec = 32
-    return f"{D(value):.{precision}f}"
+    with decimal.localcontext() as ctx:
+        ctx.prec = 32
+        return f"{D(value):.{precision}f}"
 
 
 def inject_issuances_and_block_times(ledger_db, state_db, result_list):

@@ -104,10 +104,11 @@ def to_short_json(obj):
 
 
 def divide(value1, value2):
-    decimal.getcontext().prec = 16
     if value2 == 0 or value1 == 0:
         return D(0)
-    return D(value1) / D(value2)
+    with decimal.localcontext() as ctx:
+        ctx.prec = 16
+        return D(value1) / D(value2)
 
 
 def setup_bitcoinutils(network=None):
