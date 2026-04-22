@@ -201,7 +201,11 @@ class CounterpartyServer(threading.Thread):
             time.sleep(0.1)
 
         if self.args.api_only:
-            while True:
+            # Loop must check the event so stop() actually exits the loop;
+            # without this, even after self.api_stop_event.set() the wait()
+            # just returns and we re-enter the wait. Daemon=True eventually
+            # tears the process down, but there's no clean SIGTERM round.
+            while not self.api_stop_event.is_set():
                 self.api_stop_event.wait(1)
             return
 
