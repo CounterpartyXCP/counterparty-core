@@ -103,6 +103,26 @@ class BlockchainWatcher:
             self.mempool_parser.start()
 
     def connect_to_zmq(self):
+        # Close any prior sockets + context so a reconnect (called on
+        # ZMQError in receive_multipart) doesn't leak file descriptors and
+        # eventually exhaust the per-process limit on long-running indexers
+        # with flapping ZMQ connections.
+        if hasattr(self, "zmq_sub_socket_sequence") and self.zmq_sub_socket_sequence is not None:
+            try:
+                self.zmq_sub_socket_sequence.close(linger=0)
+            except Exception:  # pylint: disable=broad-except
+                pass
+        if hasattr(self, "zmq_sub_socket_rawblock") and self.zmq_sub_socket_rawblock is not None:
+            try:
+                self.zmq_sub_socket_rawblock.close(linger=0)
+            except Exception:  # pylint: disable=broad-except
+                pass
+        if hasattr(self, "zmq_context") and self.zmq_context is not None:
+            try:
+                self.zmq_context.term()
+            except Exception:  # pylint: disable=broad-except
+                pass
+
         self.zmq_context = zmq.asyncio.Context()
         self.zmq_sub_socket_sequence = self.zmq_context.socket(zmq.SUB)
         self.zmq_sub_socket_sequence.setsockopt(zmq.RCVHWM, 0)
@@ -114,7 +134,10 @@ class BlockchainWatcher:
         self.zmq_sub_socket_sequence.connect(self.zmq_sequence_address)
         self.zmq_sub_socket_rawblock = self.zmq_context.socket(zmq.SUB)
         self.zmq_sub_socket_rawblock.setsockopt(zmq.RCVHWM, 0)
-        self.zmq_sub_socket_sequence.setsockopt(zmq.RCVTIMEO, ZMQ_TIMEOUT)
+        # Was setting RCVTIMEO on zmq_sub_socket_sequence twice (typo); rawblock
+        # uses zmq.NOBLOCK at recv time so the missing timeout was harmless,
+        # but make the timeout symmetric in case anyone removes NOBLOCK later.
+        self.zmq_sub_socket_rawblock.setsockopt(zmq.RCVTIMEO, ZMQ_TIMEOUT)
         self.zmq_sub_socket_rawblock.setsockopt_string(zmq.SUBSCRIBE, "rawblock")
         self.zmq_sub_socket_rawblock.connect(self.zmq_rawblock_address)
 
