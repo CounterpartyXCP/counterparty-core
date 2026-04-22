@@ -126,27 +126,39 @@ class BlockchainWatcher:
 
     def receive_rawblock(self, body):
         # parse blocks as they come in
-        decoded_block = deserialize.deserialize_block(
-            body.hex(),
-            parse_vouts=True,
-            block_index=CurrentState().current_block_index() + 1,
-        )
-        # check if already parsed by block.catch_up()
-        existing_block = ledger.blocks.get_block_by_hash(self.db, decoded_block["block_hash"])
-        if existing_block is None:
-            previous_block = ledger.blocks.get_block_by_hash(self.db, decoded_block["hash_prev"])
-            if previous_block is None:
-                # catch up with rpc if previous block is missing
-                logger.debug("Previous block is missing. Catching up...")
-                blocks.catch_up(self.db)
+        try:
+            decoded_block = deserialize.deserialize_block(
+                body.hex(),
+                parse_vouts=True,
+                block_index=CurrentState().current_block_index() + 1,
+            )
+            # check if already parsed by block.catch_up()
+            existing_block = ledger.blocks.get_block_by_hash(self.db, decoded_block["block_hash"])
+            if existing_block is None:
+                previous_block = ledger.blocks.get_block_by_hash(
+                    self.db, decoded_block["hash_prev"]
+                )
+                if previous_block is None:
+                    # catch up with rpc if previous block is missing
+                    logger.debug("Previous block is missing. Catching up...")
+                    blocks.catch_up(self.db)
+                    CurrentState().set_ledger_state(self.db, "Following")
+                else:
+                    blocks.parse_new_block(self.db, decoded_block)
                 CurrentState().set_ledger_state(self.db, "Following")
-            else:
-                blocks.parse_new_block(self.db, decoded_block)
-            CurrentState().set_ledger_state(self.db, "Following")
-            if not config.NO_MEMPOOL:
-                mempool.clean_mempool(self.db)
-            if not config.NO_TELEMETRY:
-                TelemetryOneShot().submit()
+                if not config.NO_MEMPOOL:
+                    mempool.clean_mempool(self.db)
+                if not config.NO_TELEMETRY:
+                    TelemetryOneShot().submit()
+        except exceptions.ParseTransactionError:
+            # Consensus halt; let the outer handler stop the watcher.
+            raise
+        except Exception as e:  # pylint: disable=broad-except
+            # Operational failures (malformed rawblock, transient telemetry/RPC
+            # error) should not tear down the watcher -- next ZMQ message or
+            # the next is_late() tick will trigger catch_up() to recover.
+            logger.warning("receive_rawblock skipped: %s", e)
+            capture_exception(e)
 
     def receive_hashtx(self, body, sequence):
         self.hash_by_sequence[sequence] = body.hex()
@@ -254,7 +266,13 @@ class BlockchainWatcher:
         last_parsed_block = ledger.blocks.get_last_block(self.db)
         if last_parsed_block:
             last_parsed_block_index = last_parsed_block["block_index"]
-            bitcoind_block_index = backend.bitcoind.getblockcount()
+            try:
+                bitcoind_block_index = backend.bitcoind.getblockcount()
+            except exceptions.BitcoindRPCError as e:
+                # Don't tear down the watcher on a transient auth/RPC flap;
+                # the outer handle() loop catches and stop()s on any raise.
+                logger.warning("is_late: getblockcount failed: %s", e)
+                return False
             return last_parsed_block_index < bitcoind_block_index
         return False
 
@@ -285,8 +303,9 @@ class BlockchainWatcher:
                     await self.receive_multipart(self.zmq_sub_socket_rawblock, "rawblock")
                     self.last_block_check_time = time.time()
 
-                    if self.is_late() and late_since is None:
-                        late_since = time.time()
+                    if self.is_late():
+                        if late_since is None:
+                            late_since = time.time()
                     else:
                         late_since = None
                     if late_since is not None and time.time() - late_since > 60:
