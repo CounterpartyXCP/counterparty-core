@@ -96,7 +96,11 @@ def validate(
 
     existing_asset = ledger.issuances.get_asset(db, asset)
     if existing_asset and existing_asset["asset_longname"] and asset_parent == "":
-        asset_parent, asset = existing_asset["asset_longname"].split(".")
+        # split(".", 1): subasset longnames may contain non-consecutive periods
+        # in the child portion (validate_subasset_longname permits e.g.
+        # "PARENT.foo.bar"). Without maxsplit, unpacking 3+ parts to two vars
+        # raises ValueError -> ParseTransactionError -> halt.
+        asset_parent, asset = existing_asset["asset_longname"].split(".", 1)
 
     # check if asset exists
     asset_name = asset
@@ -561,7 +565,11 @@ def parse(db, tx, message):
 
     existing_asset = ledger.issuances.get_asset(db, asset)
     if existing_asset and existing_asset["asset_longname"] and asset_parent == "":
-        asset_parent, asset = existing_asset["asset_longname"].split(".")
+        # split(".", 1): subasset longnames may contain non-consecutive periods
+        # in the child portion (validate_subasset_longname permits e.g.
+        # "PARENT.foo.bar"). Without maxsplit, unpacking 3+ parts to two vars
+        # raises ValueError -> ParseTransactionError -> halt.
+        asset_parent, asset = existing_asset["asset_longname"].split(".", 1)
 
     # is subasset ?
     asset_longname = ""
