@@ -18,9 +18,14 @@ def get_must_give(db, dispenser, btc_amount, block_index=None):
         last_price, _last_fee, _last_fiat_label, _last_updated = ledger.other.get_oracle_last_price(
             db, dispenser["oracle_address"], block_index or CurrentState().current_block_index()
         )
-        if last_price is None:
+        if last_price is None or last_price <= 0:
+            # Negative oracle prices are bet-cancellation sentinels (-2, -3) or
+            # other non-pricing broadcasts; treating them as a price would yield
+            # a negative must_give, then a negative credit() that raises and
+            # halts. is_dispensable already guards last_price == 0; this widens
+            # the check to <= 0 for the dispense path too.
             raise exceptions.NoPriceError(
-                f"No price available for this oracle {dispenser['oracle_address']} at block {block_index}"
+                f"No usable price for oracle {dispenser['oracle_address']} at block {block_index}"
             )
         fiatrate = helpers.satoshirate_to_fiat(dispenser["satoshirate"])
         return int(floor(((btc_amount / config.UNIT) * last_price) / fiatrate))
