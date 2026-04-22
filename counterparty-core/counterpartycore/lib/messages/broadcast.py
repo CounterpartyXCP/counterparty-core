@@ -263,13 +263,20 @@ def parse(db, tx, message):
     timestamp, value, fee_fraction_int, mime_type, text, status = unpack(message, tx["block_index"])
 
     if status == "valid":
-        # For SQLite3
-        timestamp = min(timestamp, config.MAX_INT)
-        value = min(value, config.MAX_INT)
+        try:
+            # For SQLite3
+            timestamp = min(timestamp, config.MAX_INT)
+            value = min(value, config.MAX_INT)
 
-        problems = validate(db, tx["source"], timestamp, value, fee_fraction_int, text, mime_type)
-        if problems:
-            status = "invalid: " + "; ".join(problems)
+            problems = validate(
+                db, tx["source"], timestamp, value, fee_fraction_int, text, mime_type
+            )
+            if problems:
+                status = "invalid: " + "; ".join(problems)
+        except (TypeError, ValueError, OverflowError, AssertionError) as e:
+            logger.warning("broadcast validate error on tx %s: %s", tx["tx_hash"], e)
+            timestamp, value, fee_fraction_int, text = 0, None, 0, None
+            status = "invalid: validation error"
 
     # Lock?
     lock = False
