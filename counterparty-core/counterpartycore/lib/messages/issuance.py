@@ -811,7 +811,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
         except exceptions.AssetIDError:
             asset = None
             status = "invalid: bad asset name"
-    except (exceptions.UnpackError, struct.error) as e:
+    except (exceptions.UnpackError, struct.error, TypeError, ValueError, OverflowError) as e:
         logger.warning("unpack error: %s", e)
         (
             asset_id,
@@ -918,42 +918,50 @@ def parse(db, tx, message, message_type_id):
     reissuance = None
     fee = 0
     if status == "valid":
-        (  # pylint: disable=unbalanced-tuple-unpacking
-            call_date,
-            call_price,
-            problems,
-            fee,
-            description,
-            divisible,
-            lock,
-            reset,
-            reissuance,
-            reissued_asset_longname,
-        ) = validate(
-            db,
-            tx["source"],
-            asset,
-            quantity,
-            divisible,
-            lock,
-            reset,
-            callable_,
-            call_date,
-            call_price,
-            description,
-            subasset_parent,
-            subasset_longname,
-            block_index=tx["block_index"],
-            mime_type=mime_type,
-        )
+        try:
+            (  # pylint: disable=unbalanced-tuple-unpacking
+                call_date,
+                call_price,
+                problems,
+                fee,
+                description,
+                divisible,
+                lock,
+                reset,
+                reissuance,
+                reissued_asset_longname,
+            ) = validate(
+                db,
+                tx["source"],
+                asset,
+                quantity,
+                divisible,
+                lock,
+                reset,
+                callable_,
+                call_date,
+                call_price,
+                description,
+                subasset_parent,
+                subasset_longname,
+                block_index=tx["block_index"],
+                mime_type=mime_type,
+            )
 
-        if problems:
-            status = "invalid: " + "; ".join(problems)
-        if (
-            not protocol.enabled("integer_overflow_fix", block_index=tx["block_index"])
-            and "total quantity overflow" in problems
-        ):
-            quantity = 0
+            if problems:
+                status = "invalid: " + "; ".join(problems)
+            if (
+                not protocol.enabled("integer_overflow_fix", block_index=tx["block_index"])
+                and "total quantity overflow" in problems
+            ):
+                quantity = 0
+        except (TypeError, ValueError, OverflowError, AssertionError) as e:
+            # CBOR-encoded messages (from hand-rolled txs) can carry values of
+            # unexpected types or arities that cause validate() or downstream
+            # comparisons to raise. Mark the tx invalid rather than halting.
+            logger.warning("issuance validate error on tx %s: %s", tx["tx_hash"], e)
+            status = "invalid: validation error"
+            problems = [str(e)]
 
     # Reset?
     if (status == "valid") and reset and protocol.enabled("cip03", tx["block_index"]):
@@ -1099,23 +1107,36 @@ def parse(db, tx, message, message_type_id):
         if reissuance and quantity > 0:
             asset_events.append("reissuance")
 
+        # Clamp numeric fields to SQLite's signed-64-bit INTEGER range so that
+        # inserting an invalid-status record with attacker-supplied huge values
+        # (e.g., from CBOR) does not raise OverflowError.
+        def _clamp(v):
+            if isinstance(v, int) and (v > config.MAX_INT or v < -(config.MAX_INT)):
+                return None
+            return v
+
+        safe_quantity = _clamp(quantity)
+        safe_call_date = _clamp(call_date)
+        safe_call_price = _clamp(call_price) if isinstance(call_price, int) else call_price
+        safe_fee = _clamp(fee)
+
         # Add parsed transaction to message-type–specific table.
         bindings = {
             "tx_index": tx["tx_index"],
             "tx_hash": tx["tx_hash"],
             "block_index": tx["block_index"],
             "asset": asset,
-            "quantity": quantity,
+            "quantity": safe_quantity,
             "divisible": divisible,
             "source": tx["source"],
             "issuer": issuer,
             "transfer": transfer,
             "callable": callable_,
-            "call_date": call_date,
-            "call_price": call_price,
+            "call_date": safe_call_date,
+            "call_price": safe_call_price,
             "description": description,
             "mime_type": mime_type,
-            "fee_paid": fee,
+            "fee_paid": safe_fee,
             "locked": lock,
             "description_locked": description_locked,
             "reset": reset,
@@ -1128,6 +1149,13 @@ def parse(db, tx, message, message_type_id):
         if "cannot issue during fair minting" in status:
             bindings["fair_minting"] = True
         if "integer overflow" not in status:
+            # Final safety clamp: any remaining int that exceeds SQLite's signed
+            # 64-bit range would raise OverflowError inside insert_record. This
+            # happens in practice when CBOR-encoded hand-rolled txs supply huge
+            # values that flow through validate() into the invalid-record bindings.
+            for _k, _v in list(bindings.items()):
+                if isinstance(_v, int) and (_v > config.MAX_INT or _v < -config.MAX_INT):
+                    bindings[_k] = None
             ledger.events.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
 
         logger.info(

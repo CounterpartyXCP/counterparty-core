@@ -238,6 +238,11 @@ def unpack(message, block_index, return_dict=False):
     except AssertionError:
         timestamp, value, fee_fraction_int, mime_type, text = 0, None, 0, "", None
         status = "invalid: could not unpack text"
+    except Exception:  # pylint: disable=broad-exception-caught
+        # Catches VarIntSerializer.SerializationTruncationError and any other
+        # parsing errors from hand-rolled messages that the specific excepts miss.
+        timestamp, value, fee_fraction_int, mime_type, text = 0, None, 0, "", None
+        status = "invalid: could not unpack"
 
     if return_dict:
         return {
