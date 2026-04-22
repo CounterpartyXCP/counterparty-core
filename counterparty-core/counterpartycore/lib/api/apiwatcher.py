@@ -54,7 +54,7 @@ EVENTS_ADDRESS_FIELDS = {
     "NEW_FAIRMINT": ["source"],
     "NEW_FAIRMINTER": ["source"],
     "ATTACH_TO_UTXO": ["source", "destination_address"],
-    "DETACH_FROM_UTXO": ["sourc_address", "destination"],
+    "DETACH_FROM_UTXO": ["source_address", "destination"],
     "UTXO_MOVE": ["source_address", "destination_address"],
 }
 
