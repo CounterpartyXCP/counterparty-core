@@ -163,7 +163,7 @@ def parse(db, tx, message):
 
     # Unpack message.
     try:
-        unpacked = unpack(message)
+        unpacked = unpack(message, block_index=tx["block_index"])
         destination, flags, memo_bytes = (
             unpacked["destination"],
             unpacked["flags"],

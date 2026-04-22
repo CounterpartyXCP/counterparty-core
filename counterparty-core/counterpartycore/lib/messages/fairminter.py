@@ -500,7 +500,7 @@ def parse(db, tx, message):
         divisible,
         mime_type,
         description,
-    ) = unpack(message)
+    ) = unpack(message, block_index=tx["block_index"])
 
     problems = validate(
         db,

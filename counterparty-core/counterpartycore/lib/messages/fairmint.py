@@ -144,7 +144,7 @@ def unpack(message, return_dict=False, block_index=None):
 
 
 def parse(db, tx, message):
-    (asset, quantity) = unpack(message)
+    (asset, quantity) = unpack(message, block_index=tx["block_index"])
     problems = validate(db, tx["source"], asset, quantity)
 
     # if problems, insert into fairmints table with status invalid and return

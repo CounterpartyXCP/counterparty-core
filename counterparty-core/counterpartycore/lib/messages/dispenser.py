@@ -380,12 +380,12 @@ def parse(db, tx, message):
         action_address,
         oracle_address,
         status,
-    ) = unpack(message)
+    ) = unpack(message, block_index=tx["block_index"])
     if action_address is None:
         action_address = tx["source"]
 
     if status == "valid":
-        if protocol.enabled("dispenser_parsing_validation", CurrentState().current_block_index()):
+        if protocol.enabled("dispenser_parsing_validation", tx["block_index"]):
             _asset_id, problems = validate(
                 db,
                 tx["source"],
