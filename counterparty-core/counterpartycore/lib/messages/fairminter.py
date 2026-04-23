@@ -592,7 +592,11 @@ def parse(db, tx, message):
     else:
         # only new named assets have fees
         if existing_asset is None and not asset.startswith("A"):
-            fee = 0.5 * config.UNIT
+            # int (not float): issuances.fee_paid is INTEGER, debit uses int(fee).
+            # Other fee-paying messages (issuance, dividend) all hoist to int
+            # at compute time -- match the convention so SUM over REAL doesn't
+            # drift after enough fairminters and so the schema stays coherent.
+            fee = int(0.5 * config.UNIT)
 
     # we only premint if the faireminter is open and soft cap reached,
     # otherwise we will do it at opening (`start_block`) or when

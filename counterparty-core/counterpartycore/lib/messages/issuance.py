@@ -188,17 +188,18 @@ def validate(
             problems.append("a subasset must be a numeric asset")
 
     # Check for existence of fee funds.
-    if quantity or protocol.enabled("pay_only_first_issuance"):  # Protocol change.
+    if quantity or protocol.enabled("pay_only_first_issuance", block_index=block_index):
         if not reissuance or (
-            not protocol.enabled("enable_rematch") and not protocol.is_test_network()
+            not protocol.enabled("enable_rematch", block_index=block_index)
+            and not protocol.is_test_network()
         ):  # Pay fee only upon first issuance. (Protocol change.)
             cursor = db.cursor()
             balance = ledger.balances.get_balance(db, source, config.XCP)
             cursor.close()
-            if protocol.enabled("numeric_asset_names"):  # Protocol change.
+            if protocol.enabled("numeric_asset_names", block_index=block_index):
                 if subasset_longname is not None and protocol.enabled(
-                    "subassets"
-                ):  # Protocol change.
+                    "subassets", block_index=block_index
+                ):
                     if protocol.enabled("free_subassets", block_index):
                         fee = 0
                     else:
@@ -208,11 +209,11 @@ def validate(
                     fee = 0
                 else:
                     fee = int(0.5 * config.UNIT)
-            elif protocol.enabled("issuance_fee_update_3"):  # Protocol change.
+            elif protocol.enabled("issuance_fee_update_3", block_index=block_index):
                 fee = int(0.5 * config.UNIT)
-            elif protocol.enabled("issuance_fee_update_2"):  # Protocol change.
+            elif protocol.enabled("issuance_fee_update_2", block_index=block_index):
                 fee = 5 * config.UNIT
-            elif protocol.enabled("issuance_fee_update_1"):  # Protocol change.
+            elif protocol.enabled("issuance_fee_update_1", block_index=block_index):
                 fee = 5
             if fee and (balance < fee):
                 problems.append("insufficient funds")
