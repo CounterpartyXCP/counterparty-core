@@ -660,6 +660,21 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                     subasset_longname = assetnames.expand_subasset_longname(
                         compacted_subasset_longname
                     )
+                    # CBOR malleability guard: distinct compacted byte strings
+                    # can expand to the same longname (leading zero pad, or the
+                    # phantom '!' digit when an intermediate integer is divisible
+                    # by 68). Without canonicalization, an attacker can mint
+                    # subassets under a longname rendering that they didn't
+                    # honestly compose. Reject if the bytes don't round-trip
+                    # through compact_subasset_longname.
+                    if protocol.enabled("canonical_subasset_compact", block_index=block_index):
+                        if (
+                            assetnames.compact_subasset_longname(subasset_longname)
+                            != compacted_subasset_longname
+                        ):
+                            raise exceptions.UnpackError(
+                                "non-canonical compacted subasset longname"
+                            )
                 else:
                     raise exceptions.UnpackError("Invalid message type ID")
 
