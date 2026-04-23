@@ -4,7 +4,7 @@ import struct
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import gas
-from counterpartycore.lib.parser import utxosinfo
+from counterpartycore.lib.parser import protocol, utxosinfo
 from counterpartycore.lib.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -185,8 +185,18 @@ def parse(db, tx, message):
 
         # check if destination_vout is an OP_RETURN output
         op_return_output = utxosinfo.get_op_return_output_from_utxos_info(tx["utxos_info"])
-        if op_return_output and destination_vout == op_return_output:
-            problems.append("destination vout is an OP_RETURN output")
+        # `if op_return_output and ...` (the original) short-circuits when
+        # op_return_output == 0 because 0 is Python-falsy. That means a tx
+        # with OP_RETURN at vout 0 and destination_vout=0 silently bypasses
+        # the check and attaches the asset to the unspendable OP_RETURN
+        # output -- asset is permanently locked. Use `is not None` once the
+        # gate activates so the check fires regardless of vout index.
+        if protocol.enabled("fix_attach_op_return_check", block_index=tx["block_index"]):
+            if op_return_output is not None and destination_vout == op_return_output:
+                problems.append("destination vout is an OP_RETURN output")
+        else:
+            if op_return_output and destination_vout == op_return_output:
+                problems.append("destination vout is an OP_RETURN output")
 
         destination = f"{tx['tx_hash']}:{destination_vout}"
 
