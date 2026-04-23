@@ -414,7 +414,7 @@ def match(db, tx):
     tx1_counterwager_remaining = tx1["counterwager_remaining"]
 
     bet_matches = ledger.other.get_matching_bets(db, tx1["feed_address"], counterbet_type)
-    if protocol.enabled("fix_sort_bet_matches"):
+    if protocol.enabled("fix_sort_bet_matches", block_index=tx1["block_index"]):
         # Pre-fix gate: `sorted()` was called and the result discarded -- a
         # no-op since sort_bet_matches activated. Bet matches were processed
         # in tx_index/tx_hash order from get_matching_bets, not best-price-
