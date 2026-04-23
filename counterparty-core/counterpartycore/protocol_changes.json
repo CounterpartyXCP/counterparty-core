@@ -1203,5 +1203,14 @@
         "testnet3_block_index": 4500000,
         "testnet4_block_index": 0,
         "signet_block_index": 0
+    },
+    "check_btcpay_destination": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 0,
+        "minimum_version_revision": 0,
+        "block_index": 999999999,
+        "testnet3_block_index": 999999999,
+        "testnet4_block_index": 999999999,
+        "signet_block_index": 0
     }
 }
