@@ -475,8 +475,12 @@ def reset_caches():
     # an orphaned UTXO's cached (address, value) tuple persists across
     # reorg even though Bitcoin Core may no longer recognise the tx.
     # Same for getrawtransaction's cached payloads.
-    getrawtransaction.cache_clear()
-    get_utxo_address_and_value.cache_clear()
+    # Test fixtures monkey-patch these with plain functions that don't
+    # carry the lru_cache `cache_clear` attribute, so guard with hasattr.
+    if hasattr(getrawtransaction, "cache_clear"):
+        getrawtransaction.cache_clear()
+    if hasattr(get_utxo_address_and_value, "cache_clear"):
+        get_utxo_address_and_value.cache_clear()
 
 
 def get_decoded_transaction(tx_hash, block_index=None, no_retry=False):
