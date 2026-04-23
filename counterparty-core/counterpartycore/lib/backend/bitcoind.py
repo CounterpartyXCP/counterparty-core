@@ -471,6 +471,12 @@ def reset_caches():
     deserialised under the orphaned chain's gates. Called from rollback."""
     TRANSACTIONS_CACHE.clear()
     BLOCKS_CACHE.clear()
+    # Also clear the @functools.lru_cache wrappers; without these calls
+    # an orphaned UTXO's cached (address, value) tuple persists across
+    # reorg even though Bitcoin Core may no longer recognise the tx.
+    # Same for getrawtransaction's cached payloads.
+    getrawtransaction.cache_clear()
+    get_utxo_address_and_value.cache_clear()
 
 
 def get_decoded_transaction(tx_hash, block_index=None, no_retry=False):

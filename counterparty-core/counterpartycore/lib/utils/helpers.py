@@ -6,6 +6,7 @@ import json
 import mimetypes
 import os
 import string
+import threading
 from operator import itemgetter
 from urllib.parse import urlparse
 
@@ -50,6 +51,14 @@ def satoshirate_to_fiat(satoshirate):
 
 class SingletonMeta(type):
     _instances = {}
+    # Class-level lock prevents double-instantiation when two MainProcess
+    # threads (e.g. an APIv1 worker calling LedgerDBConnectionPool() and
+    # the parser thread doing the same) both pass the `not in _instances`
+    # check before either has stored its instance. Without the lock, both
+    # call __init__, both store, the second overwrites the first, one
+    # APSW connection leaks, and the canonical singleton may be the wrong
+    # one (later .close() on _instances[cls] closes the wrong instance).
+    _lock = threading.Lock()
 
     def __call__(cls, *args, **kwargs):
         """
@@ -57,14 +66,19 @@ class SingletonMeta(type):
         the returned instance.
         """
         if cls not in cls._instances:
-            instance = super().__call__(*args, **kwargs)
-            cls._instances[cls] = instance
+            with cls._lock:
+                # Re-check inside the lock (double-checked locking) so we don't
+                # construct twice if two threads both pass the outer check.
+                if cls not in cls._instances:
+                    instance = super().__call__(*args, **kwargs)
+                    cls._instances[cls] = instance
         return cls._instances[cls]
 
     def reset_instance(cls):
         """Force reinitialization of the singleton instance."""
-        if cls in cls._instances:
-            del cls._instances[cls]
+        with cls._lock:
+            if cls in cls._instances:
+                del cls._instances[cls]
 
 
 def format_duration(seconds):
