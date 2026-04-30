@@ -180,8 +180,10 @@ def test_clean_mempool_empty(mock_db, mock_backend_bitcoind):
 
     # Vérifications
     assert cursor.execute.called
-    cursor.execute.assert_any_call("SELECT * FROM mempool")
-    cursor.execute.assert_any_call("SELECT distinct tx_hash FROM mempool")
+    cursor.execute.assert_any_call(
+        "SELECT DISTINCT tx_hash FROM mempool "
+        "UNION SELECT DISTINCT tx_hash FROM mempool_transactions"
+    )
 
     # Aucun appel à clean_transaction_from_mempool ne devrait être fait
     assert "DELETE FROM mempool WHERE tx_hash" not in str(cursor.execute.call_args_list)
@@ -193,13 +195,8 @@ def test_clean_mempool_with_removed_transactions(
     """Test clean_mempool avec des transactions supprimées du mempool"""
     db, cursor = mock_db
 
-    # Configuration des événements de mempool
-    cursor.fetchall.side_effect = [
-        # Premier appel: transactions dans la mempool
-        [{"tx_hash": "tx1"}, {"tx_hash": "tx2"}],
-        # Deuxième appel: tx_hash distincts dans la mempool
-        [{"tx_hash": "tx1"}, {"tx_hash": "tx2"}],
-    ]
+    # Configuration des tx_hash candidats (union mempool + mempool_transactions)
+    cursor.fetchall.return_value = [{"tx_hash": "tx1"}, {"tx_hash": "tx2"}]
 
     # Configuration de get_transaction pour retourner None (transactions non validées)
     mock_ledger_blocks.return_value = None

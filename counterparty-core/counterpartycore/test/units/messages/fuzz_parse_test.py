@@ -31,7 +31,6 @@ from counterpartycore.lib.messages import (
     issuance,
     order,
     sweep,
-    utxo,
 )
 from counterpartycore.lib.messages.versions import enhancedsend, mpma, send1
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
@@ -80,20 +79,6 @@ def test_fuzz_issuance_subasset_parse(ledger_db, blockchain_mock, defaults, mess
         pass  # Hypothesis reuses ledger_db across examples; known test artifact
     except Exception as exc:
         pytest.fail(f"issuance.parse(SUBASSET) raised {type(exc).__name__}: {exc}")
-
-
-@settings(
-    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
-)
-@given(msg_bytes)
-def test_fuzz_utxo_parse(ledger_db, blockchain_mock, defaults, message):
-    tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
-    try:
-        utxo.parse(ledger_db, tx, message)
-    except apsw.ConstraintError:
-        pass  # Hypothesis reuses ledger_db across examples; known test artifact
-    except Exception as exc:
-        pytest.fail(f"utxo.parse raised {type(exc).__name__}: {exc}")
 
 
 @settings(

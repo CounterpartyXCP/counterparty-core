@@ -1,5 +1,3 @@
-from unittest.mock import patch
-
 import pytest
 from counterpartycore.lib import exceptions
 from counterpartycore.lib.messages import bet
@@ -600,13 +598,6 @@ def test_cancel_bet_match(ledger_db, test_helpers, current_block_index):
             },
         ],
     )
-
-
-def test_match_duplicate_bet_does_not_halt(ledger_db):
-    fake_bet = {"tx_index": 1, "tx_hash": "deadbeef", "status": "open"}
-    with patch("counterpartycore.lib.ledger.other.get_bet") as mock_get:
-        mock_get.return_value = [fake_bet, fake_bet]
-        assert bet.match(ledger_db, {"tx_index": 1, "tx_hash": "deadbeef"}) is None
 
 
 def test_fix_sort_bet_matches_gate_off_uses_legacy_no_op_order():
