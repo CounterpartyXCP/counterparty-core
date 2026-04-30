@@ -54,7 +54,9 @@ def _dummy_tx(blockchain_mock, ledger_db, defaults):
 # exception bubbling out.
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_issuance_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
@@ -66,7 +68,9 @@ def test_fuzz_issuance_parse(ledger_db, blockchain_mock, defaults, message):
         pytest.fail(f"issuance.parse raised {type(exc).__name__}: {exc}")
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_issuance_subasset_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
@@ -79,7 +83,9 @@ def test_fuzz_issuance_subasset_parse(ledger_db, blockchain_mock, defaults, mess
         pytest.fail(f"issuance.parse(SUBASSET) raised {type(exc).__name__}: {exc}")
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_utxo_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
@@ -91,7 +97,9 @@ def test_fuzz_utxo_parse(ledger_db, blockchain_mock, defaults, message):
         pytest.fail(f"utxo.parse raised {type(exc).__name__}: {exc}")
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_attach_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
@@ -103,7 +111,9 @@ def test_fuzz_attach_parse(ledger_db, blockchain_mock, defaults, message):
         pytest.fail(f"attach.parse raised {type(exc).__name__}: {exc}")
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_detach_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
@@ -115,7 +125,9 @@ def test_fuzz_detach_parse(ledger_db, blockchain_mock, defaults, message):
         pytest.fail(f"detach.parse raised {type(exc).__name__}: {exc}")
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_fairmint_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
@@ -127,7 +139,9 @@ def test_fuzz_fairmint_parse(ledger_db, blockchain_mock, defaults, message):
         pytest.fail(f"fairmint.parse raised {type(exc).__name__}: {exc}")
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_fairminter_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
@@ -139,7 +153,9 @@ def test_fuzz_fairminter_parse(ledger_db, blockchain_mock, defaults, message):
         pytest.fail(f"fairminter.parse raised {type(exc).__name__}: {exc}")
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_order_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
@@ -151,7 +167,9 @@ def test_fuzz_order_parse(ledger_db, blockchain_mock, defaults, message):
         pytest.fail(f"order.parse raised {type(exc).__name__}: {exc}")
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_bet_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
@@ -163,7 +181,9 @@ def test_fuzz_bet_parse(ledger_db, blockchain_mock, defaults, message):
         pytest.fail(f"bet.parse raised {type(exc).__name__}: {exc}")
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_broadcast_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
@@ -175,7 +195,9 @@ def test_fuzz_broadcast_parse(ledger_db, blockchain_mock, defaults, message):
         pytest.fail(f"broadcast.parse raised {type(exc).__name__}: {exc}")
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_btcpay_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
@@ -187,7 +209,9 @@ def test_fuzz_btcpay_parse(ledger_db, blockchain_mock, defaults, message):
         pytest.fail(f"btcpay.parse raised {type(exc).__name__}: {exc}")
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_cancel_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
@@ -199,7 +223,9 @@ def test_fuzz_cancel_parse(ledger_db, blockchain_mock, defaults, message):
         pytest.fail(f"cancel.parse raised {type(exc).__name__}: {exc}")
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_destroy_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
@@ -211,7 +237,9 @@ def test_fuzz_destroy_parse(ledger_db, blockchain_mock, defaults, message):
         pytest.fail(f"destroy.parse raised {type(exc).__name__}: {exc}")
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_dividend_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
@@ -223,7 +251,9 @@ def test_fuzz_dividend_parse(ledger_db, blockchain_mock, defaults, message):
         pytest.fail(f"dividend.parse raised {type(exc).__name__}: {exc}")
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_sweep_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
@@ -235,7 +265,9 @@ def test_fuzz_sweep_parse(ledger_db, blockchain_mock, defaults, message):
         pytest.fail(f"sweep.parse raised {type(exc).__name__}: {exc}")
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_dispenser_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
@@ -247,7 +279,9 @@ def test_fuzz_dispenser_parse(ledger_db, blockchain_mock, defaults, message):
         pytest.fail(f"dispenser.parse raised {type(exc).__name__}: {exc}")
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_send1_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
@@ -259,7 +293,9 @@ def test_fuzz_send1_parse(ledger_db, blockchain_mock, defaults, message):
         pytest.fail(f"send1.parse raised {type(exc).__name__}: {exc}")
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_enhancedsend_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
@@ -271,7 +307,9 @@ def test_fuzz_enhancedsend_parse(ledger_db, blockchain_mock, defaults, message):
         pytest.fail(f"enhancedsend.parse raised {type(exc).__name__}: {exc}")
 
 
-@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
 @given(msg_bytes)
 def test_fuzz_mpma_parse(ledger_db, blockchain_mock, defaults, message):
     tx = _dummy_tx(blockchain_mock, ledger_db, defaults)

@@ -126,9 +126,7 @@ def parse(db, tx):
                         db, dispenser, next_out["btc_amount"], next_out["block_index"]
                     )
                 except exceptions.NoPriceError as e:
-                    logger.warning(
-                        "Skipping dispenser for %s: %s", dispenser["asset"], e
-                    )
+                    logger.warning("Skipping dispenser for %s: %s", dispenser["asset"], e)
                     continue
                 remaining = int(floor(dispenser["give_remaining"] / give_quantity))
                 actually_given = min(must_give, remaining) * give_quantity

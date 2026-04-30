@@ -124,6 +124,7 @@ def test_parse_lost_found(ledger_db, blockchain_mock, defaults, test_helpers, cu
         ],
     )
 
+
 def test_parse_no_price_error_does_not_halt(ledger_db, blockchain_mock, defaults):
     tx = blockchain_mock.dummy_tx(
         ledger_db, defaults["addresses"][0], defaults["addresses"][5], btc_amount=100

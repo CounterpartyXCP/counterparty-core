@@ -48,18 +48,28 @@ def issuance_cbor_tuple():
     # 7-tuple for standard issuance: (asset_id, quantity, divisible, lock,
     # reset, mime_type, description)
     return st.tuples(
-        any_scalar, any_scalar, any_scalar, any_scalar,
-        any_scalar, any_scalar, any_scalar,
+        any_scalar,
+        any_scalar,
+        any_scalar,
+        any_scalar,
+        any_scalar,
+        any_scalar,
+        any_scalar,
     )
 
 
 def subasset_cbor_tuple():
     # 9-tuple for subasset
     return st.tuples(
-        any_scalar, any_scalar, any_scalar, any_scalar, any_scalar,
+        any_scalar,
+        any_scalar,
+        any_scalar,
+        any_scalar,
+        any_scalar,
         st.integers(min_value=0, max_value=20),  # compacted_length
         st.binary(max_size=20),  # compacted_longname
-        any_scalar, any_scalar,
+        any_scalar,
+        any_scalar,
     )
 
 
@@ -67,7 +77,11 @@ def broadcast_cbor_tuple():
     # 5-tuple: (timestamp, value, fee_fraction_int, mime_type, text_bytes)
     # This is the bug_009 attack surface that ultrareview caught.
     return st.tuples(
-        any_scalar, any_scalar, any_scalar, any_scalar, any_scalar,
+        any_scalar,
+        any_scalar,
+        any_scalar,
+        any_scalar,
+        any_scalar,
     )
 
 

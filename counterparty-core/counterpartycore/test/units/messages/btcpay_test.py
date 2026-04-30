@@ -284,9 +284,7 @@ def _attacker_btcpay_setup(ledger_db, blockchain_mock, defaults, monkeypatch):
             }
         ]
 
-    monkeypatch.setattr(
-        "counterpartycore.lib.ledger.markets.get_order_match", mock_get_order_match
-    )
+    monkeypatch.setattr("counterpartycore.lib.ledger.markets.get_order_match", mock_get_order_match)
     monkeypatch.setattr(
         "counterpartycore.lib.ledger.markets.update_order_match_status", lambda *a, **kw: None
     )
@@ -311,9 +309,7 @@ def _attacker_btcpay_setup(ledger_db, blockchain_mock, defaults, monkeypatch):
     credits = []
     monkeypatch.setattr(
         "counterpartycore.lib.ledger.events.credit",
-        lambda db, address, asset, quantity, *a, **kw: credits.append(
-            (address, asset, quantity)
-        ),
+        lambda db, address, asset, quantity, *a, **kw: credits.append((address, asset, quantity)),
     )
     return tx, message, credits, carol
 

@@ -2368,9 +2368,7 @@ def test_canonical_subasset_compact_gate_off_accepts_noncanonical(
 
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     with ProtocolChangesDisabled(["canonical_subasset_compact"]):
-        message = cbor2.dumps(
-            [1, 1, True, False, False, 0, b"\x00\x00\x01", "text/plain", "test"]
-        )
+        message = cbor2.dumps([1, 1, True, False, False, 0, b"\x00\x00\x01", "text/plain", "test"])
         issuance.parse(ledger_db, tx, message, issuance.SUBASSET_ID)  # must not raise
 
 

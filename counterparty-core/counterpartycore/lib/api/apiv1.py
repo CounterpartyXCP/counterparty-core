@@ -243,9 +243,7 @@ def get_rows(
         if "field" in filter_ and (
             not isinstance(filter_["field"], str) or not field_name_re.match(filter_["field"])
         ):
-            raise exceptions.APIError(
-                "Invalid filter field name; must match [a-z0-9_]+"
-            )
+            raise exceptions.APIError("Invalid filter field name; must match [a-z0-9_]+")
         for field in ["field", "op", "value"]:  # should have all fields
             if field not in filter_:
                 raise exceptions.APIError(f"A specified filter is missing the '{field}' field")

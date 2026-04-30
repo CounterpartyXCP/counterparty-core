@@ -176,9 +176,12 @@ def test_rollback_cleans_orphaned_transactions_status(ledger_db, test_helpers):
     ).fetchone()
     rollback_to = last_attach["block_index"] - 1
 
-    orphan_tx_indexes = [row["tx_index"] for row in ledger_db.execute(
-        "SELECT tx_index FROM transactions WHERE block_index >= ?", (rollback_to,)
-    ).fetchall()]
+    orphan_tx_indexes = [
+        row["tx_index"]
+        for row in ledger_db.execute(
+            "SELECT tx_index FROM transactions WHERE block_index >= ?", (rollback_to,)
+        ).fetchall()
+    ]
     assert len(orphan_tx_indexes) > 0, "test prerequisite: need txs to be rolled back"
 
     blocks.rollback(ledger_db, rollback_to)

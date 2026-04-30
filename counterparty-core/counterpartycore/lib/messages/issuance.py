@@ -688,9 +688,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                 and assetnames.compact_subasset_longname(subasset_longname)
                 != compacted_subasset_longname
             ):
-                raise exceptions.UnpackError(
-                    "non-canonical compacted subasset longname"
-                )
+                raise exceptions.UnpackError("non-canonical compacted subasset longname")
 
         if not unpacked:
             if message_type_id in [LR_SUBASSET_ID, SUBASSET_ID]:

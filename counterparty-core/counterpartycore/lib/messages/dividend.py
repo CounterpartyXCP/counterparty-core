@@ -192,7 +192,10 @@ def compose(
 
 def unpack(db, message, block_index, return_dict=False):
     try:
-        if protocol.enabled("new_dividend_format", block_index=block_index) and len(message) == LENGTH_2:
+        if (
+            protocol.enabled("new_dividend_format", block_index=block_index)
+            and len(message) == LENGTH_2
+        ):
             quantity_per_unit, asset_id, dividend_asset_id = struct.unpack(FORMAT_2, message)
             asset = ledger.issuances.get_asset_name(db, asset_id)
             dividend_asset = ledger.issuances.get_asset_name(db, dividend_asset_id)

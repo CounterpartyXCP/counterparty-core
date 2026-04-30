@@ -375,9 +375,7 @@ def test_migration_0014_re_derives_latest_issuance_columns(state_db, ledger_db):
     # The migration should be idempotent and runnable on the current state_db
     # without error; verify it leaves assets_info consistent with the latest
     # valid issuance per asset.
-    dbbuilder.apply_migration(
-        state_db, "0014.fix_assets_info_latest_issuance_columns"
-    )
+    dbbuilder.apply_migration(state_db, "0014.fix_assets_info_latest_issuance_columns")
     rows = state_db.execute(
         "SELECT asset, description, divisible, mime_type, owner FROM assets_info "
         "WHERE asset NOT IN ('XCP', 'BTC')"

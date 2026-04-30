@@ -598,8 +598,6 @@ def test_cancel_bet_match(ledger_db, test_helpers, current_block_index):
             },
         ],
     )
-<<<<<<< HEAD
-=======
 
 
 def test_match_duplicate_bet_does_not_halt(ledger_db):
@@ -626,4 +624,3 @@ def test_fix_sort_bet_matches_gate_off_uses_legacy_no_op_order():
     # Post-fix: assigned, order changes
     items_post = sorted(items, key=lambda x: x["p"])
     assert [i["tx_index"] for i in items_post] == [3, 2, 1]
->>>>>>> 9261884e9 (Add 12 regression tests for the audit fixes)

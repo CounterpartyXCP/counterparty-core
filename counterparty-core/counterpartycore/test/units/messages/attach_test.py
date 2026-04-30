@@ -359,9 +359,7 @@ def test_attach_to_op_return_at_vout_0_with_gate_OFF_legacy_locks_asset(
     assert row["destination"] == f"{tx['tx_hash']}:0"
 
 
-def test_attach_to_op_return_at_vout_0_with_gate_ON_rejects(
-    ledger_db, blockchain_mock, defaults
-):
+def test_attach_to_op_return_at_vout_0_with_gate_ON_rejects(ledger_db, blockchain_mock, defaults):
     """Post-fix behavior: with `fix_attach_op_return_check` ON, the
     OP_RETURN check uses `is not None` instead of Python truthiness, so
     op_return_output == 0 no longer silently passes. The attach is
