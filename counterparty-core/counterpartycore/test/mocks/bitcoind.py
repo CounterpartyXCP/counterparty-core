@@ -6,6 +6,7 @@ import traceback
 from multiprocessing import Value
 
 import pytest
+from _pytest.monkeypatch import MonkeyPatch
 from bitcoinutils.keys import PublicKey
 from counterpartycore.lib import backend, config, exceptions, parser
 from counterpartycore.lib.api import composer
@@ -217,8 +218,6 @@ def search_pubkey(source, tx_hashes):
 
 @pytest.fixture(scope="session")
 def monkeymodule():
-    from _pytest.monkeypatch import MonkeyPatch
-
     mpatch = MonkeyPatch()
     yield mpatch
     mpatch.undo()

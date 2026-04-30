@@ -1,6 +1,7 @@
 import json
 import re
 import time
+from unittest.mock import patch
 
 import pytest
 from counterpartycore.lib import exceptions
@@ -504,7 +505,6 @@ def test_get_vin_info_legacy_error(monkeypatch):
 def test_get_vin_info_legacy_error_logs_warning(monkeypatch):
     """When a parent transaction cannot be found, a warning must be logged
     so operators can diagnose why a Counterparty transaction was skipped."""
-    from unittest.mock import patch
 
     def raise_error(*args, **kwargs):
         raise exceptions.BitcoindRPCError
@@ -551,7 +551,6 @@ def test_get_vin_info_fallback_also_fails(monkeypatch):
     """When Rust VIN info is None AND the legacy fallback also fails,
     a warning is logged and DecodeError is raised. This is the scenario
     that caused a transaction to be silently skipped on a user's server."""
-    from unittest.mock import patch
 
     def raise_error(*args, **kwargs):
         raise exceptions.BitcoindRPCError("No such mempool or blockchain transaction")

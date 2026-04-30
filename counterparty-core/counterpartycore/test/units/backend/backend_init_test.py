@@ -1,7 +1,9 @@
 """Tests for backend/__init__.py module."""
 
+import importlib
+
 import pytest
-from counterpartycore.lib import config, exceptions
+from counterpartycore.lib import backend, config, exceptions
 
 # Skip these tests because they conflict with session-level mocks
 # The session-level mock in bitcoind.py overrides all patching
@@ -17,11 +19,6 @@ def test_list_unspent_from_bitcoind_direct(monkeypatch):
         "counterpartycore.lib.backend.bitcoind.list_unspent",
         lambda source, allow_unconfirmed: expected_utxos,
     )
-
-    # Reimport to get patched version
-    import importlib
-
-    from counterpartycore.lib import backend
 
     importlib.reload(backend)
 
@@ -42,10 +39,6 @@ def test_list_unspent_fallback_to_electrs_direct(monkeypatch):
         lambda source, allow_unconfirmed: expected_utxos,
     )
 
-    import importlib
-
-    from counterpartycore.lib import backend
-
     importlib.reload(backend)
 
     # Save original and set ELECTRS_URL
@@ -65,10 +58,6 @@ def test_list_unspent_no_electrs_configured_direct(monkeypatch):
         "counterpartycore.lib.backend.bitcoind.list_unspent",
         lambda source, allow_unconfirmed: [],
     )
-
-    import importlib
-
-    from counterpartycore.lib import backend
 
     importlib.reload(backend)
 

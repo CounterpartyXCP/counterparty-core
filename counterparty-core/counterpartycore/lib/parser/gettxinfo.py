@@ -279,7 +279,7 @@ def get_transaction_sources(decoded_tx):
 
         # old; append to sources, results in invalid addresses
         # new; first found source is source, the rest can be anything (to fund the TX for example)
-        if not (protocol.enabled("first_input_is_source") and len(sources)):
+        if not (protocol.enabled("first_input_is_source") and sources):
             # Collect unique sources.
             if new_source not in sources:
                 sources.append(new_source)

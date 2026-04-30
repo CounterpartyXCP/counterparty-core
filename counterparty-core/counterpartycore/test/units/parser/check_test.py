@@ -1,9 +1,12 @@
+import json
 import threading
 from unittest.mock import MagicMock
 
 import pytest
+import requests
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.messages.data import checkpoints
 from counterpartycore.lib.parser import check
 
 
@@ -105,8 +108,6 @@ def test_software_version_connection_error(monkeypatch):
 
 def test_software_version_timeout_error(monkeypatch):
     """Test software_version with timeout error."""
-    import requests
-
     original_force = config.FORCE
     config.FORCE = False
 
@@ -150,8 +151,6 @@ def test_software_version_json_decode_error(monkeypatch):
 
 def test_software_version_success(monkeypatch):
     """Test software_version with valid response."""
-    import json
-
     original_force = config.FORCE
     config.FORCE = False
 
@@ -546,8 +545,6 @@ def test_consensus_hash_mainnet_checkpoints():
 # Tests for lines 87-88: ConsensusError when hash doesn't match checkpoint
 def test_consensus_hash_checkpoint_mismatch():
     """Test consensus_hash raises ConsensusError when hash doesn't match checkpoint (lines 87-88)."""
-    from counterpartycore.lib.messages.data import checkpoints
-
     mock_db = MagicMock()
     mock_cursor = MagicMock()
     mock_db.cursor.return_value = mock_cursor

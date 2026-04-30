@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import tempfile
@@ -23,8 +24,6 @@ def print_docker_output(out, printed_line_count):
 
 
 def rpc_call(url, method, params):
-    import json
-
     headers = {"content-type": "application/json"}
     payload = {
         "method": method,

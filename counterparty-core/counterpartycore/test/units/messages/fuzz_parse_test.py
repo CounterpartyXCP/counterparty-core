@@ -16,8 +16,6 @@ Run: hatch run pytest counterpartycore/test/units/messages/fuzz_parse_test.py
 
 import apsw
 import pytest
-from hypothesis import HealthCheck, given, settings, strategies as st
-
 from counterpartycore.lib.messages import (
     attach,
     bet,
@@ -37,7 +35,8 @@ from counterpartycore.lib.messages import (
 )
 from counterpartycore.lib.messages.versions import enhancedsend, mpma, send1
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
-
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 
 msg_bytes = st.binary(min_size=0, max_size=512)
 

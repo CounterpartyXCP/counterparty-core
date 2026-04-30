@@ -1,5 +1,6 @@
 import struct
 
+import cbor2
 import pytest
 from bitcoin.core import VarIntSerializer
 from counterpartycore.lib import config
@@ -1203,8 +1204,6 @@ def test_parse_cbor_none_value_doesnt_halt(ledger_db, blockchain_mock, defaults)
     try/except (TypeError, ValueError, OverflowError, AssertionError) so
     the tx is marked invalid instead.
     """
-    import cbor2
-
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     # taproot_support is active in the test fixture; load_cbor decodes the
     # tuple cleanly and status="valid" before parse hits min(None, MAX_INT).

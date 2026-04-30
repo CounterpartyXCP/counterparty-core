@@ -20,16 +20,14 @@ Run: hatch run pytest counterpartycore/test/units/messages/fuzz_cbor_test.py
 import apsw
 import cbor2
 import pytest
-from hypothesis import HealthCheck, given, settings, strategies as st
-
 from counterpartycore.lib.messages import (
     broadcast,
-    dispense,
     issuance,
     sweep,
 )
-from counterpartycore.lib.messages.versions import enhancedsend, mpma
-
+from counterpartycore.lib.messages.versions import enhancedsend
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 
 # Generate values with mixed valid / adversarial types. CBOR can carry any
 # of these; struct format would have rejected most.

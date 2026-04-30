@@ -24,7 +24,7 @@ def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
     return {
         name: (bool(value) if str(field_type) == "BOOL" else value)
-        for (name, field_type), value in zip(cursor.getdescription(), sql)
+        for (name, field_type), value in zip(cursor.getdescription(), sql, strict=True)
     }
 
 

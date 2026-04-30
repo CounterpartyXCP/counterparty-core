@@ -1,3 +1,4 @@
+import decimal
 import os
 from unittest.mock import Mock, patch
 
@@ -92,8 +93,6 @@ def test_is_process_alive():
 
 def test_api_json_encoder():
     """Test ApiJsonEncoder with various types."""
-    import decimal
-
     encoder = helpers.ApiJsonEncoder()
 
     # Test decimal

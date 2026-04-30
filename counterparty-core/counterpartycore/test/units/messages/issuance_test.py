@@ -1,5 +1,7 @@
 import binascii
+import time
 
+import cbor2
 import pytest
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import apiwatcher
@@ -2323,8 +2325,6 @@ def test_parse_cbor_str_asset_id_doesnt_halt(ledger_db, blockchain_mock, default
     -> ParseTransactionError -> halt. The unpack outer except now catches
     (TypeError, ValueError, OverflowError) so the tx is marked invalid.
     """
-    import cbor2
-
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     message = cbor2.dumps(["NOTANINT", 1, True, False, False, "text/plain", "test"])
     issuance.parse(ledger_db, tx, message, issuance.ID)  # must not raise
@@ -2335,8 +2335,6 @@ def test_parse_cbor_huge_int_clamped_no_overflow(ledger_db, blockchain_mock, def
     64-bit limit) used to raise OverflowError on insert_record. The fix is
     a defensive clamp loop over int bindings before INSERT.
     """
-    import cbor2
-
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     message = cbor2.dumps([1, 2**70, True, False, False, "text/plain", "test"])
     issuance.parse(ledger_db, tx, message, issuance.ID)  # must not raise
@@ -2346,10 +2344,6 @@ def test_parse_cbor_subasset_dos_cap(ledger_db, blockchain_mock, defaults):
     """Regression: 100KB compacted_subasset_longname caused ~25s of O(n^2)
     CPU in expand_subasset_longname. The fix caps input at 200 bytes.
     """
-    import time
-
-    import cbor2
-
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     message = cbor2.dumps([1, 1, True, False, False, 0, b"\xff" * 1000, "text/plain", "test"])
     t0 = time.time()
@@ -2364,8 +2358,6 @@ def test_canonical_subasset_compact_gate_off_accepts_noncanonical(
     compactions (leading-zero pad → same longname) are accepted. Preserves
     pre-activation consensus determinism.
     """
-    import cbor2
-
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     with ProtocolChangesDisabled(["canonical_subasset_compact"]):
         message = cbor2.dumps([1, 1, True, False, False, 0, b"\x00\x00\x01", "text/plain", "test"])
@@ -2376,8 +2368,6 @@ def test_canonical_subasset_compact_gate_on_rejects_noncanonical(
     ledger_db, blockchain_mock, defaults
 ):
     """Gate ON: same non-canonical bytes rejected, tx invalid (no halt)."""
-    import cbor2
-
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     message = cbor2.dumps([1, 1, True, False, False, 0, b"\x00\x00\x01", "text/plain", "test"])
     issuance.parse(ledger_db, tx, message, issuance.SUBASSET_ID)  # must not raise

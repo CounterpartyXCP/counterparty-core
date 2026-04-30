@@ -110,18 +110,18 @@ class BlockchainWatcher:
         if hasattr(self, "zmq_sub_socket_sequence") and self.zmq_sub_socket_sequence is not None:
             try:
                 self.zmq_sub_socket_sequence.close(linger=0)
-            except Exception:  # pylint: disable=broad-except
-                pass
+            except Exception as e:  # pylint: disable=broad-except
+                logger.debug("Error closing zmq_sub_socket_sequence: %s", e)
         if hasattr(self, "zmq_sub_socket_rawblock") and self.zmq_sub_socket_rawblock is not None:
             try:
                 self.zmq_sub_socket_rawblock.close(linger=0)
-            except Exception:  # pylint: disable=broad-except
-                pass
+            except Exception as e:  # pylint: disable=broad-except
+                logger.debug("Error closing zmq_sub_socket_rawblock: %s", e)
         if hasattr(self, "zmq_context") and self.zmq_context is not None:
             try:
                 self.zmq_context.term()
-            except Exception:  # pylint: disable=broad-except
-                pass
+            except Exception as e:  # pylint: disable=broad-except
+                logger.debug("Error terminating zmq_context: %s", e)
 
         self.zmq_context = zmq.asyncio.Context()
         self.zmq_sub_socket_sequence = self.zmq_context.socket(zmq.SUB)

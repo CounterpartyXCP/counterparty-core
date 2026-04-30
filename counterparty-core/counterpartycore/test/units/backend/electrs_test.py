@@ -5,6 +5,7 @@ import pytest
 import requests
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.backend import electrs as electrum_connector
+from ecdsa.ellipticcurve import MalformedPointError
 
 
 # Fixture for mocking requests.get
@@ -412,8 +413,6 @@ def test_pubkey_from_tx_witness_binascii_error():
 
 def test_pubkey_from_tx_witness_malformed_point():
     """Test pubkey_from_tx with P2WSH multisig where witness[1] is a DER signature, not a pubkey"""
-    from ecdsa.ellipticcurve import MalformedPointError
-
     with mock.patch("counterpartycore.lib.backend.electrs.PublicKey") as mock_pubkey:
         mock_pubkey.from_hex.side_effect = MalformedPointError()
 

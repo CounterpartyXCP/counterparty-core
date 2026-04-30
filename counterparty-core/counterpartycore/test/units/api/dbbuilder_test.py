@@ -266,7 +266,7 @@ def test_consolidated_balances(state_db, ledger_db, apiv2_client):
     ).fetchall()
     api_balances = state_db.execute("SELECT * FROM balances ORDER BY asset, address").fetchall()
     assert len(ledger_balances) == len(api_balances)
-    for ledger_balance, api_balance in zip(ledger_balances, api_balances):
+    for ledger_balance, api_balance in zip(ledger_balances, api_balances, strict=True):
         assert ledger_balance["address"] == api_balance["address"]
         assert ledger_balance["asset"] == api_balance["asset"]
         assert ledger_balance["quantity"] == api_balance["quantity"]
@@ -327,7 +327,9 @@ def test_consolidated_order_matches(state_db, ledger_db, apiv2_client):
     ).fetchall()
     api_order_matches = state_db.execute("SELECT * FROM order_matches ORDER BY id").fetchall()
     assert len(ledger_order_matches) == len(api_order_matches)
-    for ledger_order_match, api_order_match in zip(ledger_order_matches, api_order_matches):
+    for ledger_order_match, api_order_match in zip(
+        ledger_order_matches, api_order_matches, strict=True
+    ):
         assert ledger_order_match["id"] == api_order_match["id"]
         assert ledger_order_match["status"] == api_order_match["status"]
         assert ledger_order_match["tx0_hash"] == api_order_match["tx0_hash"]
@@ -359,7 +361,7 @@ def test_consolidated_assets(state_db, ledger_db, apiv2_client):
         "SELECT asset FROM assets_info WHERE asset NOT IN ('XCP', 'BTC') ORDER BY asset"
     ).fetchall()
     assert len(ledger_assets_info) == len(api_assets_info)
-    for ledger_asset_info, api_asset_info in zip(ledger_assets_info, api_assets_info):
+    for ledger_asset_info, api_asset_info in zip(ledger_assets_info, api_assets_info, strict=True):
         assert ledger_asset_info["asset_name"] == api_asset_info["asset"]
         api_result = apiv2_client.get(f"/v2/assets/{api_asset_info['asset']}").json
         assert api_result["result"]["asset"] == api_asset_info["asset"]

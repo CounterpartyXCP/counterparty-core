@@ -114,10 +114,6 @@ class CounterpartyServer(threading.Thread):
 
     def _start_pool_monitor(self):
         """Start connection pool monitor for MainProcess."""
-        from counterpartycore.lib.utils.database import (
-            LedgerDBConnectionPool,
-            StateDBConnectionPool,
-        )
 
         class MainProcessPoolMonitor(threading.Thread):
             def __init__(self, interval_seconds=60):
@@ -131,8 +127,8 @@ class CounterpartyServer(threading.Thread):
                     if self.stop_event.is_set():
                         break
                     try:
-                        ledger_stats = LedgerDBConnectionPool().get_stats()
-                        state_stats = StateDBConnectionPool().get_stats()
+                        ledger_stats = database.LedgerDBConnectionPool().get_stats()
+                        state_stats = database.StateDBConnectionPool().get_stats()
                         logger.info(
                             "MAINPROCESS_POOL ledger=%d/%d (%.0f%%, peak=%d) state=%d/%d (%.0f%%, peak=%d)",
                             ledger_stats["current"],
