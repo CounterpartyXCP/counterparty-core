@@ -1,3 +1,4 @@
+from unittest.mock import patch
 import pytest
 from counterpartycore.lib import exceptions
 from counterpartycore.lib.messages import bet
