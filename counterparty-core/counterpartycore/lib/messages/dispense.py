@@ -116,9 +116,15 @@ def parse(db, tx):
             give_quantity = dispenser["give_quantity"]
 
             if satoshirate > 0 and give_quantity > 0:
-                must_give = get_must_give(
-                    db, dispenser, next_out["btc_amount"], next_out["block_index"]
-                )
+                try:
+                    must_give = get_must_give(
+                        db, dispenser, next_out["btc_amount"], next_out["block_index"]
+                    )
+                except exceptions.NoPriceError as e:
+                    logger.warning(
+                        "Skipping dispenser for %s: %s", dispenser["asset"], e
+                    )
+                    continue
                 remaining = int(floor(dispenser["give_remaining"] / give_quantity))
                 actually_given = min(must_give, remaining) * give_quantity
                 give_remaining = dispenser["give_remaining"] - actually_given

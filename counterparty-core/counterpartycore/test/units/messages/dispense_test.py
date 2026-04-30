@@ -1,3 +1,4 @@
+from unittest.mock import patch
 import pytest
 from counterpartycore.lib import exceptions
 from counterpartycore.lib.messages import dispense
@@ -122,3 +123,12 @@ def test_parse_lost_found(ledger_db, blockchain_mock, defaults, test_helpers, cu
             },
         ],
     )
+
+def test_parse_no_price_error_does_not_halt(ledger_db, blockchain_mock, defaults):
+    tx = blockchain_mock.dummy_tx(
+        ledger_db, defaults["addresses"][0], defaults["addresses"][5], btc_amount=100
+    )
+    with ProtocolChangesDisabled(["multiple_dispenses"]):
+        with patch("counterpartycore.lib.messages.dispense.get_must_give") as mock_get:
+            mock_get.side_effect = exceptions.NoPriceError("test: oracle has no price")
+            dispense.parse(ledger_db, tx)
