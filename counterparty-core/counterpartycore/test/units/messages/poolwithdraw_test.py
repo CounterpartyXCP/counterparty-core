@@ -86,6 +86,40 @@ def test_validate_min_quantity_b_overflow(ledger_db, defaults):
     assert any("min_quantity_b exceeds maximum value" in p for p in problems)
 
 
+def test_validate_min_quantities_type_and_negative(ledger_db, defaults):
+    problems = poolwithdraw.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        100,
+        min_quantity_a="1",
+    )
+    assert any("min_quantity_a must be an integer" in p for p in problems)
+
+    problems = poolwithdraw.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        100,
+        min_quantity_b="1",
+    )
+    assert any("min_quantity_b must be an integer" in p for p in problems)
+
+    problems = poolwithdraw.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        100,
+        min_quantity_a=-1,
+        min_quantity_b=-1,
+    )
+    assert any("min_quantity_a cannot be negative" in p for p in problems)
+    assert any("min_quantity_b cannot be negative" in p for p in problems)
+
+
 def test_validate_no_pool(ledger_db, defaults):
     problems = poolwithdraw.validate(ledger_db, defaults["addresses"][0], "XCP", "DIVISIBLE", 1000)
     assert any("pool does not exist" in p for p in problems)

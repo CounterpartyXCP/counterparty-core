@@ -631,6 +631,30 @@ def test_validate_min_lp_quantity_overflow(ledger_db, defaults):
     assert any("min_lp_quantity exceeds maximum value" in p for p in problems)
 
 
+def test_validate_min_lp_quantity_type_and_negative(ledger_db, defaults):
+    problems = pooldeposit.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        defaults["quantity"],
+        defaults["quantity"],
+        min_lp_quantity="1",
+    )
+    assert any("min_lp_quantity must be an integer" in p for p in problems)
+
+    problems = pooldeposit.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        defaults["quantity"],
+        defaults["quantity"],
+        min_lp_quantity=-1,
+    )
+    assert any("min_lp_quantity cannot be negative" in p for p in problems)
+
+
 def test_validate_lp_asset_rejects_xcp(ledger_db, defaults):
     problems = pooldeposit.validate(
         ledger_db,

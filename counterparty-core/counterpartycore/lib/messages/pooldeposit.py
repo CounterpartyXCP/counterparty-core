@@ -57,7 +57,11 @@ def validate(
         elif param_value > config.MAX_INT:
             problems.append(f"{param_name} exceeds maximum value")
 
-    if min_lp_quantity > config.MAX_INT:
+    if not isinstance(min_lp_quantity, int):
+        problems.append("min_lp_quantity must be an integer")
+    elif min_lp_quantity < 0:
+        problems.append("min_lp_quantity cannot be negative")
+    elif min_lp_quantity > config.MAX_INT:
         problems.append("min_lp_quantity exceeds maximum value")
 
     if not problems and quantity_a > 0 and quantity_b > config.MAX_INT // quantity_a:
