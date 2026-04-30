@@ -95,6 +95,10 @@ class CounterpartyServer(threading.Thread):
         self.pool_monitor = None
         self.stop_when_ready = stop_when_ready
         self.stopped = False
+        # True as soon as stop() has started (set before any blocking join()),
+        # so the run() finally block knows the shutdown was requested
+        # explicitly and must NOT raise KeyboardInterrupt in the main thread.
+        self.stop_requested = False
 
         # Log all config parameters, sorted by key
         # Filter out default values, these should be set in a different way
@@ -244,13 +248,22 @@ class CounterpartyServer(threading.Thread):
             # print(traceback.format_exc())
             logger.error("Error in server thread: %s", e, stack_info=True)
         finally:
-            # Always signal main thread to stop when server thread ends
-            # This handles both exceptions and early returns (e.g., API startup failure)
-            _thread.interrupt_main()
+            # Signal main thread to stop when server thread ends unexpectedly
+            # (exception or early return like API startup failure).
+            # If stop() was already called from outside (e.g. SIGTERM handler),
+            # the main thread is already shutting down and is likely blocked
+            # in a join(); raising KeyboardInterrupt there would crash the
+            # shutdown sequence half-way through.
+            if not self.stop_requested:
+                _thread.interrupt_main()
 
     def stop(self):
         if self.stopped:
             return
+        # Mark the shutdown as explicitly requested BEFORE doing any blocking
+        # work, so the run() finally block does not raise KeyboardInterrupt
+        # in the main thread while we are joining sub-threads.
+        self.stop_requested = True
         logger.info("Shutting down...")
 
         CurrentState().set_stopping()
@@ -305,7 +318,19 @@ def start_all(args, log_stream=None, stop_when_ready=False):
     except KeyboardInterrupt:
         logger.warning("Interruption received. Shutting down...")
     finally:
-        server.stop()
+        # Shield the shutdown from a late KeyboardInterrupt (e.g. a second
+        # SIGINT, or interrupt_main() racing with the SIGTERM handler).
+        # stop() is safe to call multiple times: every sub-stop() is
+        # idempotent, and a fully-completed stop() is short-circuited by
+        # the `if self.stopped: return` guard at the top.
+        while True:
+            try:
+                server.stop()
+                break
+            except KeyboardInterrupt:
+                logger.warning(
+                    "KeyboardInterrupt received during shutdown, retrying stop..."
+                )
 
 
 def rebuild(args):

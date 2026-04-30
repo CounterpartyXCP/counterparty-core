@@ -41,6 +41,7 @@ counterparty-server start
 - Fix `MalformedPointError` when searching for pubkey in P2WSH multisig witness data
 - Fix Rust `BATCH_CLIENT` permanently caching failed parent transaction lookups, which could cause valid Counterparty transactions to be silently skipped
 - Add warning log when a parent transaction cannot be found during VIN resolution
+- Fix `KeyboardInterrupt` raised in the main thread during shutdown that could break the shutdown sequence half-way through (e.g. while joining the Asset Conservation Checker thread on SIGTERM)
 
 ## Codebase
 
