@@ -363,3 +363,53 @@ def test_consolidated_assets(state_db, ledger_db, apiv2_client):
         assert ledger_asset_info["asset_name"] == api_asset_info["asset"]
         api_result = apiv2_client.get(f"/v2/assets/{api_asset_info['asset']}").json
         assert api_result["result"]["asset"] == api_asset_info["asset"]
+
+
+def test_migration_0014_re_derives_latest_issuance_columns(state_db, ledger_db):
+    """Regression: migration 0004 selected description/divisible/mime_type/
+    owner via bare-column SELECT alongside MIN/MAX aggregates. SQLite picks
+    bare columns "from one of" the min/max rows, implementation-dependent.
+    Snapshot vs streamed nodes diverged. Migration 0014 re-derives the
+    columns deterministically from the latest valid issuance.
+    """
+    # The migration should be idempotent and runnable on the current state_db
+    # without error; verify it leaves assets_info consistent with the latest
+    # valid issuance per asset.
+    dbbuilder.apply_migration(
+        state_db, "0014.fix_assets_info_latest_issuance_columns"
+    )
+    rows = state_db.execute(
+        "SELECT asset, description, divisible, mime_type, owner FROM assets_info "
+        "WHERE asset NOT IN ('XCP', 'BTC')"
+    ).fetchall()
+    for r in rows:
+        latest = ledger_db.execute(
+            "SELECT description, divisible, mime_type, issuer FROM issuances "
+            "WHERE asset = ? AND status = 'valid' ORDER BY rowid DESC LIMIT 1",
+            (r["asset"],),
+        ).fetchone()
+        if latest is None:
+            continue
+        assert r["description"] == latest["description"]
+        assert r["divisible"] == latest["divisible"]
+        assert r["mime_type"] == latest["mime_type"]
+        assert r["owner"] == latest["issuer"]
+
+
+def test_migration_0015_locked_max_not_sum(state_db, ledger_db):
+    """Regression: migration 0004 wrote SUM(locked) and SUM(description_locked)
+    into BOOL columns, yielding integer counts (e.g. 3) when the streamed
+    apiwatcher writes 0/1. Migration 0015 re-derives both as MAX(...) ∈ {0,1}.
+    """
+    dbbuilder.apply_migration(state_db, "0015.fix_assets_info_locked_int_drift")
+    rows = state_db.execute(
+        "SELECT asset, locked, description_locked FROM assets_info "
+        "WHERE asset NOT IN ('XCP', 'BTC')"
+    ).fetchall()
+    for r in rows:
+        assert r["locked"] in (0, 1, None), (
+            f"asset {r['asset']} has locked={r['locked']} (must be 0/1 boolean)"
+        )
+        assert r["description_locked"] in (0, 1, None), (
+            f"asset {r['asset']} has description_locked={r['description_locked']}"
+        )
