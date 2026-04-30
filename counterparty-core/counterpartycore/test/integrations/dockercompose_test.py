@@ -57,7 +57,7 @@ def test_docker_compose():
             docker_compose_file = f.read()
         docker_compose_file = docker_compose_file.replace(
             f"image: counterparty/counterparty:v{config.VERSION_STRING}",
-            "image: counterparty/counterparty:v11.0.3",
+            "image: counterparty/counterparty:v11.0.4",
         )
         with open(os.path.join(BASE_DIR, "docker-compose-test.yml"), "w") as f:
             f.write(docker_compose_file)
