@@ -328,9 +328,7 @@ def start_all(args, log_stream=None, stop_when_ready=False):
                 server.stop()
                 break
             except KeyboardInterrupt:
-                logger.warning(
-                    "KeyboardInterrupt received during shutdown, retrying stop..."
-                )
+                logger.warning("KeyboardInterrupt received during shutdown, retrying stop...")
 
 
 def rebuild(args):
