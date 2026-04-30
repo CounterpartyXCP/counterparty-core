@@ -35,6 +35,7 @@ UPGRADE_ACTIONS = {
         "11.0.2": [("refresh_state_db", 0)],
         "11.0.3": [("reparse", 911955)],
         "11.0.4": [("rollback", 926807)],
+        "11.0.5": [("refresh_state_db", 0)],
     },
     "testnet3": {
         "10.3.0": [("reparse", 0)],
@@ -51,6 +52,7 @@ UPGRADE_ACTIONS = {
         "11.0.3": [("reparse", 2820893)],
         "11.0.4-alpha.1": [("reparse", 4017708)],
         "11.0.4": [("reparse", 4017708)],
+        "11.0.5": [("refresh_state_db", 0)],
     },
     "testnet4": {
         "10.10.0": [("rollback", 64492)],
@@ -58,10 +60,12 @@ UPGRADE_ACTIONS = {
         "11.0.1": [("rollback", 85000)],
         "11.0.2": [("refresh_state_db", 0)],
         "11.0.3": [("reparse", 99290)],
+        "11.0.5": [("refresh_state_db", 0)],
     },
     "signet": {
         "11.0.2": [("refresh_state_db", 0)],
         "11.0.3": [("reparse", 266993)],
+        "11.0.5": [("refresh_state_db", 0)],
     },
 }
 
