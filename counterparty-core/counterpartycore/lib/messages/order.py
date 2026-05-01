@@ -440,6 +440,18 @@ def parse(db, tx, message):
                 event=tx["tx_hash"],
             )
 
+    # Compute expire_index based on the `indefinite_orders` protocol gate.
+    # After activation: expiration=0 means indefinite (NULL), and expiration=N
+    # means exactly N blocks of life (block_index + N - 1).
+    # Before activation: expire_index = block_index + expiration (legacy off-by-one).
+    if protocol.enabled("indefinite_orders", block_index=tx["block_index"]):
+        if expiration == 0:
+            expire_index = None
+        else:
+            expire_index = tx["block_index"] + expiration - 1
+    else:
+        expire_index = tx["block_index"] + expiration
+
     # Add parsed transaction to message-type–specific table.
     bindings = {
         "tx_index": tx["tx_index"],
@@ -453,9 +465,7 @@ def parse(db, tx, message):
         "get_quantity": get_quantity,
         "get_remaining": get_quantity,
         "expiration": expiration,
-        "expire_index": (None if expiration == 0 else tx["block_index"] + expiration - 1)
-        if protocol.enabled("indefinite_orders", block_index=tx["block_index"])
-        else tx["block_index"] + expiration,
+        "expire_index": expire_index,
         "fee_required": fee_required,
         "fee_required_remaining": fee_required,
         "fee_provided": tx["fee"],
