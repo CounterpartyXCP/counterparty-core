@@ -146,6 +146,10 @@ class BlockOutOfRange(Exception):
     pass
 
 
+class ReorgError(Exception):
+    pass
+
+
 class InputError(Exception):
     pass
 

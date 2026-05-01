@@ -2,6 +2,7 @@
 Tests for counterpartycore.lib.parser.follow module.
 """
 
+import asyncio
 import os
 import tempfile
 import threading
@@ -9,6 +10,7 @@ import time
 from unittest import mock
 
 import pytest
+import zmq
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.parser import follow
 from counterpartycore.lib.utils import helpers
@@ -874,7 +876,6 @@ class TestNotSupportedTransactionsCache:
 
 def test_receive_multipart_success():
     """Test receive_multipart successful receive"""
-    import asyncio
 
     async def run_test():
         with mock.patch("counterpartycore.lib.backend.bitcoind") as mock_bitcoind:
@@ -918,9 +919,6 @@ def test_receive_multipart_success():
 
 def test_receive_multipart_eagain():
     """Test receive_multipart handles EAGAIN error"""
-    import asyncio
-
-    import zmq
 
     async def run_test():
         with mock.patch("counterpartycore.lib.backend.bitcoind") as mock_bitcoind:
@@ -960,9 +958,6 @@ def test_receive_multipart_eagain():
 
 def test_receive_multipart_other_error():
     """Test receive_multipart handles other ZMQ errors"""
-    import asyncio
-
-    import zmq
 
     async def run_test():
         with mock.patch("counterpartycore.lib.backend.bitcoind") as mock_bitcoind:
@@ -1002,7 +997,6 @@ def test_receive_multipart_other_error():
 
 def test_receive_multipart_general_exception():
     """Test receive_multipart handles general exceptions"""
-    import asyncio
 
     async def run_test():
         with mock.patch("counterpartycore.lib.backend.bitcoind") as mock_bitcoind:
@@ -1047,7 +1041,6 @@ def test_receive_multipart_general_exception():
 
 def test_receive_multipart_message_processing_error():
     """Test receive_multipart handles message processing errors"""
-    import asyncio
 
     async def run_test():
         with mock.patch("counterpartycore.lib.backend.bitcoind") as mock_bitcoind:
@@ -1096,3 +1089,256 @@ def test_receive_multipart_message_processing_error():
                 config.NO_MEMPOOL = original_no_mempool
 
     asyncio.run(run_test())
+
+
+# ============================================================================
+# Tests for receive_rawblock generic exception handler (lines 189-190)
+# ============================================================================
+
+
+def test_receive_rawblock_swallows_generic_exception(
+    mock_backend_bitcoind, mock_current_state, mock_zmq_context, caplog
+):
+    """A non-ParseTransactionError raised inside receive_rawblock must be
+    logged + sent to Sentry but not torn down -- next ZMQ msg / is_late()
+    tick will trigger catch_up() to recover. This pins the wide-except
+    branch from the receive_rawblock hardening."""
+    mock_cs, mock_instance = mock_current_state
+    mock_instance.current_block_index.return_value = 100
+    mock_backend_bitcoind.get_zmq_notifications.return_value = [
+        {"type": "pubrawtx", "address": "tcp://127.0.0.1:28332"},
+        {"type": "pubhashtx", "address": "tcp://127.0.0.1:28332"},
+        {"type": "pubsequence", "address": "tcp://127.0.0.1:28332"},
+        {"type": "pubrawblock", "address": "tcp://127.0.0.1:28333"},
+    ]
+
+    original_backend_connect = config.BACKEND_CONNECT
+    original_no_mempool = config.NO_MEMPOOL
+    config.BACKEND_CONNECT = "127.0.0.1"
+    config.NO_MEMPOOL = True
+
+    try:
+        with mock.patch("counterpartycore.lib.monitors.sentry.init"):
+            with mock.patch("asyncio.new_event_loop"):
+                with mock.patch("asyncio.set_event_loop"):
+                    with mock.patch(
+                        "counterpartycore.lib.parser.deserialize.deserialize_block",
+                        side_effect=RuntimeError("malformed rawblock"),
+                    ):
+                        with mock.patch(
+                            "counterpartycore.lib.parser.follow.capture_exception"
+                        ) as mock_capture:
+                            db = mock.MagicMock()
+                            watcher = follow.BlockchainWatcher(db)
+                            # MUST NOT raise
+                            watcher.receive_rawblock(b"\x00" * 80)
+                            mock_capture.assert_called_once()
+    finally:
+        config.BACKEND_CONNECT = original_backend_connect
+        config.NO_MEMPOOL = original_no_mempool
+
+
+# ============================================================================
+# Tests for is_late RPC failure (lines 300, 303-304)
+# ============================================================================
+
+
+def test_is_late_returns_false_on_rpc_error(
+    mock_backend_bitcoind, mock_current_state, mock_zmq_context, caplog
+):
+    """is_late must NOT tear down the watcher when bitcoind RPC fails;
+    a transient auth/proxy flap should return False so the outer handle
+    loop keeps running."""
+    mock_cs, mock_instance = mock_current_state
+    mock_instance.current_block_index.return_value = 100
+    mock_backend_bitcoind.get_zmq_notifications.return_value = [
+        {"type": "pubrawtx", "address": "tcp://127.0.0.1:28332"},
+        {"type": "pubhashtx", "address": "tcp://127.0.0.1:28332"},
+        {"type": "pubsequence", "address": "tcp://127.0.0.1:28332"},
+        {"type": "pubrawblock", "address": "tcp://127.0.0.1:28333"},
+    ]
+    mock_backend_bitcoind.getblockcount.side_effect = exceptions.BitcoindRPCError(
+        "401 Unauthorized"
+    )
+
+    original_backend_connect = config.BACKEND_CONNECT
+    original_no_mempool = config.NO_MEMPOOL
+    config.BACKEND_CONNECT = "127.0.0.1"
+    config.NO_MEMPOOL = True
+
+    try:
+        with mock.patch("counterpartycore.lib.monitors.sentry.init"):
+            with mock.patch("asyncio.new_event_loop"):
+                with mock.patch("asyncio.set_event_loop"):
+                    db = mock.MagicMock()
+                    watcher = follow.BlockchainWatcher(db)
+                    with mock.patch(
+                        "counterpartycore.lib.ledger.blocks.get_last_block",
+                        return_value={"block_index": 100},
+                    ):
+                        # MUST return False, MUST NOT raise
+                        assert watcher.is_late() is False
+    finally:
+        config.BACKEND_CONNECT = original_backend_connect
+        config.NO_MEMPOOL = original_no_mempool
+
+
+# ============================================================================
+# Tests for need_to_parse_mempool_block timeout return False path (line 221)
+# ============================================================================
+
+
+def test_need_to_parse_mempool_block_returns_false_when_no_timeout(
+    mock_backend_bitcoind, mock_current_state, mock_zmq_context
+):
+    """When the mempool block is non-empty but under the size limit AND
+    the time-since-last-parse is below the timeout, the helper must
+    return False (the previously uncovered tail of the function)."""
+    mock_cs, mock_instance = mock_current_state
+    mock_instance.current_block_index.return_value = 100
+    mock_backend_bitcoind.get_zmq_notifications.return_value = [
+        {"type": "pubrawtx", "address": "tcp://127.0.0.1:28332"},
+        {"type": "pubhashtx", "address": "tcp://127.0.0.1:28332"},
+        {"type": "pubsequence", "address": "tcp://127.0.0.1:28332"},
+        {"type": "pubrawblock", "address": "tcp://127.0.0.1:28333"},
+    ]
+
+    original_backend_connect = config.BACKEND_CONNECT
+    original_no_mempool = config.NO_MEMPOOL
+    original_network = config.NETWORK_NAME
+    config.BACKEND_CONNECT = "127.0.0.1"
+    config.NO_MEMPOOL = True
+    config.NETWORK_NAME = "mainnet"  # timeout is 60s on mainnet
+
+    try:
+        with mock.patch("counterpartycore.lib.monitors.sentry.init"):
+            with mock.patch("asyncio.new_event_loop"):
+                with mock.patch("asyncio.set_event_loop"):
+                    db = mock.MagicMock()
+                    watcher = follow.BlockchainWatcher(db)
+                    # 1 tx, but mainnet limit is 100; just-now parse time
+                    watcher.mempool_block = ["tx1"]
+                    watcher.last_mempool_parsing_time = time.time()
+                    assert watcher.need_to_parse_mempool_block() is False
+    finally:
+        config.BACKEND_CONNECT = original_backend_connect
+        config.NO_MEMPOOL = original_no_mempool
+        config.NETWORK_NAME = original_network
+
+
+# ============================================================================
+# Tests for stop() ZMQ cleanup exception handler (lines 388-389)
+# ============================================================================
+
+
+def test_stop_handles_zmq_cleanup_failure(
+    mock_backend_bitcoind, mock_current_state, mock_zmq_context, caplog
+):
+    """If a ZMQ socket close raises during stop() the watcher must still
+    finish shutdown cleanly (logged at debug, no propagation)."""
+    mock_cs, mock_instance = mock_current_state
+    mock_backend_bitcoind.get_zmq_notifications.return_value = [
+        {"type": "pubrawtx", "address": "tcp://127.0.0.1:28332"},
+        {"type": "pubhashtx", "address": "tcp://127.0.0.1:28332"},
+        {"type": "pubsequence", "address": "tcp://127.0.0.1:28332"},
+        {"type": "pubrawblock", "address": "tcp://127.0.0.1:28333"},
+    ]
+
+    original_backend_connect = config.BACKEND_CONNECT
+    original_no_mempool = config.NO_MEMPOOL
+    config.BACKEND_CONNECT = "127.0.0.1"
+    config.NO_MEMPOOL = True
+
+    try:
+        with mock.patch("counterpartycore.lib.monitors.sentry.init"):
+            with mock.patch("asyncio.new_event_loop"):
+                with mock.patch("asyncio.set_event_loop"):
+                    db = mock.MagicMock()
+                    watcher = follow.BlockchainWatcher(db)
+                    watcher.task = mock.MagicMock()
+                    watcher.task.done.return_value = True
+                    watcher.loop = mock.MagicMock()
+                    watcher.loop.is_running.return_value = False
+                    watcher.zmq_sub_socket_sequence = mock.MagicMock()
+                    watcher.zmq_sub_socket_sequence.close.side_effect = RuntimeError(
+                        "socket already closed"
+                    )
+                    watcher.zmq_sub_socket_rawblock = mock.MagicMock()
+                    watcher.zmq_context = mock.MagicMock()
+                    watcher.mempool_parser = None
+
+                    # MUST NOT raise
+                    watcher.stop()
+                    assert watcher.stop_event.is_set()
+    finally:
+        config.BACKEND_CONNECT = original_backend_connect
+        config.NO_MEMPOOL = original_no_mempool
+
+
+# ============================================================================
+# Tests for stop() KeyboardInterrupt swallowing (line ~395)
+# ============================================================================
+
+
+def test_stop_swallows_keyboard_interrupt(
+    mock_backend_bitcoind, mock_current_state, mock_zmq_context
+):
+    """A repeated Ctrl+C during shutdown must NOT crash the watcher."""
+    mock_cs, mock_instance = mock_current_state
+    mock_backend_bitcoind.get_zmq_notifications.return_value = [
+        {"type": "pubrawtx", "address": "tcp://127.0.0.1:28332"},
+        {"type": "pubhashtx", "address": "tcp://127.0.0.1:28332"},
+        {"type": "pubsequence", "address": "tcp://127.0.0.1:28332"},
+        {"type": "pubrawblock", "address": "tcp://127.0.0.1:28333"},
+    ]
+
+    original_backend_connect = config.BACKEND_CONNECT
+    original_no_mempool = config.NO_MEMPOOL
+    config.BACKEND_CONNECT = "127.0.0.1"
+    config.NO_MEMPOOL = True
+
+    try:
+        with mock.patch("counterpartycore.lib.monitors.sentry.init"):
+            with mock.patch("asyncio.new_event_loop"):
+                with mock.patch("asyncio.set_event_loop"):
+                    db = mock.MagicMock()
+                    watcher = follow.BlockchainWatcher(db)
+                    watcher.task = mock.MagicMock()
+                    watcher.task.done.return_value = True
+                    watcher.loop = mock.MagicMock()
+                    watcher.loop.is_running.return_value = False
+                    watcher.zmq_sub_socket_sequence = mock.MagicMock()
+                    watcher.zmq_sub_socket_rawblock = mock.MagicMock()
+                    watcher.zmq_context = mock.MagicMock()
+                    watcher.mempool_parser = None
+
+                    # Force the inner shutdown to raise KeyboardInterrupt
+                    # to exercise the catch-and-pass guard.
+                    with mock.patch.object(
+                        watcher.stop_event, "set", side_effect=KeyboardInterrupt
+                    ):
+                        watcher.stop()  # MUST NOT raise
+    finally:
+        config.BACKEND_CONNECT = original_backend_connect
+        config.NO_MEMPOOL = original_no_mempool
+
+
+# ============================================================================
+# Tests for RawMempoolParser KeyboardInterrupt during stop (lines 454-455)
+# ============================================================================
+
+
+def test_raw_mempool_parser_stop_swallows_keyboard_interrupt(
+    mock_backend_bitcoind, reset_not_supported_cache, temp_cache_dir
+):
+    """Repeated Ctrl+C during RawMempoolParser shutdown must be ignored."""
+    mock_backend_bitcoind.getrawmempool.return_value = {}
+
+    db = mock.MagicMock()
+    cursor = mock.MagicMock()
+    db.cursor.return_value = cursor
+
+    parser = follow.RawMempoolParser(db)
+    db.interrupt.side_effect = KeyboardInterrupt
+    # MUST NOT raise
+    parser.stop()

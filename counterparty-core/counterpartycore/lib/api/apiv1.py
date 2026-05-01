@@ -234,7 +234,16 @@ def get_rows(
     filters = new_filters
 
     # validate filter(s)
+    field_name_re = re.compile(r"^[a-z0-9_]+$")
     for filter_ in filters:
+        # filter_["field"] is f-string interpolated into the SQL at line ~281;
+        # without this allowlist an attacker can supply arbitrary SQL via the
+        # field key (e.g. "1) UNION SELECT ... --") and read any column the
+        # API process can see. Apply the same regex used for order_by.
+        if "field" in filter_ and (
+            not isinstance(filter_["field"], str) or not field_name_re.match(filter_["field"])
+        ):
+            raise exceptions.APIError("Invalid filter field name; must match [a-z0-9_]+")
         for field in ["field", "op", "value"]:  # should have all fields
             if field not in filter_:
                 raise exceptions.APIError(f"A specified filter is missing the '{field}' field")
@@ -553,6 +562,19 @@ def create_app():
 
     @dispatcher.add_method
     def sql(query, bindings=None):
+        # The route-level auth at handle_root is `@conditional_decorator(
+        # auth.login_required, hasattr(config, "RPC_PASSWORD"))` -- a no-op
+        # when RPC_PASSWORD is unset, leaving this DoS-prone endpoint open
+        # to the internet on every default-config public APIv1 deployment.
+        # The 12-year-old PhantomPhreak `sql` feature (commit a29759ee8)
+        # stays available for operators who explicitly opt in by setting
+        # RPC_PASSWORD; public deployments without auth get a clean
+        # rejection instead of a blank check on `randomblob(1e9)` /
+        # recursive CTEs / N-way self-joins on the messages table.
+        if not getattr(config, "RPC_PASSWORD", None):
+            raise exceptions.APIError(
+                "The sql method requires authentication; set RPC_PASSWORD to enable."
+            )
         if bindings is None:  # noqa: E711
             bindings = []
         with LedgerDBConnectionPool().connection() as db:

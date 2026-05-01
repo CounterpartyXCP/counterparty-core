@@ -230,3 +230,17 @@ def test_deterministic_random_asset_name_collision():
     assert result.startswith("A")
     # Should have tried at least twice
     assert call_count[0] >= 2
+
+
+def test_expand_subasset_longname_rejects_oversized():
+    """Regression: pre-fix, attacker-supplied compacted_subasset_longname
+    via CBOR (taproot_support) was uncapped, and the O(n^2) expand loop
+    consumed ~25s of CPU on a 100KB payload. The fix caps input at 200
+    bytes (a 250-char base68 longname needs only 191 bytes).
+    """
+    with pytest.raises(exceptions.AssetNameError, match="too long"):
+        assetnames.expand_subasset_longname(b"\xff" * 1000)
+    # Boundary: 200 bytes accepted, 201 rejected.
+    assetnames.expand_subasset_longname(b"\x01" * 200)
+    with pytest.raises(exceptions.AssetNameError):
+        assetnames.expand_subasset_longname(b"\x01" * 201)

@@ -18,8 +18,9 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def normalize_price(value, precision=16):
-    decimal.getcontext().prec = 32
-    return f"{D(value):.{precision}f}"
+    with decimal.localcontext() as ctx:
+        ctx.prec = 32
+        return f"{D(value):.{precision}f}"
 
 
 def inject_issuances_and_block_times(ledger_db, state_db, result_list):
@@ -503,9 +504,9 @@ def inject_transactions_events(ledger_db, state_db, result_list):
         "NEW_TRANSACTION_OUTPUT",
     ]
     sql = f"""
-        SELECT message_index AS event_index, event, bindings AS params, tx_hash, block_index 
-        FROM messages 
-        WHERE tx_hash IN ({",".join("?" * len(transaction_hashes))}) 
+        SELECT message_index AS event_index, event, bindings AS params, tx_hash, block_index
+        FROM messages
+        WHERE tx_hash IN ({",".join("?" * len(transaction_hashes))})
         AND event NOT IN ({",".join("?" * len(exclude_events))})
     """  # noqa S608 # nosec B608
     events = cursor.execute(sql, transaction_hashes + exclude_events).fetchall()
@@ -585,8 +586,7 @@ def clean_api_result(query_result):
     """
     if isinstance(query_result, dict):
         return clean_dictionary(query_result)
-    elif isinstance(query_result, list):
+    if isinstance(query_result, list):
         return [clean_api_result(item) for item in query_result]
-    else:
-        # Return primitive types as-is
-        return query_result
+    # Return primitive types as-is
+    return query_result

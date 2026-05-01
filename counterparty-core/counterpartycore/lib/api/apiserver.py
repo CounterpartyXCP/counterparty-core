@@ -6,7 +6,6 @@ import signal
 import sys
 import threading
 import time
-from collections import OrderedDict
 from multiprocessing import Process, Value
 
 import flask
@@ -20,6 +19,7 @@ from sentry_sdk import start_span as start_sentry_span
 
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import apiwatcher, dbbuilder, healthz, queries, verbose, wsgi
+from counterpartycore.lib.api.blockcache import BLOCK_CACHE, MAX_BLOCK_CACHE_SIZE
 from counterpartycore.lib.api.routes import ROUTES, function_needs_db
 from counterpartycore.lib.cli.initialise import initialise_log_and_config
 from counterpartycore.lib.cli.log import init_api_access_log
@@ -34,9 +34,6 @@ multiprocessing.set_start_method("spawn", force=True)
 logger = logging.getLogger(config.LOGGER_NAME)
 auth = HTTPBasicAuth()
 
-
-BLOCK_CACHE = OrderedDict()
-MAX_BLOCK_CACHE_SIZE = 1000
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BLUEPRINT_FILEPATH = os.path.join(CURR_DIR, "..", "..", "..", "..", "apiary.apib")

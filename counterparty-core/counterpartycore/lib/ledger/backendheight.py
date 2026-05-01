@@ -40,11 +40,13 @@ class BackendHeight(threading.Thread):
         if config.API_ONLY:
             return
         logger.trace("Updating backend height...")
-        tip = backend.bitcoind.get_chain_tip()
-        block_count = backend.bitcoind.getblockcount()
-        value = int(tip * 10e8 + block_count)  # let use only one shared value
-        self.shared_backend_height.value = value
-        self.last_check = time.time()
+        try:
+            tip = backend.bitcoind.get_chain_tip()
+            block_count = backend.bitcoind.getblockcount()
+            value = int(tip * 10e8 + block_count)  # let use only one shared value
+            self.shared_backend_height.value = value
+        finally:
+            self.last_check = time.time()
 
     def stop(self):
         self.stop_event.set()

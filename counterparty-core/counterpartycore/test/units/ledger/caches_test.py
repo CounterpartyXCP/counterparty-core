@@ -1,7 +1,9 @@
+import json
 from unittest.mock import patch
 
 from counterpartycore.lib import config
 from counterpartycore.lib.ledger import caches
+from counterpartycore.lib.utils import helpers
 
 
 def test_asset_cache(ledger_db, defaults):
@@ -99,7 +101,6 @@ def test_orders_cache(ledger_db):
         .cache_db.execute("SELECT * FROM orders WHERE status = 'open'")
         .fetchall()
     )
-    import json
 
     print(json.dumps(open_orders, indent=4))
 
@@ -722,8 +723,6 @@ def test_cleanup_if_exists_without_existing_cache():
     caches.reset_caches()
 
     # Verify singleton doesn't exist
-    from counterpartycore.lib.utils import helpers
-
     assert caches.UTXOBalancesCache not in helpers.SingletonMeta._instances
 
     # Call cleanup_if_exists - should not create singleton

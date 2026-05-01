@@ -160,9 +160,22 @@ def software_version():
             "Unable to check Counterparty version. Use --force to ignore verfication."
         ) from e
 
-    for change_name in versions:
-        protocol_change = versions[change_name]
-        check_change(protocol_change, change_name)
+    # check_change reads dict keys ("minimum_version_major" etc.) and
+    # compares them with `<` to ints. A malformed upstream JSON (compromised
+    # counterparty.io / DNS poisoning / TLS-chain attack) where any of those
+    # values is a string or missing would raise TypeError/KeyError. That isn't
+    # in the except tuple above, so it would propagate through software_version
+    # -> follow.handle()'s broad except -> self.stop() and halt the watcher
+    # on a single bad upstream response.
+    try:
+        for change_name in versions:
+            protocol_change = versions[change_name]
+            check_change(protocol_change, change_name)
+    except (KeyError, TypeError, AttributeError) as e:
+        logger.error("Malformed protocol_changes.json from upstream: %s", e)
+        raise exceptions.VersionCheckError(
+            "Malformed Counterparty version response. Use --force to ignore verification."
+        ) from e
 
     logger.debug("Version check passed.")
     return True

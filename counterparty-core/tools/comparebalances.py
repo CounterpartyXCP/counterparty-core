@@ -21,7 +21,7 @@ cursor_v11 = db_v11.cursor()
 cursor_v10.execute(sql)
 cursor_v11.execute(sql)
 
-for row_v10, row_v11 in zip(cursor_v10, cursor_v11):
+for row_v10, row_v11 in zip(cursor_v10, cursor_v11, strict=True):
     if row_v10 != row_v11:
         print("Mismatch:")
         print("v10:", row_v10)

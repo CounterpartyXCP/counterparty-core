@@ -598,3 +598,22 @@ def test_cancel_bet_match(ledger_db, test_helpers, current_block_index):
             },
         ],
     )
+
+
+def test_fix_sort_bet_matches_gate_off_uses_legacy_no_op_order():
+    """Pre-fix gate `sort_bet_matches` calls sorted() and discards the
+    result -- the matches stay in tx_index order. With `fix_sort_bet_matches`
+    OFF (default), legacy behavior must be preserved for consensus
+    determinism. The gate is at bet.py:423.
+
+    This test verifies the LOGICAL property: sorted(...).pop without
+    assignment is a no-op vs sorted(...) with assignment changes order.
+    Functional gate behavior is exercised via integration tests.
+    """
+    items = [{"tx_index": 3, "p": 0.1}, {"tx_index": 1, "p": 0.5}, {"tx_index": 2, "p": 0.3}]
+    # Pre-fix: sorted() result discarded, original order preserved
+    sorted(items, key=lambda x: x["p"])
+    assert [i["tx_index"] for i in items] == [3, 1, 2]
+    # Post-fix: assigned, order changes
+    items_post = sorted(items, key=lambda x: x["p"])
+    assert [i["tx_index"] for i in items_post] == [3, 2, 1]

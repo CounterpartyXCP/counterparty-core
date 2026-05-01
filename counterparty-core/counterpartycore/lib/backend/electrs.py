@@ -11,14 +11,22 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def electr_query(url):
-    if config.ELECTRS_URL is None:
+    if not config.ELECTRS_URLS:
         raise exceptions.ElectrsError("Electrs server not configured")
-    try:
-        full_url = f"{config.ELECTRS_URL}/{url}"
-        logger.debug("Querying Electrs: %s", full_url)
-        return requests.get(full_url, timeout=10).json()
-    except requests.exceptions.RequestException as e:
-        raise exceptions.ElectrsError(f"Electrs error: {e}") from e
+    last_error = None
+    for base_url in config.ELECTRS_URLS:
+        try:
+            full_url = f"{base_url}/{url}"
+            logger.debug("Querying Electrs: %s", full_url)
+            response = requests.get(full_url, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            logger.warning("Electrs request failed for %s: %s", base_url, e)
+            last_error = e
+    raise exceptions.ElectrsError(
+        f"All Electrs backends failed. Last error: {last_error}"
+    ) from last_error
 
 
 def get_utxos(address, unconfirmed: bool = False, unspent_tx_hash: str = None):

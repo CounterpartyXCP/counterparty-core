@@ -3,7 +3,7 @@ import time
 
 from counterpartycore.lib import config
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.parser.gettxinfo import KNOWN_SOURCES
+from counterpartycore.lib.parser.known_sources import KNOWN_SOURCES
 from counterpartycore.lib.utils import database, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -248,8 +248,9 @@ class UTXOBalancesCache(metaclass=helpers.SingletonMeta):
         Clean up spent UTXOs only if the cache singleton already exists.
         This avoids creating the singleton with a potentially stale DB connection.
         """
-        if cls in helpers.SingletonMeta._instances:
-            helpers.SingletonMeta._instances[cls].cleanup_spent_utxos()
+        instances = helpers.SingletonMeta._instances  # pylint: disable=protected-access
+        if cls in instances:
+            instances[cls].cleanup_spent_utxos()
 
 
 class OrdersCache(metaclass=helpers.SingletonMeta):
