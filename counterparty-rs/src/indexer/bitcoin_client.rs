@@ -92,7 +92,6 @@ fn arc4_decrypt(key: &[u8], data: &[u8]) -> Vec<u8> {
     result
 }
 
-
 fn is_valid_segwit_script_legacy(script: &Script) -> bool {
     if let Some(Ok(PushBytes(pb))) = script.instructions().next() {
         return pb.is_empty();
@@ -105,10 +104,10 @@ fn is_valid_segwit_script(script: &Script) -> bool {
         match instruction {
             Ok(bitcoin::blockdata::script::Instruction::PushBytes(pb)) => {
                 return pb.is_empty();
-            },
+            }
             Ok(inst) => {
                 return format!("{:?}", inst).contains("OP_PUSHNUM_1");
-            },
+            }
             Err(_) => {
                 return false;
             }
@@ -173,12 +172,11 @@ fn parse_vout(
                     }),
                 ));
             }
-        } 
+        }
         return Err(Error::ParseVout(format!(
             "Encountered invalid OP_RETURN script | tx: {}, vout: {}",
             txid, vi
         )));
-
     } else if vout.script_pubkey.instructions().last() == Some(Ok(Op(OP_CHECKSIG))) {
         let instructions: Vec<_> = vout.script_pubkey.instructions().collect();
         if instructions.len() < 3 {
@@ -400,11 +398,12 @@ fn parse_vout(
             "Encountered invalid P2SH script | tx: {}, vout: {}",
             txid, vi
         )));
-    } else if (config.segwit_supported(height) && is_valid_segwit_script_legacy(&vout.script_pubkey)) || 
-                (config.taproot_support_enabled(height) && is_valid_segwit_script(&vout.script_pubkey)) || 
-                (config.taproot_support_enabled(height) && vout.script_pubkey.is_p2tr()) {
-        
-         let destination = if config.taproot_support_enabled(height) {
+    } else if (config.segwit_supported(height)
+        && is_valid_segwit_script_legacy(&vout.script_pubkey))
+        || (config.taproot_support_enabled(height) && is_valid_segwit_script(&vout.script_pubkey))
+        || (config.taproot_support_enabled(height) && vout.script_pubkey.is_p2tr())
+    {
+        let destination = if config.taproot_support_enabled(height) {
             script_to_address(
                 vout.script_pubkey.as_bytes().to_vec(),
                 config.network.to_string().as_str(),
@@ -435,39 +434,41 @@ fn parse_vout(
     }
 }
 
-fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
+fn extract_data_from_witness(script: &Script, allow_metadata_map: bool) -> Result<Vec<u8>, Error> {
     let instructions: Vec<_> = script.instructions().collect();
-    
+
     // Check if we have enough instructions for a valid envelope script
     if instructions.len() < 5 {
-        return Err(Error::ParseVout("Invalid witness script: too few instructions".to_string()));
+        return Err(Error::ParseVout(
+            "Invalid witness script: too few instructions".to_string(),
+        ));
     }
-    
+
     // Verify it's an envelope script with empty push bytes as equivalent to OP_FALSE
     let is_envelope = match (&instructions[0], &instructions[1], instructions.last()) {
         (Ok(PushBytes(pb)), Ok(Op(op2)), Some(Ok(Op(op3)))) if pb.is_empty() => {
             format!("{:?}", op2).contains("OP_IF") && format!("{:?}", op3).contains("OP_CHECKSIG")
-        },
+        }
         (Ok(Op(op1)), Ok(Op(op2)), Some(Ok(Op(op3)))) => {
-            (format!("{:?}", op1).contains("OP_FALSE") || format!("{:?}", op1).contains("OP_0")) && 
-            format!("{:?}", op2).contains("OP_IF") && 
-            format!("{:?}", op3).contains("OP_CHECKSIG")
-        },
-        _ => false
+            (format!("{:?}", op1).contains("OP_FALSE") || format!("{:?}", op1).contains("OP_0"))
+                && format!("{:?}", op2).contains("OP_IF")
+                && format!("{:?}", op3).contains("OP_CHECKSIG")
+        }
+        _ => false,
     };
-    
+
     if !is_envelope {
         return Err(Error::ParseVout("Not an envelope script".to_string()));
     }
-    
+
     // Check if this is an "ord" inscription
-    let is_ord = instructions.len() >= 7 && 
-        match (&instructions.get(2), &instructions.get(3)) {
+    let is_ord = instructions.len() >= 7
+        && match (&instructions.get(2), &instructions.get(3)) {
             (Some(Ok(PushBytes(pb1))), Some(Ok(PushBytes(pb2)))) => {
-                pb1.as_bytes() == b"ord" && 
-                (pb2.as_bytes().len() == 1 && pb2.as_bytes()[0] == 7) // 7 for metaprotocol
-            },
-            _ => false
+                pb1.as_bytes() == b"ord" && (pb2.as_bytes().len() == 1 && pb2.as_bytes()[0] == 7)
+                // 7 for metaprotocol
+            }
+            _ => false,
         };
 
     if is_ord {
@@ -478,19 +479,20 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
                     Ok(mime) => mime.to_string(),
                     Err(_) => "".to_string(), // Default to empty string if decoding fails
                 }
-            },
+            }
             _ => "".to_string(), // Default to empty string if not found
         };
-        
+
         // For ord inscriptions, collect all metadata chunks and description chunks
         let mut metadata_chunks = Vec::new();
         let mut description_chunks = Vec::new();
-        
+
         let mut i = 7; // Skip protocol prefix elements
         let mut current_section = "none";
-        
+
         // Process all instructions to collect metadata and description
-        while i < instructions.len() - 3 { // Skip last 3 instructions: op_endif and checksig
+        while i < instructions.len() - 3 {
+            // Skip last 3 instructions: op_endif and checksig
             match &instructions[i] {
                 Ok(PushBytes(marker)) => {
                     let marker_bytes = marker.as_bytes();
@@ -498,20 +500,24 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
                         current_section = "metadata";
                         i += 1;
                         continue;
-                    } else if (marker_bytes.len() == 1 && marker_bytes[0] == 0) || marker_bytes.is_empty() {
+                    } else if (marker_bytes.len() == 1 && marker_bytes[0] == 0)
+                        || marker_bytes.is_empty()
+                    {
                         current_section = "description";
                         i += 1;
                         continue;
                     }
-                },
+                }
                 Ok(Op(op)) => {
                     // Vérifier si l'instruction est OP_0/OP_FALSE pour le marqueur de description
-                    if format!("{:?}", op).contains("OP_0") || format!("{:?}", op).contains("OP_FALSE") {
+                    if format!("{:?}", op).contains("OP_0")
+                        || format!("{:?}", op).contains("OP_FALSE")
+                    {
                         current_section = "description";
                         i += 1;
                         continue;
                     }
-                },
+                }
                 _ => {}
             }
 
@@ -525,25 +531,25 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
                     }
                 }
             }
-            
+
             i += 1;
         }
-        
+
         // Combine all metadata chunks
         let mut combined_metadata = Vec::new();
         for chunk in metadata_chunks {
             combined_metadata.extend_from_slice(&chunk);
         }
-        
+
         // Combine all description chunks
         let mut combined_description = Vec::new();
         for chunk in &description_chunks {
             combined_description.extend_from_slice(chunk);
         }
-        
+
         // Always store descriptions as raw bytes
         let description_value = Value::Bytes(combined_description);
-        
+
         // If we have metadata, use it directly
         if !combined_metadata.is_empty() {
             // First try to decode existing CBOR data
@@ -553,51 +559,82 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
                     let (message_type_id, mut value_without_type_id) = match value {
                         Value::Array(mut arr) => {
                             if arr.is_empty() {
-                                return Err(Error::ParseVout("CBOR array is empty, missing message_type_id".to_string()));
+                                return Err(Error::ParseVout(
+                                    "CBOR array is empty, missing message_type_id".to_string(),
+                                ));
                             }
                             let type_id = arr.remove(0);
                             (type_id, Value::Array(arr))
-                        },
-                        Value::Map(map) => {
-                            // Ordinals metadata format: CBOR map with "xcp" key
-                            // containing the Counterparty message as an array.
-                            // Other keys (artist, name, etc.) are ordinals metadata
-                            // visible on ordinals.com.
+                        }
+                        // Ordinals metadata format (gated by `ordinals_metadata_support`):
+                        // CBOR map with an `"xcp"` Text key whose value is the Counterparty
+                        // message array. Other keys are ordinals provenance metadata
+                        // (e.g. shown on ordinals.com) and are ignored by the consensus parser.
+                        //
+                        // Convention:
+                        // - Key MUST be the ASCII `Value::Text("xcp")` (case-sensitive).
+                        // - Value MUST be a non-empty `Value::Array` whose first element is
+                        //   the integer `message_type_id`, identical to the legacy format;
+                        //   the rest of the array is re-encoded via `serde_cbor::to_vec`
+                        //   on the same `Value::Array` shape, so the resulting binary
+                        //   payload is byte-identical to the legacy `[type_id, ...]` case.
+                        // - `serde_cbor::Value::Map` is backed by a `BTreeMap`, so duplicate
+                        //   keys are deduplicated deterministically (last-write-wins per
+                        //   `BTreeMap` semantics) — identical across nodes pinned to the
+                        //   same crate version.
+                        Value::Map(map) if allow_metadata_map => {
                             let xcp_key = Value::Text("xcp".to_string());
                             match map.get(&xcp_key) {
                                 Some(Value::Array(arr)) if !arr.is_empty() => {
                                     let mut arr = arr.clone();
                                     let type_id = arr.remove(0);
                                     (type_id, Value::Array(arr))
-                                },
+                                }
                                 Some(Value::Array(_)) => {
-                                    return Err(Error::ParseVout("xcp array in metadata is empty".to_string()));
-                                },
-                                _ => {
-                                    return Err(Error::ParseVout("No xcp key found in metadata map".to_string()));
-                                },
+                                    return Err(Error::ParseVout(
+                                        "xcp array in metadata is empty".to_string(),
+                                    ));
+                                }
+                                Some(_) => {
+                                    return Err(Error::ParseVout(
+                                        "xcp key in metadata map is not an array".to_string(),
+                                    ));
+                                }
+                                None => {
+                                    return Err(Error::ParseVout(
+                                        "No xcp key found in metadata map".to_string(),
+                                    ));
+                                }
                             }
-                        },
-                        _ => return Err(Error::ParseVout("Expected CBOR array or map, found different type".to_string())),
+                        }
+                        _ => {
+                            return Err(Error::ParseVout(
+                                "Expected CBOR array, found different type".to_string(),
+                            ))
+                        }
                     };
-                    
+
                     // Ensure message_type_id is an integer
                     let type_id = match message_type_id {
                         Value::Integer(id) => id as u8,
-                        _ => return Err(Error::ParseVout("message_type_id must be an integer".to_string())),
+                        _ => {
+                            return Err(Error::ParseVout(
+                                "message_type_id must be an integer".to_string(),
+                            ))
+                        }
                     };
-                    
+
                     // If there's a description, add it back to the data structure
                     if let Value::Array(ref mut arr) = value_without_type_id {
                         // Add the mime_type before the description
                         arr.push(Value::Text(mime_type));
-                        
+
                         // Add the description if it's not empty
                         if !description_chunks.is_empty() {
                             arr.push(description_value);
                         }
                     }
-                    
+
                     // Repack the message as CBOR
                     match serde_cbor::to_vec(&value_without_type_id) {
                         Ok(final_data) => {
@@ -606,17 +643,20 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
                             // Append the rest of the CBOR data
                             result.extend_from_slice(&final_data);
                             Ok(result)
-                        },
-                        Err(e) => Err(Error::ParseVout(format!("Failed to encode CBOR data: {}", e))),
+                        }
+                        Err(e) => Err(Error::ParseVout(format!(
+                            "Failed to encode CBOR data: {}",
+                            e
+                        ))),
                     }
-                },
-                Err(e) => {
-                   Err(Error::ParseVout(format!("CBOR decode error: {}", e)))
                 }
+                Err(e) => Err(Error::ParseVout(format!("CBOR decode error: {}", e))),
             }
         } else {
             // Neither metadata nor description found
-            Err(Error::ParseVout("No data found in the ord inscription".to_string()))
+            Err(Error::ParseVout(
+                "No data found in the ord inscription".to_string(),
+            ))
         }
     } else {
         // Generic inscription - collect all data between OP_IF and OP_ENDIF
@@ -716,16 +756,22 @@ pub fn parse_transaction(
                         break;
                     } else if let ParseOutput::Data(mut new_data) = parse_output {
                         // reveal transaction data
-                        if config.taproot_support_enabled(height) && new_data == b"CNTRPRTY" && !vtxinwit.is_empty() && vtxinwit[0].len() == 3 {
+                        if config.taproot_support_enabled(height)
+                            && new_data == b"CNTRPRTY"
+                            && !vtxinwit.is_empty()
+                            && vtxinwit[0].len() == 3
+                        {
                             if let Ok(bytes) = hex::decode(&vtxinwit[0][1]) {
                                 let script = Script::from_bytes(&bytes);
-                                match extract_data_from_witness(&script) {
+                                let allow_metadata_map =
+                                    config.ordinals_metadata_support_enabled(height);
+                                match extract_data_from_witness(&script, allow_metadata_map) {
                                     Ok(mut inscription_data) => {
                                         if !inscription_data.is_empty() {
                                             is_reveal_tx = true;
                                             data.append(&mut inscription_data);
                                         }
-                                    },
+                                    }
                                     Err(e) => {
                                         err = Some(Error::ParseVout(format!(
                                             "Failed to extract data from witness script: {} for tx: {}",
@@ -768,9 +814,11 @@ pub fn parse_transaction(
 
     // Try to get previous transactions info if RPC is available and data is not empty
     let mut prev_txs = vec![None; tx.input.len()];
-    if !data.is_empty() || 
-        parsed_vouts.as_ref().map_or(false, |p| p.destinations == vec![config.unspendable()]) {
-
+    if !data.is_empty()
+        || parsed_vouts
+            .as_ref()
+            .map_or(false, |p| p.destinations == vec![config.unspendable()])
+    {
         if BATCH_CLIENT.lock().unwrap().is_none() {
             *BATCH_CLIENT.lock().unwrap() = Some(
                 BatchRpcClient::new(
@@ -783,7 +831,6 @@ pub fn parse_transaction(
         }
 
         if let Some(batch_client) = BATCH_CLIENT.lock().unwrap().as_ref() {
-
             let input_txids: Vec<_> = tx
                 .input
                 .iter()
@@ -798,7 +845,9 @@ pub fn parse_transaction(
                     if !prev_tx.input.is_empty() {
                         commit_parent_txid = prev_tx.input[0].previous_output.txid;
                         commit_parent_vout = prev_tx.input[0].previous_output.vout as usize;
-                        if let Ok(fetched_txs) = batch_client.get_transactions(&[commit_parent_txid]) {
+                        if let Ok(fetched_txs) =
+                            batch_client.get_transactions(&[commit_parent_txid])
+                        {
                             if !fetched_txs.is_empty() {
                                 prev_txs[0] = fetched_txs[0].clone();
                             }
@@ -825,7 +874,7 @@ pub fn parse_transaction(
                 tx.output.get(vout_idx).map(|output| VinOutput {
                     value: output.value.to_sat(),
                     script_pub_key: output.script_pubkey.to_bytes(),
-                    is_segwit: if config.fix_is_segwit_enabled(height) { 
+                    is_segwit: if config.fix_is_segwit_enabled(height) {
                         output.script_pubkey.is_witness_program()
                     } else {
                         is_segwit
@@ -1202,5 +1251,185 @@ mod tests {
             script_pubkey.script_hash().as_byte_array().to_vec()
         );
         assert_eq!(e.height, height);
+    }
+
+    /// Append a Bitcoin script `OP_PUSHBYTES_*` / `OP_PUSHDATA*` push of `data`.
+    fn push_data(out: &mut Vec<u8>, data: &[u8]) {
+        let n = data.len();
+        if n <= 75 {
+            out.push(n as u8);
+        } else if n <= 255 {
+            out.push(0x4c); // OP_PUSHDATA1
+            out.push(n as u8);
+        } else if n <= 65535 {
+            out.push(0x4d); // OP_PUSHDATA2
+            out.push((n & 0xff) as u8);
+            out.push(((n >> 8) & 0xff) as u8);
+        } else {
+            panic!("push too large for test helper");
+        }
+        out.extend_from_slice(data);
+    }
+
+    /// Build a minimal `ord` envelope script carrying a single Counterparty
+    /// metadata payload under tag 0x05, suitable for `extract_data_from_witness`.
+    /// Layout: OP_FALSE OP_IF "ord" 0x07 "xcp" 0x01 "text/plain" 0x05
+    ///         <metadata chunked at 520> OP_ENDIF <x-only-pubkey> OP_CHECKSIG.
+    fn build_ord_envelope_script(metadata_cbor: &[u8]) -> ScriptBuf {
+        let mut s: Vec<u8> = Vec::new();
+        s.push(0x00); // OP_FALSE
+        s.push(0x63); // OP_IF
+        push_data(&mut s, b"ord");
+        push_data(&mut s, &[0x07]);
+        push_data(&mut s, b"xcp");
+        push_data(&mut s, &[0x01]);
+        push_data(&mut s, b"text/plain");
+        push_data(&mut s, &[0x05]);
+        for chunk in metadata_cbor.chunks(520) {
+            push_data(&mut s, chunk);
+        }
+        s.push(0x68); // OP_ENDIF
+        push_data(&mut s, &[0u8; 32]); // x-only-pubkey (zeros are fine for the parser)
+        s.push(0xac); // OP_CHECKSIG
+        ScriptBuf::from_bytes(s)
+    }
+
+    #[test]
+    fn test_extract_witness_legacy_array_ok() {
+        let array_value = Value::Array(vec![
+            Value::Integer(20),
+            Value::Integer(95428959342453541),
+            Value::Integer(100000000),
+            Value::Integer(1),
+            Value::Integer(0),
+            Value::Integer(0),
+        ]);
+        let metadata = serde_cbor::to_vec(&array_value).unwrap();
+        let script = build_ord_envelope_script(&metadata);
+
+        // Pre-gate: legacy array MUST work.
+        let res_pre = extract_data_from_witness(&script, false);
+        assert!(
+            res_pre.is_ok(),
+            "legacy array pre-gate: {:?}",
+            res_pre.err()
+        );
+        // Post-gate: legacy array MUST still work.
+        let res_post = extract_data_from_witness(&script, true);
+        assert!(
+            res_post.is_ok(),
+            "legacy array post-gate: {:?}",
+            res_post.err()
+        );
+        // Both modes must produce the exact same bytes.
+        assert_eq!(res_pre.unwrap(), res_post.unwrap());
+    }
+
+    #[test]
+    fn test_extract_witness_map_pre_gate_returns_legacy_error() {
+        let mut map = std::collections::BTreeMap::new();
+        map.insert(
+            Value::Text("xcp".to_string()),
+            Value::Array(vec![
+                Value::Integer(20),
+                Value::Integer(95428959342453541),
+                Value::Integer(100000000),
+                Value::Integer(1),
+                Value::Integer(0),
+                Value::Integer(0),
+            ]),
+        );
+        let metadata = serde_cbor::to_vec(&Value::Map(map)).unwrap();
+        let script = build_ord_envelope_script(&metadata);
+
+        let err = extract_data_from_witness(&script, false).unwrap_err();
+        match err {
+            Error::ParseVout(msg) => assert_eq!(msg, "Expected CBOR array, found different type"),
+            other => panic!("expected ParseVout, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_extract_witness_map_post_gate_ok() {
+        let array_value = Value::Array(vec![
+            Value::Integer(20),
+            Value::Integer(95428959342453541),
+            Value::Integer(100000000),
+            Value::Integer(1),
+            Value::Integer(0),
+            Value::Integer(0),
+        ]);
+        let legacy_metadata = serde_cbor::to_vec(&array_value).unwrap();
+        let legacy_script = build_ord_envelope_script(&legacy_metadata);
+        let legacy_payload = extract_data_from_witness(&legacy_script, false).unwrap();
+
+        let mut map = std::collections::BTreeMap::new();
+        map.insert(
+            Value::Text("xcp".to_string()),
+            Value::Array(vec![
+                Value::Integer(20),
+                Value::Integer(95428959342453541),
+                Value::Integer(100000000),
+                Value::Integer(1),
+                Value::Integer(0),
+                Value::Integer(0),
+            ]),
+        );
+        let map_metadata = serde_cbor::to_vec(&Value::Map(map)).unwrap();
+        let map_script = build_ord_envelope_script(&map_metadata);
+        let map_payload = extract_data_from_witness(&map_script, true).unwrap();
+
+        // Post-gate, the map and array variants MUST yield byte-identical payloads.
+        assert_eq!(map_payload, legacy_payload);
+    }
+
+    #[test]
+    fn test_extract_witness_map_post_gate_no_xcp_key() {
+        let mut map = std::collections::BTreeMap::new();
+        map.insert(
+            Value::Text("artist".to_string()),
+            Value::Text("Test".to_string()),
+        );
+        let metadata = serde_cbor::to_vec(&Value::Map(map)).unwrap();
+        let script = build_ord_envelope_script(&metadata);
+
+        let err = extract_data_from_witness(&script, true).unwrap_err();
+        match err {
+            Error::ParseVout(msg) => assert_eq!(msg, "No xcp key found in metadata map"),
+            other => panic!("expected ParseVout, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_extract_witness_map_post_gate_xcp_not_array() {
+        let mut map = std::collections::BTreeMap::new();
+        map.insert(
+            Value::Text("xcp".to_string()),
+            Value::Text("not-an-array".to_string()),
+        );
+        let metadata = serde_cbor::to_vec(&Value::Map(map)).unwrap();
+        let script = build_ord_envelope_script(&metadata);
+
+        let err = extract_data_from_witness(&script, true).unwrap_err();
+        match err {
+            Error::ParseVout(msg) => {
+                assert_eq!(msg, "xcp key in metadata map is not an array")
+            }
+            other => panic!("expected ParseVout, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_extract_witness_map_post_gate_xcp_empty_array() {
+        let mut map = std::collections::BTreeMap::new();
+        map.insert(Value::Text("xcp".to_string()), Value::Array(vec![]));
+        let metadata = serde_cbor::to_vec(&Value::Map(map)).unwrap();
+        let script = build_ord_envelope_script(&metadata);
+
+        let err = extract_data_from_witness(&script, true).unwrap_err();
+        match err {
+            Error::ParseVout(msg) => assert_eq!(msg, "xcp array in metadata is empty"),
+            other => panic!("expected ParseVout, got {:?}", other),
+        }
     }
 }
