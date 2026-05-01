@@ -41,15 +41,15 @@ def test_list_unspent_fallback_to_electrs_direct(monkeypatch):
 
     importlib.reload(backend)
 
-    # Save original and set ELECTRS_URL
-    original_electrs_url = getattr(config, "ELECTRS_URL", None)
-    config.ELECTRS_URL = "http://localhost:3000"
+    # Save original and set ELECTRS_URLS
+    original_electrs_url = getattr(config, "ELECTRS_URLS", None)
+    config.ELECTRS_URLS = ["http://localhost:3000"]
 
     try:
         result = backend.list_unspent("test_source", True)
         assert result == expected_utxos
     finally:
-        config.ELECTRS_URL = original_electrs_url
+        config.ELECTRS_URLS = original_electrs_url
 
 
 def test_list_unspent_no_electrs_configured_direct(monkeypatch):
@@ -61,12 +61,12 @@ def test_list_unspent_no_electrs_configured_direct(monkeypatch):
 
     importlib.reload(backend)
 
-    # Save original and set ELECTRS_URL to None
-    original_electrs_url = getattr(config, "ELECTRS_URL", None)
-    config.ELECTRS_URL = None
+    # Save original and set ELECTRS_URLS to None
+    original_electrs_url = getattr(config, "ELECTRS_URLS", None)
+    config.ELECTRS_URLS = None
 
     try:
         with pytest.raises(exceptions.ComposeError, match="No UTXOs found"):
             backend.list_unspent("test_source", True)
     finally:
-        config.ELECTRS_URL = original_electrs_url
+        config.ELECTRS_URLS = original_electrs_url

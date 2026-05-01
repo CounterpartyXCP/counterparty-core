@@ -15,10 +15,13 @@ VERSION_MINOR = int(version[1])
 VERSION_REVISION = int(version[2])
 VERSION_PRE_RELEASE = "-".join(VERSION_STRING.split("-")[1:])
 
-DEFAULT_ELECTRS_URL_MAINNET = "https://blockstream.info/api"
-DEFAULT_ELECTRS_URL_TESTNET3 = "https://blockstream.info/testnet/api"
-DEFAULT_ELECTRS_URL_TESTNET4 = "https://mempool.space/testnet4/api"
-DEFAULT_ELECTRS_URL_SIGNET = "https://mempool.space/signet/api"
+DEFAULT_ELECTRS_URLS_MAINNET = [
+    "https://blockstream.info/api",
+    "https://mempool.space/api",
+]
+DEFAULT_ELECTRS_URLS_TESTNET3 = ["https://blockstream.info/testnet/api"]
+DEFAULT_ELECTRS_URLS_TESTNET4 = ["https://mempool.space/testnet4/api"]
+DEFAULT_ELECTRS_URLS_SIGNET = ["https://mempool.space/signet/api"]
 
 
 UPGRADE_ACTIONS = {
