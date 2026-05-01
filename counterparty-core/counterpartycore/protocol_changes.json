@@ -1239,5 +1239,14 @@
         "testnet3_block_index": 999999999,
         "testnet4_block_index": 999999999,
         "signet_block_index": 0
+    },
+    "indefinite_orders": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 2,
+        "minimum_version_revision": 0,
+        "block_index": 999999999,
+        "testnet3_block_index": 999999999,
+        "testnet4_block_index": 999999999,
+        "signet_block_index": 0
     }
 }

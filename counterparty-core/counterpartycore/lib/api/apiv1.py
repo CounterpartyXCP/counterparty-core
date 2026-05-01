@@ -320,8 +320,14 @@ def get_rows(
     # legacy filters
     if not show_expired and table == "orders":
         # Ignore BTC orders one block early.
+        # `expire_index IS NULL` keeps indefinite orders (introduced by
+        # `indefinite_orders` protocol change) visible: in SQL `NULL > X`
+        # evaluates to NULL (falsy), so without this clause a BTC sell
+        # order with `expiration=0` would always be filtered out here.
         expire_index = CurrentState().current_block_index() + 1
-        more_conditions.append("""((give_asset == ? AND expire_index > ?) OR give_asset != ?)""")
+        more_conditions.append(
+            """((give_asset == ? AND (expire_index > ? OR expire_index IS NULL)) OR give_asset != ?)"""
+        )
         bindings += [config.BTC, expire_index, config.BTC]
 
     if (len(conditions) + len(more_conditions)) > 0:
