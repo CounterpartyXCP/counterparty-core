@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v11.0.5 (2026-02-??)
+# Release Notes - Counterparty Core v11.1.0 (2026-02-??)
 
 This release is focused on hardening the consensus-critical parser, the indexer and the API layers against a series of halt vectors and edge cases identified through fuzzing and audit, as well as fixing several State DB / API migration inaccuracies.
 
@@ -29,7 +29,7 @@ pip install -e .
 counterparty-server start
 ```
 
-The State DB is automatically rebuilt on first start of v11.0.5 (migration 0004 fix).
+The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 fix).
 
 # ChangeLog
 
@@ -47,6 +47,7 @@ The State DB is automatically rebuilt on first start of v11.0.5 (migration 0004 
 - Fix Python truthiness bug in `attach` OP_RETURN check (gated)
 - Set `transactions_status` and persist invalid record in `sweep.parse`
 - Forward `tx["block_index"]` into gated `unpack()` and `protocol.enabled()` calls; hoist fairminter fee to `int` and forward `block_index` to issuance fee gates
+- Extend MIME type support for ordinal-style inscriptions behind a new `extended_mime_types_support` gate: tolerate MIME parameters (e.g. `audio/ogg;codecs=opus`), recognise the `+json` structured suffix as textual, and validate against a deterministic hard-coded allow-list (`EXTENDED_MIME_TYPES_VALID`) instead of `mimetypes.types_map`, which read `/etc/mime.types` / the Windows registry and varied per node
 
 ## Bugfixes
 
@@ -75,7 +76,7 @@ The State DB is automatically rebuilt on first start of v11.0.5 (migration 0004 
 - Fix `DETACH_FROM_UTXO` source field typo in `EVENTS_ADDRESS_FIELDS`
 - Fix `LEFT JOIN` in API migration 0004 supplies query
 - Sync `description_locked` and filter `xcp_supply` by status in `apiwatcher`
-- Fix `assets_info` State DB population (migration 0004) so that `description`, `divisible`, `mime_type` and `owner` are derived from the latest valid issuance (matching the streamed `apiwatcher` semantics) instead of an implementation-defined row picked by SQLite from the aggregated set, and so that `locked` / `description_locked` are stored as 0/1 booleans (`MAX(...)`) rather than as `SUM(...)` integer counts. Snapshot-bootstrapped nodes will now agree with event-streamed nodes for these columns. The State DB is automatically rebuilt on first start of v11.0.5.
+- Fix `assets_info` State DB population (migration 0004) so that `description`, `divisible`, `mime_type` and `owner` are derived from the latest valid issuance (matching the streamed `apiwatcher` semantics) instead of an implementation-defined row picked by SQLite from the aggregated set, and so that `locked` / `description_locked` are stored as 0/1 booleans (`MAX(...)`) rather than as `SUM(...)` integer counts. Snapshot-bootstrapped nodes will now agree with event-streamed nodes for these columns. The State DB is automatically rebuilt on first start of v11.1.0.
 
 ## API
 
