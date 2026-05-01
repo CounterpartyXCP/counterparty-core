@@ -86,6 +86,12 @@ class BlockchainWatcher:
         self.db = db
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
+        # Pre-declare ZMQ attributes so connect_to_zmq() can safely close any
+        # prior instance on reconnect without tripping pylint
+        # access-member-before-definition warnings.
+        self.zmq_context = None
+        self.zmq_sub_socket_sequence = None
+        self.zmq_sub_socket_rawblock = None
         self.connect_to_zmq()
         self.mempool_block = []
         self.mempool_block_hashes = []
@@ -107,17 +113,17 @@ class BlockchainWatcher:
         # ZMQError in receive_multipart) doesn't leak file descriptors and
         # eventually exhaust the per-process limit on long-running indexers
         # with flapping ZMQ connections.
-        if hasattr(self, "zmq_sub_socket_sequence") and self.zmq_sub_socket_sequence is not None:
+        if self.zmq_sub_socket_sequence is not None:
             try:
                 self.zmq_sub_socket_sequence.close(linger=0)
             except Exception as e:  # pylint: disable=broad-except
                 logger.debug("Error closing zmq_sub_socket_sequence: %s", e)
-        if hasattr(self, "zmq_sub_socket_rawblock") and self.zmq_sub_socket_rawblock is not None:
+        if self.zmq_sub_socket_rawblock is not None:
             try:
                 self.zmq_sub_socket_rawblock.close(linger=0)
             except Exception as e:  # pylint: disable=broad-except
                 logger.debug("Error closing zmq_sub_socket_rawblock: %s", e)
-        if hasattr(self, "zmq_context") and self.zmq_context is not None:
+        if self.zmq_context is not None:
             try:
                 self.zmq_context.term()
             except Exception as e:  # pylint: disable=broad-except
