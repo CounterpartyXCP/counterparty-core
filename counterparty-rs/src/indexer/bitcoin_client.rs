@@ -558,7 +558,27 @@ fn extract_data_from_witness(script: &Script) -> Result<Vec<u8>, Error> {
                             let type_id = arr.remove(0);
                             (type_id, Value::Array(arr))
                         },
-                        _ => return Err(Error::ParseVout("Expected CBOR array, found different type".to_string())),
+                        Value::Map(map) => {
+                            // Ordinals metadata format: CBOR map with "xcp" key
+                            // containing the Counterparty message as an array.
+                            // Other keys (artist, name, etc.) are ordinals metadata
+                            // visible on ordinals.com.
+                            let xcp_key = Value::Text("xcp".to_string());
+                            match map.get(&xcp_key) {
+                                Some(Value::Array(arr)) if !arr.is_empty() => {
+                                    let mut arr = arr.clone();
+                                    let type_id = arr.remove(0);
+                                    (type_id, Value::Array(arr))
+                                },
+                                Some(Value::Array(_)) => {
+                                    return Err(Error::ParseVout("xcp array in metadata is empty".to_string()));
+                                },
+                                _ => {
+                                    return Err(Error::ParseVout("No xcp key found in metadata map".to_string()));
+                                },
+                            }
+                        },
+                        _ => return Err(Error::ParseVout("Expected CBOR array or map, found different type".to_string())),
                     };
                     
                     // Ensure message_type_id is an integer
