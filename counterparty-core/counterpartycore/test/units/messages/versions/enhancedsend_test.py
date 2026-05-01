@@ -123,8 +123,9 @@ def test_unpack_with_block_index_uses_cbor_when_taproot_on(ledger_db, defaults):
     """Late block index -> taproot_support active -> CBOR path used."""
     import cbor2
 
-    cbor_message = cbor2.dumps([1, 1000, b"\x00" + bytes.fromhex("8d6ae8a3b3816631"
-                                                                   "18b4e1eff4cfc7d0954dd6ec"), b""])
+    cbor_message = cbor2.dumps(
+        [1, 1000, b"\x00" + bytes.fromhex("8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec"), b""]
+    )
     # Use a high block_index where taproot_support is active in the test fixture
     result = enhancedsend.unpack(cbor_message, block_index=10**8)
     assert result["asset"] == "XCP"
@@ -157,9 +158,7 @@ def test_validate_rejects_non_int_quantity(ledger_db, defaults):
 
 
 def test_validate_rejects_zero_quantity(ledger_db, defaults):
-    problems = enhancedsend.validate(
-        ledger_db, defaults["addresses"][1], "XCP", 0, memo_bytes=None
-    )
+    problems = enhancedsend.validate(ledger_db, defaults["addresses"][1], "XCP", 0, memo_bytes=None)
     assert "zero quantity" in problems
 
 

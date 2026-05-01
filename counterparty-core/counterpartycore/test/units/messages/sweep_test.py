@@ -340,8 +340,7 @@ def test_parse_cbor_invalid_doesnt_halt(ledger_db, blockchain_mock, defaults):
     import cbor2
 
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    address_bytes = b"\x00" + bytes.fromhex("8d6ae8a3b3816631"
-                                              "18b4e1eff4cfc7d0954dd6ec")
+    address_bytes = b"\x00" + bytes.fromhex("8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec")
     message = cbor2.dumps([address_bytes, "not-an-int-flags", b""])
     sweep.parse(ledger_db, tx, message)
 
@@ -353,8 +352,7 @@ def test_parse_cbor_huge_flags_clamped(ledger_db, blockchain_mock, defaults):
     import cbor2
 
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    address_bytes = b"\x00" + bytes.fromhex("8d6ae8a3b3816631"
-                                              "18b4e1eff4cfc7d0954dd6ec")
+    address_bytes = b"\x00" + bytes.fromhex("8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec")
     message = cbor2.dumps([address_bytes, 2**70, b""])
     sweep.parse(ledger_db, tx, message)
 
@@ -369,9 +367,7 @@ def test_parse_truncated_message_marked_invalid(ledger_db, blockchain_mock, defa
 def test_unpack_with_block_index_taproot_off_uses_legacy(ledger_db, defaults):
     """When block_index is set before taproot_support activation, unpack
     falls back to the legacy fixed-size struct path."""
-    legacy_message = (
-        b"o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x01"
-    )
+    legacy_message = b"o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x01"
     result = sweep.unpack(legacy_message, block_index=1)
     assert result["destination"] == defaults["addresses"][5]
     assert result["flags"] == 1
@@ -382,8 +378,7 @@ def test_unpack_taproot_active_decodes_cbor(ledger_db):
     payloads decode through the new path."""
     import cbor2
 
-    address_bytes = b"\x00" + bytes.fromhex("8d6ae8a3b3816631"
-                                              "18b4e1eff4cfc7d0954dd6ec")
+    address_bytes = b"\x00" + bytes.fromhex("8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec")
     message = cbor2.dumps([address_bytes, 1, b""])
     result = sweep.unpack(message, block_index=10**8)
     assert result["flags"] == 1

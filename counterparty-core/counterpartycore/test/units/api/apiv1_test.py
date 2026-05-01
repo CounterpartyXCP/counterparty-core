@@ -870,9 +870,7 @@ def test_extended_info(apiv1_client, defaults):
 
 
 def test_get_rows_filter_field_sqli_blocked(ledger_db, state_db):
-    with pytest.raises(
-        exceptions.APIError, match="Invalid filter field name; must match"
-    ):
+    with pytest.raises(exceptions.APIError, match="Invalid filter field name; must match"):
         apiv1.get_rows(
             "balances",
             [{"field": "1) UNION SELECT * FROM messages --", "op": "=", "value": "x"}],
@@ -889,9 +887,7 @@ def test_get_rows_filter_field_sqli_blocked(ledger_db, state_db):
 
 
 def test_get_rows_filter_field_uppercase_blocked(ledger_db, state_db):
-    with pytest.raises(
-        exceptions.APIError, match="Invalid filter field name; must match"
-    ):
+    with pytest.raises(exceptions.APIError, match="Invalid filter field name; must match"):
         apiv1.get_rows(
             "balances",
             [{"field": "ASSET", "op": "=", "value": "XCP"}],
@@ -908,9 +904,7 @@ def test_get_rows_filter_field_uppercase_blocked(ledger_db, state_db):
 
 
 def test_get_rows_filter_field_non_string_blocked(ledger_db, state_db):
-    with pytest.raises(
-        exceptions.APIError, match="Invalid filter field name; must match"
-    ):
+    with pytest.raises(exceptions.APIError, match="Invalid filter field name; must match"):
         apiv1.get_rows(
             "balances",
             [{"field": 42, "op": "=", "value": "x"}],

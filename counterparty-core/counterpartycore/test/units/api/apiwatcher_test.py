@@ -135,9 +135,7 @@ def test_update_assets_info_propagates_description_locked(state_db):
         pytest.skip("No mutable asset to test description_locked")
     asset = asset_row["asset"]
 
-    cursor.execute(
-        "UPDATE assets_info SET description_locked = 0 WHERE asset = ?", (asset,)
-    )
+    cursor.execute("UPDATE assets_info SET description_locked = 0 WHERE asset = ?", (asset,))
 
     event = {
         "event": "ASSET_ISSUANCE",
@@ -197,9 +195,7 @@ def test_update_assets_info_skips_invalid_status(state_db):
     }
     apiwatcher.update_assets_info(state_db, event)
 
-    row = cursor.execute(
-        "SELECT description FROM assets_info WHERE asset = ?", (asset,)
-    ).fetchone()
+    row = cursor.execute("SELECT description FROM assets_info WHERE asset = ?", (asset,)).fetchone()
     assert row["description"] == original_desc
 
 
@@ -212,6 +208,4 @@ def test_events_address_fields_keys_are_lowercase_underscore():
     pattern = re.compile(r"^[a-z][a-z0-9_]*$")
     for event_name, fields in apiwatcher.EVENTS_ADDRESS_FIELDS.items():
         for field in fields:
-            assert pattern.match(field), (
-                f"{event_name} declares a malformed field name {field!r}"
-            )
+            assert pattern.match(field), f"{event_name} declares a malformed field name {field!r}"
