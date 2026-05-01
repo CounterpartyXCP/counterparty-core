@@ -172,11 +172,37 @@ class BlockchainWatcher:
                     logger.debug("Previous block is missing. Catching up...")
                     blocks.catch_up(self.db)
                     CurrentState().set_ledger_state(self.db, "Following")
+                    if not config.NO_MEMPOOL:
+                        mempool.clean_mempool(self.db)
                 else:
-                    blocks.parse_new_block(self.db, decoded_block)
-                CurrentState().set_ledger_state(self.db, "Following")
-                if not config.NO_MEMPOOL:
-                    mempool.clean_mempool(self.db)
+                    # Atomic: parse_new_block + clean_mempool share one outer
+                    # transaction so a reader (e.g. APIWatcher polling the
+                    # ledger DB) cannot observe BLOCK_PARSED visible while
+                    # the just-confirmed tx's mempool rows are still around.
+                    # Without this, scenarios_test races on `mempool/events`
+                    # being empty right after wait_for_counterparty_server
+                    # returns: the APIWatcher had already seen the commit
+                    # from parse_new_block (and bumped LAST_BLOCK_PARSED in
+                    # state_db) while the separate clean_mempool DELETEs had
+                    # not yet committed in ledger_db.
+                    with self.db:
+                        blocks.parse_new_block(self.db, decoded_block)
+                        if not config.NO_MEMPOOL:
+                            try:
+                                mempool.clean_mempool(self.db)
+                            except (
+                                exceptions.BitcoindRPCError,
+                                exceptions.BitcoindZMQError,
+                            ) as e:
+                                # A transient RPC failure inside getrawmempool
+                                # must not roll back the just-parsed block;
+                                # the next receive_rawblock will retry the
+                                # mempool sweep. We still keep the block
+                                # commit because chain progress is critical.
+                                logger.warning(
+                                    "clean_mempool failed (will retry next block): %s", e
+                                )
+                    CurrentState().set_ledger_state(self.db, "Following")
                 if not config.NO_TELEMETRY:
                     TelemetryOneShot().submit()
         except exceptions.ParseTransactionError:
