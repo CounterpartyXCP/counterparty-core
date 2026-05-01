@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 import pygit2
 import pytest
 from counterpartycore.lib.utils import helpers
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_chunkify():
@@ -217,6 +218,85 @@ def test_classify_mime_type():
     assert helpers.classify_mime_type("image/jpeg") == "binary"
 
 
+def test_classify_mime_type_extended_support_enabled():
+    # The protocol-gated branch tolerates parameters and recognises the
+    # `+json` structured suffix (alongside `+xml`).
+    assert helpers.classify_mime_type("audio/ogg;codecs=opus") == "binary"
+    assert helpers.classify_mime_type("text/plain;charset=utf-8") == "text"
+    assert helpers.classify_mime_type("application/ld+json") == "text"
+    assert helpers.classify_mime_type("application/yaml") == "text"
+    # Random binary types stay binary
+    assert helpers.classify_mime_type("video/mp4") == "binary"
+    assert helpers.classify_mime_type("image/webp") == "binary"
+
+
+def test_classify_mime_type_extended_support_disabled():
+    # Before the `extended_mime_types_support` gate activates we keep
+    # the legacy classifier semantics:
+    # - `+json` is NOT recognised as textual (only `+xml` is)
+    # - `application/yaml` is NOT in the legacy textual allow-list
+    # - parameters bypass the legacy `application/*` allow-list.
+    with ProtocolChangesDisabled(["extended_mime_types_support"]):
+        assert helpers.classify_mime_type("audio/ogg;codecs=opus") == "binary"
+        assert helpers.classify_mime_type("application/ld+json") == "binary"
+        assert helpers.classify_mime_type("application/yaml") == "binary"
+        # `application/json;charset=utf-8` doesn't match the bare-string check,
+        # so it falls through to "binary" pre-gate.
+        assert helpers.classify_mime_type("application/json;charset=utf-8") == "binary"
+        # Legacy types still classified correctly
+        assert helpers.classify_mime_type("text/plain") == "text"
+        assert helpers.classify_mime_type("application/json") == "text"
+        assert helpers.classify_mime_type("application/atom+xml") == "text"
+
+
+def test_classify_mime_type_non_string_inputs():
+    # Halt-vector guard, gated with `extended_mime_types_support`:
+    #
+    # Post-gate: a CBOR-decoded `mime_type` may be any scalar (post-
+    # taproot_support; see `fuzz_cbor_test.py::test_cbor_issuance_no_halt`).
+    # The classifier must NOT raise -- it returns "binary" and downstream
+    # validation flags the tx invalid.
+    #
+    # Pre-gate: behaviour is preserved exactly as it was before this
+    # protocol change -- the legacy classifier raises on non-string, and
+    # we keep that raise as-is. Any node still on legacy code raises too;
+    # the broad-except in each parse-path's `unpack` catches it and falls
+    # back to the legacy struct decoder. Changing pre-gate behaviour here
+    # would diverge from those nodes (consensus break since taproot_support
+    # activated).
+    #
+    # The exact exception type depends on the input: types that don't
+    # have `.startswith` at all (int, float, bool, None, list, dict)
+    # raise `AttributeError`; `bytes` has `.startswith` but rejects a
+    # `str` argument with `TypeError`. Both are consensus-equivalent --
+    # they are caught by the same broad-except downstream.
+    for bogus in (1, 0, None, b"text/plain", 1.5, True, [], {}):
+        assert helpers.classify_mime_type(bogus) == "binary"
+    with ProtocolChangesDisabled(["extended_mime_types_support"]):
+        # `int`, `float`, `bool` have no `.startswith` -> `AttributeError`.
+        for bogus in (1, 1.5, True):
+            with pytest.raises(AttributeError):
+                helpers.classify_mime_type(bogus)
+        # `bytes` has `.startswith` but `bytes.startswith("text/")` with a
+        # `str` argument raises `TypeError`. This is the actual pre-gate
+        # behaviour -- preserving it exactly is what keeps us in consensus
+        # with legacy nodes on the network.
+        with pytest.raises(TypeError):
+            helpers.classify_mime_type(b"text/plain")
+        # `0` and `None` are falsy so `mime_type or "text/plain"` upstream
+        # would coerce them to "text/plain" -- but the classifier itself
+        # is called with the raw value here, so they still hit `.startswith`
+        # on a non-string.
+        for falsy in (0, None):
+            with pytest.raises(AttributeError):
+                helpers.classify_mime_type(falsy)
+        # `[]` and `{}` are also non-string and hit `.startswith` on a
+        # non-string -- raises `AttributeError` too.
+        for container in ([], {}):
+            with pytest.raises(AttributeError):
+                helpers.classify_mime_type(container)
+
+
 def test_content_to_bytes():
     assert helpers.content_to_bytes("texte", "text/plain") == b"texte"
     assert helpers.content_to_bytes("48656c6c6f", "image/jpeg") == b"Hello"
@@ -232,6 +312,8 @@ def test_bytes_to_content():
     [
         ("text/plain", "valid content", []),  # Valid MIME type
         (None, "valid content", []),  # None defaults to text/plain
+        # MIME parameters are accepted once `extended_mime_types_support` is on.
+        ("audio/ogg;codecs=opus", "deadbeef", []),
         # Invalid MIME with both errors
         (
             "fake/nonexistent-type",
@@ -254,3 +336,119 @@ def test_check_content(mime_type, content, expected):
             assert helpers.check_content(mime_type, content) == expected
     else:
         assert helpers.check_content(mime_type, content) == expected
+
+
+def test_check_content_extended_support_disabled():
+    # When the gate is off, MIME parameters are not stripped and the
+    # raw type fails the `mimetypes.types_map` membership check.
+    with ProtocolChangesDisabled(["extended_mime_types_support"]):
+        problems = helpers.check_content("audio/ogg;codecs=opus", "deadbeef")
+        assert "Invalid mime type: audio/ogg;codecs=opus" in problems
+
+
+def test_check_content_non_string_mime_type():
+    # Same halt-vector guard as `test_classify_mime_type_non_string_inputs`:
+    # CBOR-decoded `mime_type` may be any scalar. `check_content` must
+    # return a `problems` list (not raise) so the tx is marked invalid,
+    # both pre-gate and post-gate. Pre-gate, `classify_mime_type` raises
+    # `AttributeError` (for int/float/bool/None/list/dict) or `TypeError`
+    # (for bytes) -- but either is called inside `check_content`'s own
+    # try/except, so the function returns problems instead of propagating.
+    for bogus in (1, b"text/plain", 1.5, True):
+        problems = helpers.check_content(bogus, "deadbeef")
+        assert any(p.startswith("Invalid mime type") for p in problems), problems
+    with ProtocolChangesDisabled(["extended_mime_types_support"]):
+        for bogus in (1, b"text/plain", 1.5, True):
+            problems = helpers.check_content(bogus, "deadbeef")
+            assert any(p.startswith("Invalid mime type") for p in problems), problems
+            # Pre-gate, the inner `content_to_bytes` call raises
+            # `AttributeError` and is caught into a second problem.
+            assert any(p.startswith("Error converting") for p in problems), problems
+
+
+def test_check_content_extended_support_common_types():
+    # Post-gate, the deterministic hard-coded allow-list
+    # (`EXTENDED_MIME_TYPES_VALID`) MUST recognise the common
+    # ordinal-inscription / web MIME types as valid -- otherwise
+    # legitimate inscriptions get marked "Invalid mime type" and
+    # consensus diverges from any node that previously accepted them
+    # via `mimetypes.init()`.
+    common_types = [
+        # Image (ord-style inscriptions are mostly images)
+        "image/png",
+        "image/jpeg",
+        "image/gif",
+        "image/svg+xml",
+        "image/webp",
+        "image/apng",
+        "image/avif",
+        # Audio
+        "audio/mpeg",
+        "audio/ogg",
+        "audio/wav",
+        "audio/flac",
+        # Video
+        "video/mp4",
+        "video/webm",
+        # Text
+        "text/plain",
+        "text/html",
+        "text/css",
+        "text/javascript",
+        "text/markdown",
+        # Application
+        "application/json",
+        "application/pdf",
+        "application/wasm",
+        "application/yaml",
+        # Font
+        "font/woff",
+        "font/woff2",
+        "font/otf",
+        "font/ttf",
+        # Model (3D ord inscriptions)
+        "model/stl",
+        "model/gltf-binary",
+    ]
+    for mime in common_types:
+        problems = helpers.check_content(mime, "deadbeef")
+        assert all(not p.startswith("Invalid mime type") for p in problems), (
+            f"{mime} should be a recognised MIME type post-gate, got: {problems}"
+        )
+    # Sanity-check: parameters are stripped, so `<type>;codecs=...`
+    # variants are accepted too.
+    for mime in (
+        "image/png;charset=utf-8",
+        "audio/ogg;codecs=opus",
+        "video/webm;codecs=vp9",
+        "application/json;charset=utf-8",
+    ):
+        problems = helpers.check_content(mime, "deadbeef")
+        assert all(not p.startswith("Invalid mime type") for p in problems), (
+            f"{mime} should be valid after stripping parameters, got: {problems}"
+        )
+
+
+def test_check_content_extended_support_rejects_unknown():
+    # Cross-platform consensus: a type that ISN'T in our hard-coded
+    # allow-list MUST be rejected, regardless of what
+    # /etc/mime.types says on the validating node. This is the
+    # whole reason we stopped calling `mimetypes.init()`.
+    bogus_types = [
+        "application/x-vnd-mozilla.xml-encoded",
+        "image/x-totally-made-up",
+        "foo/bar",
+    ]
+    for mime in bogus_types:
+        problems = helpers.check_content(mime, "deadbeef")
+        assert any(p.startswith("Invalid mime type") for p in problems), (
+            f"{mime} should be rejected post-gate, got: {problems}"
+        )
+
+
+def test_extended_mime_types_valid_is_superset_of_textual_application():
+    # `EXTENDED_MIME_TYPES_VALID` must contain every textual
+    # `application/*` type, otherwise `classify_mime_type` would
+    # accept (as "text") a type that `check_content` then flags as
+    # "Invalid mime type" -- a self-inconsistent validation result.
+    assert helpers.TEXTUAL_APPLICATION_MIME_TYPES.issubset(helpers.EXTENDED_MIME_TYPES_VALID)

@@ -255,8 +255,8 @@ def validate(
     ):
         problems.append("integer overflow")
 
-    if protocol.enabled("taproot_support") and description is not None:
-        problems += helpers.check_content(mime_type, description)
+    if protocol.enabled("taproot_support", block_index=block_index) and description is not None:
+        problems += helpers.check_content(mime_type, description, block_index=block_index)
 
     return (
         call_date,
@@ -666,7 +666,9 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
 
                 mime_type = mime_type or "text/plain"
                 if description is not None:
-                    description = helpers.bytes_to_content(description, mime_type)
+                    description = helpers.bytes_to_content(
+                        description, mime_type, block_index=block_index
+                    )
                 callable_, call_date, call_price = False, 0, 0.0
 
                 unpacked = True

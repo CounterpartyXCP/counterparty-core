@@ -185,20 +185,251 @@ def get_current_commit_hash(not_from_env=False):
         return None
 
 
-def classify_mime_type(mime_type):
-    # Extract base MIME type (remove parameters like codecs)
-    base_mime_type = mime_type.split(";")[0].strip()
-    
-    # Types that start with "text/" are textual
+TEXTUAL_APPLICATION_MIME_TYPES = frozenset(
+    [
+        "application/xml",
+        "application/javascript",
+        "application/ecmascript",
+        "application/x-javascript",
+        "application/json",
+        "application/manifest+json",
+        "application/x-python-code",
+        "application/x-sh",
+        "application/x-csh",
+        "application/x-tex",
+        "application/x-latex",
+        "application/postscript",
+        "application/yaml",
+        "application/x-yaml",
+        "application/sql",
+    ]
+)
+
+
+# Hard-coded MIME-type allow-list used by `check_content` once
+# `extended_mime_types_support` activates. This MUST be deterministic
+# across operating systems and Python builds: previously we relied on
+# `mimetypes.types_map` populated by `mimetypes.init()`, but that reads
+# /etc/mime.types (Unix) or the Windows registry, so the set of accepted
+# types varied per node (~799 on macOS without /etc/mime.types, ~1000+
+# on Ubuntu, ~200 on Alpine). A CBOR issuance / fairminter / broadcast
+# carrying e.g. `application/x-vnd.mozilla.xml-encoded` would have been
+# accepted on a Debian node and rejected on a macOS node, forking the
+# chain. The list below is a fixed snapshot covering:
+#   - Python's built-in `mimetypes._types_map_default` (~92 types) so we
+#     don't regress vs. the legacy pre-gate behaviour
+#   - the textual `application/*` types from
+#     `TEXTUAL_APPLICATION_MIME_TYPES` (kept in sync below)
+#   - the ordinal-inscription staples (`audio/ogg`, `audio/wav`,
+#     `audio/flac`, `image/webp`, `image/apng`, `model/stl`,
+#     `model/gltf-binary`, etc.) since the immediate motivation for
+#     this protocol change is to permit ord-style inscriptions whose
+#     MIME types are not all in Python's built-in defaults.
+EXTENDED_MIME_TYPES_VALID = frozenset(
+    [
+        # ----- application/* (binary + textual) -----
+        "application/atom+xml",
+        "application/ecmascript",
+        "application/gzip",
+        "application/javascript",
+        "application/json",
+        "application/ld+json",
+        "application/manifest+json",
+        "application/msword",
+        "application/n-quads",
+        "application/n-triples",
+        "application/octet-stream",
+        "application/oda",
+        "application/ogg",
+        "application/pdf",
+        "application/pkcs7-mime",
+        "application/postscript",
+        "application/rss+xml",
+        "application/sql",
+        "application/trig",
+        "application/vnd.apple.mpegurl",
+        "application/vnd.ms-excel",
+        "application/vnd.ms-powerpoint",
+        "application/wasm",
+        "application/x-7z-compressed",
+        "application/x-bcpio",
+        "application/x-bzip",
+        "application/x-bzip2",
+        "application/x-cpio",
+        "application/x-csh",
+        "application/x-dvi",
+        "application/x-gtar",
+        "application/x-hdf",
+        "application/x-hdf5",
+        "application/x-javascript",
+        "application/x-latex",
+        "application/x-mif",
+        "application/x-netcdf",
+        "application/x-pkcs12",
+        "application/x-pn-realaudio",
+        "application/x-python-code",
+        "application/x-rar-compressed",
+        "application/x-sh",
+        "application/x-shar",
+        "application/x-shockwave-flash",
+        "application/x-sv4cpio",
+        "application/x-sv4crc",
+        "application/x-tar",
+        "application/x-tcl",
+        "application/x-tex",
+        "application/x-texinfo",
+        "application/x-troff",
+        "application/x-troff-man",
+        "application/x-troff-me",
+        "application/x-troff-ms",
+        "application/x-ustar",
+        "application/x-wais-source",
+        "application/x-yaml",
+        "application/xhtml+xml",
+        "application/xml",
+        "application/yaml",
+        "application/zip",
+        # ----- audio/* -----
+        "audio/3gpp",
+        "audio/3gpp2",
+        "audio/aac",
+        "audio/basic",
+        "audio/flac",
+        "audio/midi",
+        "audio/mp4",
+        "audio/mpeg",
+        "audio/ogg",
+        "audio/opus",
+        "audio/wav",
+        "audio/webm",
+        "audio/x-aiff",
+        "audio/x-flac",
+        "audio/x-m4a",
+        "audio/x-pn-realaudio",
+        "audio/x-wav",
+        # ----- font/* -----
+        "font/otf",
+        "font/ttf",
+        "font/woff",
+        "font/woff2",
+        # ----- image/* -----
+        "image/apng",
+        "image/avif",
+        "image/bmp",
+        "image/gif",
+        "image/heic",
+        "image/heif",
+        "image/ief",
+        "image/jpeg",
+        "image/png",
+        "image/svg+xml",
+        "image/tiff",
+        "image/vnd.microsoft.icon",
+        "image/webp",
+        "image/x-cmu-raster",
+        "image/x-icon",
+        "image/x-portable-anymap",
+        "image/x-portable-bitmap",
+        "image/x-portable-graymap",
+        "image/x-portable-pixmap",
+        "image/x-rgb",
+        "image/x-xbitmap",
+        "image/x-xpixmap",
+        "image/x-xwindowdump",
+        # ----- message/* -----
+        "message/rfc822",
+        # ----- model/* (ordinal 3D inscriptions) -----
+        "model/gltf+json",
+        "model/gltf-binary",
+        "model/stl",
+        # ----- text/* -----
+        "text/css",
+        "text/csv",
+        "text/html",
+        "text/javascript",
+        "text/markdown",
+        "text/n3",
+        "text/plain",
+        "text/richtext",
+        "text/tab-separated-values",
+        "text/vtt",
+        "text/x-python",
+        "text/x-rst",
+        "text/x-setext",
+        "text/x-sgml",
+        "text/x-vcard",
+        "text/xml",
+        "text/yaml",
+        # ----- video/* -----
+        "video/3gpp",
+        "video/3gpp2",
+        "video/mp4",
+        "video/mpeg",
+        "video/ogg",
+        "video/quicktime",
+        "video/webm",
+        "video/x-flv",
+        "video/x-matroska",
+        "video/x-msvideo",
+        "video/x-sgi-movie",
+    ]
+    # Belt-and-braces: also accept everything classified as textual
+    # `application/*`, so the two allow-lists can never drift apart.
+).union(TEXTUAL_APPLICATION_MIME_TYPES)
+
+
+def _strip_mime_parameters(mime_type):
+    # `audio/ogg;codecs=opus` -> `audio/ogg`; only called from the
+    # `extended_mime_types_support`-gated branches. The non-string guard
+    # is for the post-gate path: a CBOR-decoded `mime_type` may be any
+    # scalar (post-taproot_support; see `fuzz_cbor_test.py`), and after
+    # the gate we want validation to flag it cleanly via "Invalid mime
+    # type" rather than halt with `AttributeError`. Pre-gate callers
+    # never reach here -- the legacy classifier raises `AttributeError`,
+    # which is consensus-baked behaviour caught by `unpack`'s broad-except.
+    if not isinstance(mime_type, str):
+        return ""
+    return mime_type.split(";")[0].strip()
+
+
+def classify_mime_type(mime_type, block_index=None):
+    # Imported lazily to avoid a circular dependency:
+    # `protocol` -> `currentstate` -> `helpers`.
+    from counterpartycore.lib.parser import protocol  # noqa: PLC0415
+
+    # After `extended_mime_types_support`, MIME parameters (e.g. `;codecs=opus`)
+    # are tolerated and additional structured-suffix types (`+json`) are
+    # treated as textual.
+    if protocol.enabled("extended_mime_types_support", block_index=block_index):
+        # Halt-vector guard gated with the same protocol change: pre-gate, a
+        # non-string `mime_type` raises `AttributeError` here -- preserved
+        # because the historical behaviour (caught downstream by `unpack`'s
+        # broad-except, which falls back to legacy struct decoding with
+        # `mime_type="text/plain"`) is consensus-baked since taproot_support
+        # activated. Changing it pre-gate would diverge from any node still
+        # running the legacy code.
+        if not isinstance(mime_type, str):
+            return "binary"
+        target = _strip_mime_parameters(mime_type)
+        if (
+            target.startswith("text/")
+            or target.startswith("message/")
+            or target.endswith("+xml")
+            or target.endswith("+json")
+        ):
+            return "text"
+        if target in TEXTUAL_APPLICATION_MIME_TYPES:
+            return "text"
+        return "binary"
+
     if (
-        base_mime_type.startswith("text/")
-        or base_mime_type.startswith("message/")
-        or base_mime_type.endswith("+xml")
+        mime_type.startswith("text/")
+        or mime_type.startswith("message/")
+        or mime_type.endswith("+xml")
     ):
         return "text"
 
-    # List of application types that are textual
-    if base_mime_type in [
+    if mime_type in [
         "application/xml",
         "application/javascript",
         "application/json",
@@ -211,33 +442,47 @@ def classify_mime_type(mime_type):
     ]:
         return "text"
 
-    # By default, consider the MIME type as binary
     return "binary"
 
 
-def content_to_bytes(content: str, mime_type: str) -> bytes:
-    file_type = classify_mime_type(mime_type)
+def content_to_bytes(content: str, mime_type: str, block_index=None) -> bytes:
+    file_type = classify_mime_type(mime_type, block_index=block_index)
     if file_type == "text":
         return content.encode("utf-8")
     return binascii.unhexlify(content)
 
 
-def bytes_to_content(content: bytes, mime_type: str) -> str:
-    file_type = classify_mime_type(mime_type)
+def bytes_to_content(content: bytes, mime_type: str, block_index=None) -> str:
+    file_type = classify_mime_type(mime_type, block_index=block_index)
     if file_type == "text":
         return content.decode("utf-8")
     return binascii.hexlify(content).decode("utf-8")
 
 
-def check_content(mime_type, content):
+def check_content(mime_type, content, block_index=None):
+    from counterpartycore.lib.parser import protocol  # noqa: PLC0415
+
     problems = []
     content_mime_type = mime_type or "text/plain"
-    # Extract base MIME type (remove parameters like codecs)
-    base_mime_type = content_mime_type.split(";")[0].strip()
-    if base_mime_type not in mimetypes.types_map.values():
+    if protocol.enabled("extended_mime_types_support", block_index=block_index):
+        # Validate against the deterministic hard-coded allow-list.
+        # `mimetypes.init()` MUST NOT be called here: it loads
+        # /etc/mime.types / Windows registry, which differs per node and
+        # would fork consensus. See `EXTENDED_MIME_TYPES_VALID` above.
+        type_to_check = _strip_mime_parameters(content_mime_type)
+        valid_types = EXTENDED_MIME_TYPES_VALID
+    else:
+        # Pre-gate: stay on Python's built-in `_types_map_default`
+        # (the ~92 stable defaults), which is what the legacy code
+        # used implicitly. Note: without `mimetypes.init()`, the
+        # platform-specific entries are NOT loaded -- this is the
+        # historical behaviour we are preserving for the legacy path.
+        type_to_check = content_mime_type
+        valid_types = mimetypes.types_map.values()
+    if type_to_check not in valid_types:
         problems.append(f"Invalid mime type: {mime_type}")
     try:
-        content_to_bytes(content, content_mime_type)
+        content_to_bytes(content, content_mime_type, block_index=block_index)
     except Exception as e:  # pylint: disable=broad-exception-caught
         problems.append(f"Error converting description to bytes: {e}")
     return problems
