@@ -1,6 +1,6 @@
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.messages import pooldeposit, poolwithdraw
+from counterpartycore.lib.messages import destroy, pooldeposit, poolwithdraw
 
 
 def create_pool(ledger_db, blockchain_mock, source, quantity_a, quantity_b):
@@ -355,8 +355,6 @@ def test_parse_partial_withdrawal(ledger_db, defaults, blockchain_mock, test_hel
 
 def test_lp_destroy_benefits_remaining_holders(ledger_db, defaults, blockchain_mock, test_helpers):
     """Destroying LP tokens locks reserves — remaining holders get more on withdrawal."""
-    from counterpartycore.lib.messages import destroy
-
     # Create pool with addr0
     create_pool(
         ledger_db,

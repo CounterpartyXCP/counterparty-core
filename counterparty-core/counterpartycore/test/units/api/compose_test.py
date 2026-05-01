@@ -1,6 +1,7 @@
 import pytest
-from counterpartycore.lib import exceptions
+from counterpartycore.lib import exceptions, ledger
 from counterpartycore.lib.api import compose
+from counterpartycore.lib.messages import pooldeposit
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 # ============================================================================
@@ -349,11 +350,9 @@ def test_compose_poolwithdraw_with_lp_asset(apiv2_client, defaults):
 
 def test_compose_poolwithdraw_with_lp_asset_direct(ledger_db, defaults):
     """Test compose_poolwithdraw with lp_asset parameter directly via compose module."""
-    from counterpartycore.lib.api import compose as api_compose
-
     address = defaults["addresses"][0]
     with pytest.raises(exceptions.ComposeError, match="no pool found for LP asset"):
-        api_compose.compose_poolwithdraw(
+        compose.compose_poolwithdraw(
             ledger_db,
             address=address,
             lp_asset="NONEXISTENTLP",
@@ -363,10 +362,6 @@ def test_compose_poolwithdraw_with_lp_asset_direct(ledger_db, defaults):
 
 def test_compose_poolwithdraw_with_lp_asset_success(ledger_db, defaults, blockchain_mock):
     """Test compose_poolwithdraw with lp_asset resolves to asset_a/asset_b from existing pool."""
-    from counterpartycore.lib import ledger
-    from counterpartycore.lib.api import compose as api_compose
-    from counterpartycore.lib.messages import pooldeposit
-
     source = defaults["addresses"][0]
     quantity = defaults["quantity"]
 
@@ -380,8 +375,7 @@ def test_compose_poolwithdraw_with_lp_asset_success(ledger_db, defaults, blockch
     lp_balance = ledger.balances.get_balance(ledger_db, source, lp_asset)
     assert lp_balance > 0
 
-    # compose_poolwithdraw with lp_asset should resolve and succeed
-    result = api_compose.compose_poolwithdraw(
+    result = compose.compose_poolwithdraw(
         ledger_db,
         address=source,
         lp_asset=lp_asset,

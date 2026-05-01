@@ -2,7 +2,7 @@ import struct
 
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.messages import pooldeposit, poolwithdraw
+from counterpartycore.lib.messages import destroy, gas, pooldeposit, poolwithdraw
 
 
 def test_validate_valid(ledger_db, defaults):
@@ -512,8 +512,6 @@ def test_empty_pool_refund_respects_min_lp_quantity(ledger_db, defaults, blockch
 
 def test_restart_after_external_lp_destroy(ledger_db, defaults, blockchain_mock):
     """Pool is recoverable when every LP holder destroys their LP externally."""
-    from counterpartycore.lib.messages import destroy
-
     quantity = defaults["quantity"] // 4
     source = defaults["addresses"][0]
 
@@ -579,8 +577,6 @@ def test_validate_subsequent_deposit_too_small(ledger_db, defaults, blockchain_m
 
 def test_validate_xcp_fee_insufficient(ledger_db, defaults, blockchain_mock):
     """When gas fee > 0 and XCP balance is too low for fee + quantity, validation should fail."""
-    from counterpartycore.lib.messages import gas
-
     source = defaults["addresses"][0]
     quantity = defaults["quantity"]
 
