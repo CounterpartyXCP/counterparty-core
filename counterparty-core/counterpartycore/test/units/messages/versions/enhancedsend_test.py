@@ -1,7 +1,8 @@
 import re
 
+import cbor2
 import pytest
-from counterpartycore.lib import exceptions
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.messages.versions import enhancedsend
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
@@ -121,8 +122,6 @@ def test_unpack_with_block_index_falls_back_when_taproot_off(ledger_db, defaults
 
 def test_unpack_with_block_index_uses_cbor_when_taproot_on(ledger_db, defaults):
     """Late block index -> taproot_support active -> CBOR path used."""
-    import cbor2
-
     cbor_message = cbor2.dumps(
         [1, 1000, b"\x00" + bytes.fromhex("8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec"), b""]
     )
@@ -170,8 +169,6 @@ def test_validate_rejects_negative_quantity(ledger_db, defaults):
 
 
 def test_validate_rejects_btc(ledger_db, defaults):
-    from counterpartycore.lib import config
-
     problems = enhancedsend.validate(
         ledger_db, defaults["addresses"][1], config.BTC, 1000, memo_bytes=None
     )
@@ -185,8 +182,6 @@ def test_validate_rejects_missing_destination(ledger_db):
 
 
 def test_validate_rejects_overflowing_quantity(ledger_db, defaults):
-    from counterpartycore.lib import config
-
     problems = enhancedsend.validate(
         ledger_db,
         defaults["addresses"][1],

@@ -7,7 +7,9 @@ Focuses on the PR-touched code paths:
 - update_address_events removed `no_cache` parameter
 """
 
+import inspect
 import json
+import re
 
 import pytest
 from counterpartycore.lib.api import apiwatcher
@@ -27,8 +29,6 @@ def test_update_address_events_signature():
     """update_address_events no longer accepts a `no_cache` kwarg; this is
     a regression guard against an accidental re-introduction that would
     silently make callers' kwargs go nowhere."""
-    import inspect
-
     sig = inspect.signature(apiwatcher.update_address_events)
     assert list(sig.parameters.keys()) == ["state_db", "event"]
 
@@ -203,8 +203,6 @@ def test_events_address_fields_keys_are_lowercase_underscore():
     """Defensive: every field name listed in EVENTS_ADDRESS_FIELDS must
     look like a real binding key (lowercase + underscores). This would
     have caught the original `sourc_address` typo."""
-    import re
-
     pattern = re.compile(r"^[a-z][a-z0-9_]*$")
     for event_name, fields in apiwatcher.EVENTS_ADDRESS_FIELDS.items():
         for field in fields:

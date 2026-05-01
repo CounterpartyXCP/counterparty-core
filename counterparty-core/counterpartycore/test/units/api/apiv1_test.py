@@ -4,6 +4,7 @@ import pytest
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import apiv1
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
+from jsonrpc import dispatcher as global_dispatcher
 
 
 def test_create_burn(apiv1_client, defaults):
@@ -937,8 +938,6 @@ def test_sql_method_requires_rpc_password_when_unset(ledger_db, state_db, monkey
             monkeypatch.delattr(config, "RPC_PASSWORD")
         # Re-instantiate the app fresh (the dispatcher closure captured by
         # apiv1_app fixture may have been built when RPC_PASSWORD was set).
-        from jsonrpc import dispatcher as global_dispatcher
-
         apiv1.create_app()
         sql_method = global_dispatcher.method_map.get("sql")
         assert sql_method is not None
@@ -952,8 +951,6 @@ def test_sql_method_requires_rpc_password_when_unset(ledger_db, state_db, monkey
 def test_sql_method_works_with_rpc_password_set(ledger_db, state_db, monkeypatch):
     """When RPC_PASSWORD is set, the sql method runs normally."""
     monkeypatch.setattr(config, "RPC_PASSWORD", "test_password", raising=False)
-    from jsonrpc import dispatcher as global_dispatcher
-
     apiv1.create_app()
     sql_method = global_dispatcher.method_map.get("sql")
     assert sql_method is not None
