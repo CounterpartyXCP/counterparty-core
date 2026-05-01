@@ -90,6 +90,12 @@ The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 
 - Document `expand_subasset_longname` 200-byte cap reasoning
 - Document libm cross-platform threshold near `gas.py` sigmoid
 
+## Features
+
+- Support multiple Electrs backends with automatic failover on connection, timeout, or HTTP errors; `--electrs-url` can now be specified multiple times
+- Default mainnet Electrs backends to both `blockstream.info` and `mempool.space`
+- Print a startup warning when using default Electrs URLs (not recommended for production)
+
 # Credits
 
 - Ouziel Slama
