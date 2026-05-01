@@ -1,6 +1,9 @@
 import pytest
 from counterpartycore.lib import exceptions
+from counterpartycore.lib import ledger as ledger_mod
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import order
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_validate(ledger_db, defaults, current_block_index):
@@ -1120,8 +1123,6 @@ def test_validate_expiration_above_u16_max(ledger_db, current_block_index):
 
 def test_validate_indefinite_before_activation(ledger_db, current_block_index):
     """expiration=0 is rejected when both indefinite_orders and no_zero_expiration are disabled."""
-    from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
-
     with ProtocolChangesDisabled(["indefinite_orders", "no_zero_expiration"]):
         problems = order.validate(
             ledger_db, "XCP", 1000, "DIVISIBLE", 1000, 0, 0, current_block_index
@@ -1131,8 +1132,6 @@ def test_validate_indefinite_before_activation(ledger_db, current_block_index):
 
 def test_validate_max_expiration_before_activation(ledger_db, current_block_index):
     """expiration above 8064 is rejected when indefinite_orders is disabled."""
-    from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
-
     with ProtocolChangesDisabled(["indefinite_orders"]):
         problems = order.validate(
             ledger_db, "XCP", 1000, "DIVISIBLE", 1000, 9000, 0, current_block_index
@@ -1173,8 +1172,6 @@ def test_match_expire_index_pre_activation(
     ledger_db, blockchain_mock, defaults, current_block_index, test_helpers
 ):
     """Before indefinite_orders, match_expire_index = block_index + 20."""
-    from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
-
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][1], fee=10000)
     message = b"\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00"
     with ProtocolChangesDisabled(["indefinite_orders"]):
@@ -1196,8 +1193,6 @@ def test_match_expire_index_pre_activation(
 
 def test_parse_expire_index_pre_activation(ledger_db, blockchain_mock, defaults):
     """Before indefinite_orders activation, expire_index = block_index + expiration (no -1)."""
-    from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
-
     source = defaults["addresses"][0]
     _, _, data = order.compose(ledger_db, source, "XCP", 1000, "DIVISIBLE", 1000, 100, 0)
     tx = blockchain_mock.dummy_tx(ledger_db, source)
@@ -1213,15 +1208,11 @@ def test_parse_expire_index_pre_activation(ledger_db, blockchain_mock, defaults)
 
 def test_indefinite_order_not_in_expiry_scan(ledger_db, blockchain_mock, defaults):
     """Indefinite order never appears in get_orders_to_expire."""
-    from counterpartycore.lib.ledger.currentstate import CurrentState
-
     source = defaults["addresses"][0]
     block_index = CurrentState().current_block_index()
     _, _, data = order.compose(ledger_db, source, "XCP", 1000, "DIVISIBLE", 1000, 0, 0)
     tx = blockchain_mock.dummy_tx(ledger_db, source)
     order.parse(ledger_db, tx, data[1:])
-
-    from counterpartycore.lib import ledger as ledger_mod
 
     for future in [block_index + 1, block_index + 100, 1, 2]:
         expiring = ledger_mod.markets.get_orders_to_expire(ledger_db, future)
