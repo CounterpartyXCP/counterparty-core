@@ -49,6 +49,7 @@ The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 
 - Forward `tx["block_index"]` into gated `unpack()` and `protocol.enabled()` calls; hoist fairminter fee to `int` and forward `block_index` to issuance fee gates
 - Extend MIME type support for ordinal-style inscriptions behind a new `extended_mime_types_support` gate: tolerate MIME parameters (e.g. `audio/ogg;codecs=opus`), recognise the `+json` structured suffix as textual, and validate against a deterministic hard-coded allow-list (`EXTENDED_MIME_TYPES_VALID`) instead of `mimetypes.types_map`, which read `/etc/mime.types` / the Windows registry and varied per node
 - Allow CBOR map under tag `0x05` for ordinals-style provenance metadata in taproot inscriptions, behind a new `ordinals_metadata_support` gate. The Counterparty message is extracted from the `"xcp"` array key; other keys are ordinals metadata ignored by the consensus parser.
+- Add support for indefinite DEX orders and fix `expiration` semantics behind a new `indefinite_orders` gate: `expiration=0` now means indefinite (open until filled or cancelled, `expire_index = NULL`), `expiration=N` now means exactly N blocks of life (was N+1 due to a long-standing off-by-one), and `MAX_EXPIRATION` is raised from 8064 (~56 days) to 65535 (the wire-format u16 max, ~455 days). The wire format is unchanged.
 
 ## Bugfixes
 
