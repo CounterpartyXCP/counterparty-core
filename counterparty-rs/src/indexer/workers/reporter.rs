@@ -32,7 +32,10 @@ where
 {
     move |rx, tx, stopper| {
         let mut last_round_time = start;
-        let mut prev_height = start_height - 1;
+        // saturating_sub: start_height==0 (regtest from genesis) would have
+        // underflowed u32. The reporter's first delta uses `height - prev_height`
+        // which with height>=1 produces the right initial count regardless.
+        let mut prev_height = start_height.saturating_sub(1);
         let mut max_height = 0;
         let mut bpss = VecDeque::new();
         let mut epss = VecDeque::new();
@@ -69,7 +72,10 @@ where
                           return Ok(())
                       }
                   }
-                  num_blocks += height - prev_height;
+                  // saturating_sub: orderer can deliver a rollback that leaves
+                  // height < prev_height (orderer.rs resets next_index on
+                  // rollback); count zero rather than underflow.
+                  num_blocks += height.saturating_sub(prev_height);
                   prev_height = height;
                   let total_elapsed = start.elapsed().as_secs();
                   if last_round_time.elapsed() < Duration::from_secs(1) {
@@ -90,8 +96,14 @@ where
                   }
                   let avg_eps = epss.iter().sum::<f64>() / epss.len() as f64;
 
-                  let progress = ((height - CP_HEIGHT) as f64 / (max_height - CP_HEIGHT) as f64) * 100.0;
-                  let remaining_blocks = max_height - height;
+                  // Both subtractions underflow for regtest with height < CP_HEIGHT
+                  // (800k); also guard divide-by-zero. Show 0% rather than NaN/garbage.
+                  let progress = if max_height > CP_HEIGHT && height > CP_HEIGHT {
+                      ((height - CP_HEIGHT) as f64 / (max_height - CP_HEIGHT) as f64) * 100.0
+                  } else {
+                      0.0
+                  };
+                  let remaining_blocks = max_height.saturating_sub(height);
                   let estimated_secs_remaining = if avg_bps > 0.0 {
                       remaining_blocks as f64 / avg_bps
                   } else {

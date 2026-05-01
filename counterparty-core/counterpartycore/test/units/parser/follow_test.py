@@ -2,6 +2,7 @@
 Tests for counterpartycore.lib.parser.follow module.
 """
 
+import asyncio
 import os
 import tempfile
 import threading
@@ -9,6 +10,7 @@ import time
 from unittest import mock
 
 import pytest
+import zmq
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.parser import follow
 from counterpartycore.lib.utils import helpers
@@ -874,7 +876,6 @@ class TestNotSupportedTransactionsCache:
 
 def test_receive_multipart_success():
     """Test receive_multipart successful receive"""
-    import asyncio
 
     async def run_test():
         with mock.patch("counterpartycore.lib.backend.bitcoind") as mock_bitcoind:
@@ -918,9 +919,6 @@ def test_receive_multipart_success():
 
 def test_receive_multipart_eagain():
     """Test receive_multipart handles EAGAIN error"""
-    import asyncio
-
-    import zmq
 
     async def run_test():
         with mock.patch("counterpartycore.lib.backend.bitcoind") as mock_bitcoind:
@@ -960,9 +958,6 @@ def test_receive_multipart_eagain():
 
 def test_receive_multipart_other_error():
     """Test receive_multipart handles other ZMQ errors"""
-    import asyncio
-
-    import zmq
 
     async def run_test():
         with mock.patch("counterpartycore.lib.backend.bitcoind") as mock_bitcoind:
@@ -1002,7 +997,6 @@ def test_receive_multipart_other_error():
 
 def test_receive_multipart_general_exception():
     """Test receive_multipart handles general exceptions"""
-    import asyncio
 
     async def run_test():
         with mock.patch("counterpartycore.lib.backend.bitcoind") as mock_bitcoind:
@@ -1047,7 +1041,6 @@ def test_receive_multipart_general_exception():
 
 def test_receive_multipart_message_processing_error():
     """Test receive_multipart handles message processing errors"""
-    import asyncio
 
     async def run_test():
         with mock.patch("counterpartycore.lib.backend.bitcoind") as mock_bitcoind:

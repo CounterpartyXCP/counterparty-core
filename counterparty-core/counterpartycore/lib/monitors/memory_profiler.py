@@ -11,12 +11,22 @@ Logs memory usage of:
 
 import gc
 import logging
+import platform
 import sys
 import threading
 import tracemalloc
 
 from counterpartycore.lib import config
+from counterpartycore.lib.api.blockcache import BLOCK_CACHE
+from counterpartycore.lib.ledger.caches import AssetCache, OrdersCache, UTXOBalancesCache
+from counterpartycore.lib.parser.follow import NotSupportedTransactionsCache
 from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils.database import LedgerDBConnectionPool, StateDBConnectionPool
+
+try:
+    import resource
+except ImportError:
+    resource = None
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -30,7 +40,7 @@ TOP_ALLOCATIONS = 10
 def get_process_memory():
     """Get process memory stats from /proc/self/status (Linux only)."""
     try:
-        with open("/proc/self/status", "r") as f:
+        with open("/proc/self/status", "r", encoding="utf-8") as f:
             status = f.read()
 
         stats = {}
@@ -48,23 +58,19 @@ def get_process_memory():
         return stats
     except (FileNotFoundError, IOError):
         # Not on Linux, try resource module
-        try:
-            import platform
-            import resource
-
-            usage = resource.getrusage(resource.RUSAGE_SELF)
-            # On macOS, ru_maxrss is in bytes; on Linux it's in KB
-            if platform.system() == "Darwin":
-                rss_kb = usage.ru_maxrss // 1024
-            else:
-                rss_kb = usage.ru_maxrss
-            return {
-                "rss_kb": rss_kb,
-                "data_kb": 0,
-                "hwm_kb": rss_kb,
-            }
-        except ImportError:
+        if resource is None:
             return {}
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        # On macOS, ru_maxrss is in bytes; on Linux it's in KB
+        if platform.system() == "Darwin":
+            rss_kb = usage.ru_maxrss // 1024
+        else:
+            rss_kb = usage.ru_maxrss
+        return {
+            "rss_kb": rss_kb,
+            "data_kb": 0,
+            "hwm_kb": rss_kb,
+        }
 
 
 def estimate_dict_memory(d):
@@ -117,104 +123,75 @@ def estimate_set_memory(s):
 def get_cache_sizes():
     """Get sizes of known caches."""
     sizes = {}
+    instances = helpers.SingletonMeta._instances  # pylint: disable=protected-access
 
-    # Import here to avoid circular imports
-    try:
-        from counterpartycore.lib.ledger.caches import AssetCache, OrdersCache, UTXOBalancesCache
+    # AssetCache
+    if AssetCache in instances:
+        cache = instances[AssetCache]
+        assets = getattr(cache, "assets", {})
+        total_issued = getattr(cache, "assets_total_issued", {})
+        total_destroyed = getattr(cache, "assets_total_destroyed", {})
 
-        # AssetCache
-        if AssetCache in helpers.SingletonMeta._instances:
-            cache = helpers.SingletonMeta._instances[AssetCache]
-            assets = getattr(cache, "assets", {})
-            total_issued = getattr(cache, "assets_total_issued", {})
-            total_destroyed = getattr(cache, "assets_total_destroyed", {})
-
-            sizes["AssetCache.assets"] = len(assets)
-            sizes["AssetCache.assets_MB"] = estimate_dict_memory(assets) / (1024 * 1024)
-            sizes["AssetCache.total_issued"] = len(total_issued)
-            sizes["AssetCache.total_issued_MB"] = estimate_dict_memory(total_issued) / (1024 * 1024)
-            sizes["AssetCache.total_destroyed"] = len(total_destroyed)
-            sizes["AssetCache.total_destroyed_MB"] = estimate_dict_memory(total_destroyed) / (
-                1024 * 1024
-            )
-
-        # OrdersCache
-        if OrdersCache in helpers.SingletonMeta._instances:
-            cache = helpers.SingletonMeta._instances[OrdersCache]
-            if hasattr(cache, "cache_db") and cache.cache_db:
-                try:
-                    cursor = cache.cache_db.cursor()
-                    cursor.execute("SELECT COUNT(*) FROM orders")
-                    row = cursor.fetchone()
-                    count = row[0] if row else 0
-                    sizes["OrdersCache.orders"] = count
-                    # Estimate: each order ~500 bytes in memory
-                    sizes["OrdersCache.orders_MB"] = (count * 500) / (1024 * 1024)
-                except Exception:
-                    sizes["OrdersCache.orders"] = "error"
-
-        # UTXOBalancesCache
-        if UTXOBalancesCache in helpers.SingletonMeta._instances:
-            cache = helpers.SingletonMeta._instances[UTXOBalancesCache]
-            utxos = getattr(cache, "utxos_with_balance", {})
-            sizes["UTXOBalancesCache.utxos"] = len(utxos)
-            sizes["UTXOBalancesCache.utxos_MB"] = estimate_dict_memory(utxos) / (1024 * 1024)
-    except ImportError:
-        pass
-
-    # NotSupportedTransactionsCache
-    try:
-        from counterpartycore.lib.parser.follow import NotSupportedTransactionsCache
-
-        if NotSupportedTransactionsCache in helpers.SingletonMeta._instances:
-            cache = helpers.SingletonMeta._instances[NotSupportedTransactionsCache]
-            not_supported = getattr(cache, "not_suppported_txs", set())
-            sizes["NotSupportedTxCache"] = len(not_supported)
-            sizes["NotSupportedTxCache_MB"] = estimate_set_memory(not_supported) / (1024 * 1024)
-    except ImportError:
-        pass
-
-    # BLOCK_CACHE (global in apiserver)
-    try:
-        from counterpartycore.lib.api import apiserver
-
-        sizes["BLOCK_CACHE"] = len(getattr(apiserver, "BLOCK_CACHE", {}))
-
-        # Estimate memory usage of BLOCK_CACHE values
-        if hasattr(apiserver, "BLOCK_CACHE"):
-            total_size = 0
-            # Copy items to avoid mutation during iteration
-            try:
-                items = list(apiserver.BLOCK_CACHE.items())
-                for key, value in items:
-                    total_size += sys.getsizeof(key) + sys.getsizeof(value)
-                sizes["BLOCK_CACHE_bytes"] = total_size
-            except RuntimeError:
-                # Cache was modified during iteration, skip size calculation
-                sizes["BLOCK_CACHE_bytes"] = "skipped"
-    except ImportError:
-        pass
-
-    # Connection pool sizes
-    try:
-        from counterpartycore.lib.utils.database import (
-            LedgerDBConnectionPool,
-            StateDBConnectionPool,
+        sizes["AssetCache.assets"] = len(assets)
+        sizes["AssetCache.assets_MB"] = estimate_dict_memory(assets) / (1024 * 1024)
+        sizes["AssetCache.total_issued"] = len(total_issued)
+        sizes["AssetCache.total_issued_MB"] = estimate_dict_memory(total_issued) / (1024 * 1024)
+        sizes["AssetCache.total_destroyed"] = len(total_destroyed)
+        sizes["AssetCache.total_destroyed_MB"] = estimate_dict_memory(total_destroyed) / (
+            1024 * 1024
         )
 
-        if LedgerDBConnectionPool in helpers.SingletonMeta._instances:
-            pool = helpers.SingletonMeta._instances[LedgerDBConnectionPool]
-            if hasattr(pool, "_pool"):
-                sizes["LedgerDBPool"] = (
-                    pool._pool.qsize() if hasattr(pool._pool, "qsize") else "N/A"
-                )
+    # OrdersCache
+    if OrdersCache in instances:
+        cache = instances[OrdersCache]
+        if hasattr(cache, "cache_db") and cache.cache_db:
+            try:
+                cursor = cache.cache_db.cursor()
+                cursor.execute("SELECT COUNT(*) FROM orders")
+                row = cursor.fetchone()
+                count = row[0] if row else 0
+                sizes["OrdersCache.orders"] = count
+                # Estimate: each order ~500 bytes in memory
+                sizes["OrdersCache.orders_MB"] = (count * 500) / (1024 * 1024)
+            except Exception:  # pylint: disable=broad-exception-caught
+                sizes["OrdersCache.orders"] = "error"
 
-        if StateDBConnectionPool in helpers.SingletonMeta._instances:
-            pool = helpers.SingletonMeta._instances[StateDBConnectionPool]
-            if hasattr(pool, "_pool"):
-                sizes["StateDBPool"] = pool._pool.qsize() if hasattr(pool._pool, "qsize") else "N/A"
-    except ImportError:
-        pass
+    # UTXOBalancesCache
+    if UTXOBalancesCache in instances:
+        cache = instances[UTXOBalancesCache]
+        utxos = getattr(cache, "utxos_with_balance", {})
+        sizes["UTXOBalancesCache.utxos"] = len(utxos)
+        sizes["UTXOBalancesCache.utxos_MB"] = estimate_dict_memory(utxos) / (1024 * 1024)
+
+    # NotSupportedTransactionsCache
+    if NotSupportedTransactionsCache in instances:
+        cache = instances[NotSupportedTransactionsCache]
+        not_supported = getattr(cache, "not_suppported_txs", set())
+        sizes["NotSupportedTxCache"] = len(not_supported)
+        sizes["NotSupportedTxCache_MB"] = estimate_set_memory(not_supported) / (1024 * 1024)
+
+    sizes["BLOCK_CACHE"] = len(BLOCK_CACHE)
+    total_size = 0
+    try:
+        items = list(BLOCK_CACHE.items())
+        for key, value in items:
+            total_size += sys.getsizeof(key) + sys.getsizeof(value)
+        sizes["BLOCK_CACHE_bytes"] = total_size
+    except RuntimeError:
+        sizes["BLOCK_CACHE_bytes"] = "skipped"
+
+    # Connection pool sizes
+    # pylint: disable=protected-access
+    if LedgerDBConnectionPool in instances:
+        pool = instances[LedgerDBConnectionPool]
+        if hasattr(pool, "_pool"):
+            sizes["LedgerDBPool"] = pool._pool.qsize() if hasattr(pool._pool, "qsize") else "N/A"
+
+    if StateDBConnectionPool in instances:
+        pool = instances[StateDBConnectionPool]
+        if hasattr(pool, "_pool"):
+            sizes["StateDBPool"] = pool._pool.qsize() if hasattr(pool._pool, "qsize") else "N/A"
+    # pylint: enable=protected-access
 
     return sizes
 
@@ -319,7 +296,7 @@ class MemoryProfiler(threading.Thread):
         while not self.stop_event.is_set():
             try:
                 log_memory_profile()
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.error("Error in memory profiler: %s", e)
 
             # Wait for interval or stop event

@@ -1,3 +1,4 @@
+import importlib
 import os
 from unittest import mock
 
@@ -188,8 +189,6 @@ class TestEnvironmentVariables:
             del os.environ["SENTRY_ENVIRONMENT"]
 
         # Reimport to test global variables
-        import importlib
-
         importlib.reload(sentry)
 
         assert sentry.environment == "development"
@@ -199,8 +198,6 @@ class TestEnvironmentVariables:
         os.environ["SENTRY_ENVIRONMENT"] = "production"
 
         # Reimport to test global variables
-        import importlib
-
         importlib.reload(sentry)
 
         assert sentry.environment == "production"
@@ -217,8 +214,6 @@ class TestEnvironmentVariables:
             config.__version__ = "test_version"
 
             # Reimport to test global variables
-            import importlib
-
             importlib.reload(sentry)
 
             assert sentry.release == "test_version"
@@ -231,8 +226,6 @@ class TestEnvironmentVariables:
         os.environ["SENTRY_RELEASE"] = "custom_version"
 
         # Reimport to test global variables
-        import importlib
-
         importlib.reload(sentry)
 
         assert sentry.release == "custom_version"

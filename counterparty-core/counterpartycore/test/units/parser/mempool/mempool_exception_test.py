@@ -20,11 +20,11 @@ def test_parse_mempool_transactions_sql_error(
     with pytest.raises(sqlite3.Error):
         mempool_module.parse_mempool_transactions(db, ["raw_tx"])
 
-    # Vérifier que CurrentState.set_parsing_mempool(True) a été appelé
-    mock_current_state.assert_called_with(True)
-
-    # Note: On ne peut pas vérifier set_parsing_mempool(False) car l'erreur SQL
-    # interrompt l'exécution avant que cette méthode soit appelée
+    # set_parsing_mempool(True) au début, puis set_parsing_mempool(False) dans
+    # le `finally` -- doit être appelé même en cas d'exception pour ne pas
+    # laisser le singleton bloqué en mode mempool.
+    mock_current_state.assert_any_call(True)
+    mock_current_state.assert_any_call(False)
 
 
 def test_parse_mempool_transactions_deserialize_error(
@@ -47,11 +47,11 @@ def test_parse_mempool_transactions_deserialize_error(
     with pytest.raises(ValueError):
         mempool_module.parse_mempool_transactions(db, ["raw_tx"])
 
-    # Vérifier que CurrentState.set_parsing_mempool(True) a été appelé
-    mock_current_state.assert_called_with(True)
-
-    # Note: On ne peut pas vérifier set_parsing_mempool(False) car l'erreur de désérialisation
-    # interrompt l'exécution avant que cette méthode soit appelée
+    # set_parsing_mempool(True) au début, puis set_parsing_mempool(False) dans
+    # le `finally` -- doit être appelé même en cas d'exception pour ne pas
+    # laisser le singleton bloqué en mode mempool.
+    mock_current_state.assert_any_call(True)
+    mock_current_state.assert_any_call(False)
 
 
 def test_clean_transaction_from_mempool_sql_error(mock_db):
@@ -66,12 +66,16 @@ def test_clean_transaction_from_mempool_sql_error(mock_db):
         mempool_module.clean_transaction_from_mempool(db, "tx1")
 
 
-def test_clean_mempool_get_transaction_error(mock_db, mock_ledger_blocks):
+def test_clean_mempool_get_transaction_error(mock_db, mock_ledger_blocks, mock_backend_bitcoind):
     """Test clean_mempool avec une erreur dans get_transaction"""
     db, cursor = mock_db
 
-    # Configuration des événements de mempool
+    # Configuration des tx_hash candidats (union mempool + mempool_transactions)
     cursor.fetchall.return_value = [{"tx_hash": "tx1"}]
+
+    # getrawmempool est désormais appelé AVANT la boucle get_transaction;
+    # on doit le mocker pour ne pas taper sur le vrai bitcoind.
+    mock_backend_bitcoind.return_value = ["tx1"]
 
     # Simuler une erreur dans get_transaction
     mock_ledger_blocks.side_effect = ValueError("Get Transaction Error")
@@ -85,11 +89,8 @@ def test_clean_mempool_getrawmempool_error(mock_db, mock_ledger_blocks, mock_bac
     """Test clean_mempool avec une erreur dans getrawmempool"""
     db, cursor = mock_db
 
-    # Configuration des événements de mempool
-    cursor.fetchall.side_effect = [
-        [{"tx_hash": "tx1"}],  # Pour la première requête SELECT
-        [{"tx_hash": "tx1"}],  # Pour la deuxième requête SELECT
-    ]
+    # Configuration des tx_hash candidats (union mempool + mempool_transactions)
+    cursor.fetchall.return_value = [{"tx_hash": "tx1"}]
 
     # Configuration de get_transaction
     mock_ledger_blocks.return_value = None

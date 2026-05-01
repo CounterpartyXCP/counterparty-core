@@ -1,7 +1,9 @@
 """Tests for backend/__init__.py module."""
 
+import importlib
+
 import pytest
-from counterpartycore.lib import config, exceptions
+from counterpartycore.lib import backend, config, exceptions
 
 # Skip these tests because they conflict with session-level mocks
 # The session-level mock in bitcoind.py overrides all patching
@@ -17,11 +19,6 @@ def test_list_unspent_from_bitcoind_direct(monkeypatch):
         "counterpartycore.lib.backend.bitcoind.list_unspent",
         lambda source, allow_unconfirmed: expected_utxos,
     )
-
-    # Reimport to get patched version
-    import importlib
-
-    from counterpartycore.lib import backend
 
     importlib.reload(backend)
 
@@ -42,21 +39,17 @@ def test_list_unspent_fallback_to_electrs_direct(monkeypatch):
         lambda source, allow_unconfirmed: expected_utxos,
     )
 
-    import importlib
-
-    from counterpartycore.lib import backend
-
     importlib.reload(backend)
 
-    # Save original and set ELECTRS_URL
-    original_electrs_url = getattr(config, "ELECTRS_URL", None)
-    config.ELECTRS_URL = "http://localhost:3000"
+    # Save original and set ELECTRS_URLS
+    original_electrs_url = getattr(config, "ELECTRS_URLS", None)
+    config.ELECTRS_URLS = ["http://localhost:3000"]
 
     try:
         result = backend.list_unspent("test_source", True)
         assert result == expected_utxos
     finally:
-        config.ELECTRS_URL = original_electrs_url
+        config.ELECTRS_URLS = original_electrs_url
 
 
 def test_list_unspent_no_electrs_configured_direct(monkeypatch):
@@ -66,18 +59,14 @@ def test_list_unspent_no_electrs_configured_direct(monkeypatch):
         lambda source, allow_unconfirmed: [],
     )
 
-    import importlib
-
-    from counterpartycore.lib import backend
-
     importlib.reload(backend)
 
-    # Save original and set ELECTRS_URL to None
-    original_electrs_url = getattr(config, "ELECTRS_URL", None)
-    config.ELECTRS_URL = None
+    # Save original and set ELECTRS_URLS to None
+    original_electrs_url = getattr(config, "ELECTRS_URLS", None)
+    config.ELECTRS_URLS = None
 
     try:
         with pytest.raises(exceptions.ComposeError, match="No UTXOs found"):
             backend.list_unspent("test_source", True)
     finally:
-        config.ELECTRS_URL = original_electrs_url
+        config.ELECTRS_URLS = original_electrs_url

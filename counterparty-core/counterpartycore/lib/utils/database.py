@@ -24,7 +24,7 @@ def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style"""
     return {
         name: (bool(value) if str(field_type) == "BOOL" else value)
-        for (name, field_type), value in zip(cursor.getdescription(), sql)
+        for (name, field_type), value in zip(cursor.getdescription(), sql, strict=True)
     }
 
 
@@ -164,8 +164,7 @@ class APSWConnectionPool:
             self.connection_count += 1
 
             # Track peak connection count
-            if self.connection_count > self.peak_connection_count:
-                self.peak_connection_count = self.connection_count
+            self.peak_connection_count = max(self.peak_connection_count, self.connection_count)
 
         return get_db_connection(self.db_file, read_only=True, check_wal=False)
 

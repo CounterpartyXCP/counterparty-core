@@ -1,4 +1,5 @@
 import binascii
+import math
 import re
 from io import BytesIO
 
@@ -2420,8 +2421,6 @@ def test_compose_taproot(ledger_db, defaults):
 
 def test_sub_sat_per_vbyte_fee_rounding():
     """Test that sub-1 sat/vByte fees use math.ceil for proper rounding."""
-    import math
-
     test_cases = [
         # (sat_per_vbyte, vsize, expected_fee)
         (0.5, 101, 51),  # 50.5 -> ceil = 51
@@ -2451,8 +2450,6 @@ def test_fee_per_kb_to_sat_per_vbyte_conversion():
 @pytest.mark.parametrize("sat_per_vbyte", [0.1, 0.5, 0.9])
 def test_compose_transaction_sub_sat_per_vbyte(ledger_db, defaults, sat_per_vbyte):
     """Test composing transactions with various sub-1 sat/vByte rates."""
-    import math
-
     params = {
         "source": defaults["addresses"][0],
         "destination": defaults["addresses"][1],

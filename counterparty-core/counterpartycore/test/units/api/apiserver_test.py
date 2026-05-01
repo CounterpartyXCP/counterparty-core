@@ -1,3 +1,5 @@
+from unittest.mock import Mock
+
 import pytest
 from counterpartycore.lib import config, ledger
 from counterpartycore.lib.api import apiserver, apiwatcher, composer
@@ -176,7 +178,7 @@ def test_new_get_balances_vs_old(apiv1_client, apiv2_client):
         old_balance, key=lambda x: (x["address"] or x["utxo"], x["asset"], x["quantity"])
     )
     assert len(new_balances) == len(old_balance)
-    for new_balance, old_balance in zip(new_balances, old_balance):  # noqa: B020
+    for new_balance, old_balance in zip(new_balances, old_balance, strict=True):  # noqa: B020
         assert new_balance["address"] == old_balance["address"]
         assert new_balance["utxo"] == old_balance["utxo"]
         assert new_balance["asset"] == old_balance["asset"]
@@ -737,8 +739,6 @@ def test_is_cachable(
     monkeypatch, test_case, method, path, url, rule, route, result, cache_disabled, expected
 ):
     """Test is_cachable with various scenarios"""
-    from unittest.mock import Mock
-
     monkeypatch.setattr("counterpartycore.lib.config.DISABLE_API_CACHE", cache_disabled)
 
     mock_request = Mock(method=method, path=path, url=url)

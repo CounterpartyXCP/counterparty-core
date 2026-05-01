@@ -107,8 +107,13 @@ def validate(db, destination, asset, quantity, memo_bytes):
         problems.append("destination is required")
 
     # check memo
-    if memo_bytes is not None and len(memo_bytes) > MAX_MEMO_LENGTH:
-        problems.append("memo is too long")
+    if memo_bytes is not None:
+        # CBOR-encoded messages can carry any type here; reject anything
+        # that is not bytes-like before calling len() on it.
+        if not isinstance(memo_bytes, (bytes, bytearray)):
+            problems.append("memo must be bytes")
+        elif len(memo_bytes) > MAX_MEMO_LENGTH:
+            problems.append("memo is too long")
 
     if protocol.enabled("options_require_memo"):
         cursor = db.cursor()
@@ -202,7 +207,7 @@ def parse(db, tx, message):
 
     # Unpack message.
     try:
-        unpacked = unpack(message)
+        unpacked = unpack(message, block_index=tx["block_index"])
         asset, quantity, destination, memo_bytes = (
             unpacked["asset"],
             unpacked["quantity"],
@@ -220,8 +225,17 @@ def parse(db, tx, message):
         status = "invalid: could not unpack"
 
     if status == "valid":
+        # CBOR-encoded messages can carry any type for these fields;
+        # normalise unexpected types to None so downstream code (validate,
+        # logging, DB insert) never sees a non-int quantity or non-bytes
+        # memo. validate() will then mark the tx invalid.
+        if not isinstance(quantity, int):
+            quantity = None
+        if memo_bytes is not None and not isinstance(memo_bytes, (bytes, bytearray)):
+            memo_bytes = None
+
         # don't allow sends over MAX_INT at all
-        if quantity and quantity > config.MAX_INT:
+        if quantity is not None and quantity > config.MAX_INT:
             status = "invalid: quantity is too large"
             quantity = None
 

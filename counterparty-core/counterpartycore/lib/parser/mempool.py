@@ -139,8 +139,19 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
                 )""",
                 tx,
             )
+    except exceptions.ParseTransactionError as e:
+        # A mempool tx that would halt the chain on confirmation must NOT
+        # halt the watcher pre-confirmation -- the `with db:` context already
+        # rolled back the speculative inserts. Log and drop this batch; the
+        # tx will halt the chain only if/when it actually confirms.
+        logger.warning("mempool parse skipped on halt-class tx: %s", e)
+    finally:
+        # Set unconditionally so a non-MempoolError exit doesn't leave the
+        # singleton stuck in mempool mode (which would silently disable UTXO
+        # cache eviction in subsequent block parsing).
+        CurrentState().set_parsing_mempool(False)
+
     logger.trace("Mempool transaction parsed successfully.")
-    CurrentState().set_parsing_mempool(False)
     return not_supported_txs
 
 
@@ -153,17 +164,17 @@ def clean_transaction_from_mempool(db, tx_hash):
 def clean_mempool(db):
     logger.debug("Remove validated transactions from mempool...")
     cursor = db.cursor()
-    cursor.execute("SELECT * FROM mempool")
-    mempool_events = cursor.fetchall()
-    for event in mempool_events:
-        tx = ledger.blocks.get_transaction(db, event["tx_hash"])
-        if tx:
-            clean_transaction_from_mempool(db, event["tx_hash"])
-    # remove transactions removed from the mempool
-    logger.debug("Remove transactions removed from the mempool...")
-    cursor.execute("SELECT distinct tx_hash FROM mempool")
-    tx_hashes = cursor.fetchall()
+    # Iterate both mempool (events) AND mempool_transactions: an unsupported
+    # tx (or one whose handler raised before emitting events) has a row in
+    # mempool_transactions but none in mempool, so the events-only sweep
+    # never cleaned it -- ghost rows accumulated indefinitely.
+    cursor.execute(
+        "SELECT DISTINCT tx_hash FROM mempool "
+        "UNION SELECT DISTINCT tx_hash FROM mempool_transactions"
+    )
+    candidate_hashes = [row["tx_hash"] for row in cursor.fetchall()]
     raw_mempool = backend.bitcoind.getrawmempool(verbose=False)
-    for tx_hash in tx_hashes:
-        if tx_hash["tx_hash"] not in raw_mempool:
-            clean_transaction_from_mempool(db, tx_hash["tx_hash"])
+    for tx_hash in candidate_hashes:
+        tx = ledger.blocks.get_transaction(db, tx_hash)
+        if tx or tx_hash not in raw_mempool:
+            clean_transaction_from_mempool(db, tx_hash)

@@ -266,7 +266,7 @@ def compose_mpma(
         if not quantity.isdigit():
             raise exceptions.ComposeError("Quantity must be an integer")
     quantity_list = [int(quantity) for quantity in quantity_list]
-    asset_dest_quant_list = list(zip(asset_list, destination_list, quantity_list))
+    asset_dest_quant_list = list(zip(asset_list, destination_list, quantity_list, strict=True))
 
     if memos:
         if not isinstance(memos, list):

@@ -147,6 +147,13 @@ def add_config_arguments(parser, args, configfile, add_default=False):
                 and key in configfile["Default"]
             ):
                 arg[1]["default"] = configfile["Default"].getboolean(key)
+            elif (
+                "action" in arg[1]
+                and arg[1]["action"] == "append"
+                and key in configfile["Default"]
+                and configfile["Default"][key]
+            ):
+                arg[1]["default"] = [configfile["Default"][key]]
             elif key in configfile["Default"] and configfile["Default"][key]:
                 arg[1]["default"] = configfile["Default"][key]
             elif (
