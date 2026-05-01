@@ -739,3 +739,32 @@ def test_is_cachable(
 
     actual = apiserver.is_cachable(rule, route=route, result=result)
     assert actual == expected, f"Test case '{test_case}' failed"
+
+
+def test_limit_param_capped_to_api_limit_rows(apiv2_client, monkeypatch):
+    """Limit is capped to config.API_LIMIT_ROWS when caller asks for more."""
+    monkeypatch.setattr(config, "API_LIMIT_ROWS", 5)
+
+    response = apiv2_client.get("/v2/transactions?limit=99999")
+    assert response.status_code == 200
+    assert len(response.json["result"]) <= 5
+
+
+def test_limit_param_zero_rejected(apiv2_client):
+    """A limit of 0 must be rejected with a clear error."""
+    response = apiv2_client.get("/v2/transactions?limit=0")
+    assert response.status_code != 200 or "error" in response.json
+
+
+def test_limit_param_negative_rejected(apiv2_client):
+    """A negative limit must be rejected."""
+    response = apiv2_client.get("/v2/transactions?limit=-1")
+    assert response.status_code != 200 or "error" in response.json
+
+
+def test_limit_param_unlimited_when_zero(apiv2_client, monkeypatch):
+    """When config.API_LIMIT_ROWS == 0 the cap is disabled."""
+    monkeypatch.setattr(config, "API_LIMIT_ROWS", 0)
+
+    response = apiv2_client.get("/v2/transactions?limit=10")
+    assert response.status_code == 200

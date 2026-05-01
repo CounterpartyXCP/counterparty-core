@@ -567,3 +567,31 @@ def test_get_vin_info_fallback_also_fails(monkeypatch):
     mock_warning.assert_called_once()
     logged_message = mock_warning.call_args[0][0] % mock_warning.call_args[0][1:]
     assert parent_txid in logged_message
+
+
+def test_reset_caches_clears_dicts():
+    """reset_caches() must clear TRANSACTIONS_CACHE and BLOCKS_CACHE so that
+    a reorg does not leave block-indexed deserialised data behind."""
+    bitcoind.TRANSACTIONS_CACHE["sentinel_tx"] = {"foo": "bar"}
+    bitcoind.BLOCKS_CACHE[123] = {"baz": "qux"}
+
+    bitcoind.reset_caches()
+
+    assert "sentinel_tx" not in bitcoind.TRANSACTIONS_CACHE
+    assert 123 not in bitcoind.BLOCKS_CACHE
+
+
+def test_reset_caches_handles_missing_lru_cache_clear(monkeypatch):
+    """Test fixtures monkey-patch lru_cache wrappers with plain functions
+    that don't carry a `cache_clear` attribute. reset_caches() must guard
+    against this with hasattr() instead of raising AttributeError."""
+
+    def fake_func(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(bitcoind, "getrawtransaction", fake_func)
+    monkeypatch.setattr(bitcoind, "get_utxo_address_and_value", fake_func)
+
+    assert not hasattr(fake_func, "cache_clear")
+
+    bitcoind.reset_caches()
