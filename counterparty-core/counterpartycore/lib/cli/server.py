@@ -140,7 +140,7 @@ class CounterpartyServer(threading.Thread):
                             state_stats["utilization"],
                             state_stats["peak"],
                         )
-                    except Exception as e:
+                    except Exception as e:  # pylint: disable=broad-exception-caught
                         logger.error("Error logging MainProcess pool stats: %s", e)
 
             def stop(self):
@@ -308,7 +308,7 @@ def start_all(args, log_stream=None, stop_when_ready=False):
     server = CounterpartyServer(args, log_stream, stop_when_ready=stop_when_ready)
     shutdown_event = threading.Event()
 
-    def handle_sigterm(signum, frame):
+    def handle_sigterm(signum, frame):  # pylint: disable=unused-argument
         logger.warning("SIGTERM received. Shutting down...")
         shutdown_event.set()
 

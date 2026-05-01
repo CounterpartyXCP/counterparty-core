@@ -192,8 +192,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                     self.stopped_event.set()
                     self.running = False
                     return
-                else:
-                    raise e
+                raise e
         self.running = False
         logger.debug("Prefetching blocks stopped.")
 

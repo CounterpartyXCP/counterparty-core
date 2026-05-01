@@ -32,41 +32,15 @@ from counterpartycore.lib import (
     messages,
 )
 from counterpartycore.lib.parser import deserialize, messagetype, utxosinfo
-from counterpartycore.lib.utils import helpers, multisig, opcodes, script
+from counterpartycore.lib.utils import helpers, multisig, script
 
 MAX_INPUTS_SET = 100
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
-def get_output_type(script_pub_key):
-    asm = script.script_to_asm(script_pub_key)
-    if asm[0] == opcodes.OP_RETURN:
-        return "OP_RETURN"
-    if len(asm) == 2 and asm[1] == opcodes.OP_CHECKSIG:
-        return "P2PK"
-    if (
-        len(asm) == 5
-        and asm[0] == opcodes.OP_DUP
-        and asm[3] == opcodes.OP_EQUALVERIFY
-        and asm[4] == opcodes.OP_CHECKSIG
-    ):
-        return "P2PKH"
-    if len(asm) >= 4 and asm[-1] == opcodes.OP_CHECKMULTISIG and asm[-2] == len(asm) - 3:
-        return "P2MS"
-    if len(asm) == 3 and asm[0] == opcodes.OP_HASH160 and asm[2] == opcodes.OP_EQUAL:
-        return "P2SH"
-    if len(asm) == 2 and asm[0] == b"":
-        if len(asm[1]) == 32:
-            return "P2WSH"
-        return "P2WPKH"
-    if len(asm) == 2 and asm[0] == b"\x01":
-        return "P2TR"
-    return "UNKNOWN"
-
-
-def is_segwit_output(script_pub_key):
-    return get_output_type(script_pub_key) in ("P2WPKH", "P2WSH", "P2TR")
+get_output_type = script.get_output_type
+is_segwit_output = script.is_segwit_output
 
 
 def is_address_script(address, script_pub_key):
@@ -1145,7 +1119,7 @@ def construct(db, tx_info, construct_params):
     return result, unspent_list
 
 
-def check_transaction_sanity(tx_info, composed_tx, unspent_list, construct_params):
+def check_transaction_sanity(tx_info, composed_tx, unspent_list, construct_params):  # pylint: disable=unused-argument
     tx_hex = composed_tx["rawtransaction"]
     source, destinations, data = tx_info
     decoded_tx = deserialize.deserialize_tx(tx_hex, parse_vouts=True)

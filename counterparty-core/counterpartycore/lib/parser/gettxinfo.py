@@ -10,6 +10,7 @@ from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.parser import gettxinfolegacy, messagetype, p2sh, protocol
+from counterpartycore.lib.parser.known_sources import KNOWN_SOURCES
 from counterpartycore.lib.utils import base58, multisig, opcodes, script
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -519,12 +520,6 @@ def get_op_return_vout(decoded_tx):
         except DecodeError:
             pass
     return None
-
-
-KNOWN_SOURCES = {
-    "92ad58f5aa35c503489efbdd2a466e942baa9ac5cd67cb7544adf03e47a457d0": "a71da7169db3672408c7b25f84be425839548e63fa480c0478f91e3c2aa3ec67:0",
-    "c80143886181ebbc782d23a50acca0f5ea7ac005d3164d7c76fc5e14f72d47c8": "",
-}
 
 
 def get_utxos_info(db, decoded_tx):

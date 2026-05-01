@@ -227,7 +227,7 @@ def unpack(message, block_index, return_dict=False):
                 timestamp, value, fee_fraction_int, mime_type, text = load_cbor(
                     message, block_index=block_index
                 )
-            except Exception:
+            except Exception:  # pylint: disable=broad-exception-caught
                 timestamp, value, fee_fraction_int, mime_type, text = load_data_legacy(
                     message, block_index
                 )  # fallback to legacy unpacking

@@ -395,6 +395,7 @@ def _strip_mime_parameters(mime_type):
 def classify_mime_type(mime_type, block_index=None):
     # Imported lazily to avoid a circular dependency:
     # `protocol` -> `currentstate` -> `helpers`.
+    # pylint: disable=import-outside-toplevel
     from counterpartycore.lib.parser import protocol  # noqa: PLC0415
 
     # After `extended_mime_types_support`, MIME parameters (e.g. `;codecs=opus`)
@@ -460,6 +461,8 @@ def bytes_to_content(content: bytes, mime_type: str, block_index=None) -> str:
 
 
 def check_content(mime_type, content, block_index=None):
+    # Imported lazily to avoid a circular dependency.
+    # pylint: disable=import-outside-toplevel
     from counterpartycore.lib.parser import protocol  # noqa: PLC0415
 
     problems = []

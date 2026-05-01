@@ -19,9 +19,9 @@ from requests.exceptions import (  # pylint: disable=redefined-builtin
 )
 
 from counterpartycore.lib import config, exceptions
-from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import deserialize, utxosinfo
+from counterpartycore.lib.utils import script
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -610,8 +610,7 @@ def get_vin_info(vin, no_retry=False):
     vin_info = vin.get("info")
     if vin_info is None:
         return get_vin_info_legacy(vin, no_retry=no_retry)
-    else:
-        return vin_info["value"], vin_info["script_pub_key"], vin_info["is_segwit"]
+    return vin_info["value"], vin_info["script_pub_key"], vin_info["is_segwit"]
 
 
 def get_vin_info_legacy(vin, no_retry=False):
@@ -621,7 +620,7 @@ def get_vin_info_legacy(vin, no_retry=False):
         return (
             vout["value"],
             vout["script_pub_key"],
-            composer.is_segwit_output(vout["script_pub_key"]),
+            script.is_segwit_output(vout["script_pub_key"]),
         )
     except exceptions.BitcoindRPCError as e:
         logger.warning(

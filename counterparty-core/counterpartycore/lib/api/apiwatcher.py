@@ -213,7 +213,7 @@ def search_address_from_utxo(state_db, utxo):
     return None
 
 
-def update_address_events(state_db, event, no_cache=False):
+def update_address_events(state_db, event):
     if event["event"] not in EVENTS_ADDRESS_FIELDS:
         return
     event_bindings = json.loads(event["bindings"])

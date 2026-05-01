@@ -30,7 +30,7 @@ def apply(db):
     )
 
 
-def rollback(db):
+def rollback(db):  # pylint: disable=unused-argument
     pass
 
 
