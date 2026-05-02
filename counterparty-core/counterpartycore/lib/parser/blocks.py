@@ -861,6 +861,30 @@ def parse_new_block(db, decoded_block, tx_index=None):
             previous_messages_hash=previous_block["messages_hash"],
         )
 
+        # Atomically remove from mempool tables any tx that was just
+        # confirmed in this block. Without this, the APIWatcher (a
+        # separate thread polling LAST_BLOCK_PARSED via state_db) can
+        # observe BLOCK_PARSED visible while clean_mempool() -- which
+        # only runs *after* parse_new_block commits in the streamed
+        # path, and *after* the entire catch_up() loop in the RPC
+        # fallback / ZMQ-late paths -- has not yet committed its
+        # DELETEs in ledger_db. That race makes scenarios_test see
+        # stale `mempool/events` for a tx that the test already saw
+        # confirmed via `wait_for_counterparty_server`. Doing the
+        # purge inside the same with-block guarantees BLOCK_PARSED
+        # and the mempool DELETEs become visible together.
+        cursor = db.cursor()
+        cursor.execute(
+            "DELETE FROM mempool WHERE tx_hash IN "
+            "(SELECT tx_hash FROM transactions WHERE block_index = ?)",
+            (decoded_block["block_index"],),
+        )
+        cursor.execute(
+            "DELETE FROM mempool_transactions WHERE tx_hash IN "
+            "(SELECT tx_hash FROM transactions WHERE block_index = ?)",
+            (decoded_block["block_index"],),
+        )
+
         duration = time.time() - start_time
 
         log_message = "Block %(block_index)s - Parsing complete. "
