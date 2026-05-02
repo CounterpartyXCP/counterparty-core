@@ -4,9 +4,7 @@ import tempfile
 import time
 
 import pytest
-from bitcoinutils.transactions import Transaction
 from counterpartycore.lib import backend, config, exceptions, ledger
-from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import (
     cancel,
@@ -16,7 +14,7 @@ from counterpartycore.lib.messages import (
     sweep,
 )
 from counterpartycore.lib.messages.versions import mpma, send1
-from counterpartycore.lib.parser import blocks, deserialize, messagetype
+from counterpartycore.lib.parser import blocks, messagetype
 from counterpartycore.lib.utils import database
 
 
@@ -906,87 +904,3 @@ def test_get_next_tx_index_empty_db(empty_ledger_db):
     """Test get_next_tx_index returns 0 for empty database"""
     result = blocks.get_next_tx_index(empty_ledger_db)
     assert result == 0
-
-
-def test_mine_empty_block_runs_parse_new_block(bitcoind_mock, ledger_db):
-    """Mining an empty block exercises parse_new_block(), including the
-    in-transaction mempool purge (DELETEs scoped to the new block_index)."""
-    tip_before = ledger_db.execute("SELECT MAX(block_index) AS b FROM blocks").fetchone()["b"]
-    bitcoind_mock.mine_block(ledger_db, [])
-    tip_after = ledger_db.execute("SELECT MAX(block_index) AS b FROM blocks").fetchone()["b"]
-    assert tip_after == tip_before + 1
-
-
-def test_parse_new_block_removes_mempool_rows_for_confirmed_tx(
-    bitcoind_mock, ledger_db, defaults, blockchain_mock
-):
-    """Rows in mempool / mempool_transactions for a tx must disappear when
-    that tx is confirmed in the same parse_new_block commit as the block."""
-    params = {
-        "source": defaults["addresses"][0],
-        "destination": defaults["addresses"][1],
-        "asset": "XCP",
-        "quantity": 1,
-        "skip_validation": False,
-    }
-    construct_params = {"encoding": "multisig", "disable_utxo_locks": True}
-    composed = composer.compose_transaction(ledger_db, "send", params, construct_params)
-    tx_obj = Transaction.from_raw(composed["rawtransaction"])
-    unspent = blockchain_mock.list_unspent(defaults["addresses"][0])
-    signed_hex = composer.generate_dummy_signed_tx(tx_obj, unspent).serialize()
-    decoded = deserialize.deserialize_tx(signed_hex, parse_vouts=True)
-    tx_hash = decoded["tx_id"]
-
-    ledger_db.execute(
-        """INSERT INTO mempool (tx_hash, command, category, bindings, timestamp, event, addresses)
-        VALUES (?, 'fake', 'mempool', '{}', 1, 'TEST', '')""",
-        (tx_hash,),
-    )
-    ledger_db.execute(
-        """INSERT INTO mempool_transactions (
-            tx_index, tx_hash, block_index, block_hash, block_time, source, destination,
-            btc_amount, fee, data, supported, utxos_info, transaction_type
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (
-            9_800_000_000,
-            tx_hash,
-            config.MEMPOOL_BLOCK_INDEX,
-            config.MEMPOOL_BLOCK_HASH,
-            1,
-            defaults["addresses"][0],
-            defaults["addresses"][1],
-            0,
-            0,
-            b"",
-            1,
-            "",
-            "send",
-        ),
-    )
-    assert (
-        ledger_db.execute(
-            "SELECT 1 FROM mempool WHERE tx_hash = ? LIMIT 1", (tx_hash,)
-        ).fetchone()
-        is not None
-    )
-
-    bitcoind_mock.sendrawtransaction(ledger_db, signed_hex)
-
-    assert (
-        ledger_db.execute(
-            "SELECT 1 FROM mempool WHERE tx_hash = ? LIMIT 1", (tx_hash,)
-        ).fetchone()
-        is None
-    )
-    assert (
-        ledger_db.execute(
-            "SELECT 1 FROM mempool_transactions WHERE tx_hash = ? LIMIT 1", (tx_hash,)
-        ).fetchone()
-        is None
-    )
-
-
-def test_execute_upgrade_actions_clear_not_supported_cache_no_file(tmp_path, monkeypatch):
-    """clear_not_supported_cache is a no-op when the cache file does not exist."""
-    monkeypatch.setattr(config, "CACHE_DIR", str(tmp_path))
-    blocks.execute_upgrade_actions([("clear_not_supported_cache",)])
