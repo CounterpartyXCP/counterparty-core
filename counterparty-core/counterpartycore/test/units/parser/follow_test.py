@@ -1342,3 +1342,66 @@ def test_raw_mempool_parser_stop_swallows_keyboard_interrupt(
     db.interrupt.side_effect = KeyboardInterrupt
     # MUST NOT raise
     parser.stop()
+
+
+# ============================================================================
+# Tests for clean_mempool sweep after catch_up paths
+# ============================================================================
+
+
+def test_receive_rawblock_previous_block_missing_calls_clean_mempool(
+    mock_backend_bitcoind, mock_current_state, mock_zmq_context
+):
+    """The `previous_block is None` branch in receive_rawblock falls
+    back to RPC catch_up. It must follow up with clean_mempool for
+    the same reason as the ZMQ-late branch: confirmed-tx mempool rows
+    only get pruned by clean_mempool, never by parse_new_block."""
+    mock_cs, mock_instance = mock_current_state
+    mock_backend_bitcoind.get_zmq_notifications.return_value = [
+        {"type": "pubrawtx", "address": "tcp://127.0.0.1:28332"},
+        {"type": "pubhashtx", "address": "tcp://127.0.0.1:28332"},
+        {"type": "pubsequence", "address": "tcp://127.0.0.1:28332"},
+        {"type": "pubrawblock", "address": "tcp://127.0.0.1:28333"},
+    ]
+
+    original_backend_connect = config.BACKEND_CONNECT
+    original_no_mempool = config.NO_MEMPOOL
+    original_no_telemetry = config.NO_TELEMETRY
+    config.BACKEND_CONNECT = "127.0.0.1"
+    config.NO_MEMPOOL = False
+    config.NO_TELEMETRY = True
+
+    decoded_block = {"block_hash": "newhash", "hash_prev": "prevhash"}
+
+    try:
+        with mock.patch("counterpartycore.lib.monitors.sentry.init"):
+            with mock.patch("asyncio.new_event_loop"):
+                with mock.patch("asyncio.set_event_loop"):
+                    with mock.patch("counterpartycore.lib.parser.mempool.clean_mempool"):
+                        with mock.patch(
+                            "counterpartycore.lib.parser.follow.RawMempoolParser"
+                        ):
+                            db = mock.MagicMock()
+                            watcher = follow.BlockchainWatcher(db)
+
+                    with mock.patch(
+                        "counterpartycore.lib.parser.deserialize.deserialize_block",
+                        return_value=decoded_block,
+                    ):
+                        with mock.patch(
+                            "counterpartycore.lib.ledger.blocks.get_block_by_hash",
+                            side_effect=[None, None],
+                        ):
+                            with mock.patch(
+                                "counterpartycore.lib.parser.blocks.catch_up"
+                            ) as mock_catch:
+                                with mock.patch(
+                                    "counterpartycore.lib.parser.mempool.clean_mempool"
+                                ) as mock_clean:
+                                    watcher.receive_rawblock(b"block_data")
+                                    mock_catch.assert_called_once_with(db)
+                                    mock_clean.assert_called_once_with(db)
+    finally:
+        config.BACKEND_CONNECT = original_backend_connect
+        config.NO_MEMPOOL = original_no_mempool
+        config.NO_TELEMETRY = original_no_telemetry

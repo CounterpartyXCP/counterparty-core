@@ -173,7 +173,17 @@ class BlockchainWatcher:
                     blocks.catch_up(self.db)
                     CurrentState().set_ledger_state(self.db, "Following")
                     if not config.NO_MEMPOOL:
-                        mempool.clean_mempool(self.db)
+                        try:
+                            mempool.clean_mempool(self.db)
+                        except (
+                            exceptions.BitcoindRPCError,
+                            exceptions.BitcoindZMQError,
+                        ) as e:
+                            logger.warning(
+                                "clean_mempool failed after catch_up "
+                                "(will retry next block): %s",
+                                e,
+                            )
                 else:
                     # Atomic: parse_new_block + clean_mempool share one outer
                     # transaction so a reader (e.g. APIWatcher polling the
@@ -367,6 +377,26 @@ class BlockchainWatcher:
                         logger.warning("ZMQ is late. Catching up...")
                         blocks.catch_up(self.db)
                         CurrentState().set_ledger_state(self.db, "Following")
+                        # Mirror the post-catch_up behaviour of receive_rawblock:
+                        # without this sweep, any mempool tx that confirmed in
+                        # the blocks parsed by catch_up() stays visible via
+                        # `mempool/events` until the next ZMQ rawblock arrives,
+                        # because clean_mempool only runs in receive_rawblock
+                        # and at watcher startup. Same reason scenarios_test
+                        # races on `mempool/events` after a `cancel` tx that
+                        # was confirmed via this code path.
+                        if not config.NO_MEMPOOL:
+                            try:
+                                mempool.clean_mempool(self.db)
+                            except (
+                                exceptions.BitcoindRPCError,
+                                exceptions.BitcoindZMQError,
+                            ) as e:
+                                logger.warning(
+                                    "clean_mempool failed after catch_up "
+                                    "(will retry next block): %s",
+                                    e,
+                                )
                         late_since = None
 
                 # Yield control to the event loop to allow other tasks to run

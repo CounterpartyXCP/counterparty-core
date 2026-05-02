@@ -69,6 +69,7 @@ The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 
 - Update `BackendHeight.last_check` in a `finally` so RPC failures don't spam
 - Don't let halt-class mempool transactions tear down the `BlockchainWatcher`; harden it against transient operational failures
 - Reorg + mempool hygiene: stale events, leak, horizon, reparse cache
+- Fix stale `mempool/events` after RPC catch-up paths (`receive_rawblock` previous-block-missing branch and `handle()` ZMQ-late branch): both now sweep the mempool table after `catch_up()`, matching the streamed `receive_rawblock` path
 - Clear bitcoind transaction cache on rollback to avoid stale deserialisation; encapsulate in `reset_caches()` helper
 - Clean orphaned `transactions_status` rows on rollback and rebuild
 - Close ZMQ sockets/context before reconnect; fix `RCVTIMEO` typo
