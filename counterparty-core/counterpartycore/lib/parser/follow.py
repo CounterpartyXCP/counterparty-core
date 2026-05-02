@@ -180,8 +180,7 @@ class BlockchainWatcher:
                             exceptions.BitcoindZMQError,
                         ) as e:
                             logger.warning(
-                                "clean_mempool failed after catch_up "
-                                "(will retry next block): %s",
+                                "clean_mempool failed after catch_up (will retry next block): %s",
                                 e,
                             )
                 else:

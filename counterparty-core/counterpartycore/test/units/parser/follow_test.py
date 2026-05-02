@@ -1378,9 +1378,7 @@ def test_receive_rawblock_previous_block_missing_calls_clean_mempool(
             with mock.patch("asyncio.new_event_loop"):
                 with mock.patch("asyncio.set_event_loop"):
                     with mock.patch("counterpartycore.lib.parser.mempool.clean_mempool"):
-                        with mock.patch(
-                            "counterpartycore.lib.parser.follow.RawMempoolParser"
-                        ):
+                        with mock.patch("counterpartycore.lib.parser.follow.RawMempoolParser"):
                             db = mock.MagicMock()
                             watcher = follow.BlockchainWatcher(db)
 
