@@ -9,9 +9,9 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.messages import cancel as cancel_message
 from counterpartycore.lib.messages import gas
 from counterpartycore.lib.messages.attach import ID as UTXO_ID
-from counterpartycore.lib.messages.cancel import ID as CANCEL_ID
 from counterpartycore.lib.parser import deserialize, gettxinfo, messagetype
 
 D = decimal.Decimal
@@ -117,12 +117,12 @@ def compose_cancel(db, address: str, offer_hash: str = "", **construct_params):
     return composer.compose_transaction(db, "cancel", params, construct_params)
 
 
-def get_cancel_all_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
+def get_cancel_all_estimate_xcp_fee(db, address: str):
     """
     Returns the estimated XCP fee for a cancel-all transaction.
     :param address: The address that will be cancelling (e.g. $ADDRESS_1)
     """
-    return gas.get_transaction_fee(db, CANCEL_ID, CurrentState().current_block_index())
+    return cancel_message.get_cancel_all_fee(db, address, CurrentState().current_block_index())
 
 
 def compose_destroy(db, address: str, asset: str, quantity: int, tag: str, **construct_params):

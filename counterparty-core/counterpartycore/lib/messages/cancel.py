@@ -23,16 +23,41 @@ ID = 70
 CANCEL_ALL_FLAG = b"\x01"
 
 
+def get_offers_to_cancel(db, source, block_index):
+    """Return (orders, bets) to cancel for `source`, truncated to the
+    `cancel_all_offers_limit` for `block_index`. Orders are taken first,
+    then bets up to the remaining capacity."""
+    open_orders = ledger.markets.get_open_orders_by_source(db, source)
+    open_bets = ledger.other.get_open_bets_by_source(db, source)
+    limit = protocol.get_value_by_block_index("cancel_all_offers_limit", block_index)
+    to_cancel_orders = open_orders[:limit]
+    remaining = max(0, limit - len(to_cancel_orders))
+    to_cancel_bets = open_bets[:remaining]
+    return to_cancel_orders, to_cancel_bets
+
+
+def get_cancel_all_fee(db, source, block_index):
+    """Total XCP fee for cancelling every targeted offer in a single
+    cancel-all transaction at `block_index`. The first offer is free, so
+    cancel-all of a single offer matches a regular (free) cancel."""
+    to_cancel_orders, to_cancel_bets = get_offers_to_cancel(db, source, block_index)
+    offer_count = len(to_cancel_orders) + len(to_cancel_bets)
+    billable_count = max(0, offer_count - 1)
+    if billable_count == 0:
+        return 0
+    return gas.get_transaction_fee(db, ID, block_index) * billable_count
+
+
 def validate(db, source, offer_hash):
     problems = []
 
     if offer_hash is None:
-        open_orders = ledger.markets.get_open_orders_by_source(db, source)
-        open_bets = ledger.other.get_open_bets_by_source(db, source)
-        if not open_orders and not open_bets:
+        block_index = CurrentState().current_block_index()
+        to_cancel_orders, to_cancel_bets = get_offers_to_cancel(db, source, block_index)
+        if not to_cancel_orders and not to_cancel_bets:
             problems.append("no open offers for this address")
         if not problems:
-            fee = gas.get_transaction_fee(db, ID, CurrentState().current_block_index())
+            fee = get_cancel_all_fee(db, source, block_index)
             if fee > 0:
                 balance = ledger.balances.get_balance(db, source, config.XCP)
                 if balance < fee:
@@ -121,16 +146,12 @@ def parse(db, tx, message):
                 status = "invalid: " + "; ".join(problems)
 
         if status == "valid":
-            open_orders = ledger.markets.get_open_orders_by_source(db, tx["source"])
-            open_bets = ledger.other.get_open_bets_by_source(db, tx["source"])
-
-            limit = protocol.get_value_by_block_index("cancel_all_offers_limit", tx["block_index"])
-            to_cancel_orders = open_orders[:limit]
-            remaining = max(0, limit - len(to_cancel_orders))
-            to_cancel_bets = open_bets[:remaining]
+            to_cancel_orders, to_cancel_bets = get_offers_to_cancel(
+                db, tx["source"], tx["block_index"]
+            )
             offer_count = len(to_cancel_orders) + len(to_cancel_bets)
 
-            fee = gas.get_transaction_fee(db, ID, tx["block_index"])
+            fee = get_cancel_all_fee(db, tx["source"], tx["block_index"])
             if fee > 0:
                 ledger.events.debit(
                     db,
