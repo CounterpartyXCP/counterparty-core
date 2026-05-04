@@ -825,6 +825,7 @@ pub fn parse_transaction(
                     config.rpc_address.clone(),
                     config.rpc_user.clone(),
                     config.rpc_password.clone(),
+                    config.rpc_api_key.clone(),
                 )
                 .unwrap(),
             );
@@ -1127,6 +1128,7 @@ impl BitcoinClientInner {
             config.rpc_address.clone(),
             config.rpc_user.clone(),
             config.rpc_password.clone(),
+            config.rpc_api_key.clone(),
         )
         .map_err(|e| Error::BitcoinRpc(format!("Failed to create BatchRpcClient: {:#?}", e)))?;
 

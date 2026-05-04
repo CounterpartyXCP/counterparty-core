@@ -44,6 +44,14 @@ def prepare(network, use_existing_data=False):
         DATA_DIR,
         "--no-confirm",
     ]
+
+    # Forward an optional API key (set in CI as a GitHub Actions secret)
+    # to lift the public proxy's per-IP 120 req/min rate-limit to the
+    # premium 1000 req/min bucket. Without this, signet/testnet4 catchup
+    # gets stuck on 429 retries inside `getrawtransaction` parent lookups.
+    api_key = os.environ.get("BACKEND_API_KEY")
+    if api_key:
+        args += ["--backend-api-key", api_key]
     if network == "testnet4":
         args += [
             "--testnet4",
