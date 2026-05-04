@@ -15,7 +15,7 @@ SCENARIO = [
             "ORDER_1_HASH": "$TX_HASH",
             "ORDER_1_TX_INDEX": "$TX_INDEX",
             "ORDER_1_BLOCK_INDEX": "$BLOCK_INDEX",
-            "ORDER_1_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 21",
+            "ORDER_1_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 20",
         },
         "controls": [
             {
@@ -81,7 +81,7 @@ SCENARIO = [
             "ORDER_2_HASH": "$TX_HASH",
             "ORDER_2_TX_INDEX": "$TX_INDEX",
             "ORDER_2_BLOCK_INDEX": "$BLOCK_INDEX",
-            "ORDER_2_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 20",
+            "ORDER_2_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 19",
         },
         "controls": [
             {
@@ -198,7 +198,7 @@ SCENARIO = [
     {
         "title": "mint empty block to trigger order expiration",
         "transaction": "mine_blocks",
-        "params": {"blocks": 21},
+        "params": {"blocks": 20},
         "controls": [
             {
                 "url": "blocks/$BLOCK_INDEX/events?event_name=ORDER_EXPIRATION,ORDER_UPDATE,CREDIT,ORDER_MATCH_EXPIRATION,ORDER_MATCH_UPDATE,DEBIT",

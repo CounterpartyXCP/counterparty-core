@@ -136,17 +136,23 @@ impl DatabaseOps for Database {
             let entry = (key.to_vec(), value.to_vec());
             let height = ScriptHashHasOutputsInBlockAtHeight::from_entry(entry)?.height;
             let height_as_bytes = height.to_be_bytes();
-            #[allow(clippy::expect_used, clippy::expect_fun_call)]
-            let hash = self
-                .db
-                .get_cf(
-                    self.cf(to_cf_name::<BlockAtHeightHasHash>())?,
-                    height_as_bytes,
-                )?
-                .expect(&format!(
-                    "DB should have BlockAtHeightHasHash index for block at height: {}",
-                    height
-                ));
+            // The expect() here panicked on dirty-shutdown DB state (script
+            // hash + block hash were written non-atomically through put_cf,
+            // not WriteBatch). On worker restart the missing block-hash row
+            // crashed get_funding_block_entries and the BitcoinClient thread
+            // until manual pruning. Return a typed error and skip the entry.
+            let hash = match self.db.get_cf(
+                self.cf(to_cf_name::<BlockAtHeightHasHash>())?,
+                height_as_bytes,
+            )? {
+                Some(h) => h,
+                None => {
+                    return Err(Error::Database(format!(
+                        "BlockAtHeightHasHash index missing for height {} (likely dirty-shutdown leftover); rebuild may be required",
+                        height
+                    )));
+                }
+            };
             results.push(BlockAtHeightHasHash::from_entry((
                 height_as_bytes.to_vec(),
                 hash,

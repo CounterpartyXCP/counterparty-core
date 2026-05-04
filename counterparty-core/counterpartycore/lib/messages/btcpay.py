@@ -18,7 +18,7 @@ LENGTH = 32 + 32
 ID = 11
 
 
-def validate(db, source, order_match_id, block_index):
+def validate(db, source, order_match_id, block_index):  # pylint: disable=unused-argument
     problems = []
     order_match = None
     order_matches = ledger.markets.get_order_match(db, match_id=order_match_id)
@@ -129,11 +129,29 @@ def parse(db, tx, message):
     tx0_hash, tx1_hash, order_match_id, status = unpack(message)
 
     if status == "valid":
-        _destination, btc_quantity, escrowed_asset, escrowed_quantity, _order_match, problems = (
+        destination, btc_quantity, escrowed_asset, escrowed_quantity, _order_match, problems = (
             validate(db, tx["source"], order_match_id, tx["block_index"])
         )
         if problems:
             status = "invalid: " + "; ".join(problems)
+
+    if status == "valid":
+        # SECURITY: pre-fix, parse only checked `tx["btc_amount"] >= btc_quantity`
+        # without verifying that `tx["destination"]` actually equals the
+        # legitimate counterparty's address (`destination` returned by validate).
+        # Combined with `check_btcpay_source` (active mainnet >= block 313900)
+        # bypassing the source check, ANYONE could craft a btcpay tx that paid
+        # 1 BTC to their OWN address and the legitimate order_match_id in
+        # OP_RETURN -> parse credited the attacker with the escrowed asset.
+        # 11 years of zero exploitation on mainnet, but verified reproducible
+        # at the unit-test level (test_parse_attacker_diverts_btc_to_self).
+        # Gated behind `check_btcpay_destination` so historical re-validation
+        # preserves consensus determinism (existing 2,158 mainnet btcpays were
+        # all honest -- per gcloud kubectl SQL invariants), and the fix
+        # activates at a future block coordinated with the team.
+        if protocol.enabled("check_btcpay_destination", block_index=tx["block_index"]):
+            if tx["destination"] != destination:
+                status = "invalid: btc payment destination does not match order match counterparty"
 
     if status == "valid":
         # BTC must be paid all at once.

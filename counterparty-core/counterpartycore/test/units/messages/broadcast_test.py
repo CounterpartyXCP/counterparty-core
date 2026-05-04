@@ -1,5 +1,6 @@
 import struct
 
+import cbor2
 import pytest
 from bitcoin.core import VarIntSerializer
 from counterpartycore.lib import config
@@ -1194,3 +1195,23 @@ def test_load_data_legacy_unicode_decode_error():
         assert result_fee_fraction_int == fee_fraction_int
         assert result_encoding == "text/plain"
         assert result_text == ""
+
+
+def test_parse_cbor_none_value_doesnt_halt(ledger_db, blockchain_mock, defaults):
+    """Regression: bug_009. CBOR-encoded broadcast with None timestamp+value
+    used to reach `min(None, MAX_INT)` in parse() and raise TypeError ->
+    ParseTransactionError -> halt. The fix wraps the post-unpack block in
+    try/except (TypeError, ValueError, OverflowError, AssertionError) so
+    the tx is marked invalid instead.
+    """
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    # taproot_support is active in the test fixture; load_cbor decodes the
+    # tuple cleanly and status="valid" before parse hits min(None, MAX_INT).
+    message = cbor2.dumps([None, 0.0, 0, "text/plain", b""])
+    # Must NOT raise.
+    broadcast.parse(ledger_db, tx, message)
+    row = ledger_db.execute(
+        "SELECT status FROM broadcasts WHERE tx_hash = ?", (tx["tx_hash"],)
+    ).fetchone()
+    assert row is not None
+    assert "invalid" in row["status"]

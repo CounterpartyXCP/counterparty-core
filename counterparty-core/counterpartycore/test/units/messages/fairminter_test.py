@@ -919,3 +919,20 @@ def test_compose_2(ledger_db, defaults, current_block_index):
         [],
         b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x03\n\x00\x00\x00\x19\x07\x8c\x00\x00\x00\x00\xf4\xf4\xf4\xf5`@",
     )
+
+
+def test_multidot_longname_split_doesnt_halt():
+    """Regression: validate_subasset_longname permits non-consecutive dots
+    in the child portion (e.g. "PARENT.foo.bar"). The fairminter parse
+    paths at lines 99 + 564 used `.split(".")` to unpack to two vars,
+    which raises ValueError on 3+ parts -> ParseTransactionError -> halt.
+    The fix is `.split(".", 1)`.
+    """
+    longname = "PARENT.foo.bar"
+    # Pre-fix behavior:
+    with pytest.raises(ValueError):
+        _parent, _asset = longname.split(".")
+    # Post-fix behavior:
+    parent, asset = longname.split(".", 1)
+    assert parent == "PARENT"
+    assert asset == "foo.bar"

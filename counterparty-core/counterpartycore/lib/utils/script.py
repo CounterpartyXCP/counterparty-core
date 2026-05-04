@@ -18,6 +18,36 @@ def script_to_asm(scriptpubkey):
         raise exceptions.DecodeError("invalid script") from e
 
 
+def get_output_type(script_pub_key):
+    asm = script_to_asm(script_pub_key)
+    if asm[0] == opcodes.OP_RETURN:
+        return "OP_RETURN"
+    if len(asm) == 2 and asm[1] == opcodes.OP_CHECKSIG:
+        return "P2PK"
+    if (
+        len(asm) == 5
+        and asm[0] == opcodes.OP_DUP
+        and asm[3] == opcodes.OP_EQUALVERIFY
+        and asm[4] == opcodes.OP_CHECKSIG
+    ):
+        return "P2PKH"
+    if len(asm) >= 4 and asm[-1] == opcodes.OP_CHECKMULTISIG and asm[-2] == len(asm) - 3:
+        return "P2MS"
+    if len(asm) == 3 and asm[0] == opcodes.OP_HASH160 and asm[2] == opcodes.OP_EQUAL:
+        return "P2SH"
+    if len(asm) == 2 and asm[0] == b"":
+        if len(asm[1]) == 32:
+            return "P2WSH"
+        return "P2WPKH"
+    if len(asm) == 2 and asm[0] == b"\x01":
+        return "P2TR"
+    return "UNKNOWN"
+
+
+def is_segwit_output(script_pub_key):
+    return get_output_type(script_pub_key) in ("P2WPKH", "P2WSH", "P2TR")
+
+
 def _script_to_address(scriptpubkey, use_legacy=False):
     if isinstance(scriptpubkey, str):
         scriptpubkey = binascii.unhexlify(scriptpubkey)

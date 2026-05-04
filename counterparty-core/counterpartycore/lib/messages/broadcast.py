@@ -32,6 +32,7 @@ from counterpartycore.lib import (
     exceptions,
     ledger,
 )
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import helpers
 
@@ -71,7 +72,7 @@ def validate_address_options(options):
         raise exceptions.OptionsError("options not possible")
 
 
-def validate(db, source, timestamp, value, fee_fraction_int, text, mime_type):
+def validate(db, source, timestamp, value, fee_fraction_int, text, mime_type, block_index=None):
     problems = []
 
     # For SQLite3
@@ -112,8 +113,8 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, mime_type):
         except exceptions.OptionsError as e:
             problems.append(str(e))
 
-    if protocol.enabled("taproot_support"):
-        problems += helpers.check_content(mime_type, text)
+    if protocol.enabled("taproot_support", block_index=block_index):
+        problems += helpers.check_content(mime_type, text, block_index=block_index)
 
     return problems
 
@@ -146,6 +147,7 @@ def compose(
         fee_fraction_int,
         text,
         mime_type,
+        block_index=CurrentState().current_block_index(),
     )
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
@@ -181,10 +183,10 @@ def compose(
     return (source, [], data)
 
 
-def load_cbor(message):
+def load_cbor(message, block_index=None):
     timestamp, value, fee_fraction_int, mime_type, text = cbor2.loads(message)
     mime_type = mime_type or "text/plain"
-    text = helpers.bytes_to_content(text, mime_type)
+    text = helpers.bytes_to_content(text, mime_type, block_index=block_index)
     return timestamp, value, fee_fraction_int, mime_type, text
 
 
@@ -222,8 +224,16 @@ def unpack(message, block_index, return_dict=False):
         if protocol.enabled("taproot_support", block_index=block_index):
             # Unpack the message using cbor2
             try:
-                timestamp, value, fee_fraction_int, mime_type, text = load_cbor(message)
-            except Exception:
+                timestamp, value, fee_fraction_int, mime_type, text = load_cbor(
+                    message, block_index=block_index
+                )
+            except Exception:  # pylint: disable=broad-exception-caught
+                # Inelegant but effective: after taproot_support, broadcasts
+                # *should* be CBOR, but a non-trivial number of messages on
+                # chain still use the legacy struct format (and cbor2 raises
+                # a wide range of decoder-specific exceptions we don't want
+                # to enumerate). Falling back unconditionally lets us keep
+                # parsing both formats without forking the wire path.
                 timestamp, value, fee_fraction_int, mime_type, text = load_data_legacy(
                     message, block_index
                 )  # fallback to legacy unpacking
@@ -238,6 +248,17 @@ def unpack(message, block_index, return_dict=False):
     except AssertionError:
         timestamp, value, fee_fraction_int, mime_type, text = 0, None, 0, "", None
         status = "invalid: could not unpack text"
+    except Exception:  # pylint: disable=broad-exception-caught
+        # Consensus-safety net: unpack() is reached for *every* on-chain
+        # broadcast message, including arbitrary attacker-crafted bytes.
+        # Any uncaught exception here would propagate up to the parser
+        # and halt the indexer (chain stall == liveness failure for every
+        # node running this code). We deliberately catch everything --
+        # VarIntSerializer.SerializationTruncationError, cbor2 decoder
+        # errors, MemoryError on absurd lengths, etc. -- and mark the
+        # message invalid so consensus stays uniform across nodes.
+        timestamp, value, fee_fraction_int, mime_type, text = 0, None, 0, "", None
+        status = "invalid: could not unpack"
 
     if return_dict:
         return {
@@ -258,13 +279,27 @@ def parse(db, tx, message):
     timestamp, value, fee_fraction_int, mime_type, text, status = unpack(message, tx["block_index"])
 
     if status == "valid":
-        # For SQLite3
-        timestamp = min(timestamp, config.MAX_INT)
-        value = min(value, config.MAX_INT)
+        try:
+            # For SQLite3
+            timestamp = min(timestamp, config.MAX_INT)
+            value = min(value, config.MAX_INT)
 
-        problems = validate(db, tx["source"], timestamp, value, fee_fraction_int, text, mime_type)
-        if problems:
-            status = "invalid: " + "; ".join(problems)
+            problems = validate(
+                db,
+                tx["source"],
+                timestamp,
+                value,
+                fee_fraction_int,
+                text,
+                mime_type,
+                block_index=tx["block_index"],
+            )
+            if problems:
+                status = "invalid: " + "; ".join(problems)
+        except (TypeError, ValueError, OverflowError, AssertionError) as e:
+            logger.warning("broadcast validate error on tx %s: %s", tx["tx_hash"], e)
+            timestamp, value, fee_fraction_int, text = 0, None, 0, None
+            status = "invalid: validation error"
 
     # Lock?
     lock = False
@@ -289,6 +324,16 @@ def parse(db, tx, message):
         "mime_type": mime_type,
     }
     if "integer overflow" not in status:
+        # Final safety clamp: any int that exceeds SQLite's signed 64-bit
+        # range would raise OverflowError inside insert_record. This happens
+        # for CBOR-encoded hand-rolled txs whose `mime_type` (TEXT column)
+        # or numeric fields carry attacker-supplied huge ints that survive
+        # validate() (which only flags the value as a problem string, it
+        # doesn't replace it). Mirror the same defense applied to
+        # issuances; see fuzz_cbor_test.py::test_cbor_broadcast_no_halt.
+        for _k, _v in list(bindings.items()):
+            if isinstance(_v, int) and (_v > config.MAX_INT or _v < -config.MAX_INT):
+                bindings[_k] = None
         ledger.events.insert_record(db, "broadcasts", bindings, "BROADCAST")
 
     logger.info("Broadcast from %(source)s (%(tx_hash)s) [%(status)s]", bindings)

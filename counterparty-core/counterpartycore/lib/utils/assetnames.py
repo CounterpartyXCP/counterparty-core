@@ -196,6 +196,20 @@ def compact_subasset_longname(string):
 
 def expand_subasset_longname(raw_bytes):
     """Expands an array of bytes into a subasset name string."""
+    # The legacy struct path is bounded by a uint8 length prefix (max 255).
+    # The CBOR path has no inherent cap, so a malicious 100KB payload costs
+    # ~25 seconds of O(n^2) string-concat + integer-divide CPU per tx. The
+    # >200 byte cap rejects that before doing any work. NOTE: we don't gate
+    # the cap because (a) a 250-char longname (validate_subasset_longname's
+    # max) needs only ceil(250*log2(68)/8) = 191 bytes, well under 200, and
+    # (b) any historical post-902000 mainnet tx with a >200-byte compacted
+    # payload would have failed validate_subasset_longname downstream
+    # anyway -- this just prevents the DoS budget from being spent first.
+    # If a mainnet snapshot scan ever surfaces a successfully-issued
+    # subasset whose compacted bytes exceed 200, gate this cap behind a
+    # protocol entry.
+    if len(raw_bytes) > 200:
+        raise exceptions.AssetNameError("compacted subasset name too long")
     integer = int.from_bytes(raw_bytes, byteorder="big")
     if integer == 0:
         return ""

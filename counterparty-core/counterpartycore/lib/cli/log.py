@@ -192,7 +192,7 @@ class SQLiteFilter(logging.Filter):
         return True
 
 
-def set_up(
+def set_up(  # pylint: disable=unused-argument
     verbose=0,
     quiet=True,
     log_file=None,

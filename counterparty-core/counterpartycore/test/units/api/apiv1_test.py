@@ -4,6 +4,7 @@ import pytest
 from counterpartycore.lib import exceptions
 from counterpartycore.lib.api import apiv1
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
+from jsonrpc import dispatcher as global_dispatcher
 
 
 def test_create_burn(apiv1_client, defaults):
@@ -867,3 +868,62 @@ def test_extended_info(apiv1_client, defaults):
             "name": "issuance",
             "tx_hex": "0200000001f45bd80918ce634fe0d6e3ac328fa229c8aeff3e63316bb33e9db43dd07b75c30000000000ffffffff0322020000000000001976a9148d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec88ace80300000000000069512103ea49bccb9828a4b03ae59a92115ace194fb7b43de0f8830b2f6de1ee3b2c6dcb2102bddf4de9fc412c28787ed4a5d64a6080c8264a956a78010aa5b44b5e553bc2ce210282b886c087eb37dc8182f14ba6cc3e9485ed618b95804d44aecc17c300b585b053ae86c09a3b000000001976a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac00000000",
         }
+
+
+def test_get_rows_filter_field_sqli_blocked(ledger_db, state_db):
+    with pytest.raises(exceptions.APIError, match="Invalid filter field name; must match"):
+        apiv1.get_rows(
+            "balances",
+            [{"field": "1) UNION SELECT * FROM messages --", "op": "=", "value": "x"}],
+            "AND",
+            None,
+            None,
+            None,
+            None,
+            None,
+            1000,
+            0,
+            True,
+        )
+
+
+def test_get_rows_filter_field_uppercase_blocked(ledger_db, state_db):
+    with pytest.raises(exceptions.APIError, match="Invalid filter field name; must match"):
+        apiv1.get_rows(
+            "balances",
+            [{"field": "ASSET", "op": "=", "value": "XCP"}],
+            "AND",
+            None,
+            None,
+            None,
+            None,
+            None,
+            1000,
+            0,
+            True,
+        )
+
+
+def test_get_rows_filter_field_non_string_blocked(ledger_db, state_db):
+    with pytest.raises(exceptions.APIError, match="Invalid filter field name; must match"):
+        apiv1.get_rows(
+            "balances",
+            [{"field": 42, "op": "=", "value": "x"}],
+            "AND",
+            None,
+            None,
+            None,
+            None,
+            None,
+            1000,
+            0,
+            True,
+        )
+
+
+def test_sql_method(ledger_db, state_db):
+    apiv1.create_app()
+    sql_method = global_dispatcher.method_map.get("sql")
+    assert sql_method is not None
+    result = sql_method("SELECT 1 AS one")
+    assert result == [{"one": 1}]

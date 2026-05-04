@@ -12,8 +12,8 @@ OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
 OrderMatchesStatus = Literal["all", "pending", "completed", "expired"]
 BetStatus = Literal["cancelled", "dropped", "expired", "filled", "open"]
 DispenserStatus = Literal["all", "open", "closed", "closing", "open_empty_address"]
-DispenserStatusNumber = {"open": 0, "closed": 10, "closing": 11, "open_empty_address": 1}
-DispenserStatusNumberInverted = {value: key for key, value in DispenserStatusNumber.items()}
+DispenserStatusNumber = {"open": 0, "closed": 10, "closing": 11, "open_empty_address": 1}  # pylint: disable=invalid-name
+DispenserStatusNumberInverted = {value: key for key, value in DispenserStatusNumber.items()}  # pylint: disable=invalid-name
 FairmintersStatus = Literal["all", "open", "closed", "pending"]
 IssuancesAssetEvents = Literal[
     "all",
@@ -1972,7 +1972,7 @@ def utxos_with_balances(state_db, utxos: str):
     return QueryResult(result, None, "balances", len(utxo_list))
 
 
-def get_balances_by_addresses(
+def get_balances_by_addresses(  # pylint: disable=unused-argument
     state_db,
     addresses: str,
     type: BalanceType = "all",  # pylint: disable=W0622
@@ -2869,9 +2869,11 @@ def prepare_order_matches_where(status, other_conditions=None):
     return prepare_where_status(status, OrderMatchesStatus, other_conditions=other_conditions)
 
 
-SELECT_ORDERS = "*, "
-SELECT_ORDERS += "COALESCE((get_quantity * 1.0) / (give_quantity * 1.0), 0) AS give_price, "
-SELECT_ORDERS += "COALESCE((give_quantity * 1.0) / (get_quantity * 1.0), 0) AS get_price"
+SELECT_ORDERS = (
+    "*, "
+    "COALESCE((get_quantity * 1.0) / (give_quantity * 1.0), 0) AS give_price, "
+    "COALESCE((give_quantity * 1.0) / (get_quantity * 1.0), 0) AS get_price"
+)
 SELECT_ORDER_MATCHES = SELECT_ORDERS.replace("get_", "forward_").replace("give_", "backward_")
 
 

@@ -858,7 +858,7 @@ class RegtestNode:
                 "asset": "BTC",
             },
         )
-        assert "Electrs error" in transaction["error"]
+        assert "All Electrs backends failed" in transaction["error"]
         assert "Failed to establish a new connection" in transaction["error"]
 
         # start electrs

@@ -10,7 +10,7 @@ def list_unspent(source, allow_unconfirmed_inputs):
         return unspent_list
 
     # then try with Electrs
-    if config.ELECTRS_URL is None:
+    if not config.ELECTRS_URLS:
         raise exceptions.ComposeError(
             "No UTXOs found with Bitcoin Core and Electrs is not configured, use the `inputs_set` parameter to provide UTXOs"
         )
@@ -24,7 +24,7 @@ def search_pubkey(source, tx_hashes=None):
         if pubkey is not None:
             return pubkey
     # then search with Electrs
-    if config.ELECTRS_URL is None:
+    if not config.ELECTRS_URLS:
         return None
     pubkey = electrs.search_pubkey(source)
     if pubkey is not None:
