@@ -307,9 +307,12 @@ def initialise_config(
 
     # Optional API key for premium rate limits behind a Cloud-Armor-style
     # gateway. The key is sent as the `X-API-Key` HTTP header on every
-    # backend RPC request (Python and Rust BatchRpcClient). Used by the
-    # integration tests to avoid 429s on the public signet/testnet4 proxy.
-    config.BACKEND_API_KEY = backend_api_key or None
+    # backend RPC request (Python and Rust BatchRpcClient). The CLI flag
+    # takes precedence; otherwise we fall back to the `BACKEND_API_KEY`
+    # environment variable so CI can inject the secret without exposing
+    # it in the process command line (CodeQL flags any sensitive value
+    # passed as an argv element that ends up echoed by `sh`/`subprocess`).
+    config.BACKEND_API_KEY = backend_api_key or os.environ.get("BACKEND_API_KEY") or None
 
     # Construct backend URL.
     if backend_cookie_file is not None and os.path.exists(backend_cookie_file):

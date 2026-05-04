@@ -37,6 +37,12 @@ def prepare(network, use_existing_data=False):
             sh.rm("-rf", DATA_DIR)
         sh.mkdir("-p", DATA_DIR)
 
+    # The optional `BACKEND_API_KEY` env var (set in CI as a GHA secret)
+    # is read directly by `initialise_config` to lift the public proxy's
+    # per-IP 120 req/min rate-limit to the premium 1000 req/min bucket.
+    # We deliberately do NOT pass it on the command line: doing so would
+    # echo the secret through `sh`/`subprocess` stdout and trigger CodeQL
+    # "clear-text logging of sensitive information" alerts.
     args = [
         "--data-dir",
         DATA_DIR,
@@ -44,14 +50,6 @@ def prepare(network, use_existing_data=False):
         DATA_DIR,
         "--no-confirm",
     ]
-
-    # Forward an optional API key (set in CI as a GitHub Actions secret)
-    # to lift the public proxy's per-IP 120 req/min rate-limit to the
-    # premium 1000 req/min bucket. Without this, signet/testnet4 catchup
-    # gets stuck on 429 retries inside `getrawtransaction` parent lookups.
-    api_key = os.environ.get("BACKEND_API_KEY")
-    if api_key:
-        args += ["--backend-api-key", api_key]
     if network == "testnet4":
         args += [
             "--testnet4",
