@@ -1,5 +1,7 @@
 import binascii
+import time
 
+import cbor2
 import pytest
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import apiwatcher
@@ -1656,6 +1658,69 @@ def test_parse_paid_subasset_invalid_length(ledger_db, blockchain_mock, defaults
     )
 
 
+def test_parse_subasset_truncated_message(ledger_db, blockchain_mock, defaults, test_helpers):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
+    message = b"\x01"
+    with ProtocolChangesDisabled(["free_subassets"]):
+        issuance.parse(ledger_db, tx, message, issuance.SUBASSET_ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "asset": None,
+                    "asset_longname": None,
+                    "block_index": tx["block_index"],
+                    "description": None,
+                    "fee_paid": 0,
+                    "issuer": defaults["addresses"][0],
+                    "locked": 0,
+                    "quantity": None,
+                    "source": defaults["addresses"][0],
+                    "status": "invalid: could not unpack",
+                    "transfer": 0,
+                    "divisible": None,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                },
+            }
+        ],
+    )
+
+
+def test_parse_asset_truncated_message(ledger_db, blockchain_mock, defaults, test_helpers):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
+    message = b"\x01"
+    issuance.parse(ledger_db, tx, message, issuance.ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "asset": None,
+                    "asset_longname": None,
+                    "block_index": tx["block_index"],
+                    "description": None,
+                    "fee_paid": 0,
+                    "issuer": defaults["addresses"][0],
+                    "locked": 0,
+                    "quantity": None,
+                    "source": defaults["addresses"][0],
+                    "status": "invalid: could not unpack",
+                    "transfer": 0,
+                    "divisible": None,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                },
+            }
+        ],
+    )
+
+
 def test_parse_paid_subasset_reissuance(ledger_db, blockchain_mock, defaults, test_helpers):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = b'\x87\x1b\x01S\x08"\x06\xe4c%\x19\x03\xe8\xf5\xf4\xf4`@'
@@ -2252,3 +2317,57 @@ def test_issuance_with_none_description(
         "text/plain",
         "valid",
     )
+
+
+def test_parse_cbor_str_asset_id_doesnt_halt(ledger_db, blockchain_mock, defaults):
+    """Regression: CBOR-encoded issuance with asset_id as str instead of int
+    used to raise TypeError from `asset_id < 26**3` in generate_asset_name
+    -> ParseTransactionError -> halt. The unpack outer except now catches
+    (TypeError, ValueError, OverflowError) so the tx is marked invalid.
+    """
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    message = cbor2.dumps(["NOTANINT", 1, True, False, False, "text/plain", "test"])
+    issuance.parse(ledger_db, tx, message, issuance.ID)  # must not raise
+
+
+def test_parse_cbor_huge_int_clamped_no_overflow(ledger_db, blockchain_mock, defaults):
+    """Regression: CBOR-supplied quantity > 2^63-1 (SQLite INTEGER signed
+    64-bit limit) used to raise OverflowError on insert_record. The fix is
+    a defensive clamp loop over int bindings before INSERT.
+    """
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    message = cbor2.dumps([1, 2**70, True, False, False, "text/plain", "test"])
+    issuance.parse(ledger_db, tx, message, issuance.ID)  # must not raise
+
+
+def test_parse_cbor_subasset_dos_cap(ledger_db, blockchain_mock, defaults):
+    """Regression: 100KB compacted_subasset_longname caused ~25s of O(n^2)
+    CPU in expand_subasset_longname. The fix caps input at 200 bytes.
+    """
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    message = cbor2.dumps([1, 1, True, False, False, 0, b"\xff" * 1000, "text/plain", "test"])
+    t0 = time.time()
+    issuance.parse(ledger_db, tx, message, issuance.SUBASSET_ID)
+    assert time.time() - t0 < 1.0
+
+
+def test_canonical_subasset_compact_gate_off_accepts_noncanonical(
+    ledger_db, blockchain_mock, defaults
+):
+    """`canonical_subasset_compact` gate OFF: legacy non-canonical CBOR
+    compactions (leading-zero pad → same longname) are accepted. Preserves
+    pre-activation consensus determinism.
+    """
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    with ProtocolChangesDisabled(["canonical_subasset_compact"]):
+        message = cbor2.dumps([1, 1, True, False, False, 0, b"\x00\x00\x01", "text/plain", "test"])
+        issuance.parse(ledger_db, tx, message, issuance.SUBASSET_ID)  # must not raise
+
+
+def test_canonical_subasset_compact_gate_on_rejects_noncanonical(
+    ledger_db, blockchain_mock, defaults
+):
+    """Gate ON: same non-canonical bytes rejected, tx invalid (no halt)."""
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    message = cbor2.dumps([1, 1, True, False, False, 0, b"\x00\x00\x01", "text/plain", "test"])
+    issuance.parse(ledger_db, tx, message, issuance.SUBASSET_ID)  # must not raise

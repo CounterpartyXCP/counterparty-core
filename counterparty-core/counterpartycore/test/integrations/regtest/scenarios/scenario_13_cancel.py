@@ -13,7 +13,7 @@ SCENARIO = [
         },
         "set_variables": {
             "ORDER_6_HASH": "$TX_HASH",
-            "ORDER_6_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 21",
+            "ORDER_6_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 20",
         },
         "controls": [
             {
@@ -127,7 +127,7 @@ SCENARIO = [
         },
         "set_variables": {
             "ORDER_7_HASH": "$TX_HASH",
-            "ORDER_7_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 21",
+            "ORDER_7_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 20",
         },
         "controls": [
             {

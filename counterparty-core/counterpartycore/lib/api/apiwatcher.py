@@ -55,7 +55,7 @@ EVENTS_ADDRESS_FIELDS = {
     "NEW_FAIRMINT": ["source"],
     "NEW_FAIRMINTER": ["source"],
     "ATTACH_TO_UTXO": ["source", "destination_address"],
-    "DETACH_FROM_UTXO": ["sourc_address", "destination"],
+    "DETACH_FROM_UTXO": ["source_address", "destination"],
     "UTXO_MOVE": ["source_address", "destination_address"],
 }
 
@@ -214,7 +214,7 @@ def search_address_from_utxo(state_db, utxo):
     return None
 
 
-def update_address_events(state_db, event, no_cache=False):
+def update_address_events(state_db, event):
     if event["event"] not in EVENTS_ADDRESS_FIELDS:
         return
     event_bindings = json.loads(event["bindings"])
@@ -272,12 +272,18 @@ def update_xcp_supply(state_db, event):
     if event["event"] not in XCP_DESTROY_EVENTS:
         return
     event_bindings = json.loads(event["bindings"])
+    if event_bindings.get("status") != "valid":
+        # Migration 0004 derives XCP supply via valid-only ledger queries;
+        # the streamed handler must filter the same way or snapshot vs
+        # event-streamed nodes diverge for any invalid issuance/sweep that
+        # carries a non-zero fee_paid binding.
+        return
     if "fee_paid" not in event_bindings:
         return
     if event_bindings["fee_paid"] == 0:
         return
     sql = """
-        UPDATE assets_info 
+        UPDATE assets_info
         SET supply = supply - :fee_paid
         WHERE asset = 'XCP'
     """
@@ -329,6 +335,11 @@ def update_assets_info(state_db, event):
         set_data.append("asset_longname = :asset_longname")
         if event_bindings["locked"]:
             set_data.append("locked = :locked")
+        if event_bindings.get("description_locked"):
+            # Migration 0004 reads description_locked from issuances, but the
+            # streamed handler never updated it. Snapshot vs streamed nodes
+            # diverged for assets locked via an issuance with this flag.
+            set_data.append("description_locked = :description_locked")
         if existing_asset is None or not existing_asset["issuer"]:  # first issuance
             set_data.append("issuer = :issuer")
         set_data = ", ".join(set_data)

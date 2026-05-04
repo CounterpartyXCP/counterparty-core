@@ -6,6 +6,7 @@ import time
 from unittest.mock import MagicMock, patch
 
 import apsw
+import psutil
 import pytest
 from counterpartycore.lib import config, exceptions
 
@@ -13,6 +14,7 @@ from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.utils import database
 from counterpartycore.lib.utils.database import (
     APSWConnectionPool,
+    DatabaseIntegrityError,
     apply_outstanding_migration,
     check_foreign_keys,
     check_wal_file,
@@ -29,6 +31,8 @@ from counterpartycore.lib.utils.database import (
     update_version,
     vacuum,
 )
+from counterpartycore.lib.utils.helpers import SingletonMeta
+from yoyo.exceptions import LockTimeout
 
 
 def test_version(ledger_db, test_helpers):
@@ -650,8 +654,6 @@ def test_get_file_openers_with_open_file(temp_db_file):
 
 def test_get_file_openers_handles_exceptions():
     """Tests get_file_openers handles psutil exceptions gracefully."""
-    import psutil
-
     with patch("counterpartycore.lib.utils.database.psutil.process_iter") as mock_iter:
         # Create a mock process that raises NoSuchProcess
         mock_proc = MagicMock()
@@ -665,8 +667,6 @@ def test_get_file_openers_handles_exceptions():
 
 def test_get_file_openers_handles_access_denied():
     """Tests get_file_openers handles psutil AccessDenied exception."""
-    import psutil
-
     with patch("counterpartycore.lib.utils.database.psutil.process_iter") as mock_iter:
         # Create a mock process that raises AccessDenied
         mock_proc = MagicMock()
@@ -1188,8 +1188,6 @@ def test_close_function(temp_db_file, monkeypatch):
     monkeypatch.setattr(config, "DATABASE", temp_db_file)
 
     # Reset the singleton for LedgerDBConnectionPool
-    from counterpartycore.lib.utils.helpers import SingletonMeta
-
     if database.LedgerDBConnectionPool in SingletonMeta._instances:
         del SingletonMeta._instances[database.LedgerDBConnectionPool]
 
@@ -1232,8 +1230,6 @@ def test_apply_outstanding_migration_lock_timeout(temp_db_file):
     migration_dir = tempfile.mkdtemp()
 
     try:
-        from yoyo.exceptions import LockTimeout
-
         # Create mock backend
         mock_backend = MagicMock()
         mock_backend.apply_migrations.side_effect = [LockTimeout(), None]
@@ -1279,8 +1275,6 @@ def test_rollback_all_migrations(temp_db_file):
 
 def test_database_integrity_error_class():
     """Tests DatabaseIntegrityError is a subclass of DatabaseError."""
-    from counterpartycore.lib.utils.database import DatabaseIntegrityError
-
     error = DatabaseIntegrityError("test error")
     assert isinstance(error, exceptions.DatabaseError)
 
@@ -1290,8 +1284,6 @@ def test_ledger_db_connection_pool_singleton(temp_db_file, monkeypatch):
     monkeypatch.setattr(config, "DATABASE", temp_db_file)
 
     # Reset the singleton
-    from counterpartycore.lib.utils.helpers import SingletonMeta
-
     if database.LedgerDBConnectionPool in SingletonMeta._instances:
         del SingletonMeta._instances[database.LedgerDBConnectionPool]
 
@@ -1312,8 +1304,6 @@ def test_state_db_connection_pool_singleton(temp_db_file, monkeypatch):
     monkeypatch.setattr(config, "STATE_DATABASE", temp_db_file)
 
     # Reset the singleton
-    from counterpartycore.lib.utils.helpers import SingletonMeta
-
     if database.StateDBConnectionPool in SingletonMeta._instances:
         del SingletonMeta._instances[database.StateDBConnectionPool]
 

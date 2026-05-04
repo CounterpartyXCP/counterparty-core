@@ -109,6 +109,7 @@ def unpack(message, return_dict=False):
 def parse(db, tx, message):
     # Unpack message.
     offer_hash, status = unpack(message)
+    offer_type = None
 
     # Cancel-all mode
     if offer_hash is None and status == "valid":

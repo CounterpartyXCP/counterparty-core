@@ -55,7 +55,9 @@ where
                 // height + 1 because we need one before to satisfy the check
                 let in_reorg_window_b = in_reorg_window(height + 1, target_height, reorg_window);
                 let min_index_height = if in_reorg_window_b {
-                    Some(height - reorg_window)
+                    // saturating_sub: on tiny chains where height < reorg_window,
+                    // the original height - reorg_window underflowed.
+                    Some(height.saturating_sub(reorg_window))
                 } else {
                     None
                 };

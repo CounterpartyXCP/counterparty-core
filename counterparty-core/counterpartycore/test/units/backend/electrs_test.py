@@ -5,6 +5,7 @@ import pytest
 import requests
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.backend import electrs as electrum_connector
+from ecdsa.ellipticcurve import MalformedPointError
 
 
 # Fixture for mocking requests.get
@@ -17,9 +18,9 @@ def mock_requests_get():
 # Tests for electr_query
 def test_electr_query_success(mock_requests_get):
     """Test the electr_query function with a successful result"""
-    # Ensure config.ELECTRS_URL is set before calling electr_query
-    previous_url = config.ELECTRS_URL
-    config.ELECTRS_URL = "http://localhost:3000"
+    # Ensure config.ELECTRS_URLS is set before calling electr_query
+    previous_url = config.ELECTRS_URLS
+    config.ELECTRS_URLS = ["http://localhost:3000"]
 
     mock_response = mock.Mock()
     mock_response.json.return_value = {"test": "data"}
@@ -31,25 +32,36 @@ def test_electr_query_success(mock_requests_get):
     assert result == {"test": "data"}
 
     # Restore original URL
-    config.ELECTRS_URL = previous_url
+    config.ELECTRS_URLS = previous_url
 
 
 def test_electr_query_no_url():
     """Test the electr_query function without a configured URL"""
-    previous_url = config.ELECTRS_URL
-    config.ELECTRS_URL = None
+    previous_url = config.ELECTRS_URLS
+    config.ELECTRS_URLS = None
 
     with pytest.raises(exceptions.ElectrsError, match="Electrs server not configured"):
         electrum_connector.electr_query("test/url")
 
     # Restore original URL
-    config.ELECTRS_URL = previous_url
+    config.ELECTRS_URLS = previous_url
+
+
+def test_electr_query_empty_list():
+    """Test the electr_query function with an empty URL list"""
+    previous_url = config.ELECTRS_URLS
+    config.ELECTRS_URLS = []
+
+    with pytest.raises(exceptions.ElectrsError, match="Electrs server not configured"):
+        electrum_connector.electr_query("test/url")
+
+    config.ELECTRS_URLS = previous_url
 
 
 def test_electr_query_request_exception(mock_requests_get):
     """Test the electr_query function when a request exception is raised"""
-    previous_url = config.ELECTRS_URL
-    config.ELECTRS_URL = "http://localhost:3000"
+    previous_url = config.ELECTRS_URLS
+    config.ELECTRS_URLS = ["http://localhost:3000"]
 
     mock_requests_get.side_effect = requests.RequestException("Connection error")
 
@@ -57,7 +69,63 @@ def test_electr_query_request_exception(mock_requests_get):
         electrum_connector.electr_query("test/url")
 
     # Restore original URL
-    config.ELECTRS_URL = previous_url
+    config.ELECTRS_URLS = previous_url
+
+
+def test_electr_query_failover(mock_requests_get):
+    """Test failover to second URL when first fails."""
+    previous_urls = config.ELECTRS_URLS
+    config.ELECTRS_URLS = ["http://first:3000", "http://second:3000"]
+
+    success_response = mock.Mock()
+    success_response.json.return_value = {"test": "data"}
+
+    mock_requests_get.side_effect = [
+        requests.RequestException("Connection refused"),
+        success_response,
+    ]
+
+    result = electrum_connector.electr_query("test/url")
+    assert result == {"test": "data"}
+    assert mock_requests_get.call_count == 2
+    mock_requests_get.assert_called_with("http://second:3000/test/url", timeout=10)
+
+    config.ELECTRS_URLS = previous_urls
+
+
+def test_electr_query_all_fail(mock_requests_get):
+    """Test error when all backends fail."""
+    previous_urls = config.ELECTRS_URLS
+    config.ELECTRS_URLS = ["http://first:3000", "http://second:3000"]
+
+    mock_requests_get.side_effect = requests.RequestException("Connection refused")
+
+    with pytest.raises(exceptions.ElectrsError, match="All Electrs backends failed"):
+        electrum_connector.electr_query("test/url")
+
+    assert mock_requests_get.call_count == 2
+
+    config.ELECTRS_URLS = previous_urls
+
+
+def test_electr_query_http_error_failover(mock_requests_get):
+    """Test failover on HTTP error (e.g. 500) to next backend."""
+    previous_urls = config.ELECTRS_URLS
+    config.ELECTRS_URLS = ["http://first:3000", "http://second:3000"]
+
+    fail_response = mock.Mock()
+    fail_response.raise_for_status.side_effect = requests.exceptions.HTTPError("500 Server Error")
+
+    success_response = mock.Mock()
+    success_response.json.return_value = {"test": "data"}
+
+    mock_requests_get.side_effect = [fail_response, success_response]
+
+    result = electrum_connector.electr_query("test/url")
+    assert result == {"test": "data"}
+    assert mock_requests_get.call_count == 2
+
+    config.ELECTRS_URLS = previous_urls
 
 
 # Tests for get_utxos
@@ -208,8 +276,8 @@ def test_get_utxos_empty_list():
 # Tests for get_history
 def test_get_history_confirmed_only():
     """Test get_history including only confirmed transactions"""
-    previous_url = config.ELECTRS_URL
-    config.ELECTRS_URL = "http://localhost:3000"
+    previous_url = config.ELECTRS_URLS
+    config.ELECTRS_URLS = ["http://localhost:3000"]
 
     with mock.patch("counterpartycore.lib.backend.electrs.electr_query") as mock_query:
         mock_query.return_value = [
@@ -224,13 +292,13 @@ def test_get_history_confirmed_only():
         mock_query.assert_called_once_with("address/test_address/txs")
 
     # Restore original URL
-    config.ELECTRS_URL = previous_url
+    config.ELECTRS_URLS = previous_url
 
 
 def test_get_history_include_unconfirmed():
     """Test get_history including unconfirmed transactions"""
-    previous_url = config.ELECTRS_URL
-    config.ELECTRS_URL = "http://localhost:3000"
+    previous_url = config.ELECTRS_URLS
+    config.ELECTRS_URLS = ["http://localhost:3000"]
 
     with mock.patch("counterpartycore.lib.backend.electrs.electr_query") as mock_query:
         mock_query.return_value = [
@@ -247,13 +315,13 @@ def test_get_history_include_unconfirmed():
         assert result == expected
 
     # Restore original URL
-    config.ELECTRS_URL = previous_url
+    config.ELECTRS_URLS = previous_url
 
 
 def test_get_history_empty_list():
     """Test get_history with an empty transaction list"""
-    previous_url = config.ELECTRS_URL
-    config.ELECTRS_URL = "http://localhost:3000"
+    previous_url = config.ELECTRS_URLS
+    config.ELECTRS_URLS = ["http://localhost:3000"]
 
     with mock.patch("counterpartycore.lib.backend.electrs.electr_query") as mock_query:
         mock_query.return_value = []
@@ -263,14 +331,14 @@ def test_get_history_empty_list():
         assert result == []
 
     # Restore original URL
-    config.ELECTRS_URL = previous_url
+    config.ELECTRS_URLS = previous_url
 
 
 # Tests for get_utxos_by_addresses
 def test_get_utxos_by_addresses():
     """Test get_utxos_by_addresses with multiple addresses"""
-    previous_url = config.ELECTRS_URL
-    config.ELECTRS_URL = "http://localhost:3000"
+    previous_url = config.ELECTRS_URLS
+    config.ELECTRS_URLS = ["http://localhost:3000"]
 
     with mock.patch("counterpartycore.lib.backend.electrs.get_utxos") as mock_get_utxos:
         mock_get_utxos.side_effect = [
@@ -318,13 +386,13 @@ def test_get_utxos_by_addresses():
         assert mock_get_utxos.call_count == 2
 
     # Restore original URL
-    config.ELECTRS_URL = previous_url
+    config.ELECTRS_URLS = previous_url
 
 
 def test_get_utxos_by_addresses_with_params():
     """Test get_utxos_by_addresses with additional parameters"""
-    previous_url = config.ELECTRS_URL
-    config.ELECTRS_URL = "http://localhost:3000"
+    previous_url = config.ELECTRS_URLS
+    config.ELECTRS_URLS = ["http://localhost:3000"]
 
     with mock.patch("counterpartycore.lib.backend.electrs.get_utxos") as mock_get_utxos:
         mock_get_utxos.return_value = [
@@ -355,13 +423,13 @@ def test_get_utxos_by_addresses_with_params():
         mock_get_utxos.assert_called_once_with("addr1", True, "tx1")
 
     # Restore original URL
-    config.ELECTRS_URL = previous_url
+    config.ELECTRS_URLS = previous_url
 
 
 def test_get_utxos_by_addresses_empty_string():
     """Test get_utxos_by_addresses with an empty string"""
-    previous_url = config.ELECTRS_URL
-    config.ELECTRS_URL = "http://localhost:3000"
+    previous_url = config.ELECTRS_URLS
+    config.ELECTRS_URLS = ["http://localhost:3000"]
 
     # Mock get_utxos to return an empty list when called
     with mock.patch("counterpartycore.lib.backend.electrs.get_utxos") as mock_get_utxos:
@@ -378,7 +446,7 @@ def test_get_utxos_by_addresses_empty_string():
         mock_get_utxos.assert_called_with("", False, None)
 
     # Restore original URL
-    config.ELECTRS_URL = previous_url
+    config.ELECTRS_URLS = previous_url
 
 
 # Tests for pubkey_from_tx
@@ -412,8 +480,6 @@ def test_pubkey_from_tx_witness_binascii_error():
 
 def test_pubkey_from_tx_witness_malformed_point():
     """Test pubkey_from_tx with P2WSH multisig where witness[1] is a DER signature, not a pubkey"""
-    from ecdsa.ellipticcurve import MalformedPointError
-
     with mock.patch("counterpartycore.lib.backend.electrs.PublicKey") as mock_pubkey:
         mock_pubkey.from_hex.side_effect = MalformedPointError()
 
@@ -592,8 +658,8 @@ def test_pubkey_from_tx_coinbase():
 # Tests for search_pubkey
 def test_search_pubkey_found():
     """Test search_pubkey when the public key is found"""
-    previous_url = config.ELECTRS_URL
-    config.ELECTRS_URL = "http://localhost:3000"
+    previous_url = config.ELECTRS_URLS
+    config.ELECTRS_URLS = ["http://localhost:3000"]
 
     with (
         mock.patch("counterpartycore.lib.backend.electrs.get_history") as mock_get_history,
@@ -608,13 +674,13 @@ def test_search_pubkey_found():
         assert mock_pubkey_from_tx.call_count == 2
 
     # Restore original URL
-    config.ELECTRS_URL = previous_url
+    config.ELECTRS_URLS = previous_url
 
 
 def test_search_pubkey_not_found():
     """Test search_pubkey when the public key is not found"""
-    previous_url = config.ELECTRS_URL
-    config.ELECTRS_URL = "http://localhost:3000"
+    previous_url = config.ELECTRS_URLS
+    config.ELECTRS_URLS = ["http://localhost:3000"]
 
     with (
         mock.patch("counterpartycore.lib.backend.electrs.get_history") as mock_get_history,
@@ -629,13 +695,13 @@ def test_search_pubkey_not_found():
         assert mock_pubkey_from_tx.call_count == 2
 
     # Restore original URL
-    config.ELECTRS_URL = previous_url
+    config.ELECTRS_URLS = previous_url
 
 
 def test_search_pubkey_empty_history():
     """Test search_pubkey with an empty history"""
-    previous_url = config.ELECTRS_URL
-    config.ELECTRS_URL = "http://localhost:3000"
+    previous_url = config.ELECTRS_URLS
+    config.ELECTRS_URLS = ["http://localhost:3000"]
 
     with mock.patch("counterpartycore.lib.backend.electrs.get_history") as mock_get_history:
         mock_get_history.return_value = []
@@ -645,7 +711,7 @@ def test_search_pubkey_empty_history():
         assert result is None
 
     # Restore original URL
-    config.ELECTRS_URL = previous_url
+    config.ELECTRS_URLS = previous_url
 
 
 # Tests for list_unspent
@@ -653,8 +719,8 @@ def test_list_unspent_with_utxos():
     """Test list_unspent with available UTXOs"""
     previous_unit = getattr(config, "UNIT", None)
     config.UNIT = 10**8
-    previous_url = config.ELECTRS_URL
-    config.ELECTRS_URL = "http://localhost:3000"
+    previous_url = config.ELECTRS_URLS
+    config.ELECTRS_URLS = ["http://localhost:3000"]
 
     with mock.patch("counterpartycore.lib.backend.electrs.get_utxos") as mock_get_utxos:
         mock_get_utxos.return_value = [
@@ -673,15 +739,15 @@ def test_list_unspent_with_utxos():
 
     # Restore original values
     config.UNIT = previous_unit
-    config.ELECTRS_URL = previous_url
+    config.ELECTRS_URLS = previous_url
 
 
 def test_list_unspent_no_utxos():
     """Test list_unspent without available UTXOs"""
     previous_unit = getattr(config, "UNIT", None)
     config.UNIT = 10**8
-    previous_url = config.ELECTRS_URL
-    config.ELECTRS_URL = "http://localhost:3000"
+    previous_url = config.ELECTRS_URLS
+    config.ELECTRS_URLS = ["http://localhost:3000"]
 
     with mock.patch("counterpartycore.lib.backend.electrs.get_utxos") as mock_get_utxos:
         mock_get_utxos.return_value = []
@@ -693,14 +759,14 @@ def test_list_unspent_no_utxos():
 
     # Restore original values
     config.UNIT = previous_unit
-    config.ELECTRS_URL = previous_url
+    config.ELECTRS_URLS = previous_url
 
 
 # Tests for pubkeyhash_to_pubkey
 def test_pubkeyhash_to_pubkey():
     """Test pubkeyhash_to_pubkey"""
-    previous_url = config.ELECTRS_URL
-    config.ELECTRS_URL = "http://localhost:3000"
+    previous_url = config.ELECTRS_URLS
+    config.ELECTRS_URLS = ["http://localhost:3000"]
 
     with mock.patch("counterpartycore.lib.backend.electrs.search_pubkey") as mock_search_pubkey:
         mock_search_pubkey.return_value = "found_pubkey"
@@ -711,4 +777,31 @@ def test_pubkeyhash_to_pubkey():
         mock_search_pubkey.assert_called_once_with("test_address")
 
     # Restore original URL
-    config.ELECTRS_URL = previous_url
+    config.ELECTRS_URLS = previous_url
+
+
+# Tests for default URL configuration
+def test_default_electrs_urls_mainnet():
+    """Test that mainnet defaults include both blockstream and mempool."""
+    assert isinstance(config.DEFAULT_ELECTRS_URLS_MAINNET, list)
+    assert len(config.DEFAULT_ELECTRS_URLS_MAINNET) >= 2
+    assert "https://blockstream.info/api" in config.DEFAULT_ELECTRS_URLS_MAINNET
+    assert "https://mempool.space/api" in config.DEFAULT_ELECTRS_URLS_MAINNET
+
+
+def test_default_electrs_urls_testnet3():
+    """Test testnet3 default URL."""
+    assert isinstance(config.DEFAULT_ELECTRS_URLS_TESTNET3, list)
+    assert "https://blockstream.info/testnet/api" in config.DEFAULT_ELECTRS_URLS_TESTNET3
+
+
+def test_default_electrs_urls_testnet4():
+    """Test testnet4 default URL."""
+    assert isinstance(config.DEFAULT_ELECTRS_URLS_TESTNET4, list)
+    assert "https://mempool.space/testnet4/api" in config.DEFAULT_ELECTRS_URLS_TESTNET4
+
+
+def test_default_electrs_urls_signet():
+    """Test signet default URL."""
+    assert isinstance(config.DEFAULT_ELECTRS_URLS_SIGNET, list)
+    assert "https://mempool.space/signet/api" in config.DEFAULT_ELECTRS_URLS_SIGNET

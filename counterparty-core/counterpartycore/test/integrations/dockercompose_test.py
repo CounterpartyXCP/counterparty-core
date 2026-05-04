@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import tempfile
@@ -23,8 +24,6 @@ def print_docker_output(out, printed_line_count):
 
 
 def rpc_call(url, method, params):
-    import json
-
     headers = {"content-type": "application/json"}
     payload = {
         "method": method,
@@ -57,7 +56,7 @@ def test_docker_compose():
             docker_compose_file = f.read()
         docker_compose_file = docker_compose_file.replace(
             f"image: counterparty/counterparty:v{config.VERSION_STRING}",
-            "image: counterparty/counterparty:v11.0.3",
+            "image: counterparty/counterparty:v11.0.4",
         )
         with open(os.path.join(BASE_DIR, "docker-compose-test.yml"), "w") as f:
             f.write(docker_compose_file)

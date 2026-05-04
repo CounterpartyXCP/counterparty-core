@@ -90,7 +90,7 @@ def compose(db, source: str, asset: str, quantity: int = 0, skip_validation: boo
         fairminter = ledger.issuances.get_fairminter_by_asset(db, asset)
         if fairminter["price"] == 0:
             raise exceptions.ComposeError("quantity is not allowed for free fairminters")
-        elif quantity % fairminter["quantity_by_price"] != 0:
+        if quantity % fairminter["quantity_by_price"] != 0:
             raise exceptions.ComposeError("quantity is not a multiple of lot_size")
 
     # create message
@@ -144,7 +144,7 @@ def unpack(message, return_dict=False, block_index=None):
 
 
 def parse(db, tx, message):
-    (asset, quantity) = unpack(message)
+    (asset, quantity) = unpack(message, block_index=tx["block_index"])
     problems = validate(db, tx["source"], asset, quantity)
 
     # if problems, insert into fairmints table with status invalid and return

@@ -1,5 +1,7 @@
 import binascii
+import math
 import re
+import threading
 from io import BytesIO
 
 import bitcoin
@@ -10,6 +12,7 @@ from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessI
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import composer
 from counterpartycore.lib.parser import deserialize
+from counterpartycore.lib.utils import script
 from counterpartycore.test.fixtures.defaults import DEFAULT_PARAMS as DEFAULTS
 
 PROVIDED_PUBKEYS = ",".join(
@@ -2224,6 +2227,51 @@ def test_utxolocks(ledger_db):
     )
 
 
+def test_utxolocks_thread_safety():
+    """The mutex must serialise concurrent lock/locked calls so that two
+    threads cannot pick the same UTXO between filter_unspent_list and
+    lock_inputs."""
+    composer.UTXOLocks().init()
+    composer.UTXOLocks().set_limits(60, 2000)
+
+    # Concurrent lock/locked must not raise and must keep the singleton
+    # in a consistent state
+    errors = []
+
+    def hammer(prefix):
+        try:
+            for i in range(50):
+                utxo = f"tx_{prefix}_{i}:0"
+                composer.UTXOLocks().lock(utxo)
+                assert composer.UTXOLocks().locked(utxo) is True
+        except Exception as e:  # pylint: disable=broad-except
+            errors.append(e)
+
+    threads = [threading.Thread(target=hammer, args=(p,)) for p in ("a", "b", "c", "d")]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert errors == []
+
+
+def test_utxolocks_mutex_attribute_present():
+    """The UTXOLocks singleton must expose a `_mutex` attribute so that
+    lock() and locked() can serialise access; without it concurrent
+    compose_transaction calls in a single gunicorn worker can pick the
+    same UTXO and produce an unsignable second tx."""
+    composer.UTXOLocks().init()
+    assert hasattr(composer.UTXOLocks(), "_mutex")
+
+
+def test_get_output_type_aliases():
+    """get_output_type / is_segwit_output are now thin re-exports of the
+    `script` module helpers; this test pins the re-export so the alias
+    survives future refactors."""
+    assert composer.get_output_type is script.get_output_type
+    assert composer.is_segwit_output is script.is_segwit_output
+
+
 def test_utxolocks_custom_input(ledger_db):
     composer.UTXOLocks().init()
 
@@ -2420,8 +2468,6 @@ def test_compose_taproot(ledger_db, defaults):
 
 def test_sub_sat_per_vbyte_fee_rounding():
     """Test that sub-1 sat/vByte fees use math.ceil for proper rounding."""
-    import math
-
     test_cases = [
         # (sat_per_vbyte, vsize, expected_fee)
         (0.5, 101, 51),  # 50.5 -> ceil = 51
@@ -2451,8 +2497,6 @@ def test_fee_per_kb_to_sat_per_vbyte_conversion():
 @pytest.mark.parametrize("sat_per_vbyte", [0.1, 0.5, 0.9])
 def test_compose_transaction_sub_sat_per_vbyte(ledger_db, defaults, sat_per_vbyte):
     """Test composing transactions with various sub-1 sat/vByte rates."""
-    import math
-
     params = {
         "source": defaults["addresses"][0],
         "destination": defaults["addresses"][1],

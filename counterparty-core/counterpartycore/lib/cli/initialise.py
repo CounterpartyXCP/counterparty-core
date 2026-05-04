@@ -532,20 +532,25 @@ def initialise_config(
     config.GUNICORN_WORKERS = gunicorn_workers
 
     if electrs_url:
-        if not helpers.is_url(electrs_url):
-            raise exceptions.ConfigurationError("Invalid Electrs URL")
-        config.ELECTRS_URL = electrs_url
+        if isinstance(electrs_url, str):
+            electrs_url = [electrs_url]
+        for url in electrs_url:
+            if not helpers.is_url(url):
+                raise exceptions.ConfigurationError(f"Invalid Electrs URL: {url}")
+        config.ELECTRS_URLS = electrs_url
+        config.ELECTRS_URLS_IS_DEFAULT = False
     else:
         if config.NETWORK_NAME == "testnet":
-            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_TESTNET3
-        if config.NETWORK_NAME == "testnet4":
-            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_TESTNET4
+            config.ELECTRS_URLS = config.DEFAULT_ELECTRS_URLS_TESTNET3
+        elif config.NETWORK_NAME == "testnet4":
+            config.ELECTRS_URLS = config.DEFAULT_ELECTRS_URLS_TESTNET4
         elif config.NETWORK_NAME == "mainnet":
-            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_MAINNET
+            config.ELECTRS_URLS = config.DEFAULT_ELECTRS_URLS_MAINNET
         elif config.NETWORK_NAME == "signet":
-            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_SIGNET
+            config.ELECTRS_URLS = config.DEFAULT_ELECTRS_URLS_SIGNET
         else:
-            config.ELECTRS_URL = None
+            config.ELECTRS_URLS = None
+        config.ELECTRS_URLS_IS_DEFAULT = config.ELECTRS_URLS is not None
 
     config.API_ONLY = api_only
     config.PROFILE = profile
