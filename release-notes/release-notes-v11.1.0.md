@@ -102,3 +102,4 @@ The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 
 
 - Ouziel Slama
 - Adam Krellenstein
+- Dan Anderson
