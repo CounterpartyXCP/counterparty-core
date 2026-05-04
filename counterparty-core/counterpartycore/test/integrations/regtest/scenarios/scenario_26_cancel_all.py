@@ -13,7 +13,7 @@ SCENARIO = [
         },
         "set_variables": {
             "CANCEL_ALL_ORDER_A_HASH": "$TX_HASH",
-            "CANCEL_ALL_ORDER_A_EXPIRE_INDEX": "$BLOCK_INDEX + 21",
+            "CANCEL_ALL_ORDER_A_EXPIRE_INDEX": "$BLOCK_INDEX + 20",
         },
         "controls": [
             {
@@ -77,7 +77,7 @@ SCENARIO = [
         },
         "set_variables": {
             "CANCEL_ALL_ORDER_B_HASH": "$TX_HASH",
-            "CANCEL_ALL_ORDER_B_EXPIRE_INDEX": "$BLOCK_INDEX + 21",
+            "CANCEL_ALL_ORDER_B_EXPIRE_INDEX": "$BLOCK_INDEX + 20",
         },
         "controls": [
             {
