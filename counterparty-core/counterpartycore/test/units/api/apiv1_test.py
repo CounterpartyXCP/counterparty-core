@@ -1,7 +1,7 @@
 import re
 
 import pytest
-from counterpartycore.lib import config, exceptions
+from counterpartycore.lib import exceptions
 from counterpartycore.lib.api import apiv1
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 from jsonrpc import dispatcher as global_dispatcher
