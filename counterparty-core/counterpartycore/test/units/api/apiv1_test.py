@@ -921,36 +921,7 @@ def test_get_rows_filter_field_non_string_blocked(ledger_db, state_db):
         )
 
 
-def test_sql_method_requires_rpc_password_when_unset(ledger_db, state_db, monkeypatch):
-    """The sql JSON-RPC method must reject calls when RPC_PASSWORD is not
-    set, because the route-level auth wrapper at handle_root is a no-op
-    in that case -- leaving the DoS-prone endpoint open to the internet.
-
-    Calls the inner @dispatcher-decorated function directly to bypass the
-    Flask app's own auth handling (which itself would error before our
-    gate ran).
-    """
-    # Re-create the app under config without RPC_PASSWORD so the dispatcher
-    # method definition runs the new gate.
-    previous_password = getattr(config, "RPC_PASSWORD", None)
-    try:
-        if hasattr(config, "RPC_PASSWORD"):
-            monkeypatch.delattr(config, "RPC_PASSWORD")
-        # Re-instantiate the app fresh (the dispatcher closure captured by
-        # apiv1_app fixture may have been built when RPC_PASSWORD was set).
-        apiv1.create_app()
-        sql_method = global_dispatcher.method_map.get("sql")
-        assert sql_method is not None
-        with pytest.raises(exceptions.APIError, match="requires authentication"):
-            sql_method("SELECT 1")
-    finally:
-        if previous_password is not None:
-            config.RPC_PASSWORD = previous_password
-
-
-def test_sql_method_works_with_rpc_password_set(ledger_db, state_db, monkeypatch):
-    """When RPC_PASSWORD is set, the sql method runs normally."""
-    monkeypatch.setattr(config, "RPC_PASSWORD", "test_password", raising=False)
+def test_sql_method(ledger_db, state_db):
     apiv1.create_app()
     sql_method = global_dispatcher.method_map.get("sql")
     assert sql_method is not None

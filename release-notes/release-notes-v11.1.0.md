@@ -84,7 +84,6 @@ The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 
 ## API
 
 - Block APIv1 SQL injection via `filter_["field"]`; redact secrets in logs
-- Require auth for the APIv1 `sql` JSON-RPC method
 
 ## Codebase
 
