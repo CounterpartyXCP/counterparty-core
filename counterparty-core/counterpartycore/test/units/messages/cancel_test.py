@@ -1,6 +1,27 @@
+from contextlib import contextmanager
+
 import pytest
 from counterpartycore.lib import exceptions, ledger
 from counterpartycore.lib.messages import cancel
+from counterpartycore.lib.parser import protocol
+
+
+@contextmanager
+def cancel_all_limit(value):
+    """Temporarily override the cancel_all_offers_limit protocol value."""
+    change = protocol.PROTOCOL_CHANGES["cancel_all_offers_limit"]
+    original = {
+        net: {block: dict(entry) for block, entry in change[net].items()}
+        for net in ("mainnet", "testnet3", "testnet4", "signet")
+    }
+    try:
+        for net in ("mainnet", "testnet3", "testnet4", "signet"):
+            for block in change[net]:
+                change[net][block]["value"] = value
+        yield
+    finally:
+        for net, blocks in original.items():
+            change[net] = blocks
 
 
 def get_open_order(ledger_db):
@@ -262,3 +283,90 @@ def test_parse_cancel_all_wrong_flag(ledger_db, blockchain_mock):
         (tx["tx_hash"],),
     ).fetchone()
     assert "invalid: could not unpack" in record["status"]
+
+
+def test_parse_cancel_all_respects_limit(ledger_db, blockchain_mock):
+    """When more open offers exist than the configured limit, only `limit`
+    offers are cancelled (orders first, then bets) and the rest stay open."""
+    source = get_open_order(ledger_db)["source"]
+
+    orders_before = ledger.markets.get_open_orders_by_source(ledger_db, source)
+    bets_before = ledger.other.get_open_bets_by_source(ledger_db, source)
+    total_before = len(orders_before) + len(bets_before)
+    assert total_before > 1, "fixture must have at least 2 open offers for the truncation test"
+
+    limit = 1
+    expected_cancelled_orders = orders_before[:limit]
+    expected_remaining_orders = orders_before[limit:]
+
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    with cancel_all_limit(limit):
+        cancel.parse(ledger_db, tx, cancel.CANCEL_ALL_FLAG)
+
+    cancel_record = ledger_db.execute(
+        "SELECT * FROM cancels WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
+        (tx["tx_hash"],),
+    ).fetchone()
+    assert cancel_record is not None
+    assert cancel_record["status"] == "valid"
+    assert cancel_record["offer_hash"] == "cancel_all"
+
+    orders_after = ledger.markets.get_open_orders_by_source(ledger_db, source)
+    bets_after = ledger.other.get_open_bets_by_source(ledger_db, source)
+    assert len(orders_after) + len(bets_after) == total_before - limit
+
+    remaining_hashes_after = {o["tx_hash"] for o in orders_after} | {
+        b["tx_hash"] for b in bets_after
+    }
+    assert remaining_hashes_after == {o["tx_hash"] for o in expected_remaining_orders} | {
+        b["tx_hash"] for b in bets_before
+    }
+
+    cancelled = ledger_db.execute(
+        """SELECT * FROM (
+            SELECT *, MAX(rowid) FROM orders WHERE tx_hash = ? GROUP BY tx_hash
+        )""",
+        (expected_cancelled_orders[0]["tx_hash"],),
+    ).fetchone()
+    assert cancelled["status"] == "cancelled"
+
+    counter = ledger_db.execute(
+        """SELECT count FROM transaction_count
+           WHERE block_index = ? AND transaction_id = ?
+           ORDER BY rowid DESC LIMIT 1""",
+        (tx["block_index"], cancel.ID),
+    ).fetchone()
+    assert counter is not None
+    prev_counter = ledger_db.execute(
+        """SELECT count FROM transaction_count
+           WHERE block_index = ? AND transaction_id = ?
+           ORDER BY rowid DESC LIMIT 1 OFFSET 1""",
+        (tx["block_index"], cancel.ID),
+    ).fetchone()
+    prev_count = prev_counter["count"] if prev_counter is not None else 0
+    assert counter["count"] - prev_count == limit
+
+
+def test_parse_cancel_all_limit_above_total(ledger_db, blockchain_mock):
+    """When the limit exceeds the total open offers, all are cancelled (no truncation)."""
+    source = get_open_order(ledger_db)["source"]
+
+    orders_before = ledger.markets.get_open_orders_by_source(ledger_db, source)
+    bets_before = ledger.other.get_open_bets_by_source(ledger_db, source)
+    total_before = len(orders_before) + len(bets_before)
+    assert total_before > 0
+
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    with cancel_all_limit(total_before + 10):
+        cancel.parse(ledger_db, tx, cancel.CANCEL_ALL_FLAG)
+
+    record = ledger_db.execute(
+        "SELECT * FROM cancels WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
+        (tx["tx_hash"],),
+    ).fetchone()
+    assert record["status"] == "valid"
+
+    orders_after = ledger.markets.get_open_orders_by_source(ledger_db, source)
+    bets_after = ledger.other.get_open_bets_by_source(ledger_db, source)
+    assert len(orders_after) == 0
+    assert len(bets_after) == 0

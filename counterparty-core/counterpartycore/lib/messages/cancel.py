@@ -123,7 +123,12 @@ def parse(db, tx, message):
         if status == "valid":
             open_orders = ledger.markets.get_open_orders_by_source(db, tx["source"])
             open_bets = ledger.other.get_open_bets_by_source(db, tx["source"])
-            offer_count = len(open_orders) + len(open_bets)
+
+            limit = protocol.get_value_by_block_index("cancel_all_offers_limit", tx["block_index"])
+            to_cancel_orders = open_orders[:limit]
+            remaining = max(0, limit - len(to_cancel_orders))
+            to_cancel_bets = open_bets[:remaining]
+            offer_count = len(to_cancel_orders) + len(to_cancel_bets)
 
             fee = gas.get_transaction_fee(db, ID, tx["block_index"])
             if fee > 0:
@@ -139,9 +144,9 @@ def parse(db, tx, message):
 
             gas.increment_counter(db, ID, tx["block_index"], count=offer_count)
 
-            for open_order in open_orders:
+            for open_order in to_cancel_orders:
                 order.cancel_order(db, open_order, "cancelled", tx["block_index"], tx["tx_index"])
-            for open_bet in open_bets:
+            for open_bet in to_cancel_bets:
                 bet.cancel_bet(db, open_bet, "cancelled", tx["tx_index"])
 
         bindings = {
