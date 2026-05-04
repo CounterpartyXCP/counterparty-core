@@ -228,6 +228,12 @@ def unpack(message, block_index, return_dict=False):
                     message, block_index=block_index
                 )
             except Exception:  # pylint: disable=broad-exception-caught
+                # Inelegant but effective: after taproot_support, broadcasts
+                # *should* be CBOR, but a non-trivial number of messages on
+                # chain still use the legacy struct format (and cbor2 raises
+                # a wide range of decoder-specific exceptions we don't want
+                # to enumerate). Falling back unconditionally lets us keep
+                # parsing both formats without forking the wire path.
                 timestamp, value, fee_fraction_int, mime_type, text = load_data_legacy(
                     message, block_index
                 )  # fallback to legacy unpacking
@@ -243,8 +249,14 @@ def unpack(message, block_index, return_dict=False):
         timestamp, value, fee_fraction_int, mime_type, text = 0, None, 0, "", None
         status = "invalid: could not unpack text"
     except Exception:  # pylint: disable=broad-exception-caught
-        # Catches VarIntSerializer.SerializationTruncationError and any other
-        # parsing errors from hand-rolled messages that the specific excepts miss.
+        # Consensus-safety net: unpack() is reached for *every* on-chain
+        # broadcast message, including arbitrary attacker-crafted bytes.
+        # Any uncaught exception here would propagate up to the parser
+        # and halt the indexer (chain stall == liveness failure for every
+        # node running this code). We deliberately catch everything --
+        # VarIntSerializer.SerializationTruncationError, cbor2 decoder
+        # errors, MemoryError on absurd lengths, etc. -- and mark the
+        # message invalid so consensus stays uniform across nodes.
         timestamp, value, fee_fraction_int, mime_type, text = 0, None, 0, "", None
         status = "invalid: could not unpack"
 
