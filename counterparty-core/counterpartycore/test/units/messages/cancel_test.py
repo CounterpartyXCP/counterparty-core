@@ -4,6 +4,7 @@ import pytest
 from counterpartycore.lib import exceptions, ledger
 from counterpartycore.lib.messages import cancel
 from counterpartycore.lib.parser import protocol
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 @contextmanager
@@ -257,8 +258,6 @@ def test_parse_cancel_all_invalid_message_before_activation(
     ledger_db, blockchain_mock, test_helpers
 ):
     """Before protocol activation, the 1-byte flag is treated as invalid unpack."""
-    from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
-
     source = get_open_order(ledger_db)["source"]
     tx = blockchain_mock.dummy_tx(ledger_db, source)
 
