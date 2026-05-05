@@ -222,8 +222,11 @@ def inject_normalized_quantities(result_list):
         "reserve_b": {"asset_field": "asset_b_info", "divisible": None},
         "quantity_a": {"asset_field": "asset_a_info", "divisible": None},
         "quantity_b": {"asset_field": "asset_b_info", "divisible": None},
-        "quantity_minted": {"asset_field": "lp_asset_info", "divisible": None},
-        "quantity_destroyed": {"asset_field": "lp_asset_info", "divisible": None},
+        # LP tokens are always divisible (set in make_lp_issuance_bindings); the
+        # withdrawal/match tables don't carry lp_asset, so resolving lp_asset_info
+        # is unreliable. Hardcode divisible=True to ensure normalization always runs.
+        "quantity_minted": {"asset_field": None, "divisible": True},
+        "quantity_destroyed": {"asset_field": None, "divisible": True},
         "fee_quantity": {"asset_field": "backward_asset_info", "divisible": None},
     }
 
