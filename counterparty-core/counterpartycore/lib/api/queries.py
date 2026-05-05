@@ -3970,6 +3970,8 @@ def get_pool_quote(state_db, asset1: str, asset2: str, quantity: int):
     :param asset2: The asset you want to receive (e.g. $ASSET_1)
     :param quantity: The quantity of asset1 to sell (in satoshis) (e.g. 1000000)
     """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
     give_asset = asset1
     give_quantity = quantity
     sorted_a, sorted_b = sort_pair(asset1, asset2)
@@ -4094,6 +4096,8 @@ def get_pool_quote_deposit(state_db, asset1: str, asset2: str, quantity: int):
     :param asset2: The second asset in the pair (e.g. $ASSET_1)
     :param quantity: The quantity of asset1 to deposit (in satoshis) (e.g. 1000000)
     """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
     sorted_a, sorted_b = sort_pair(asset1, asset2)
     pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
     pool = pool_row.result if pool_row else None
@@ -4140,7 +4144,8 @@ def get_pool_quote_withdraw(state_db, asset1: str, asset2: str, quantity: int):
     :param asset2: The second asset in the pair (e.g. $ASSET_1)
     :param quantity: The quantity of LP tokens to destroy (in satoshis) (e.g. 1000000)
     """
-
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
     sorted_a, sorted_b = sort_pair(asset1, asset2)
     pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
     pool = pool_row.result if pool_row else None

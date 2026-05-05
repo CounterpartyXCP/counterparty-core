@@ -300,6 +300,26 @@ def test_compose_pooldeposit(apiv2_client, defaults):
     assert response.status_code in [200, 400]
 
 
+def test_get_pool_deposit_estimate_xcp_fee(apiv2_client, defaults):
+    """Test get_pool_deposit_estimate_xcp_fee function via API."""
+    address = defaults["addresses"][0]
+    response = apiv2_client.get(f"/v2/addresses/{address}/compose/pooldeposit/estimatexcpfees")
+    assert response.status_code == 200
+    assert "result" in response.json
+    result = response.json["result"]
+    assert result is None or (isinstance(result, int) and result >= 0)
+
+
+def test_get_pool_withdraw_estimate_xcp_fee(apiv2_client, defaults):
+    """Test get_pool_withdraw_estimate_xcp_fee function via API."""
+    address = defaults["addresses"][0]
+    response = apiv2_client.get(f"/v2/addresses/{address}/compose/poolwithdraw/estimatexcpfees")
+    assert response.status_code == 200
+    assert "result" in response.json
+    result = response.json["result"]
+    assert result is None or (isinstance(result, int) and result >= 0)
+
+
 def test_compose_pooldeposit_with_lp_asset(apiv2_client, defaults):
     address = defaults["addresses"][0]
     response = apiv2_client.get(

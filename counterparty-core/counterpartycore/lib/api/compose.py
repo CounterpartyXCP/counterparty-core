@@ -542,9 +542,10 @@ def compose_pooldeposit(
     return composer.compose_transaction(db, "pooldeposit", params, construct_params)
 
 
-def get_pool_deposit_estimate_xcp_fee(db):
+def get_pool_deposit_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
     """
     Returns the estimated XCP fee for a pool deposit transaction.
+    :param address: The address depositing liquidity (e.g. $ADDRESS_1)
     """
     return gas.get_transaction_fee(db, 120, CurrentState().current_block_index())
 
@@ -586,9 +587,10 @@ def compose_poolwithdraw(
     return composer.compose_transaction(db, "poolwithdraw", params, construct_params)
 
 
-def get_pool_withdraw_estimate_xcp_fee(db):
+def get_pool_withdraw_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
     """
     Returns the estimated XCP fee for a pool withdrawal transaction.
+    :param address: The address withdrawing liquidity (e.g. $ADDRESS_1)
     """
     return gas.get_transaction_fee(db, 121, CurrentState().current_block_index())
 

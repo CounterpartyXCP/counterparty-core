@@ -1099,3 +1099,27 @@ def test_get_pool_quote_withdraw_zero_supply(state_db):
     assert result["pool_exists"] is True
     assert result["supply"] == 0
     assert "No LP tokens" in result["message"]
+
+
+def test_get_pool_quote_case_insensitive(state_db):
+    """get_pool_quote returns the same result for upper and lower case asset names."""
+    upper = queries.get_pool_quote(state_db, "POOLASSETA", "POOLASSETB", 1_000_000)
+    lower = queries.get_pool_quote(state_db, "poolasseta", "poolassetb", 1_000_000)
+    assert upper == lower
+    assert lower["pool_exists"] is True
+
+
+def test_get_pool_quote_deposit_case_insensitive(state_db):
+    """get_pool_quote_deposit returns the same result for upper and lower case asset names."""
+    upper = queries.get_pool_quote_deposit(state_db, "POOLASSETA", "POOLASSETB", 10_000_000)
+    lower = queries.get_pool_quote_deposit(state_db, "poolasseta", "poolassetb", 10_000_000)
+    assert upper == lower
+    assert lower["first_deposit"] is False
+
+
+def test_get_pool_quote_withdraw_case_insensitive(state_db):
+    """get_pool_quote_withdraw returns the same result for upper and lower case asset names."""
+    upper = queries.get_pool_quote_withdraw(state_db, "POOLASSETA", "POOLASSETB", 1_000_000)
+    lower = queries.get_pool_quote_withdraw(state_db, "poolasseta", "poolassetb", 1_000_000)
+    assert upper == lower
+    assert lower["pool_exists"] is True
