@@ -24,6 +24,7 @@ UPDATE_EVENTS_ID_FIELDS = {
     "RPS_UPDATE": ["tx_hash"],
     "ADDRESS_OPTIONS_UPDATE": ["address"],
     "FAIRMINTER_UPDATE": ["tx_hash"],
+    "POOL_UPDATE": ["asset_a", "asset_b"],
 }
 
 EVENTS_ADDRESS_FIELDS = {
@@ -57,6 +58,11 @@ EVENTS_ADDRESS_FIELDS = {
     "ATTACH_TO_UTXO": ["source", "destination_address"],
     "DETACH_FROM_UTXO": ["source_address", "destination"],
     "UTXO_MOVE": ["source_address", "destination_address"],
+    "OPEN_POOL": ["source"],
+    "POOL_UPDATE": [],
+    "NEW_POOL_DEPOSIT": ["source"],
+    "NEW_POOL_WITHDRAWAL": ["source"],
+    "POOL_MATCH": ["source"],
 }
 
 EXPIRATION_EVENTS_OBJECT_ID = {
@@ -96,6 +102,10 @@ STATE_DB_TABLES = [
     "orders",
     "rps",
     "rps_matches",
+    "pools",
+    "pool_deposits",
+    "pool_withdrawals",
+    "pool_matches",
     # only in state_db
     "address_events",
     "all_expirations",

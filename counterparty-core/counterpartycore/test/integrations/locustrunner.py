@@ -188,6 +188,10 @@ def prepare_url(route, MainnetFixtures):
         return None
     if "/bitcoin/" in route:
         return None
+    if "/quote" in route:
+        return None
+    if route == "/v2/pools/<asset1>/<asset2>":
+        return None
     if route in ["/v2/transactions/<tx_hash>/info", "/v2/transactions/info"]:
         return None
 

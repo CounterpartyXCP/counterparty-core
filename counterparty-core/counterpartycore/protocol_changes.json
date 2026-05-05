@@ -1058,6 +1058,18 @@
                         "fee_upper_threshold": 15,
                         "base_fee": 1,
                         "fee_sigmoid_k": 1
+                    },
+                    "120": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
+                    },
+                    "121": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
                     }
                 }
             }
@@ -1081,6 +1093,18 @@
                         "fee_sigmoid_k": 1
                     },
                     "70": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
+                    },
+                    "120": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
+                    },
+                    "121": {
                         "fee_lower_threshold": 3,
                         "fee_upper_threshold": 15,
                         "base_fee": 1,
@@ -1109,6 +1133,18 @@
                         "fee_upper_threshold": 15,
                         "base_fee": 1,
                         "fee_sigmoid_k": 1
+                    },
+                    "120": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
+                    },
+                    "121": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
                     }
                 }
             }
@@ -1129,6 +1165,18 @@
                         "fee_sigmoid_k": 1
                     },
                     "70": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
+                    },
+                    "120": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
+                    },
+                    "121": {
                         "fee_lower_threshold": 3,
                         "fee_upper_threshold": 15,
                         "base_fee": 1,
@@ -1306,5 +1354,14 @@
                 "value": 100
             }
         }
+    },
+    "amm_pools": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 999999999,
+        "testnet3_block_index": 999999999,
+        "testnet4_block_index": 999999999,
+        "signet_block_index": 0
     }
 }

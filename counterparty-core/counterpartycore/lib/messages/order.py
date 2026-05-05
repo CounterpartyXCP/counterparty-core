@@ -529,6 +529,18 @@ def match(db, tx, block_index=None):
     tx1_fee_required_remaining = tx1["fee_required_remaining"]
     tx1_fee_provided_remaining = tx1["fee_provided_remaining"]
 
+    # AMM pool lookup.
+    amm_pool = None
+    if protocol.enabled("amm_pools", block_index=tx["block_index"]) and config.BTC not in (
+        tx1["give_asset"],
+        tx1["get_asset"],
+    ):
+        amm_pool = ledger.markets.get_pool(
+            db, *ledger.markets.sort_pair(tx1["give_asset"], tx1["get_asset"])
+        )
+        if amm_pool and not ledger.markets.pool_has_liquidity(amm_pool):
+            amm_pool = None
+
     tx1_status = tx1["status"]
     for tx0 in order_matches:
         # Sanity check. Should never happen.
@@ -590,6 +602,56 @@ def match(db, tx, block_index=None):
                 if tx1_fee_required_remaining < 0:
                     logger.trace("Skipping: negative tx1 fee required remaining")
                     continue
+
+        # Routing rule: use pool liquidity while its marginal price
+        # beats the next book order's limit price, then fill the book
+        # order, then repeat. Remainder after all book orders goes to
+        # pool. This guarantees best-price execution for the taker.
+        if amm_pool and tx1_give_remaining > 0:
+            pool_fill_quantity, pool_output = ledger.markets.try_pool_fill(
+                tx1,
+                amm_pool,
+                tx1_give_remaining,
+                target_price_num=tx0["get_quantity"],
+                target_price_den=tx0["give_quantity"],
+            )
+            if pool_fill_quantity > 0:
+                ledger.markets.execute_pool_match(
+                    db, tx, tx1, amm_pool, pool_fill_quantity, pool_output
+                )
+                tx1_give_remaining -= pool_fill_quantity
+                tx1_get_remaining -= pool_output
+                amm_pool = ledger.markets.get_pool(
+                    db, *ledger.markets.sort_pair(tx1["give_asset"], tx1["get_asset"])
+                )
+
+                if tx1_give_remaining <= 0 or (
+                    tx1_get_remaining <= 0 and protocol.enabled("recredit_give_remaining")
+                ):
+                    tx1_status = "filled"
+                    if tx1_give_remaining > 0:
+                        ledger.events.credit(
+                            db,
+                            tx1["source"],
+                            tx1["give_asset"],
+                            tx1_give_remaining,
+                            tx["block_index"],
+                            event=tx1["tx_hash"],
+                            action="filled",
+                        )
+                    tx1_give_remaining = 0
+
+                set_data = {
+                    "give_remaining": tx1_give_remaining,
+                    "get_remaining": tx1_get_remaining,
+                    "fee_required_remaining": tx1_fee_required_remaining,
+                    "fee_provided_remaining": tx1_fee_provided_remaining,
+                    "status": tx1_status,
+                }
+                ledger.markets.update_order(db, tx1["tx_hash"], set_data)
+
+                if tx1_status == "filled":
+                    break
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
@@ -829,6 +891,50 @@ def match(db, tx, block_index=None):
 
             if tx1_status == "filled":
                 break
+
+    # Fill any remaining quantity from AMM pool after book orders exhausted.
+    if tx1_status == "open" and amm_pool and tx1_give_remaining > 0:
+        amm_pool = ledger.markets.get_pool(
+            db, *ledger.markets.sort_pair(tx1["give_asset"], tx1["get_asset"])
+        )
+        pool_fill_quantity, pool_output = ledger.markets.try_pool_fill(
+            tx1,
+            amm_pool,
+            tx1_give_remaining,
+            target_price_num=tx1["give_quantity"],
+            target_price_den=tx1["get_quantity"],
+        )
+        if pool_fill_quantity > 0:
+            ledger.markets.execute_pool_match(
+                db, tx, tx1, amm_pool, pool_fill_quantity, pool_output
+            )
+            tx1_give_remaining -= pool_fill_quantity
+            tx1_get_remaining -= pool_output
+
+            if tx1_give_remaining <= 0 or (
+                tx1_get_remaining <= 0 and protocol.enabled("recredit_give_remaining")
+            ):
+                tx1_status = "filled"
+                if tx1_give_remaining > 0:
+                    ledger.events.credit(
+                        db,
+                        tx1["source"],
+                        tx1["give_asset"],
+                        tx1_give_remaining,
+                        tx["block_index"],
+                        event=tx1["tx_hash"],
+                        action="filled",
+                    )
+                tx1_give_remaining = 0
+
+            set_data = {
+                "give_remaining": tx1_give_remaining,
+                "get_remaining": tx1_get_remaining,
+                "fee_required_remaining": tx1_fee_required_remaining,
+                "fee_provided_remaining": tx1_fee_provided_remaining,
+                "status": tx1_status,
+            }
+            ledger.markets.update_order(db, tx1["tx_hash"], set_data)
 
     cursor.close()
     return

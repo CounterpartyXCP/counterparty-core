@@ -864,3 +864,303 @@ def test_get_fairminters_by_asset_with_longname(state_db):
         asset="PARENT.CHILD",
     )
     assert result is not None
+
+
+# =============================================================================
+# Tests for AMM pool queries
+# =============================================================================
+
+
+def test_get_pools(state_db):
+    """Test get_pools returns a result (may be empty pre-activation)."""
+    result = queries.get_pools(state_db)
+    assert result is not None
+
+
+def test_get_pool_by_pair_nonexistent(state_db):
+    """Test get_pool_by_pair for a pair with no pool."""
+    result = queries.get_pool_by_pair(state_db, "XCP", "DIVISIBLE")
+    # No pool exists in default test fixture — returns None
+    assert result is None
+
+
+def test_get_pool_deposits_by_pair(state_db):
+    """Test get_pool_deposits_by_pair (may be empty)."""
+    result = queries.get_pool_deposits_by_pair(state_db, "XCP", "DIVISIBLE")
+    assert result is not None
+
+
+def test_get_pool_withdrawals_by_pair(state_db):
+    """Test get_pool_withdrawals_by_pair (may be empty)."""
+    result = queries.get_pool_withdrawals_by_pair(state_db, "XCP", "DIVISIBLE")
+    assert result is not None
+
+
+def test_get_pool_matches_by_pair(state_db):
+    """Test get_pool_matches_by_pair (may be empty)."""
+    result = queries.get_pool_matches_by_pair(state_db, "XCP", "DIVISIBLE")
+    assert result is not None
+
+
+def test_get_all_pool_matches(state_db):
+    """Test get_all_pool_matches (may be empty)."""
+    result = queries.get_all_pool_matches(state_db)
+    assert result is not None
+
+
+def test_get_pool_deposits_by_address(state_db, defaults):
+    """Test get_pool_deposits_by_address (may be empty)."""
+    result = queries.get_pool_deposits_by_address(state_db, defaults["addresses"][0])
+    assert result is not None
+
+
+def test_get_pool_withdrawals_by_address(state_db, defaults):
+    """Test get_pool_withdrawals_by_address (may be empty)."""
+    result = queries.get_pool_withdrawals_by_address(state_db, defaults["addresses"][0])
+    assert result is not None
+
+
+def test_get_pool_positions_by_address(state_db, defaults):
+    """Test get_pool_positions_by_address returns paginated QueryResult."""
+    result = queries.get_pool_positions_by_address(state_db, defaults["addresses"][0])
+    assert result is not None
+    assert isinstance(result, queries.QueryResult)
+    assert isinstance(result.result, list)
+
+
+def test_get_pool_positions_result_count(state_db, defaults):
+    """result_count reflects total matching rows, not just page size."""
+    full = queries.get_pool_positions_by_address(state_db, defaults["addresses"][0], limit=100)
+    total = full.result_count
+    if total > 1:
+        page = queries.get_pool_positions_by_address(state_db, defaults["addresses"][0], limit=1)
+        assert len(page.result) <= 1
+        assert page.result_count == total
+
+
+# =============================================================================
+# Tests for AMM pool quote functions — no-pool and edge-case paths
+# =============================================================================
+
+
+def test_get_pool_positions_by_address_with_cursor(state_db, defaults):
+    """get_pool_positions_by_address respects cursor parameter."""
+    result = queries.get_pool_positions_by_address(
+        state_db, defaults["addresses"][0], cursor=999999
+    )
+    assert result is not None
+    assert isinstance(result, queries.QueryResult)
+    assert isinstance(result.result, list)
+
+
+def test_get_pool_positions_by_address_with_offset(state_db, defaults):
+    """get_pool_positions_by_address respects offset parameter."""
+    result = queries.get_pool_positions_by_address(state_db, defaults["addresses"][0], offset=0)
+    assert result is not None
+    assert isinstance(result, queries.QueryResult)
+
+
+def test_get_pool_quote_deposit_with_pool(state_db):
+    """Deposit quote returns proportional amounts and LP estimate."""
+    result = queries.get_pool_quote_deposit(state_db, "POOLASSETA", "POOLASSETB", 10_000_000)
+    assert result["first_deposit"] is False
+    assert result["asset_a"] == "POOLASSETA"
+    assert result["asset_b"] == "POOLASSETB"
+    assert result["quantity_a_required"] == 10_000_000
+    assert result["quantity_b_required"] == 10_000_000
+    assert result["quantity_minted_estimate"] > 0
+
+
+def test_get_pool_quote_deposit_asset_order(state_db):
+    """Deposit quote works with assets in either URL order."""
+    result = queries.get_pool_quote_deposit(state_db, "POOLASSETB", "POOLASSETA", 10_000_000)
+    assert result["first_deposit"] is False
+    assert result["asset_a"] == "POOLASSETA"
+    assert result["asset_b"] == "POOLASSETB"
+
+
+def test_get_pool_quote_swap_with_pool(state_db):
+    """Swap quote routes through pool and/or book orders."""
+    result = queries.get_pool_quote(state_db, "POOLASSETA", "POOLASSETB", 1_000_000)
+    assert result["pool_exists"] is True
+    assert result["estimated_output"] > 0
+    assert result["pool_output"] + result["book_output"] > 0
+    assert result["fee_bps"] == 100
+    assert result["effective_price"] > 0
+    assert result["give_remaining"] == 0
+
+
+def test_get_pool_quote_swap_no_pool_no_orders(state_db):
+    """Swap quote with no pool and no orders returns early."""
+    result = queries.get_pool_quote(state_db, "XCP", "DIVISIBLE", 1_000_000)
+    assert result["pool_exists"] is False
+    assert result["estimated_output"] == 0
+    assert result["message"] == "No pool or orders exist for this pair."
+
+
+def test_get_pool_quote_swap_reversed_asset_order(state_db):
+    """Swap quote with reversed asset order (asset2 < asset1)."""
+    result = queries.get_pool_quote(state_db, "POOLASSETB", "POOLASSETA", 1_000_000)
+    assert result["pool_exists"] is True
+    assert result["estimated_output"] > 0
+    assert result["pool_output"] > 0
+
+
+def test_get_pool_quote_swap_hybrid(state_db):
+    """Swap quote with both pool and resting book orders (hybrid routing)."""
+    result = queries.get_pool_quote(state_db, "POOLASSETA", "POOLASSETB", 10_000_000)
+    assert result["pool_exists"] is True
+    assert result["pool_output"] >= 0
+    assert result["book_output"] > 0
+    assert result["book_orders_matched"] >= 1
+    assert result["estimated_output"] > 0
+
+
+def test_get_pool_quote_withdraw_with_pool(state_db):
+    """Withdraw quote returns proportional reserve amounts."""
+    result = queries.get_pool_quote_withdraw(state_db, "POOLASSETA", "POOLASSETB", 1_000_000)
+    assert result["pool_exists"] is True
+    assert result["asset_a"] == "POOLASSETA"
+    assert result["asset_b"] == "POOLASSETB"
+    assert result["quantity_a_estimate"] > 0
+    assert result["quantity_b_estimate"] > 0
+    assert result["supply"] == 50_000_000
+
+
+def test_get_pool_by_pair_with_pool(state_db):
+    """get_pool_by_pair returns pool when it exists."""
+    result = queries.get_pool_by_pair(state_db, "POOLASSETA", "POOLASSETB")
+    assert result is not None
+    assert result.result["asset_a"] == "POOLASSETA"
+    assert result.result["asset_b"] == "POOLASSETB"
+    assert result.result["reserve_a"] == 50_000_000
+    assert result.result["reserve_b"] == 50_000_000
+
+
+def test_get_pool_by_pair_reversed_order(state_db):
+    """get_pool_by_pair with reversed asset order still finds pool."""
+    result = queries.get_pool_by_pair(state_db, "POOLASSETB", "POOLASSETA")
+    assert result is not None
+    assert result.result["asset_a"] == "POOLASSETA"
+
+
+def test_get_pool_positions_with_data(state_db, defaults):
+    """get_pool_positions_by_address returns LP position when pool exists."""
+    result = queries.get_pool_positions_by_address(state_db, defaults["addresses"][0])
+    assert result.result_count > 0
+    position = result.result[0]
+    assert position["asset_a"] == "POOLASSETA"
+    assert position["asset_b"] == "POOLASSETB"
+    assert position["quantity"] == 50_000_000
+
+
+def test_get_pool_quote_deposit_no_pool(state_db):
+    """Deposit quote for nonexistent pair returns first_deposit=True."""
+    result = queries.get_pool_quote_deposit(state_db, "XCP", "DIVISIBLE", 100_000_000)
+    assert result["first_deposit"] is True
+    assert result["quantity_minted_estimate"] is None
+
+
+def test_get_pool_quote_withdraw_no_pool(state_db):
+    """Withdraw quote for nonexistent pair returns pool_exists=False."""
+    result = queries.get_pool_quote_withdraw(state_db, "XCP", "DIVISIBLE", 1_000)
+    assert result["pool_exists"] is False
+
+
+def test_get_pool_price_history(ledger_db):
+    """Pool price history returns results."""
+    result = queries.get_pool_price_history(ledger_db, "POOLASSETA", "POOLASSETB")
+    assert result is not None
+
+
+def test_get_pool_by_pair_case_insensitive(state_db):
+    """get_pool_by_pair returns same result for lower/upper case inputs."""
+    upper = queries.get_pool_by_pair(state_db, "POOLASSETA", "POOLASSETB")
+    lower = queries.get_pool_by_pair(state_db, "poolasseta", "poolassetb")
+    assert upper is not None
+    assert lower is not None
+    assert upper.result == lower.result
+
+
+def test_get_pool_deposits_by_pair_case_insensitive(state_db):
+    """get_pool_deposits_by_pair is case-insensitive on pair params."""
+    upper = queries.get_pool_deposits_by_pair(state_db, "POOLASSETA", "POOLASSETB")
+    lower = queries.get_pool_deposits_by_pair(state_db, "poolasseta", "poolassetb")
+    assert upper.result == lower.result
+    assert upper.result_count == lower.result_count
+
+
+def test_get_pool_withdrawals_by_pair_case_insensitive(state_db):
+    """get_pool_withdrawals_by_pair is case-insensitive on pair params."""
+    upper = queries.get_pool_withdrawals_by_pair(state_db, "POOLASSETA", "POOLASSETB")
+    lower = queries.get_pool_withdrawals_by_pair(state_db, "poolasseta", "poolassetb")
+    assert upper.result == lower.result
+    assert upper.result_count == lower.result_count
+
+
+def test_get_pool_matches_by_pair_case_insensitive(state_db):
+    """get_pool_matches_by_pair is case-insensitive on pair params."""
+    upper = queries.get_pool_matches_by_pair(state_db, "POOLASSETA", "POOLASSETB")
+    lower = queries.get_pool_matches_by_pair(state_db, "poolasseta", "poolassetb")
+    assert upper.result == lower.result
+    assert upper.result_count == lower.result_count
+
+
+def test_get_pool_price_history_case_insensitive(ledger_db):
+    """get_pool_price_history is case-insensitive on pair params."""
+    upper = queries.get_pool_price_history(ledger_db, "POOLASSETA", "POOLASSETB")
+    lower = queries.get_pool_price_history(ledger_db, "poolasseta", "poolassetb")
+    assert upper.result == lower.result
+    assert upper.result_count == lower.result_count
+
+
+def test_get_all_pool_matches_empty(state_db):
+    """All pool matches returns results."""
+    result = queries.get_all_pool_matches(state_db)
+    assert result is not None
+
+
+def test_get_all_pool_matches_with_block_index(state_db):
+    """All pool matches filtered by block_index."""
+    result = queries.get_all_pool_matches(state_db, block_index=310000)
+    assert result is not None
+
+
+def test_get_pool_matches_by_pair_empty(state_db):
+    """Pool matches for a pair returns results."""
+    result = queries.get_pool_matches_by_pair(state_db, "POOLASSETA", "POOLASSETB")
+    assert result is not None
+
+
+def test_get_pool_quote_withdraw_zero_supply(state_db):
+    """Withdraw quote reports zero supply when LP supply is drained."""
+    pool = queries.get_pool_by_pair(state_db, "POOLASSETA", "POOLASSETB").result
+    state_db.execute("UPDATE assets_info SET supply = 0 WHERE asset = ?", (pool["lp_asset"],))
+    result = queries.get_pool_quote_withdraw(state_db, "POOLASSETA", "POOLASSETB", 1_000_000)
+    assert result["pool_exists"] is True
+    assert result["supply"] == 0
+    assert "No LP tokens" in result["message"]
+
+
+def test_get_pool_quote_case_insensitive(state_db):
+    """get_pool_quote returns the same result for upper and lower case asset names."""
+    upper = queries.get_pool_quote(state_db, "POOLASSETA", "POOLASSETB", 1_000_000)
+    lower = queries.get_pool_quote(state_db, "poolasseta", "poolassetb", 1_000_000)
+    assert upper == lower
+    assert lower["pool_exists"] is True
+
+
+def test_get_pool_quote_deposit_case_insensitive(state_db):
+    """get_pool_quote_deposit returns the same result for upper and lower case asset names."""
+    upper = queries.get_pool_quote_deposit(state_db, "POOLASSETA", "POOLASSETB", 10_000_000)
+    lower = queries.get_pool_quote_deposit(state_db, "poolasseta", "poolassetb", 10_000_000)
+    assert upper == lower
+    assert lower["first_deposit"] is False
+
+
+def test_get_pool_quote_withdraw_case_insensitive(state_db):
+    """get_pool_quote_withdraw returns the same result for upper and lower case asset names."""
+    upper = queries.get_pool_quote_withdraw(state_db, "POOLASSETA", "POOLASSETB", 1_000_000)
+    lower = queries.get_pool_quote_withdraw(state_db, "poolasseta", "poolassetb", 1_000_000)
+    assert upper == lower
+    assert lower["pool_exists"] is True

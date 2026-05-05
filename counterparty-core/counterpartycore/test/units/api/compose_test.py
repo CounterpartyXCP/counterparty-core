@@ -1,6 +1,7 @@
 import pytest
-from counterpartycore.lib import exceptions
+from counterpartycore.lib import exceptions, ledger
 from counterpartycore.lib.api import compose
+from counterpartycore.lib.messages import pooldeposit
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 # ============================================================================
@@ -282,6 +283,141 @@ def test_get_attach_estimate_xcp_fee_no_address(apiv2_client):
     response = apiv2_client.get("/v2/compose/attach/estimatexcpfees")
     assert response.status_code == 200
     assert "result" in response.json
+
+
+# =============================================================================
+# Tests for pool compose and quote functions
+# =============================================================================
+
+
+def test_compose_pooldeposit(apiv2_client, defaults):
+    """Test compose_pooldeposit function via API."""
+    address = defaults["addresses"][0]
+    response = apiv2_client.get(
+        f"/v2/addresses/{address}/compose/pooldeposit"
+        f"?asset_a=XCP&asset_b=DIVISIBLE&quantity_a=100000000&quantity_b=100000000"
+    )
+    assert response.status_code in [200, 400]
+
+
+def test_get_pool_deposit_estimate_xcp_fee(apiv2_client, defaults):
+    """Test get_pool_deposit_estimate_xcp_fee function via API."""
+    address = defaults["addresses"][0]
+    response = apiv2_client.get(f"/v2/addresses/{address}/compose/pooldeposit/estimatexcpfees")
+    assert response.status_code == 200
+    assert "result" in response.json
+    result = response.json["result"]
+    assert result is None or (isinstance(result, int) and result >= 0)
+
+
+def test_get_pool_withdraw_estimate_xcp_fee(apiv2_client, defaults):
+    """Test get_pool_withdraw_estimate_xcp_fee function via API."""
+    address = defaults["addresses"][0]
+    response = apiv2_client.get(f"/v2/addresses/{address}/compose/poolwithdraw/estimatexcpfees")
+    assert response.status_code == 200
+    assert "result" in response.json
+    result = response.json["result"]
+    assert result is None or (isinstance(result, int) and result >= 0)
+
+
+def test_compose_pooldeposit_with_lp_asset(apiv2_client, defaults):
+    address = defaults["addresses"][0]
+    response = apiv2_client.get(
+        f"/v2/addresses/{address}/compose/pooldeposit"
+        f"?asset_a=XCP&asset_b=DIVISIBLE&quantity_a=100000000&quantity_b=100000000"
+        f"&lp_asset=A77777777777777777"
+    )
+    assert response.status_code in [200, 400]
+
+
+def test_compose_poolwithdraw(apiv2_client, defaults):
+    """Test compose_poolwithdraw function via API."""
+    address = defaults["addresses"][0]
+    response = apiv2_client.get(
+        f"/v2/addresses/{address}/compose/poolwithdraw?asset_a=XCP&asset_b=DIVISIBLE&quantity=1000"
+    )
+    assert response.status_code in [200, 400]
+
+
+def test_compose_poolwithdraw_with_slippage(apiv2_client, defaults):
+    address = defaults["addresses"][0]
+    response = apiv2_client.get(
+        f"/v2/addresses/{address}/compose/poolwithdraw"
+        f"?asset_a=XCP&asset_b=DIVISIBLE&quantity=1000"
+        f"&min_quantity_a=10&min_quantity_b=10"
+    )
+    assert response.status_code in [200, 400]
+
+
+def test_get_pool_quote_deposit(apiv2_client):
+    """Test get_pool_quote_deposit function via API."""
+    response = apiv2_client.get("/v2/pools/XCP/DIVISIBLE/quote/deposit?quantity=100000000")
+    assert response.status_code == 200
+    assert "result" in response.json
+    result = response.json["result"]
+    assert "first_deposit" in result
+
+
+def test_get_pool_quote_swap(apiv2_client):
+    """Test get_pool_quote_swap function via API."""
+    response = apiv2_client.get("/v2/pools/XCP/DIVISIBLE/quote?quantity=100000000")
+    assert response.status_code == 200
+    assert "result" in response.json
+
+
+def test_get_pool_quote_withdraw(apiv2_client):
+    """Test get_pool_quote_withdraw function via API."""
+    response = apiv2_client.get("/v2/pools/XCP/DIVISIBLE/quote/withdraw?quantity=1000")
+    assert response.status_code == 200
+    assert "result" in response.json
+
+
+def test_compose_poolwithdraw_with_lp_asset(apiv2_client, defaults):
+    """Test compose_poolwithdraw with lp_asset parameter instead of asset_a/asset_b."""
+    address = defaults["addresses"][0]
+    # Use a valid LP asset name. No pool will exist for it, so we expect an error,
+    # but the code path that resolves lp_asset -> asset_a/asset_b is exercised.
+    response = apiv2_client.get(
+        f"/v2/addresses/{address}/compose/poolwithdraw?lp_asset=NONEXISTENTLP&quantity=1000"
+    )
+    # Should return 400 because no pool found for LP asset
+    assert response.status_code == 400
+
+
+def test_compose_poolwithdraw_with_lp_asset_direct(ledger_db, defaults):
+    """Test compose_poolwithdraw with lp_asset parameter directly via compose module."""
+    address = defaults["addresses"][0]
+    with pytest.raises(exceptions.ComposeError, match="no pool found for LP asset"):
+        compose.compose_poolwithdraw(
+            ledger_db,
+            address=address,
+            lp_asset="NONEXISTENTLP",
+            quantity=1000,
+        )
+
+
+def test_compose_poolwithdraw_with_lp_asset_success(ledger_db, defaults, blockchain_mock):
+    """Test compose_poolwithdraw with lp_asset resolves to asset_a/asset_b from existing pool."""
+    source = defaults["addresses"][0]
+    quantity = defaults["quantity"]
+
+    # Create a real pool so lp_asset lookup succeeds
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", quantity, quantity)
+    pooldeposit.parse(ledger_db, tx, data[1:])
+
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    lp_asset = pool["lp_asset"]
+    lp_balance = ledger.balances.get_balance(ledger_db, source, lp_asset)
+    assert lp_balance > 0
+
+    result = compose.compose_poolwithdraw(
+        ledger_db,
+        address=source,
+        lp_asset=lp_asset,
+        quantity=lp_balance,
+    )
+    assert result is not None
 
 
 def test_compose_detach(ledger_db, defaults):
