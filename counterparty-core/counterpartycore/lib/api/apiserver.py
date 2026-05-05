@@ -217,7 +217,7 @@ def prepare_args(route, **kwargs):
             function_args[arg_name] = str_arg
 
     for arg_name, str_arg in function_args.items():
-        if str_arg is not None:
+        if str_arg is not None and str_arg != "":
             if arg_name.startswith("address"):
                 addresses = str_arg.split(",")
                 if not all(address.is_valid_address(addr) for addr in addresses):

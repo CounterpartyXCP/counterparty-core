@@ -320,8 +320,14 @@ def get_rows(
     # legacy filters
     if not show_expired and table == "orders":
         # Ignore BTC orders one block early.
+        # `expire_index IS NULL` keeps indefinite orders (introduced by
+        # `indefinite_orders` protocol change) visible: in SQL `NULL > X`
+        # evaluates to NULL (falsy), so without this clause a BTC sell
+        # order with `expiration=0` would always be filtered out here.
         expire_index = CurrentState().current_block_index() + 1
-        more_conditions.append("""((give_asset == ? AND expire_index > ?) OR give_asset != ?)""")
+        more_conditions.append(
+            """((give_asset == ? AND (expire_index > ? OR expire_index IS NULL)) OR give_asset != ?)"""
+        )
         bindings += [config.BTC, expire_index, config.BTC]
 
     if (len(conditions) + len(more_conditions)) > 0:
@@ -562,19 +568,6 @@ def create_app():
 
     @dispatcher.add_method
     def sql(query, bindings=None):
-        # The route-level auth at handle_root is `@conditional_decorator(
-        # auth.login_required, hasattr(config, "RPC_PASSWORD"))` -- a no-op
-        # when RPC_PASSWORD is unset, leaving this DoS-prone endpoint open
-        # to the internet on every default-config public APIv1 deployment.
-        # The 12-year-old PhantomPhreak `sql` feature (commit a29759ee8)
-        # stays available for operators who explicitly opt in by setting
-        # RPC_PASSWORD; public deployments without auth get a clean
-        # rejection instead of a blank check on `randomblob(1e9)` /
-        # recursive CTEs / N-way self-joins on the messages table.
-        if not getattr(config, "RPC_PASSWORD", None):
-            raise exceptions.APIError(
-                "The sql method requires authentication; set RPC_PASSWORD to enable."
-            )
         if bindings is None:  # noqa: E711
             bindings = []
         with LedgerDBConnectionPool().connection() as db:

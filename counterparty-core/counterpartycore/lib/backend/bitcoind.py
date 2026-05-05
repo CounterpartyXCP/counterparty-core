@@ -42,6 +42,19 @@ def clean_url_for_log(url):
     return url
 
 
+def _rpc_headers():
+    # Always send JSON content-type; conditionally include the X-API-Key
+    # header so the backend (e.g. Cloud Armor in front of bitcoind) can
+    # apply a higher per-key rate-limit bucket. Falls back to no header
+    # when `BACKEND_API_KEY` is unset, preserving the previous request
+    # shape for self-hosted nodes.
+    headers = {"content-type": "application/json"}
+    api_key = getattr(config, "BACKEND_API_KEY", None)
+    if api_key:
+        headers["X-API-Key"] = api_key
+    return headers
+
+
 # for testing
 def should_retry():
     if CurrentState().stopping():
@@ -97,7 +110,7 @@ def rpc_call(payload, retry=0):
             response = requests.post(
                 url,
                 data=json.dumps(payload),
-                headers={"content-type": "application/json"},
+                headers=_rpc_headers(),
                 verify=(not config.BACKEND_SSL_NO_VERIFY),
                 timeout=config.REQUESTS_TIMEOUT,
                 auth=("__cookie__", config.BACKEND_COOKIE) if config.BACKEND_COOKIE else None,
@@ -223,7 +236,7 @@ def safe_rpc_payload(payload):
         response = requests.post(
             config.BACKEND_URL,
             data=json.dumps(payload),
-            headers={"content-type": "application/json"},
+            headers=_rpc_headers(),
             verify=(not config.BACKEND_SSL_NO_VERIFY),
             timeout=config.REQUESTS_TIMEOUT,
             auth=("__cookie__", config.BACKEND_COOKIE) if config.BACKEND_COOKIE else None,

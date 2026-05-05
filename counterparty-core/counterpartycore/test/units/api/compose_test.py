@@ -78,6 +78,22 @@ def test_compose_cancel(apiv2_client, defaults, ledger_db):
         assert response.status_code in [200, 400]
 
 
+def test_compose_cancel_all(apiv2_client, defaults, ledger_db):
+    """Test compose_cancel with no offer_hash (cancel-all mode) via API."""
+    order = ledger_db.execute("SELECT source FROM orders WHERE status = 'open' LIMIT 1").fetchone()
+    if order:
+        response = apiv2_client.get(f"/v2/addresses/{order['source']}/compose/cancel")
+        assert response.status_code in [200, 400]
+
+
+def test_compose_cancel_all_estimate_fee(apiv2_client, defaults):
+    """Test cancel-all fee estimate endpoint."""
+    response = apiv2_client.get(
+        f"/v2/addresses/{defaults['addresses'][0]}/compose/cancel/estimatexcpfees"
+    )
+    assert response.status_code == 200
+
+
 def test_compose_destroy(apiv2_client, defaults):
     """Test compose_destroy function via API."""
     address = defaults["addresses"][0]

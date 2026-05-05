@@ -19,6 +19,7 @@ D = decimal.Decimal
 FORMAT = ">QQQQHQ"
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
 ID = 10
+MAX_EXPIRATION_U16 = 2**16 - 1
 
 
 def exact_penalty(db, address, block_index, tx_index):
@@ -283,7 +284,10 @@ def validate(
         db, status="valid", asset=get_asset, current_block_index=block_index
     ):
         problems.append(f"no such asset to get ({get_asset})")
-    if expiration > config.MAX_EXPIRATION:
+    if protocol.enabled("indefinite_orders", block_index=block_index):
+        if expiration > MAX_EXPIRATION_U16:
+            problems.append("expiration overflow")
+    elif expiration > config.MAX_EXPIRATION:
         problems.append("expiration overflow")
 
     cursor.close()
@@ -436,6 +440,18 @@ def parse(db, tx, message):
                 event=tx["tx_hash"],
             )
 
+    # Compute expire_index based on the `indefinite_orders` protocol gate.
+    # After activation: expiration=0 means indefinite (NULL), and expiration=N
+    # means exactly N blocks of life (block_index + N - 1).
+    # Before activation: expire_index = block_index + expiration (legacy off-by-one).
+    if protocol.enabled("indefinite_orders", block_index=tx["block_index"]):
+        if expiration == 0:
+            expire_index = None
+        else:
+            expire_index = tx["block_index"] + expiration - 1
+    else:
+        expire_index = tx["block_index"] + expiration
+
     # Add parsed transaction to message-type–specific table.
     bindings = {
         "tx_index": tx["tx_index"],
@@ -449,7 +465,7 @@ def parse(db, tx, message):
         "get_quantity": get_quantity,
         "get_remaining": get_quantity,
         "expiration": expiration,
-        "expire_index": tx["block_index"] + expiration,
+        "expire_index": expire_index,
         "fee_required": fee_required,
         "fee_required_remaining": fee_required,
         "fee_provided": tx["fee"],
@@ -835,7 +851,10 @@ def match(db, tx, block_index=None):
 
             # Calculate when the match will expire.
             if protocol.enabled("20_blocks_expiration"):  # Protocol change.
-                match_expire_index = block_index + 20
+                if protocol.enabled("indefinite_orders", block_index=block_index):
+                    match_expire_index = block_index + 20 - 1
+                else:
+                    match_expire_index = block_index + 20
             elif protocol.enabled("no_backwards_compatibility"):  # Protocol change.
                 match_expire_index = block_index + 10
             else:

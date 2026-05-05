@@ -113,6 +113,12 @@ class BlockchainWatcher:
         # ZMQError in receive_multipart) doesn't leak file descriptors and
         # eventually exhaust the per-process limit on long-running indexers
         # with flapping ZMQ connections.
+        # Best-effort teardown on the reconnect path: each step must not
+        # short-circuit the next one (and the fresh Context/socket creation
+        # below), otherwise a single failed close() would leave the watcher
+        # stuck without a working ZMQ stack. pyzmq can raise ZMQError but
+        # also OS-level errors / edge cases (already-closed socket, race
+        # with the asyncio loop) so we catch broadly and only log at debug.
         if self.zmq_sub_socket_sequence is not None:
             try:
                 self.zmq_sub_socket_sequence.close(linger=0)
@@ -172,11 +178,46 @@ class BlockchainWatcher:
                     logger.debug("Previous block is missing. Catching up...")
                     blocks.catch_up(self.db)
                     CurrentState().set_ledger_state(self.db, "Following")
+                    if not config.NO_MEMPOOL:
+                        try:
+                            mempool.clean_mempool(self.db)
+                        except (
+                            exceptions.BitcoindRPCError,
+                            exceptions.BitcoindZMQError,
+                        ) as e:
+                            logger.warning(
+                                "clean_mempool failed after catch_up (will retry next block): %s",
+                                e,
+                            )
                 else:
-                    blocks.parse_new_block(self.db, decoded_block)
-                CurrentState().set_ledger_state(self.db, "Following")
-                if not config.NO_MEMPOOL:
-                    mempool.clean_mempool(self.db)
+                    # Atomic: parse_new_block + clean_mempool share one outer
+                    # transaction so a reader (e.g. APIWatcher polling the
+                    # ledger DB) cannot observe BLOCK_PARSED visible while
+                    # the just-confirmed tx's mempool rows are still around.
+                    # Without this, scenarios_test races on `mempool/events`
+                    # being empty right after wait_for_counterparty_server
+                    # returns: the APIWatcher had already seen the commit
+                    # from parse_new_block (and bumped LAST_BLOCK_PARSED in
+                    # state_db) while the separate clean_mempool DELETEs had
+                    # not yet committed in ledger_db.
+                    with self.db:
+                        blocks.parse_new_block(self.db, decoded_block)
+                        if not config.NO_MEMPOOL:
+                            try:
+                                mempool.clean_mempool(self.db)
+                            except (
+                                exceptions.BitcoindRPCError,
+                                exceptions.BitcoindZMQError,
+                            ) as e:
+                                # A transient RPC failure inside getrawmempool
+                                # must not roll back the just-parsed block;
+                                # the next receive_rawblock will retry the
+                                # mempool sweep. We still keep the block
+                                # commit because chain progress is critical.
+                                logger.warning(
+                                    "clean_mempool failed (will retry next block): %s", e
+                                )
+                    CurrentState().set_ledger_state(self.db, "Following")
                 if not config.NO_TELEMETRY:
                     TelemetryOneShot().submit()
         except exceptions.ParseTransactionError:
@@ -278,6 +319,10 @@ class BlockchainWatcher:
                 return
             raise e
         except Exception as e:  # pylint: disable=broad-except
+            # Anything other than EAGAIN here means the socket is in a bad
+            # state (closed, context terminated, asyncio<->zmq desync, OS
+            # error). Don't let it crash the watcher: rebuild the ZMQ stack
+            # via connect_to_zmq() and let the next handle() tick retry.
             logger.error("Error receiving message: %s. Reconnecting...", e)
             capture_exception(e)
             self.connect_to_zmq()
@@ -285,6 +330,12 @@ class BlockchainWatcher:
         try:
             self.receive_message(topic, body, seq)
         except Exception as e:  # pylint: disable=broad-except
+            # Re-raise after logging + Sentry so the outer handle() loop
+            # can stop() the watcher: any failure while *processing* a
+            # message (vs. receiving it) is not safely retriable here -- it
+            # would either corrupt sequence/raw_tx_cache state or silently
+            # skip a tx/block. Better to fail loud and let the supervisor
+            # restart catch_up() from scratch.
             logger.error("Error processing message: %s", e)
             # import traceback
             # print(traceback.format_exc())  # for debugging
@@ -341,6 +392,26 @@ class BlockchainWatcher:
                         logger.warning("ZMQ is late. Catching up...")
                         blocks.catch_up(self.db)
                         CurrentState().set_ledger_state(self.db, "Following")
+                        # Mirror the post-catch_up behaviour of receive_rawblock:
+                        # without this sweep, any mempool tx that confirmed in
+                        # the blocks parsed by catch_up() stays visible via
+                        # `mempool/events` until the next ZMQ rawblock arrives,
+                        # because clean_mempool only runs in receive_rawblock
+                        # and at watcher startup. Same reason scenarios_test
+                        # races on `mempool/events` after a `cancel` tx that
+                        # was confirmed via this code path.
+                        if not config.NO_MEMPOOL:
+                            try:
+                                mempool.clean_mempool(self.db)
+                            except (
+                                exceptions.BitcoindRPCError,
+                                exceptions.BitcoindZMQError,
+                            ) as e:
+                                logger.warning(
+                                    "clean_mempool failed after catch_up "
+                                    "(will retry next block): %s",
+                                    e,
+                                )
                         late_since = None
 
                 # Yield control to the event loop to allow other tasks to run
@@ -349,6 +420,11 @@ class BlockchainWatcher:
                 logger.debug("BlockchainWatcher.handle() was cancelled.")
                 break  # Exit the loop if the task is cancelled
             except Exception as e:  # pylint: disable=broad-except
+                # Last-resort safety net for the watcher's main loop: if
+                # any unhandled error escapes (re-raise from receive_message,
+                # bug in mempool/catch_up, etc.) we must stop() cleanly
+                # instead of leaving a half-dead asyncio task running with
+                # open ZMQ sockets. Sentry gets the exception for triage.
                 logger.error("Error in handle loop: %s", e)
                 capture_exception(e)
                 # import traceback
@@ -386,6 +462,11 @@ class BlockchainWatcher:
                 self.zmq_sub_socket_rawblock.close()
                 self.zmq_context.term()
             except Exception as e:  # pylint: disable=broad-except
+                # Same idea as connect_to_zmq()'s teardown: a failed
+                # close()/term() (already-closed socket, asyncio race,
+                # OS error) must not abort the rest of stop() -- the
+                # mempool parser still needs to be joined below and the
+                # process is already on its way out.
                 logger.debug("Error cleaning up ZMQ: %s", e)
             # Stop mempool parser
             if self.mempool_parser:

@@ -48,6 +48,9 @@ The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 
 - Set `transactions_status` and persist invalid record in `sweep.parse`
 - Forward `tx["block_index"]` into gated `unpack()` and `protocol.enabled()` calls; hoist fairminter fee to `int` and forward `block_index` to issuance fee gates
 - Extend MIME type support for ordinal-style inscriptions behind a new `extended_mime_types_support` gate: tolerate MIME parameters (e.g. `audio/ogg;codecs=opus`), recognise the `+json` structured suffix as textual, and validate against a deterministic hard-coded allow-list (`EXTENDED_MIME_TYPES_VALID`) instead of `mimetypes.types_map`, which read `/etc/mime.types` / the Windows registry and varied per node
+- Allow CBOR map under tag `0x05` for ordinals-style provenance metadata in taproot inscriptions, behind a new `ordinals_metadata_support` gate. The Counterparty message is extracted from the `"xcp"` array key; other keys are ordinals metadata ignored by the consensus parser.
+- Add support for indefinite DEX orders and fix `expiration` semantics behind a new `indefinite_orders` gate: `expiration=0` now means indefinite (open until filled or cancelled, `expire_index = NULL`), `expiration=N` now means exactly N blocks of life (was N+1 due to a long-standing off-by-one), and `MAX_EXPIRATION` is raised from 8064 (~56 days) to 65535 (the wire-format u16 max, ~455 days). The wire format is unchanged.
+- Add support for cancelling all open orders and bets for an address in a single transaction behind a new `cancel_all_offers` gate. A `Cancel` message with an empty `offer_hash` is now encoded as a single-byte `0x01` payload (`CANCEL_ALL_FLAG`) and cancels every open order for the source first, then open bets, up to the `cancel_all_offers_limit` per transaction (configurable via `protocol_changes.json`, defaults to 100 on mainnet/testnet3/testnet4). The first cancelled offer is free; each additional offer is charged a per-offer XCP fee (same schedule as a single `cancel`, via `gas.get_transaction_fee`), so a cancel-all of a single offer matches the legacy free `cancel`. A new `CANCEL_ALL` event is emitted on success (`offer_hash = "cancel_all"`), and `INVALID_CANCEL` on failure. A new compose endpoint `GET /v2/addresses/<address>/compose/cancel/estimatexcpfees` returns the estimated XCP fee for a cancel-all at the current block. The wire format for single-hash cancels is unchanged.
 
 ## Bugfixes
 
@@ -67,6 +70,7 @@ The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 
 - Update `BackendHeight.last_check` in a `finally` so RPC failures don't spam
 - Don't let halt-class mempool transactions tear down the `BlockchainWatcher`; harden it against transient operational failures
 - Reorg + mempool hygiene: stale events, leak, horizon, reparse cache
+- Fix stale `mempool/events` after RPC catch-up paths (`receive_rawblock` previous-block-missing branch and `handle()` ZMQ-late branch): both now sweep the mempool table after `catch_up()`, matching the streamed `receive_rawblock` path
 - Clear bitcoind transaction cache on rollback to avoid stale deserialisation; encapsulate in `reset_caches()` helper
 - Clean orphaned `transactions_status` rows on rollback and rebuild
 - Close ZMQ sockets/context before reconnect; fix `RCVTIMEO` typo
@@ -81,7 +85,6 @@ The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 
 ## API
 
 - Block APIv1 SQL injection via `filter_["field"]`; redact secrets in logs
-- Require auth for the APIv1 `sql` JSON-RPC method
 
 ## Codebase
 
@@ -100,3 +103,4 @@ The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 
 
 - Ouziel Slama
 - Adam Krellenstein
+- Dan Anderson

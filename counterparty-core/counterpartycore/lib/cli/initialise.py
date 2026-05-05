@@ -104,6 +104,7 @@ def initialise_config(
     backend_ssl=False,
     backend_ssl_no_verify=False,
     backend_poll_interval=None,
+    backend_api_key=None,
     rpc_host=None,
     rpc_port=None,
     rpc_user=None,
@@ -303,6 +304,15 @@ def initialise_config(
         config.BACKEND_POLL_INTERVAL = backend_poll_interval
     else:
         config.BACKEND_POLL_INTERVAL = 3.0
+
+    # Optional API key for premium rate limits behind a Cloud-Armor-style
+    # gateway. The key is sent as the `X-API-Key` HTTP header on every
+    # backend RPC request (Python and Rust BatchRpcClient). The CLI flag
+    # takes precedence; otherwise we fall back to the `BACKEND_API_KEY`
+    # environment variable so CI can inject the secret without exposing
+    # it in the process command line (CodeQL flags any sensitive value
+    # passed as an argv element that ends up echoed by `sh`/`subprocess`).
+    config.BACKEND_API_KEY = backend_api_key or os.environ.get("BACKEND_API_KEY") or None
 
     # Construct backend URL.
     if backend_cookie_file is not None and os.path.exists(backend_cookie_file):
@@ -575,6 +585,7 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "backend_ssl": args.backend_ssl,
         "backend_ssl_no_verify": args.backend_ssl_no_verify,
         "backend_poll_interval": args.backend_poll_interval,
+        "backend_api_key": getattr(args, "backend_api_key", None),
         "rpc_host": args.rpc_host,
         "rpc_port": args.rpc_port,
         "rpc_user": args.rpc_user,
