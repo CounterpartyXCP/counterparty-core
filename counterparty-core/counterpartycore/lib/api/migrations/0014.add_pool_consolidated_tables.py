@@ -173,7 +173,22 @@ def apply(db):
                 SELECT 'XCP' AS asset, tx1_address AS address, backward_quantity AS quantity,
                 id AS escrow, ('bet_match_' || CAST(rowid AS VARCAHR)) AS cursor_id,
                 'pending_bet_match' AS holding_type, status
-                FROM bet_matches WHERE status = 'pending';
+                FROM bet_matches WHERE status = 'pending'
+             UNION ALL
+                SELECT 'XCP' AS asset, source AS address, wager AS quantity,
+                tx_hash AS escrow, ('open_rps_' || CAST(rowid AS VARCAHR)) AS cursor_id,
+                'open_rps' AS holding_type, status
+                FROM rps WHERE status = 'open'
+             UNION ALL
+                SELECT 'XCP' AS asset, tx0_address AS address, wager AS quantity,
+                id AS escrow, ('rps_match_' || CAST(rowid AS VARCAHR)) AS cursor_id,
+                'pending_rps_match' AS holding_type, status
+                FROM rps_matches WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
+             UNION ALL
+                SELECT 'XCP' AS asset, tx1_address AS address, wager AS quantity,
+                id AS escrow, ('rps_match_' || CAST(rowid AS VARCAHR)) AS cursor_id,
+                'pending_rps_match' AS holding_type, status
+                FROM rps_matches WHERE status IN ('pending', 'pending and resolved', 'resolved and pending');
         """)
 
     db.execute("""PRAGMA foreign_keys=ON""")
