@@ -1073,6 +1073,47 @@ def test_get_pool_price_history(ledger_db):
     assert result is not None
 
 
+def test_get_pool_by_pair_case_insensitive(state_db):
+    """get_pool_by_pair returns same result for lower/upper case inputs."""
+    upper = queries.get_pool_by_pair(state_db, "POOLASSETA", "POOLASSETB")
+    lower = queries.get_pool_by_pair(state_db, "poolasseta", "poolassetb")
+    assert upper is not None
+    assert lower is not None
+    assert upper.result == lower.result
+
+
+def test_get_pool_deposits_by_pair_case_insensitive(state_db):
+    """get_pool_deposits_by_pair is case-insensitive on pair params."""
+    upper = queries.get_pool_deposits_by_pair(state_db, "POOLASSETA", "POOLASSETB")
+    lower = queries.get_pool_deposits_by_pair(state_db, "poolasseta", "poolassetb")
+    assert upper.result == lower.result
+    assert upper.result_count == lower.result_count
+
+
+def test_get_pool_withdrawals_by_pair_case_insensitive(state_db):
+    """get_pool_withdrawals_by_pair is case-insensitive on pair params."""
+    upper = queries.get_pool_withdrawals_by_pair(state_db, "POOLASSETA", "POOLASSETB")
+    lower = queries.get_pool_withdrawals_by_pair(state_db, "poolasseta", "poolassetb")
+    assert upper.result == lower.result
+    assert upper.result_count == lower.result_count
+
+
+def test_get_pool_matches_by_pair_case_insensitive(state_db):
+    """get_pool_matches_by_pair is case-insensitive on pair params."""
+    upper = queries.get_pool_matches_by_pair(state_db, "POOLASSETA", "POOLASSETB")
+    lower = queries.get_pool_matches_by_pair(state_db, "poolasseta", "poolassetb")
+    assert upper.result == lower.result
+    assert upper.result_count == lower.result_count
+
+
+def test_get_pool_price_history_case_insensitive(ledger_db):
+    """get_pool_price_history is case-insensitive on pair params."""
+    upper = queries.get_pool_price_history(ledger_db, "POOLASSETA", "POOLASSETB")
+    lower = queries.get_pool_price_history(ledger_db, "poolasseta", "poolassetb")
+    assert upper.result == lower.result
+    assert upper.result_count == lower.result_count
+
+
 def test_get_all_pool_matches_empty(state_db):
     """All pool matches returns results."""
     result = queries.get_all_pool_matches(state_db)

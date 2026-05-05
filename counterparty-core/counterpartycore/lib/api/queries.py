@@ -3622,6 +3622,8 @@ def get_pool_by_pair(
     :param str asset1: The first asset in the pair (e.g. XCP)
     :param str asset2: The second asset in the pair (e.g. POOLTEST)
     """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
     a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
     return select_row(
         state_db,
@@ -3646,6 +3648,8 @@ def get_pool_deposits_by_pair(
     :param int limit: The maximum number of deposits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
     a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
     return select_rows(
         state_db,
@@ -3674,6 +3678,8 @@ def get_pool_withdrawals_by_pair(
     :param int limit: The maximum number of withdrawals to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
     a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
     return select_rows(
         state_db,
@@ -3702,6 +3708,8 @@ def get_pool_matches_by_pair(
     :param int limit: The maximum number of pool matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
     a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
     return select_rows(
         state_db,
@@ -3926,6 +3934,8 @@ def get_pool_price_history(
     :param int limit: The maximum number of entries to return (e.g. 100)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
     a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
     return select_rows(
         ledger_db,
