@@ -37,6 +37,7 @@ from scenarios import (
     scenario_23_detach,
     scenario_24_dispenser,
     scenario_25_issuance,
+    scenario_26_cancel_all,
     scenario_26_indefinite_orders,
     scenario_last_mempool,
 )
@@ -69,6 +70,7 @@ SCENARIOS += scenario_23_detach.SCENARIO
 SCENARIOS += scenario_24_dispenser.SCENARIO
 SCENARIOS += scenario_25_issuance.SCENARIO
 SCENARIOS += scenario_26_indefinite_orders.SCENARIO
+SCENARIOS += scenario_26_cancel_all.SCENARIO
 # more scenarios before this one
 SCENARIOS += scenario_last_mempool.SCENARIO
 

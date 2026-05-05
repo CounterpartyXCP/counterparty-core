@@ -150,6 +150,13 @@ CONFIG_ARGS = [
         },
     ],
     [
+        ("--backend-api-key",),
+        {
+            "default": None,
+            "help": "optional API key sent as the `X-API-Key` HTTP header on every backend RPC request, used by Cloud-Armor-like rate limiters to grant a higher quota (default: none)",
+        },
+    ],
+    [
         ("--skip-asset-conservation-check",),
         {
             "action": "store_true",

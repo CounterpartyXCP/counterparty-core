@@ -84,6 +84,7 @@ def test_argparser():
         "backend_ssl": False,
         "backend_ssl_no_verify": False,
         "backend_poll_interval": 3.0,
+        "backend_api_key": None,
         "skip_asset_conservation_check": False,
         "p2sh_dust_return_pubkey": None,
         "rpc_host": "127.0.0.1",

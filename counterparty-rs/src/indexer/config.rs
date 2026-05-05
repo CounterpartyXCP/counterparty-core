@@ -164,6 +164,10 @@ pub struct Config {
     pub rpc_address: String,
     pub rpc_user: String,
     pub rpc_password: String,
+    // Optional `X-API-Key` header value sent on every backend RPC call;
+    // matches the Python `BACKEND_API_KEY` setting and is used to grant
+    // a higher rate-limit bucket on Cloud-Armor-style proxies.
+    pub rpc_api_key: Option<String>,
     pub log_file: String,
     pub log_level: LogLevel,
     pub db_dir: String,
@@ -240,6 +244,23 @@ impl<'source> FromPyObject<'source> for Config {
             .get_item("rpc_password")?
             .ok_or(PyErr::new::<PyValueError, _>("'rpc_password' is required"))?
             .extract()?;
+        // `rpc_api_key` is optional: omit it for self-hosted nodes; supply it
+        // when talking to a public, rate-limited proxy.
+        let rpc_api_key: Option<String> = match dict.get_item("rpc_api_key") {
+            Ok(Some(item)) => {
+                if item.is_none() {
+                    None
+                } else {
+                    let s: String = item.extract()?;
+                    if s.is_empty() {
+                        None
+                    } else {
+                        Some(s)
+                    }
+                }
+            }
+            _ => None,
+        };
         let db_dir: String = dict
             .get_item("db_dir")?
             .ok_or(PyErr::new::<PyValueError, _>("'db_dir' is required"))?
@@ -322,6 +343,7 @@ impl<'source> FromPyObject<'source> for Config {
             rpc_address,
             rpc_user,
             rpc_password,
+            rpc_api_key,
             log_file,
             log_level,
             db_dir,
