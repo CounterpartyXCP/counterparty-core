@@ -602,19 +602,9 @@
         "result_count": 1
     },
     "/v2/blocks/<int:block_index>/cancels": {
-        "result": [
-            {
-                "tx_index": 122,
-                "tx_hash": "4800456a07b13057c0c9a9461fe229590897f04d62d662dc924ce12382aac00e",
-                "block_index": 294,
-                "source": "bcrt1q85chq6leuxr4t3ujvhn0yzl0s5cwf984p53rqx",
-                "offer_hash": "cancel_all",
-                "status": "valid",
-                "block_time": 1777999477
-            }
-        ],
+        "result": [],
         "next_cursor": null,
-        "result_count": 1
+        "result_count": 0
     },
     "/v2/blocks/<int:block_index>/destructions": {
         "result": [
@@ -6973,9 +6963,6 @@
             },
             "name": "cancel"
         }
-    },
-    "/v2/addresses/<address>/compose/cancel/estimatexcpfees": {
-        "result": 0
     },
     "/v2/addresses/<address>/compose/destroy": {
         "result": {
@@ -17955,7 +17942,7 @@
             },
             "/v2/addresses/<address>/compose/cancel": {
                 "function": "compose_cancel",
-                "description": "Composes a transaction to cancel an open order or bet. If offer_hash is empty, cancels all open orders and bets for the address.",
+                "description": "Composes a transaction to cancel an open order or bet.",
                 "args": [
                     {
                         "name": "address",
@@ -17967,10 +17954,9 @@
                     {
                         "name": "offer_hash",
                         "category": "primary",
-                        "default": "",
-                        "required": false,
+                        "required": true,
                         "type": "str",
-                        "description": "The hash of the order/bet to be cancelled; if empty, all open orders and bets will be cancelled (e.g. $LAST_OPEN_ORDER_TX_HASH)"
+                        "description": "The hash of the order/bet to be cancelled (e.g. $LAST_OPEN_ORDER_TX_HASH)"
                     },
                     {
                         "name": "encoding",
@@ -18227,28 +18213,6 @@
                         "description": "Ignored, Segwit automatically detected",
                         "required": false,
                         "category": "secondary"
-                    },
-                    {
-                        "name": "verbose",
-                        "type": "bool",
-                        "default": "false",
-                        "description": "Include asset and dispenser info and normalized quantities in the response.",
-                        "required": false,
-                        "category": "tertiary"
-                    }
-                ],
-                "category": "compose"
-            },
-            "/v2/addresses/<address>/compose/cancel/estimatexcpfees": {
-                "function": "get_cancel_all_estimate_xcp_fee",
-                "description": "Returns the estimated XCP fee for a cancel-all transaction.",
-                "args": [
-                    {
-                        "name": "address",
-                        "category": "primary",
-                        "required": true,
-                        "type": "str",
-                        "description": "The address that will be cancelling (e.g. $ADDRESS_1)"
                     },
                     {
                         "name": "verbose",
