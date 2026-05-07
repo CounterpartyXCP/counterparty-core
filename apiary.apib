@@ -2462,19 +2462,9 @@ Returns the cancels of a block
 
     ```
         {
-            "result": [
-                {
-                    "tx_index": 122,
-                    "tx_hash": "4800456a07b13057c0c9a9461fe229590897f04d62d662dc924ce12382aac00e",
-                    "block_index": 294,
-                    "source": "bcrt1q85chq6leuxr4t3ujvhn0yzl0s5cwf984p53rqx",
-                    "offer_hash": "cancel_all",
-                    "status": "valid",
-                    "block_time": 1777999477
-                }
-            ],
+            "result": [],
             "next_cursor": null,
-            "result_count": 1
+            "result_count": 0
         }
     ```
 
@@ -12052,12 +12042,11 @@ Composes a transaction to burn a given quantity of BTC for XCP (on mainnet, poss
 
 ### Compose Cancel [GET /v2/addresses/{address}/compose/cancel{?offer_hash,encoding,validate,sat_per_vbyte,confirmation_target,exact_fee,max_fee,inputs_set,allow_unconfirmed_inputs,exclude_utxos,use_utxos_with_balances,exclude_utxos_with_balances,disable_utxo_locks,use_all_inputs_set,multisig_pubkey,change_address,more_outputs,pubkeys,verbose,return_only_data,segwit_dust_size,inscription,verbose}]
 
-Composes a transaction to cancel an open order or bet. If offer_hash is empty, cancels all open orders and bets for the address.
+Composes a transaction to cancel an open order or bet.
 
 + Parameters
     + address: `bcrt1qqs2ktkf7xzceqr5kaemzjnzppgdnq7nfpzlap9` (str, required) - The address that placed the order/bet to be cancelled
-    + offer_hash: `edc48c017a2c32cea061660c932d5a031b493434d2a5fc6a922effbf9dc9c3bd` (str, optional) - The hash of the order/bet to be cancelled; if empty, all open orders and bets will be cancelled
-        + Default: `null`
+    + offer_hash: `edc48c017a2c32cea061660c932d5a031b493434d2a5fc6a922effbf9dc9c3bd` (str, required) - The hash of the order/bet to be cancelled
     + encoding (str, optional) - The encoding method to use
         + Default: `auto`
     + validate (bool, optional) - Validate the transaction
@@ -12133,23 +12122,6 @@ Composes a transaction to cancel an open order or bet. If offer_hash is empty, c
                 },
                 "name": "cancel"
             }
-        }
-    ```
-
-### Get Cancel All Estimate Xcp Fee [GET /v2/addresses/{address}/compose/cancel/estimatexcpfees{?verbose}]
-
-Returns the estimated XCP fee for a cancel-all transaction.
-
-+ Parameters
-    + address: `bcrt1q5ageza3525gwwx6r0xxktan3dgddgsft0gf7kw` (str, required) - The address that will be cancelling
-    + verbose: `true` (bool, optional) - Include asset and dispenser info and normalized quantities in the response.
-        + Default: `false`
-
-+ Response 200 (application/json)
-
-    ```
-        {
-            "result": 0
         }
     ```
 
@@ -26109,7 +26081,7 @@ Return the API routes.
                 },
                 "/v2/addresses/<address>/compose/cancel": {
                     "function": "compose_cancel",
-                    "description": "Composes a transaction to cancel an open order or bet. If offer_hash is empty, cancels all open orders and bets for the address.",
+                    "description": "Composes a transaction to cancel an open order or bet.",
                     "args": [
                         {
                             "name": "address",
@@ -26121,10 +26093,9 @@ Return the API routes.
                         {
                             "name": "offer_hash",
                             "category": "primary",
-                            "default": "",
-                            "required": false,
+                            "required": true,
                             "type": "str",
-                            "description": "The hash of the order/bet to be cancelled; if empty, all open orders and bets will be cancelled (e.g. $LAST_OPEN_ORDER_TX_HASH)"
+                            "description": "The hash of the order/bet to be cancelled (e.g. $LAST_OPEN_ORDER_TX_HASH)"
                         },
                         {
                             "name": "encoding",
@@ -26381,28 +26352,6 @@ Return the API routes.
                             "description": "Ignored, Segwit automatically detected",
                             "required": false,
                             "category": "secondary"
-                        },
-                        {
-                            "name": "verbose",
-                            "type": "bool",
-                            "default": "false",
-                            "description": "Include asset and dispenser info and normalized quantities in the response.",
-                            "required": false,
-                            "category": "tertiary"
-                        }
-                    ],
-                    "category": "compose"
-                },
-                "/v2/addresses/<address>/compose/cancel/estimatexcpfees": {
-                    "function": "get_cancel_all_estimate_xcp_fee",
-                    "description": "Returns the estimated XCP fee for a cancel-all transaction.",
-                    "args": [
-                        {
-                            "name": "address",
-                            "category": "primary",
-                            "required": true,
-                            "type": "str",
-                            "description": "The address that will be cancelling (e.g. $ADDRESS_1)"
                         },
                         {
                             "name": "verbose",
