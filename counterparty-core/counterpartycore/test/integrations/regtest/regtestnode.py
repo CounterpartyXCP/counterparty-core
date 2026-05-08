@@ -10,6 +10,7 @@ import sys
 import threading
 import time
 import urllib.parse
+from decimal import Decimal as D
 from io import StringIO
 
 import requests
@@ -198,7 +199,10 @@ class RegtestNode:
             tx_outputs.append(TxOutput(0, Script(["OP_RETURN", b_to_h(encrypted_data)])))
 
         tx_outputs.append(
-            TxOutput(int(utxo["amount"] * 1e8), P2wpkhAddress(source).to_script_pub_key())
+            TxOutput(
+                int(D(str(utxo["amount"])) * D(config.UNIT)),
+                P2wpkhAddress(source).to_script_pub_key(),
+            )
         )
 
         tx = Transaction(tx_inputs, tx_outputs)
@@ -1037,7 +1041,9 @@ class RegtestNode:
         )
         txid_1 = decoded_transaction_1["txid"]
         vout_1 = len(decoded_transaction_1["vout"]) - 1  # last vout is the change
-        value_1 = int(decoded_transaction_1["vout"][vout_1]["value"] * 1e8)
+        # use Decimal to avoid float rounding errors that would produce an
+        # off-by-one sat value and a SegWit signature mismatch on broadcast
+        value_1 = int(D(str(decoded_transaction_1["vout"][vout_1]["value"])) * D(config.UNIT))
 
         #####   Send BTC to new address using the change from the previous transaction #####
 
@@ -1069,7 +1075,7 @@ class RegtestNode:
         )
         txid_2 = decoded_transaction_2["txid"]
         vout_2 = 0  # first vout is the 10000 sats from the previous transaction
-        value_2 = int(decoded_transaction_2["vout"][vout_2]["value"] * 1e8)
+        value_2 = int(D(str(decoded_transaction_2["vout"][vout_2]["value"])) * D(config.UNIT))
         assert value_2 == 10000
 
         #####   Create a dispenser using the BTC received from the second transactions #####
@@ -1237,7 +1243,7 @@ class RegtestNode:
         )
         sorted(list_unspent, key=lambda x: -x["amount"])
         utxo = f"{list_unspent[0]['txid']}:{list_unspent[0]['vout']}"
-        value = int(list_unspent[0]["amount"] * 1e8)
+        value = int(D(str(list_unspent[0]["amount"])) * D(config.UNIT))
         unsigned_tx = self.compose(
             utxo,
             "detach",

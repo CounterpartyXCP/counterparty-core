@@ -5,6 +5,7 @@ import logging
 import re
 import time
 from collections import OrderedDict
+from decimal import Decimal as D
 from multiprocessing import current_process
 from threading import current_thread
 
@@ -609,7 +610,7 @@ def list_unspent(source, allow_unconfirmed_inputs):
                 {
                     "txid": unspent["txid"],
                     "vout": unspent["vout"],
-                    "value": int(unspent["amount"] * config.UNIT),
+                    "value": int(D(str(unspent["amount"])) * D(config.UNIT)),
                     "amount": unspent["amount"],
                     "script_pub_key": unspent["scriptPubKey"],
                 }

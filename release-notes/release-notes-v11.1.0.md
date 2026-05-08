@@ -77,6 +77,7 @@ The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 
 - Make `--api-only` loop honor `api_stop_event` for clean shutdown
 - Make `UTXOLocks` intra-worker thread-safe
 - Concurrency: `SingletonMeta` double-checked locking; guard `reset_caches` `lru_cache.cache_clear()` with `hasattr`
+- Fix float rounding error in `bitcoind.list_unspent` (`int(amount * UNIT)`) that could produce off-by-one sat values, causing SegWit signatures computed from the returned `value` to be rejected by Bitcoin Core with a misleading `mandatory-script-verify-flag-failed (Signature must be zero for failed CHECK(MULTI)SIG operation)` error
 - Fix `DETACH_FROM_UTXO` source field typo in `EVENTS_ADDRESS_FIELDS`
 - Fix `LEFT JOIN` in API migration 0004 supplies query
 - Sync `description_locked` and filter `xcp_supply` by status in `apiwatcher`
