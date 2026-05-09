@@ -38,7 +38,7 @@ UPGRADE_ACTIONS = {
         "11.0.2": [("refresh_state_db", 0)],
         "11.0.3": [("reparse", 911955)],
         "11.0.4": [("rollback", 926807)],
-        "11.1.0": [("refresh_state_db", 0)],
+        "11.1.0": [("rollback", 941000)],
     },
     "testnet3": {
         "10.3.0": [("reparse", 0)],
