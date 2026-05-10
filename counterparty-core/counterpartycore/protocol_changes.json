@@ -1260,108 +1260,74 @@
     },
     "fix_sort_bet_matches": {
         "minimum_version_major": 11,
-        "minimum_version_minor": 0,
+        "minimum_version_minor": 1,
         "minimum_version_revision": 0,
-        "block_index": 950000,
-        "testnet3_block_index": 4500000,
-        "testnet4_block_index": 0,
-        "signet_block_index": 0
+        "block_index": 952500,
+        "testnet3_block_index": 4961000,
+        "testnet4_block_index": 136000,
+        "signet_block_index": 310000
     },
     "canonical_subasset_compact": {
         "minimum_version_major": 11,
-        "minimum_version_minor": 0,
+        "minimum_version_minor": 1,
         "minimum_version_revision": 0,
-        "block_index": 950000,
-        "testnet3_block_index": 4500000,
-        "testnet4_block_index": 0,
-        "signet_block_index": 0
+        "block_index": 952500,
+        "testnet3_block_index": 4961000,
+        "testnet4_block_index": 136000,
+        "signet_block_index": 310000
     },
     "check_btcpay_destination": {
         "minimum_version_major": 11,
-        "minimum_version_minor": 0,
+        "minimum_version_minor": 1,
         "minimum_version_revision": 0,
-        "block_index": 999999999,
-        "testnet3_block_index": 999999999,
-        "testnet4_block_index": 999999999,
-        "signet_block_index": 0
+        "block_index": 952500,
+        "testnet3_block_index": 4961000,
+        "testnet4_block_index": 136000,
+        "signet_block_index": 310000
     },
     "fix_attach_op_return_check": {
         "minimum_version_major": 11,
-        "minimum_version_minor": 0,
+        "minimum_version_minor": 1,
         "minimum_version_revision": 0,
-        "block_index": 999999999,
-        "testnet3_block_index": 999999999,
-        "testnet4_block_index": 999999999,
-        "signet_block_index": 0
+        "block_index": 952500,
+        "testnet3_block_index": 4961000,
+        "testnet4_block_index": 136000,
+        "signet_block_index": 310000
     },
     "extended_mime_types_support": {
         "minimum_version_major": 11,
-        "minimum_version_minor": 0,
+        "minimum_version_minor": 1,
         "minimum_version_revision": 0,
-        "block_index": 999999999,
-        "testnet3_block_index": 999999999,
-        "testnet4_block_index": 999999999,
-        "signet_block_index": 0
+        "block_index": 952500,
+        "testnet3_block_index": 4961000,
+        "testnet4_block_index": 136000,
+        "signet_block_index": 310000
     },
     "ordinals_metadata_support": {
         "minimum_version_major": 11,
         "minimum_version_minor": 1,
         "minimum_version_revision": 0,
-        "block_index": 999999999,
-        "testnet3_block_index": 999999999,
-        "testnet4_block_index": 999999999,
-        "signet_block_index": 0
+        "block_index": 952500,
+        "testnet3_block_index": 4961000,
+        "testnet4_block_index": 136000,
+        "signet_block_index": 310000
     },
     "indefinite_orders": {
         "minimum_version_major": 11,
-        "minimum_version_minor": 2,
+        "minimum_version_minor": 1,
         "minimum_version_revision": 0,
-        "block_index": 999999999,
-        "testnet3_block_index": 999999999,
-        "testnet4_block_index": 999999999,
-        "signet_block_index": 0
-    },
-    "cancel_all_offers": {
-        "minimum_version_major": 11,
-        "minimum_version_minor": 2,
-        "minimum_version_revision": 0,
-        "block_index": 999999999,
-        "testnet3_block_index": 999999999,
-        "testnet4_block_index": 999999999,
-        "signet_block_index": 0
-    },
-    "cancel_all_offers_limit": {
-        "minimum_version_major": 11,
-        "minimum_version_minor": 2,
-        "minimum_version_revision": 0,
-        "mainnet": {
-            "1": {
-                "value": 100
-            }
-        },
-        "testnet3": {
-            "1": {
-                "value": 100
-            }
-        },
-        "testnet4": {
-            "1": {
-                "value": 100
-            }
-        },
-        "signet": {
-            "1": {
-                "value": 100
-            }
-        }
+        "block_index": 952500,
+        "testnet3_block_index": 4961000,
+        "testnet4_block_index": 136000,
+        "signet_block_index": 310000
     },
     "amm_pools": {
         "minimum_version_major": 11,
         "minimum_version_minor": 1,
         "minimum_version_revision": 0,
-        "block_index": 999999999,
-        "testnet3_block_index": 999999999,
-        "testnet4_block_index": 999999999,
-        "signet_block_index": 0
+        "block_index": 952500,
+        "testnet3_block_index": 4961000,
+        "testnet4_block_index": 136000,
+        "signet_block_index": 310000
     }
 }

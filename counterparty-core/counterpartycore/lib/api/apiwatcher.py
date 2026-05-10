@@ -44,7 +44,6 @@ EVENTS_ADDRESS_FIELDS = {
     "ORDER_MATCH": ["tx0_address", "tx1_address"],
     "BTC_PAY": ["source", "destination"],
     "CANCEL_ORDER": ["source"],
-    "CANCEL_ALL": ["source"],
     "ORDER_EXPIRATION": ["source"],
     "ORDER_MATCH_EXPIRATION": ["tx0_address", "tx1_address"],
     "OPEN_DISPENSER": ["source", "origin", "oracle_address"],
