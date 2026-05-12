@@ -8,6 +8,7 @@ import logging
 import time
 
 from counterpartycore.lib import config
+from counterpartycore.lib.utils import hashcodec
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -24,6 +25,12 @@ def apply(db):
 
     if hasattr(db, "row_factory"):
         db.row_factory = dict_factory
+
+    # The ``ALTER TABLE ... RENAME TO address_events`` below triggers SQLite
+    # view re-validation; ``xcp_holders`` / ``asset_holders`` reference
+    # ``hex_lower(...)``, which is only registered on apsw connections by
+    # default. Register it on the yoyo-provided stdlib sqlite3 connection too.
+    hashcodec.register_db_functions(db)
 
     # Attach ledger_db if not already attached
     attached = (
@@ -75,6 +82,9 @@ def apply(db):
 
 
 def rollback(db):
+    # See ``apply`` for why the UDFs need to be registered on this connection.
+    hashcodec.register_db_functions(db)
+
     cursor = db.cursor()
 
     # Create table without event column

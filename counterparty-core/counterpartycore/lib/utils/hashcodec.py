@@ -126,8 +126,17 @@ def normalize_record_hashes(record, hash_columns):
 
 
 def register_db_functions(db):
-    """Register apsw scalar UDFs on the given connection so SQL can convert
+    """Register scalar UDFs on the given connection so SQL can convert
     between BLOB and hex inline (used by VIEW definitions and migrations).
+
+    Works on both ``apsw.Connection`` (``createscalarfunction``) and the
+    stdlib ``sqlite3.Connection`` (``create_function``). The stdlib path is
+    needed by yoyo-driven migrations of the API state DB, which open a
+    plain ``sqlite3`` connection that hasn't been through
+    ``database.get_db_connection``. Without it, any DDL that triggers view
+    re-validation (e.g. ``ALTER TABLE ... RENAME``) on a table referenced
+    by a view that uses ``hex_lower`` will fail with
+    ``no such function: hex_lower``.
 
     - ``hex_lower(blob)`` returns the lowercase hex string of a BLOB, or
       NULL for NULL. Mirrors Python ``binascii.hexlify(value).decode()``.
@@ -148,5 +157,9 @@ def register_db_functions(db):
             return text
         return bytes.fromhex(text)
 
-    db.createscalarfunction("hex_lower", _hex_lower, 1)
-    db.createscalarfunction("unhex", _unhex, 1)
+    if hasattr(db, "createscalarfunction"):
+        db.createscalarfunction("hex_lower", _hex_lower, 1)
+        db.createscalarfunction("unhex", _unhex, 1)
+    else:
+        db.create_function("hex_lower", 1, _hex_lower)
+        db.create_function("unhex", 1, _unhex)
