@@ -48,10 +48,49 @@ def get_hashes_path(network):
 
 
 def cache_exists(network):
-    """Check if a valid cache exists for the given network."""
+    """Check if a valid cache exists for the given network.
+
+    Validates both that the files are present and that the hashes JSON is
+    syntactically valid and has the expected structure. A corrupted hashes
+    file (e.g. partial write from a previous failed run) is treated as a
+    missing cache so the test falls back to a clean bootstrap and rewrites
+    the cache rather than aborting with ``JSONDecodeError``.
+    """
     db_path = get_cached_db_path(network)
     hashes_path = get_hashes_path(network)
-    return os.path.exists(db_path) and os.path.exists(hashes_path)
+    if not (os.path.exists(db_path) and os.path.exists(hashes_path)):
+        return False
+
+    try:
+        with open(hashes_path, "r") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"Cache hashes file is unreadable ({e}); treating cache as missing.")
+        _discard_corrupted_cache(network)
+        return False
+
+    if not isinstance(data, dict) or not isinstance(data.get("hashes"), list) or not data["hashes"]:
+        print("Cache hashes file is malformed; treating cache as missing.")
+        _discard_corrupted_cache(network)
+        return False
+
+    return True
+
+
+def _discard_corrupted_cache(network):
+    """Remove a corrupted cache directory so the next run rebuilds it.
+
+    Used when ``cache_exists`` detects an unreadable or malformed hashes
+    file. We can't trust the cached DB either in that case, since the two
+    are produced together and may be out of sync.
+    """
+    network_cache_dir = get_network_cache_dir(network)
+    if os.path.exists(network_cache_dir):
+        try:
+            shutil.rmtree(network_cache_dir)
+            print(f"Removed corrupted cache directory: {network_cache_dir}")
+        except OSError as e:
+            print(f"Failed to remove corrupted cache directory {network_cache_dir}: {e}")
 
 
 def get_block_hashes_from_db(db_path, count=HASH_COUNT):
@@ -126,8 +165,20 @@ def save_hashes(network, db_path):
     }
 
     hashes_path = get_hashes_path(network)
-    with open(hashes_path, "w") as f:
-        json.dump(data, f, indent=2)
+    # Write atomically: dump to a temp file in the same directory, then rename.
+    # This prevents leaving a partially-written / corrupted JSON file on disk
+    # if json.dump raises mid-write (e.g. a serialization error). Otherwise a
+    # subsequent run would find a syntactically broken cache file and abort
+    # with a JSONDecodeError instead of falling back to a clean rebuild.
+    tmp_path = hashes_path + ".tmp"
+    try:
+        with open(tmp_path, "w") as f:
+            json.dump(data, f, indent=2)
+        os.replace(tmp_path, hashes_path)
+    except Exception:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise
 
     print(f"Saved {len(hashes)} block hashes to {hashes_path}")
     return data
