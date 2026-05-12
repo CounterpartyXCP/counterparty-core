@@ -11,7 +11,7 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.api import compose
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import hashcodec, helpers
 
 D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -516,13 +516,20 @@ def inject_transactions_events(ledger_db, state_db, result_list):
         "INCREMENT_TRANSACTION_COUNT",
         "NEW_TRANSACTION_OUTPUT",
     ]
+    # ``messages.tx_hash`` was dropped in favour of a ``tx_index`` FK;
+    # resolve via ``transactions``. The ``hex_lower`` UDF (registered on
+    # the connection) keeps the result as 64-char lowercase hex so
+    # downstream code paths (events grouping by tx_hash) remain unchanged.
     sql = f"""
-        SELECT message_index AS event_index, event, bindings AS params, tx_hash, block_index
-        FROM messages
-        WHERE tx_hash IN ({",".join("?" * len(transaction_hashes))})
-        AND event NOT IN ({",".join("?" * len(exclude_events))})
+        SELECT m.message_index AS event_index, m.event, m.bindings AS params,
+               hex_lower(t.tx_hash) AS tx_hash, m.block_index
+        FROM messages m
+        LEFT JOIN transactions t ON t.tx_index = m.tx_index
+        WHERE t.tx_hash IN ({",".join("?" * len(transaction_hashes))})
+        AND m.event NOT IN ({",".join("?" * len(exclude_events))})
     """  # noqa S608 # nosec B608
-    events = cursor.execute(sql, transaction_hashes + exclude_events).fetchall()
+    bindings = [hashcodec.hash_to_db(h) for h in transaction_hashes] + exclude_events
+    events = cursor.execute(sql, bindings).fetchall()
     for event in events:
         event["params"] = json.loads(event["params"])
 

@@ -1210,8 +1210,11 @@ def test_parse_cbor_none_value_doesnt_halt(ledger_db, blockchain_mock, defaults)
     message = cbor2.dumps([None, 0.0, 0, "text/plain", b""])
     # Must NOT raise.
     broadcast.parse(ledger_db, tx, message)
+    from counterpartycore.lib.utils import hashcodec
+
     row = ledger_db.execute(
-        "SELECT status FROM broadcasts WHERE tx_hash = ?", (tx["tx_hash"],)
+        "SELECT status FROM broadcasts WHERE tx_hash = ?",
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchone()
     assert row is not None
     assert "invalid" in row["status"]

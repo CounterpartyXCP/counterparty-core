@@ -17,13 +17,16 @@ def apply(db):
     start_time = time.time()
     logger.debug("Building views...")
 
+    # ``tx_hash`` is stored as BLOB(32) after the compact-hash storage
+    # migration; expose the legacy 64-char lowercase hex via the ``hex_lower``
+    # UDF so the API surface (``escrow`` field on holder rows) stays unchanged.
     db.execute("""
          CREATE VIEW IF NOT EXISTS asset_holders AS 
             SELECT asset, address, quantity, NULL AS escrow,
                 ('balances_' || CAST(rowid AS VARCHAR)) AS cursor_id, 'balances' AS holding_type, NULL AS status
             FROM balances
          UNION ALL 
-            SELECT give_asset AS asset, source AS address, give_remaining AS quantity, tx_hash AS escrow,
+            SELECT give_asset AS asset, source AS address, give_remaining AS quantity, hex_lower(tx_hash) AS escrow,
                 ('open_order_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                 'open_order' AS holding_type, status
             FROM orders WHERE status = 'open'
@@ -39,7 +42,7 @@ def apply(db):
             FROM order_matches WHERE status = 'pending'
          UNION ALL 
             SELECT asset, source AS address, give_remaining AS quantity,
-            tx_hash AS escrow, ('open_dispenser_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+            hex_lower(tx_hash) AS escrow, ('open_dispenser_' || CAST(rowid AS VARCHAR)) AS cursor_id,
             'open_dispenser' AS holding_type, status
             FROM dispensers WHERE status = 0;
       """)
@@ -49,7 +52,7 @@ def apply(db):
             SELECT * FROM asset_holders
          UNION ALL 
             SELECT 'XCP' AS asset, source AS address, wager_remaining AS quantity,
-            tx_hash AS escrow, ('open_bet_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+            hex_lower(tx_hash) AS escrow, ('open_bet_' || CAST(rowid AS VARCHAR)) AS cursor_id,
             'open_bet' AS holding_type, status
             FROM bets WHERE status = 'open'
          UNION ALL 
@@ -64,7 +67,7 @@ def apply(db):
             FROM bet_matches WHERE status = 'pending'
          UNION ALL 
             SELECT 'XCP' AS asset, source AS address, wager AS quantity,
-            tx_hash AS escrow, ('open_rps_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+            hex_lower(tx_hash) AS escrow, ('open_rps_' || CAST(rowid AS VARCHAR)) AS cursor_id,
             'open_rps' AS holding_type, status
             FROM rps WHERE status = 'open'
          UNION ALL 

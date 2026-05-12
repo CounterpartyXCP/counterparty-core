@@ -13,6 +13,7 @@ from counterpartycore.lib.messages import (
     send,
     sweep,
 )
+from counterpartycore.lib.utils import hashcodec
 from counterpartycore.lib.messages.versions import mpma, send1
 from counterpartycore.lib.parser import blocks, messagetype
 from counterpartycore.lib.utils import database
@@ -357,7 +358,8 @@ def test_update_transaction_unsupported(ledger_db, defaults, blockchain_mock, te
     # Check that the transaction was marked as unsupported
     cursor = ledger_db.cursor()
     result = cursor.execute(
-        "SELECT supported FROM transactions WHERE tx_hash = ?", (tx["tx_hash"],)
+        "SELECT supported FROM transactions WHERE tx_hash = ?",
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchone()
     assert result["supported"] == 0
 

@@ -51,7 +51,7 @@ from counterpartycore.lib.messages.versions import enhancedsend, mpma
 from counterpartycore.lib.monitors.profiler import Profiler
 from counterpartycore.lib.parser import check, deserialize, messagetype, protocol
 from counterpartycore.lib.parser.gettxinfo import get_tx_info
-from counterpartycore.lib.utils import database, helpers
+from counterpartycore.lib.utils import database, hashcodec, helpers
 
 D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -118,7 +118,7 @@ def update_transaction(db, tx, supported):
             """UPDATE transactions \
                             SET supported=$supported \
                             WHERE tx_hash=$tx_hash""",
-            {"supported": False, "tx_hash": tx["tx_hash"]},
+            {"supported": False, "tx_hash": hashcodec.hash_to_db(tx["tx_hash"])},
         )
         if tx["block_index"] != config.MEMPOOL_BLOCK_INDEX:
             logger.info("Unsupported transaction: hash %s; data %s", tx["tx_hash"], tx["data"])
@@ -269,13 +269,28 @@ def parse_tx(db, tx):
 
 def replay_transactions_events(db, transactions):
     cursor = db.cursor()
+    # Cache block_hash lookups per block_index since transactions no longer
+    # carry block_hash; journal payload still includes it for consensus
+    # stability.
+    block_hash_cache = {}
+
+    def _block_hash_for(block_index):
+        if block_index not in block_hash_cache:
+            row = cursor.execute(
+                "SELECT block_hash FROM blocks WHERE block_index = ?",
+                (block_index,),
+            ).fetchone()
+            block_hash_cache[block_index] = row["block_hash"] if row else None
+        return block_hash_cache[block_index]
+
     for tx in transactions:
         CurrentState().set_current_tx_hash(tx["tx_hash"])
+        block_hash = _block_hash_for(tx["block_index"])
         transaction_bindings = {
             "tx_index": tx["tx_index"],
             "tx_hash": tx["tx_hash"],
             "block_index": tx["block_index"],
-            "block_hash": tx["block_hash"],
+            "block_hash": block_hash,
             "block_time": tx["block_time"],
             "source": tx["source"],
             "destination": tx["destination"],
@@ -436,9 +451,12 @@ def parse_block(
             WHERE block_index=:block_index
         """
         update_block_bindings = {
-            "txlist_hash": new_txlist_hash,
-            "ledger_hash": new_ledger_hash,
-            "messages_hash": new_messages_hash,
+            # The hash columns are BLOB(32) at rest; bind the BLOB form so
+            # SQLite actually stores the optimized representation instead of
+            # falling back to TEXT affinity for the hex string.
+            "txlist_hash": hashcodec.hash_to_db(new_txlist_hash),
+            "ledger_hash": hashcodec.hash_to_db(new_ledger_hash),
+            "messages_hash": hashcodec.hash_to_db(new_messages_hash),
             "transaction_count": len(transactions),
             "block_index": block_index,
         }
@@ -509,7 +527,6 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
             "tx_index": tx_index,
             "tx_hash": tx_hash,
             "block_index": block_index,
-            "block_hash": block_hash,
             "block_time": block_time,
             "source": source,
             "destination": destination,
@@ -521,23 +538,34 @@ def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_
                 data, destination, utxos_info, block_index
             ),
         }
-        ledger.events.insert_record(db, "transactions", transaction_bindings, "NEW_TRANSACTION")
+        # ``transactions.block_hash`` was dropped from storage; we still
+        # expose it in the consensus journal so ``messages_hash`` is
+        # byte-identical to the pre-migration release.
+        ledger.events.insert_record(
+            db,
+            "transactions",
+            transaction_bindings,
+            "NEW_TRANSACTION",
+            event_info={"block_hash": block_hash},
+        )
 
         if dispensers_outs:
             for next_out in dispensers_outs:
                 transaction_outputs_bindings = {
                     "tx_index": tx_index,
-                    "tx_hash": tx_hash,
                     "block_index": block_index,
                     "out_index": next_out["out_index"],
                     "destination": next_out["destination"],
                     "btc_amount": next_out["btc_amount"],
                 }
+                # Journal payload keeps the legacy hex ``tx_hash`` field so the
+                # consensus-critical ``messages_hash`` JSON stays byte-identical.
                 ledger.events.insert_record(
                     db,
                     "transaction_outputs",
                     transaction_outputs_bindings,
                     "NEW_TRANSACTION_OUTPUT",
+                    event_info={"tx_hash": tx_hash},
                 )
 
         cursor.close()
@@ -987,7 +1015,8 @@ def create_events_indexes(db):
         "CREATE INDEX IF NOT EXISTS messages_block_index_message_index_idx ON messages (block_index, message_index)",
         "CREATE INDEX IF NOT EXISTS messages_block_index_event_idx ON messages (block_index, event)",
         "CREATE INDEX IF NOT EXISTS messages_event_idx ON messages (event)",
-        "CREATE INDEX IF NOT EXISTS messages_tx_hash_idx ON messages (tx_hash)",
+        # ``messages.tx_hash`` was replaced by a ``tx_index`` FK.
+        "CREATE INDEX IF NOT EXISTS messages_tx_index_idx ON messages (tx_index)",
         "CREATE INDEX IF NOT EXISTS messages_event_hash_idx ON messages (event_hash)",
     ]
     cursor = db.cursor()

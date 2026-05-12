@@ -159,10 +159,16 @@ def test_parse_mempool_transactions_tx_index_calculation(
     ]
     assert insert_block_calls, "Aucune insertion dans la table blocks trouvée"
 
-    # Vérifier que les paramètres d'insertion contiennent le bon block_index
+    # Vérifier que les paramètres d'insertion contiennent le bon block_index.
+    # ``block_hash`` is now stored as BLOB(32); compare against the encoded
+    # form produced by hashcodec.hash_to_db on MEMPOOL_BLOCK_HASH.
+    from counterpartycore.lib.utils import hashcodec
+
     block_params = insert_block_calls[0][0][1]
     assert block_params[0] == config.MEMPOOL_BLOCK_INDEX, "Mauvais block_index utilisé"
-    assert block_params[1] == config.MEMPOOL_BLOCK_HASH, "Mauvais block_hash utilisé"
+    assert block_params[1] == hashcodec.hash_to_db(config.MEMPOOL_BLOCK_HASH), (
+        "Mauvais block_hash utilisé"
+    )
 
 
 def test_clean_mempool_empty(mock_db, mock_backend_bitcoind):
@@ -211,6 +217,12 @@ def test_clean_mempool_with_removed_transactions(
     # Vérifications
     assert cursor.execute.called
 
-    # Vérifier que clean_transaction_from_mempool a été appelé pour tx2
-    cursor.execute.assert_any_call("DELETE FROM mempool WHERE tx_hash = ?", ("tx2",))
-    cursor.execute.assert_any_call("DELETE FROM mempool_transactions WHERE tx_hash = ?", ("tx2",))
+    # Vérifier que clean_transaction_from_mempool a été appelé pour tx2 -
+    # tx_hash is BLOB(32) at rest now.
+    expected_tx_hash = b"tx2"
+    cursor.execute.assert_any_call(
+        "DELETE FROM mempool WHERE tx_hash = ?", (expected_tx_hash,)
+    )
+    cursor.execute.assert_any_call(
+        "DELETE FROM mempool_transactions WHERE tx_hash = ?", (expected_tx_hash,)
+    )

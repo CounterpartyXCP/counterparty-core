@@ -154,6 +154,8 @@ class UTXOBalancesCache(metaclass=helpers.SingletonMeta):
 
     def _add_known_sources_descendants(self, cursor):
         """Add to cache the destinations from KNOWN_SOURCES and all descendant transactions."""
+        from counterpartycore.lib.utils import hashcodec
+
         pending_utxos = set()
 
         # Start with destinations from KNOWN_SOURCES
@@ -161,7 +163,7 @@ class UTXOBalancesCache(metaclass=helpers.SingletonMeta):
             if source != "":
                 tx = cursor.execute(
                     "SELECT utxos_info, transaction_type FROM transactions WHERE tx_hash = ?",
-                    (tx_hash,),
+                    (hashcodec.hash_to_db(tx_hash),),
                 ).fetchone()
                 if tx:
                     utxos_info = tx["utxos_info"].split(" ")
@@ -254,6 +256,23 @@ class UTXOBalancesCache(metaclass=helpers.SingletonMeta):
 
 
 class OrdersCache(metaclass=helpers.SingletonMeta):
+    """In-memory shadow of the ``orders`` table for fast matching.
+
+    NOTE on hash encoding: the cache table keeps ``tx_hash`` as ``TEXT``
+    (64-char lowercase hex), unlike the persisted ledger schema which stores
+    it as ``BLOB(32)`` after the compact-hash storage migration. This is
+    intentional because the cache is populated and consumed exclusively
+    via the rowtracer / Python layer where hashes are already normalised
+    to hex strings (see ``utils/database.rowtracer``).
+
+    Callers MUST pass hex strings to ``insert_order``, ``update_order``,
+    ``get_matching_orders``, etc. Passing raw ``bytes`` would silently
+    fail to match (SQLite would compare a BLOB against a TEXT column).
+    If a caller ever needs to bind a value coming from a raw SQL fetch
+    that bypassed the rowtracer, normalise it first via
+    ``hashcodec.hash_from_db``.
+    """
+
     def __init__(self, db) -> None:
         logger.debug("Initialising orders cache...")
         self.last_cleaning_block_index = 0

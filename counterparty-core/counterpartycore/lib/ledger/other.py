@@ -1,5 +1,6 @@
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger.events import insert_update
+from counterpartycore.lib.utils import hashcodec
 
 #####################
 #    BROADCASTS     #
@@ -106,7 +107,7 @@ def get_send_msg_index(db, tx_hash):
         """
         SELECT MAX(msg_index) as msg_index FROM sends WHERE tx_hash = ?
     """,
-        (tx_hash,),
+        (hashcodec.hash_to_db(tx_hash),),
     ).fetchone()
     if last_msg_index and last_msg_index["msg_index"] is not None:
         msg_index = last_msg_index["msg_index"] + 1
@@ -121,7 +122,7 @@ def get_issuance_msg_index(db, tx_hash):
         """
         SELECT MAX(msg_index) as msg_index FROM issuances WHERE tx_hash = ?
     """,
-        (tx_hash,),
+        (hashcodec.hash_to_db(tx_hash),),
     ).fetchone()
     if last_msg_index and last_msg_index["msg_index"] is not None:
         msg_index = last_msg_index["msg_index"] + 1
@@ -188,7 +189,7 @@ def get_bet(db, bet_hash: str):
         WHERE tx_hash = ?
         ORDER BY rowid DESC LIMIT 1
     """
-    bindings = (bet_hash,)
+    bindings = (hashcodec.hash_to_db(bet_hash),)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 

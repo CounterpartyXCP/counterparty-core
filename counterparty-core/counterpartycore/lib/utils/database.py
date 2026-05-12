@@ -1,3 +1,4 @@
+import binascii
 import logging
 import os
 import threading
@@ -9,7 +10,7 @@ import apsw.bestpractice
 import apsw.ext
 import psutil
 from counterpartycore.lib import config, exceptions
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import helpers, hashcodec
 from termcolor import cprint
 from yoyo import get_backend, read_migrations
 from yoyo.exceptions import LockTimeout
@@ -20,10 +21,27 @@ logger = logging.getLogger(config.LOGGER_NAME)
 apsw.ext.log_sqlite(logger=logger)
 
 
+def _convert_value(name, field_type, value):
+    if value is None:
+        return None
+    if str(field_type) == "BOOL":
+        return bool(value)
+    # Columns storing 256-bit hashes are BLOB(32) at rest after the size
+    # optimization migration, but the rest of the codebase (consensus,
+    # API, tests) expects 64-char lowercase hex strings. Convert lazily
+    # in the rowtracer so downstream code is unchanged.
+    if isinstance(value, bytes) and name in hashcodec.HASH_COLUMN_NAMES:
+        return binascii.hexlify(value).decode("ascii")
+    return value
+
+
 def rowtracer(cursor, sql):
-    """Converts fetched SQL data into dict-style"""
+    """Converts fetched SQL data into dict-style. Auto-converts BLOB hash
+    columns back to lowercase hex strings, preserving the legacy contract that
+    ``row['tx_hash']`` etc. are hex strings.
+    """
     return {
-        name: (bool(value) if str(field_type) == "BOOL" else value)
+        name: _convert_value(name, field_type, value)
         for (name, field_type), value in zip(cursor.getdescription(), sql, strict=True)
     }
 
@@ -89,6 +107,38 @@ def get_db_connection(db_file, read_only=True, check_wal=False):
     cursor.execute("PRAGMA journal_size_limit = 6144000")
     cursor.execute("PRAGMA foreign_keys = ON")
     cursor.execute("PRAGMA defer_foreign_keys = ON")
+
+    # Register hex_lower/unhex UDFs so VIEWs and migrations can convert
+    # between the BLOB(32) at-rest representation and the legacy hex string
+    # used by consensus, API, and tests.
+    hashcodec.register_db_functions(db)
+
+    # State DB read-only connections (used by API request handlers) need to
+    # see ``ledger_db.transactions`` so that hash-FK projections that
+    # re-hydrate ``order_tx_hash`` / ``dispenser_tx_hash`` from their
+    # ``*_tx_index`` foreign keys can JOIN against it. We do this only for
+    # read-only connections to avoid taking a write lock on ledger_db
+    # (which would conflict with the ledger writer / test fixtures).
+    if (
+        read_only
+        and hasattr(config, "STATE_DATABASE")
+        and db_file == config.STATE_DATABASE
+        and hasattr(config, "DATABASE")
+        and config.DATABASE
+        and os.path.exists(config.DATABASE)
+    ):
+        try:
+            attached_row = cursor.execute(
+                "SELECT COUNT(*) FROM pragma_database_list WHERE name = ?",
+                ("ledger_db",),
+            ).fetchone()
+            already_attached = (attached_row[0] if attached_row else 0) > 0
+            if not already_attached:
+                cursor.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
+        except apsw.SQLError:
+            # Ledger DB may not exist yet during early bootstrap; the caller
+            # will retry once it's available.
+            pass
 
     db.setrowtrace(rowtracer)
 

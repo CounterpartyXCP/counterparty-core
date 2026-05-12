@@ -11,7 +11,7 @@ from counterpartycore.lib.ledger.caches import AssetCache
 from counterpartycore.lib.ledger.events import insert_update
 from counterpartycore.lib.ledger.supplies import asset_supply
 from counterpartycore.lib.parser import protocol
-from counterpartycore.lib.utils import assetnames
+from counterpartycore.lib.utils import assetnames, hashcodec
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -501,9 +501,11 @@ def get_fairmint_quantities(db, fairminter_tx_hash):
             SUM(paid_quantity) AS paid_quantity,
             SUM(commission) AS commission
         FROM fairmints
-        WHERE fairminter_tx_hash = ? AND status = ?
+        WHERE fairminter_tx_index = (
+            SELECT tx_index FROM transactions WHERE tx_hash = ?
+        ) AND status = ?
     """
-    bindings = (fairminter_tx_hash, "valid")
+    bindings = (hashcodec.hash_to_db(fairminter_tx_hash), "valid")
     cursor.execute(query, bindings)
     sums = cursor.fetchone()
     return (sums["quantity"] or 0) + (sums["commission"] or 0), (sums["paid_quantity"] or 0)
@@ -515,9 +517,11 @@ def get_fairmint_by_address(db, fairminter_tx_hash, source):
         SELECT
             SUM(earn_quantity) AS quantity
         FROM fairmints
-        WHERE fairminter_tx_hash = ? AND status = ? AND source = ?
+        WHERE fairminter_tx_index = (
+            SELECT tx_index FROM transactions WHERE tx_hash = ?
+        ) AND status = ? AND source = ?
     """
-    bindings = (fairminter_tx_hash, "valid", source)
+    bindings = (hashcodec.hash_to_db(fairminter_tx_hash), "valid", source)
     cursor.execute(query, bindings)
     sums = cursor.fetchone()
     return sums["quantity"] or 0
@@ -546,9 +550,11 @@ def get_valid_fairmints(db, fairminter_tx_hash):
     cursor = db.cursor()
     query = """
         SELECT * FROM fairmints
-        WHERE fairminter_tx_hash = ? AND status = ?
+        WHERE fairminter_tx_index = (
+            SELECT tx_index FROM transactions WHERE tx_hash = ?
+        ) AND status = ?
     """
-    bindings = (fairminter_tx_hash, "valid")
+    bindings = (hashcodec.hash_to_db(fairminter_tx_hash), "valid")
     cursor.execute(query, bindings)
     return cursor.fetchall()
 

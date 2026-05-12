@@ -1,6 +1,7 @@
 #
 # file: counterpartycore/lib/api/migrations/0003.create_and_populate_all_expirations.py
 #
+import binascii
 import logging
 import time
 
@@ -17,12 +18,36 @@ def dict_factory(cursor, row):
     return dict(zip(fields, row, strict=True))
 
 
+def _hex_lower_udf(value):
+    """SQLite UDF: BLOB/text -> 64-char lowercase hex string, NULL->NULL.
+
+    The state DB attaches the (already migrated) ledger DB and reads
+    ``*_hash`` columns that are now BLOB(32). Yoyo connects via the stdlib
+    sqlite3 driver, so the apsw-registered ``hex_lower`` UDF on the main
+    state-DB connection is not visible here; we register the same shim on
+    the migration connection.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value.lower()
+    return binascii.hexlify(value).decode("ascii")
+
+
 def apply(db):
     start_time = time.time()
     logger.debug("Populating the `all_expirations` table...")
 
     if hasattr(db, "row_factory"):
         db.row_factory = dict_factory
+
+    # Register hex_lower so the ``object_id`` projection produces lowercase
+    # hex strings even though the underlying columns are BLOB(32).
+    try:
+        db.create_function("hex_lower", 1, _hex_lower_udf)
+    except AttributeError:
+        # apsw path: ``createscalarfunction`` instead of ``create_function``.
+        db.createscalarfunction("hex_lower", _hex_lower_udf, 1)
 
     attached = (
         db.execute(
@@ -41,9 +66,13 @@ def apply(db):
             block_index INTEGER
         );
         """,
+        # ``*_hash`` columns on the ledger DB are now BLOB(32); convert to
+        # lowercase hex via the ``hex_lower`` UDF so ``object_id`` stays a
+        # 64-char hex string (matching the runtime path that gets the value
+        # via ``json.loads(event["bindings"])``).
         """
         INSERT INTO all_expirations (object_id, block_index, type)
-        SELECT order_hash AS object_id, block_index, 'order' AS type
+        SELECT hex_lower(order_hash) AS object_id, block_index, 'order' AS type
         FROM ledger_db.order_expirations
         """,
         """
@@ -53,7 +82,7 @@ def apply(db):
         """,
         """
         INSERT INTO all_expirations (object_id, block_index, type)
-        SELECT bet_hash AS object_id, block_index, 'bet' AS type
+        SELECT hex_lower(bet_hash) AS object_id, block_index, 'bet' AS type
         FROM ledger_db.bet_expirations
         """,
         """
@@ -63,7 +92,7 @@ def apply(db):
         """,
         """
         INSERT INTO all_expirations (object_id, block_index, type)
-        SELECT rps_hash AS object_id, block_index, 'rps' AS type
+        SELECT hex_lower(rps_hash) AS object_id, block_index, 'rps' AS type
         FROM ledger_db.rps_expirations
         """,
         """

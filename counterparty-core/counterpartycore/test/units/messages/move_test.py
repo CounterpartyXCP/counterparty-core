@@ -1,6 +1,7 @@
 import pytest
 from counterpartycore.lib import exceptions
 from counterpartycore.lib.messages import move
+from counterpartycore.lib.utils import hashcodec
 
 DUMMY_UTXO = 64 * "0" + ":0"
 
@@ -185,14 +186,14 @@ def test_move_assets_with_zero_balance(
     # The zero balance should not create a send record
     zero_sends = ledger_db.execute(
         "SELECT * FROM sends WHERE tx_hash = ? AND asset = 'ZEROVAL'",
-        (tx["tx_hash"],),
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchall()
     assert len(zero_sends) == 0
 
     # But XCP should still be moved
     xcp_sends = ledger_db.execute(
         "SELECT * FROM sends WHERE tx_hash = ? AND asset = 'XCP'",
-        (tx["tx_hash"],),
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchall()
     assert len(xcp_sends) == 1
 

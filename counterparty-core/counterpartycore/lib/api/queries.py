@@ -1,6 +1,7 @@
 # pylint: disable=too-many-lines
 
 import json
+import re
 import typing
 from typing import Literal
 
@@ -13,7 +14,147 @@ from counterpartycore.lib.ledger.markets import (
     pool_has_liquidity,
     sort_pair,
 )
+from counterpartycore.lib.utils import hashcodec
 from counterpartycore.lib.utils.helpers import divide
+
+
+def _convert_hash_value(field, value):
+    """If the WHERE clause targets a hash column and the caller passes a hex
+    string, convert it to BLOB so it can match the at-rest representation."""
+    if value is None:
+        return value
+    if isinstance(value, bytes):
+        return value
+    if field in hashcodec.HASH_COLUMN_NAMES and isinstance(value, str):
+        try:
+            return hashcodec.hash_to_db(value)
+        except ValueError:
+            return value
+    return value
+
+
+# Legacy hash filter keys in callers that have been replaced by
+# ``*_tx_index`` foreign keys. ``select_rows`` rewrites the WHERE clause so the
+# existing API surface (which still accepts hex tx_hash query params) can
+# resolve via a transactions subquery.
+_HASH_FK_WHERE_REWRITE = {
+    "dispenser_tx_hash": "dispenser_tx_index",
+    "fairminter_tx_hash": "fairminter_tx_index",
+    "order_tx_hash": "order_tx_index",
+    "offer_hash": "offer_tx_index",
+}
+
+# For tables where a legacy hash column was dropped and replaced by a
+# ``*_tx_index`` FK, ``select_rows`` rewrites ``SELECT *`` to re-expose the
+# legacy hash via a JOIN against ``transactions`` so the API response shape is
+# preserved. The mapping uses ``ledger_db.transactions`` so it also works when
+# the query targets a State DB connection (which ATTACHes the Ledger DB as
+# ``ledger_db`` at read-only open time).
+_HASH_FK_PROJECTIONS = {
+    "dispenses": ("dispenser_tx_index", "dispenser_tx_hash"),
+    "dispenser_refills": ("dispenser_tx_index", "dispenser_tx_hash"),
+    "fairmints": ("fairminter_tx_index", "fairminter_tx_hash"),
+    "pool_matches": ("order_tx_index", "order_tx_hash"),
+    "cancels": ("offer_tx_index", "offer_hash"),
+}
+
+
+def _resolve_transactions_table_name(db):
+    """Return ``transactions`` if the connection sees that table directly,
+    ``ledger_db.transactions`` if ``ledger_db`` is attached and contains it,
+    or ``None`` otherwise (in which case hash-FK projections are skipped).
+    """
+    cursor = db.cursor()
+    try:
+        cursor.execute("SELECT 1 FROM transactions LIMIT 0")
+        return "transactions"
+    except Exception:  # pylint: disable=broad-exception-caught
+        pass
+    try:
+        cursor.execute("SELECT 1 FROM ledger_db.transactions LIMIT 0")
+        return "ledger_db.transactions"
+    except Exception:  # pylint: disable=broad-exception-caught
+        return None
+
+
+# Cache of table -> list of public columns (everything except the internal
+# ``*_tx_index`` FK that replaced the legacy hash). Populated lazily on first
+# projection.
+_HASH_FK_PUBLIC_COLUMNS: dict[str, tuple[str, ...]] = {}
+
+
+def _hash_fk_public_columns(db, table):
+    """Return the list of column names to expose to the API for a table
+    where the legacy hash was replaced by a ``*_tx_index`` FK, i.e. every
+    column of the underlying table *except* that internal FK.
+
+    The legacy hash column is re-hydrated separately by the caller via a
+    ``LEFT JOIN`` against ``transactions``.
+    """
+    cached = _HASH_FK_PUBLIC_COLUMNS.get(table)
+    if cached is not None:
+        return cached
+    index_col, _hash_col = _HASH_FK_PROJECTIONS[table]
+    cursor = db.cursor()
+    rows = cursor.execute(f"PRAGMA table_info({table})").fetchall()  # nosec B608  # noqa: S608
+    cols = []
+    for row in rows:
+        if isinstance(row, dict):
+            name = row["name"]
+        else:
+            name = row[1]
+        if name == index_col:
+            continue
+        cols.append(name)
+    cols_tuple = tuple(cols)
+    _HASH_FK_PUBLIC_COLUMNS[table] = cols_tuple
+    return cols_tuple
+
+
+def _project_messages_tx_hash(select_clause):
+    """Rewrite identifiers in a ``SELECT`` clause targeting the joined
+    ``messages``/``transactions`` view (``messages.tx_hash`` was dropped in
+    favour of an FK on ``transactions``):
+
+    - ``tx_hash`` -> ``hex_lower(__txh.tx_hash) AS tx_hash``
+    - bare ``block_index`` -> ``__m.block_index AS block_index``
+      (both ``messages`` and ``transactions`` have ``block_index``; without
+      a qualifier the join is ambiguous).
+    - bare ``rowid`` -> ``__m.rowid AS rowid``
+      (both tables have an implicit ``rowid``; the join needs an explicit
+      qualifier).
+
+    Uses word-boundary safe rewrites so ``last_status_tx_hash`` etc. are not
+    touched.
+    """
+    rewritten = re.sub(
+        r"(?<![A-Za-z0-9_\.])tx_hash(?![A-Za-z0-9_])",
+        "hex_lower(__txh.tx_hash) AS tx_hash",
+        select_clause,
+    )
+    rewritten = re.sub(
+        r"(?<![A-Za-z0-9_\.])block_index(?![A-Za-z0-9_])",
+        "__m.block_index AS block_index",
+        rewritten,
+    )
+    # Collapse ``rowid AS rowid`` to ``__m.rowid AS rowid``. We need a
+    # dedicated pass first so the bare-``rowid`` rewrite below does not
+    # mangle the alias position.
+    rewritten = re.sub(
+        r"(?<![A-Za-z0-9_\.])rowid\s+AS\s+rowid(?![A-Za-z0-9_])",
+        "__m.rowid AS rowid",
+        rewritten,
+        flags=re.IGNORECASE,
+    )
+    # Qualify a bare ``rowid`` column reference (used by callers that select
+    # rowid without an explicit alias). Skip when already qualified
+    # (``__m.rowid``) or when it appears as an alias (``AS rowid``).
+    rewritten = re.sub(
+        r"(?<![A-Za-z0-9_\.])(?<!AS\s)rowid(?![A-Za-z0-9_])",
+        "__m.rowid AS rowid",
+        rewritten,
+    )
+    return rewritten
 
 OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
 OrderMatchesStatus = Literal["all", "pending", "completed", "expired"]
@@ -211,36 +352,100 @@ def select_rows(
 
     bindings = []
 
+    # ``messages.tx_hash`` has been dropped from storage. Reads from
+    # ``messages`` are rewritten to come from a JOIN against ``transactions``
+    # so legacy callers that still filter or project on ``tx_hash`` keep
+    # working.
+    rewrite_messages_tx_hash = table == "messages"
+
+    table_has_hash_fk = table in _HASH_FK_PROJECTIONS
+
+    # Columns shared between the main table and the joined ``transactions``
+    # table that need explicit qualification when we add the JOIN. The set is
+    # the intersection of common columns; over-qualifying with ``__m.`` is
+    # safe because the resulting SQL still resolves to the main table's row.
+    _AMBIGUOUS_COLS = (
+        "block_index",
+        "tx_index",
+        "rowid",
+        "tx_hash",
+        "source",
+        "destination",
+        "block_time",
+        "btc_amount",
+        "fee",
+        "data",
+        "supported",
+        "utxos_info",
+        "transaction_type",
+    )
+
+    def _qualify(field):
+        """Disambiguate columns when the SELECT joins ``messages`` or one of
+        the ``_HASH_FK_PROJECTIONS`` tables against ``transactions``."""
+        if rewrite_messages_tx_hash:
+            if field in ("block_index", "tx_index", "rowid", "message_index"):
+                return f"__m.{field}"
+            if field == "tx_hash":
+                return "__txh.tx_hash"
+        elif table_has_hash_fk:
+            if field in _AMBIGUOUS_COLS:
+                return f"__m.{field}"
+        return field
+
     or_where = []
     for where_dict in where:
         where_field = []
         for key, value in where_dict.items():
             if key.endswith("__gt"):
-                where_field.append(f"{key[:-4]} > ?")
-                bindings.append(value)
+                field = key[:-4]
+                where_field.append(f"{_qualify(field)} > ?")
+                bindings.append(_convert_hash_value(field, value))
             elif key.endswith("__like"):
-                where_field.append(f"{key[:-6]} LIKE ?")
+                field = key[:-6]
+                where_field.append(f"{_qualify(field)} LIKE ?")
                 bindings.append(value)
             elif key.endswith("__notlike"):
-                where_field.append(f"{key[:-9]} NOT LIKE ?")
+                field = key[:-9]
+                where_field.append(f"{_qualify(field)} NOT LIKE ?")
                 bindings.append(value)
             elif key.endswith("__in"):
-                where_field.append(f"{key[:-4]} IN ({','.join(['?'] * len(value))})")
-                bindings += value
+                field = key[:-4]
+                if field in _HASH_FK_WHERE_REWRITE:
+                    new_field = _HASH_FK_WHERE_REWRITE[field]
+                    placeholders = ",".join(
+                        ["(SELECT tx_index FROM transactions WHERE tx_hash = ?)"] * len(value)
+                    )
+                    where_field.append(f"{new_field} IN ({placeholders})")
+                    bindings += [hashcodec.hash_to_db(v) for v in value]
+                else:
+                    where_field.append(
+                        f"{_qualify(field)} IN ({','.join(['?'] * len(value))})"
+                    )
+                    bindings += [_convert_hash_value(field, v) for v in value]
             elif key.endswith("__notnull"):
-                where_field.append(f"{key[:-9]} IS NOT NULL")
+                field = key[:-9]
+                where_field.append(f"{_qualify(field)} IS NOT NULL")
             elif key.endswith("__null"):
-                where_field.append(f"{key[:-6]} IS NULL")
+                field = key[:-6]
+                where_field.append(f"{_qualify(field)} IS NULL")
             elif key.endswith("__nocase"):
-                where_field.append(f"{key[:-8]} = ? COLLATE NOCASE")
-                bindings.append(value)
+                field = key[:-8]
+                where_field.append(f"{_qualify(field)} = ? COLLATE NOCASE")
+                bindings.append(_convert_hash_value(field, value))
             else:
-                if key in ADDRESS_FIELDS and len(value.split(",")) > 1:
+                if key in _HASH_FK_WHERE_REWRITE:
+                    new_field = _HASH_FK_WHERE_REWRITE[key]
+                    where_field.append(
+                        f"{new_field} = (SELECT tx_index FROM transactions WHERE tx_hash = ?)"
+                    )
+                    bindings.append(hashcodec.hash_to_db(value))
+                elif key in ADDRESS_FIELDS and len(value.split(",")) > 1:
                     where_field.append(f"{key} IN ({','.join(['?'] * len(value.split(',')))})")
                     bindings += value.split(",")
                 else:
-                    where_field.append(f"{key} = ?")
-                    bindings.append(value)
+                    where_field.append(f"{_qualify(key)} = ?")
+                    bindings.append(_convert_hash_value(key, value))
 
         and_where_clause = ""
         if where_field:
@@ -258,13 +463,14 @@ def select_rows(
         where_clause_count = ""
     bindings_count = list(bindings)
 
+    cursor_field_qualified = _qualify(cursor_field)
     if offset is None and last_cursor is not None:
         if where_clause != "":
             where_clause = f"({where_clause}) AND "
         if order == "ASC":
-            where_clause += f" {cursor_field} >= ?"
+            where_clause += f" {cursor_field_qualified} >= ?"
         else:
-            where_clause += f" {cursor_field} <= ?"
+            where_clause += f" {cursor_field_qualified} <= ?"
         bindings.append(last_cursor)
 
     if where_clause:
@@ -277,9 +483,9 @@ def select_rows(
         group_by_clause = f"GROUP BY {group_by}"
 
     if select == "*":
-        select = f"*, {cursor_field} AS {cursor_field}"
+        select = f"*, {cursor_field_qualified} AS {cursor_field}"
     elif cursor_field not in select:
-        select = f"{select}, {cursor_field} AS {cursor_field}"
+        select = f"{select}, {cursor_field_qualified} AS {cursor_field}"
     if (
         table
         in [
@@ -292,20 +498,92 @@ def select_rows(
         ]
         and "COUNT(*)" not in select
     ):
-        select += ", NULLIF(destination, '') AS destination"
+        # When ``dispenses`` rows are read through the hash-FK JOIN, the
+        # outer ``transactions`` row also contains a ``destination`` column;
+        # qualify the reference so SQLite knows we mean the dispense row.
+        dest_ref = "__m.destination" if table_has_hash_fk else "destination"
+        select += f", NULLIF({dest_ref}, '') AS destination"
 
-    query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
-    query_count = f"SELECT {select} FROM {table} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
+    # Rewrite ``SELECT ... tx_hash ... FROM messages`` to project
+    # ``transactions.tx_hash`` through the join we set up above.
+    if rewrite_messages_tx_hash:
+        txtable = _resolve_transactions_table_name(db)
+        if txtable is None:
+            from_clause = "messages AS __m"
+            # Word-boundary safe substitution so embedded substrings such as
+            # ``last_status_tx_hash`` (not a column on ``messages`` today, but
+            # this branch is shared with future schema additions) are not
+            # corrupted by a naive ``str.replace``.
+            select_rewritten = re.sub(
+                r"(?<![A-Za-z0-9_\.])tx_hash(?![A-Za-z0-9_])",
+                "NULL AS tx_hash",
+                select,
+            )
+        else:
+            from_clause = (
+                f"messages AS __m LEFT JOIN {txtable} AS __txh "
+                f"ON __txh.tx_index = __m.tx_index"
+            )
+            # Project tx_hash from the joined transactions; leave other columns
+            # untouched. We do a token-level rewrite so embedded substrings such
+            # as ``last_status_tx_hash`` are not touched.
+            select_rewritten = _project_messages_tx_hash(select)
+    elif table_has_hash_fk:
+        # Add the legacy hash column back via a JOIN against ``transactions``
+        # so the API row shape remains unchanged after the column drop.
+        # Explicitly enumerate public columns so the internal ``*_tx_index``
+        # FK that replaced the legacy hash does NOT leak into the response.
+        index_col, hash_col = _HASH_FK_PROJECTIONS[table]
+        public_cols = _hash_fk_public_columns(db, table)
+        explicit_cols = ", ".join(f"__m.{c}" for c in public_cols)
+        txtable = _resolve_transactions_table_name(db)
+        if txtable is None:
+            # No transactions table available (e.g. State DB without the
+            # Ledger DB attached). Skip the JOIN and surface a NULL legacy
+            # hash; callers that need the real hash can fetch it separately.
+            from_clause = f"{table} AS __m"
+            if "*" in select:
+                select_rewritten = select.replace(
+                    "*", f"{explicit_cols}, NULL AS {hash_col}", 1
+                )
+            else:
+                select_rewritten = f"{select}, NULL AS {hash_col}"
+        else:
+            from_clause = (
+                f"{table} AS __m LEFT JOIN {txtable} AS __txjoin "
+                f"ON __txjoin.tx_index = __m.{index_col}"
+            )
+            if "*" in select:
+                # Expand the bare ``*`` to the explicit public column list
+                # and re-add the legacy hash via the JOIN.
+                select_rewritten = select.replace(
+                    "*",
+                    f"{explicit_cols}, hex_lower(__txjoin.tx_hash) AS {hash_col}",
+                    1,
+                )
+            else:
+                select_rewritten = (
+                    f"{select}, hex_lower(__txjoin.tx_hash) AS {hash_col}"
+                )
+    else:
+        from_clause = table
+        select_rewritten = select
+
+    query = f"SELECT {select_rewritten} FROM {from_clause} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
+    query_count = f"SELECT {select_rewritten} FROM {from_clause} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
 
     if wrap_where is not None:
         wrap_where_field = []
         for key, value in wrap_where.items():
             if key.endswith("__gt"):
-                wrap_where_field.append(f"{key[:-4]} > ?")
+                field = key[:-4]
+                wrap_where_field.append(f"{field} > ?")
             else:
-                wrap_where_field.append(f"{key} = ?")
-            bindings.append(value)
-            bindings_count.append(value)
+                field = key
+                wrap_where_field.append(f"{field} = ?")
+            converted = _convert_hash_value(field, value)
+            bindings.append(converted)
+            bindings_count.append(converted)
         wrap_where_clause = " AND ".join(wrap_where_field)
         wrap_where_clause = f"WHERE {wrap_where_clause}"
         query = f"SELECT * FROM ({query}) {wrap_where_clause}"  # nosec B608  # noqa: S608 # nosec B608

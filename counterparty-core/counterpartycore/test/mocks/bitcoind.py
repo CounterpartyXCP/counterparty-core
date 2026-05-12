@@ -192,12 +192,15 @@ def mine_empty_blocks(db, blocks):
 
 
 def sendrawtransaction(db, rawtransaction):
+    from counterpartycore.lib.utils import hashcodec
+
     decoded_tx = deserialize.deserialize_tx(rawtransaction, parse_vouts=True)
     BlockchainMock().save_address_and_value(decoded_tx)
     mine_block(db, [decoded_tx])
     cursor = db.cursor()
     transaction = cursor.execute(
-        "SELECT * FROM transactions WHERE tx_hash = ?", (decoded_tx["tx_id"],)
+        "SELECT * FROM transactions WHERE tx_hash = ?",
+        (hashcodec.hash_to_db(decoded_tx["tx_id"]),),
     ).fetchone()
     assert transaction is not None
 

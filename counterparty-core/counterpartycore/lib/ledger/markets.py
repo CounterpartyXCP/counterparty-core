@@ -5,6 +5,7 @@ from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger.caches import OrdersCache
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.ledger.events import credit, insert_record, insert_update
+from counterpartycore.lib.utils import hashcodec
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -100,7 +101,11 @@ def get_pending_order_matches(db, tx0_hash, tx1_hash):
         ) WHERE status = :status
         ORDER BY rowid
     """
-    bindings = {"status": "pending", "tx0_hash": tx0_hash, "tx1_hash": tx1_hash}
+    bindings = {
+        "status": "pending",
+        "tx0_hash": hashcodec.hash_to_db(tx0_hash),
+        "tx1_hash": hashcodec.hash_to_db(tx1_hash),
+    }
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -158,7 +163,7 @@ def get_order(db, order_hash: str):
         WHERE tx_hash = ?
         ORDER BY rowid DESC LIMIT 1
     """
-    bindings = (order_hash,)
+    bindings = (hashcodec.hash_to_db(order_hash),)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -169,7 +174,7 @@ def get_order_first_block_index(cursor, tx_hash):
         WHERE tx_hash = ?
         ORDER BY rowid ASC LIMIT 1
     """
-    bindings = (tx_hash,)
+    bindings = (hashcodec.hash_to_db(tx_hash),)
     cursor.execute(query, bindings)
     return cursor.fetchone()["block_index"]
 
@@ -233,7 +238,7 @@ def get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset):
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     """
-    bindings = (tx_hash, get_asset, give_asset, "open")
+    bindings = (hashcodec.hash_to_db(tx_hash), get_asset, give_asset, "open")
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -260,7 +265,10 @@ def update_order(db, tx_hash, update_data):
 
 
 def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
-    select_bindings = {"tx0_hash": tx0_hash, "tx1_hash": tx1_hash}
+    select_bindings = {
+        "tx0_hash": hashcodec.hash_to_db(tx0_hash),
+        "tx1_hash": hashcodec.hash_to_db(tx1_hash),
+    }
 
     where_source = ""
     if source is not None:
@@ -323,7 +331,7 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
     bindings = []
     if tx_hash is not None:
         where.append("tx_hash = ?")
-        bindings.append(tx_hash)
+        bindings.append(hashcodec.hash_to_db(tx_hash))
     if tx_index is not None:
         where.append("tx_index = ?")
         bindings.append(tx_index)
@@ -352,11 +360,13 @@ def get_dispensers_info(db, tx_hash_list):
         WHERE tx_hash IN ({",".join(["?" for e in range(0, len(tx_hash_list))])})
         GROUP BY tx_hash
     """  # nosec B608  # noqa: S608 # nosec B608
-    cursor.execute(query, tx_hash_list)
+    cursor.execute(query, [hashcodec.hash_to_db(h) for h in tx_hash_list])
     dispensers = cursor.fetchall()
     result = {}
     for dispenser in dispensers:
         del dispenser["rowid"]
+        # rowtracer converts BLOB -> hex; key the result on the hex form so
+        # callers passing hex keys can index it back.
         tx_hash = dispenser["tx_hash"]
         del dispenser["tx_hash"]
         del dispenser["asset"]
@@ -365,13 +375,18 @@ def get_dispensers_info(db, tx_hash_list):
 
 
 def get_refilling_count(db, dispenser_tx_hash):
+    # ``dispenser_refills.dispenser_tx_hash`` was replaced by an integer
+    # ``dispenser_tx_index`` FK; translate the hex hash via the
+    # ``transactions`` table.
     cursor = db.cursor()
     query = """
         SELECT count(*) cnt
         FROM dispenser_refills
-        WHERE dispenser_tx_hash = ?
+        WHERE dispenser_tx_index = (
+            SELECT tx_index FROM transactions WHERE tx_hash = ?
+        )
     """
-    bindings = (dispenser_tx_hash,)
+    bindings = (hashcodec.hash_to_db(dispenser_tx_hash),)
     cursor.execute(query, bindings)
     return cursor.fetchall()[0]["cnt"]
 
@@ -579,13 +594,18 @@ def get_open_orders_for_pair(db, give_asset, get_asset):
 
 
 def get_pool_matches_by_order(db, order_tx_hash):
+    # ``pool_matches.order_tx_hash`` was replaced by an integer
+    # ``order_tx_index`` FK; translate the hex hash via the
+    # ``transactions`` table.
     cursor = db.cursor()
     query = """
         SELECT * FROM pool_matches
-        WHERE order_tx_hash = ?
+        WHERE order_tx_index = (
+            SELECT tx_index FROM transactions WHERE tx_hash = ?
+        )
         ORDER BY block_index, tx_index
     """
-    cursor.execute(query, (order_tx_hash,))
+    cursor.execute(query, (hashcodec.hash_to_db(order_tx_hash),))
     return cursor.fetchall()
 
 

@@ -13,6 +13,18 @@ from counterpartycore.lib.utils import database
 logger = logging.getLogger(config.LOGGER_NAME)
 
 MIGRATIONS_AFTER_ROLLBACK = [
+    # 0002 / 0003 are included so that pre-existing state DBs built before the
+    # compact-hash storage migration get rebuilt with the ``hex_lower(...)``
+    # projection on the next rollback:
+    #   - 0002 populates ``parsed_events.event_hash`` (TEXT) from
+    #     ``ledger_db.messages.event_hash`` (now BLOB(32)); without the
+    #     ``hex_lower`` projection, BLOBs end up stored in the TEXT column.
+    #   - 0003 has the same problem on ``all_expirations.object_id``.
+    # ``parsed_events`` and ``all_expirations`` are also in ``ROLLBACKABLE_TABLES``
+    # (DELETE-only path); the DELETE is harmless since the table is dropped
+    # and recreated by the migration apply.
+    "0002.create_and_populate_parsed_events",
+    "0003.create_and_populate_all_expirations",
     "0004.create_and_populate_assets_info",
     "0005.create_and_populate_events_count",
     "0006.create_and_populate_consolidated_tables",

@@ -182,8 +182,23 @@ def empty_ledger_db(build_dbs):
     os.remove(config.DATABASE)
 
 
+# Tables where a legacy ``*_tx_hash`` (or ``offer_hash``) column has been
+# replaced by an integer ``*_tx_index`` foreign key. The mock test helper
+# below rewrites legacy hex-hash filters to the new FK form via a subquery
+# on ``transactions`` so existing test fixtures keep working unchanged.
+_LEGACY_HASH_TO_TX_INDEX_FK = {
+    "cancels": {"offer_hash": ("offer_tx_index", "transactions")},
+    "dispenses": {"dispenser_tx_hash": ("dispenser_tx_index", "transactions")},
+    "dispenser_refills": {"dispenser_tx_hash": ("dispenser_tx_index", "transactions")},
+    "fairmints": {"fairminter_tx_hash": ("fairminter_tx_index", "transactions")},
+    "pool_matches": {"order_tx_hash": ("order_tx_index", "transactions")},
+}
+
+
 def check_record(ledger_db, record):
     """Allow direct record access to the db."""
+    from counterpartycore.lib.utils import hashcodec
+
     cursor = ledger_db.cursor()
 
     if record["table"] == "pragma":
@@ -192,15 +207,28 @@ def check_record(ledger_db, record):
         value = cursor.execute(sql).fetchall()[0][field]
         assert value == record["value"]
     else:
-        sql = f"SELECT COUNT(*) AS count FROM {record['table']} WHERE "  # noqa: S608 # nosec B608
+        table = record["table"]
+        legacy_map = _LEGACY_HASH_TO_TX_INDEX_FK.get(table, {})
+        sql = f"SELECT COUNT(*) AS count FROM {table} WHERE "  # noqa: S608 # nosec B608
         bindings = []
         conditions = []
         fields = []
         for field in record["values"]:
             if record["values"][field] is not None:
                 fields.append(field)
-                conditions.append(f"{field} = ?")
-                bindings.append(record["values"][field])
+                value = record["values"][field]
+                if field in legacy_map:
+                    new_col, fk_table = legacy_map[field]
+                    conditions.append(
+                        f"{new_col} = (SELECT tx_index FROM {fk_table} WHERE tx_hash = ?)"
+                    )
+                    if isinstance(value, str):
+                        value = hashcodec.hash_to_db(value)
+                else:
+                    conditions.append(f"{field} = ?")
+                    if field in hashcodec.HASH_COLUMN_NAMES and isinstance(value, str):
+                        value = hashcodec.hash_to_db(value)
+                bindings.append(value)
         sql += " AND ".join(conditions)
         count = cursor.execute(sql, tuple(bindings)).fetchone()["count"]
         ok = (record.get("not", False) and count == 0) or count == 1

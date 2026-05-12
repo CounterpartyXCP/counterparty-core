@@ -10,7 +10,7 @@ import yaml
 from counterparty_rs import utils as rs_utils
 from counterpartycore.lib.api import routes
 from counterpartycore.lib.api.composer import DEPRECATED_CONSTRUCT_PARAMS
-from counterpartycore.lib.utils import database
+from counterpartycore.lib.utils import database, hashcodec
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../../../../apiary.apib")
@@ -347,9 +347,17 @@ def gen_events_doc():
 
 
 def get_event_tx_hash(db, event_name):
+    # ``messages.tx_hash`` was replaced by a ``tx_index`` FK in the compact-
+    # hash storage migration; re-hydrate the legacy column via JOIN on
+    # ``transactions``. ``rowtracer`` converts BLOB(32) -> 64-char hex.
     cursor = db.cursor()
     cursor.execute(
-        "SELECT tx_hash FROM messages WHERE event=? ORDER BY rowid DESC LIMIT 1",
+        """SELECT t.tx_hash AS tx_hash
+           FROM messages m
+           LEFT JOIN transactions t ON t.tx_index = m.tx_index
+           WHERE m.event = ?
+           ORDER BY m.rowid DESC
+           LIMIT 1""",
         (event_name,),
     )
     row = cursor.fetchone()
@@ -605,14 +613,25 @@ def generate_regtest_fixtures(db):
     row = cursor.fetchone()
     regtest_fixtures["$LAST_DEBIT_BLOCK"] = row["block_index"]
 
-    # transactions with events
+    # transactions with events. ``messages.tx_hash`` was dropped in the
+    # compact-hash storage migration; re-hydrate via JOIN on ``transactions``.
     cursor.execute(
-        "SELECT tx_hash, block_index FROM messages WHERE event='CREDIT' ORDER BY rowid DESC LIMIT 1"
+        """SELECT t.tx_hash AS tx_hash, m.block_index AS block_index
+           FROM messages m
+           LEFT JOIN transactions t ON t.tx_index = m.tx_index
+           WHERE m.event = 'CREDIT'
+           ORDER BY m.rowid DESC
+           LIMIT 1"""
     )
     row = cursor.fetchone()
     regtest_fixtures["$LAST_EVENT_TX_HASH"] = row["tx_hash"]
     regtest_fixtures["$LAST_EVENT_BLOCK"] = row["block_index"]
-    cursor.execute("SELECT tx_index FROM transactions WHERE tx_hash=?", (row["tx_hash"],))
+    # ``transactions.tx_hash`` is BLOB(32) at rest; convert the hex string
+    # back to BLOB for the WHERE binding.
+    cursor.execute(
+        "SELECT tx_index FROM transactions WHERE tx_hash=?",
+        (hashcodec.hash_to_db(row["tx_hash"]),),
+    )
     row = cursor.fetchone()
     regtest_fixtures["$LAST_EVENT_TX_INDEX"] = row["tx_index"]
 

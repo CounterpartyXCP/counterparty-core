@@ -237,11 +237,16 @@ def test_clean_transaction_from_mempool(mock_db):
     # Appel de la fonction
     mempool_module.clean_transaction_from_mempool(db, "tx1")
 
-    # Vérifications
+    # Vérifications - tx_hash is now stored as BLOB(32) so the params are
+    # passed as bytes (encoded via hashcodec.hash_to_db).
+    expected_tx_hash = b"tx1"
     cursor.execute.assert_has_calls(
         [
-            mock.call("DELETE FROM mempool WHERE tx_hash = ?", ("tx1",)),
-            mock.call("DELETE FROM mempool_transactions WHERE tx_hash = ?", ("tx1",)),
+            mock.call("DELETE FROM mempool WHERE tx_hash = ?", (expected_tx_hash,)),
+            mock.call(
+                "DELETE FROM mempool_transactions WHERE tx_hash = ?",
+                (expected_tx_hash,),
+            ),
         ]
     )
 
@@ -270,5 +275,10 @@ def test_clean_mempool_with_validated_transactions(
     assert mock_ledger_blocks.call_count == 2
 
     # Vérifier que clean_transaction_from_mempool a été appelé pour tx1
-    cursor.execute.assert_any_call("DELETE FROM mempool WHERE tx_hash = ?", ("tx1",))
-    cursor.execute.assert_any_call("DELETE FROM mempool_transactions WHERE tx_hash = ?", ("tx1",))
+    expected_tx_hash = b"tx1"
+    cursor.execute.assert_any_call(
+        "DELETE FROM mempool WHERE tx_hash = ?", (expected_tx_hash,)
+    )
+    cursor.execute.assert_any_call(
+        "DELETE FROM mempool_transactions WHERE tx_hash = ?", (expected_tx_hash,)
+    )

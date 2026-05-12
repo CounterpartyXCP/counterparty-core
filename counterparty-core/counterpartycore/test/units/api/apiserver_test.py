@@ -256,7 +256,17 @@ def test_get_dispense(ledger_db, apiv2_client, blockchain_mock, defaults, curren
     with ProtocolChangesDisabled(["multiple_dispenses"]):
         dispense.parse(ledger_db, tx)
 
-    dispenses = ledger_db.execute("SELECT * FROM dispenses ORDER BY rowid DESC LIMIT 1").fetchone()
+    # ``dispenses.dispenser_tx_hash`` has been dropped from storage and
+    # replaced by a ``dispenser_tx_index`` FK. Re-expose the legacy hash via a
+    # ``LEFT JOIN`` against ``transactions`` so the test continues to read
+    # both ``tx_hash`` (the dispense tx) and ``dispenser_tx_hash`` (the
+    # dispenser tx) like before.
+    dispenses = ledger_db.execute(
+        """SELECT d.*, t.tx_hash AS dispenser_tx_hash
+           FROM dispenses d
+           LEFT JOIN transactions t ON t.tx_index = d.dispenser_tx_index
+           ORDER BY d.rowid DESC LIMIT 1"""
+    ).fetchone()
     url = f"/v2/dispenses/{dispenses['tx_hash']}"
     result = apiv2_client.get(url).json
 

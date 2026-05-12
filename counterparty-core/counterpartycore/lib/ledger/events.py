@@ -9,7 +9,122 @@ from counterpartycore.lib.ledger.balances import get_balance
 from counterpartycore.lib.ledger.caches import AssetCache, UTXOBalancesCache
 from counterpartycore.lib.ledger.currentstate import ConsensusHashBuilder, CurrentState
 from counterpartycore.lib.parser import protocol, utxosinfo
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import hashcodec, helpers
+
+# Per-table list of BLOB hash columns that need automatic ``hex -> bytes``
+# normalization at insert time. The values are still passed around as hex
+# strings inside Python (consensus, API, tests); this mapping is consulted by
+# ``insert_record`` to write the binary form to disk.
+#
+# Tables not listed here either have no hash columns (e.g. ``balances``) or
+# their hash columns have been replaced by a ``tx_index`` FK and legacy
+# ``*_tx_hash`` bindings are *resolved* before insert; see
+# ``HASH_TO_TX_INDEX_FK`` below.
+HASH_COLUMNS_BY_TABLE = {
+    "blocks": [
+        "block_hash",
+        "previous_block_hash",
+        "ledger_hash",
+        "txlist_hash",
+        "messages_hash",
+    ],
+    "transactions": ["tx_hash"],
+    "mempool_transactions": ["tx_hash", "block_hash"],
+    "mempool": ["tx_hash"],
+    "messages": ["event_hash"],
+    "transaction_outputs": [],
+    "orders": ["tx_hash"],
+    "order_matches": ["tx0_hash", "tx1_hash"],
+    "order_expirations": ["order_hash"],
+    "bets": ["tx_hash"],
+    "bet_matches": ["tx0_hash", "tx1_hash"],
+    "bet_expirations": ["bet_hash"],
+    "rps": ["tx_hash", "move_random_hash"],
+    "rps_matches": [
+        "tx0_hash",
+        "tx1_hash",
+        "tx0_move_random_hash",
+        "tx1_move_random_hash",
+    ],
+    "rps_expirations": ["rps_hash"],
+    "rpsresolves": ["tx_hash"],
+    "issuances": ["tx_hash"],
+    "broadcasts": ["tx_hash"],
+    "btcpays": ["tx_hash"],
+    "burns": ["tx_hash"],
+    "cancels": ["tx_hash"],
+    "dividends": ["tx_hash"],
+    "destructions": ["tx_hash"],
+    "sweeps": ["tx_hash"],
+    "sends": ["tx_hash"],
+    "dispensers": ["tx_hash", "last_status_tx_hash"],
+    "dispenses": ["tx_hash"],
+    "dispenser_refills": ["tx_hash"],
+    "fairminters": ["tx_hash"],
+    "fairmints": ["tx_hash"],
+    "pools": ["tx_hash"],
+    "pool_deposits": ["tx_hash"],
+    "pool_withdrawals": ["tx_hash"],
+    "pool_matches": ["tx_hash"],
+}
+
+
+# Legacy ``hex tx_hash`` columns that have been replaced by a ``tx_index``
+# FK in the optimized schema. ``insert_record`` resolves the hex value to
+# its tx_index via the ``transactions`` table just before issuing the
+# INSERT, so callers (message handlers) can keep using the legacy field
+# names without modification.
+#
+# Mapping: table -> {legacy_hex_column: new_index_column}
+HASH_TO_TX_INDEX_FK = {
+    "dispenses": {"dispenser_tx_hash": "dispenser_tx_index"},
+    "dispenser_refills": {"dispenser_tx_hash": "dispenser_tx_index"},
+    "fairmints": {"fairminter_tx_hash": "fairminter_tx_index"},
+    "pool_matches": {"order_tx_hash": "order_tx_index"},
+    "cancels": {"offer_hash": "offer_tx_index"},
+}
+
+
+def _resolve_tx_index(db, tx_hash_hex):
+    """Look up ``tx_index`` for a hex ``tx_hash``. Returns ``None`` if the
+    value is ``None`` or the tx is not (yet) in the table; callers must
+    tolerate the latter (e.g. dispenser refresh references the dispenser's
+    own row inserted earlier in the same block)."""
+    if tx_hash_hex is None:
+        return None
+    blob = hashcodec.hash_to_db(tx_hash_hex)
+    cursor = db.cursor()
+    cursor.execute("SELECT tx_index FROM transactions WHERE tx_hash = ?", (blob,))
+    row = cursor.fetchone()
+    cursor.close()
+    if row is None:
+        return None
+    return row["tx_index"]
+
+
+def _prepare_record_for_insert(db, table_name, record):
+    """Return a copy of ``record`` with hash columns normalized to BLOB and
+    any legacy hash columns resolved to their new ``*_tx_index`` FK form."""
+    out = dict(record)
+
+    # Resolve legacy hex hash -> tx_index and drop the legacy field.
+    fk_map = HASH_TO_TX_INDEX_FK.get(table_name)
+    if fk_map:
+        for legacy_col, new_col in fk_map.items():
+            if legacy_col in out and new_col not in out:
+                out[new_col] = _resolve_tx_index(db, out.pop(legacy_col))
+            elif legacy_col in out and new_col in out:
+                out.pop(legacy_col)
+
+    # Convert hex strings to BLOB for known hash columns. We tolerate
+    # both bytes (already converted) and None.
+    hash_cols = HASH_COLUMNS_BY_TABLE.get(table_name)
+    if hash_cols:
+        for col in hash_cols:
+            if col in out:
+                out[col] = hashcodec.hash_to_db(out[col])
+
+    return out
 
 
 @contextmanager
@@ -22,12 +137,13 @@ def get_cursor(db):
 
 
 def insert_record(db, table_name, record, event, event_info=None):
-    fields = list(record.keys())
+    record_for_db = _prepare_record_for_insert(db, table_name, record)
+    fields = list(record_for_db.keys())
     placeholders = ", ".join(["?" for _ in fields])
     query = f"INSERT INTO {table_name} ({', '.join(fields)}) VALUES ({placeholders})"  # noqa: S608 # nosec B608
 
     with get_cursor(db) as cursor:
-        cursor.execute(query, list(record.values()))
+        cursor.execute(query, list(record_for_db.values()))
         if table_name in ["issuances", "destructions"] and not CurrentState().parsing_mempool():
             cursor.execute("SELECT last_insert_rowid() AS rowid")
             inserted_rowid = cursor.fetchone()["rowid"]
@@ -58,7 +174,17 @@ def insert_record(db, table_name, record, event, event_info=None):
 # order updates and retrieve the row with the current data.
 def insert_update(db, table_name, id_name, id_value, update_data, event, event_info=None):  # noqa: B006
     cursor = db.cursor()
-    # select records to update
+    # The id may be a hex hash and the underlying column may be BLOB; convert
+    # consistently so SQLite can match the at-rest representation.
+    # ``hash_to_db`` is permissive: it passes ``bytes``/``None`` through, hex
+    # strings -> BLOB(32), and non-hex strings -> UTF-8 bytes (consistent
+    # with INSERT paths for synthetic test fixtures). Only triggered for
+    # ``id_name``s that are actually hash columns; non-hash ids like
+    # ``rowid`` / ``id`` (composite text) / ``address`` are bound as-is.
+    if id_name in hashcodec.HASH_COLUMN_NAMES:
+        id_bind = hashcodec.hash_to_db(id_value)
+    else:
+        id_bind = id_value
     select_query = f"""
         SELECT *, rowid
         FROM {table_name}
@@ -66,7 +192,7 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
         ORDER BY rowid DESC
         LIMIT 1
     """  # nosec B608  # noqa: S608 # nosec B608
-    bindings = (id_value,)
+    bindings = (id_bind,)
     need_update_record = cursor.execute(select_query, bindings).fetchone()
 
     # update record
@@ -83,6 +209,7 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     # insert new record
     if "rowid" in new_record:
         del new_record["rowid"]
+    new_record = _prepare_record_for_insert(db, table_name, new_record)
     fields_name = ", ".join(new_record.keys())
     fields_values = ", ".join([f":{key}" for key in new_record.keys()])
     # no sql injection here
@@ -99,11 +226,14 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
 
 
 def last_message(db):
-    """Return latest message from the db."""
+    """Return latest message from the db. Exposes the legacy ``tx_hash`` hex
+    string by joining on ``transactions`` (``messages.tx_index`` is the
+    storage column after the compact-hash migration)."""
     cursor = db.cursor()
     query = """
-        SELECT * FROM messages
-        WHERE message_index = (
+        SELECT m.*, (SELECT t.tx_hash FROM transactions t WHERE t.tx_index = m.tx_index) AS tx_hash
+        FROM messages m
+        WHERE m.message_index = (
             SELECT MAX(message_index) from messages
         )
     """
@@ -127,11 +257,22 @@ def add_to_journal(db, block_index, command, category, event, bindings):
     try:
         previous_message = last_message(db)
         message_index = previous_message["message_index"] + 1
-        previous_event_hash = previous_message["event_hash"] or ""
+        # The rowtracer already converts BLOB event_hash back to hex, but be
+        # defensive in case the row trace is bypassed somewhere.
+        prev_eh = previous_message["event_hash"]
+        previous_event_hash = (
+            hashcodec.hash_from_db(prev_eh) if isinstance(prev_eh, bytes) else (prev_eh or "")
+        )
     except exceptions.DatabaseError:
         message_index = 0
         previous_event_hash = ""
 
+    # The consensus-critical ``bindings_string`` JSON MUST stay byte-identical
+    # to the pre-optimization release: hashes (which the message handlers
+    # always pass as hex strings) must remain hex; ``bytes`` values found in
+    # ``data`` style fields must be hex-encoded; ``None`` stays None. The
+    # original implementation converts bytes -> hex which already covers both
+    # cases (BLOB hashes coming from row dicts and binary ``data`` payloads).
     items = {
         key: binascii.hexlify(value).decode("ascii") if isinstance(value, bytes) else value
         for key, value in bindings.items()
@@ -152,6 +293,15 @@ def add_to_journal(db, block_index, command, category, event, bindings):
         ]
     )
     event_hash = binascii.hexlify(helpers.dhash(event_hash_content)).decode("ascii")
+    # ``messages.tx_hash`` has been replaced by ``messages.tx_index``
+    # (INTEGER FK into ``transactions``). Resolve from the in-flight tx_hash
+    # via CurrentState. For block-level events (BLOCK_PARSED, EXPIRE_*) the
+    # tx context is None, so tx_index stays NULL.
+    current_tx_hash_hex = CurrentState().current_tx_hash()
+    tx_index = None
+    if current_tx_hash_hex is not None:
+        tx_index = _resolve_tx_index(db, current_tx_hash_hex)
+    event_hash_blob = hashcodec.hash_to_db(event_hash)
     message_bindings = {
         "message_index": message_index,
         "block_index": block_index,
@@ -160,11 +310,11 @@ def add_to_journal(db, block_index, command, category, event, bindings):
         "bindings": bindings_string,
         "timestamp": current_time,
         "event": event,
-        "tx_hash": CurrentState().current_tx_hash(),
-        "event_hash": event_hash,
+        "tx_index": tx_index,
+        "event_hash": event_hash_blob,
     }
     query = """INSERT INTO messages (
-                message_index, block_index, command, category, bindings, timestamp, event, tx_hash, event_hash
+                message_index, block_index, command, category, bindings, timestamp, event, tx_index, event_hash
             ) VALUES (
                 :message_index,
                 :block_index,
@@ -173,7 +323,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
                 :bindings,
                 :timestamp,
                 :event,
-                :tx_hash,
+                :tx_index,
                 :event_hash
             )"""
     cursor = db.cursor()
@@ -361,21 +511,27 @@ def get_messages(db, block_index=None, block_index_in=None, message_index_in=Non
     where = []
     bindings = []
     if block_index is not None:
-        where.append("block_index = ?")
+        where.append("m.block_index = ?")
         bindings.append(block_index)
     if block_index_in is not None:
-        where.append(f"block_index IN ({','.join(['?' for e in range(0, len(block_index_in))])})")
+        where.append(f"m.block_index IN ({','.join(['?' for e in range(0, len(block_index_in))])})")
         bindings += block_index_in
     if message_index_in is not None:
         where.append(
-            f"message_index IN ({','.join(['?' for e in range(0, len(message_index_in))])})"
+            f"m.message_index IN ({','.join(['?' for e in range(0, len(message_index_in))])})"
         )
         bindings += message_index_in
-    # no sql injection here
+    # no sql injection here -- expose tx_hash via JOIN (messages.tx_hash
+    # was dropped in favour of an FK on transactions).
+    select = (
+        "SELECT m.*, "
+        "(SELECT t.tx_hash FROM transactions t WHERE t.tx_index = m.tx_index) AS tx_hash "
+        "FROM messages m"
+    )
     if len(where) == 0:
-        query = """SELECT * FROM messages ORDER BY message_index ASC LIMIT ?"""
+        query = f"""{select} ORDER BY m.message_index ASC LIMIT ?"""
     else:
-        query = f"""SELECT * FROM messages WHERE ({" AND ".join(where)}) ORDER BY message_index ASC LIMIT ?"""  # nosec B608  # noqa: S608 # nosec B608
+        query = f"""{select} WHERE ({" AND ".join(where)}) ORDER BY m.message_index ASC LIMIT ?"""  # nosec B608  # noqa: S608 # nosec B608
     bindings.append(limit)
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()

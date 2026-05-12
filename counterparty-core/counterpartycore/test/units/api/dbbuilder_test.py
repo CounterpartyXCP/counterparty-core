@@ -1,4 +1,5 @@
 from counterpartycore.lib.api import dbbuilder
+from counterpartycore.lib.utils import hashcodec
 
 # =============================================================================
 # Tests for migration rollback functions
@@ -295,7 +296,8 @@ def test_consolidated_orders(state_db, ledger_db, apiv2_client):
     ).fetchall()
     for ledger_order in ledger_orders:
         api_order = state_db.execute(
-            "SELECT * FROM orders WHERE tx_hash = ?", (ledger_order["tx_hash"],)
+            "SELECT * FROM orders WHERE tx_hash = ?",
+            (hashcodec.hash_to_db(ledger_order["tx_hash"]),),
         ).fetchone()
         assert ledger_order["status"] == api_order["status"]
         assert ledger_order["give_asset"] == api_order["give_asset"]
