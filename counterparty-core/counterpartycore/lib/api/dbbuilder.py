@@ -110,6 +110,14 @@ def build_state_db():
         if os.path.exists(config.STATE_DATABASE + ext):
             os.unlink(config.STATE_DATABASE + ext)
 
+    # The State DB migrations read from the Ledger DB schema (e.g. migration
+    # 0006 references ``fairmints.fairminter_tx_index``, introduced by ledger
+    # migration 0010). Make sure the Ledger DB is fully migrated before
+    # building the State DB so this command works against bootstrap snapshots
+    # that predate the latest Ledger DB migrations.
+    with log.Spinner("Applying Ledger DB migrations"):
+        database.apply_outstanding_migration(config.DATABASE, config.LEDGER_DB_MIGRATIONS_DIR)
+
     with log.Spinner("Applying migrations"):
         database.apply_outstanding_migration(config.STATE_DATABASE, config.STATE_DB_MIGRATIONS_DIR)
 
