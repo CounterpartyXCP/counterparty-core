@@ -1786,9 +1786,7 @@ def apply(conn):
     # Idempotency: bail if already applied (the rerun-safe shape avoids
     # double work on dev DBs).
     try:
-        row = cursor.execute(
-            "SELECT value FROM config WHERE name = ?", (SENTINEL_NAME,)
-        ).fetchone()
+        row = cursor.execute("SELECT value FROM config WHERE name = ?", (SENTINEL_NAME,)).fetchone()
     except Exception:  # noqa: BLE001
         row = None
     if row:

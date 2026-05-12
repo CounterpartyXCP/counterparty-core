@@ -12,7 +12,7 @@ from counterpartycore.lib import backend, config, exceptions, parser
 from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import blocks, check, deserialize
-from counterpartycore.lib.utils import helpers, multisig, opcodes, script
+from counterpartycore.lib.utils import hashcodec, helpers, multisig, opcodes, script
 
 from ..fixtures.defaults import DEFAULT_PARAMS
 
@@ -192,8 +192,6 @@ def mine_empty_blocks(db, blocks):
 
 
 def sendrawtransaction(db, rawtransaction):
-    from counterpartycore.lib.utils import hashcodec
-
     decoded_tx = deserialize.deserialize_tx(rawtransaction, parse_vouts=True)
     BlockchainMock().save_address_and_value(decoded_tx)
     mine_block(db, [decoded_tx])

@@ -276,9 +276,7 @@ def test_clean_mempool_with_validated_transactions(
 
     # Vérifier que clean_transaction_from_mempool a été appelé pour tx1
     expected_tx_hash = b"tx1"
-    cursor.execute.assert_any_call(
-        "DELETE FROM mempool WHERE tx_hash = ?", (expected_tx_hash,)
-    )
+    cursor.execute.assert_any_call("DELETE FROM mempool WHERE tx_hash = ?", (expected_tx_hash,))
     cursor.execute.assert_any_call(
         "DELETE FROM mempool_transactions WHERE tx_hash = ?", (expected_tx_hash,)
     )

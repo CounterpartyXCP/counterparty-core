@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 from counterpartycore.lib import config
 from counterpartycore.lib.ledger import caches
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import hashcodec, helpers
 
 
 def test_asset_cache(ledger_db, defaults):
@@ -244,8 +244,6 @@ def _to_blob_hash(label):
     """Convert any synthetic test tx_hash to BLOB form. Uses ``hashcodec``'s
     permissive logic so the same encoding is used by production code paths
     that query ``WHERE tx_hash = ?`` with the same label."""
-    from counterpartycore.lib.utils import hashcodec
-
     return hashcodec.hash_to_db(label)
 
 

@@ -83,9 +83,7 @@ def hash_to_db(value, strict=False):
         return None
     if isinstance(value, bytes):
         if strict and len(value) != 32:
-            raise ValueError(
-                f"hash_to_db(strict): expected 32 bytes, got {len(value)}"
-            )
+            raise ValueError(f"hash_to_db(strict): expected 32 bytes, got {len(value)}")
         return value
     if isinstance(value, str):
         if value == "":
@@ -94,9 +92,7 @@ def hash_to_db(value, strict=False):
             return None
         if strict:
             if len(value) != 64:
-                raise ValueError(
-                    f"hash_to_db(strict): expected 64-char hex, got len={len(value)}"
-                )
+                raise ValueError(f"hash_to_db(strict): expected 64-char hex, got len={len(value)}")
             # bytes.fromhex will raise ValueError on non-hex content.
             return bytes.fromhex(value)
         try:

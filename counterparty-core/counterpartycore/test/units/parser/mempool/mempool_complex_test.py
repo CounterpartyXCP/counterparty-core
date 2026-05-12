@@ -5,6 +5,7 @@ import counterpartycore.lib.parser.mempool as mempool_module
 import pytest
 from counterpartycore.lib import config
 from counterpartycore.lib.api import apiwatcher
+from counterpartycore.lib.utils import hashcodec
 
 
 @pytest.mark.parametrize(
@@ -162,8 +163,6 @@ def test_parse_mempool_transactions_tx_index_calculation(
     # Vérifier que les paramètres d'insertion contiennent le bon block_index.
     # ``block_hash`` is now stored as BLOB(32); compare against the encoded
     # form produced by hashcodec.hash_to_db on MEMPOOL_BLOCK_HASH.
-    from counterpartycore.lib.utils import hashcodec
-
     block_params = insert_block_calls[0][0][1]
     assert block_params[0] == config.MEMPOOL_BLOCK_INDEX, "Mauvais block_index utilisé"
     assert block_params[1] == hashcodec.hash_to_db(config.MEMPOOL_BLOCK_HASH), (
@@ -220,9 +219,7 @@ def test_clean_mempool_with_removed_transactions(
     # Vérifier que clean_transaction_from_mempool a été appelé pour tx2 -
     # tx_hash is BLOB(32) at rest now.
     expected_tx_hash = b"tx2"
-    cursor.execute.assert_any_call(
-        "DELETE FROM mempool WHERE tx_hash = ?", (expected_tx_hash,)
-    )
+    cursor.execute.assert_any_call("DELETE FROM mempool WHERE tx_hash = ?", (expected_tx_hash,))
     cursor.execute.assert_any_call(
         "DELETE FROM mempool_transactions WHERE tx_hash = ?", (expected_tx_hash,)
     )

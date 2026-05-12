@@ -5,6 +5,7 @@ import pytest
 from bitcoin.core import VarIntSerializer
 from counterpartycore.lib import config
 from counterpartycore.lib.messages import broadcast
+from counterpartycore.lib.utils import hashcodec
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
@@ -1210,7 +1211,6 @@ def test_parse_cbor_none_value_doesnt_halt(ledger_db, blockchain_mock, defaults)
     message = cbor2.dumps([None, 0.0, 0, "text/plain", b""])
     # Must NOT raise.
     broadcast.parse(ledger_db, tx, message)
-    from counterpartycore.lib.utils import hashcodec
 
     row = ledger_db.execute(
         "SELECT status FROM broadcasts WHERE tx_hash = ?",

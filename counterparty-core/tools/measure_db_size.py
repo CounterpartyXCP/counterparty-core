@@ -22,7 +22,6 @@ import sqlite3
 import sys
 from collections import defaultdict
 
-
 HASH_COLUMN_PATTERNS = (
     "tx_hash",
     "block_hash",
@@ -135,7 +134,12 @@ def dbstat_breakdown(conn):
 
 def is_hash_column(name):
     n = name.lower()
-    return any(n == p or n.endswith("_" + p) or n.endswith(p) for p in HASH_COLUMN_PATTERNS) or n.endswith("_hash") or n == "id" and False
+    return (
+        any(n == p or n.endswith("_" + p) or n.endswith(p) for p in HASH_COLUMN_PATTERNS)
+        or n.endswith("_hash")
+        or n == "id"
+        and False
+    )
 
 
 def hashish_columns(conn, table):
@@ -192,9 +196,18 @@ def find_hash_indexes(conn):
         sql = (idx["sql"] or "").lower()
         if not sql:
             continue
-        if any(p in sql for p in (
-            "tx_hash", "block_hash", "event_hash", "_hash", "(id)", " id,", " id)",
-        )):
+        if any(
+            p in sql
+            for p in (
+                "tx_hash",
+                "block_hash",
+                "event_hash",
+                "_hash",
+                "(id)",
+                " id,",
+                " id)",
+            )
+        ):
             hash_indexes.append((idx["name"], idx["tbl_name"]))
     return hash_indexes
 
@@ -210,7 +223,7 @@ def estimate_gains(conn, sizes):
         lambda: {"rows": 0, "hash_cols": 0, "blob_hash_data": 0, "hash_fk_data": 0}
     )
 
-    for table, col, dtype, nrows in inv:
+    for table, col, _dtype, nrows in inv:
         if nrows is None:
             continue
         by_table[table]["rows"] = nrows
@@ -230,7 +243,7 @@ def fmt_pct(part, whole):
 
 
 def measure_db(path):
-    print(f"\n{'='*80}\nMeasuring: {path}\n{'='*80}")
+    print(f"\n{'=' * 80}\nMeasuring: {path}\n{'=' * 80}")
     print(f"On-disk size: {human(os.path.getsize(path))}")
     conn = open_ro(path)
     try:
@@ -258,7 +271,7 @@ def measure_db(path):
             rows_by_table.append((t, n, t_size, i_size, t_size + i_size))
         rows_by_table.sort(key=lambda r: r[4], reverse=True)
 
-        print(f"\nTop 30 tables by total size (table + indexes):")
+        print("\nTop 30 tables by total size (table + indexes):")
         print(f"{'table':40} {'rows':>14} {'table':>12} {'indexes':>12} {'total':>12} {'pct':>6}")
         for name, nrows, tsz, isz, total in rows_by_table[:30]:
             print(
@@ -266,37 +279,34 @@ def measure_db(path):
                 f"{human(tsz):>12} {human(isz):>12} {human(total):>12} {fmt_pct(total, total_used):>6}"
             )
 
-        print(f"\n{'-'*80}\nHash column inventory")
-        print(f"{'-'*80}")
+        print(f"\n{'-' * 80}\nHash column inventory")
+        print(f"{'-' * 80}")
         inv = collect_hash_inventory(conn)
         for table, col, dtype, nrows in inv:
             avg, cnt = measure_avg_text_len(conn, table, col)
             avg_s = "-" if avg is None else f"{avg:.1f}"
             print(
-                f"  {table+'.'+col:50} type={dtype:6} rows={nrows or 0:>14} "
+                f"  {table + '.' + col:50} type={dtype:6} rows={nrows or 0:>14} "
                 f"avg_len={avg_s:>6} non_null={cnt or 0:>14}"
             )
 
-        print(f"\n{'-'*80}\nComposite match-id column inventory")
-        print(f"{'-'*80}")
+        print(f"\n{'-' * 80}\nComposite match-id column inventory")
+        print(f"{'-' * 80}")
         for table, col, avg, cnt in collect_composite_ids(conn):
-            print(f"  {table+'.'+col:50} avg_len={avg:.1f}  non_null={cnt}")
+            print(f"  {table + '.' + col:50} avg_len={avg:.1f}  non_null={cnt}")
 
-        print(f"\n{'-'*80}\nIndexes touching hash columns")
-        print(f"{'-'*80}")
+        print(f"\n{'-' * 80}\nIndexes touching hash columns")
+        print(f"{'-' * 80}")
         hash_indexes = find_hash_indexes(conn)
         total_hash_index_bytes = 0
         for name, table in hash_indexes:
             sz = sizes.get(name, 0)
             total_hash_index_bytes += sz
-            print(f"  {table+'.'+name:60} size={human(sz):>12}")
+            print(f"  {table + '.' + name:60} size={human(sz):>12}")
         print(f"  TOTAL hash-related index size: {human(total_hash_index_bytes)}")
 
-        print(
-            f"\n{'-'*80}\n"
-            "Estimated savings per optimization (data only; index gains additive)"
-        )
-        print(f"{'-'*80}")
+        print(f"\n{'-' * 80}\nEstimated savings per optimization (data only; index gains additive)")
+        print(f"{'-' * 80}")
         by_table = estimate_gains(conn, sizes)
         total_blob_hash_data = 0
         total_hash_fk_data = 0
@@ -310,9 +320,7 @@ def measure_db(path):
                 f"blob_hash_save~={human(info['blob_hash_data']):>10} "
                 f"hash_fk_save~={human(info['hash_fk_data']):>10}"
             )
-        print(
-            f"\n  TOTAL BLOB-hash data savings (TEXT64->BLOB32): {human(total_blob_hash_data)}"
-        )
+        print(f"\n  TOTAL BLOB-hash data savings (TEXT64->BLOB32): {human(total_blob_hash_data)}")
         print(
             f"  TOTAL hash-FK data savings (txhash->tx_index on top tables): "
             f"{human(total_hash_fk_data)}"
@@ -320,12 +328,11 @@ def measure_db(path):
 
         # composite id potential savings
         composite_save = 0
-        for table, col, avg, cnt in collect_composite_ids(conn):
+        for _table, _col, avg, cnt in collect_composite_ids(conn):
             saving_per = max(0, (avg or 0) - 8 + 1)
             composite_save += int(saving_per * cnt)
         print(
-            f"  TOTAL composite-id data savings (composite id -> (i0,i1)): "
-            f"{human(composite_save)}"
+            f"  TOTAL composite-id data savings (composite id -> (i0,i1)): {human(composite_save)}"
         )
 
         # rough index gains: hash-related indexes shrink ~50% with BLOB hashes

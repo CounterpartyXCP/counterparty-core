@@ -68,7 +68,9 @@ def _resolve_transactions_table_name(db):
     try:
         cursor.execute("SELECT 1 FROM transactions LIMIT 0")
         return "transactions"
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception:  # noqa: S110 # pylint: disable=broad-exception-caught
+        # Probing the schema: the absence of the table is the expected
+        # negative path. Fall through to try the ATTACHed ledger_db alias.
         pass
     try:
         cursor.execute("SELECT 1 FROM ledger_db.transactions LIMIT 0")
@@ -155,6 +157,7 @@ def _project_messages_tx_hash(select_clause):
         rewritten,
     )
     return rewritten
+
 
 OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
 OrderMatchesStatus = Literal["all", "pending", "completed", "expired"]
@@ -419,9 +422,7 @@ def select_rows(
                     where_field.append(f"{new_field} IN ({placeholders})")
                     bindings += [hashcodec.hash_to_db(v) for v in value]
                 else:
-                    where_field.append(
-                        f"{_qualify(field)} IN ({','.join(['?'] * len(value))})"
-                    )
+                    where_field.append(f"{_qualify(field)} IN ({','.join(['?'] * len(value))})")
                     bindings += [_convert_hash_value(field, v) for v in value]
             elif key.endswith("__notnull"):
                 field = key[:-9]
@@ -437,7 +438,7 @@ def select_rows(
                 if key in _HASH_FK_WHERE_REWRITE:
                     new_field = _HASH_FK_WHERE_REWRITE[key]
                     where_field.append(
-                        f"{new_field} = (SELECT tx_index FROM transactions WHERE tx_hash = ?)"
+                        f"{new_field} = (SELECT tx_index FROM transactions WHERE tx_hash = ?)"  # nosec B608  # noqa: S608
                     )
                     bindings.append(hashcodec.hash_to_db(value))
                 elif key in ADDRESS_FIELDS and len(value.split(",")) > 1:
@@ -521,8 +522,7 @@ def select_rows(
             )
         else:
             from_clause = (
-                f"messages AS __m LEFT JOIN {txtable} AS __txh "
-                f"ON __txh.tx_index = __m.tx_index"
+                f"messages AS __m LEFT JOIN {txtable} AS __txh ON __txh.tx_index = __m.tx_index"
             )
             # Project tx_hash from the joined transactions; leave other columns
             # untouched. We do a token-level rewrite so embedded substrings such
@@ -543,9 +543,7 @@ def select_rows(
             # hash; callers that need the real hash can fetch it separately.
             from_clause = f"{table} AS __m"
             if "*" in select:
-                select_rewritten = select.replace(
-                    "*", f"{explicit_cols}, NULL AS {hash_col}", 1
-                )
+                select_rewritten = select.replace("*", f"{explicit_cols}, NULL AS {hash_col}", 1)
             else:
                 select_rewritten = f"{select}, NULL AS {hash_col}"
         else:
@@ -562,15 +560,15 @@ def select_rows(
                     1,
                 )
             else:
-                select_rewritten = (
-                    f"{select}, hex_lower(__txjoin.tx_hash) AS {hash_col}"
-                )
+                select_rewritten = f"{select}, hex_lower(__txjoin.tx_hash) AS {hash_col}"
     else:
         from_clause = table
         select_rewritten = select
 
     query = f"SELECT {select_rewritten} FROM {from_clause} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
-    query_count = f"SELECT {select_rewritten} FROM {from_clause} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
+    query_count = (
+        f"SELECT {select_rewritten} FROM {from_clause} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
+    )
 
     if wrap_where is not None:
         wrap_where_field = []

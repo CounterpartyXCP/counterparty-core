@@ -10,7 +10,7 @@ import apsw.bestpractice
 import apsw.ext
 import psutil
 from counterpartycore.lib import config, exceptions
-from counterpartycore.lib.utils import helpers, hashcodec
+from counterpartycore.lib.utils import hashcodec, helpers
 from termcolor import cprint
 from yoyo import get_backend, read_migrations
 from yoyo.exceptions import LockTimeout

@@ -6,13 +6,12 @@ from counterpartycore.lib import backend, config, exceptions, ledger
 from counterpartycore.lib.api.apiwatcher import EVENTS_ADDRESS_FIELDS
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import blocks, deserialize
+from counterpartycore.lib.utils import hashcodec
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
-    from counterpartycore.lib.utils import hashcodec
-
     CurrentState().set_parsing_mempool(True)
 
     logger.trace(f"Parsing {len(raw_tx_list)} raw transaction(s) from the mempool...")
@@ -182,8 +181,6 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
 
 
 def clean_transaction_from_mempool(db, tx_hash):
-    from counterpartycore.lib.utils import hashcodec
-
     cursor = db.cursor()
     tx_hash_blob = hashcodec.hash_to_db(tx_hash)
     cursor.execute("DELETE FROM mempool WHERE tx_hash = ?", (tx_hash_blob,))

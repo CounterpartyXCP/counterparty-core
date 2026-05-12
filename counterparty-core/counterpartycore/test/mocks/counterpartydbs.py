@@ -11,7 +11,7 @@ from counterpartycore.lib.cli.initialise import initialise_log_and_config
 from counterpartycore.lib.cli.main import arg_parser
 from counterpartycore.lib.ledger import caches
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.utils import database, helpers
+from counterpartycore.lib.utils import database, hashcodec, helpers
 
 from ..fixtures.defaults import DEFAULT_PARAMS
 from ..fixtures.ledgerdb import UNITTEST_FIXTURE
@@ -197,8 +197,6 @@ _LEGACY_HASH_TO_TX_INDEX_FK = {
 
 def check_record(ledger_db, record):
     """Allow direct record access to the db."""
-    from counterpartycore.lib.utils import hashcodec
-
     cursor = ledger_db.cursor()
 
     if record["table"] == "pragma":
@@ -220,7 +218,7 @@ def check_record(ledger_db, record):
                 if field in legacy_map:
                     new_col, fk_table = legacy_map[field]
                     conditions.append(
-                        f"{new_col} = (SELECT tx_index FROM {fk_table} WHERE tx_hash = ?)"
+                        f"{new_col} = (SELECT tx_index FROM {fk_table} WHERE tx_hash = ?)"  # nosec B608  # noqa: S608
                     )
                     if isinstance(value, str):
                         value = hashcodec.hash_to_db(value)

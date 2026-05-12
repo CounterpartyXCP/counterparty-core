@@ -4,7 +4,7 @@ import time
 from counterpartycore.lib import config
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser.known_sources import KNOWN_SOURCES
-from counterpartycore.lib.utils import database, helpers
+from counterpartycore.lib.utils import database, hashcodec, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -154,8 +154,6 @@ class UTXOBalancesCache(metaclass=helpers.SingletonMeta):
 
     def _add_known_sources_descendants(self, cursor):
         """Add to cache the destinations from KNOWN_SOURCES and all descendant transactions."""
-        from counterpartycore.lib.utils import hashcodec
-
         pending_utxos = set()
 
         # Start with destinations from KNOWN_SOURCES
