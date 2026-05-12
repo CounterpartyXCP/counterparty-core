@@ -22,10 +22,16 @@ apsw.ext.log_sqlite(logger=logger)
 
 
 def _convert_value(name, field_type, value):
-    if value is None:
-        return None
+    # Preserve the pre-optimization rowtracer contract: ``BOOL`` columns
+    # always materialize as a real Python bool, even when the underlying
+    # SQLite value is NULL (``bool(None) == False``). Several handlers and
+    # serialized events rely on this (e.g. ``description_locked`` is never
+    # written by ``open_fairminter`` so the column stays NULL, but the
+    # event journal/API contract expects ``False``).
     if str(field_type) == "BOOL":
         return bool(value)
+    if value is None:
+        return None
     # Columns storing 256-bit hashes are BLOB(32) at rest after the size
     # optimization migration, but the rest of the codebase (consensus,
     # API, tests) expects 64-char lowercase hex strings. Convert lazily

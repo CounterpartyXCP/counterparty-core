@@ -11,6 +11,7 @@ import shutil
 from datetime import datetime, timezone
 
 import apsw
+from counterpartycore.lib.utils import hashcodec
 
 # Number of block hashes to store in cache
 HASH_COUNT = 100
@@ -58,6 +59,9 @@ def get_block_hashes_from_db(db_path, count=HASH_COUNT):
     Extract the last N block hashes from the database.
 
     Returns a list of dicts with block_index, ledger_hash, and txlist_hash.
+    Hashes are returned as 64-char lowercase hex strings, regardless of
+    whether the underlying schema stores them as BLOB (post-migration 0010)
+    or TEXT (pre-migration).
     """
     db = apsw.Connection(db_path)
     try:
@@ -77,8 +81,8 @@ def get_block_hashes_from_db(db_path, count=HASH_COUNT):
         return [
             {
                 "block_index": row[0],
-                "ledger_hash": row[1],
-                "txlist_hash": row[2],
+                "ledger_hash": hashcodec.hash_from_db(row[1]),
+                "txlist_hash": hashcodec.hash_from_db(row[2]),
             }
             for row in reversed(rows)
         ]
@@ -337,8 +341,10 @@ def verify_hashes(db_path, expected_hashes):
             if row is None:
                 raise AssertionError(f"Block {block_index} not found in database")
 
-            actual_ledger_hash = row[0]
-            actual_txlist_hash = row[1]
+            # Normalize to hex string so the comparison works regardless of
+            # whether the schema stores hashes as BLOB or TEXT.
+            actual_ledger_hash = hashcodec.hash_from_db(row[0])
+            actual_txlist_hash = hashcodec.hash_from_db(row[1])
 
             if actual_ledger_hash != expected["ledger_hash"]:
                 raise AssertionError(
