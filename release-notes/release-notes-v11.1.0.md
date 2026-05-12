@@ -1,6 +1,6 @@
-# Release Notes - Counterparty Core v11.1.0 (2026-02-??)
+# Release Notes - Counterparty Core v11.1.0 (2026-MM-DD)
 
-This release is focused on hardening the consensus-critical parser, the indexer and the API layers against a series of halt vectors and edge cases identified through fuzzing and audit, as well as fixing several State DB / API migration inaccuracies.
+This release introduces two major new protocol features — Automated Market Maker liquidity pools and indefinite DEX orders — alongside extended inscription support and a substantial hardening pass on the consensus parser, indexer, and API layers. Protocol changes activate at mainnet block 952500.
 
 # Upgrading
 
@@ -33,7 +33,18 @@ The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 
 
 # ChangeLog
 
-## Consensus / Halt vectors (gated)
+## Protocol Changes
+
+- Add **AMM (Automated Market Maker) liquidity pools** behind a new `amm_pools` gate, with two new message types: `pooldeposit` (`120`) and `poolwithdraw` (`121`); BTC pairs are explicitly rejected. Deposits/withdraws use standard constant-product math (LP tokens minted via `floor(sqrt(qa*qb))` on first deposit, then proportionally; withdrawals burn LP tokens for proportional reserve shares), support slippage bounds (`min_lp_quantity`, `min_quantity_a`/`b`) and pay an XCP gas fee. The DEX `match()` loop now interleaves pool fills with the resting book at every step (constant-product, fee-adjusted, with `XCP_POOL_FEE_BPS=50` for XCP pairs and `100` otherwise), then sweeps any remainder against the pool in a tail phase. Pool reserves are counted in `held()` for asset conservation. Five new events (`OPEN_POOL`, `POOL_UPDATE`, `NEW_POOL_DEPOSIT`, `NEW_POOL_WITHDRAWAL`, `POOL_MATCH`) and four new tables (`pools`, `pool_deposits`, `pool_withdrawals`, `pool_matches`) are added via ledger migration `0009.amm_pools.sql` and consolidated into the State DB by migration `0014.add_pool_consolidated_tables` (registered in `MIGRATIONS_AFTER_ROLLBACK`, also rebuilds `asset_holders` / `xcp_holders` to include pool reserves).
+- Add support for **indefinite DEX orders** and fix `expiration` semantics behind a new `indefinite_orders` gate: `expiration=0` now means indefinite (open until filled or cancelled, `expire_index = NULL`), `expiration=N` now means exactly N blocks of life (was N+1 due to a long-standing off-by-one), and `MAX_EXPIRATION` is raised from 8064 (~56 days) to 65535 (the wire-format u16 max, ~455 days). The wire format is unchanged.
+- Allow **CBOR map under tag `0x05` for ordinals-style provenance metadata** in taproot inscriptions, behind a new `ordinals_metadata_support` gate. The Counterparty message is extracted from the `"xcp"` array key; other keys are ordinals metadata ignored by the consensus parser.
+- Extend **MIME type support for ordinal-style inscriptions** behind a new `extended_mime_types_support` gate: tolerate MIME parameters (e.g. `audio/ogg;codecs=opus`), recognise the `+json` structured suffix as textual, and validate against a deterministic hard-coded allow-list (`EXTENDED_MIME_TYPES_VALID`) instead of `mimetypes.types_map`, which read `/etc/mime.types` / the Windows registry and varied per node
+
+## Other Features
+
+- Support multiple Electrs backends with automatic failover on connection, timeout, or HTTP errors; `--electrs-url` can now be specified multiple times; default mainnet Electrs backends to both `blockstream.info` and `mempool.space`; print a startup warning when using default Electrs URLs (not recommended for production)
+
+## Bugfixes
 
 - Catch `struct.error` in `issuance.unpack` to prevent consensus halt
 - Catch `NoPriceError` in `dispense.parse` to prevent consensus halt
@@ -47,13 +58,6 @@ The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 
 - Fix Python truthiness bug in `attach` OP_RETURN check (gated)
 - Set `transactions_status` and persist invalid record in `sweep.parse`
 - Forward `tx["block_index"]` into gated `unpack()` and `protocol.enabled()` calls; hoist fairminter fee to `int` and forward `block_index` to issuance fee gates
-- Extend MIME type support for ordinal-style inscriptions behind a new `extended_mime_types_support` gate: tolerate MIME parameters (e.g. `audio/ogg;codecs=opus`), recognise the `+json` structured suffix as textual, and validate against a deterministic hard-coded allow-list (`EXTENDED_MIME_TYPES_VALID`) instead of `mimetypes.types_map`, which read `/etc/mime.types` / the Windows registry and varied per node
-- Allow CBOR map under tag `0x05` for ordinals-style provenance metadata in taproot inscriptions, behind a new `ordinals_metadata_support` gate. The Counterparty message is extracted from the `"xcp"` array key; other keys are ordinals metadata ignored by the consensus parser.
-- Add support for indefinite DEX orders and fix `expiration` semantics behind a new `indefinite_orders` gate: `expiration=0` now means indefinite (open until filled or cancelled, `expire_index = NULL`), `expiration=N` now means exactly N blocks of life (was N+1 due to a long-standing off-by-one), and `MAX_EXPIRATION` is raised from 8064 (~56 days) to 65535 (the wire-format u16 max, ~455 days). The wire format is unchanged.
-- Add **AMM (Automated Market Maker) liquidity pools** behind a new `amm_pools` gate, with two new message types: `pooldeposit` (`120`) and `poolwithdraw` (`121`); BTC pairs are explicitly rejected. Deposits/withdraws use standard constant-product math (LP tokens minted via `floor(sqrt(qa*qb))` on first deposit, then proportionally; withdrawals burn LP tokens for proportional reserve shares), support slippage bounds (`min_lp_quantity`, `min_quantity_a`/`b`) and pay an XCP gas fee. The DEX `match()` loop now interleaves pool fills with the resting book at every step (constant-product, fee-adjusted, with `XCP_POOL_FEE_BPS=50` for XCP pairs and `100` otherwise), then sweeps any remainder against the pool in a tail phase. Pool reserves are counted in `held()` for asset conservation. Five new events (`OPEN_POOL`, `POOL_UPDATE`, `NEW_POOL_DEPOSIT`, `NEW_POOL_WITHDRAWAL`, `POOL_MATCH`) and four new tables (`pools`, `pool_deposits`, `pool_withdrawals`, `pool_matches`) are added via ledger migration `0009.amm_pools.sql` and consolidated into the State DB by migration `0014.add_pool_consolidated_tables` (registered in `MIGRATIONS_AFTER_ROLLBACK`, also rebuilds `asset_holders` / `xcp_holders` to include pool reserves).
-
-## Bugfixes
-
 - `excludes_utxos` supports now `<txid>:<vout>` and `<txid>` alone
 - Add missing `max_mint_per_address` parameter in `compose_fairminter()`
 - Fix shutdown during rate limit backoff
@@ -95,14 +99,8 @@ The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 
 - Document `expand_subasset_longname` 200-byte cap reasoning
 - Document libm cross-platform threshold near `gas.py` sigmoid
 
-## Features
-
-- Support multiple Electrs backends with automatic failover on connection, timeout, or HTTP errors; `--electrs-url` can now be specified multiple times
-- Default mainnet Electrs backends to both `blockstream.info` and `mempool.space`
-- Print a startup warning when using default Electrs URLs (not recommended for production)
-
 # Credits
 
 - Ouziel Slama
-- Adam Krellenstein
 - Dan Anderson
+- Adam Krellenstein
