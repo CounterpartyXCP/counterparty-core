@@ -6,6 +6,7 @@ import typing
 import weakref
 from typing import Literal
 
+import apsw
 from sentry_sdk import start_span as start_sentry_span
 
 from counterpartycore.lib.ledger.markets import (
@@ -67,6 +68,23 @@ _HASH_FK_PROJECTIONS = {
 _TX_TABLE_NAME_CACHE: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
 
 
+def _probe_transactions_table(cursor, qualified_name):
+    """Return ``qualified_name`` if the cursor can SELECT from it, else None.
+
+    The absence of the table is the expected negative path here (e.g. early
+    bootstrap before the Ledger DB exists, or when ``ledger_db`` is not
+    ATTACHed). Returning ``None`` lets the caller try the next candidate.
+
+    ``qualified_name`` is always a hard-coded constant from this module
+    (``transactions`` or ``ledger_db.transactions``); the f-string is safe.
+    """
+    try:
+        cursor.execute(f"SELECT 1 FROM {qualified_name} LIMIT 0")  # nosec B608  # noqa: S608
+    except apsw.SQLError:
+        return None
+    return qualified_name
+
+
 def _resolve_transactions_table_name(db):
     """Return ``transactions`` if the connection sees that table directly,
     ``ledger_db.transactions`` if ``ledger_db`` is attached and contains it,
@@ -81,20 +99,9 @@ def _resolve_transactions_table_name(db):
         return cached if cached != "" else None
 
     cursor = db.cursor()
-    resolved = None
-    try:
-        cursor.execute("SELECT 1 FROM transactions LIMIT 0")
-        resolved = "transactions"
-    except Exception:  # noqa: S110 # pylint: disable=broad-exception-caught
-        # Probing the schema: the absence of the table is the expected
-        # negative path. Fall through to try the ATTACHed ledger_db alias.
-        pass
+    resolved = _probe_transactions_table(cursor, "transactions")
     if resolved is None:
-        try:
-            cursor.execute("SELECT 1 FROM ledger_db.transactions LIMIT 0")
-            resolved = "ledger_db.transactions"
-        except Exception:  # pylint: disable=broad-exception-caught
-            resolved = None
+        resolved = _probe_transactions_table(cursor, "ledger_db.transactions")
 
     # Cache an empty sentinel for the negative result so we don't keep
     # re-probing connections that won't see ``transactions`` (e.g. early

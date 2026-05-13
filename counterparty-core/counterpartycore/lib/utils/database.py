@@ -89,6 +89,19 @@ def check_wal_file(db_file):
         raise exceptions.WALFileFoundError("Found WAL file. Database may be corrupted.")
 
 
+def _should_attach_ledger_db(read_only, db_file):
+    """Return True when a read-only State DB connection should ATTACH the
+    Ledger DB so that hash-FK projections can JOIN against ``transactions``.
+    """
+    if not read_only:
+        return False
+    if not hasattr(config, "STATE_DATABASE") or db_file != config.STATE_DATABASE:
+        return False
+    if not hasattr(config, "DATABASE") or not config.DATABASE:
+        return False
+    return os.path.exists(config.DATABASE)
+
+
 def get_db_connection(db_file, read_only=True, check_wal=False):
     """Connects to the SQLite database, returning a db `Connection` object"""
 
@@ -135,14 +148,7 @@ def get_db_connection(db_file, read_only=True, check_wal=False):
     # ``*_tx_index`` foreign keys can JOIN against it. We do this only for
     # read-only connections to avoid taking a write lock on ledger_db
     # (which would conflict with the ledger writer / test fixtures).
-    if (
-        read_only
-        and hasattr(config, "STATE_DATABASE")
-        and db_file == config.STATE_DATABASE
-        and hasattr(config, "DATABASE")
-        and config.DATABASE
-        and os.path.exists(config.DATABASE)
-    ):
+    if _should_attach_ledger_db(read_only, db_file):
         try:
             attached_row = cursor.execute(
                 "SELECT COUNT(*) FROM pragma_database_list WHERE name = ?",
