@@ -1164,3 +1164,129 @@ def test_get_pool_quote_withdraw_case_insensitive(state_db):
     lower = queries.get_pool_quote_withdraw(state_db, "poolasseta", "poolassetb", 1_000_000)
     assert upper == lower
     assert lower["pool_exists"] is True
+
+
+# =============================================================================
+# Tests for the COUNT(*) fast-path optimization
+# These verify that ``result_count`` stays accurate when ``select_rows``
+# bypasses the legacy wrap-COUNT and counts from the underlying table.
+# =============================================================================
+
+
+def test_count_fast_path_messages_no_tx_hash_filter(ledger_db):
+    """Counting ``messages`` without a tx_hash filter uses the no-JOIN
+    fast-path; the count must still match a row-by-row tally."""
+    page = queries.select_rows(
+        ledger_db,
+        "messages",
+        limit=10,
+        select="message_index AS event_index, event, tx_hash, block_index",
+    )
+    cursor = ledger_db.cursor()
+    actual = cursor.execute("SELECT COUNT(*) AS c FROM messages").fetchone()["c"]
+    assert page.result_count == actual
+
+
+def test_count_fast_path_messages_with_event_filter(ledger_db):
+    """Event filter on ``messages`` exercises the no-JOIN fast-path with
+    a non-trivial WHERE clause."""
+    page = queries.select_rows(
+        ledger_db,
+        "messages",
+        where={"event": "CREDIT"},
+        limit=10,
+        select="message_index AS event_index, event, tx_hash, block_index",
+    )
+    cursor = ledger_db.cursor()
+    actual = cursor.execute(
+        "SELECT COUNT(*) AS c FROM messages WHERE event = ?", ("CREDIT",)
+    ).fetchone()["c"]
+    assert page.result_count == actual
+
+
+def test_count_fast_path_messages_with_tx_hash_filter(ledger_db, defaults):
+    """Filtering by ``tx_hash`` forces the JOIN path; ensure the wrap-COUNT
+    fallback still returns the correct count."""
+    sample_tx = ledger_db.cursor().execute("SELECT tx_hash FROM transactions LIMIT 1").fetchone()
+    if not sample_tx:
+        return
+    tx_hash = sample_tx["tx_hash"]
+    page = queries.select_rows(
+        ledger_db,
+        "messages",
+        where={"tx_hash": tx_hash},
+        limit=10,
+        select="message_index AS event_index, event, tx_hash, block_index",
+    )
+    # No assertion on the exact value other than "matches reality".
+    cursor = ledger_db.cursor()
+    blob = bytes.fromhex(tx_hash)
+    actual = cursor.execute(
+        "SELECT COUNT(*) AS c FROM messages WHERE tx_index = (SELECT tx_index FROM transactions WHERE tx_hash = ?)",
+        (blob,),
+    ).fetchone()["c"]
+    assert page.result_count == actual
+
+
+def test_count_fast_path_hash_fk_table(ledger_db):
+    """Counting a ``_HASH_FK_PROJECTIONS`` table skips the legacy hash JOIN."""
+    page = queries.select_rows(ledger_db, "dispenses", limit=10)
+    cursor = ledger_db.cursor()
+    actual = cursor.execute("SELECT COUNT(*) AS c FROM dispenses").fetchone()["c"]
+    assert page.result_count == actual
+
+
+def test_count_fast_path_transactions_with_status_override(ledger_db):
+    """``transactions_with_status`` filter on a column that exists on
+    ``transactions`` itself uses the underlying-table COUNT override."""
+    page = queries.select_rows(
+        ledger_db,
+        "transactions_with_status",
+        where={"transaction_type": "send"},
+        limit=10,
+    )
+    cursor = ledger_db.cursor()
+    actual = cursor.execute(
+        "SELECT COUNT(*) AS c FROM transactions WHERE transaction_type = ?", ("send",)
+    ).fetchone()["c"]
+    assert page.result_count == actual
+
+
+def test_count_fast_path_transactions_with_status_with_valid(ledger_db):
+    """When the filter references the ``valid`` column (only on
+    ``transactions_status``), the override is rejected and we fall back to
+    the wrap-COUNT path."""
+    page = queries.select_rows(
+        ledger_db,
+        "transactions_with_status",
+        where={"valid": True},
+        limit=10,
+    )
+    cursor = ledger_db.cursor()
+    actual = cursor.execute(
+        "SELECT COUNT(*) AS c FROM transactions t "
+        "LEFT JOIN transactions_status ts ON t.tx_index = ts.tx_index "
+        "WHERE ts.valid = ?",
+        (True,),
+    ).fetchone()["c"]
+    assert page.result_count == actual
+
+
+def test_count_fast_path_group_by_falls_back(ledger_db):
+    """``group_by`` callers must keep the wrap-COUNT semantics so the
+    returned count reflects the number of *groups*, not the number of
+    pre-group rows."""
+    page = queries.select_rows(
+        ledger_db,
+        "messages",
+        where={"block_index": 310000},
+        select="event, COUNT(*) AS event_count",
+        group_by="event",
+        cursor_field="event",
+    )
+    cursor = ledger_db.cursor()
+    actual = cursor.execute(
+        "SELECT COUNT(*) AS c FROM (SELECT event FROM messages WHERE block_index = ? GROUP BY event)",
+        (310000,),
+    ).fetchone()["c"]
+    assert page.result_count == actual
