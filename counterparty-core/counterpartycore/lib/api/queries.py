@@ -697,9 +697,7 @@ def select_rows(
                 count_fast_from = main_table
 
     if count_fast_from is not None:
-        query_count = (
-            f"SELECT COUNT(*) AS count FROM {count_fast_from} {where_clause_count}"  # nosec B608  # noqa: S608 # nosec B608
-        )
+        query_count = f"SELECT COUNT(*) AS count FROM {count_fast_from} {where_clause_count}"  # nosec B608  # noqa: S608 # nosec B608
     else:
         # Legacy wrap-COUNT path: required when ``group_by`` is set or the
         # caller passes ``wrap_where`` whose filter may reference JOIN'd
