@@ -1008,8 +1008,15 @@ def start_rsfetcher():
 
 
 def create_events_indexes(db):
-    if database.get_config_value(db, "EVENTS_INDEXES_CREATED") == "True":
-        return
+    # ``CREATE INDEX IF NOT EXISTS`` is already idempotent, so we don't gate
+    # on a config flag any more. The previous flag-gated path silently
+    # skipped index creation when migration 0010 (compact-hash storage)
+    # rebuilt ``messages`` against a DB that had the ``EVENTS_INDEXES_CREATED``
+    # marker from a pre-migration parse: the marker stayed but the indexes
+    # were dropped along with the old table, leaving the runtime to do a
+    # full-table scan on every ``messages`` read. Running the DDL on every
+    # call costs a single ``sqlite_master`` probe per index when the index
+    # already exists, which is cheap.
     sqls = [
         "CREATE INDEX IF NOT EXISTS messages_block_index_idx ON messages (block_index)",
         "CREATE INDEX IF NOT EXISTS messages_block_index_message_index_idx ON messages (block_index, message_index)",

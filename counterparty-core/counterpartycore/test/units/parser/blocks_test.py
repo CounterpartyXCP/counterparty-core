@@ -335,8 +335,14 @@ def test_handle_reorg3(ledger_db, monkeypatch, test_helpers, caplog):
 
 def test_create_events_indexes(ledger_db):
     sql = "SELECT * FROM sqlite_master WHERE type= 'index' and tbl_name = 'messages'"
+    # The compact-hash-storage migration (0010) now creates the runtime
+    # ``messages`` indexes inline so ``--api-only`` deployments don't end
+    # up with an unindexed messages table. Reset state to exercise the
+    # legacy lazy-creation path the helper still has to support.
+    for row in ledger_db.execute(sql).fetchall():
+        ledger_db.execute(f"DROP INDEX IF EXISTS {row['name']}")  # noqa: S608 # nosec B608
+    database.set_config_value(ledger_db, "EVENTS_INDEXES_CREATED", None)
     assert len(ledger_db.execute(sql).fetchall()) == 0
-
     assert database.get_config_value(ledger_db, "EVENTS_INDEXES_CREATED") is None
 
     blocks.create_events_indexes(ledger_db)
@@ -344,7 +350,11 @@ def test_create_events_indexes(ledger_db):
     assert len(ledger_db.execute(sql).fetchall()) == 6
     assert database.get_config_value(ledger_db, "EVENTS_INDEXES_CREATED") == "True"
 
+    # Calling again is a no-op (``CREATE INDEX IF NOT EXISTS`` is idempotent;
+    # the flag-based short-circuit was dropped because it silently skipped
+    # creation on DBs where 0010 had dropped the indexes but left the flag).
     blocks.create_events_indexes(ledger_db)
+    assert len(ledger_db.execute(sql).fetchall()) == 6
 
 
 # Tests for update_transaction with unsupported transactions (lines 110-119)

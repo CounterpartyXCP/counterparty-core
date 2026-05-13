@@ -167,6 +167,14 @@ class CounterpartyServer(threading.Thread):
         # Initialise database
         database.apply_outstanding_migration(config.DATABASE, config.LEDGER_DB_MIGRATIONS_DIR)
         self.db = database.initialise_db()
+        # Ensure the ``messages`` table has its read indexes even when
+        # ``--api-only`` skips the parser's ``catch_up()`` path. Migration
+        # 0010 rebuilt the table without these indexes for legacy DBs
+        # carrying the ``EVENTS_INDEXES_CREATED`` flag, so without this
+        # call the API would full-scan ``messages`` on every read.
+        # ``CREATE INDEX IF NOT EXISTS`` is idempotent, so this is a no-op
+        # for fully-indexed databases.
+        blocks.create_events_indexes(self.db)
         CurrentState().set_current_block_index(ledger.blocks.last_db_index(self.db))
         blocks.check_database_version(self.db)
         database.optimize(self.db)

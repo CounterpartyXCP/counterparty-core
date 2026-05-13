@@ -1229,10 +1229,21 @@ INDEXES_AFTER_REWRITE = [
     "CREATE INDEX IF NOT EXISTS mempool_transactions_block_index_tx_index_idx ON mempool_transactions (block_index, tx_index)",
     "CREATE INDEX IF NOT EXISTS mempool_transactions_tx_index_tx_hash_block_index_idx ON mempool_transactions (tx_index, tx_hash, block_index)",
     "CREATE INDEX IF NOT EXISTS mempool_transactions_source_idx ON mempool_transactions (source)",
-    # messages: indexes are created lazily by ``create_events_indexes`` once
-    # the catch-up parser has populated the table, mirroring the original
-    # behaviour from 0001 + the runtime helper. We deliberately skip them
-    # here so the runtime path remains the single source of truth.
+    # messages: rebuild the same index set the runtime helper
+    # ``parser.blocks.create_events_indexes`` would create. The migration
+    # drops and recreates the table, which destroys the original indexes;
+    # nodes running ``--api-only`` (load test, API-only deployments) never
+    # invoke the parser path that lazily rebuilds them, so every read on
+    # ``messages`` would fall back to a full table scan -- on a 30M-row
+    # ledger that turns ``/v2/transactions/<tx_hash>/events`` into a
+    # 6-20s request. Recreating the indexes here keeps both code paths
+    # (parser catch-up and api-only) covered.
+    "CREATE INDEX IF NOT EXISTS messages_block_index_idx ON messages (block_index)",
+    "CREATE INDEX IF NOT EXISTS messages_block_index_message_index_idx ON messages (block_index, message_index)",
+    "CREATE INDEX IF NOT EXISTS messages_block_index_event_idx ON messages (block_index, event)",
+    "CREATE INDEX IF NOT EXISTS messages_event_idx ON messages (event)",
+    "CREATE INDEX IF NOT EXISTS messages_tx_index_idx ON messages (tx_index)",
+    "CREATE INDEX IF NOT EXISTS messages_event_hash_idx ON messages (event_hash)",
     # orders
     "CREATE INDEX IF NOT EXISTS orders_block_index_idx ON orders (block_index)",
     "CREATE INDEX IF NOT EXISTS orders_tx_index_tx_hash_idx ON orders (tx_index, tx_hash)",
