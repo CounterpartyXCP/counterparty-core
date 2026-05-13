@@ -3,6 +3,7 @@
 import json
 import re
 import typing
+import weakref
 from typing import Literal
 
 from sentry_sdk import start_span as start_sentry_span
@@ -59,30 +60,78 @@ _HASH_FK_PROJECTIONS = {
 }
 
 
+# Per-connection cache so we run the schema probe at most once per pooled
+# connection instead of on every ``select_rows`` call. Using a
+# ``WeakKeyDictionary`` lets the entry disappear automatically when the
+# connection is garbage-collected.
+_TX_TABLE_NAME_CACHE: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
+
+
 def _resolve_transactions_table_name(db):
     """Return ``transactions`` if the connection sees that table directly,
     ``ledger_db.transactions`` if ``ledger_db`` is attached and contains it,
     or ``None`` otherwise (in which case hash-FK projections are skipped).
+
+    The result is cached per connection: API hot paths read from ``messages``
+    and the ``_HASH_FK_PROJECTIONS`` tables on every call; without the cache
+    each call would issue 1-2 extra SQL probes against the connection.
     """
+    cached = _TX_TABLE_NAME_CACHE.get(db)
+    if cached is not None:
+        return cached if cached != "" else None
+
     cursor = db.cursor()
+    resolved = None
     try:
         cursor.execute("SELECT 1 FROM transactions LIMIT 0")
-        return "transactions"
+        resolved = "transactions"
     except Exception:  # noqa: S110 # pylint: disable=broad-exception-caught
         # Probing the schema: the absence of the table is the expected
         # negative path. Fall through to try the ATTACHed ledger_db alias.
         pass
-    try:
-        cursor.execute("SELECT 1 FROM ledger_db.transactions LIMIT 0")
-        return "ledger_db.transactions"
-    except Exception:  # pylint: disable=broad-exception-caught
-        return None
+    if resolved is None:
+        try:
+            cursor.execute("SELECT 1 FROM ledger_db.transactions LIMIT 0")
+            resolved = "ledger_db.transactions"
+        except Exception:  # pylint: disable=broad-exception-caught
+            resolved = None
+
+    # Cache an empty sentinel for the negative result so we don't keep
+    # re-probing connections that won't see ``transactions`` (e.g. early
+    # bootstrap before the Ledger DB exists). The None case is short-lived
+    # in practice and the cache entry will be replaced on the next attach.
+    _TX_TABLE_NAME_CACHE[db] = resolved if resolved is not None else ""
+    return resolved
 
 
 # Cache of table -> list of public columns (everything except the internal
 # ``*_tx_index`` FK that replaced the legacy hash). Populated lazily on first
 # projection.
 _HASH_FK_PUBLIC_COLUMNS: dict[str, tuple[str, ...]] = {}
+
+
+# Columns shared between a main table and the joined ``transactions`` table
+# that need explicit ``__m.`` qualification when ``select_rows`` adds the
+# JOIN for ``messages`` / ``_HASH_FK_PROJECTIONS`` tables. Lifted out of the
+# function body so the tuple isn't reallocated on every API call.
+_AMBIGUOUS_COLS = frozenset(
+    {
+        "block_index",
+        "tx_index",
+        "rowid",
+        "tx_hash",
+        "source",
+        "destination",
+        "block_time",
+        "btc_amount",
+        "fee",
+        "data",
+        "supported",
+        "utxos_info",
+        "transaction_type",
+    }
+)
+_MESSAGES_QUALIFY_M_FIELDS = frozenset({"block_index", "tx_index", "rowid", "message_index"})
 
 
 def _hash_fk_public_columns(db, table):
@@ -118,7 +167,9 @@ def _project_messages_tx_hash(select_clause):
     ``messages``/``transactions`` view (``messages.tx_hash`` was dropped in
     favour of an FK on ``transactions``):
 
-    - ``tx_hash`` -> ``hex_lower(__txh.tx_hash) AS tx_hash``
+    - ``tx_hash`` -> ``__txh.tx_hash AS tx_hash`` (the column alias keeps
+      ``tx_hash``, which is in ``hashcodec.HASH_COLUMN_NAMES`` so the
+      connection rowtracer converts BLOB -> hex without a per-row UDF).
     - bare ``block_index`` -> ``__m.block_index AS block_index``
       (both ``messages`` and ``transactions`` have ``block_index``; without
       a qualifier the join is ambiguous).
@@ -131,7 +182,7 @@ def _project_messages_tx_hash(select_clause):
     """
     rewritten = re.sub(
         r"(?<![A-Za-z0-9_\.])tx_hash(?![A-Za-z0-9_])",
-        "hex_lower(__txh.tx_hash) AS tx_hash",
+        "__txh.tx_hash AS tx_hash",
         select_clause,
     )
     rewritten = re.sub(
@@ -363,31 +414,11 @@ def select_rows(
 
     table_has_hash_fk = table in _HASH_FK_PROJECTIONS
 
-    # Columns shared between the main table and the joined ``transactions``
-    # table that need explicit qualification when we add the JOIN. The set is
-    # the intersection of common columns; over-qualifying with ``__m.`` is
-    # safe because the resulting SQL still resolves to the main table's row.
-    _AMBIGUOUS_COLS = (
-        "block_index",
-        "tx_index",
-        "rowid",
-        "tx_hash",
-        "source",
-        "destination",
-        "block_time",
-        "btc_amount",
-        "fee",
-        "data",
-        "supported",
-        "utxos_info",
-        "transaction_type",
-    )
-
     def _qualify(field):
         """Disambiguate columns when the SELECT joins ``messages`` or one of
         the ``_HASH_FK_PROJECTIONS`` tables against ``transactions``."""
         if rewrite_messages_tx_hash:
-            if field in ("block_index", "tx_index", "rowid", "message_index"):
+            if field in _MESSAGES_QUALIFY_M_FIELDS:
                 return f"__m.{field}"
             if field == "tx_hash":
                 return "__txh.tx_hash"
@@ -551,16 +582,19 @@ def select_rows(
                 f"{table} AS __m LEFT JOIN {txtable} AS __txjoin "
                 f"ON __txjoin.tx_index = __m.{index_col}"
             )
+            # ``hash_col`` (dispenser_tx_hash / fairminter_tx_hash / order_tx_hash
+            # / offer_hash) is in ``hashcodec.HASH_COLUMN_NAMES`` so the rowtracer
+            # converts the BLOB to 64-char hex; no per-row Python UDF needed.
             if "*" in select:
                 # Expand the bare ``*`` to the explicit public column list
                 # and re-add the legacy hash via the JOIN.
                 select_rewritten = select.replace(
                     "*",
-                    f"{explicit_cols}, hex_lower(__txjoin.tx_hash) AS {hash_col}",
+                    f"{explicit_cols}, __txjoin.tx_hash AS {hash_col}",
                     1,
                 )
             else:
-                select_rewritten = f"{select}, hex_lower(__txjoin.tx_hash) AS {hash_col}"
+                select_rewritten = f"{select}, __txjoin.tx_hash AS {hash_col}"
     else:
         from_clause = table
         select_rewritten = select

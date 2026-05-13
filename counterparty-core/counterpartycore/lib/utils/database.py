@@ -1,4 +1,3 @@
-import binascii
 import logging
 import os
 import threading
@@ -21,23 +20,34 @@ logger = logging.getLogger(config.LOGGER_NAME)
 apsw.ext.log_sqlite(logger=logger)
 
 
+# Local reference for the rowtracer hot path: avoids the per-call attribute
+# lookup ``hashcodec.HASH_COLUMN_NAMES``. The rowtracer runs once per row per
+# column so trimming a few attribute lookups matters in the load test.
+_HASH_COLUMN_NAMES = hashcodec.HASH_COLUMN_NAMES
+
+
 def _convert_value(name, field_type, value):
-    # Preserve the pre-optimization rowtracer contract: ``BOOL`` columns
-    # always materialize as a real Python bool, even when the underlying
-    # SQLite value is NULL (``bool(None) == False``). Several handlers and
-    # serialized events rely on this (e.g. ``description_locked`` is never
-    # written by ``open_fairminter`` so the column stays NULL, but the
-    # event journal/API contract expects ``False``).
-    if str(field_type) == "BOOL":
-        return bool(value)
+    # Fast path: most columns are non-NULL primitives (int, str, ...) and
+    # not BOOL/BLOB hashes. Putting the cheapest checks first avoids the
+    # ``isinstance(..., bytes)`` and ``str(field_type) == "BOOL"``
+    # allocations that previously ran for every cell.
     if value is None:
+        # Preserve the pre-optimization rowtracer contract: ``BOOL`` columns
+        # always materialize as a real Python bool, even when the underlying
+        # SQLite value is NULL (``bool(None) == False``). Several handlers
+        # and serialized events rely on this.
+        if field_type == "BOOL":
+            return False
         return None
     # Columns storing 256-bit hashes are BLOB(32) at rest after the size
     # optimization migration, but the rest of the codebase (consensus,
     # API, tests) expects 64-char lowercase hex strings. Convert lazily
-    # in the rowtracer so downstream code is unchanged.
-    if isinstance(value, bytes) and name in hashcodec.HASH_COLUMN_NAMES:
-        return binascii.hexlify(value).decode("ascii")
+    # in the rowtracer so downstream code is unchanged. ``bytes.hex()`` is
+    # ~1.6x faster than ``binascii.hexlify(value).decode("ascii")``.
+    if value.__class__ is bytes and name in _HASH_COLUMN_NAMES:
+        return value.hex()
+    if field_type == "BOOL":
+        return bool(value)
     return value
 
 

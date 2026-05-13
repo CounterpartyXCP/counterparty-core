@@ -517,12 +517,13 @@ def inject_transactions_events(ledger_db, state_db, result_list):
         "NEW_TRANSACTION_OUTPUT",
     ]
     # ``messages.tx_hash`` was dropped in favour of a ``tx_index`` FK;
-    # resolve via ``transactions``. The ``hex_lower`` UDF (registered on
-    # the connection) keeps the result as 64-char lowercase hex so
-    # downstream code paths (events grouping by tx_hash) remain unchanged.
+    # resolve via ``transactions``. The result column is aliased ``tx_hash``,
+    # which is in ``hashcodec.HASH_COLUMN_NAMES`` so the connection rowtracer
+    # converts the BLOB to 64-char lowercase hex without a per-row Python
+    # UDF callback.
     sql = f"""
         SELECT m.message_index AS event_index, m.event, m.bindings AS params,
-               hex_lower(t.tx_hash) AS tx_hash, m.block_index
+               t.tx_hash AS tx_hash, m.block_index
         FROM messages m
         LEFT JOIN transactions t ON t.tx_index = m.tx_index
         WHERE t.tx_hash IN ({",".join("?" * len(transaction_hashes))})
