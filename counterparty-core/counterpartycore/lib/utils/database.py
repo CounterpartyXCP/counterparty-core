@@ -427,19 +427,30 @@ def close(db):
     db.close()  # always close connection with write access last
 
 
+_VACUUM_AFTER_MIGRATIONS = {"0010.compact_hash_storage"}
+
+
 def apply_outstanding_migration(db_file, migration_dir):
     logger.info("Applying migrations to %s...", db_file)
-    # Apply migrations
     backend = get_backend(f"sqlite:///{db_file}")
     migrations = read_migrations(migration_dir)
+    to_apply = backend.to_apply(migrations)
+    needs_vacuum = any(
+        any(name in m.id for name in _VACUUM_AFTER_MIGRATIONS) for m in to_apply
+    )
     try:
-        # with backend.lock():
-        backend.apply_migrations(backend.to_apply(migrations))
+        backend.apply_migrations(to_apply)
     except LockTimeout:
         logger.debug("API Watcher - Migration lock timeout. Breaking lock and retrying...")
         backend.break_lock()
         backend.apply_migrations(backend.to_apply(migrations))
     backend.connection.close()
+    if needs_vacuum:
+        logger.info("Running VACUUM after compact-hash migration to reclaim disk space...")
+        conn = apsw.Connection(db_file)
+        conn.cursor().execute("VACUUM")
+        conn.close()
+        logger.info("VACUUM completed.")
 
 
 def rollback_all_migrations(db_file, migration_dir):
