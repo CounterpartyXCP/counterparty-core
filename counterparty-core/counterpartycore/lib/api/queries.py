@@ -67,6 +67,14 @@ _HASH_FK_PROJECTIONS = {
 # connection is garbage-collected.
 _TX_TABLE_NAME_CACHE: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
 
+_ALLOWED_TX_TABLE_NAMES = frozenset({"transactions", "ledger_db.transactions"})
+
+
+def _safe_tx_table(table_name):
+    if table_name not in _ALLOWED_TX_TABLE_NAMES:
+        raise ValueError(f"Unexpected transactions table name: {table_name!r}")
+    return table_name
+
 
 def _probe_transactions_table(cursor, qualified_name):
     """Return ``qualified_name`` if the cursor can SELECT from it, else None.
@@ -504,8 +512,8 @@ def select_rows(
                         where_field.append("(0 = 1)")
                     else:
                         placeholders = ",".join(
-                            [f"(SELECT tx_index FROM {_where_tx_table} WHERE tx_hash = ?)"]  # noqa: S608
-                            * len(value)  # nosec B608
+                            [f"(SELECT tx_index FROM {_safe_tx_table(_where_tx_table)} WHERE tx_hash = ?)"]
+                            * len(value)
                         )
                         where_field.append(f"{new_field} IN ({placeholders})")
                         bindings += [hashcodec.hash_to_db(v) for v in value]
@@ -533,7 +541,7 @@ def select_rows(
                         where_field.append("(0 = 1)")
                     else:
                         where_field.append(
-                            f"{new_field} = (SELECT tx_index FROM {_where_tx_table} WHERE tx_hash = ?)"  # nosec B608  # noqa: S608
+                            f"{new_field} = (SELECT tx_index FROM {_safe_tx_table(_where_tx_table)} WHERE tx_hash = ?)"
                         )
                         bindings.append(hashcodec.hash_to_db(value))
                     # ``key`` is the legacy hex hash column (e.g.
@@ -628,7 +636,7 @@ def select_rows(
             )
         else:
             from_clause = (
-                f"messages AS __m LEFT JOIN {txtable} AS __txh ON __txh.tx_index = __m.tx_index"
+                f"messages AS __m LEFT JOIN {_safe_tx_table(txtable)} AS __txh ON __txh.tx_index = __m.tx_index"
             )
             # Project tx_hash from the joined transactions; leave other columns
             # untouched. We do a token-level rewrite so embedded substrings such
@@ -654,7 +662,7 @@ def select_rows(
                 select_rewritten = f"{select}, NULL AS {hash_col}"
         else:
             from_clause = (
-                f"{table} AS __m LEFT JOIN {txtable} AS __txjoin "
+                f"{table} AS __m LEFT JOIN {_safe_tx_table(txtable)} AS __txjoin "
                 f"ON __txjoin.tx_index = __m.{index_col}"
             )
             # ``hash_col`` (dispenser_tx_hash / fairminter_tx_hash / order_tx_hash

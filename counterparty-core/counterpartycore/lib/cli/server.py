@@ -403,9 +403,12 @@ def rollback(block_index=None):
 
 
 def vacuum():
-    db = database.initialise_db()
-    with log.Spinner("Vacuuming database..."):
-        database.vacuum(db)
+    ledger_db = database.initialise_db()
+    state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
+    with log.Spinner("Vacuuming Ledger DB..."):
+        database.vacuum(ledger_db)
+    with log.Spinner("Vacuuming State DB..."):
+        database.vacuum(state_db)
 
 
 def check_database():

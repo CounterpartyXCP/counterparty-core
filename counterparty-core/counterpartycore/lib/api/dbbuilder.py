@@ -121,6 +121,11 @@ def build_state_db():
     with log.Spinner("Applying migrations"):
         database.apply_outstanding_migration(config.STATE_DATABASE, config.STATE_DB_MIGRATIONS_DIR)
 
+    with log.Spinner("Vacuuming State DB..."):
+        state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
+        database.vacuum(state_db)
+        state_db.close()
+
     logger.info("State DB built in %.2f seconds", time.time() - start_time)
 
 

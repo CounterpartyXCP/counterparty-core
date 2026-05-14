@@ -126,21 +126,24 @@ def get_db_connection(db_file, read_only=True, check_wal=False):
         db = apsw.Connection(db_file, flags=apsw.SQLITE_OPEN_READONLY)
     else:
         db = apsw.Connection(db_file)
+
+    # Register UDFs before opening any cursor. SQLite 3.41+ ships a built-in
+    # ``unhex``; overriding a built-in fails with SQLITE_BUSY when there are
+    # active prepared statements on the connection, so we must register here
+    # before any cursor/PRAGMA work creates such statements.
+    hashcodec.register_db_functions(db)
+
     cursor = db.cursor()
 
     # Make case sensitive the `LIKE` operator.
     # For insensitive queries use 'UPPER(fieldname) LIKE value.upper()''
     cursor.execute("PRAGMA case_sensitive_like = ON")
-    cursor.execute("PRAGMA auto_vacuum = 1")
-    cursor.execute("PRAGMA synchronous = normal")
-    cursor.execute("PRAGMA journal_size_limit = 6144000")
     cursor.execute("PRAGMA foreign_keys = ON")
     cursor.execute("PRAGMA defer_foreign_keys = ON")
-
-    # Register hex_lower/unhex UDFs so VIEWs and migrations can convert
-    # between the BLOB(32) at-rest representation and the legacy hex string
-    # used by consensus, API, and tests.
-    hashcodec.register_db_functions(db)
+    if not read_only:
+        cursor.execute("PRAGMA auto_vacuum = 1")
+        cursor.execute("PRAGMA synchronous = normal")
+        cursor.execute("PRAGMA journal_size_limit = 6144000")
 
     # State DB read-only connections (used by API request handlers) need to
     # see ``ledger_db.transactions`` so that hash-FK projections that
