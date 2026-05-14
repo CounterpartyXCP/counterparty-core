@@ -513,7 +513,7 @@ def select_rows(
                     else:
                         placeholders = ",".join(
                             [
-                                f"(SELECT tx_index FROM {_safe_tx_table(_where_tx_table)} WHERE tx_hash = ?)"  # noqa: S608
+                                f"(SELECT tx_index FROM {_safe_tx_table(_where_tx_table)} WHERE tx_hash = ?)"  # noqa: S608  # nosec B608
                             ]
                             * len(value)
                         )
@@ -543,7 +543,7 @@ def select_rows(
                         where_field.append("(0 = 1)")
                     else:
                         where_field.append(
-                            f"{new_field} = (SELECT tx_index FROM {_safe_tx_table(_where_tx_table)} WHERE tx_hash = ?)"  # noqa: S608
+                            f"{new_field} = (SELECT tx_index FROM {_safe_tx_table(_where_tx_table)} WHERE tx_hash = ?)"  # noqa: S608  # nosec B608
                         )
                         bindings.append(hashcodec.hash_to_db(value))
                     # ``key`` is the legacy hex hash column (e.g.
