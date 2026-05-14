@@ -72,16 +72,12 @@ def _make_sqlite3_cursor(sql_setup):
 
 
 def test_table_has_column_tuple_rows_found():
-    cursor = _make_sqlite3_cursor([
-        "CREATE TABLE test_t (id INTEGER, name TEXT, value REAL)"
-    ])
+    cursor = _make_sqlite3_cursor(["CREATE TABLE test_t (id INTEGER, name TEXT, value REAL)"])
     assert m0010._table_has_column(cursor, "test_t", "name") is True
 
 
 def test_table_has_column_tuple_rows_not_found():
-    cursor = _make_sqlite3_cursor([
-        "CREATE TABLE test_t (id INTEGER, name TEXT)"
-    ])
+    cursor = _make_sqlite3_cursor(["CREATE TABLE test_t (id INTEGER, name TEXT)"])
     assert m0010._table_has_column(cursor, "test_t", "nonexistent") is False
 
 
@@ -111,17 +107,13 @@ def test_table_has_column_dict_rows_not_found(ledger_db):
 
 
 def test_column_affinity_tuple_rows_found():
-    cursor = _make_sqlite3_cursor([
-        "CREATE TABLE test_t (id INTEGER, name TEXT, amount REAL)"
-    ])
+    cursor = _make_sqlite3_cursor(["CREATE TABLE test_t (id INTEGER, name TEXT, amount REAL)"])
     result = m0010._column_affinity(cursor, "test_t", "name")
     assert result == "TEXT"
 
 
 def test_column_affinity_tuple_rows_not_found():
-    cursor = _make_sqlite3_cursor([
-        "CREATE TABLE test_t (id INTEGER, name TEXT)"
-    ])
+    cursor = _make_sqlite3_cursor(["CREATE TABLE test_t (id INTEGER, name TEXT)"])
     result = m0010._column_affinity(cursor, "test_t", "nonexistent")
     assert result is None
 
@@ -149,18 +141,18 @@ def test_column_affinity_dict_rows_not_found(ledger_db):
 
 
 def test_index_definitions_tuple_rows_no_indexes():
-    cursor = _make_sqlite3_cursor([
-        "CREATE TABLE test_t (id INTEGER, name TEXT)"
-    ])
+    cursor = _make_sqlite3_cursor(["CREATE TABLE test_t (id INTEGER, name TEXT)"])
     result = m0010._index_definitions(cursor, "test_t")
     assert result == []
 
 
 def test_index_definitions_tuple_rows_with_index():
-    cursor = _make_sqlite3_cursor([
-        "CREATE TABLE test_t (id INTEGER, name TEXT)",
-        "CREATE INDEX idx_name ON test_t(name)",
-    ])
+    cursor = _make_sqlite3_cursor(
+        [
+            "CREATE TABLE test_t (id INTEGER, name TEXT)",
+            "CREATE INDEX idx_name ON test_t(name)",
+        ]
+    )
     result = m0010._index_definitions(cursor, "test_t")
     assert len(result) == 1
     assert result[0][0] == "idx_name"

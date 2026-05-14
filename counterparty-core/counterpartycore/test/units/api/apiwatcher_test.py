@@ -205,7 +205,13 @@ def test_pool_events_in_update_events_id_fields():
 
 
 def test_pool_events_in_events_address_fields():
-    for event in ("OPEN_POOL", "POOL_UPDATE", "NEW_POOL_DEPOSIT", "NEW_POOL_WITHDRAWAL", "POOL_MATCH"):
+    for event in (
+        "OPEN_POOL",
+        "POOL_UPDATE",
+        "NEW_POOL_DEPOSIT",
+        "NEW_POOL_WITHDRAWAL",
+        "POOL_MATCH",
+    ):
         assert event in apiwatcher.EVENTS_ADDRESS_FIELDS
 
 
@@ -232,20 +238,22 @@ def test_update_assets_info_no_description_locked(state_db):
 
     event = {
         "event": "ASSET_ISSUANCE",
-        "bindings": json.dumps({
-            "status": "valid",
-            "asset": asset,
-            "asset_longname": None,
-            "asset_id": "1",
-            "issuer": "addr",
-            "divisible": True,
-            "description": "x",
-            "mime_type": "text/plain",
-            "quantity": 0,
-            "block_index": 200,
-            "locked": False,
-            "fee_paid": 0,
-        }),
+        "bindings": json.dumps(
+            {
+                "status": "valid",
+                "asset": asset,
+                "asset_longname": None,
+                "asset_id": "1",
+                "issuer": "addr",
+                "divisible": True,
+                "description": "x",
+                "mime_type": "text/plain",
+                "quantity": 0,
+                "block_index": 200,
+                "locked": False,
+                "fee_paid": 0,
+            }
+        ),
     }
     apiwatcher.update_assets_info(state_db, event)
 

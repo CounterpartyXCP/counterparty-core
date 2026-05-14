@@ -504,7 +504,8 @@ def select_rows(
                         where_field.append("(0 = 1)")
                     else:
                         placeholders = ",".join(
-                            [f"(SELECT tx_index FROM {_where_tx_table} WHERE tx_hash = ?)"] * len(value)  # nosec B608  # noqa: S608
+                            [f"(SELECT tx_index FROM {_where_tx_table} WHERE tx_hash = ?)"]  # noqa: S608
+                            * len(value)  # nosec B608
                         )
                         where_field.append(f"{new_field} IN ({placeholders})")
                         bindings += [hashcodec.hash_to_db(v) for v in value]
