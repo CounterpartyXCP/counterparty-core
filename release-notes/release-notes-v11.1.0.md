@@ -52,6 +52,10 @@ The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 
 - Add support for indefinite DEX orders and fix `expiration` semantics behind a new `indefinite_orders` gate: `expiration=0` now means indefinite (open until filled or cancelled, `expire_index = NULL`), `expiration=N` now means exactly N blocks of life (was N+1 due to a long-standing off-by-one), and `MAX_EXPIRATION` is raised from 8064 (~56 days) to 65535 (the wire-format u16 max, ~455 days). The wire format is unchanged.
 - Add **AMM (Automated Market Maker) liquidity pools** behind a new `amm_pools` gate, with two new message types: `pooldeposit` (`120`) and `poolwithdraw` (`121`); BTC pairs are explicitly rejected. Deposits/withdraws use standard constant-product math (LP tokens minted via `floor(sqrt(qa*qb))` on first deposit, then proportionally; withdrawals burn LP tokens for proportional reserve shares), support slippage bounds (`min_lp_quantity`, `min_quantity_a`/`b`) and pay an XCP gas fee. The DEX `match()` loop now interleaves pool fills with the resting book at every step (constant-product, fee-adjusted, with `XCP_POOL_FEE_BPS=50` for XCP pairs and `100` otherwise), then sweeps any remainder against the pool in a tail phase. Pool reserves are counted in `held()` for asset conservation. Five new events (`OPEN_POOL`, `POOL_UPDATE`, `NEW_POOL_DEPOSIT`, `NEW_POOL_WITHDRAWAL`, `POOL_MATCH`) and four new tables (`pools`, `pool_deposits`, `pool_withdrawals`, `pool_matches`) are added via ledger migration `0009.amm_pools.sql` and consolidated into the State DB by migration `0014.add_pool_consolidated_tables` (registered in `MIGRATIONS_AFTER_ROLLBACK`, also rebuilds `asset_holders` / `xcp_holders` to include pool reserves).
 
+## Performance
+
+- Compact hash storage in the Ledger DB: transaction hashes, block hashes and other fixed-size hex strings are now stored as raw 32-byte BLOBs instead of 64-char hex strings, cutting hash-column storage roughly in half. A new migration (`0010.compact_hash_storage`) rewrites all affected tables and runs `VACUUM` afterwards; a new `hashcodec` module handles encoding/decoding transparently so the rest of the codebase is unaffected.
+
 ## Bugfixes
 
 - `excludes_utxos` supports now `<txid>:<vout>` and `<txid>` alone
@@ -85,6 +89,7 @@ The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 
 
 ## API
 
+- Fix `valid` field returned as integer `0` instead of boolean `false` in API responses
 - Block APIv1 SQL injection via `filter_["field"]`; redact secrets in logs
 - New AMM pool endpoints: `GET /v2/pools`, `GET /v2/pools/<asset1>/<asset2>` (with `/deposits`, `/withdrawals`, `/matches`, `/price_history` sub-resources), `GET /v2/pools/<asset1>/<asset2>/quote` (hybrid pool+book swap quote), `/quote/deposit` and `/quote/withdraw`, `GET /v2/pool_matches`, `GET /v2/orders/<order_hash>/pool_matches`, `GET /v2/addresses/<address>/pools` (LP positions), `GET /v2/addresses/<address>/pool_deposits` and `/pool_withdrawals`, `GET /v2/blocks/<int:block_index>/pool_deposits` / `pool_withdrawals` / `pool_matches`, plus the compose endpoints `POST /v2/addresses/<address>/compose/pooldeposit` and `compose/poolwithdraw` with their `estimatexcpfees` companions.
 
