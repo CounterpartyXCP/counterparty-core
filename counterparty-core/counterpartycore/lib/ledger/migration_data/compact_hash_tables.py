@@ -85,7 +85,9 @@ TABLE_REWRITES = [
                           PRIMARY KEY (tx_index))""",
         ("tx_hash",),
     ),
-    # mempool_transactions: tx_hash + block_hash BLOB; rest unchanged.
+    # mempool_transactions: tx_hash BLOB; block_hash stays TEXT because it
+    # stores the literal sentinel "mempool" (not a real 32-byte hash).
+    # Converting it with __hex_to_blob would fail (not valid hex).
     (
         "mempool_transactions",
         (
@@ -107,7 +109,7 @@ TABLE_REWRITES = [
                           tx_index INTEGER UNIQUE,
                           tx_hash BLOB UNIQUE,
                           block_index INTEGER,
-                          block_hash BLOB,
+                          block_hash TEXT,
                           block_time INTEGER,
                           source TEXT,
                           destination TEXT,
@@ -116,7 +118,7 @@ TABLE_REWRITES = [
                           data BLOB,
                           supported BOOL DEFAULT 1,
                           utxos_info TEXT, transaction_type TEXT)""",
-        ("tx_hash", "block_hash"),
+        ("tx_hash",),
     ),
     # mempool: tx_hash BLOB.
     (

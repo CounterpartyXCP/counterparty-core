@@ -79,7 +79,7 @@ def get_blocks_time(db, block_indexes):
     blocks = cursor.fetchall()
     result = {}
     for block in blocks:
-        result[block["block_index"]] = block["block_time"]
+        result[block["block_index"]] = int(block["block_time"])
     return result
 
 

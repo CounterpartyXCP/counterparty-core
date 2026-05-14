@@ -29,7 +29,7 @@ HASH_COLUMNS_BY_TABLE = {
         "messages_hash",
     ],
     "transactions": ["tx_hash"],
-    "mempool_transactions": ["tx_hash", "block_hash"],
+    "mempool_transactions": ["tx_hash"],  # block_hash is TEXT sentinel "mempool", not a real hash
     "mempool": ["tx_hash"],
     "messages": ["event_hash"],
     "transaction_outputs": [],

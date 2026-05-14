@@ -199,6 +199,62 @@ def test_update_assets_info_skips_invalid_status(state_db):
     assert row["description"] == original_desc
 
 
+def test_pool_events_in_update_events_id_fields():
+    assert "POOL_UPDATE" in apiwatcher.UPDATE_EVENTS_ID_FIELDS
+    assert apiwatcher.UPDATE_EVENTS_ID_FIELDS["POOL_UPDATE"] == ["asset_a", "asset_b"]
+
+
+def test_pool_events_in_events_address_fields():
+    for event in ("OPEN_POOL", "POOL_UPDATE", "NEW_POOL_DEPOSIT", "NEW_POOL_WITHDRAWAL", "POOL_MATCH"):
+        assert event in apiwatcher.EVENTS_ADDRESS_FIELDS
+
+
+def test_pool_tables_in_state_db_tables():
+    for table in ("pools", "pool_deposits", "pool_withdrawals", "pool_matches"):
+        assert table in apiwatcher.STATE_DB_TABLES
+
+
+def test_update_address_events_skips_unknown_event(state_db):
+    event = {"event": "UNKNOWN_EVENT_XYZ", "bindings": "{}"}
+    apiwatcher.update_address_events(state_db, event)  # should not raise
+
+
+def test_update_assets_info_no_description_locked(state_db):
+    """description_locked absent from bindings -> column not updated."""
+    cursor = state_db.cursor()
+    asset_row = cursor.execute(
+        "SELECT asset, description_locked FROM assets_info WHERE asset NOT IN ('XCP', 'BTC') LIMIT 1"
+    ).fetchone()
+    if asset_row is None:
+        return
+    asset = asset_row["asset"]
+    original = bool(asset_row["description_locked"])
+
+    event = {
+        "event": "ASSET_ISSUANCE",
+        "bindings": json.dumps({
+            "status": "valid",
+            "asset": asset,
+            "asset_longname": None,
+            "asset_id": "1",
+            "issuer": "addr",
+            "divisible": True,
+            "description": "x",
+            "mime_type": "text/plain",
+            "quantity": 0,
+            "block_index": 200,
+            "locked": False,
+            "fee_paid": 0,
+        }),
+    }
+    apiwatcher.update_assets_info(state_db, event)
+
+    row = cursor.execute(
+        "SELECT description_locked FROM assets_info WHERE asset = ?", (asset,)
+    ).fetchone()
+    assert bool(row["description_locked"]) == original
+
+
 def test_events_address_fields_keys_are_lowercase_underscore():
     """Defensive: every field name listed in EVENTS_ADDRESS_FIELDS must
     look like a real binding key (lowercase + underscores). This would

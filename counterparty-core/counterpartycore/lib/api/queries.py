@@ -475,6 +475,11 @@ def select_rows(
     # to decide whether the ``_COUNT_FROM_OVERRIDE`` shortcut is safe.
     where_fields_used: set[str] = set()
 
+    # Resolve the transactions table once so _HASH_FK_WHERE_REWRITE subqueries
+    # use the same table name as the FROM clause JOIN (or emit a false condition
+    # when no transactions table is reachable from this connection).
+    _where_tx_table = _resolve_transactions_table_name(db)
+
     or_where = []
     for where_dict in where:
         where_field = []
@@ -495,11 +500,14 @@ def select_rows(
                 field = key[:-4]
                 if field in _HASH_FK_WHERE_REWRITE:
                     new_field = _HASH_FK_WHERE_REWRITE[field]
-                    placeholders = ",".join(
-                        ["(SELECT tx_index FROM transactions WHERE tx_hash = ?)"] * len(value)
-                    )
-                    where_field.append(f"{new_field} IN ({placeholders})")
-                    bindings += [hashcodec.hash_to_db(v) for v in value]
+                    if _where_tx_table is None:
+                        where_field.append("(0 = 1)")
+                    else:
+                        placeholders = ",".join(
+                            [f"(SELECT tx_index FROM {_where_tx_table} WHERE tx_hash = ?)"] * len(value)  # nosec B608  # noqa: S608
+                        )
+                        where_field.append(f"{new_field} IN ({placeholders})")
+                        bindings += [hashcodec.hash_to_db(v) for v in value]
                     # ``field`` becomes the resolved FK column so the
                     # ``_COUNT_FROM_OVERRIDE`` gate sees the actual schema
                     # column rather than the legacy hex hash alias.
@@ -520,10 +528,13 @@ def select_rows(
             else:
                 if key in _HASH_FK_WHERE_REWRITE:
                     new_field = _HASH_FK_WHERE_REWRITE[key]
-                    where_field.append(
-                        f"{new_field} = (SELECT tx_index FROM transactions WHERE tx_hash = ?)"  # nosec B608  # noqa: S608
-                    )
-                    bindings.append(hashcodec.hash_to_db(value))
+                    if _where_tx_table is None:
+                        where_field.append("(0 = 1)")
+                    else:
+                        where_field.append(
+                            f"{new_field} = (SELECT tx_index FROM {_where_tx_table} WHERE tx_hash = ?)"  # nosec B608  # noqa: S608
+                        )
+                        bindings.append(hashcodec.hash_to_db(value))
                     # ``key`` is the legacy hex hash column (e.g.
                     # ``dispenser_tx_hash``); record the *resolved* FK column
                     # name so the override gate sees the actual schema column.

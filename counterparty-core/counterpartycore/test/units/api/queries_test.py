@@ -1173,6 +1173,53 @@ def test_get_pool_quote_withdraw_case_insensitive(state_db):
 # =============================================================================
 
 
+def test_get_pool_deposits_by_block(ledger_db, current_block_index):
+    result = queries.get_pool_deposits_by_block(ledger_db, current_block_index)
+    assert result is not None
+
+
+def test_get_pool_withdrawals_by_block(ledger_db, current_block_index):
+    result = queries.get_pool_withdrawals_by_block(ledger_db, current_block_index)
+    assert result is not None
+
+
+def test_get_pool_matches_by_block(ledger_db, current_block_index):
+    result = queries.get_pool_matches_by_block(ledger_db, current_block_index)
+    assert result is not None
+
+
+def test_get_pool_matches_by_order(state_db):
+    result = queries.get_pool_matches_by_order(state_db, "nonexistent_hash")
+    assert result is not None
+
+
+def test_get_pool_deposits_by_address_with_cursor(state_db, defaults):
+    result = queries.get_pool_deposits_by_address(state_db, defaults["addresses"][0], cursor=999)
+    assert result is not None
+
+
+def test_get_pool_withdrawals_by_address_with_cursor(state_db, defaults):
+    result = queries.get_pool_withdrawals_by_address(state_db, defaults["addresses"][0], cursor=999)
+    assert result is not None
+
+
+def test_get_pool_quote_no_pool_with_orders(state_db):
+    """Book-only path: no pool but orders might exist."""
+    result = queries.get_pool_quote(state_db, "XCP", "DIVISIBLE", 1_000_000)
+    assert "pool_exists" in result
+    assert result["pool_exists"] is False
+
+
+def test_get_pools_with_sort(state_db):
+    result = queries.get_pools(state_db, sort="reserve_a:desc")
+    assert result is not None
+
+
+def test_get_all_pool_matches_with_sort(state_db):
+    result = queries.get_all_pool_matches(state_db, sort="forward_quantity:asc")
+    assert result is not None
+
+
 def test_count_fast_path_messages_no_tx_hash_filter(ledger_db):
     """Counting ``messages`` without a tx_hash filter uses the no-JOIN
     fast-path; the count must still match a row-by-row tally."""

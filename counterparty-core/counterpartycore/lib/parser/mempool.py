@@ -156,7 +156,10 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
         for tx in mempool_transactions:
             tx_for_insert = dict(tx)
             tx_for_insert["tx_hash"] = hashcodec.hash_to_db(tx.get("tx_hash"))
-            tx_for_insert["block_hash"] = hashcodec.hash_to_db(tx.get("block_hash"))
+            # block_hash is always the "mempool" sentinel TEXT value; do not
+            # call hash_to_db which would encode it as a 7-byte BLOB and then
+            # have the rowtracer decode it back as "6d656d706f6f6c".
+            tx_for_insert["block_hash"] = config.MEMPOOL_BLOCK_HASH
             cursor.execute(
                 """INSERT INTO mempool_transactions VALUES(
                     :tx_index, :tx_hash, :block_index, :block_hash, :block_time, :source, :destination, :btc_amount, :fee,
