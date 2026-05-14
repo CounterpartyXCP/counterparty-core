@@ -435,9 +435,7 @@ def apply_outstanding_migration(db_file, migration_dir):
     backend = get_backend(f"sqlite:///{db_file}")
     migrations = read_migrations(migration_dir)
     to_apply = backend.to_apply(migrations)
-    needs_vacuum = any(
-        any(name in m.id for name in _VACUUM_AFTER_MIGRATIONS) for m in to_apply
-    )
+    needs_vacuum = any(any(name in m.id for name in _VACUUM_AFTER_MIGRATIONS) for m in to_apply)
     try:
         backend.apply_migrations(to_apply)
     except LockTimeout:
