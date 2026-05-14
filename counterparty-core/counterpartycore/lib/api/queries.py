@@ -512,7 +512,9 @@ def select_rows(
                         where_field.append("(0 = 1)")
                     else:
                         placeholders = ",".join(
-                            [f"(SELECT tx_index FROM {_safe_tx_table(_where_tx_table)} WHERE tx_hash = ?)"]
+                            [
+                                f"(SELECT tx_index FROM {_safe_tx_table(_where_tx_table)} WHERE tx_hash = ?)"  # noqa: S608
+                            ]
                             * len(value)
                         )
                         where_field.append(f"{new_field} IN ({placeholders})")
@@ -541,7 +543,7 @@ def select_rows(
                         where_field.append("(0 = 1)")
                     else:
                         where_field.append(
-                            f"{new_field} = (SELECT tx_index FROM {_safe_tx_table(_where_tx_table)} WHERE tx_hash = ?)"
+                            f"{new_field} = (SELECT tx_index FROM {_safe_tx_table(_where_tx_table)} WHERE tx_hash = ?)"  # noqa: S608
                         )
                         bindings.append(hashcodec.hash_to_db(value))
                     # ``key`` is the legacy hex hash column (e.g.
@@ -635,9 +637,7 @@ def select_rows(
                 select,
             )
         else:
-            from_clause = (
-                f"messages AS __m LEFT JOIN {_safe_tx_table(txtable)} AS __txh ON __txh.tx_index = __m.tx_index"
-            )
+            from_clause = f"messages AS __m LEFT JOIN {_safe_tx_table(txtable)} AS __txh ON __txh.tx_index = __m.tx_index"
             # Project tx_hash from the joined transactions; leave other columns
             # untouched. We do a token-level rewrite so embedded substrings such
             # as ``last_status_tx_hash`` are not touched.
