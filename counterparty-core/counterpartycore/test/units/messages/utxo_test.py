@@ -69,6 +69,27 @@ def test_unpack(defaults):
     )
 
 
+def test_parse_invalid_unpack(ledger_db, blockchain_mock, defaults, test_helpers):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+
+    utxo.parse(ledger_db, tx, b"not-enough-fields")
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "sends",
+                "values": {
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                    "send_type": "utxo",
+                    "status": "invalid: could not unpack",
+                },
+            },
+        ],
+    )
+
+
 def test_parse_attach(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     destination_uxo = "344dcc8909ca3a137630726d0071dfd2df4f7c855bac150c7d3a8367835c90bc:0"

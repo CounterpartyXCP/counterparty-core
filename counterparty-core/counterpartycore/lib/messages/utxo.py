@@ -154,7 +154,20 @@ def unpack(message, return_dict=False):
 
 
 def parse(db, tx, message):
-    (source, destination, asset, quantity) = unpack(message)
+    try:
+        (source, destination, asset, quantity) = unpack(message)
+    except exceptions.UnpackError:
+        bindings = {
+            "tx_index": tx["tx_index"],
+            "tx_hash": tx["tx_hash"],
+            "msg_index": ledger.other.get_send_msg_index(db, tx["tx_hash"]),
+            "block_index": tx["block_index"],
+            "status": "invalid: could not unpack",
+            "send_type": "utxo",
+        }
+        ledger.events.insert_record(db, "sends", bindings, "UTXO_MOVE")
+        ledger.blocks.set_transaction_status(db, tx["tx_index"], False)
+        return
 
     problems = validate(db, source, destination, asset, quantity, tx["block_index"])
 
