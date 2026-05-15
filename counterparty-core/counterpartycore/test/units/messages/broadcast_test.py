@@ -2,7 +2,7 @@ import struct
 
 import pytest
 from bitcoin.core import VarIntSerializer
-from counterpartycore.lib import config
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.messages import broadcast
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
@@ -1061,6 +1061,41 @@ def test_parse_invalid_message_legacy(ledger_db, blockchain_mock, defaults, test
         )
 
 
+def test_parse_invalid_cbor_schema(ledger_db, blockchain_mock, defaults, test_helpers):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][4], use_first_tx=True)
+    message = broadcast.cbor2.dumps([1588000000, "not-a-number", 0, "text/plain", b"x"])
+
+    broadcast.parse(ledger_db, tx, message)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "broadcasts",
+                "values": {
+                    "block_index": tx["block_index"],
+                    "fee_fraction_int": 0,
+                    "locked": 0,
+                    "source": defaults["addresses"][4],
+                    "status": "invalid: could not unpack",
+                    "text": None,
+                    "timestamp": 0,
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                    "value": None,
+                },
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": False,
+                },
+            },
+        ],
+    )
+
+
 def test_loads_cbor(monkeypatch):
     message = (
         b"\x85\x1a^\xa6\xf5\x00\x01\x00`X5Exactly 53 characters test test test test test testt."
@@ -1078,7 +1113,7 @@ def test_loads_cbor(monkeypatch):
     monkeypatch.setattr(
         "counterpartycore.lib.utils.helpers.bytes_to_content", bytes_to_content_mock
     )
-    with pytest.raises(Exception):  # noqa: B017
+    with pytest.raises(exceptions.UnpackError):
         broadcast.load_cbor(message)
 
 

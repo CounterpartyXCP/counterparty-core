@@ -182,9 +182,25 @@ def compose(
 
 
 def load_cbor(message):
-    timestamp, value, fee_fraction_int, mime_type, text = cbor2.loads(message)
+    decoded = cbor2.loads(message)
+    if not isinstance(decoded, (list, tuple)) or len(decoded) != 5:
+        raise exceptions.UnpackError
+
+    timestamp, value, fee_fraction_int, mime_type, text = decoded
+    if (
+        type(timestamp) is not int
+        or type(value) not in (int, float)
+        or type(fee_fraction_int) is not int
+        or (mime_type is not None and not isinstance(mime_type, str))
+        or not isinstance(text, bytes)
+    ):
+        raise exceptions.UnpackError
+
     mime_type = mime_type or "text/plain"
-    text = helpers.bytes_to_content(text, mime_type)
+    try:
+        text = helpers.bytes_to_content(text, mime_type)
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        raise exceptions.UnpackError from exc
     return timestamp, value, fee_fraction_int, mime_type, text
 
 
@@ -223,6 +239,8 @@ def unpack(message, block_index, return_dict=False):
             # Unpack the message using cbor2
             try:
                 timestamp, value, fee_fraction_int, mime_type, text = load_cbor(message)
+            except exceptions.UnpackError:
+                raise
             except Exception:
                 timestamp, value, fee_fraction_int, mime_type, text = load_data_legacy(
                     message, block_index
@@ -232,7 +250,7 @@ def unpack(message, block_index, return_dict=False):
                 message, block_index
             )
         status = "valid"
-    except struct.error:
+    except (exceptions.UnpackError, struct.error):
         timestamp, value, fee_fraction_int, mime_type, text = 0, None, 0, "", None
         status = "invalid: could not unpack"
     except AssertionError:
