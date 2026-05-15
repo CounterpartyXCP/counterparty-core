@@ -34,6 +34,76 @@ DESCRIPTION_MARK_BYTE = b"\xc0"
 DESCRIPTION_NULL_ACTION = "NULL"
 
 
+def _is_int(value):
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _is_boolish(value):
+    return isinstance(value, bool) or (_is_int(value) and value in (0, 1))
+
+
+def _is_optional_text(value):
+    return value is None or isinstance(value, str)
+
+
+def _is_optional_bytes(value):
+    return value is None or isinstance(value, bytes)
+
+
+def _load_cbor_payload(message, message_type_id):
+    payload = cbor2.loads(message)
+    if not isinstance(payload, list):
+        raise ValueError("Not an issuance CBOR payload")
+
+    if message_type_id in [ID, LR_ISSUANCE_ID]:
+        if len(payload) != 7:
+            raise ValueError("Not an issuance CBOR payload")
+
+        asset_id, quantity, divisible, lock, reset, mime_type, description = payload
+        if not (
+            _is_int(asset_id)
+            and _is_int(quantity)
+            and _is_boolish(divisible)
+            and _is_boolish(lock)
+            and _is_boolish(reset)
+            and _is_optional_text(mime_type)
+            and _is_optional_bytes(description)
+        ):
+            raise exceptions.UnpackError("Invalid issuance CBOR payload")
+        return payload
+
+    if message_type_id in [SUBASSET_ID, LR_SUBASSET_ID]:
+        if len(payload) != 9:
+            raise ValueError("Not an issuance CBOR payload")
+
+        (
+            asset_id,
+            quantity,
+            divisible,
+            lock,
+            reset,
+            compacted_subasset_length,
+            compacted_subasset_longname,
+            mime_type,
+            description,
+        ) = payload
+        if not (
+            _is_int(asset_id)
+            and _is_int(quantity)
+            and _is_boolish(divisible)
+            and _is_boolish(lock)
+            and _is_boolish(reset)
+            and _is_int(compacted_subasset_length)
+            and isinstance(compacted_subasset_longname, bytes)
+            and _is_optional_text(mime_type)
+            and _is_optional_bytes(description)
+        ):
+            raise exceptions.UnpackError("Invalid issuance CBOR payload")
+        return payload
+
+    raise exceptions.UnpackError("Invalid message type ID")
+
+
 def validate(
     db,
     source,
@@ -644,7 +714,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                         reset,
                         mime_type,
                         description,
-                    ) = cbor2.loads(message)
+                    ) = _load_cbor_payload(message, message_type_id)
                 elif message_type_id in [SUBASSET_ID, LR_SUBASSET_ID]:
                     (
                         asset_id,
@@ -656,7 +726,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                         compacted_subasset_longname,
                         mime_type,
                         description,
-                    ) = cbor2.loads(message)
+                    ) = _load_cbor_payload(message, message_type_id)
                     subasset_longname = assetnames.expand_subasset_longname(
                         compacted_subasset_longname
                     )
@@ -669,6 +739,8 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                 callable_, call_date, call_price = False, 0, 0.0
 
                 unpacked = True
+            except exceptions.UnpackError:
+                raise
             except Exception:  # pylint: disable=broad-exception-caught
                 unpacked = False  # Fallback to legacy unpacking
 

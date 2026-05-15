@@ -1,5 +1,6 @@
 import binascii
 
+import cbor2
 import pytest
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import apiwatcher
@@ -2075,6 +2076,36 @@ def test_parse_divisible_legacy_taproot_acivated(
                     "block_index": current_block_index,
                     "event": tx["tx_hash"],
                     "quantity": 0,
+                },
+            },
+        ],
+    )
+
+
+def test_parse_invalid_cbor_schema(ledger_db, blockchain_mock, defaults, test_helpers):
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    message = cbor2.dumps([17576, "not-int", False, False, False, "text/plain", b"desc"])
+
+    issuance.parse(ledger_db, tx, message, issuance.ID)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "issuances",
+                "values": {
+                    "block_index": tx["block_index"],
+                    "source": defaults["addresses"][0],
+                    "status": "invalid: could not unpack",
+                    "tx_hash": tx["tx_hash"],
+                    "tx_index": tx["tx_index"],
+                },
+            },
+            {
+                "table": "transactions_status",
+                "values": {
+                    "tx_index": tx["tx_index"],
+                    "valid": False,
                 },
             },
         ],
