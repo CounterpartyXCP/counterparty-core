@@ -811,7 +811,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
         except exceptions.AssetIDError:
             asset = None
             status = "invalid: bad asset name"
-    except exceptions.UnpackError as e:
+    except (exceptions.UnpackError, struct.error) as e:
         logger.warning("unpack error: %s", e)
         (
             asset_id,

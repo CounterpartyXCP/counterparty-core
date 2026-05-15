@@ -7,6 +7,30 @@ from counterpartycore.lib.messages import issuance
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
+def test_unpack_short_subasset_message(ledger_db):
+    assert issuance.unpack(
+        ledger_db,
+        b"",
+        issuance.SUBASSET_ID,
+        9999999,
+        return_dict=True,
+    ) == {
+        "asset_id": None,
+        "asset": None,
+        "subasset_longname": None,
+        "quantity": None,
+        "divisible": False,
+        "lock": False,
+        "reset": False,
+        "callable": False,
+        "call_date": None,
+        "call_price": None,
+        "description": None,
+        "mime_type": None,
+        "status": "invalid: could not unpack",
+    }
+
+
 def test_validate(ledger_db, defaults, current_block_index):
     assert issuance.validate(
         ledger_db,
