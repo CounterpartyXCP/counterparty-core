@@ -1,7 +1,24 @@
+import struct
+
 import pytest
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
+
+
+def test_unpack_invalid_asset_id():
+    payload = struct.pack(">QQQQB", 2, 1, 1, 1, dispenser.STATUS_OPEN)
+
+    assert dispenser.unpack(payload, return_dict=True) == {
+        "asset": None,
+        "give_quantity": None,
+        "escrow_quantity": None,
+        "mainchainrate": None,
+        "dispenser_status": None,
+        "action_address": None,
+        "oracle_address": None,
+        "status": "invalid: could not unpack",
+    }
 
 
 def test_validate(ledger_db, defaults):

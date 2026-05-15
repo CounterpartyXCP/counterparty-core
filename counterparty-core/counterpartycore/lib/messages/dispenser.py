@@ -332,7 +332,7 @@ def unpack(message, return_dict=False, block_index=None):
             oracle_address = address_unpack(message[read : read + 21])
         asset = ledger.issuances.generate_asset_name(assetid)
         status = "valid"
-    except (exceptions.UnpackError, struct.error):
+    except (exceptions.UnpackError, exceptions.AssetIDError, struct.error):
         (
             give_quantity,
             escrow_quantity,
