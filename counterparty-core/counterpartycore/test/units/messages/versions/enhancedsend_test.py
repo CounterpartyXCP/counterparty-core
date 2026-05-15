@@ -1,7 +1,7 @@
 import re
 
 import pytest
-from counterpartycore.lib import exceptions
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.messages.versions import enhancedsend
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
@@ -61,6 +61,48 @@ def test_compose(ledger_db, defaults):
                 True,
                 True,  # skip validation
             )
+
+
+def test_compose_rejects_overflow_quantity_with_skip_validation(ledger_db, defaults):
+    with pytest.raises(exceptions.ComposeError, match="integer overflow"):
+        enhancedsend.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            defaults["addresses"][1],
+            "XCP",
+            config.MAX_INT + 1,
+            None,
+            False,
+            True,  # skip validation
+        )
+
+    with ProtocolChangesDisabled(["taproot_support"]):
+        with pytest.raises(exceptions.ComposeError, match="integer overflow"):
+            enhancedsend.compose(
+                ledger_db,
+                defaults["addresses"][0],
+                defaults["addresses"][1],
+                "XCP",
+                config.MAX_INT + 1,
+                None,
+                False,
+                True,  # skip validation
+            )
+
+
+def test_compose_rejects_overflow_btc_quantity(ledger_db, defaults):
+    with pytest.raises(exceptions.ComposeError, match="integer overflow"):
+        enhancedsend.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            defaults["addresses"][1],
+            "BTC",
+            config.MAX_INT + 1,
+            None,
+            False,
+            True,  # skip validation
+            True,  # no dispense
+        )
 
 
 def test_unpack(ledger_db, defaults):

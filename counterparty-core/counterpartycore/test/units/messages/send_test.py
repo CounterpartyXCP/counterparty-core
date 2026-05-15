@@ -247,10 +247,21 @@ def test_compose_no_valid(ledger_db, defaults, current_block_index):
             defaults["quantity"] / 3,
         )
 
-    with pytest.raises(exceptions.ComposeError, match="insufficient funds"):
+    with pytest.raises(exceptions.ComposeError, match="integer overflow"):
         send.compose(
             ledger_db, defaults["addresses"][0], defaults["addresses"][1], "MAXI", 2**63 + 1
         )
+
+    with ProtocolChangesDisabled(["enhanced_sends"]):
+        with pytest.raises(exceptions.ComposeError, match="integer overflow"):
+            send.compose(
+                ledger_db,
+                defaults["addresses"][0],
+                defaults["addresses"][1],
+                "BTC",
+                config.MAX_INT + 1,
+                no_dispense=True,
+            )
 
     insert_required_option(ledger_db, current_block_index, defaults)
 
