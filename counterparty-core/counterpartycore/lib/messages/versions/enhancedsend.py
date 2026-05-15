@@ -143,6 +143,8 @@ def compose(
     skip_validation: bool = False,
     no_dispense: bool = False,
 ):
+    send1.validate_compose_quantity(quantity)
+
     cursor = db.cursor()
 
     # Just send BTC?
@@ -152,10 +154,6 @@ def compose(
 
     # resolve subassets
     asset = ledger.issuances.resolve_subasset_longname(db, asset)
-
-    # quantity must be in int satoshi (not float, string, etc)
-    if not isinstance(quantity, int):
-        raise exceptions.ComposeError("quantity must be an int (in satoshi)")
 
     # Only for outgoing (incoming will overburn).
     balance = ledger.balances.get_balance(db, source, asset)
