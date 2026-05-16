@@ -98,10 +98,14 @@ def test_software_version_connection_error(monkeypatch):
     monkeypatch.setattr("requests.get", mock_get)
 
     try:
-        with pytest.raises(
-            exceptions.VersionCheckError, match="Unable to check Counterparty version"
-        ):
+        with pytest.raises(exceptions.VersionCheckError) as exc_info:
             check.software_version()
+        message = str(exc_info.value)
+        assert "Unable to check Counterparty version from" in message
+        assert config.PROTOCOL_CHANGES_URL in message
+        assert "Connection refused" in message
+        assert "Use --force to ignore verification." in message
+        assert "verfication" not in message
     finally:
         config.FORCE = original_force
 
@@ -117,10 +121,12 @@ def test_software_version_timeout_error(monkeypatch):
     monkeypatch.setattr("requests.get", mock_get)
 
     try:
-        with pytest.raises(
-            exceptions.VersionCheckError, match="Unable to check Counterparty version"
-        ):
+        with pytest.raises(exceptions.VersionCheckError) as exc_info:
             check.software_version()
+        message = str(exc_info.value)
+        assert "Unable to check Counterparty version from" in message
+        assert "Read timed out" in message
+        assert "Use --force to ignore verification." in message
     finally:
         config.FORCE = original_force
 
@@ -141,10 +147,12 @@ def test_software_version_json_decode_error(monkeypatch):
     monkeypatch.setattr("requests.get", mock_get)
 
     try:
-        with pytest.raises(
-            exceptions.VersionCheckError, match="Unable to check Counterparty version"
-        ):
+        with pytest.raises(exceptions.VersionCheckError) as exc_info:
             check.software_version()
+        message = str(exc_info.value)
+        assert "Unable to check Counterparty version from" in message
+        assert "Expecting value" in message
+        assert "Use --force to ignore verification." in message
     finally:
         config.FORCE = original_force
 
