@@ -20,6 +20,10 @@ def test_unpack_invalid_asset_id():
         "status": "invalid: could not unpack",
     }
 
+    with ProtocolChangesDisabled(["catch_invalid_dispenser_asset_id"]):
+        with pytest.raises(exceptions.AssetIDError):
+            dispenser.unpack(payload, return_dict=True)
+
 
 def test_validate(ledger_db, defaults):
     assert dispenser.validate(
