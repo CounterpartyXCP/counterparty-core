@@ -4,7 +4,6 @@ import time
 from io import StringIO
 
 import pytest
-
 from counterpartycore.lib.cli import server
 from counterpartycore.lib.cli.initialise import initialise_log_and_config
 from counterpartycore.lib.cli.main import arg_parser
