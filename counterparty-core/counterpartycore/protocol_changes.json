@@ -1329,5 +1329,14 @@
         "testnet3_block_index": 4961000,
         "testnet4_block_index": 136000,
         "signet_block_index": 310000
+    },
+    "catch_invalid_dispenser_asset_id": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 952500,
+        "testnet3_block_index": 4961000,
+        "testnet4_block_index": 136000,
+        "signet_block_index": 310000
     }
 }

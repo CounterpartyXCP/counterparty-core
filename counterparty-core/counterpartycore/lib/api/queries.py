@@ -2453,7 +2453,14 @@ def prepare_dispenser_where(status, other_conditions=None, exclude_with_oracle=F
     return where
 
 
-SELECT_DISPENSERS = "*, (satoshirate * 1.0) / (give_quantity * 1.0) AS price"
+SELECT_DISPENSERS = """
+*,
+CASE
+    WHEN COALESCE((SELECT divisible FROM assets_info WHERE assets_info.asset = dispensers.asset), 0) = 1
+    THEN (satoshirate * 100000000.0) / (give_quantity * 1.0)
+    ELSE (satoshirate * 1.0) / (give_quantity * 1.0)
+END AS price
+"""
 
 
 def get_dispensers(

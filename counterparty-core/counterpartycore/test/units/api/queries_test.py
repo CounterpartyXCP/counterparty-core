@@ -631,6 +631,69 @@ def test_prepare_dispenser_where_with_invalid_status():
     assert len(result) == 0
 
 
+def test_get_dispensers_by_asset_prices_divisible_lots(state_db):
+    """Test dispenser price is satoshis per whole asset unit for divisible assets."""
+    state_db.execute(
+        "INSERT INTO assets_info (asset, divisible) VALUES (?, ?)",
+        ("UNITTESTDIV", True),
+    )
+    state_db.execute(
+        """
+        INSERT INTO dispensers (
+            tx_index, tx_hash, block_index, source, asset, give_quantity,
+            escrow_quantity, satoshirate, status, give_remaining, origin,
+            dispense_count
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            9001,
+            "a" * 64,
+            9001,
+            "addr1",
+            "UNITTESTDIV",
+            100000000,
+            100000000,
+            12345,
+            0,
+            100000000,
+            "addr1",
+            0,
+        ),
+    )
+    state_db.execute(
+        """
+        INSERT INTO dispensers (
+            tx_index, tx_hash, block_index, source, asset, give_quantity,
+            escrow_quantity, satoshirate, status, give_remaining, origin,
+            dispense_count
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            9002,
+            "b" * 64,
+            9002,
+            "addr2",
+            "UNITTESTDIV",
+            200000000,
+            200000000,
+            12345,
+            0,
+            200000000,
+            "addr2",
+            0,
+        ),
+    )
+
+    result = queries.get_dispensers_by_asset(
+        state_db,
+        "UNITTESTDIV",
+        status="open",
+        sort="price:asc",
+    )
+
+    assert [row["price"] for row in result.result] == [6172.5, 12345]
+
+
 # =============================================================================
 # Tests for assets
 # =============================================================================

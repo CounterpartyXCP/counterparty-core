@@ -155,9 +155,12 @@ def software_version():
         TimeoutError,
         json.decoder.JSONDecodeError,
     ) as e:
-        logger.error(e, exc_info=True)
+        logger.error(
+            "Unable to check Counterparty version from %s: %s", config.PROTOCOL_CHANGES_URL, e
+        )
         raise exceptions.VersionCheckError(
-            "Unable to check Counterparty version. Use --force to ignore verfication."
+            f"Unable to check Counterparty version from {config.PROTOCOL_CHANGES_URL}: {e}. "
+            "Use --force to ignore verification."
         ) from e
 
     # check_change reads dict keys ("minimum_version_major" etc.) and
