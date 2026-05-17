@@ -42,6 +42,7 @@ The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 
 - Fix two asset-name halt vectors found by name-generation audit
 - Reject non-canonical compacted subasset longname behind a new gate
 - Reject non-positive oracle prices in `dispense.get_must_give`
+- Catch `AssetIDError` in `dispenser.unpack` behind a new `catch_invalid_dispenser_asset_id` gate to prevent consensus halt on invalid dispenser asset ids
 - Reject `btcpay` where tx destination doesn't match order match counterparty
 - Fix bet match sort no-op behind new `fix_sort_bet_matches` gate
 - Fix Python truthiness bug in `attach` OP_RETURN check (gated)
@@ -80,6 +81,8 @@ The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 
 - Fix float rounding error in `bitcoind.list_unspent` (`int(amount * UNIT)`) that could produce off-by-one sat values, causing SegWit signatures computed from the returned `value` to be rejected by Bitcoin Core with a misleading `mandatory-script-verify-flag-failed (Signature must be zero for failed CHECK(MULTI)SIG operation)` error
 - Fix `DETACH_FROM_UTXO` source field typo in `EVENTS_ADDRESS_FIELDS`
 - Fix `LEFT JOIN` in API migration 0004 supplies query
+- Fix dispenser `price` in API: scale `satoshirate / give_quantity` by `1e8` when the dispensed asset is divisible, so the reported price matches a per-unit BTC price for both divisible and indivisible assets
+- Improve version check failure message in `software_version()`: include the `PROTOCOL_CHANGES_URL` and underlying error in both the log and the `VersionCheckError` raised to the user
 - Sync `description_locked` and filter `xcp_supply` by status in `apiwatcher`
 - Fix `assets_info` State DB population (migration 0004) so that `description`, `divisible`, `mime_type` and `owner` are derived from the latest valid issuance (matching the streamed `apiwatcher` semantics) instead of an implementation-defined row picked by SQLite from the aggregated set, and so that `locked` / `description_locked` are stored as 0/1 booleans (`MAX(...)`) rather than as `SUM(...)` integer counts. Snapshot-bootstrapped nodes will now agree with event-streamed nodes for these columns. The State DB is automatically rebuilt on first start of v11.1.0.
 
