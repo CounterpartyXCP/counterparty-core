@@ -1,6 +1,6 @@
 # Release Notes - Counterparty Core v11.1.0 (2026-MM-DD)
 
-This release introduces two major new protocol features — Automated Market Maker liquidity pools and indefinite DEX orders — alongside extended inscription support and a substantial hardening pass on the consensus parser, indexer, and API layers. Protocol changes activate at mainnet block 952500.
+This release introduces two major new protocol features — Automated Market Maker liquidity pools and indefinite DEX orders — alongside extended inscription support and a substantial hardening pass on the consensus parser, indexer, and API layers. Protocol changes activate at mainnet block 952788.
 
 # Upgrading
 
