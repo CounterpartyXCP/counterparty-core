@@ -933,7 +933,7 @@ CHECKPOINTS_TESTNET4 = {
     135609: {
         "ledger_hash": "2e151bb3cef31ed91e78584ed4310b98b77d6411eb7adf0622b8a2d306835feb",
         "txlist_hash": "e48b2953a75fe701b801137096dab8af5ad7e4e264eac4dfbc9f5c11302abae7",
-    }
+    },
 }
 
 CONSENSUS_HASH_VERSION_SIGNET = 1
@@ -965,5 +965,5 @@ CHECKPOINTS_SIGNET = {
     305052: {
         "ledger_hash": "a69bb5ec7fc49b93ed8e5942e33071ddd79a55cdccd071124fff75b6616f7672",
         "txlist_hash": "04636181c0122e624313c3d9beecc60d4b3511bea9ad03e1db90817002a64414",
-    }
+    },
 }
