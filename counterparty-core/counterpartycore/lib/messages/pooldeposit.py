@@ -88,13 +88,15 @@ def validate(
 
     total_lp_supply = 0
     if existing_pool is not None:
-        if not ledger.markets.pool_has_liquidity(existing_pool):
-            problems.append("pool has no liquidity")
-            return problems
         lp_asset = existing_pool["lp_asset"]
         total_lp_supply = ledger.supplies.asset_issued_total_no_cache(
             db, lp_asset
         ) - ledger.supplies.asset_destroyed_total_no_cache(db, lp_asset)
+        if not ledger.markets.pool_has_liquidity(existing_pool) and total_lp_supply > 0:
+            # Abnormal: LP tokens exist but a reserve is zero — reject to prevent div-by-zero
+            problems.append("pool has no liquidity")
+            return problems
+        # total_lp_supply == 0 means pool fully drained; treat as restart below
 
     if total_lp_supply == 0:
         actual_a_sorted = sorted_quantity_a
@@ -250,12 +252,6 @@ def parse(db, tx, message):
         )
         if problems:
             status = "invalid: " + "; ".join(problems)
-
-    if status == "valid":
-        sorted_a, sorted_b = ledger.markets.sort_pair(asset_a, asset_b)
-        existing_pool = ledger.markets.get_pool(db, sorted_a, sorted_b)
-        if existing_pool is not None and not ledger.markets.pool_has_liquidity(existing_pool):
-            status = "invalid: pool has no liquidity"
 
     # if invalid, record and return early
     if status != "valid":

@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.utils import assetnames
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_parse_subasset_from_asset_name():
@@ -238,8 +239,6 @@ def test_expand_subasset_longname_rejects_oversized():
     consumed ~25s of CPU on a 100KB payload. The fix caps input at 200
     bytes (a 250-char base68 longname needs only 191 bytes).
     """
-    from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
-
     # Gate off: oversized payload is not rejected at expand time (legacy replay).
     with ProtocolChangesDisabled(["subasset_compact_expand_cap"]):
         assetnames.expand_subasset_longname(b"\x01" * 30, block_index=999999)
