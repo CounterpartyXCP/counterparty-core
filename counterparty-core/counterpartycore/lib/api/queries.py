@@ -4119,7 +4119,7 @@ def get_pool_quote_deposit(state_db, asset1: str, asset2: str, quantity: int):
     pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
     pool = pool_row.result if pool_row else None
 
-    if pool is None or pool["reserve_a"] == 0:
+    if pool is None or not pool_has_liquidity(pool):
         return {
             "first_deposit": True,
             "asset_a": sorted_a,
@@ -4166,7 +4166,7 @@ def get_pool_quote_withdraw(state_db, asset1: str, asset2: str, quantity: int):
     sorted_a, sorted_b = sort_pair(asset1, asset2)
     pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
     pool = pool_row.result if pool_row else None
-    if pool is None or pool["reserve_a"] == 0:
+    if pool is None or not pool_has_liquidity(pool):
         return {"pool_exists": False, "message": "Pool does not exist or is empty."}
 
     lp_info = select_row(state_db, "assets_info", where={"asset": pool["lp_asset"]})

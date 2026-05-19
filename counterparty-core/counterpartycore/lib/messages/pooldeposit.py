@@ -88,6 +88,9 @@ def validate(
 
     total_lp_supply = 0
     if existing_pool is not None:
+        if not ledger.markets.pool_has_liquidity(existing_pool):
+            problems.append("pool has no liquidity")
+            return problems
         lp_asset = existing_pool["lp_asset"]
         total_lp_supply = ledger.supplies.asset_issued_total_no_cache(
             db, lp_asset
@@ -248,6 +251,12 @@ def parse(db, tx, message):
         if problems:
             status = "invalid: " + "; ".join(problems)
 
+    if status == "valid":
+        sorted_a, sorted_b = ledger.markets.sort_pair(asset_a, asset_b)
+        existing_pool = ledger.markets.get_pool(db, sorted_a, sorted_b)
+        if existing_pool is not None and not ledger.markets.pool_has_liquidity(existing_pool):
+            status = "invalid: pool has no liquidity"
+
     # if invalid, record and return early
     if status != "valid":
         sorted_a, sorted_b = (
@@ -365,6 +374,8 @@ def make_lp_issuance_bindings(db, tx, lp_asset, quantity, asset_a, asset_b, asse
 
 def compute_actual_deposit_amounts(pool, quantity_a, quantity_b):
     """Clamp a deposit to the pool's current reserve ratio. Returns (actual_a, actual_b)."""
+    if pool["reserve_a"] <= 0 or pool["reserve_b"] <= 0:
+        return 0, 0
     ratio_a = quantity_a * pool["reserve_b"]
     ratio_b = quantity_b * pool["reserve_a"]
     if ratio_a <= ratio_b:

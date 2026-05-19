@@ -481,7 +481,9 @@ def check_content(mime_type, content, block_index=None):
         # platform-specific entries are NOT loaded -- this is the
         # historical behaviour we are preserving for the legacy path.
         type_to_check = content_mime_type
-        valid_types = mimetypes.types_map.values()
+        # Use the built-in default map only; never `types_map.values()` which
+        # picks up OS-specific entries if anything calls mimetypes.init().
+        valid_types = mimetypes._types_map_default.values()  # noqa: SLF001
     if type_to_check not in valid_types:
         problems.append(f"Invalid mime type: {mime_type}")
     try:
