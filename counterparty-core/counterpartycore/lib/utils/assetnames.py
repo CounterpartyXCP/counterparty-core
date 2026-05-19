@@ -201,7 +201,7 @@ def expand_subasset_longname(raw_bytes, block_index=None):
     # ~25 seconds of O(n^2) string-concat + integer-divide CPU per tx.
     # Gated behind `subasset_compact_expand_cap` so re-indexing blocks before
     # activation keeps the same invalid-status strings in the messages journal.
-    from counterpartycore.lib.parser import protocol  # noqa: PLC0415
+    from counterpartycore.lib.parser import protocol  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
     if protocol.enabled("subasset_compact_expand_cap", block_index=block_index):
         if len(raw_bytes) > 200:
