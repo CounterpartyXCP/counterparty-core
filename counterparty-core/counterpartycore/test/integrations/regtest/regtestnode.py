@@ -1060,10 +1060,19 @@ class RegtestNode:
         raw_transaction_2 = result["result"]["rawtransaction"]
 
         # sign transaction
+        # format the amount as an exact BTC decimal string — going through
+        # float would introduce IEEE-754 rounding that breaks the SegWit
+        # signature (BIP143 commits to the input amount)
+        quot, rem = divmod(value_1, config.UNIT)
         prevtx = [
-            {"txid": txid_1, "vout": vout_1, "scriptPubKey": pubkey_source, "amount": value_1 / 1e8}
+            {
+                "txid": txid_1,
+                "vout": vout_1,
+                "scriptPubKey": pubkey_source,
+                "amount": D(f"{quot}.{rem:08d}"),
+            }
         ]
-        prevtx = json.dumps(prevtx)
+        prevtx = json.dumps(prevtx, default=str)
         signed_transaction_2_json = json.loads(
             self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_2, prevtx).strip()
         )
@@ -1093,10 +1102,16 @@ class RegtestNode:
         raw_transaction_3 = result["result"]["rawtransaction"]
 
         # sign transaction
+        quot, rem = divmod(value_2, config.UNIT)
         prevtx = [
-            {"txid": txid_2, "vout": 0, "scriptPubKey": pubkey_new_address, "amount": value_2 / 1e8}
+            {
+                "txid": txid_2,
+                "vout": 0,
+                "scriptPubKey": pubkey_new_address,
+                "amount": D(f"{quot}.{rem:08d}"),
+            }
         ]
-        prevtx = json.dumps(prevtx)
+        prevtx = json.dumps(prevtx, default=str)
         signed_transaction_3 = json.loads(
             self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_3, prevtx).strip()
         )["hex"]
