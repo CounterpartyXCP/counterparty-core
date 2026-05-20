@@ -521,9 +521,7 @@ class RegtestNode:
 
         # legacy wallet so dumpprivkey is available for local SegWit signing
         # in test_transaction_chaining (descriptor wallets do not expose privkeys)
-        self.bitcoin_cli(
-            "createwallet", WALLET_NAME, False, False, "", False, False
-        )
+        self.bitcoin_cli("createwallet", WALLET_NAME, False, False, "", False, False)
         print("Wallet created")
 
         self.generate_addresses_with_btc()
@@ -853,9 +851,7 @@ class RegtestNode:
         self.start_and_wait_second_node()
 
         # create a new address on the Bitcoin node not connected to Counterparty server
-        self.bitcoin_cli_2(
-            "createwallet", WALLET_NAME, False, False, "", False, False
-        )
+        self.bitcoin_cli_2("createwallet", WALLET_NAME, False, False, "", False, False)
         new_address = self.bitcoin_wallet_2("getnewaddress", WALLET_NAME, "bech32").strip()
         # send 0.1 BTC to the new address
         self.bitcoin_wallet("sendtoaddress", new_address, 0.1)
