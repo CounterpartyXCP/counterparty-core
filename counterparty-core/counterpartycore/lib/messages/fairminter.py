@@ -601,7 +601,9 @@ def parse(db, tx, message):
             # Other fee-paying messages (issuance, dividend) all hoist to int
             # at compute time -- match the convention so SUM over REAL doesn't
             # drift after enough fairminters and so the schema stays coherent.
-            fee = int(0.5 * config.UNIT)
+            fee = 0.5 * config.UNIT
+            if protocol.enabled("fairminter_integer_fee_paid", block_index=tx["block_index"]):
+                fee = int(fee)
 
     # we only premint if the faireminter is open and soft cap reached,
     # otherwise we will do it at opening (`start_block`) or when

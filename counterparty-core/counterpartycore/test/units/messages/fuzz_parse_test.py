@@ -30,6 +30,8 @@ from counterpartycore.lib.messages import (
     fairminter,
     issuance,
     order,
+    pooldeposit,
+    poolwithdraw,
     sweep,
 )
 from counterpartycore.lib.messages.versions import enhancedsend, mpma, send1
@@ -303,3 +305,31 @@ def test_fuzz_mpma_parse(ledger_db, blockchain_mock, defaults, message):
         pass  # Hypothesis reuses ledger_db across examples; known test artifact
     except Exception as exc:
         pytest.fail(f"mpma.parse raised {type(exc).__name__}: {exc}")
+
+
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
+@given(msg_bytes)
+def test_fuzz_pooldeposit_parse(ledger_db, blockchain_mock, defaults, message):
+    tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
+    try:
+        pooldeposit.parse(ledger_db, tx, message)
+    except apsw.ConstraintError:
+        pass
+    except Exception as exc:
+        pytest.fail(f"pooldeposit.parse raised {type(exc).__name__}: {exc}")
+
+
+@settings(
+    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
+@given(msg_bytes)
+def test_fuzz_poolwithdraw_parse(ledger_db, blockchain_mock, defaults, message):
+    tx = _dummy_tx(blockchain_mock, ledger_db, defaults)
+    try:
+        poolwithdraw.parse(ledger_db, tx, message)
+    except apsw.ConstraintError:
+        pass
+    except Exception as exc:
+        pytest.fail(f"poolwithdraw.parse raised {type(exc).__name__}: {exc}")

@@ -324,7 +324,7 @@ def parse(db, tx, message):
         ledger.events.insert_record(db, "sweeps", bindings, "SWEEP")
 
         logger.info("Sweep from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]", bindings)
-    else:
+    elif protocol.enabled("persist_invalid_sweep", block_index=tx["block_index"]):
         # Persist an invalid sweep row + INVALID_SWEEP event so API consumers
         # can enumerate failed sweeps; mirrors the cancel.py / utxo.py pattern.
         bindings = {
@@ -340,11 +340,16 @@ def parse(db, tx, message):
         }
         ledger.events.insert_record(db, "sweeps", bindings, "INVALID_SWEEP")
         logger.info("Invalid sweep from %(source)s (%(tx_hash)s) [%(status)s]", bindings)
+    else:
+        logger.info(
+            "Invalid sweep from %(source)s (%(tx_hash)s) [%(status)s]",
+            {
+                "source": tx["source"],
+                "tx_hash": tx["tx_hash"],
+                "status": status,
+            },
+        )
 
-    # Every other parse module sets transactions_status; sweep.py was the
-    # one omission, leaving sweeps' `valid` column permanently NULL and
-    # making API filters on `valid = 1` / `valid = 0` silently exclude
-    # every sweep ever processed.
     ledger.blocks.set_transaction_status(db, tx["tx_index"], status == "valid")
 
     cursor.close()

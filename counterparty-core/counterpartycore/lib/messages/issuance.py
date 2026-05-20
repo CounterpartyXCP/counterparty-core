@@ -659,7 +659,7 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                         description,
                     ) = cbor2.loads(message)
                     subasset_longname = assetnames.expand_subasset_longname(
-                        compacted_subasset_longname
+                        compacted_subasset_longname, block_index=block_index
                     )
                 else:
                     raise exceptions.UnpackError("Invalid message type ID")
@@ -738,7 +738,9 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                                 description = None
                         except UnicodeDecodeError:
                             description = ""
-                subasset_longname = assetnames.expand_subasset_longname(compacted_subasset_longname)
+                subasset_longname = assetnames.expand_subasset_longname(
+                    compacted_subasset_longname, block_index=block_index
+                )
                 callable_, call_date, call_price = False, 0, 0.0
 
             elif (
@@ -831,14 +833,45 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
         except exceptions.AssetIDError:
             asset = None
             status = "invalid: bad asset name"
+    except exceptions.UnpackError as e:
+        logger.warning("unpack error: %s", e)
+        (
+            asset_id,
+            asset,
+            subasset_longname,
+            quantity,
+            divisible,
+            lock,
+            reset,
+            callable_,
+            call_date,
+            call_price,
+            description,
+            mime_type,
+        ) = (
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        status = "invalid: could not unpack"
     except (
-        exceptions.UnpackError,
         exceptions.AssetNameError,
         struct.error,
         TypeError,
         ValueError,
         OverflowError,
     ) as e:
+        if not protocol.enabled("issuance_safe_unpack", block_index=block_index):
+            raise
         logger.warning("unpack error: %s", e)
         (
             asset_id,
@@ -983,6 +1016,8 @@ def parse(db, tx, message, message_type_id):
             ):
                 quantity = 0
         except (TypeError, ValueError, OverflowError, AssertionError) as e:
+            if not protocol.enabled("issuance_safe_validate", block_index=tx["block_index"]):
+                raise
             # CBOR-encoded messages (from hand-rolled txs) can carry values of
             # unexpected types or arities that cause validate() or downstream
             # comparisons to raise. Mark the tx invalid rather than halting.

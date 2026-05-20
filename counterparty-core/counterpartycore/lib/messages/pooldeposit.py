@@ -92,6 +92,11 @@ def validate(
         total_lp_supply = ledger.supplies.asset_issued_total_no_cache(
             db, lp_asset
         ) - ledger.supplies.asset_destroyed_total_no_cache(db, lp_asset)
+        if not ledger.markets.pool_has_liquidity(existing_pool) and total_lp_supply > 0:
+            # Abnormal: LP tokens exist but a reserve is zero — reject to prevent div-by-zero
+            problems.append("pool has no liquidity")
+            return problems
+        # total_lp_supply == 0 means pool fully drained; treat as restart below
 
     if total_lp_supply == 0:
         actual_a_sorted = sorted_quantity_a
@@ -365,6 +370,8 @@ def make_lp_issuance_bindings(db, tx, lp_asset, quantity, asset_a, asset_b, asse
 
 def compute_actual_deposit_amounts(pool, quantity_a, quantity_b):
     """Clamp a deposit to the pool's current reserve ratio. Returns (actual_a, actual_b)."""
+    if pool["reserve_a"] <= 0 or pool["reserve_b"] <= 0:
+        return 0, 0
     ratio_a = quantity_a * pool["reserve_b"]
     ratio_b = quantity_b * pool["reserve_a"]
     if ratio_a <= ratio_b:

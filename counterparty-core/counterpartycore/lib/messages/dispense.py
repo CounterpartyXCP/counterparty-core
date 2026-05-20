@@ -18,15 +18,20 @@ def get_must_give(db, dispenser, btc_amount, block_index=None):
         last_price, _last_fee, _last_fiat_label, _last_updated = ledger.other.get_oracle_last_price(
             db, dispenser["oracle_address"], block_index or CurrentState().current_block_index()
         )
-        if last_price is None or last_price <= 0:
-            # Negative oracle prices are bet-cancellation sentinels (-2, -3) or
-            # other non-pricing broadcasts; treating them as a price would yield
-            # a negative must_give, then a negative credit() that raises and
-            # halts. is_dispensable already guards last_price == 0; this widens
-            # the check to <= 0 for the dispense path too.
+        if last_price is None:
             raise exceptions.NoPriceError(
-                f"No usable price for oracle {dispenser['oracle_address']} at block {block_index}"
+                f"No price available for this oracle {dispenser['oracle_address']} at block {block_index}"
             )
+        if protocol.enabled("dispense_skip_unusable_oracle_price", block_index=block_index):
+            if last_price <= 0:
+                # Negative oracle prices are bet-cancellation sentinels (-2, -3) or
+                # other non-pricing broadcasts; treating them as a price would yield
+                # a negative must_give, then a negative credit() that raises and
+                # halts. is_dispensable already guards last_price == 0; this widens
+                # the check to <= 0 for the dispense path too.
+                raise exceptions.NoPriceError(
+                    f"No usable price for oracle {dispenser['oracle_address']} at block {block_index}"
+                )
         fiatrate = helpers.satoshirate_to_fiat(dispenser["satoshirate"])
         return int(floor(((btc_amount / config.UNIT) * last_price) / fiatrate))
 
@@ -121,13 +126,20 @@ def parse(db, tx):
             give_quantity = dispenser["give_quantity"]
 
             if satoshirate > 0 and give_quantity > 0:
-                try:
+                if protocol.enabled(
+                    "dispense_skip_unusable_oracle_price", block_index=tx["block_index"]
+                ):
+                    try:
+                        must_give = get_must_give(
+                            db, dispenser, next_out["btc_amount"], next_out["block_index"]
+                        )
+                    except exceptions.NoPriceError as e:
+                        logger.warning("Skipping dispenser for %s: %s", dispenser["asset"], e)
+                        continue
+                else:
                     must_give = get_must_give(
                         db, dispenser, next_out["btc_amount"], next_out["block_index"]
                     )
-                except exceptions.NoPriceError as e:
-                    logger.warning("Skipping dispenser for %s: %s", dispenser["asset"], e)
-                    continue
                 remaining = int(floor(dispenser["give_remaining"] / give_quantity))
                 actually_given = min(must_give, remaining) * give_quantity
                 give_remaining = dispenser["give_remaining"] - actually_given
