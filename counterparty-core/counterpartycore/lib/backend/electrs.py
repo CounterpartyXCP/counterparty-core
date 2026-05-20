@@ -3,6 +3,7 @@ import logging
 
 import requests
 from bitcoinutils.keys import PublicKey
+from ecdsa.ellipticcurve import MalformedPointError
 
 from counterpartycore.lib import config, exceptions
 
@@ -10,14 +11,22 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def electr_query(url):
-    if config.ELECTRS_URL is None:
+    if not config.ELECTRS_URLS:
         raise exceptions.ElectrsError("Electrs server not configured")
-    try:
-        full_url = f"{config.ELECTRS_URL}/{url}"
-        logger.debug("Querying Electrs: %s", full_url)
-        return requests.get(full_url, timeout=10).json()
-    except requests.exceptions.RequestException as e:
-        raise exceptions.ElectrsError(f"Electrs error: {e}") from e
+    last_error = None
+    for base_url in config.ELECTRS_URLS:
+        try:
+            full_url = f"{base_url}/{url}"
+            logger.debug("Querying Electrs: %s", full_url)
+            response = requests.get(full_url, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            logger.warning("Electrs request failed for %s: %s", base_url, e)
+            last_error = e
+    raise exceptions.ElectrsError(
+        f"All Electrs backends failed. Last error: {last_error}"
+    ) from last_error
 
 
 def get_utxos(address, unconfirmed: bool = False, unspent_tx_hash: str = None):
@@ -77,7 +86,7 @@ def pubkey_from_tx(tx, pubkeyhash):
                     pubkey = vin["witness"][1]
                     if pubkeyhash == PublicKey.from_hex(pubkey).get_segwit_address().to_string():
                         return pubkey
-                except binascii.Error:
+                except (binascii.Error, MalformedPointError):
                     pass
         elif "is_coinbase" not in vin or not vin["is_coinbase"]:
             asm = vin["scriptsig_asm"].split(" ")
@@ -95,7 +104,7 @@ def pubkey_from_tx(tx, pubkeyhash):
                         == PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
                     ):
                         return pubkey
-                except binascii.Error:
+                except (binascii.Error, MalformedPointError):
                     pass
     for vout in tx["vout"]:
         asm = vout["scriptpubkey_asm"].split(" ")
@@ -112,7 +121,7 @@ def pubkey_from_tx(tx, pubkeyhash):
                     == PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
                 ):
                     return pubkey
-            except binascii.Error:
+            except (binascii.Error, MalformedPointError):
                 pass
     return None
 

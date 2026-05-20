@@ -1,0 +1,109 @@
+# Release Notes - Counterparty Core v11.1.0 (2026-MM-DD)
+
+This release introduces two major new protocol features — Automated Market Maker liquidity pools and indefinite DEX orders — alongside extended inscription support and a substantial hardening pass on the consensus parser, indexer, and API layers. Protocol changes activate at mainnet block 952500.
+
+# Upgrading
+
+**Upgrade Instructions:**
+
+To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
+
+With Docker Compose:
+
+```bash
+cd counterparty-core
+git pull
+docker compose stop counterparty-core
+docker compose --profile mainnet up -d
+```
+
+or use `ctrl-c` to interrupt the server:
+
+```bash
+cd counterparty-core
+git pull
+cd counterparty-rs
+pip install -e .
+cd ../counterparty-core
+pip install -e .
+counterparty-server start
+```
+
+The State DB is automatically rebuilt on first start of v11.1.0 (migration 0004 fix).
+
+# ChangeLog
+
+## Protocol Changes
+
+- Add **AMM (Automated Market Maker) liquidity pools** behind a new `amm_pools` gate, with two new message types: `pooldeposit` (`120`) and `poolwithdraw` (`121`); BTC pairs are explicitly rejected. Deposits/withdraws use standard constant-product math (LP tokens minted via `floor(sqrt(qa*qb))` on first deposit, then proportionally; withdrawals burn LP tokens for proportional reserve shares), support slippage bounds (`min_lp_quantity`, `min_quantity_a`/`b`) and pay an XCP gas fee. The DEX `match()` loop now interleaves pool fills with the resting book at every step (constant-product, fee-adjusted, with `XCP_POOL_FEE_BPS=50` for XCP pairs and `100` otherwise), then sweeps any remainder against the pool in a tail phase. Pool reserves are counted in `held()` for asset conservation. Five new events (`OPEN_POOL`, `POOL_UPDATE`, `NEW_POOL_DEPOSIT`, `NEW_POOL_WITHDRAWAL`, `POOL_MATCH`) and four new tables (`pools`, `pool_deposits`, `pool_withdrawals`, `pool_matches`) are added via ledger migration `0009.amm_pools.sql` and consolidated into the State DB by migration `0014.add_pool_consolidated_tables` (registered in `MIGRATIONS_AFTER_ROLLBACK`, also rebuilds `asset_holders` / `xcp_holders` to include pool reserves).
+- Add support for **indefinite DEX orders** and fix `expiration` semantics behind a new `indefinite_orders` gate: `expiration=0` now means indefinite (open until filled or cancelled, `expire_index = NULL`), `expiration=N` now means exactly N blocks of life (was N+1 due to a long-standing off-by-one), and `MAX_EXPIRATION` is raised from 8064 (~56 days) to 65535 (the wire-format u16 max, ~455 days). The wire format is unchanged.
+- Allow **CBOR map under tag `0x05` for ordinals-style provenance metadata** in taproot inscriptions, behind a new `ordinals_metadata_support` gate. The Counterparty message is extracted from the `"xcp"` array key; other keys are ordinals metadata ignored by the consensus parser.
+- Extend **MIME type support for ordinal-style inscriptions** behind a new `extended_mime_types_support` gate: tolerate MIME parameters (e.g. `audio/ogg;codecs=opus`), recognise the `+json` structured suffix as textual, and validate against a deterministic hard-coded allow-list (`EXTENDED_MIME_TYPES_VALID`) instead of `mimetypes.types_map`, which read `/etc/mime.types` / the Windows registry and varied per node
+
+## Other Features
+
+- Support multiple Electrs backends with automatic failover on connection, timeout, or HTTP errors; `--electrs-url` can now be specified multiple times; default mainnet Electrs backends to both `blockstream.info` and `mempool.space`; print a startup warning when using default Electrs URLs (not recommended for production)
+
+## Bugfixes
+
+- Catch `struct.error` in `issuance.unpack` to prevent consensus halt
+- Catch `NoPriceError` in `dispense.parse` to prevent consensus halt
+- Harden `issuance` and `broadcast` parse against CBOR-crafted halt vectors
+- Fix two hand-rolled-tx halt vectors found by fuzzing
+- Fix two asset-name halt vectors found by name-generation audit
+- Reject non-canonical compacted subasset longname behind a new gate
+- Reject non-positive oracle prices in `dispense.get_must_give`
+- Catch `AssetIDError` in `dispenser.unpack` behind a new `catch_invalid_dispenser_asset_id` gate to prevent consensus halt on invalid dispenser asset ids
+- Reject `btcpay` where tx destination doesn't match order match counterparty
+- Fix bet match sort no-op behind new `fix_sort_bet_matches` gate
+- Fix Python truthiness bug in `attach` OP_RETURN check (gated)
+- Set `transactions_status` and persist invalid record in `sweep.parse`
+- Forward `tx["block_index"]` into gated `unpack()` and `protocol.enabled()` calls; hoist fairminter fee to `int` and forward `block_index` to issuance fee gates
+- `excludes_utxos` supports now `<txid>:<vout>` and `<txid>` alone
+- Add missing `max_mint_per_address` parameter in `compose_fairminter()`
+- Fix shutdown during rate limit backoff
+- Fix missing `limit` parameter validation in API v2 (was not enforced unlike API v1)
+- Fix `MalformedPointError` when searching for pubkey in P2WSH multisig witness data
+- Fix Rust `BATCH_CLIENT` permanently caching failed parent transaction lookups, which could cause valid Counterparty transactions to be silently skipped
+- Add warning log when a parent transaction cannot be found during VIN resolution
+- Fix `KeyboardInterrupt` raised in the main thread during shutdown that could break the shutdown sequence half-way through (e.g. while joining the Asset Conservation Checker thread on SIGTERM)
+- Fix four `u32` underflow patterns in the Rust indexer
+- Fix off-by-one and short-prefix panics in `parse_vout`
+- Replace `expect()` in `get_funding_block_entries` with a typed `Error`
+- Catch malformed `protocol_changes.json` shape in `software_version()`
+- Scope `Decimal` context changes to `localcontext` so precision doesn't leak
+- Update `BackendHeight.last_check` in a `finally` so RPC failures don't spam
+- Don't let halt-class mempool transactions tear down the `BlockchainWatcher`; harden it against transient operational failures
+- Reorg + mempool hygiene: stale events, leak, horizon, reparse cache
+- Fix stale `mempool/events` after RPC catch-up paths (`receive_rawblock` previous-block-missing branch and `handle()` ZMQ-late branch): both now sweep the mempool table after `catch_up()`, matching the streamed `receive_rawblock` path
+- Clear bitcoind transaction cache on rollback to avoid stale deserialisation; encapsulate in `reset_caches()` helper
+- Clean orphaned `transactions_status` rows on rollback and rebuild
+- Close ZMQ sockets/context before reconnect; fix `RCVTIMEO` typo
+- Make `--api-only` loop honor `api_stop_event` for clean shutdown
+- Make `UTXOLocks` intra-worker thread-safe
+- Concurrency: `SingletonMeta` double-checked locking; guard `reset_caches` `lru_cache.cache_clear()` with `hasattr`
+- Fix float rounding error in `bitcoind.list_unspent` (`int(amount * UNIT)`) that could produce off-by-one sat values, causing SegWit signatures computed from the returned `value` to be rejected by Bitcoin Core with a misleading `mandatory-script-verify-flag-failed (Signature must be zero for failed CHECK(MULTI)SIG operation)` error
+- Fix `DETACH_FROM_UTXO` source field typo in `EVENTS_ADDRESS_FIELDS`
+- Fix `LEFT JOIN` in API migration 0004 supplies query
+- Fix dispenser `price` in API: scale `satoshirate / give_quantity` by `1e8` when the dispensed asset is divisible, so the reported price matches a per-unit BTC price for both divisible and indivisible assets
+- Improve version check failure message in `software_version()`: include the `PROTOCOL_CHANGES_URL` and underlying error in both the log and the `VersionCheckError` raised to the user
+- Sync `description_locked` and filter `xcp_supply` by status in `apiwatcher`
+- Fix `assets_info` State DB population (migration 0004) so that `description`, `divisible`, `mime_type` and `owner` are derived from the latest valid issuance (matching the streamed `apiwatcher` semantics) instead of an implementation-defined row picked by SQLite from the aggregated set, and so that `locked` / `description_locked` are stored as 0/1 booleans (`MAX(...)`) rather than as `SUM(...)` integer counts. Snapshot-bootstrapped nodes will now agree with event-streamed nodes for these columns. The State DB is automatically rebuilt on first start of v11.1.0.
+
+## API
+
+- Block APIv1 SQL injection via `filter_["field"]`; redact secrets in logs
+- New AMM pool endpoints: `GET /v2/pools`, `GET /v2/pools/<asset1>/<asset2>` (with `/deposits`, `/withdrawals`, `/matches`, `/price_history` sub-resources), `GET /v2/pools/<asset1>/<asset2>/quote` (hybrid pool+book swap quote), `/quote/deposit` and `/quote/withdraw`, `GET /v2/pool_matches`, `GET /v2/orders/<order_hash>/pool_matches`, `GET /v2/addresses/<address>/pools` (LP positions), `GET /v2/addresses/<address>/pool_deposits` and `/pool_withdrawals`, `GET /v2/blocks/<int:block_index>/pool_deposits` / `pool_withdrawals` / `pool_matches`, plus the compose endpoints `POST /v2/addresses/<address>/compose/pooldeposit` and `compose/poolwithdraw` with their `estimatexcpfees` companions.
+
+## Codebase
+
+- Add fuzz tests
+- Add 10 regression tests for the audit fixes
+- Document `expand_subasset_longname` 200-byte cap reasoning
+- Document libm cross-platform threshold near `gas.py` sigmoid
+
+# Credits
+
+- Ouziel Slama
+- Dan Anderson
+- Adam Krellenstein

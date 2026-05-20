@@ -1,6 +1,9 @@
 import pytest
 from counterpartycore.lib import exceptions
+from counterpartycore.lib import ledger as ledger_mod
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import order
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def test_validate(ledger_db, defaults, current_block_index):
@@ -134,7 +137,7 @@ def test_validate(ledger_db, defaults, current_block_index):
         4 * 2016 + 10,
         0,
         current_block_index,
-    ) == ["integer overflow", "expiration overflow"]
+    ) == ["integer overflow"]
 
 
 def test_compose(ledger_db, defaults, current_block_index):
@@ -456,7 +459,7 @@ def test_parse_order(ledger_db, blockchain_mock, defaults, test_helpers, current
                 "values": {
                     "block_index": current_block_index,
                     "expiration": 2000,
-                    "expire_index": tx["block_index"] + 2000,
+                    "expire_index": tx["block_index"] + 1999,
                     "fee_provided": 10000,
                     "fee_provided_remaining": 10000,
                     "fee_required": 0,
@@ -482,7 +485,7 @@ def test_parse_order(ledger_db, blockchain_mock, defaults, test_helpers, current
                     "fee_paid": 0,
                     "forward_asset": "XCP",
                     "forward_quantity": 100000000,
-                    "match_expire_index": tx["block_index"] + 20,
+                    "match_expire_index": tx["block_index"] + 19,
                     "status": "completed",
                     "tx0_address": defaults["addresses"][0],
                     "tx1_address": defaults["addresses"][1],
@@ -568,7 +571,7 @@ def test_parse_order_p2sh(ledger_db, blockchain_mock, defaults, test_helpers, cu
                 "values": {
                     "block_index": current_block_index,
                     "expiration": 2000,
-                    "expire_index": tx["block_index"] + 2000,
+                    "expire_index": tx["block_index"] + 1999,
                     "fee_provided": 10000,
                     "fee_provided_remaining": 10000,
                     "fee_required": 0,
@@ -594,7 +597,7 @@ def test_parse_order_p2sh(ledger_db, blockchain_mock, defaults, test_helpers, cu
                     "fee_paid": 0,
                     "forward_asset": "XCP",
                     "forward_quantity": 100000000,
-                    "match_expire_index": tx["block_index"] + 20,
+                    "match_expire_index": tx["block_index"] + 19,
                     "status": "completed",
                     "tx0_address": defaults["addresses"][0],
                     "tx1_address": defaults["p2sh_addresses"][0],
@@ -630,7 +633,7 @@ def test_parse_order_btc(ledger_db, blockchain_mock, defaults, test_helpers, cur
                     "get_quantity": defaults["quantity"],
                     "get_remaining": defaults["quantity"],
                     "expiration": 2000,
-                    "expire_index": 3223,
+                    "expire_index": 3222,
                     "fee_required": 0,
                     "fee_required_remaining": 0,
                     "fee_provided": 10000,
@@ -649,12 +652,12 @@ def test_parse_order_btc(ledger_db, blockchain_mock, defaults, test_helpers, cur
                     "forward_quantity": defaults["quantity"],
                     "backward_asset": "BTC",
                     "backward_quantity": 800000,
-                    "tx0_block_index": 1230,
+                    "tx0_block_index": 1229,
                     "tx1_block_index": 1223,
                     "block_index": 1223,
                     "tx0_expiration": 2000,
                     "tx1_expiration": 2000,
-                    "match_expire_index": 1243,
+                    "match_expire_index": 1242,
                     "fee_paid": 7200,
                     "status": "pending",
                 },
@@ -685,7 +688,7 @@ def test_parse_order_btc_2(ledger_db, blockchain_mock, defaults, test_helpers, c
                     "get_quantity": 666666,
                     "get_remaining": 666666,
                     "expiration": 2000,
-                    "expire_index": 3223,
+                    "expire_index": 3222,
                     "fee_required": 0,
                     "fee_required_remaining": 0,
                     "fee_provided": 10000,
@@ -707,7 +710,7 @@ def test_parse_order_btc_2(ledger_db, blockchain_mock, defaults, test_helpers, c
                     "block_index": tx["block_index"],
                     "tx0_expiration": 2000,
                     "tx1_expiration": 2000,
-                    "match_expire_index": tx["block_index"] + 20,
+                    "match_expire_index": tx["block_index"] + 19,
                     "fee_paid": 0,
                     "status": "pending",
                 },
@@ -738,7 +741,7 @@ def test_parse_order_btc_3(ledger_db, blockchain_mock, defaults, test_helpers, c
                     "get_quantity": 1999999,
                     "get_remaining": 1999999,
                     "expiration": 2000,
-                    "expire_index": tx["block_index"] + 2000,
+                    "expire_index": tx["block_index"] + 1999,
                     "fee_required": 0,
                     "fee_required_remaining": 0,
                     "fee_provided": 10000,
@@ -783,7 +786,7 @@ def test_parse_order_btc_4(ledger_db, blockchain_mock, defaults, test_helpers, c
                     "get_quantity": 100000000,
                     "get_remaining": 100000000,
                     "expiration": 2000,
-                    "expire_index": tx["block_index"] + 2000,
+                    "expire_index": tx["block_index"] + 1999,
                     "fee_required": 0,
                     "fee_required_remaining": 0,
                     "fee_provided": 10000,
@@ -808,7 +811,7 @@ def test_parse_order_invalid_data(ledger_db, blockchain_mock, defaults, test_hel
                 "values": {
                     "block_index": tx["block_index"],
                     "expiration": 0,
-                    "expire_index": tx["block_index"],
+                    "expire_index": None,
                     "fee_provided": 10000,
                     "fee_provided_remaining": 10000,
                     "fee_required": 0,
@@ -860,7 +863,7 @@ def test_parse_order_no_divisible(
                     "get_quantity": 500,
                     "get_remaining": 500,
                     "expiration": 2000,
-                    "expire_index": tx["block_index"] + 2000,
+                    "expire_index": tx["block_index"] + 1999,
                     "fee_required": 0,
                     "fee_required_remaining": 0,
                     "fee_provided": 10000,
@@ -907,7 +910,7 @@ def test_parse_order_multisig(
                     "get_quantity": 100000000,
                     "get_remaining": 0,
                     "expiration": 2000,
-                    "expire_index": tx["block_index"] + 2000,
+                    "expire_index": tx["block_index"] + 1999,
                     "fee_required": 0,
                     "fee_required_remaining": 0,
                     "fee_provided": 10000,
@@ -930,7 +933,7 @@ def test_parse_order_multisig(
                     "block_index": tx["block_index"],
                     "tx0_expiration": 2000,
                     "tx1_expiration": 2000,
-                    "match_expire_index": tx["block_index"] + 20,
+                    "match_expire_index": tx["block_index"] + 19,
                     "fee_paid": 7200,
                     "status": "pending",
                 },
@@ -963,7 +966,7 @@ def test_parse_order_multisig2(
                     "get_quantity": 500000,
                     "get_remaining": -300000,
                     "expiration": 2000,
-                    "expire_index": tx["block_index"] + 2000,
+                    "expire_index": tx["block_index"] + 1999,
                     "fee_required": 0,
                     "fee_required_remaining": 0,
                     "fee_provided": 10000,
@@ -986,7 +989,7 @@ def test_parse_order_multisig2(
                     "block_index": tx["block_index"],
                     "tx0_expiration": 2000,
                     "tx1_expiration": 2000,
-                    "match_expire_index": tx["block_index"] + 20,
+                    "match_expire_index": tx["block_index"] + 19,
                     "fee_paid": 0,
                     "status": "pending",
                 },
@@ -1019,7 +1022,7 @@ def test_parse_order_multisig3(
                     "get_quantity": 500,
                     "get_remaining": 500,
                     "expiration": 2000,
-                    "expire_index": tx["block_index"] + 2000,
+                    "expire_index": tx["block_index"] + 1999,
                     "fee_required": 0,
                     "fee_required_remaining": 0,
                     "fee_provided": 10000,
@@ -1055,7 +1058,7 @@ def test_parse_order_maxi(ledger_db, blockchain_mock, defaults, test_helpers, cu
                 "values": {
                     "block_index": tx["block_index"],
                     "expiration": 10,
-                    "expire_index": tx["block_index"] + 10,
+                    "expire_index": tx["block_index"] + 9,
                     "fee_provided": 10000,
                     "fee_provided_remaining": 10000,
                     "fee_required": 900000,
@@ -1093,3 +1096,125 @@ def test_parse_more_than_maxi(ledger_db, blockchain_mock, defaults, caplog, test
 
     with test_helpers.capture_log(caplog, "invalid: integer overflow"):
         order.parse(ledger_db, tx, message)
+
+
+def test_validate_indefinite_order(ledger_db, current_block_index):
+    """expiration=0 is valid (indefinite order)."""
+    assert (
+        order.validate(ledger_db, "XCP", 1000, "DIVISIBLE", 1000, 0, 0, current_block_index) == []
+    )
+
+
+def test_validate_expiration_above_old_max(ledger_db, current_block_index):
+    """expiration above old MAX_EXPIRATION (8064) is now allowed."""
+    assert (
+        order.validate(ledger_db, "XCP", 1000, "DIVISIBLE", 1000, 10000, 0, current_block_index)
+        == []
+    )
+
+
+def test_validate_expiration_above_u16_max(ledger_db, current_block_index):
+    """expiration above u16 max (65535) is rejected."""
+    problems = order.validate(
+        ledger_db, "XCP", 1000, "DIVISIBLE", 1000, 65536, 0, current_block_index
+    )
+    assert "expiration overflow" in problems
+
+
+def test_validate_indefinite_before_activation(ledger_db, current_block_index):
+    """expiration=0 is rejected when both indefinite_orders and no_zero_expiration are disabled."""
+    with ProtocolChangesDisabled(["indefinite_orders", "no_zero_expiration"]):
+        problems = order.validate(
+            ledger_db, "XCP", 1000, "DIVISIBLE", 1000, 0, 0, current_block_index
+        )
+        assert "zero expiration" in problems
+
+
+def test_validate_max_expiration_before_activation(ledger_db, current_block_index):
+    """expiration above 8064 is rejected when indefinite_orders is disabled."""
+    with ProtocolChangesDisabled(["indefinite_orders"]):
+        problems = order.validate(
+            ledger_db, "XCP", 1000, "DIVISIBLE", 1000, 9000, 0, current_block_index
+        )
+        assert "expiration overflow" in problems
+
+
+def test_parse_indefinite_order_expire_index(ledger_db, blockchain_mock, defaults):
+    """Indefinite order gets expire_index=NULL."""
+    source = defaults["addresses"][0]
+    _, _, data = order.compose(ledger_db, source, "XCP", 1000, "DIVISIBLE", 1000, 0, 0)
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    order.parse(ledger_db, tx, data[1:])
+
+    record = ledger_db.execute(
+        "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
+        (tx["tx_hash"],),
+    ).fetchone()
+    assert record["expire_index"] is None
+    assert record["expiration"] == 0
+
+
+def test_parse_expiration_n_means_n_blocks(ledger_db, blockchain_mock, defaults):
+    """expiration=100 gives expire_index = block_index + 99 (100 blocks of life)."""
+    source = defaults["addresses"][0]
+    _, _, data = order.compose(ledger_db, source, "XCP", 1000, "DIVISIBLE", 1000, 100, 0)
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    order.parse(ledger_db, tx, data[1:])
+
+    record = ledger_db.execute(
+        "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
+        (tx["tx_hash"],),
+    ).fetchone()
+    assert record["expire_index"] == tx["block_index"] + 99
+
+
+def test_match_expire_index_pre_activation(
+    ledger_db, blockchain_mock, defaults, current_block_index, test_helpers
+):
+    """Before indefinite_orders, match_expire_index = block_index + 20."""
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][1], fee=10000)
+    message = b"\x00\x00\x00\xa2[\xe3Kf\x00\x00\x00\x00\x05\xf5\xe1\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x05\xf5\xe1\x00\x07\xd0\x00\x00\x00\x00\x00\x00\x00\x00"
+    with ProtocolChangesDisabled(["indefinite_orders"]):
+        order.parse(ledger_db, tx, message)
+
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "order_matches",
+                "values": {
+                    "match_expire_index": tx["block_index"] + 20,
+                    "tx1_hash": tx["tx_hash"],
+                },
+            },
+        ],
+    )
+
+
+def test_parse_expire_index_pre_activation(ledger_db, blockchain_mock, defaults):
+    """Before indefinite_orders activation, expire_index = block_index + expiration (no -1)."""
+    source = defaults["addresses"][0]
+    _, _, data = order.compose(ledger_db, source, "XCP", 1000, "DIVISIBLE", 1000, 100, 0)
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    with ProtocolChangesDisabled(["indefinite_orders"]):
+        order.parse(ledger_db, tx, data[1:])
+
+    record = ledger_db.execute(
+        "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
+        (tx["tx_hash"],),
+    ).fetchone()
+    assert record["expire_index"] == tx["block_index"] + 100
+
+
+def test_indefinite_order_not_in_expiry_scan(ledger_db, blockchain_mock, defaults):
+    """Indefinite order never appears in get_orders_to_expire."""
+    source = defaults["addresses"][0]
+    block_index = CurrentState().current_block_index()
+    _, _, data = order.compose(ledger_db, source, "XCP", 1000, "DIVISIBLE", 1000, 0, 0)
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    order.parse(ledger_db, tx, data[1:])
+
+    for future in [block_index + 1, block_index + 100, 1, 2]:
+        expiring = ledger_mod.markets.get_orders_to_expire(ledger_db, future)
+        tx_hashes = [o["tx_hash"] for o in expiring]
+        assert tx["tx_hash"] not in tx_hashes

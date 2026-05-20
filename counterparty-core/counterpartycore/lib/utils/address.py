@@ -111,7 +111,7 @@ def pack(address):
             return bytes(utils.pack_address(address, config.NETWORK_NAME))
         except Exception:  # pylint: disable=broad-except  # noqa: F841, S110
             # fallback to legacy packing
-            pass  # noqa: B110
+            pass
 
     return pack_legacy(address)
 
@@ -144,7 +144,7 @@ def unpack(short_address_bytes):
             return utils.unpack_address(short_address_bytes, config.NETWORK_NAME)
         except Exception:  # pylint: disable=broad-except  # noqa: F841, S110
             # fallback to legacy unpacking
-            pass  # noqa: B110
+            pass
 
     return unpack_legacy(short_address_bytes)
 

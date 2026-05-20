@@ -1,3 +1,5 @@
+from unittest.mock import Mock
+
 import pytest
 from counterpartycore.lib import config, ledger
 from counterpartycore.lib.api import apiserver, apiwatcher, composer
@@ -35,6 +37,10 @@ def prepare_url(db, current_block_index, defaults, rawtransaction, route):
     if "/compose/" in route:
         return None
     if "/dispenses/" in route:
+        return None
+    if "/quote/" in route:
+        return None
+    if "/pools/" in route or route == "/v2/pools":
         return None
 
     last_block = db.execute(
@@ -172,7 +178,7 @@ def test_new_get_balances_vs_old(apiv1_client, apiv2_client):
         old_balance, key=lambda x: (x["address"] or x["utxo"], x["asset"], x["quantity"])
     )
     assert len(new_balances) == len(old_balance)
-    for new_balance, old_balance in zip(new_balances, old_balance):  # noqa: B020
+    for new_balance, old_balance in zip(new_balances, old_balance, strict=True):  # noqa: B020
         assert new_balance["address"] == old_balance["address"]
         assert new_balance["utxo"] == old_balance["utxo"]
         assert new_balance["asset"] == old_balance["asset"]
@@ -419,17 +425,20 @@ def test_get_balances_by_addresses(apiv2_client, defaults):
     url = f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&verbose=true"
     result = apiv2_client.get(url).json["result"]
 
-    assert result[0]["asset"] == "A95428959342453541"
-    assert result[1]["asset"] == "CALLABLE"
-    assert result[2]["asset"] == "DIVISIBLE"
-    assert result[3]["asset"] == "FREEFAIRMIN"
-    assert result[4]["asset"] == "LOCKED"
-    assert result[5]["asset"] == "MAXI"
-    assert result[6]["asset"] == "NODIVISIBLE"
-    assert result[7]["asset"] == "PARENT"
-    assert result[8]["asset"] == "RAIDFAIRMIN"
-    assert result[9]["asset"] == "TAIDFAIRMIN"
-    assert result[10]["asset"] == "XCP"
+    assert result[0]["asset"] == "A95428956773044873"
+    assert result[1]["asset"] == "A95428959342453541"
+    assert result[2]["asset"] == "CALLABLE"
+    assert result[3]["asset"] == "DIVISIBLE"
+    assert result[4]["asset"] == "FREEFAIRMIN"
+    assert result[5]["asset"] == "LOCKED"
+    assert result[6]["asset"] == "MAXI"
+    assert result[7]["asset"] == "NODIVISIBLE"
+    assert result[8]["asset"] == "PARENT"
+    assert result[9]["asset"] == "POOLASSETA"
+    assert result[10]["asset"] == "POOLASSETB"
+    assert result[11]["asset"] == "RAIDFAIRMIN"
+    assert result[12]["asset"] == "TAIDFAIRMIN"
+    assert result[13]["asset"] == "XCP"
 
     for balance in result[9]["addresses"]:
         assert (
@@ -730,8 +739,6 @@ def test_is_cachable(
     monkeypatch, test_case, method, path, url, rule, route, result, cache_disabled, expected
 ):
     """Test is_cachable with various scenarios"""
-    from unittest.mock import Mock
-
     monkeypatch.setattr("counterpartycore.lib.config.DISABLE_API_CACHE", cache_disabled)
 
     mock_request = Mock(method=method, path=path, url=url)
@@ -739,3 +746,32 @@ def test_is_cachable(
 
     actual = apiserver.is_cachable(rule, route=route, result=result)
     assert actual == expected, f"Test case '{test_case}' failed"
+
+
+def test_limit_param_capped_to_api_limit_rows(apiv2_client, monkeypatch):
+    """Limit is capped to config.API_LIMIT_ROWS when caller asks for more."""
+    monkeypatch.setattr(config, "API_LIMIT_ROWS", 5)
+
+    response = apiv2_client.get("/v2/transactions?limit=99999")
+    assert response.status_code == 200
+    assert len(response.json["result"]) <= 5
+
+
+def test_limit_param_zero_rejected(apiv2_client):
+    """A limit of 0 must be rejected with a clear error."""
+    response = apiv2_client.get("/v2/transactions?limit=0")
+    assert response.status_code != 200 or "error" in response.json
+
+
+def test_limit_param_negative_rejected(apiv2_client):
+    """A negative limit must be rejected."""
+    response = apiv2_client.get("/v2/transactions?limit=-1")
+    assert response.status_code != 200 or "error" in response.json
+
+
+def test_limit_param_unlimited_when_zero(apiv2_client, monkeypatch):
+    """When config.API_LIMIT_ROWS == 0 the cap is disabled."""
+    monkeypatch.setattr(config, "API_LIMIT_ROWS", 0)
+
+    response = apiv2_client.get("/v2/transactions?limit=10")
+    assert response.status_code == 200

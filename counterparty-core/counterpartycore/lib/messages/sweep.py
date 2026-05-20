@@ -57,12 +57,21 @@ def validate(db, source, destination, flags, memo, block_index):
 
     cursor.close()
 
-    if flags > FLAGS_ALL:
+    # CBOR-encoded messages can carry any type for flags; reject anything
+    # that is not int (excluding bool, which is an int subclass and
+    # meaningless as flags).
+    if not isinstance(flags, int) or isinstance(flags, bool):
+        problems.append("flags must be an int")
+    elif flags > FLAGS_ALL:
         problems.append(f"invalid flags {flags}")
     elif not flags & (FLAG_BALANCES | FLAG_OWNERSHIP):
         problems.append("must specify which kind of transfer in flags")
 
-    if memo and len(memo) > MAX_MEMO_LENGTH:
+    # CBOR-encoded messages can carry any type for memo; len() requires a
+    # bytes-like (or str) value.
+    if memo and not isinstance(memo, (bytes, bytearray, str)):
+        problems.append("memo must be bytes")
+    elif memo and len(memo) > MAX_MEMO_LENGTH:
         problems.append("memo too long")
 
     return problems, total_fee
@@ -163,7 +172,7 @@ def parse(db, tx, message):
 
     # Unpack message.
     try:
-        unpacked = unpack(message)
+        unpacked = unpack(message, block_index=tx["block_index"])
         destination, flags, memo_bytes = (
             unpacked["destination"],
             unpacked["flags"],
@@ -182,6 +191,21 @@ def parse(db, tx, message):
         status = "invalid: could not unpack, " + str(err)
 
     if status == "valid":
+        # CBOR-encoded messages can carry any type for these fields;
+        # normalise unexpected types so downstream code (validate, flag
+        # checks below, logging, DB insert) never sees a non-int flags or
+        # non-bytes memo. validate() will then mark the tx invalid.
+        if not isinstance(flags, int) or isinstance(flags, bool):
+            flags = None
+        # Also drop ints outside SQLite's signed 64-bit range; otherwise
+        # the invalid-record insert below raises OverflowError. validate()
+        # would already mark such flags invalid (flags > FLAGS_ALL), but
+        # the value still reaches the bindings dict.
+        elif flags > config.MAX_INT or flags < -config.MAX_INT:
+            flags = None
+        if memo_bytes is not None and not isinstance(memo_bytes, (bytes, bytearray, str)):
+            memo_bytes = None
+
         problems, total_fee = validate(
             db, tx["source"], destination, flags, memo_bytes, tx["block_index"]
         )
@@ -300,5 +324,32 @@ def parse(db, tx, message):
         ledger.events.insert_record(db, "sweeps", bindings, "SWEEP")
 
         logger.info("Sweep from %(source)s to %(destination)s (%(tx_hash)s) [%(status)s]", bindings)
+    elif protocol.enabled("persist_invalid_sweep", block_index=tx["block_index"]):
+        # Persist an invalid sweep row + INVALID_SWEEP event so API consumers
+        # can enumerate failed sweeps; mirrors the cancel.py / utxo.py pattern.
+        bindings = {
+            "tx_index": tx["tx_index"],
+            "tx_hash": tx["tx_hash"],
+            "block_index": tx["block_index"],
+            "source": tx["source"],
+            "destination": destination,
+            "flags": flags,
+            "status": status,
+            "memo": memo_bytes,
+            "fee_paid": 0,
+        }
+        ledger.events.insert_record(db, "sweeps", bindings, "INVALID_SWEEP")
+        logger.info("Invalid sweep from %(source)s (%(tx_hash)s) [%(status)s]", bindings)
+    else:
+        logger.info(
+            "Invalid sweep from %(source)s (%(tx_hash)s) [%(status)s]",
+            {
+                "source": tx["source"],
+                "tx_hash": tx["tx_hash"],
+                "status": status,
+            },
+        )
+
+    ledger.blocks.set_transaction_status(db, tx["tx_index"], status == "valid")
 
     cursor.close()

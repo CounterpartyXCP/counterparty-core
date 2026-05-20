@@ -1,7 +1,84 @@
-from counterpartycore.lib import config
+import logging
+import math
+
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger.caches import OrdersCache
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.ledger.events import insert_record, insert_update
+from counterpartycore.lib.ledger.events import credit, insert_record, insert_update
+
+logger = logging.getLogger(config.LOGGER_NAME)
+
+#####################
+#   POOL UTILITIES  #
+#####################
+
+XCP_POOL_FEE_BPS = 50
+OTHER_POOL_FEE_BPS = 100
+
+
+def sort_pair(asset_a, asset_b):
+    if asset_a > asset_b:
+        return asset_b, asset_a
+    return asset_a, asset_b
+
+
+def get_pool_fee_bps(pool):
+    if config.XCP in (pool["asset_a"], pool["asset_b"]):
+        return XCP_POOL_FEE_BPS
+    return OTHER_POOL_FEE_BPS
+
+
+def pool_has_liquidity(pool):
+    return pool is not None and pool["reserve_a"] > 0 and pool["reserve_b"] > 0
+
+
+def isqrt(n):
+    return math.isqrt(n)
+
+
+def compute_pool_output(reserve_in, reserve_out, input_qty, fee_bps):
+    """Constant-product swap with fee. Returns integer output quantity."""
+    if input_qty <= 0 or reserve_in <= 0 or reserve_out <= 0:
+        return 0
+    input_with_fee = input_qty * (10000 - fee_bps)
+    numerator = input_with_fee * reserve_out
+    denominator = reserve_in * 10000 + input_with_fee
+    return numerator // denominator
+
+
+def compute_pool_input_for_target_price(
+    reserve_in, reserve_out, target_price_num, target_price_den, fee_bps
+):
+    """Max input before pool marginal price reaches target. Returns 0 if already past."""
+    if reserve_in <= 0 or reserve_out <= 0:
+        return 0
+    if target_price_den <= 0 or target_price_num <= 0:
+        return 0
+
+    fee_factor = 10000 - fee_bps
+
+    current_price_lhs = reserve_in * 10000 * target_price_den
+    current_price_rhs = reserve_out * fee_factor * target_price_num
+    if current_price_lhs >= current_price_rhs:
+        return 0
+
+    a = fee_factor
+    b_coeff = reserve_in * (10000 + fee_factor)
+    c_target = reserve_in * reserve_out * fee_factor * target_price_num // target_price_den
+    constant = reserve_in * reserve_in * 10000 - c_target
+
+    discriminant = b_coeff * b_coeff - 4 * a * constant
+    if discriminant < 0:
+        return 0
+
+    sqrt_disc = isqrt(discriminant)
+    numerator = -b_coeff + sqrt_disc
+    if numerator <= 0:
+        return 0
+
+    dx = numerator // (2 * a)
+    return max(dx, 0)
+
 
 #####################
 #       ORDERS      #
@@ -125,6 +202,22 @@ def get_open_btc_orders(db, address):
         ORDER BY tx_index, tx_hash
     """
     bindings = (address, config.BTC, "open")
+    cursor.execute(query, bindings)
+    return cursor.fetchall()
+
+
+def get_open_orders_by_source(db, address):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM (
+            SELECT *, MAX(rowid)
+            FROM orders
+            WHERE source = ?
+            GROUP BY tx_hash
+        ) WHERE status = ?
+        ORDER BY tx_index, tx_hash
+    """
+    bindings = (address, "open")
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -393,3 +486,223 @@ def get_all_dispensables(db):
 
 def update_dispenser(db, rowid, update_data, dispenser_info):
     insert_update(db, "dispensers", "rowid", rowid, update_data, "DISPENSER_UPDATE", dispenser_info)
+
+
+#####################
+#       POOLS       #
+#####################
+
+### SELECTS ###
+
+
+def get_pool(db, asset_a, asset_b):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM pools
+        WHERE asset_a = ? AND asset_b = ?
+        ORDER BY rowid DESC LIMIT 1
+    """
+    bindings = (asset_a, asset_b)
+    cursor.execute(query, bindings)
+    pools = cursor.fetchall()
+    cursor.close()
+    if pools:
+        return pools[0]
+    return None
+
+
+def get_pool_by_lp_asset(db, lp_asset):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM pools
+        WHERE lp_asset = ?
+        ORDER BY rowid DESC LIMIT 1
+    """
+    bindings = (lp_asset,)
+    cursor.execute(query, bindings)
+    pools = cursor.fetchall()
+    cursor.close()
+    if pools:
+        return pools[0]
+    return None
+
+
+def get_all_pools(db):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM (
+            SELECT *, MAX(rowid)
+            FROM pools
+            GROUP BY asset_a, asset_b
+        ) WHERE reserve_a > 0 AND reserve_b > 0
+        ORDER BY asset_a, asset_b
+    """
+    cursor.execute(query)
+    return cursor.fetchall()
+
+
+def get_pool_deposits(db, asset_a, asset_b):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM pool_deposits
+        WHERE asset_a = ? AND asset_b = ? AND status = 'valid'
+        ORDER BY block_index, tx_index
+    """
+    cursor.execute(query, (asset_a, asset_b))
+    return cursor.fetchall()
+
+
+def get_pool_withdrawals(db, asset_a, asset_b):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM pool_withdrawals
+        WHERE asset_a = ? AND asset_b = ? AND status = 'valid'
+        ORDER BY block_index, tx_index
+    """
+    cursor.execute(query, (asset_a, asset_b))
+    return cursor.fetchall()
+
+
+def get_open_orders_for_pair(db, give_asset, get_asset):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM (
+            SELECT *, MAX(rowid)
+            FROM orders
+            WHERE give_asset = ? AND get_asset = ?
+            GROUP BY tx_hash
+        ) WHERE status = ?
+        ORDER BY tx_index, tx_hash
+    """
+    cursor.execute(query, (give_asset, get_asset, "open"))
+    return cursor.fetchall()
+
+
+def get_pool_matches_by_order(db, order_tx_hash):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM pool_matches
+        WHERE order_tx_hash = ?
+        ORDER BY block_index, tx_index
+    """
+    cursor.execute(query, (order_tx_hash,))
+    return cursor.fetchall()
+
+
+### UPDATES ###
+
+
+def insert_pool(db, pool_data):
+    insert_record(db, "pools", pool_data, "OPEN_POOL")
+
+
+def update_pool(db, asset_a, asset_b, new_reserve_a, new_reserve_b):
+    cursor = db.cursor()
+    cursor.execute(
+        "SELECT rowid FROM pools WHERE asset_a = ? AND asset_b = ? ORDER BY rowid DESC LIMIT 1",
+        (asset_a, asset_b),
+    )
+    row = cursor.fetchone()
+    cursor.close()
+    if row is None:
+        raise exceptions.ConsensusError(
+            f"update_pool called with no matching pool row for {asset_a}/{asset_b}"
+        )
+    update_data = {"reserve_a": new_reserve_a, "reserve_b": new_reserve_b}
+    insert_update(
+        db,
+        "pools",
+        "rowid",
+        row["rowid"],
+        update_data,
+        "POOL_UPDATE",
+        {"asset_a": asset_a, "asset_b": asset_b},
+    )
+
+
+### POOL SWAP EXECUTION ###
+
+
+def try_pool_fill(tx1, pool, max_give, target_price_num=None, target_price_den=None):
+    """Try to fill an order against the pool. Returns (fill_quantity, output) or (0, 0)."""
+    if not pool or not pool_has_liquidity(pool):
+        return 0, 0
+
+    if tx1["give_asset"] == pool["asset_a"]:
+        reserve_in, reserve_out = pool["reserve_a"], pool["reserve_b"]
+    else:
+        reserve_in, reserve_out = pool["reserve_b"], pool["reserve_a"]
+
+    fee_bps = get_pool_fee_bps(pool)
+
+    if target_price_num is not None:
+        fill_quantity = compute_pool_input_for_target_price(
+            reserve_in, reserve_out, target_price_num, target_price_den, fee_bps
+        )
+        fill_quantity = min(fill_quantity, max_give)
+    else:
+        fill_quantity = max_give
+
+    if fill_quantity <= 0:
+        return 0, 0
+
+    output = compute_pool_output(reserve_in, reserve_out, fill_quantity, fee_bps)
+    # Ceil so the limit price is enforced strictly (floor would allow
+    # sub-satoshi fills below the order's rate).
+    min_output = -(-fill_quantity * tx1["get_quantity"] // tx1["give_quantity"])
+    if output < min_output or output <= 0:
+        return 0, 0
+
+    return fill_quantity, output
+
+
+def execute_pool_match(db, tx, tx1, pool, give_quantity, get_quantity):
+    """Fill part of tx1's order against the pool."""
+    fee_bps = get_pool_fee_bps(pool)
+    fee_quantity = give_quantity * fee_bps // 10000
+
+    asset_a, asset_b = pool["asset_a"], pool["asset_b"]
+    if tx1["give_asset"] == asset_a:
+        new_reserve_a = pool["reserve_a"] + give_quantity
+        new_reserve_b = pool["reserve_b"] - get_quantity
+    else:
+        new_reserve_b = pool["reserve_b"] + give_quantity
+        new_reserve_a = pool["reserve_a"] - get_quantity
+
+    assert new_reserve_a * new_reserve_b >= pool["reserve_a"] * pool["reserve_b"]
+
+    credit(
+        db,
+        tx1["source"],
+        tx1["get_asset"],
+        get_quantity,
+        tx["tx_index"],
+        action="pool match",
+        event=tx1["tx_hash"],
+    )
+
+    update_pool(db, *sort_pair(asset_a, asset_b), new_reserve_a, new_reserve_b)
+
+    bindings = {
+        "tx_index": tx["tx_index"],
+        "tx_hash": tx["tx_hash"],
+        "block_index": tx["block_index"],
+        "source": tx1["source"],
+        "asset_a": asset_a,
+        "asset_b": asset_b,
+        "forward_asset": tx1["get_asset"],
+        "forward_quantity": get_quantity,
+        "backward_asset": tx1["give_asset"],
+        "backward_quantity": give_quantity,
+        "fee_quantity": fee_quantity,
+        "fee_bps": fee_bps,
+        "order_tx_hash": tx1["tx_hash"],
+        "status": "valid",
+    }
+    insert_record(db, "pool_matches", bindings, "POOL_MATCH")
+
+    logger.info(
+        "Pool match: %(backward_quantity)s %(backward_asset)s -> %(forward_quantity)s %(forward_asset)s "
+        "(fee: %(fee_quantity)s, %(fee_bps)s bps) [%(order_tx_hash)s]",
+        bindings,
+    )

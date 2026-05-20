@@ -194,8 +194,20 @@ def compact_subasset_longname(string):
     return name_int.to_bytes((name_int.bit_length() + 7) // 8, byteorder="big")
 
 
-def expand_subasset_longname(raw_bytes):
+def expand_subasset_longname(raw_bytes, block_index=None):
     """Expands an array of bytes into a subasset name string."""
+    # The legacy struct path is bounded by a uint8 length prefix (max 255).
+    # The CBOR path has no inherent cap, so a malicious 100KB payload costs
+    # ~25 seconds of O(n^2) string-concat + integer-divide CPU per tx.
+    # Gated behind `subasset_compact_expand_cap` so re-indexing blocks before
+    # activation keeps the same invalid-status strings in the messages journal.
+    from counterpartycore.lib.parser import (  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
+        protocol,
+    )
+
+    if protocol.enabled("subasset_compact_expand_cap", block_index=block_index):
+        if len(raw_bytes) > 200:
+            raise exceptions.AssetNameError("compacted subasset name too long")
     integer = int.from_bytes(raw_bytes, byteorder="big")
     if integer == 0:
         return ""

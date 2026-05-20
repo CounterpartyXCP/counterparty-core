@@ -1,6 +1,6 @@
 [package]
 name = "counterparty-rs"
-version = "11.0.4"
+version = "11.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -19,23 +19,23 @@ sha256 = "1.5.0"
 bitcoin = "0.32.4"
 par-map = "0.1.4"
 tracing = "0.1.40"
-crossbeam-channel = "0.5.13"
+crossbeam-channel = "0.5.15"
 thiserror = "1.0.58"
 derive_more = "0.99.17"
-tracing-subscriber = { version = "0.3.18", features = [
+tracing-subscriber = { version = "0.3.23", features = [
   "env-filter",
   "fmt",
   "chrono",
   "json",
 ] }
 rocksdb = "0.22.0"
-rand = "0.8.5"
+rand = "0.8.6"
 serde = { version = "1.0.214", features = ["derive"] }
 serde_json = "1.0.132"
 uuid = { version = "1.11.0", features = ["v4", "fast-rng"] }
 colored = "2.1.0"
 rust-crypto = "0.2.36"
-time = "0.3.37"
+time = "0.3.47"
 hex = "0.4"
 lazy_static = "1.4"
 reqwest = { version = "0.12.12", features = ["json", "blocking"]}

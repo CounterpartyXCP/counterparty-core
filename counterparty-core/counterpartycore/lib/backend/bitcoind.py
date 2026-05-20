@@ -5,11 +5,13 @@ import logging
 import re
 import time
 from collections import OrderedDict
+from decimal import Decimal as D
 from multiprocessing import current_process
 from threading import current_thread
 
 import requests
 from bitcoinutils.keys import PublicKey
+from ecdsa.ellipticcurve import MalformedPointError
 from requests.exceptions import (  # pylint: disable=redefined-builtin
     ChunkedEncodingError,
     ConnectionError,
@@ -18,9 +20,9 @@ from requests.exceptions import (  # pylint: disable=redefined-builtin
 )
 
 from counterpartycore.lib import config, exceptions
-from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import deserialize, utxosinfo
+from counterpartycore.lib.utils import script
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -39,6 +41,19 @@ def clean_url_for_log(url):
         url = url.replace(m.group(1), "XXXXXXXX")
 
     return url
+
+
+def _rpc_headers():
+    # Always send JSON content-type; conditionally include the X-API-Key
+    # header so the backend (e.g. Cloud Armor in front of bitcoind) can
+    # apply a higher per-key rate-limit bucket. Falls back to no header
+    # when `BACKEND_API_KEY` is unset, preserving the previous request
+    # shape for self-hosted nodes.
+    headers = {"content-type": "application/json"}
+    api_key = getattr(config, "BACKEND_API_KEY", None)
+    if api_key:
+        headers["X-API-Key"] = api_key
+    return headers
 
 
 # for testing
@@ -96,7 +111,7 @@ def rpc_call(payload, retry=0):
             response = requests.post(
                 url,
                 data=json.dumps(payload),
-                headers={"content-type": "application/json"},
+                headers=_rpc_headers(),
                 verify=(not config.BACKEND_SSL_NO_VERIFY),
                 timeout=config.REQUESTS_TIMEOUT,
                 auth=("__cookie__", config.BACKEND_COOKIE) if config.BACKEND_COOKIE else None,
@@ -222,7 +237,7 @@ def safe_rpc_payload(payload):
         response = requests.post(
             config.BACKEND_URL,
             data=json.dumps(payload),
-            headers={"content-type": "application/json"},
+            headers=_rpc_headers(),
             verify=(not config.BACKEND_SSL_NO_VERIFY),
             timeout=config.REQUESTS_TIMEOUT,
             auth=("__cookie__", config.BACKEND_COOKIE) if config.BACKEND_COOKIE else None,
@@ -463,6 +478,25 @@ def add_block_in_cache(block_index, block):
         add_transaction_in_cache(transaction["tx_hash"], transaction)
 
 
+def reset_caches():
+    """Clear in-memory backend caches that may hold data tied to a specific
+    block_index. TRANSACTIONS_CACHE holds `deserialize_tx` output which
+    honours protocol gates, so a cache hit after a reorg can return data
+    deserialised under the orphaned chain's gates. Called from rollback."""
+    TRANSACTIONS_CACHE.clear()
+    BLOCKS_CACHE.clear()
+    # Also clear the @functools.lru_cache wrappers; without these calls
+    # an orphaned UTXO's cached (address, value) tuple persists across
+    # reorg even though Bitcoin Core may no longer recognise the tx.
+    # Same for getrawtransaction's cached payloads.
+    # Test fixtures monkey-patch these with plain functions that don't
+    # carry the lru_cache `cache_clear` attribute, so guard with hasattr.
+    if hasattr(getrawtransaction, "cache_clear"):
+        getrawtransaction.cache_clear()
+    if hasattr(get_utxo_address_and_value, "cache_clear"):
+        get_utxo_address_and_value.cache_clear()
+
+
 def get_decoded_transaction(tx_hash, block_index=None, no_retry=False):
     if tx_hash in TRANSACTIONS_CACHE:
         return TRANSACTIONS_CACHE[tx_hash]
@@ -517,7 +551,7 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                             == PublicKey.from_hex(pubkey).get_segwit_address().to_string()
                         ):
                             return pubkey
-                    except binascii.Error:
+                    except (binascii.Error, MalformedPointError):
                         pass
             elif "coinbase" not in vin:
                 scriptsig = vin["scriptSig"]
@@ -536,7 +570,7 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                             == PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
                         ):
                             return pubkey
-                    except binascii.Error:
+                    except (binascii.Error, MalformedPointError):
                         pass
         for vout in tx["vout"]:
             asm = vout["scriptPubKey"]["asm"].split(" ")
@@ -548,7 +582,7 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                         == PublicKey.from_hex(pubkey).get_address(compressed=False).to_string()
                     ):
                         return pubkey
-                except (binascii.Error, AttributeError):
+                except (binascii.Error, AttributeError, MalformedPointError):
                     pass
                 try:
                     if (
@@ -556,7 +590,7 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                         == PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
                     ):
                         return pubkey
-                except (binascii.Error, AttributeError):
+                except (binascii.Error, AttributeError, MalformedPointError):
                     pass
     return None
 
@@ -576,7 +610,7 @@ def list_unspent(source, allow_unconfirmed_inputs):
                 {
                     "txid": unspent["txid"],
                     "vout": unspent["vout"],
-                    "value": int(unspent["amount"] * config.UNIT),
+                    "value": int(D(str(unspent["amount"])) * D(config.UNIT)),
                     "amount": unspent["amount"],
                     "script_pub_key": unspent["scriptPubKey"],
                 }
@@ -590,8 +624,7 @@ def get_vin_info(vin, no_retry=False):
     vin_info = vin.get("info")
     if vin_info is None:
         return get_vin_info_legacy(vin, no_retry=no_retry)
-    else:
-        return vin_info["value"], vin_info["script_pub_key"], vin_info["is_segwit"]
+    return vin_info["value"], vin_info["script_pub_key"], vin_info["is_segwit"]
 
 
 def get_vin_info_legacy(vin, no_retry=False):
@@ -601,9 +634,14 @@ def get_vin_info_legacy(vin, no_retry=False):
         return (
             vout["value"],
             vout["script_pub_key"],
-            composer.is_segwit_output(vout["script_pub_key"]),
+            script.is_segwit_output(vout["script_pub_key"]),
         )
     except exceptions.BitcoindRPCError as e:
+        logger.warning(
+            "Failed to lookup parent transaction %s for VIN resolution. "
+            "This transaction will be skipped. Is `txindex` enabled in Bitcoin Core?",
+            vin["hash"],
+        )
         raise exceptions.DecodeError("vin not found") from e
 
 

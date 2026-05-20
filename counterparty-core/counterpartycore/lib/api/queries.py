@@ -6,14 +6,21 @@ from typing import Literal
 
 from sentry_sdk import start_span as start_sentry_span
 
+from counterpartycore.lib.ledger.markets import (
+    compute_pool_input_for_target_price,
+    compute_pool_output,
+    get_pool_fee_bps,
+    pool_has_liquidity,
+    sort_pair,
+)
 from counterpartycore.lib.utils.helpers import divide
 
 OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
 OrderMatchesStatus = Literal["all", "pending", "completed", "expired"]
 BetStatus = Literal["cancelled", "dropped", "expired", "filled", "open"]
 DispenserStatus = Literal["all", "open", "closed", "closing", "open_empty_address"]
-DispenserStatusNumber = {"open": 0, "closed": 10, "closing": 11, "open_empty_address": 1}
-DispenserStatusNumberInverted = {value: key for key, value in DispenserStatusNumber.items()}
+DispenserStatusNumber = {"open": 0, "closed": 10, "closing": 11, "open_empty_address": 1}  # pylint: disable=invalid-name
+DispenserStatusNumberInverted = {value: key for key, value in DispenserStatusNumber.items()}  # pylint: disable=invalid-name
 FairmintersStatus = Literal["all", "open", "closed", "pending"]
 IssuancesAssetEvents = Literal[
     "all",
@@ -151,6 +158,16 @@ SUPPORTED_SORT_FIELDS = {
         "quantity",
         "holding_type",
         "status",
+    ],
+    "pools": [
+        "block_index",
+        "reserve_a",
+        "reserve_b",
+    ],
+    "pool_matches": [
+        "block_index",
+        "forward_quantity",
+        "backward_quantity",
     ],
 }
 
@@ -1972,7 +1989,7 @@ def utxos_with_balances(state_db, utxos: str):
     return QueryResult(result, None, "balances", len(utxo_list))
 
 
-def get_balances_by_addresses(
+def get_balances_by_addresses(  # pylint: disable=unused-argument
     state_db,
     addresses: str,
     type: BalanceType = "all",  # pylint: disable=W0622
@@ -2436,7 +2453,14 @@ def prepare_dispenser_where(status, other_conditions=None, exclude_with_oracle=F
     return where
 
 
-SELECT_DISPENSERS = "*, (satoshirate * 1.0) / (give_quantity * 1.0) AS price"
+SELECT_DISPENSERS = """
+*,
+CASE
+    WHEN COALESCE((SELECT divisible FROM assets_info WHERE assets_info.asset = dispensers.asset), 0) = 1
+    THEN (satoshirate * 100000000.0) / (give_quantity * 1.0)
+    ELSE (satoshirate * 1.0) / (give_quantity * 1.0)
+END AS price
+"""
 
 
 def get_dispensers(
@@ -2869,9 +2893,11 @@ def prepare_order_matches_where(status, other_conditions=None):
     return prepare_where_status(status, OrderMatchesStatus, other_conditions=other_conditions)
 
 
-SELECT_ORDERS = "*, "
-SELECT_ORDERS += "COALESCE((get_quantity * 1.0) / (give_quantity * 1.0), 0) AS give_price, "
-SELECT_ORDERS += "COALESCE((give_quantity * 1.0) / (get_quantity * 1.0), 0) AS get_price"
+SELECT_ORDERS = (
+    "*, "
+    "COALESCE((get_quantity * 1.0) / (give_quantity * 1.0), 0) AS give_price, "
+    "COALESCE((give_quantity * 1.0) / (get_quantity * 1.0), 0) AS get_price"
+)
 SELECT_ORDER_MATCHES = SELECT_ORDERS.replace("get_", "forward_").replace("give_", "backward_")
 
 
@@ -3561,3 +3587,605 @@ def get_fairmints_by_block(
         limit=limit,
         offset=offset,
     )
+
+
+#####################
+#       POOLS       #
+#####################
+
+
+def get_pools(
+    state_db,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
+):
+    """
+    Returns all AMM liquidity pools
+    :param int cursor: The last index of the pools to return
+    :param int limit: The maximum number of pools to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the pools to return (e.g. reserve_a:desc)
+    """
+    return select_rows(
+        state_db,
+        "pools",
+        where=None,
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+        sort=sort,
+    )
+
+
+def get_pool_by_pair(
+    state_db,
+    asset1: str,
+    asset2: str,
+):
+    """
+    Returns the AMM pool for a given asset pair
+    :param str asset1: The first asset in the pair (e.g. XCP)
+    :param str asset2: The second asset in the pair (e.g. POOLTEST)
+    """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
+    a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
+    return select_row(
+        state_db,
+        "pools",
+        where={"asset_a": a, "asset_b": b},
+    )
+
+
+def get_pool_deposits_by_pair(
+    state_db,
+    asset1: str,
+    asset2: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns deposits for a given pool pair
+    :param str asset1: The first asset in the pair (e.g. XCP)
+    :param str asset2: The second asset in the pair (e.g. $ASSET_1)
+    :param int cursor: The last index of the deposits to return
+    :param int limit: The maximum number of deposits to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
+    a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
+    return select_rows(
+        state_db,
+        "pool_deposits",
+        where={"asset_a": a, "asset_b": b, "status": "valid"},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_withdrawals_by_pair(
+    state_db,
+    asset1: str,
+    asset2: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns withdrawals for a given pool pair
+    :param str asset1: The first asset in the pair (e.g. XCP)
+    :param str asset2: The second asset in the pair (e.g. $ASSET_1)
+    :param int cursor: The last index of the withdrawals to return
+    :param int limit: The maximum number of withdrawals to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
+    a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
+    return select_rows(
+        state_db,
+        "pool_withdrawals",
+        where={"asset_a": a, "asset_b": b, "status": "valid"},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_matches_by_pair(
+    state_db,
+    asset1: str,
+    asset2: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns pool matches (swaps) for a given pool pair
+    :param str asset1: The first asset in the pair (e.g. XCP)
+    :param str asset2: The second asset in the pair (e.g. $ASSET_1)
+    :param int cursor: The last index of the pool matches to return
+    :param int limit: The maximum number of pool matches to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
+    a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
+    return select_rows(
+        state_db,
+        "pool_matches",
+        where={"asset_a": a, "asset_b": b},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_all_pool_matches(
+    state_db,
+    block_index: int = None,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
+):
+    """
+    Returns all pool matches (swaps against AMM pools)
+    :param int block_index: The block index to filter by (e.g. 840000)
+    :param int cursor: The last index of the pool matches to return
+    :param int limit: The maximum number of pool matches to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the pool matches to return (e.g. forward_quantity:desc)
+    """
+    where = {"block_index": block_index} if block_index else {}
+    return select_rows(
+        state_db,
+        "pool_matches",
+        where=where or None,
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+        sort=sort,
+    )
+
+
+def get_pool_deposits_by_block(
+    ledger_db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns pool deposits in a given block
+    :param int block_index: The block index (e.g. 840000)
+    :param int cursor: The last index of the deposits to return
+    :param int limit: The maximum number of deposits to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "pool_deposits",
+        where={"block_index": block_index},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_withdrawals_by_block(
+    ledger_db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns pool withdrawals in a given block
+    :param int block_index: The block index (e.g. 840000)
+    :param int cursor: The last index of the withdrawals to return
+    :param int limit: The maximum number of withdrawals to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "pool_withdrawals",
+        where={"block_index": block_index},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_matches_by_block(
+    ledger_db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns pool matches (swaps) in a given block
+    :param int block_index: The block index (e.g. 840000)
+    :param int cursor: The last index of the pool matches to return
+    :param int limit: The maximum number of pool matches to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "pool_matches",
+        where={"block_index": block_index},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_deposits_by_address(
+    state_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns pool deposits by a given address
+    :param str address: The address to query (e.g. $ADDRESS_1)
+    :param int cursor: The last index of the deposits to return
+    :param int limit: The maximum number of deposits to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        state_db,
+        "pool_deposits",
+        where={"source": address, "status": "valid"},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_withdrawals_by_address(
+    state_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns pool withdrawals by a given address
+    :param str address: The address to query (e.g. $ADDRESS_1)
+    :param int cursor: The last index of the withdrawals to return
+    :param int limit: The maximum number of withdrawals to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        state_db,
+        "pool_withdrawals",
+        where={"source": address, "status": "valid"},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_positions_by_address(
+    state_db,
+    address: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns all AMM pool LP positions for a given address
+    :param str address: The address to query LP positions for (e.g. $ADDRESS_1)
+    :param int cursor: The last index of the positions to return
+    :param int limit: The maximum number of positions to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    db_cursor = state_db.cursor()
+    query_bindings = [address]
+    cursor_clause = ""
+    if offset is None and cursor is not None:
+        cursor_clause = "AND b.rowid <= ?"
+        query_bindings.append(cursor)
+    query = f"""
+        SELECT
+            p.asset_a,
+            p.asset_b,
+            p.lp_asset,
+            p.reserve_a,
+            p.reserve_b,
+            b.quantity,
+            b.rowid AS rowid
+        FROM balances b
+        JOIN pools p ON b.asset = p.lp_asset
+        WHERE b.address = ?
+          AND b.quantity > 0
+          {cursor_clause}
+        ORDER BY b.rowid DESC
+        LIMIT ?
+    """  # noqa S608 # nosec B608
+    query_bindings.append(limit + 1)
+    if offset is not None:
+        query += " OFFSET ?"
+        query_bindings.append(offset)
+    count_query = """
+        SELECT COUNT(*) AS count
+        FROM balances b
+        JOIN pools p ON b.asset = p.lp_asset
+        WHERE b.address = ?
+          AND b.quantity > 0
+    """  # noqa S608 # nosec B608
+    db_cursor.execute(query, query_bindings)
+    rows = db_cursor.fetchall()
+    db_cursor.execute(count_query, (address,))
+    result_count = db_cursor.fetchone()["count"]
+    db_cursor.close()
+
+    if len(rows) > limit:
+        next_cursor = None if offset is not None else rows[-1]["rowid"]
+        rows = rows[:limit]
+    else:
+        next_cursor = None
+
+    return QueryResult(rows, next_cursor, "pools", result_count)
+
+
+def get_pool_price_history(
+    ledger_db,
+    asset1: str,
+    asset2: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns the price history for a pool pair (reserve snapshots at each state change).
+    Each entry includes block_index, reserves, and computed price.
+    Can be used to build price charts and compute TWAP.
+    :param str asset1: The first asset in the pair (e.g. XCP)
+    :param str asset2: The second asset in the pair (e.g. $ASSET_1)
+    :param int cursor: The last index of the entries to return
+    :param int limit: The maximum number of entries to return (e.g. 100)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
+    a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
+    return select_rows(
+        ledger_db,
+        "pools",
+        where={"asset_a": a, "asset_b": b},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_matches_by_order(
+    state_db,
+    order_hash: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns pool matches (swaps against the AMM) for a given order
+    :param str order_hash: The hash of the order transaction (e.g. $ORDER_WITH_MATCH_HASH)
+    :param int cursor: The last index of the pool matches to return
+    :param int limit: The maximum number of pool matches to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        state_db,
+        "pool_matches",
+        where={"order_tx_hash": order_hash},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_quote(state_db, asset1: str, asset2: str, quantity: int):
+    """
+    Returns the estimated swap output considering both AMM pool and resting order book.
+    Reflects current state only; actual execution may differ if trades confirm before yours.
+    :param asset1: The asset you want to sell (e.g. XCP)
+    :param asset2: The asset you want to receive (e.g. $ASSET_1)
+    :param quantity: The quantity of asset1 to sell (in satoshis) (e.g. 1000000)
+    """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
+    give_asset = asset1
+    give_quantity = quantity
+    sorted_a, sorted_b = sort_pair(asset1, asset2)
+    pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
+    pool = pool_row.result if pool_row else None
+    has_pool = pool is not None and pool_has_liquidity(pool)
+
+    orders_result = select_rows(
+        state_db,
+        "orders_info",
+        where={"give_asset": asset2, "get_asset": asset1, "status": "open"},
+        cursor_field="tx_index",
+        sort="give_price:asc",
+        limit=1000,
+    )
+    book_orders = orders_result.result if orders_result else []
+
+    if not has_pool and not book_orders:
+        return {
+            "pool_exists": False,
+            "estimated_output": 0,
+            "book_orders": 0,
+            "message": "No pool or orders exist for this pair.",
+        }
+
+    give_remaining = give_quantity
+    pool_input_total = 0
+    pool_output_total = 0
+    book_output = 0
+    book_orders_matched = 0
+
+    if has_pool:
+        fee_bps = get_pool_fee_bps(pool)
+        if give_asset == pool["asset_a"]:
+            sim_ri, sim_ro = pool["reserve_a"], pool["reserve_b"]
+        else:
+            sim_ri, sim_ro = pool["reserve_b"], pool["reserve_a"]
+    else:
+        fee_bps = 0
+        sim_ri, sim_ro = 0, 0
+
+    for order in book_orders:
+        if give_remaining <= 0:
+            break
+
+        order_give_remaining = order["give_remaining"]
+        if order_give_remaining <= 0:
+            continue
+
+        if has_pool and sim_ri > 0 and sim_ro > 0:
+            pool_fill = compute_pool_input_for_target_price(
+                sim_ri, sim_ro, order["get_quantity"], order["give_quantity"], fee_bps
+            )
+            pool_fill = min(pool_fill, give_remaining)
+
+            if pool_fill > 0:
+                pout = compute_pool_output(sim_ri, sim_ro, pool_fill, fee_bps)
+                if pout > 0:
+                    pool_output_total += pout
+                    pool_input_total += pool_fill
+                    give_remaining -= pool_fill
+                    sim_ri += pool_fill
+                    sim_ro -= pout
+
+        if give_remaining <= 0:
+            break
+
+        can_take = min(give_remaining, order["get_remaining"])
+        if can_take <= 0:
+            continue
+        get_from_order = can_take * order["give_quantity"] // order["get_quantity"]
+        if get_from_order > order_give_remaining:
+            get_from_order = order_give_remaining
+            can_take = get_from_order * order["get_quantity"] // order["give_quantity"]
+
+        if get_from_order > 0 and can_take > 0:
+            book_output += get_from_order
+            give_remaining -= can_take
+            book_orders_matched += 1
+
+    if give_remaining > 0 and has_pool and sim_ri > 0 and sim_ro > 0:
+        pout = compute_pool_output(sim_ri, sim_ro, give_remaining, fee_bps)
+        if pout > 0:
+            pool_output_total += pout
+            pool_input_total += give_remaining
+            give_remaining = 0
+
+    total_output = pool_output_total + book_output
+    if has_pool and give_asset == pool["asset_a"]:
+        orig_ri, orig_ro = pool["reserve_a"], pool["reserve_b"]
+    elif has_pool:
+        orig_ri, orig_ro = pool["reserve_b"], pool["reserve_a"]
+    else:
+        orig_ri, orig_ro = 0, 0
+    marginal_price = orig_ro / orig_ri if orig_ri > 0 else 0
+    effective_price = total_output / give_quantity if give_quantity > 0 else 0
+    price_impact = (1 - effective_price / marginal_price) * 100 if marginal_price > 0 else 0
+
+    result = {
+        "estimated_output": total_output,
+        "pool_output": pool_output_total,
+        "book_output": book_output,
+        "book_orders_matched": book_orders_matched,
+        "give_remaining": give_remaining,
+        "effective_price": effective_price,
+        "price_impact": round(price_impact, 4),
+    }
+    if has_pool:
+        result["pool_exists"] = True
+        result["fee_bps"] = fee_bps
+        result["fee_amount"] = pool_input_total * fee_bps // 10000 if fee_bps > 0 else 0
+    else:
+        result["pool_exists"] = False
+
+    return result
+
+
+def get_pool_quote_deposit(state_db, asset1: str, asset2: str, quantity: int):
+    """
+    Returns the required quantities of both assets and expected LP tokens for a deposit.
+    :param asset1: The first asset in the pair (e.g. XCP)
+    :param asset2: The second asset in the pair (e.g. $ASSET_1)
+    :param quantity: The quantity of asset1 to deposit (in satoshis) (e.g. 1000000)
+    """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
+    sorted_a, sorted_b = sort_pair(asset1, asset2)
+    pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
+    pool = pool_row.result if pool_row else None
+
+    if pool is None or not pool_has_liquidity(pool):
+        return {
+            "first_deposit": True,
+            "asset_a": sorted_a,
+            "asset_b": sorted_b,
+            "quantity_a_required": None,
+            "quantity_b_required": None,
+            "quantity_minted_estimate": None,
+            "message": "First deposit: provide both quantities to set the initial price.",
+        }
+
+    lp_info = select_row(state_db, "assets_info", where={"asset": pool["lp_asset"]})
+    total_supply = lp_info.result["supply"] if lp_info else 0
+
+    # ceil the partner so the user's pair lands on the A-constraint branch
+    # in compute_actual_deposit_amounts and mints the quoted LP exactly
+    if asset1 == sorted_a:
+        quantity_a_required = quantity
+        quantity_b_required = -(-quantity * pool["reserve_b"] // pool["reserve_a"])
+        lp_estimate = quantity * total_supply // pool["reserve_a"] if total_supply else 0
+    else:
+        quantity_b_required = quantity
+        quantity_a_required = -(-quantity * pool["reserve_a"] // pool["reserve_b"])
+        lp_estimate = quantity * total_supply // pool["reserve_b"] if total_supply else 0
+
+    return {
+        "first_deposit": False,
+        "asset_a": sorted_a,
+        "asset_b": sorted_b,
+        "quantity_a_required": quantity_a_required,
+        "quantity_b_required": quantity_b_required,
+        "quantity_minted_estimate": lp_estimate,
+    }
+
+
+def get_pool_quote_withdraw(state_db, asset1: str, asset2: str, quantity: int):
+    """
+    Returns the estimated assets received for burning a given amount of LP tokens.
+    :param asset1: The first asset in the pair (e.g. XCP)
+    :param asset2: The second asset in the pair (e.g. $ASSET_1)
+    :param quantity: The quantity of LP tokens to destroy (in satoshis) (e.g. 1000000)
+    """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
+    sorted_a, sorted_b = sort_pair(asset1, asset2)
+    pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
+    pool = pool_row.result if pool_row else None
+    if pool is None or not pool_has_liquidity(pool):
+        return {"pool_exists": False, "message": "Pool does not exist or is empty."}
+
+    lp_info = select_row(state_db, "assets_info", where={"asset": pool["lp_asset"]})
+    total_supply = lp_info.result["supply"] if lp_info else 0
+
+    if total_supply <= 0:
+        return {"pool_exists": True, "supply": 0, "message": "No LP tokens in circulation."}
+
+    quantity_a = quantity * pool["reserve_a"] // total_supply
+    quantity_b = quantity * pool["reserve_b"] // total_supply
+
+    return {
+        "pool_exists": True,
+        "asset_a": sorted_a,
+        "asset_b": sorted_b,
+        "quantity": quantity,
+        "supply": total_supply,
+        "quantity_a_estimate": quantity_a,
+        "quantity_b_estimate": quantity_b,
+        "reserve_a": pool["reserve_a"],
+        "reserve_b": pool["reserve_b"],
+    }

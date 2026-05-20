@@ -18,8 +18,9 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def normalize_price(value, precision=16):
-    decimal.getcontext().prec = 32
-    return f"{D(value):.{precision}f}"
+    with decimal.localcontext() as ctx:
+        ctx.prec = 32
+        return f"{D(value):.{precision}f}"
 
 
 def inject_issuances_and_block_times(ledger_db, state_db, result_list):
@@ -30,6 +31,9 @@ def inject_issuances_and_block_times(ledger_db, state_db, result_list):
         "dividend_asset",
         "forward_asset",
         "backward_asset",
+        "asset_a",
+        "asset_b",
+        "lp_asset",
     ]
 
     # gather asset list and block indexes (use sets for O(1) deduplication)
@@ -214,6 +218,16 @@ def inject_normalized_quantities(result_list):
         "get_price": {"asset_field": "get_asset_info", "divisible": None},
         "forward_price": {"asset_field": "forward_asset_info", "divisible": None},
         "backward_price": {"asset_field": "backward_asset_info", "divisible": None},
+        "reserve_a": {"asset_field": "asset_a_info", "divisible": None},
+        "reserve_b": {"asset_field": "asset_b_info", "divisible": None},
+        "quantity_a": {"asset_field": "asset_a_info", "divisible": None},
+        "quantity_b": {"asset_field": "asset_b_info", "divisible": None},
+        # LP tokens are always divisible (set in make_lp_issuance_bindings); the
+        # withdrawal/match tables don't carry lp_asset, so resolving lp_asset_info
+        # is unreliable. Hardcode divisible=True to ensure normalization always runs.
+        "quantity_minted": {"asset_field": None, "divisible": True},
+        "quantity_destroyed": {"asset_field": None, "divisible": True},
+        "fee_quantity": {"asset_field": "backward_asset_info", "divisible": None},
     }
 
     enriched_result_list = []
@@ -503,9 +517,9 @@ def inject_transactions_events(ledger_db, state_db, result_list):
         "NEW_TRANSACTION_OUTPUT",
     ]
     sql = f"""
-        SELECT message_index AS event_index, event, bindings AS params, tx_hash, block_index 
-        FROM messages 
-        WHERE tx_hash IN ({",".join("?" * len(transaction_hashes))}) 
+        SELECT message_index AS event_index, event, bindings AS params, tx_hash, block_index
+        FROM messages
+        WHERE tx_hash IN ({",".join("?" * len(transaction_hashes))})
         AND event NOT IN ({",".join("?" * len(exclude_events))})
     """  # noqa S608 # nosec B608
     events = cursor.execute(sql, transaction_hashes + exclude_events).fetchall()
@@ -585,8 +599,7 @@ def clean_api_result(query_result):
     """
     if isinstance(query_result, dict):
         return clean_dictionary(query_result)
-    elif isinstance(query_result, list):
+    if isinstance(query_result, list):
         return [clean_api_result(item) for item in query_result]
-    else:
-        # Return primitive types as-is
-        return query_result
+    # Return primitive types as-is
+    return query_result

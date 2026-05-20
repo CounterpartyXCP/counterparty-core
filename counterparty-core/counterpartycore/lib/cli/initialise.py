@@ -104,6 +104,7 @@ def initialise_config(
     backend_ssl=False,
     backend_ssl_no_verify=False,
     backend_poll_interval=None,
+    backend_api_key=None,
     rpc_host=None,
     rpc_port=None,
     rpc_user=None,
@@ -303,6 +304,15 @@ def initialise_config(
         config.BACKEND_POLL_INTERVAL = backend_poll_interval
     else:
         config.BACKEND_POLL_INTERVAL = 3.0
+
+    # Optional API key for premium rate limits behind a Cloud-Armor-style
+    # gateway. The key is sent as the `X-API-Key` HTTP header on every
+    # backend RPC request (Python and Rust BatchRpcClient). The CLI flag
+    # takes precedence; otherwise we fall back to the `BACKEND_API_KEY`
+    # environment variable so CI can inject the secret without exposing
+    # it in the process command line (CodeQL flags any sensitive value
+    # passed as an argv element that ends up echoed by `sh`/`subprocess`).
+    config.BACKEND_API_KEY = backend_api_key or os.environ.get("BACKEND_API_KEY") or None
 
     # Construct backend URL.
     if backend_cookie_file is not None and os.path.exists(backend_cookie_file):
@@ -532,20 +542,25 @@ def initialise_config(
     config.GUNICORN_WORKERS = gunicorn_workers
 
     if electrs_url:
-        if not helpers.is_url(electrs_url):
-            raise exceptions.ConfigurationError("Invalid Electrs URL")
-        config.ELECTRS_URL = electrs_url
+        if isinstance(electrs_url, str):
+            electrs_url = [electrs_url]
+        for url in electrs_url:
+            if not helpers.is_url(url):
+                raise exceptions.ConfigurationError(f"Invalid Electrs URL: {url}")
+        config.ELECTRS_URLS = electrs_url
+        config.ELECTRS_URLS_IS_DEFAULT = False
     else:
         if config.NETWORK_NAME == "testnet":
-            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_TESTNET3
-        if config.NETWORK_NAME == "testnet4":
-            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_TESTNET4
+            config.ELECTRS_URLS = config.DEFAULT_ELECTRS_URLS_TESTNET3
+        elif config.NETWORK_NAME == "testnet4":
+            config.ELECTRS_URLS = config.DEFAULT_ELECTRS_URLS_TESTNET4
         elif config.NETWORK_NAME == "mainnet":
-            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_MAINNET
+            config.ELECTRS_URLS = config.DEFAULT_ELECTRS_URLS_MAINNET
         elif config.NETWORK_NAME == "signet":
-            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_SIGNET
+            config.ELECTRS_URLS = config.DEFAULT_ELECTRS_URLS_SIGNET
         else:
-            config.ELECTRS_URL = None
+            config.ELECTRS_URLS = None
+        config.ELECTRS_URLS_IS_DEFAULT = config.ELECTRS_URLS is not None
 
     config.API_ONLY = api_only
     config.PROFILE = profile
@@ -570,6 +585,7 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "backend_ssl": args.backend_ssl,
         "backend_ssl_no_verify": args.backend_ssl_no_verify,
         "backend_poll_interval": args.backend_poll_interval,
+        "backend_api_key": getattr(args, "backend_api_key", None),
         "rpc_host": args.rpc_host,
         "rpc_port": args.rpc_port,
         "rpc_user": args.rpc_user,

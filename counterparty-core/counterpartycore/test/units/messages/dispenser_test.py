@@ -1,7 +1,28 @@
+import struct
+
 import pytest
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
+
+
+def test_unpack_invalid_asset_id():
+    payload = struct.pack(">QQQQB", 2, 1, 1, 1, dispenser.STATUS_OPEN)
+
+    assert dispenser.unpack(payload, return_dict=True) == {
+        "asset": None,
+        "give_quantity": None,
+        "escrow_quantity": None,
+        "mainchainrate": None,
+        "dispenser_status": None,
+        "action_address": None,
+        "oracle_address": None,
+        "status": "invalid: could not unpack",
+    }
+
+    with ProtocolChangesDisabled(["catch_invalid_dispenser_asset_id"]):
+        with pytest.raises(exceptions.AssetIDError):
+            dispenser.unpack(payload, return_dict=True)
 
 
 def test_validate(ledger_db, defaults):
@@ -88,7 +109,7 @@ def test_validate(ledger_db, defaults):
     ) == (
         None,
         [
-            "address doesn't have enough balance of XCP (91499999693 < 9223372036854775808)",
+            "address doesn't have enough balance of XCP (91399999693 < 9223372036854775808)",
             "integer overflow",
         ],
     )

@@ -13,7 +13,14 @@ from math import floor
 from counterpartycore.lib import (
     config,
     exceptions,
-    ledger,
+)
+from counterpartycore.lib.ledger import (
+    balances,
+    blocks,
+    events,
+    issuances,
+    markets,
+    other,
 )
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import messagetype, protocol
@@ -67,7 +74,7 @@ def validate(
         return None, problems
 
     # resolve subassets
-    asset = ledger.issuances.resolve_subasset_longname(db, asset)
+    asset = issuances.resolve_subasset_longname(db, asset)
 
     if status in [STATUS_OPEN, STATUS_OPEN_EMPTY_ADDRESS]:
         if give_quantity <= 0:
@@ -80,7 +87,7 @@ def validate(
         problems.append(f"invalid status {status}")
 
     cursor = db.cursor()
-    available = ledger.balances.get_balance(db, source, asset, return_list=True)
+    available = balances.get_balance(db, source, asset, return_list=True)
 
     if len(available) == 0:
         problems.append(f"address doesn't have the asset {asset}")
@@ -94,7 +101,7 @@ def validate(
         and source != open_address
         and status != STATUS_CLOSED
         and len(
-            ledger.markets.get_dispensers(
+            markets.get_dispensers(
                 db,
                 status_in=[0, 11],
                 address=open_address if status == STATUS_OPEN_EMPTY_ADDRESS else source,
@@ -124,12 +131,12 @@ def validate(
             and open_address
             and open_address != source
         ):
-            open_dispensers = ledger.markets.get_dispensers(
+            open_dispensers = markets.get_dispensers(
                 db, status_in=[0, 11], address=open_address, asset=asset, origin=source
             )
         else:
             query_address = open_address if status == STATUS_OPEN_EMPTY_ADDRESS else source
-            open_dispensers = ledger.markets.get_dispensers(
+            open_dispensers = markets.get_dispensers(
                 db, status_in=[0, 11], address=query_address, asset=asset
             )
 
@@ -139,7 +146,7 @@ def validate(
                     max_refills = protocol.get_value_by_block_index("max_refills", block_index)
                     refilling_count = 0
                     if max_refills > 0:
-                        refilling_count = ledger.markets.get_refilling_count(
+                        refilling_count = markets.get_refilling_count(
                             db, dispenser_tx_hash=open_dispensers[0]["tx_hash"]
                         )
 
@@ -170,7 +177,7 @@ def validate(
                     and (len(open_dispensers) > 0)
                     and (open_dispensers[0]["origin"] == source)
                 ):
-                    dispensers_from_same_origin_count = ledger.markets.get_dispensers_count(
+                    dispensers_from_same_origin_count = markets.get_dispensers_count(
                         db, source=query_address, status=STATUS_CLOSED, origin=source
                     )
 
@@ -179,7 +186,7 @@ def validate(
                         and dispensers_from_same_origin_count > 0
                     ):
                         # It means that the same origin has not opened other dispensers in this address
-                        existing_balances = ledger.balances.get_balances_count(db, query_address)
+                        existing_balances = balances.get_balances_count(db, query_address)
 
                         if existing_balances[0]["cnt"] > 0:
                             problems.append(
@@ -200,7 +207,7 @@ def validate(
                                 )
 
             if len(problems) == 0:
-                asset_id = ledger.issuances.generate_asset_id(asset)
+                asset_id = issuances.generate_asset_id(asset)
                 if asset_id == 0:
                     problems.append(
                         f"cannot dispense {asset}"
@@ -213,7 +220,7 @@ def validate(
     cursor.close()
 
     if oracle_address is not None and protocol.enabled("oracle_dispensers", block_index):
-        last_price, _last_fee, _last_label, _last_updated = ledger.other.get_oracle_last_price(
+        last_price, _last_fee, _last_label, _last_updated = other.get_oracle_last_price(
             db, oracle_address, block_index
         )
 
@@ -264,7 +271,7 @@ def compose(
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
     if asset_id is None:
-        asset_id = ledger.issuances.generate_asset_id(asset)
+        asset_id = issuances.generate_asset_id(asset)
     destination = []
     data = messagetype.pack(ID)
     data += struct.pack(FORMAT, asset_id, give_quantity, escrow_quantity, mainchainrate, status)
@@ -296,7 +303,7 @@ def compose(
 def calculate_oracle_fee(
     db, escrow_quantity, give_quantity, mainchainrate, oracle_address, block_index
 ):
-    last_price, last_fee, _last_fiat_label, _last_updated = ledger.other.get_oracle_last_price(
+    last_price, last_fee, _last_fiat_label, _last_updated = other.get_oracle_last_price(
         db, oracle_address, block_index
     )
     last_fee_multiplier = last_fee / config.UNIT
@@ -314,6 +321,9 @@ def calculate_oracle_fee(
 
 
 def unpack(message, return_dict=False, block_index=None):
+    catch_classes = [exceptions.UnpackError, struct.error]
+    if protocol.enabled("catch_invalid_dispenser_asset_id", block_index=block_index):
+        catch_classes.append(exceptions.AssetIDError)
     try:
         action_address = None
         oracle_address = None
@@ -330,9 +340,9 @@ def unpack(message, return_dict=False, block_index=None):
             read = LENGTH + 21
         if len(message) > read:
             oracle_address = address_unpack(message[read : read + 21])
-        asset = ledger.issuances.generate_asset_name(assetid)
+        asset = issuances.generate_asset_name(assetid)
         status = "valid"
-    except (exceptions.UnpackError, struct.error):
+    except tuple(catch_classes):
         (
             give_quantity,
             escrow_quantity,
@@ -380,12 +390,12 @@ def parse(db, tx, message):
         action_address,
         oracle_address,
         status,
-    ) = unpack(message)
+    ) = unpack(message, block_index=tx["block_index"])
     if action_address is None:
         action_address = tx["source"]
 
     if status == "valid":
-        if protocol.enabled("dispenser_parsing_validation", CurrentState().current_block_index()):
+        if protocol.enabled("dispenser_parsing_validation", tx["block_index"]):
             _asset_id, problems = validate(
                 db,
                 tx["source"],
@@ -407,7 +417,7 @@ def parse(db, tx, message):
             status = "invalid: " + "; ".join(problems)
         else:
             if dispenser_status in [STATUS_OPEN, STATUS_OPEN_EMPTY_ADDRESS]:
-                existing = ledger.markets.get_dispensers(
+                existing = markets.get_dispensers(
                     db, address=action_address, asset=asset, status=STATUS_OPEN
                 )
 
@@ -433,12 +443,10 @@ def parse(db, tx, message):
                         try:
                             if dispenser_status == STATUS_OPEN_EMPTY_ADDRESS:
                                 is_empty_address = True
-                                address_assets = ledger.balances.get_address_assets(
-                                    db, action_address
-                                )
+                                address_assets = balances.get_address_assets(db, action_address)
                                 if len(address_assets) > 0:
                                     for asset_name in address_assets:
-                                        asset_balance = ledger.balances.get_balance(
+                                        asset_balance = balances.get_balance(
                                             db, action_address, asset_name["asset"]
                                         )
                                         if asset_balance > 0:
@@ -446,7 +454,7 @@ def parse(db, tx, message):
                                             break
 
                                 if is_empty_address:
-                                    ledger.events.debit(
+                                    events.debit(
                                         db,
                                         tx["source"],
                                         asset,
@@ -455,7 +463,7 @@ def parse(db, tx, message):
                                         action="open dispenser empty addr",
                                         event=tx["tx_hash"],
                                     )
-                                    ledger.events.credit(
+                                    events.credit(
                                         db,
                                         action_address,
                                         asset,
@@ -464,7 +472,7 @@ def parse(db, tx, message):
                                         action="open dispenser empty addr",
                                         event=tx["tx_hash"],
                                     )
-                                    ledger.events.debit(
+                                    events.debit(
                                         db,
                                         action_address,
                                         asset,
@@ -476,7 +484,7 @@ def parse(db, tx, message):
                                 else:
                                     status = "invalid: address not empty"
                             else:
-                                ledger.events.debit(
+                                events.debit(
                                     db,
                                     tx["source"],
                                     asset,
@@ -508,7 +516,7 @@ def parse(db, tx, message):
                         if protocol.enabled("dispenser_origin_permission_extended"):
                             bindings["origin"] = tx["source"]
 
-                        ledger.events.insert_record(db, "dispensers", bindings, "OPEN_DISPENSER")
+                        events.insert_record(db, "dispensers", bindings, "OPEN_DISPENSER")
                         # Add the address to the dispensable cache
                         if not CurrentState().parsing_mempool():
                             DispensableCache(db).new_dispensable(action_address)
@@ -549,7 +557,7 @@ def parse(db, tx, message):
                         if status == "valid":
                             # Refill the dispenser by the given amount
                             try:
-                                ledger.events.debit(
+                                events.debit(
                                     db,
                                     tx["source"],
                                     asset,
@@ -564,7 +572,7 @@ def parse(db, tx, message):
                                     + escrow_quantity,
                                     "dispense_count": 0,  # reset the dispense count on refill
                                 }
-                                ledger.markets.update_dispenser(
+                                markets.update_dispenser(
                                     db,
                                     existing[0]["rowid"],
                                     set_data,
@@ -581,7 +589,7 @@ def parse(db, tx, message):
                                     },
                                 )
 
-                                dispenser_tx_hash = ledger.markets.get_dispensers(
+                                dispenser_tx_hash = markets.get_dispensers(
                                     db, address=action_address, asset=asset, status=STATUS_OPEN
                                 )[0]["tx_hash"]
                                 bindings_refill = {
@@ -594,7 +602,7 @@ def parse(db, tx, message):
                                     "dispense_quantity": escrow_quantity,
                                     "dispenser_tx_hash": dispenser_tx_hash,
                                 }
-                                ledger.events.insert_record(
+                                events.insert_record(
                                     db, "dispenser_refills", bindings_refill, "REFILL_DISPENSER"
                                 )
 
@@ -620,7 +628,7 @@ def parse(db, tx, message):
                 )
                 existing = []
                 if close_from_another_address:
-                    existing = ledger.markets.get_dispensers(
+                    existing = markets.get_dispensers(
                         db,
                         address=action_address,
                         asset=asset,
@@ -628,12 +636,12 @@ def parse(db, tx, message):
                         origin=tx["source"],
                     )
                 else:
-                    existing = ledger.markets.get_dispensers(
+                    existing = markets.get_dispensers(
                         db, address=tx["source"], asset=asset, status=STATUS_OPEN
                     )
                 if len(existing) == 1:
                     if close_delay == 0:
-                        ledger.events.credit(
+                        events.credit(
                             db,
                             tx["source"],
                             asset,
@@ -655,7 +663,7 @@ def parse(db, tx, message):
                             "close_block_index": tx["block_index"] + close_delay,
                         }
 
-                    ledger.markets.update_dispenser(
+                    markets.update_dispenser(
                         db,
                         existing[0]["rowid"],
                         set_data,
@@ -692,7 +700,7 @@ def parse(db, tx, message):
             },
         )
 
-    ledger.blocks.set_transaction_status(
+    blocks.set_transaction_status(
         db,
         tx["tx_index"],
         status == "valid",
@@ -704,7 +712,7 @@ def parse(db, tx, message):
 class DispensableCache(metaclass=helpers.SingletonMeta):
     def __init__(self, db):
         logger.debug("Initialising Dispensable Cache...")
-        self.dispensable = ledger.markets.get_all_dispensables(db)
+        self.dispensable = markets.get_all_dispensables(db)
 
     def could_be_dispensable(self, source):
         return self.dispensable.get(source, False)
@@ -720,14 +728,12 @@ def is_dispensable(db, destination_address, amount):
     if not DispensableCache(db).could_be_dispensable(destination_address):
         return False
 
-    dispensers = ledger.markets.get_dispensers(db, address=destination_address, status_in=[0, 11])
+    dispensers = markets.get_dispensers(db, address=destination_address, status_in=[0, 11])
 
     for next_dispenser in dispensers:
         if next_dispenser["oracle_address"] is not None:
-            last_price, _last_fee, _last_fiat_label, _last_updated = (
-                ledger.other.get_oracle_last_price(
-                    db, next_dispenser["oracle_address"], CurrentState().current_block_index()
-                )
+            last_price, _last_fee, _last_fiat_label, _last_updated = other.get_oracle_last_price(
+                db, next_dispenser["oracle_address"], CurrentState().current_block_index()
             )
             fiatrate = helpers.satoshirate_to_fiat(next_dispenser["satoshirate"])
             if fiatrate == 0 or last_price == 0:
@@ -745,11 +751,11 @@ def close_pending(db, block_index):
     block_delay = protocol.get_value_by_block_index("dispenser_close_delay", block_index)
 
     if block_delay > 0:
-        pending_dispensers = ledger.markets.get_pending_dispensers(db, block_index=block_index)
+        pending_dispensers = markets.get_pending_dispensers(db, block_index=block_index)
 
         for dispenser in pending_dispensers:
             # use tx_index=0 for block actions
-            ledger.events.credit(
+            events.credit(
                 db,
                 dispenser["last_status_tx_source"],
                 dispenser["asset"],
@@ -763,7 +769,7 @@ def close_pending(db, block_index):
                 "give_remaining": 0,
                 "status": STATUS_CLOSED,
             }
-            ledger.markets.update_dispenser(
+            markets.update_dispenser(
                 db,
                 dispenser["rowid"],
                 set_data,

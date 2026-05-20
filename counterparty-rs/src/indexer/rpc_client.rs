@@ -20,6 +20,10 @@ pub struct BatchRpcClient {
     client: Arc<HttpClient>,
     url: String,
     auth: String,
+    // Optional `X-API-Key` header value. When set, every RPC request
+    // includes it so a Cloud-Armor-style gateway grants a higher
+    // per-key rate-limit bucket; left as `None` for self-hosted nodes.
+    api_key: Option<String>,
     cache: Arc<Mutex<HashMap<Txid, Option<Transaction>>>>,
 }
 
@@ -66,7 +70,12 @@ impl From<serde_json::Error> for BatchRpcError {
 }
 
 impl BatchRpcClient {
-    pub fn new(url: String, user: String, password: String) -> Result<Self, BatchRpcError> {
+    pub fn new(
+        url: String,
+        user: String,
+        password: String,
+        api_key: Option<String>,
+    ) -> Result<Self, BatchRpcError> {
         let mut headers = HeaderMap::new();
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
 
@@ -81,12 +90,34 @@ impl BatchRpcClient {
             .build()
             .map_err(BatchRpcError::Http)?;
 
+        // Sanitize: an empty string is treated as "no API key" so the caller
+        // can pass `Some("".into())` when the Python config left the value
+        // blank without us emitting an invalid header.
+        let api_key = api_key.filter(|s| !s.is_empty());
+
         Ok(BatchRpcClient {
             client: Arc::new(client),
             url,
             auth,
+            api_key,
             cache: Arc::new(Mutex::new(HashMap::new())),
         })
+    }
+
+    fn auth_headers(&self) -> Result<HeaderMap, BatchRpcError> {
+        let mut headers = HeaderMap::new();
+        let auth_value = HeaderValue::from_str(&self.auth)
+            .map_err(|e| BatchRpcError::InvalidResponse(e.to_string()))?;
+        headers.insert("Authorization", auth_value);
+        if let Some(api_key) = &self.api_key {
+            // Skip the header silently if the configured key contains
+            // characters that aren't valid in an HTTP header value, rather
+            // than panicking the worker thread.
+            if let Ok(value) = HeaderValue::from_str(api_key) {
+                headers.insert("X-API-Key", value);
+            }
+        }
+        Ok(headers)
     }
 
     // Le reste du code reste inchangé...
@@ -128,13 +159,10 @@ impl BatchRpcClient {
             })
             .collect();
 
-        let mut headers = HeaderMap::new();
-        headers.insert("Authorization", HeaderValue::from_str(&self.auth).unwrap());
-
         let response = self
             .client
             .post(&self.url)
-            .headers(headers)
+            .headers(self.auth_headers()?)
             .json(&requests)
             .send()?;
 
@@ -175,7 +203,9 @@ impl BatchRpcClient {
                 _ => None,
             };
 
-            cache.insert(*txid, tx.clone());
+            if tx.is_some() {
+                cache.insert(*txid, tx.clone());
+            }
             result_map.insert(*txid, tx);
         }
 
@@ -193,13 +223,10 @@ impl BatchRpcClient {
             params: vec![json!(height)],
         };
 
-        let mut headers = HeaderMap::new();
-        headers.insert("Authorization", HeaderValue::from_str(&self.auth).unwrap());
-
         let response = self
             .client
             .post(&self.url)
-            .headers(headers)
+            .headers(self.auth_headers()?)
             .json(&request)
             .send()?;
 
@@ -241,13 +268,10 @@ impl BatchRpcClient {
             params: vec![json!(hash.to_string()), json!(0)],
         };
 
-        let mut headers = HeaderMap::new();
-        headers.insert("Authorization", HeaderValue::from_str(&self.auth).unwrap());
-
         let response = self
             .client
             .post(&self.url)
-            .headers(headers)
+            .headers(self.auth_headers()?)
             .json(&request)
             .send()?;
 
@@ -291,13 +315,10 @@ impl BatchRpcClient {
             params: vec![],
         };
 
-        let mut headers = HeaderMap::new();
-        headers.insert("Authorization", HeaderValue::from_str(&self.auth).unwrap());
-
         let response = self
             .client
             .post(&self.url)
-            .headers(headers)
+            .headers(self.auth_headers()?)
             .json(&request)
             .send()?;
 

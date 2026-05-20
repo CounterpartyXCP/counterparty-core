@@ -1,6 +1,7 @@
 import json
 import re
 import time
+from unittest.mock import patch
 
 import pytest
 from counterpartycore.lib import exceptions
@@ -263,6 +264,58 @@ def test_search_pubkey_in_transactions_bech32(monkeypatch):
     helpers.setup_bitcoinutils("regtest")
 
 
+def test_search_pubkey_in_transactions_p2wsh_multisig(monkeypatch):
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.getrawtransaction",
+        lambda x, y: {
+            "txid": "d4387de0bb04a9952e421caab34104e007f9776ffc3bbff023695f2fdd74b1ce",
+            "hash": "fa6c4b77b577ec45ed56cbf0fdb575fdda574f5935bbef7366f2cb58d6346f87",
+            "version": 1,
+            "size": 382,
+            "locktime": 0,
+            "vin": [
+                {
+                    "txid": "f274037b92cd0a90d7cf6f34be025d02065e7d032980edf955a3f2c66c278bfb",
+                    "vout": 1,
+                    "scriptSig": {"asm": "", "hex": ""},
+                    "txinwitness": [
+                        "",
+                        "30440220776030e83ebd30b9461169df4e6b9e4ff63f940564fdc5691db220a7c12387720220639257fe96ea4fb64128a110f16a5b3e6fab84cd843f4686cd405be9fe783e9f01",
+                        "3044022042e06cf65a08aac0ee6d4db4eb1bae5518628583ca9e942120bb22c99c6b070e02204011dddbe64e8f14a23c8182dfe78e814d3deb3ac704d94ef19b38507a200d4701",
+                        "52210209d604337bcb785d1fba1fec16556e6ed914d12ee08bc8a87e7fe4f81607c3fd210387d133ae86d83ae28c6615882b88e53cbcf9cad9aaeaf55816dfba9b55ee4f3a21024cc0c0ec7d678c70606cf07c373f1b7db86d0f41f404cea48512b37379395a6f53ae",
+                    ],
+                    "sequence": 4294967293,
+                }
+            ],
+            "vout": [
+                {
+                    "value": 0.00102146,
+                    "n": 0,
+                    "scriptPubKey": {
+                        "address": "14xyFwHGmrGJjGtMbjJoJHqrLZvf6MibYU",
+                        "asm": "OP_DUP OP_HASH160 2b7e3776eb8e160e2fd628e8d1cacbe44cec013e OP_EQUALVERIFY OP_CHECKSIG",
+                        "hex": "76a9142b7e3776eb8e160e2fd628e8d1cacbe44cec013e88ac",
+                        "type": "pubkeyhash",
+                    },
+                },
+            ],
+            "hex": "01000000000101fb8b276cc6f2a355f9ed8029037d5e06025d02be346fcfd7900acd927b0374f20100000000fdffffff02028f0100000000001976a9142b7e3776eb8e160e2fd628e8d1cacbe44cec013e88ac152d2800000000002200203722913c3426c12d25a4747f93f351e4f00c96a1514b2d6f7c46cef1a463808c04004730440220776030e83ebd30b9461169df4e6b9e4ff63f940564fdc5691db220a7c12387720220639257fe96ea4fb64128a110f16a5b3e6fab84cd843f4686cd405be9fe783e9f01473044022042e06cf65a08aac0ee6d4db4eb1bae5518628583ca9e942120bb22c99c6b070e02204011dddbe64e8f14a23c8182dfe78e814d3deb3ac704d94ef19b38507a200d47016952210209d604337bcb785d1fba1fec16556e6ed914d12ee08bc8a87e7fe4f81607c3fd210387d133ae86d83ae28c6615882b88e53cbcf9cad9aaeaf55816dfba9b55ee4f3a21024cc0c0ec7d678c70606cf07c373f1b7db86d0f41f404cea48512b37379395a6f53ae00000000",
+        },
+    )
+
+    helpers.setup_bitcoinutils("mainnet")
+
+    assert (
+        bitcoind.search_pubkey_in_transactions(
+            "14xyFwHGmrGJjGtMbjJoJHqrLZvf6MibYU",
+            ["d4387de0bb04a9952e421caab34104e007f9776ffc3bbff023695f2fdd74b1ce"],
+        )
+        is None
+    )
+
+    helpers.setup_bitcoinutils("regtest")
+
+
 def test_search_pubkey_in_transactions_p2pkh(monkeypatch):
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.getrawtransaction",
@@ -447,3 +500,98 @@ def test_get_vin_info_legacy_error(monkeypatch):
 
     with pytest.raises(exceptions.DecodeError, match="vin not found"):
         bitcoind.get_vin_info_legacy({"hash": "hash", "n": 0})
+
+
+def test_get_vin_info_legacy_error_logs_warning(monkeypatch):
+    """When a parent transaction cannot be found, a warning must be logged
+    so operators can diagnose why a Counterparty transaction was skipped."""
+
+    def raise_error(*args, **kwargs):
+        raise exceptions.BitcoindRPCError
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+
+    parent_txid = "fba2aa8d334a6c74eaa8b0998be6c29477ff4d927449e9a07efa0ec374fc73bf"
+    with patch.object(bitcoind.logger, "warning") as mock_warning:
+        with pytest.raises(exceptions.DecodeError, match="vin not found"):
+            bitcoind.get_vin_info_legacy({"hash": parent_txid, "n": 1})
+
+    mock_warning.assert_called_once()
+    logged_message = mock_warning.call_args[0][0] % mock_warning.call_args[0][1:]
+    assert parent_txid in logged_message
+    assert "txindex" in logged_message
+
+
+def test_get_vin_info_falls_back_to_legacy(monkeypatch):
+    """When Rust VIN info is None, get_vin_info falls back to legacy lookup."""
+    monkeypatch.setattr(
+        bitcoind,
+        "get_decoded_transaction",
+        lambda *args, **kwargs: {
+            "vout": [
+                {
+                    "value": 10554,
+                    "script_pub_key": "76a9140132c2887759f123166b3048b5ec599ea0d5b8f988ac",
+                }
+            ]
+        },
+    )
+    vin = {
+        "hash": "01f38776b07990118cb3720b9143adbde3725af12e0394cdd02c36458c6b3a03",
+        "n": 0,
+        "info": None,
+    }
+    value, script_pub_key, is_segwit = original_get_vin_info(vin)
+    assert value == 10554
+    assert script_pub_key == "76a9140132c2887759f123166b3048b5ec599ea0d5b8f988ac"
+    assert is_segwit is False
+
+
+def test_get_vin_info_fallback_also_fails(monkeypatch):
+    """When Rust VIN info is None AND the legacy fallback also fails,
+    a warning is logged and DecodeError is raised. This is the scenario
+    that caused a transaction to be silently skipped on a user's server."""
+
+    def raise_error(*args, **kwargs):
+        raise exceptions.BitcoindRPCError("No such mempool or blockchain transaction")
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+
+    parent_txid = "01f38776b07990118cb3720b9143adbde3725af12e0394cdd02c36458c6b3a03"
+    vin_without_info = {"hash": parent_txid, "n": 1, "info": None}
+
+    with patch.object(bitcoind.logger, "warning") as mock_warning:
+        with pytest.raises(exceptions.DecodeError, match="vin not found"):
+            original_get_vin_info(vin_without_info)
+
+    mock_warning.assert_called_once()
+    logged_message = mock_warning.call_args[0][0] % mock_warning.call_args[0][1:]
+    assert parent_txid in logged_message
+
+
+def test_reset_caches_clears_dicts():
+    """reset_caches() must clear TRANSACTIONS_CACHE and BLOCKS_CACHE so that
+    a reorg does not leave block-indexed deserialised data behind."""
+    bitcoind.TRANSACTIONS_CACHE["sentinel_tx"] = {"foo": "bar"}
+    bitcoind.BLOCKS_CACHE[123] = {"baz": "qux"}
+
+    bitcoind.reset_caches()
+
+    assert "sentinel_tx" not in bitcoind.TRANSACTIONS_CACHE
+    assert 123 not in bitcoind.BLOCKS_CACHE
+
+
+def test_reset_caches_handles_missing_lru_cache_clear(monkeypatch):
+    """Test fixtures monkey-patch lru_cache wrappers with plain functions
+    that don't carry a `cache_clear` attribute. reset_caches() must guard
+    against this with hasattr() instead of raising AttributeError."""
+
+    def fake_func(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(bitcoind, "getrawtransaction", fake_func)
+    monkeypatch.setattr(bitcoind, "get_utxo_address_and_value", fake_func)
+
+    assert not hasattr(fake_func, "cache_clear")
+
+    bitcoind.reset_caches()

@@ -3,6 +3,7 @@ from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger import blocks, caches
 from counterpartycore.lib.messages import attach
 from counterpartycore.lib.parser import gettxinfo
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 DUMMY_UTXO = 64 * "0" + ":1"
 
@@ -323,3 +324,57 @@ def test_cache_invalid_attach(
     caches.UTXOBalancesCache.reset_instance()
     # check if the utxo is still in the cache
     assert caches.UTXOBalancesCache(ledger_db).has_balance(utxo)
+
+
+def test_attach_to_op_return_at_vout_0_with_gate_OFF_legacy_locks_asset(
+    ledger_db, blockchain_mock, defaults, test_helpers
+):
+    """Pre-fix legacy behavior: attach.py:188 wrote
+        if op_return_output and destination_vout == op_return_output:
+    which short-circuits when op_return_output == 0 (Python-falsy 0).
+    With OP_RETURN at vout 0 and destination_vout=0, the OP_RETURN check
+    is silently skipped and the asset gets attached to the OP_RETURN
+    output -- permanently locked.
+
+    This test pins the legacy buggy behavior so the gated fix cannot
+    accidentally change consensus for past blocks (mainnet has 0
+    historical occurrences of this case but ANY future tx that hits the
+    pattern would diverge between patched/unpatched nodes without the
+    gate).
+    """
+    address_0 = defaults["addresses"][0]
+    # OP_RETURN at vout 0; message body destination_vout=0 (attach to vout 0)
+    tx = blockchain_mock.dummy_tx(ledger_db, address_0, op_return_position=0)
+    message = b"XCP|100|0"
+    with ProtocolChangesDisabled(["fix_attach_op_return_check"]):
+        attach.parse(ledger_db, tx, message)
+    # Legacy: status=valid, asset attached to OP_RETURN at vout 0 (locked)
+    row = ledger_db.execute(
+        "SELECT status, destination FROM sends WHERE tx_hash = ?", (tx["tx_hash"],)
+    ).fetchone()
+    assert row is not None
+    assert row["status"] == "valid", (
+        f"Pre-fix legacy behavior violated: expected valid (asset locked at OP_RETURN), got {row['status']}"
+    )
+    assert row["destination"] == f"{tx['tx_hash']}:0"
+
+
+def test_attach_to_op_return_at_vout_0_with_gate_ON_rejects(ledger_db, blockchain_mock, defaults):
+    """Post-fix behavior: with `fix_attach_op_return_check` ON, the
+    OP_RETURN check uses `is not None` instead of Python truthiness, so
+    op_return_output == 0 no longer silently passes. The attach is
+    rejected with status "invalid: destination vout is an OP_RETURN
+    output" and no asset is locked.
+    """
+    address_0 = defaults["addresses"][0]
+    tx = blockchain_mock.dummy_tx(ledger_db, address_0, op_return_position=0)
+    message = b"XCP|100|0"
+    # Gate is ON by default in tests (signet activation = 0)
+    attach.parse(ledger_db, tx, message)
+    row = ledger_db.execute(
+        "SELECT status FROM sends WHERE tx_hash = ?", (tx["tx_hash"],)
+    ).fetchone()
+    assert row is not None
+    assert "OP_RETURN" in row["status"], (
+        f"Fix did not reject: expected status mentioning OP_RETURN, got {row['status']}"
+    )

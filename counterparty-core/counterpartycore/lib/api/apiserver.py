@@ -6,7 +6,6 @@ import signal
 import sys
 import threading
 import time
-from collections import OrderedDict
 from multiprocessing import Process, Value
 
 import flask
@@ -20,6 +19,7 @@ from sentry_sdk import start_span as start_sentry_span
 
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import apiwatcher, dbbuilder, healthz, queries, verbose, wsgi
+from counterpartycore.lib.api.blockcache import BLOCK_CACHE, MAX_BLOCK_CACHE_SIZE
 from counterpartycore.lib.api.routes import ROUTES, function_needs_db
 from counterpartycore.lib.cli.initialise import initialise_log_and_config
 from counterpartycore.lib.cli.log import init_api_access_log
@@ -34,9 +34,6 @@ multiprocessing.set_start_method("spawn", force=True)
 logger = logging.getLogger(config.LOGGER_NAME)
 auth = HTTPBasicAuth()
 
-
-BLOCK_CACHE = OrderedDict()
-MAX_BLOCK_CACHE_SIZE = 1000
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BLUEPRINT_FILEPATH = os.path.join(CURR_DIR, "..", "..", "..", "..", "apiary.apib")
@@ -220,13 +217,20 @@ def prepare_args(route, **kwargs):
             function_args[arg_name] = str_arg
 
     for arg_name, str_arg in function_args.items():
-        if str_arg is not None:
+        if str_arg is not None and str_arg != "":
             if arg_name.startswith("address"):
                 addresses = str_arg.split(",")
                 if not all(address.is_valid_address(addr) for addr in addresses):
                     raise ValueError(f"Invalid address: {str_arg}")
             elif arg_name.endswith("_hash") and not helpers.is_valid_tx_hash(str_arg):
                 raise ValueError(f"Invalid transaction hash: {str_arg}")
+
+    # Cap limit parameter to API_LIMIT_ROWS
+    if "limit" in function_args and function_args["limit"] is not None:
+        if function_args["limit"] <= 0:
+            raise ValueError("Limit must be greater than 0")
+        if config.API_LIMIT_ROWS > 0 and function_args["limit"] > config.API_LIMIT_ROWS:
+            function_args["limit"] = config.API_LIMIT_ROWS
 
     return function_args
 

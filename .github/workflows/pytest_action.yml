@@ -72,11 +72,19 @@ jobs:
           sudo cp bitcoin-28.0/bin/bitcoind /usr/local/bin/bitcoind
           sudo cp bitcoin-28.0/bin/bitcoin-wallet /usr/local/bin/bitcoin-wallet
           npm install dredd --global
-          rustup toolchain install 1.83-x86_64-unknown-linux-gnu
           git clone https://github.com/mempool/electrs && cd electrs
-          cargo install --path=.
+          rustup toolchain install nightly
+          cargo +nightly update
+          cargo +nightly install --path=.
 
       - name: Run tests
+        # `BACKEND_API_KEY` (when defined as a repo/org secret) lifts the
+        # per-IP rate-limit on the public signet/testnet4 RPC proxy from
+        # 120 req/min to the premium 1000 req/min bucket, which is what
+        # the bootstrap+catchup integration tests need to avoid hanging
+        # on 429-induced retry loops in `getrawtransaction`.
+        env:
+          BACKEND_API_KEY: ${{ secrets.BACKEND_API_KEY }}
         run: |
           cd counterparty-core
           hatch run pytest counterpartycore/test/${{ inputs.test-path }} \

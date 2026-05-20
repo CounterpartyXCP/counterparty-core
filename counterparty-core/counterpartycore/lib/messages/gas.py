@@ -25,9 +25,9 @@ def get_transaction_count_by_block(db, transaction_id, block_index):
     return count["count"]
 
 
-def increment_counter(db, transaction_id, block_index):
+def increment_counter(db, transaction_id, block_index, count=1):
     current_count = get_transaction_count_by_block(db, transaction_id, block_index)
-    new_count = current_count + 1
+    new_count = current_count + count
 
     bindings = {
         "block_index": block_index,
@@ -109,6 +109,10 @@ def calculate_fee(x: int, a: int, b: int, base_fee: int, k: int):
 
     def sigmoid(t):
         midpoint = (b - a) / 2 + a
+        # math.exp is libm-backed and last-ulp drift varies across platforms.
+        # int(fee * UNIT) at base_fee=1 absorbs the ~5.55e-9 sat drift via
+        # the floor. If base_fee ever exceeds ~1.8e8, switch to (x).exp()
+        # under a fixed-prec localcontext to keep consensus deterministic.
         return base_fee / (1 + D(math.exp(-k * (t - midpoint))))
 
     if x <= a:

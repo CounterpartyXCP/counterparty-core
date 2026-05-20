@@ -5,6 +5,7 @@ from counterpartycore.lib import (
     backend,
     config,
     exceptions,
+    ledger,
     messages,
 )
 from counterpartycore.lib.api import composer
@@ -265,7 +266,7 @@ def compose_mpma(
         if not quantity.isdigit():
             raise exceptions.ComposeError("Quantity must be an integer")
     quantity_list = [int(quantity) for quantity in quantity_list]
-    asset_dest_quant_list = list(zip(asset_list, destination_list, quantity_list))
+    asset_dest_quant_list = list(zip(asset_list, destination_list, quantity_list, strict=True))
 
     if memos:
         if not isinstance(memos, list):
@@ -305,7 +306,7 @@ def compose_order(
     :param give_quantity: The quantity of the asset that will be given (in satoshis, hence integer) (e.g. 1000)
     :param get_asset: The asset that will be received in the trade (e.g. $ASSET_1)
     :param get_quantity: The quantity of the asset that will be received (in satoshis, hence integer) (e.g. 1000)
-    :param expiration: The number of blocks for which the order should be valid (e.g. 100)
+    :param expiration: The number of blocks for which the order should be valid. Use 0 for indefinite (open until filled or cancelled). (e.g. 100)
     :param fee_required: The miners’ fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though) (e.g. 100)
     """
     params = {
@@ -414,6 +415,7 @@ def compose_fairminter(
     lot_price: int = 0,
     lot_size: int = 1,
     max_mint_per_tx: int = 0,
+    max_mint_per_address: int = 0,
     hard_cap: int = 0,
     premint_quantity: int = 0,
     start_block: int = 0,
@@ -439,6 +441,7 @@ def compose_fairminter(
     :param lot_price: Formerly `price`. The price in XCP of the asset to issue (e.g. 10)
     :param lot_size: Formerly `quantity_by_price`. The quantity of asset to mint per `price` paid
     :param max_mint_per_tx: Amount minted if price is equal to 0; otherwise, maximum amount of asset that can be minted in a single transaction; if 0, there is no limit
+    :param max_mint_per_address: Maximum amount of asset that can be minted by a single address; if 0, there is no limit
     :param hard_cap: The maximum amount of asset that can be minted; if 0 there is no limit
     :param premint_quantity: Amount of asset to be minted when the sale starts, if 0, no premint; preminted assets are sent to the source of the transaction
     :param start_block: The block at which the sale starts
@@ -465,6 +468,7 @@ def compose_fairminter(
         "price": price_arg,
         "quantity_by_price": quantity_by_price_arg,
         "max_mint_per_tx": max_mint_per_tx,
+        "max_mint_per_address": max_mint_per_address,
         "hard_cap": hard_cap,
         "premint_quantity": premint_quantity,
         "start_block": start_block,
@@ -491,6 +495,95 @@ def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construc
     """
     params = {"source": address, "asset": asset, "quantity": quantity}
     return composer.compose_transaction(db, "fairmint", params, construct_params)
+
+
+def compose_pooldeposit(
+    db,
+    address: str,
+    asset_a: str = None,
+    asset_b: str = None,
+    quantity_a: int = None,
+    quantity_b: int = None,
+    min_lp_quantity: int = 0,
+    lp_asset: str = None,
+    **construct_params,
+):
+    """
+    Composes a transaction to deposit liquidity into an AMM pool.
+    For the first deposit, both quantities set the initial price.
+    For subsequent deposits, quantities are maximums; only proportional amounts are debited.
+    Use the quote/deposit endpoint to get the current ratio before composing.
+    :param address: The address providing liquidity (e.g. $ADDRESS_1)
+    :param asset_a: The first asset in the pair (e.g. XCP)
+    :param asset_b: The second asset in the pair (e.g. POOLTEST)
+    :param quantity_a: The quantity of asset_a to deposit (in satoshis, hence integer) (e.g. 1000000)
+    :param quantity_b: The quantity of asset_b to deposit (in satoshis, hence integer) (e.g. 1000000)
+    :param min_lp_quantity: Minimum LP tokens to receive; reverts if slippage exceeds this (e.g. 0)
+    :param lp_asset: Optional LP asset name for first deposit; auto-generated if omitted
+    """
+    params = {
+        "source": address,
+        "asset_a": asset_a,
+        "asset_b": asset_b,
+        "quantity_a": quantity_a,
+        "quantity_b": quantity_b,
+        "min_lp_quantity": min_lp_quantity,
+        "lp_asset": lp_asset,
+    }
+    return composer.compose_transaction(db, "pooldeposit", params, construct_params)
+
+
+def get_pool_deposit_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
+    """
+    Returns the estimated XCP fee for a pool deposit transaction.
+    :param address: The address depositing liquidity (e.g. $ADDRESS_1)
+    """
+    return gas.get_transaction_fee(db, 120, CurrentState().current_block_index())
+
+
+def compose_poolwithdraw(
+    db,
+    address: str,
+    asset_a: str = None,
+    asset_b: str = None,
+    quantity: int = None,
+    min_quantity_a: int = 0,
+    min_quantity_b: int = 0,
+    lp_asset: str = None,
+    **construct_params,
+):
+    """
+    Composes a transaction to withdraw liquidity from an AMM pool.
+    :param address: The address withdrawing liquidity (e.g. $ADDRESS_1)
+    :param asset_a: The first asset in the pair (e.g. XCP)
+    :param asset_b: The second asset in the pair (e.g. POOLTEST)
+    :param quantity: The quantity of LP tokens to destroy (in satoshis, hence integer) (e.g. 1000000)
+    :param min_quantity_a: Minimum asset_a to receive; reverts if slippage exceeds this (e.g. 0)
+    :param min_quantity_b: Minimum asset_b to receive; reverts if slippage exceeds this (e.g. 0)
+    :param lp_asset: The LP token asset name (alternative to asset_a/asset_b)
+    """
+    if lp_asset and not asset_a and not asset_b:
+        pool = ledger.markets.get_pool_by_lp_asset(db, lp_asset)
+        if not pool:
+            raise exceptions.ComposeError(f"no pool found for LP asset {lp_asset}")
+        asset_a, asset_b = pool["asset_a"], pool["asset_b"]
+    params = {
+        "source": address,
+        "asset_a": asset_a,
+        "asset_b": asset_b,
+        "quantity": quantity,
+        "min_quantity_a": min_quantity_a,
+        "min_quantity_b": min_quantity_b,
+    }
+    return composer.compose_transaction(db, "poolwithdraw", params, construct_params)
+
+
+def get_pool_withdraw_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
+    """
+    Returns the estimated XCP fee for a pool withdrawal transaction.
+    :param address: The address withdrawing liquidity (e.g. $ADDRESS_1)
+    """
+    return gas.get_transaction_fee(db, 121, CurrentState().current_block_index())
 
 
 def compose_attach(
@@ -745,6 +838,14 @@ def unpack(db, datahex: str, block_index: int = None):
         elif message_type_id == messages.detach.ID:
             message_type_name = "detach"
             message_data = messages.detach.unpack(message, return_dict=True)
+        # Pool Deposit
+        elif message_type_id == messages.pooldeposit.ID:
+            message_type_name = "pooldeposit"
+            message_data = messages.pooldeposit.unpack(db, message, return_dict=True)
+        # Pool Withdraw
+        elif message_type_id == messages.poolwithdraw.ID:
+            message_type_name = "poolwithdraw"
+            message_data = messages.poolwithdraw.unpack(db, message, return_dict=True)
     except (exceptions.UnpackError, UnicodeDecodeError) as e:
         message_data = {"error": str(e)}
 

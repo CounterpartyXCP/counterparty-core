@@ -4,7 +4,7 @@ import threading
 import time
 from multiprocessing import Value
 
-from counterpartycore.lib import backend, config
+from counterpartycore.lib import backend, config, exceptions
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -25,7 +25,13 @@ class BackendHeight(threading.Thread):
         try:
             while not self.stop_event.is_set():
                 if time.time() - self.last_check > BACKEND_HEIGHT_REFRSH_INTERVAL:
-                    self.refresh()
+                    try:
+                        self.refresh()
+                    except exceptions.BitcoindRPCError as e:
+                        if self.stop_event.is_set():
+                            # Shutdown requested, exit gracefully
+                            break
+                        logger.warning("Error refreshing backend height: %s", e)
                 self.stop_event.wait(0.1)
         finally:
             logger.info("BackendHeight Thread stopped.")
@@ -34,11 +40,13 @@ class BackendHeight(threading.Thread):
         if config.API_ONLY:
             return
         logger.trace("Updating backend height...")
-        tip = backend.bitcoind.get_chain_tip()
-        block_count = backend.bitcoind.getblockcount()
-        value = int(tip * 10e8 + block_count)  # let use only one shared value
-        self.shared_backend_height.value = value
-        self.last_check = time.time()
+        try:
+            tip = backend.bitcoind.get_chain_tip()
+            block_count = backend.bitcoind.getblockcount()
+            value = int(tip * 10e8 + block_count)  # let use only one shared value
+            self.shared_backend_height.value = value
+        finally:
+            self.last_check = time.time()
 
     def stop(self):
         self.stop_event.set()

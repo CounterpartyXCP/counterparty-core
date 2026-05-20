@@ -44,6 +44,9 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                 "rpc_address": rpc_address,
                 "rpc_user": config.BACKEND_USER,
                 "rpc_password": config.BACKEND_PASSWORD,
+                # Optional `X-API-Key` header for Cloud-Armor-style rate
+                # limiters; mirrors the Python `BACKEND_API_KEY` setting.
+                "rpc_api_key": getattr(config, "BACKEND_API_KEY", None) or "",
                 "db_dir": config.FETCHER_DB,
                 "log_file": config.FETCHER_LOG,
                 "json_format": config.JSON_LOGS,
@@ -192,8 +195,7 @@ class RSFetcher(metaclass=helpers.SingletonMeta):
                     self.stopped_event.set()
                     self.running = False
                     return
-                else:
-                    raise e
+                raise e
         self.running = False
         logger.debug("Prefetching blocks stopped.")
 

@@ -9,7 +9,7 @@ import apsw
 def compare_strings(string1, string2):
     """Compare strings diff-style."""
     diff = list(difflib.unified_diff(string1.splitlines(1), string2.splitlines(1), n=0))
-    if len(diff):
+    if diff:
         print(f"\n{len(diff)} Differences:")
         print("\n".join(diff))
         print(f"\n{len(diff)} differences")
@@ -149,7 +149,7 @@ def get_last_block(database_file_1, database_file_2):
 database_file_1 = sys.argv[1]
 database_file_2 = sys.argv[2]
 
-LAST_BLOCK = 99277
+LAST_BLOCK = 939011
 # compare_ledger(database_file_1, database_file_2)
 check_hashes(database_file_1, database_file_2, "txlist_hash")
 # get_checkpoints(database_file_1)
