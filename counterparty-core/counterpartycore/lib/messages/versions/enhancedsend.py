@@ -164,7 +164,10 @@ def compose(
     if memo is None:
         memo_bytes = b""
     elif memo_is_hex:
-        memo_bytes = bytes.fromhex(memo)
+        try:
+            memo_bytes = bytes.fromhex(memo)
+        except ValueError as exc:
+            raise exceptions.ComposeError(["invalid memo hex"]) from exc
     else:
         memo_bytes = memo.encode("utf-8")
         memo_bytes = struct.pack(f">{len(memo_bytes)}s", memo_bytes)
