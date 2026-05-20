@@ -37,6 +37,14 @@ def test_compose(ledger_db, defaults):
         cancel.compose(ledger_db, closed_bet["source"], closed_bet["tx_hash"])
 
 
+def test_compose_rejects_invalid_offer_hash_with_skip_validation(ledger_db, defaults):
+    with pytest.raises(exceptions.ComposeError, match="invalid offer hash"):
+        cancel.compose(ledger_db, defaults["addresses"][0], "not-hex", skip_validation=True)
+
+    with pytest.raises(exceptions.ComposeError, match="invalid offer hash"):
+        cancel.compose(ledger_db, defaults["addresses"][0], "z" * 64, skip_validation=True)
+
+
 def test_unpack_invalid_length():
     offer_hash, status = cancel.unpack(b"short")
     assert offer_hash is None

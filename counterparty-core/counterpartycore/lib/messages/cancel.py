@@ -49,7 +49,14 @@ def compose(db, source: str, offer_hash: str, skip_validation: bool = False):
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
-    offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, "utf-8"))
+    if len(offer_hash) != 64:
+        raise exceptions.ComposeError(["invalid offer hash"])
+
+    try:
+        offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, "utf-8"))
+    except binascii.Error as exc:
+        raise exceptions.ComposeError(["invalid offer hash"]) from exc
+
     data = messagetype.pack(ID)
     data += struct.pack(FORMAT, offer_hash_bytes)
     return (source, [], data)
