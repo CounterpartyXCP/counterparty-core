@@ -83,6 +83,20 @@ def test_validate_no_order_match(ledger_db):
     assert "no such order match" in problems[0]
 
 
+@pytest.mark.parametrize(
+    "order_match_id",
+    [
+        "",
+        "short",
+        "0" * 64 + "-" + "1" * 64,
+        "0" * 64 + "_" + "g" * 64,
+    ],
+)
+def test_compose_rejects_malformed_order_match_id(ledger_db, defaults, order_match_id):
+    with pytest.raises(exceptions.ComposeError, match="invalid order match id"):
+        btcpay.compose(ledger_db, defaults["addresses"][0], order_match_id)
+
+
 def test_validate_expired_order_match(ledger_db, defaults, monkeypatch):
     """Test btcpay validate with an expired order match."""
     fake_order_match_id = "abc_def"
