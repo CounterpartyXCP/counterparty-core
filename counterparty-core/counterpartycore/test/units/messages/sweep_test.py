@@ -109,6 +109,9 @@ def test_compose(ledger_db, defaults, monkeypatch):
             b"\x04o\x9c\x8d\x1fT\x05E\x1d\xe6\x07\x0b\xf1\xdb\x86\xabj\xcc\xb4\x95\xb6%\x07\xca\xfe\xba\xbe",
         )
 
+        with pytest.raises(exceptions.ComposeError, match="invalid memo hex"):
+            sweep.compose(ledger_db, defaults["addresses"][6], defaults["addresses"][5], 7, "Z")
+
         monkeypatch.setattr(
             "counterpartycore.lib.messages.sweep.get_total_fee",
             lambda db, source, block_index: 1000000000000,
