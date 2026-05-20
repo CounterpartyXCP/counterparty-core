@@ -16,10 +16,10 @@ from io import StringIO
 import requests
 import sh
 from arc4 import ARC4
-from bitcoinutils.keys import P2wpkhAddress
+from bitcoinutils.keys import P2wpkhAddress, PrivateKey
 from bitcoinutils.script import Script, b_to_h
 from bitcoinutils.setup import setup
-from bitcoinutils.transactions import Transaction, TxInput, TxOutput
+from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.utils import database
 
@@ -436,6 +436,7 @@ class RegtestNode:
             "-minrelaytxfee=0",
             "-blockmintxfee=0",
             "-mempoolfullrbf",
+            "-deprecatedrpc=create_bdb",
             f"-datadir={self.datadir}",
             _bg=True,
             _out=sys.stdout,
@@ -460,6 +461,7 @@ class RegtestNode:
             "-blockmintxfee=0",
             "-bind=127.0.0.1:2223=onion",
             "-mempoolfullrbf",
+            "-deprecatedrpc=create_bdb",
             _bg=True,
             _out=sys.stdout,
         )
@@ -517,7 +519,11 @@ class RegtestNode:
 
         self.start_bitcoin_node()
 
-        self.bitcoin_cli("createwallet", WALLET_NAME)
+        # legacy wallet so dumpprivkey is available for local SegWit signing
+        # in test_transaction_chaining (descriptor wallets do not expose privkeys)
+        self.bitcoin_cli(
+            "createwallet", WALLET_NAME, False, False, "", False, False
+        )
         print("Wallet created")
 
         self.generate_addresses_with_btc()
@@ -847,7 +853,9 @@ class RegtestNode:
         self.start_and_wait_second_node()
 
         # create a new address on the Bitcoin node not connected to Counterparty server
-        self.bitcoin_cli_2("createwallet", WALLET_NAME)
+        self.bitcoin_cli_2(
+            "createwallet", WALLET_NAME, False, False, "", False, False
+        )
         new_address = self.bitcoin_wallet_2("getnewaddress", WALLET_NAME, "bech32").strip()
         # send 0.1 BTC to the new address
         self.bitcoin_wallet("sendtoaddress", new_address, 0.1)
@@ -1009,6 +1017,24 @@ class RegtestNode:
 
         print("Detach with a single OP_RETURN output transaction test successful")
 
+    def sign_p2wpkh_input_locally(self, raw_tx_hex, signer_address, input_value_sats):
+        # bypass signrawtransactionwithwallet to avoid intermittent NULLFAIL when
+        # chaining unbroadcast inputs — sign the single P2WPKH input ourselves
+        wif = self.bitcoin_wallet("dumpprivkey", signer_address).strip()
+        priv_key = PrivateKey(wif=wif)
+        pub_key = priv_key.get_public_key()
+        pub_key_hex = pub_key.to_hex()
+        pub_key_hash = pub_key.to_hash160()
+        script_code = Script(
+            ["OP_DUP", "OP_HASH160", pub_key_hash, "OP_EQUALVERIFY", "OP_CHECKSIG"]
+        )
+        tx = Transaction.from_raw(raw_tx_hex)
+        # mark as segwit so serialize() emits the witness marker+flag and stack
+        tx.has_segwit = True
+        sig = priv_key.sign_segwit_input(tx, 0, script_code, input_value_sats)
+        tx.witnesses = [TxWitnessInput([sig, pub_key_hex])]
+        return tx.serialize()
+
     def test_transaction_chaining(self):
         print("Test transaction chaining...")
         # source address
@@ -1059,24 +1085,12 @@ class RegtestNode:
         result = self.api_call(api_call_url)
         raw_transaction_2 = result["result"]["rawtransaction"]
 
-        # sign transaction
-        # format the amount as an exact BTC decimal string — going through
-        # float would introduce IEEE-754 rounding that breaks the SegWit
-        # signature (BIP143 commits to the input amount)
-        quot, rem = divmod(value_1, config.UNIT)
-        prevtx = [
-            {
-                "txid": txid_1,
-                "vout": vout_1,
-                "scriptPubKey": pubkey_source,
-                "amount": D(f"{quot}.{rem:08d}"),
-            }
-        ]
-        prevtx = json.dumps(prevtx, default=str)
-        signed_transaction_2_json = json.loads(
-            self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_2, prevtx).strip()
+        # sign transaction locally to avoid the intermittent SegWit signature
+        # mismatch we hit when feeding prevtx info to signrawtransactionwithwallet
+        # for an unbroadcast input
+        signed_transaction_2 = self.sign_p2wpkh_input_locally(
+            raw_transaction_2, source_address, value_1
         )
-        signed_transaction_2 = signed_transaction_2_json["hex"]
 
         # get utxo info from the second transaction
         decoded_transaction_2 = json.loads(
@@ -1101,20 +1115,10 @@ class RegtestNode:
         result = self.api_call(api_call_url)
         raw_transaction_3 = result["result"]["rawtransaction"]
 
-        # sign transaction
-        quot, rem = divmod(value_2, config.UNIT)
-        prevtx = [
-            {
-                "txid": txid_2,
-                "vout": 0,
-                "scriptPubKey": pubkey_new_address,
-                "amount": D(f"{quot}.{rem:08d}"),
-            }
-        ]
-        prevtx = json.dumps(prevtx, default=str)
-        signed_transaction_3 = json.loads(
-            self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_3, prevtx).strip()
-        )["hex"]
+        # sign transaction locally (see sign_p2wpkh_input_locally for rationale)
+        signed_transaction_3 = self.sign_p2wpkh_input_locally(
+            raw_transaction_3, new_address, value_2
+        )
 
         # broadcast the three transactions
         tx_hash, block_hash, block_time = self.broadcast_transaction(
