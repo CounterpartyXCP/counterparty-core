@@ -1031,9 +1031,17 @@ class RegtestNode:
         raw_transaction_1 = result["result"]["rawtransaction"]
 
         # sign transaction
-        signed_transaction_1 = json.loads(
+        signed_transaction_1_json = json.loads(
             self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_1).strip()
-        )["hex"]
+        )
+        print(
+            f"Sign tx1: complete={signed_transaction_1_json.get('complete')} "
+            f"errors={signed_transaction_1_json.get('errors')}"
+        )
+        assert signed_transaction_1_json["complete"], (
+            f"tx1 sign incomplete: {signed_transaction_1_json.get('errors')}"
+        )
+        signed_transaction_1 = signed_transaction_1_json["hex"]
 
         # get utxo info from the transaction
         decoded_transaction_1 = json.loads(
@@ -1044,6 +1052,18 @@ class RegtestNode:
         # use Decimal to avoid float rounding errors that would produce an
         # off-by-one sat value and a SegWit signature mismatch on broadcast
         value_1 = int(D(str(decoded_transaction_1["vout"][vout_1]["value"])) * D(config.UNIT))
+        print(
+            f"tx1 txid={txid_1} vout_1={vout_1} value_1={value_1} sats "
+            f"({value_1 / D(config.UNIT)} BTC) nvout={len(decoded_transaction_1['vout'])}"
+        )
+
+        # broadcast tx1 BEFORE signing tx2 so the wallet sees tx1's UTXOs in its
+        # mempool view — this avoids intermittent BIP143 signature mismatches
+        # observed when signing tx2 offline via `prevtx`
+        tx_hash_1, _, _ = self.broadcast_transaction(
+            signed_transaction_1, no_confirmation=True, dont_wait_mempool=True
+        )
+        print(f"Transaction 1 sent: {tx_hash_1}")
 
         #####   Send BTC to new address using the change from the previous transaction #####
 
@@ -1076,6 +1096,13 @@ class RegtestNode:
         signed_transaction_2_json = json.loads(
             self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_2, prevtx).strip()
         )
+        print(
+            f"Sign tx2: complete={signed_transaction_2_json.get('complete')} "
+            f"errors={signed_transaction_2_json.get('errors')} prevtx={prevtx}"
+        )
+        assert signed_transaction_2_json["complete"], (
+            f"tx2 sign incomplete: {signed_transaction_2_json.get('errors')}"
+        )
         signed_transaction_2 = signed_transaction_2_json["hex"]
 
         # get utxo info from the second transaction
@@ -1086,6 +1113,12 @@ class RegtestNode:
         vout_2 = 0  # first vout is the 10000 sats from the previous transaction
         value_2 = int(D(str(decoded_transaction_2["vout"][vout_2]["value"])) * D(config.UNIT))
         assert value_2 == 10000
+        print(f"tx2 txid={txid_2} value_2={value_2} sats")
+
+        tx_hash_2, _, _ = self.broadcast_transaction(
+            signed_transaction_2, no_confirmation=True, dont_wait_mempool=True
+        )
+        print(f"Transaction 2 sent: {tx_hash_2}")
 
         #####   Create a dispenser using the BTC received from the second transactions #####
 
@@ -1112,23 +1145,22 @@ class RegtestNode:
             }
         ]
         prevtx = json.dumps(prevtx, default=str)
-        signed_transaction_3 = json.loads(
+        signed_transaction_3_json = json.loads(
             self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_3, prevtx).strip()
-        )["hex"]
+        )
+        print(
+            f"Sign tx3: complete={signed_transaction_3_json.get('complete')} "
+            f"errors={signed_transaction_3_json.get('errors')} prevtx={prevtx}"
+        )
+        assert signed_transaction_3_json["complete"], (
+            f"tx3 sign incomplete: {signed_transaction_3_json.get('errors')}"
+        )
+        signed_transaction_3 = signed_transaction_3_json["hex"]
 
-        # broadcast the three transactions
-        tx_hash, block_hash, block_time = self.broadcast_transaction(
-            signed_transaction_1, no_confirmation=True, dont_wait_mempool=True
-        )
-        print(f"Transaction 1 sent: {tx_hash}")
-        tx_hash, block_hash, block_time = self.broadcast_transaction(
-            signed_transaction_2, no_confirmation=True, dont_wait_mempool=True
-        )
-        print(f"Transaction 2 sent: {tx_hash}")
-        tx_hash, block_hash, block_time = self.broadcast_transaction(
+        tx_hash_3, _, _ = self.broadcast_transaction(
             signed_transaction_3, no_confirmation=True, dont_wait_mempool=True
         )
-        print(f"Transaction 3 sent: {tx_hash}")
+        print(f"Transaction 3 sent: {tx_hash_3}")
 
         # mine a block
         self.mine_blocks(1)
