@@ -3,7 +3,7 @@ import struct
 import cbor2
 import pytest
 from bitcoin.core import VarIntSerializer
-from counterpartycore.lib import config
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.messages import broadcast
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
@@ -293,6 +293,51 @@ def test_compose(ledger_db, defaults):
             defaults["addresses"][1],
             [],
             b"\x1e\x85\x1aR\xbb3d\x1a\x02\xfa\xf0\x80\x00`FBARFOO",
+        )
+
+
+def test_compose_rejects_unencodable_numeric_fields(ledger_db, defaults):
+    with pytest.raises(exceptions.ComposeError, match="timestamp must be"):
+        broadcast.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            2**32,
+            1,
+            0,
+            "Unit Test",
+            skip_validation=True,
+        )
+
+    with pytest.raises(exceptions.ComposeError, match="value must be finite"):
+        broadcast.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            1588000000,
+            float("nan"),
+            0,
+            "Unit Test",
+        )
+
+    with pytest.raises(exceptions.ComposeError, match="fee fraction must fit"):
+        broadcast.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            1588000000,
+            1,
+            -0.01,
+            "Unit Test",
+            skip_validation=True,
+        )
+
+    with pytest.raises(exceptions.ComposeError, match="fee fraction must be finite"):
+        broadcast.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            1588000000,
+            1,
+            float("inf"),
+            "Unit Test",
+            skip_validation=True,
         )
 
 

@@ -21,6 +21,7 @@ because it is stored as a four‐byte integer, it may not be greater than about
 
 import decimal
 import logging
+import math
 import struct
 from fractions import Fraction
 
@@ -46,6 +47,7 @@ FORMAT = ">IdI"
 LENGTH = 4 + 8 + 4
 ID = 30
 BET_TYPE_ID = {"BullCFD": 0, "BearCFD": 1, "Equal": 2, "NotEqual": 3}
+UINT32_MAX = 2**32 - 1
 
 # NOTE: Pascal strings are used for storing texts for backwards‐compatibility.
 
@@ -70,6 +72,33 @@ def validate_address_options(options):
         raise exceptions.OptionsError("options out of range")
     if not helpers.active_options(config.ADDRESS_OPTION_MAX_VALUE, options):
         raise exceptions.OptionsError("options not possible")
+
+
+def is_finite_number(value):
+    try:
+        return math.isfinite(value)
+    except (TypeError, ValueError):
+        return False
+
+
+def validate_compose_fields(timestamp, value, fee_fraction):
+    problems = []
+
+    if not isinstance(timestamp, int) or timestamp < 0 or timestamp > UINT32_MAX:
+        problems.append("timestamp must be a 32-bit unsigned integer")
+
+    if not is_finite_number(value):
+        problems.append("value must be finite")
+
+    if not is_finite_number(fee_fraction):
+        problems.append("fee fraction must be finite")
+        fee_fraction_int = None
+    else:
+        fee_fraction_int = int(fee_fraction * 1e8)
+        if fee_fraction_int < 0 or fee_fraction_int > UINT32_MAX:
+            problems.append("fee fraction must fit in a 32-bit unsigned integer")
+
+    return problems, fee_fraction_int
 
 
 def validate(db, source, timestamp, value, fee_fraction_int, text, mime_type, block_index=None):
@@ -130,14 +159,18 @@ def compose(
     skip_validation: bool = False,
 ):
     # Store the fee fraction as an integer.
-    fee_fraction_int = int(fee_fraction * 1e8)
-
     broadcast_timestamp = timestamp
     if timestamp == 0:
         broadcasts = ledger.other.get_broadcasts_by_source(db, source, "valid", order_by="ASC")
         if broadcasts:
             last_broadcast = broadcasts[-1]
             broadcast_timestamp = last_broadcast["timestamp"] + 1
+
+    field_problems, fee_fraction_int = validate_compose_fields(
+        broadcast_timestamp, value, fee_fraction
+    )
+    if field_problems:
+        raise exceptions.ComposeError(field_problems)
 
     problems = validate(
         db,
