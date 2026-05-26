@@ -3,7 +3,8 @@ from decimal import Decimal
 import pytest
 from counterpartycore.lib import exceptions
 from counterpartycore.lib.api import apiwatcher
-from counterpartycore.lib.messages import fairminter
+from counterpartycore.lib.messages import fairminter, gas, pooldeposit
+from counterpartycore.test.mocks.bitcoind import BlockchainMock
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
@@ -592,8 +593,6 @@ def test_validate_pool(ledger_db, defaults):
     )
 
     # insufficient XCP balance for pool deposit fee
-    from counterpartycore.lib.messages import gas, pooldeposit
-
     real_get_fee = gas.get_transaction_fee
 
     def mock_fee(db, transaction_id, block_index):
@@ -632,16 +631,12 @@ def test_validate_pool(ledger_db, defaults):
         gas.get_transaction_fee = orig
 
     # pool already exists for asset/XCP
-    from counterpartycore.lib.messages import pooldeposit as pooldeposit_mod
-
     source = defaults["addresses"][0]
-    pool_source, _, deposit_data = pooldeposit_mod.compose(
+    pool_source, _, deposit_data = pooldeposit.compose(
         ledger_db, source, "XCP", "DIVISIBLE", defaults["quantity"] // 4, defaults["quantity"] // 4
     )
-    from counterpartycore.test.mocks.bitcoind import BlockchainMock
-
     tx = BlockchainMock().dummy_tx(ledger_db, source)
-    pooldeposit_mod.parse(ledger_db, tx, deposit_data[1:])
+    pooldeposit.parse(ledger_db, tx, deposit_data[1:])
 
     assert "pool already exists for DIVISIBLE/XCP" in fairminter.validate(
         ledger_db,
@@ -697,8 +692,6 @@ def test_validate_pool(ledger_db, defaults):
     )
 
     # pool_quantity not yet enabled (protocol gate)
-    from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
-
     with ProtocolChangesDisabled(["fairmint_pool"]):
         assert "pool_quantity is not yet enabled" in fairminter.validate(
             ledger_db,
@@ -1090,8 +1083,6 @@ def test_parse_fairminter_pool_fee_debit(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
     """When pool_deposit_fee > 0, parse debits it upfront from the issuer."""
-    from counterpartycore.lib.messages import gas, pooldeposit
-
     fake_fee = 12345
     real_get_fee = gas.get_transaction_fee
 

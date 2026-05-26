@@ -2,7 +2,7 @@ import struct
 
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.messages import destroy, gas, pooldeposit, poolwithdraw
+from counterpartycore.lib.messages import destroy, fairminter, gas, pooldeposit, poolwithdraw
 
 
 def test_validate_valid(ledger_db, defaults):
@@ -545,8 +545,6 @@ def test_restart_after_external_lp_destroy(ledger_db, defaults, blockchain_mock)
 
 def test_validate_blocks_pool_during_active_fairmint(ledger_db, defaults, blockchain_mock):
     """Manual pool creation is blocked while a fairmint-pool is active for the asset."""
-    from counterpartycore.lib.messages import fairminter
-
     source = defaults["addresses"][0]
     tx = blockchain_mock.dummy_tx(ledger_db, source, use_first_tx=True)
     # FAIRMINTED, price=1, hard_cap=100, soft_cap=60, pool_quantity=40, lp_asset=A95428956661682177
@@ -561,8 +559,6 @@ def test_validate_blocks_pool_during_active_fairmint_reverse_pair(
     ledger_db, defaults, blockchain_mock
 ):
     """Earmark check runs on both asset_a and asset_b — (XCP, FAIRMINTED) is equally blocked."""
-    from counterpartycore.lib.messages import fairminter
-
     source = defaults["addresses"][0]
     tx = blockchain_mock.dummy_tx(ledger_db, source, use_first_tx=True)
     message = b"\x95\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x01\x00\x00\x18d\x00\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x18<\x1a\x00\x0c\xf8P\x00\xf4\xf4\xf5\xf5`@\x18(\x1b\x01S\x08!g\x1b\x10\x01"
@@ -574,8 +570,6 @@ def test_validate_blocks_pool_during_active_fairmint_reverse_pair(
 
 def test_validate_blocks_pool_with_earmarked_lp_asset(ledger_db, defaults, blockchain_mock):
     """lp_asset earmarked by an active fairminter is rejected in pooldeposit.validate."""
-    from counterpartycore.lib.messages import fairminter
-
     source = defaults["addresses"][0]
     tx = blockchain_mock.dummy_tx(ledger_db, source, use_first_tx=True)
     message = b"\x95\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x01\x00\x00\x18d\x00\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x18<\x1a\x00\x0c\xf8P\x00\xf4\xf4\xf5\xf5`@\x18(\x1b\x01S\x08!g\x1b\x10\x01"
@@ -589,8 +583,6 @@ def test_validate_blocks_pool_with_earmarked_lp_asset(ledger_db, defaults, block
 
 def test_validate_allows_pool_after_fairminter_closes(ledger_db, defaults, blockchain_mock):
     """Once the fairminter is closed, the earmark is released and a pool may be created."""
-    from counterpartycore.lib.messages import fairminter
-
     source = defaults["addresses"][0]
     tx = blockchain_mock.dummy_tx(ledger_db, source, use_first_tx=True)
     message = b"\x95\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x01\x00\x00\x18d\x00\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x18<\x1a\x00\x0c\xf8P\x00\xf4\xf4\xf5\xf5`@\x18(\x1b\x01S\x08!g\x1b\x10\x01"
