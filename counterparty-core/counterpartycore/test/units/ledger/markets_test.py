@@ -1,4 +1,6 @@
+import pytest
 from counterpartycore.lib.ledger import currentstate, markets
+from counterpartycore.lib.messages import pooldeposit
 
 
 def test_markets(ledger_db, defaults):
@@ -140,9 +142,6 @@ def test_compute_pool_math(ledger_db):
 
 
 def test_execute_pool_match_enforces_k_invariant(ledger_db, defaults, blockchain_mock):
-    import pytest
-    from counterpartycore.lib.messages import pooldeposit
-
     source = defaults["addresses"][0]
     tx = blockchain_mock.dummy_tx(ledger_db, source)
     _, _, data = pooldeposit.compose(

@@ -5,6 +5,7 @@ import logging
 import math
 import string
 import sys
+import threading
 import time
 from collections import OrderedDict
 from decimal import Decimal as D
@@ -31,41 +32,15 @@ from counterpartycore.lib import (
     messages,
 )
 from counterpartycore.lib.parser import deserialize, messagetype, utxosinfo
-from counterpartycore.lib.utils import helpers, multisig, opcodes, script
+from counterpartycore.lib.utils import helpers, multisig, script
 
 MAX_INPUTS_SET = 100
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
-def get_output_type(script_pub_key):
-    asm = script.script_to_asm(script_pub_key)
-    if asm[0] == opcodes.OP_RETURN:
-        return "OP_RETURN"
-    if len(asm) == 2 and asm[1] == opcodes.OP_CHECKSIG:
-        return "P2PK"
-    if (
-        len(asm) == 5
-        and asm[0] == opcodes.OP_DUP
-        and asm[3] == opcodes.OP_EQUALVERIFY
-        and asm[4] == opcodes.OP_CHECKSIG
-    ):
-        return "P2PKH"
-    if len(asm) >= 4 and asm[-1] == opcodes.OP_CHECKMULTISIG and asm[-2] == len(asm) - 3:
-        return "P2MS"
-    if len(asm) == 3 and asm[0] == opcodes.OP_HASH160 and asm[2] == opcodes.OP_EQUAL:
-        return "P2SH"
-    if len(asm) == 2 and asm[0] == b"":
-        if len(asm[1]) == 32:
-            return "P2WSH"
-        return "P2WPKH"
-    if len(asm) == 2 and asm[0] == b"\x01":
-        return "P2TR"
-    return "UNKNOWN"
-
-
-def is_segwit_output(script_pub_key):
-    return get_output_type(script_pub_key) in ("P2WPKH", "P2WSH", "P2TR")
+get_output_type = script.get_output_type
+is_segwit_output = script.is_segwit_output
 
 
 def is_address_script(address, script_pub_key):
@@ -563,13 +538,19 @@ def prepare_outputs(db, source, destinations, data, unspent_list, construct_para
 
 
 class UTXOLocks(metaclass=helpers.SingletonMeta):
+    # Singleton state is shared across threads in a single gunicorn worker;
+    # without this lock, two concurrent compose_transaction calls between
+    # filter_unspent_list and lock_inputs can both pick the same UTXO,
+    # producing an unsignable second tx the network rejects (UX bug). The
+    # lock does NOT cross processes -- multi-worker deployments still need
+    # a shared store (file/DB/redis) for cross-worker safety.
     def __init__(self):
         self.max_age = None
         self.max_size = None
+        self._mutex = threading.Lock()
         self.init()
 
     def init(self):
-        self.locks = OrderedDict()
         self.locks = OrderedDict()
         self.set_limits(config.UTXO_LOCKS_MAX_AGE, config.UTXO_LOCKS_MAX_ADDRESSES)
 
@@ -578,17 +559,19 @@ class UTXOLocks(metaclass=helpers.SingletonMeta):
         self.max_size = max_size
 
     def lock(self, utxo):
-        self.locks[utxo] = time.time()
-        if len(self.locks) > self.max_size:
-            self.locks.popitem(last=False)
+        with self._mutex:
+            self.locks[utxo] = time.time()
+            if len(self.locks) > self.max_size:
+                self.locks.popitem(last=False)
 
     def locked(self, utxo):
-        if utxo not in self.locks:
-            return False
-        if time.time() - self.locks[utxo] > self.max_age:
-            del self.locks[utxo]
-            return False
-        return True
+        with self._mutex:
+            if utxo not in self.locks:
+                return False
+            if time.time() - self.locks[utxo] > self.max_age:
+                del self.locks[utxo]
+                return False
+            return True
 
     def filter_unspent_list(self, unspent_list):
         return [utxo for utxo in unspent_list if not self.locked(f"{utxo['txid']}:{utxo['vout']}")]
@@ -1142,7 +1125,7 @@ def construct(db, tx_info, construct_params):
     return result, unspent_list
 
 
-def check_transaction_sanity(tx_info, composed_tx, unspent_list, construct_params):
+def check_transaction_sanity(tx_info, composed_tx, unspent_list, construct_params):  # pylint: disable=unused-argument
     tx_hex = composed_tx["rawtransaction"]
     source, destinations, data = tx_info
     decoded_tx = deserialize.deserialize_tx(tx_hex, parse_vouts=True)

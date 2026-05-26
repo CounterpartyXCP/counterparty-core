@@ -68,7 +68,18 @@ def validate(db, destination, asset, quantity):
     return problems
 
 
+def validate_compose_quantity(quantity):
+    if not isinstance(quantity, int):
+        raise exceptions.ComposeError("quantity must be an int (in satoshi)")
+    if quantity < 0:
+        raise exceptions.ComposeError("negative quantity")
+    if quantity > config.MAX_INT:
+        raise exceptions.ComposeError("integer overflow")
+
+
 def compose_send_btc(db, source: str, destination: str, quantity: int, no_dispense: bool):
+    validate_compose_quantity(quantity)
+
     if not protocol.enabled("enable_dispense_tx") or no_dispense:
         return (source, [(destination, quantity)], None)
     # try to compose a dispense instead
@@ -88,6 +99,8 @@ def compose(
     skip_validation: bool = False,
     no_dispense: bool = False,
 ):
+    validate_compose_quantity(quantity)
+
     cursor = db.cursor()
 
     # Just send BTC?
@@ -96,10 +109,6 @@ def compose(
 
     # resolve subassets
     asset = ledger.issuances.resolve_subasset_longname(db, asset)
-
-    # quantity must be in int satoshi (not float, string, etc)
-    if not isinstance(quantity, int):
-        raise exceptions.ComposeError("quantity must be an int (in satoshi)")
 
     # Only for outgoing (incoming will overburn).
     balance = ledger.balances.get_balance(db, source, asset)

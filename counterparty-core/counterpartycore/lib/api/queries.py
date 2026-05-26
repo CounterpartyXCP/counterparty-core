@@ -19,8 +19,8 @@ OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
 OrderMatchesStatus = Literal["all", "pending", "completed", "expired"]
 BetStatus = Literal["cancelled", "dropped", "expired", "filled", "open"]
 DispenserStatus = Literal["all", "open", "closed", "closing", "open_empty_address"]
-DispenserStatusNumber = {"open": 0, "closed": 10, "closing": 11, "open_empty_address": 1}
-DispenserStatusNumberInverted = {value: key for key, value in DispenserStatusNumber.items()}
+DispenserStatusNumber = {"open": 0, "closed": 10, "closing": 11, "open_empty_address": 1}  # pylint: disable=invalid-name
+DispenserStatusNumberInverted = {value: key for key, value in DispenserStatusNumber.items()}  # pylint: disable=invalid-name
 FairmintersStatus = Literal["all", "open", "closed", "pending"]
 IssuancesAssetEvents = Literal[
     "all",
@@ -1989,7 +1989,7 @@ def utxos_with_balances(state_db, utxos: str):
     return QueryResult(result, None, "balances", len(utxo_list))
 
 
-def get_balances_by_addresses(
+def get_balances_by_addresses(  # pylint: disable=unused-argument
     state_db,
     addresses: str,
     type: BalanceType = "all",  # pylint: disable=W0622
@@ -2453,7 +2453,14 @@ def prepare_dispenser_where(status, other_conditions=None, exclude_with_oracle=F
     return where
 
 
-SELECT_DISPENSERS = "*, (satoshirate * 1.0) / (give_quantity * 1.0) AS price"
+SELECT_DISPENSERS = """
+*,
+CASE
+    WHEN COALESCE((SELECT divisible FROM assets_info WHERE assets_info.asset = dispensers.asset), 0) = 1
+    THEN (satoshirate * 100000000.0) / (give_quantity * 1.0)
+    ELSE (satoshirate * 1.0) / (give_quantity * 1.0)
+END AS price
+"""
 
 
 def get_dispensers(
@@ -2886,9 +2893,11 @@ def prepare_order_matches_where(status, other_conditions=None):
     return prepare_where_status(status, OrderMatchesStatus, other_conditions=other_conditions)
 
 
-SELECT_ORDERS = "*, "
-SELECT_ORDERS += "COALESCE((get_quantity * 1.0) / (give_quantity * 1.0), 0) AS give_price, "
-SELECT_ORDERS += "COALESCE((give_quantity * 1.0) / (get_quantity * 1.0), 0) AS get_price"
+SELECT_ORDERS = (
+    "*, "
+    "COALESCE((get_quantity * 1.0) / (give_quantity * 1.0), 0) AS give_price, "
+    "COALESCE((give_quantity * 1.0) / (get_quantity * 1.0), 0) AS get_price"
+)
 SELECT_ORDER_MATCHES = SELECT_ORDERS.replace("get_", "forward_").replace("give_", "backward_")
 
 
@@ -3620,6 +3629,8 @@ def get_pool_by_pair(
     :param str asset1: The first asset in the pair (e.g. XCP)
     :param str asset2: The second asset in the pair (e.g. POOLTEST)
     """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
     a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
     return select_row(
         state_db,
@@ -3644,6 +3655,8 @@ def get_pool_deposits_by_pair(
     :param int limit: The maximum number of deposits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
     a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
     return select_rows(
         state_db,
@@ -3672,6 +3685,8 @@ def get_pool_withdrawals_by_pair(
     :param int limit: The maximum number of withdrawals to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
     a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
     return select_rows(
         state_db,
@@ -3700,6 +3715,8 @@ def get_pool_matches_by_pair(
     :param int limit: The maximum number of pool matches to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
     a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
     return select_rows(
         state_db,
@@ -3924,6 +3941,8 @@ def get_pool_price_history(
     :param int limit: The maximum number of entries to return (e.g. 100)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
     a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
     return select_rows(
         ledger_db,
@@ -3968,6 +3987,8 @@ def get_pool_quote(state_db, asset1: str, asset2: str, quantity: int):
     :param asset2: The asset you want to receive (e.g. $ASSET_1)
     :param quantity: The quantity of asset1 to sell (in satoshis) (e.g. 1000000)
     """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
     give_asset = asset1
     give_quantity = quantity
     sorted_a, sorted_b = sort_pair(asset1, asset2)
@@ -4092,11 +4113,13 @@ def get_pool_quote_deposit(state_db, asset1: str, asset2: str, quantity: int):
     :param asset2: The second asset in the pair (e.g. $ASSET_1)
     :param quantity: The quantity of asset1 to deposit (in satoshis) (e.g. 1000000)
     """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
     sorted_a, sorted_b = sort_pair(asset1, asset2)
     pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
     pool = pool_row.result if pool_row else None
 
-    if pool is None or pool["reserve_a"] == 0:
+    if pool is None or not pool_has_liquidity(pool):
         return {
             "first_deposit": True,
             "asset_a": sorted_a,
@@ -4138,11 +4161,12 @@ def get_pool_quote_withdraw(state_db, asset1: str, asset2: str, quantity: int):
     :param asset2: The second asset in the pair (e.g. $ASSET_1)
     :param quantity: The quantity of LP tokens to destroy (in satoshis) (e.g. 1000000)
     """
-
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
     sorted_a, sorted_b = sort_pair(asset1, asset2)
     pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
     pool = pool_row.result if pool_row else None
-    if pool is None or pool["reserve_a"] == 0:
+    if pool is None or not pool_has_liquidity(pool):
         return {"pool_exists": False, "message": "Pool does not exist or is empty."}
 
     lp_info = select_row(state_db, "assets_info", where={"asset": pool["lp_asset"]})

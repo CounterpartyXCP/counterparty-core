@@ -24,6 +24,9 @@ only:
 - Blocks > Get Sweeps By Block > Get Sweeps By Block
 - Blocks > Get Fairminters By Block > Get Fairminters By Block
 - Blocks > Get Fairmints By Block > Get Fairmints By Block
+- Blocks > Get Pool Deposits By Block > Get Pool Deposits By Block
+- Blocks > Get Pool Withdrawals By Block > Get Pool Withdrawals By Block
+- Blocks > Get Pool Matches By Block > Get Pool Matches By Block
 - Transactions > Get Transactions > Get Transactions
 - Transactions > Get Transaction Types Count > Get Transaction Types Count
 - Transactions > Info > Info
@@ -83,6 +86,7 @@ only:
 - Compose > Compose BTCPay > Compose BTCPay
 - Compose > Compose Burn > Compose Burn
 - Compose > Compose Cancel > Compose Cancel
+- Compose > Get Cancel All Estimate Xcp Fee > Get Cancel All Estimate Xcp Fee
 - Compose > Compose Destroy > Compose Destroy
 - Compose > Compose Dispenser > Compose Dispenser
 - Compose > Compose Dividend > Compose Dividend
@@ -96,6 +100,13 @@ only:
 - Compose > Compose Dispense > Compose Dispense
 - Compose > Compose Fairminter > Compose Fairminter
 - Compose > Compose Fairmint > Compose Fairmint
+- Compose > Compose Pooldeposit > Compose Pooldeposit
+- Compose > Get Pool Deposit Estimate Xcp Fee > Get Pool Deposit Estimate Xcp Fee
+- Compose > Compose Poolwithdraw > Compose Poolwithdraw
+- Compose > Get Pool Withdraw Estimate Xcp Fee > Get Pool Withdraw Estimate Xcp Fee
+- Pools > Get Pool Quote > Get Pool Quote
+- Pools > Get Pool Quote Deposit > Get Pool Quote Deposit
+- Pools > Get Pool Quote Withdraw > Get Pool Quote Withdraw
 - Compose > Compose Attach > Compose Attach
 - Compose > Get Attach Estimate Xcp Fee > Get Attach Estimate Xcp Fee
 - Compose > Compose Detach > Compose Detach
@@ -128,6 +139,17 @@ only:
 - Orders > Get Orders By Two Assets > Get Orders By Two Assets
 - Orders > Get Order Matches By Two Assets > Get Order Matches By Two Assets
 - Order_matches > Get All Order Matches > Get All Order Matches
+- Orders > Get Pool Matches By Order > Get Pool Matches By Order
+- Pool_matches > Get All Pool Matches > Get All Pool Matches
+- Pools > Get Pools > Get Pools
+- Pools > Get Pool By Pair > Get Pool By Pair
+- Pools > Get Pool Deposits By Pair > Get Pool Deposits By Pair
+- Pools > Get Pool Withdrawals By Pair > Get Pool Withdrawals By Pair
+- Pools > Get Pool Matches By Pair > Get Pool Matches By Pair
+- Pools > Get Pool Price History > Get Pool Price History
+- Addresses > Get Pool Deposits By Address > Get Pool Deposits By Address
+- Addresses > Get Pool Withdrawals By Address > Get Pool Withdrawals By Address
+- Addresses > Get Pool Positions By Address > Get Pool Positions By Address
 - Burns > Get All Burns > Get All Burns
 - Dispensers > Get Dispensers > Get Dispensers
 - Dispensers > Get Dispenser Info By Hash > Get Dispenser Info By Hash

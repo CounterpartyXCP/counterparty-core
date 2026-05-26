@@ -95,11 +95,18 @@ class CounterpartyServer(threading.Thread):
         self.pool_monitor = None
         self.stop_when_ready = stop_when_ready
         self.stopped = False
+        # True as soon as stop() has started (set before any blocking join()),
+        # so the run() finally block knows the shutdown was requested
+        # explicitly and must NOT raise KeyboardInterrupt in the main thread.
+        self.stop_requested = False
 
         # Log all config parameters, sorted by key
         # Filter out default values, these should be set in a different way
+        # Redact secrets so DEBUG logs / Sentry breadcrumbs don't leak the
+        # bitcoind RPC password, API password, or auth cookies.
+        secret_substrings = ("PASSWORD", "SECRET", "COOKIE", "TOKEN", "KEY")
         custom_config = {
-            k: v
+            k: ("***" if any(s in k.upper() for s in secret_substrings) and v else v)
             for k, v in sorted(config.__dict__.items())
             if not k.startswith("__") and not k.startswith("DEFAULT_")
         }
@@ -107,10 +114,6 @@ class CounterpartyServer(threading.Thread):
 
     def _start_pool_monitor(self):
         """Start connection pool monitor for MainProcess."""
-        from counterpartycore.lib.utils.database import (
-            LedgerDBConnectionPool,
-            StateDBConnectionPool,
-        )
 
         class MainProcessPoolMonitor(threading.Thread):
             def __init__(self, interval_seconds=60):
@@ -124,8 +127,8 @@ class CounterpartyServer(threading.Thread):
                     if self.stop_event.is_set():
                         break
                     try:
-                        ledger_stats = LedgerDBConnectionPool().get_stats()
-                        state_stats = StateDBConnectionPool().get_stats()
+                        ledger_stats = database.LedgerDBConnectionPool().get_stats()
+                        state_stats = database.StateDBConnectionPool().get_stats()
                         logger.info(
                             "MAINPROCESS_POOL ledger=%d/%d (%.0f%%, peak=%d) state=%d/%d (%.0f%%, peak=%d)",
                             ledger_stats["current"],
@@ -137,7 +140,7 @@ class CounterpartyServer(threading.Thread):
                             state_stats["utilization"],
                             state_stats["peak"],
                         )
-                    except Exception as e:
+                    except Exception as e:  # pylint: disable=broad-exception-caught
                         logger.error("Error logging MainProcess pool stats: %s", e)
 
             def stop(self):
@@ -194,7 +197,11 @@ class CounterpartyServer(threading.Thread):
             time.sleep(0.1)
 
         if self.args.api_only:
-            while True:
+            # Loop must check the event so stop() actually exits the loop;
+            # without this, even after self.api_stop_event.set() the wait()
+            # just returns and we re-enter the wait. Daemon=True eventually
+            # tears the process down, but there's no clean SIGTERM round.
+            while not self.api_stop_event.is_set():
                 self.api_stop_event.wait(1)
             return
 
@@ -244,13 +251,22 @@ class CounterpartyServer(threading.Thread):
             # print(traceback.format_exc())
             logger.error("Error in server thread: %s", e, stack_info=True)
         finally:
-            # Always signal main thread to stop when server thread ends
-            # This handles both exceptions and early returns (e.g., API startup failure)
-            _thread.interrupt_main()
+            # Signal main thread to stop when server thread ends unexpectedly
+            # (exception or early return like API startup failure).
+            # If stop() was already called from outside (e.g. SIGTERM handler),
+            # the main thread is already shutting down and is likely blocked
+            # in a join(); raising KeyboardInterrupt there would crash the
+            # shutdown sequence half-way through.
+            if not self.stop_requested:
+                _thread.interrupt_main()
 
     def stop(self):
         if self.stopped:
             return
+        # Mark the shutdown as explicitly requested BEFORE doing any blocking
+        # work, so the run() finally block does not raise KeyboardInterrupt
+        # in the main thread while we are joining sub-threads.
+        self.stop_requested = True
         logger.info("Shutting down...")
 
         CurrentState().set_stopping()
@@ -292,7 +308,7 @@ def start_all(args, log_stream=None, stop_when_ready=False):
     server = CounterpartyServer(args, log_stream, stop_when_ready=stop_when_ready)
     shutdown_event = threading.Event()
 
-    def handle_sigterm(signum, frame):
+    def handle_sigterm(signum, frame):  # pylint: disable=unused-argument
         logger.warning("SIGTERM received. Shutting down...")
         shutdown_event.set()
 
@@ -305,7 +321,17 @@ def start_all(args, log_stream=None, stop_when_ready=False):
     except KeyboardInterrupt:
         logger.warning("Interruption received. Shutting down...")
     finally:
-        server.stop()
+        # Shield the shutdown from a late KeyboardInterrupt (e.g. a second
+        # SIGINT, or interrupt_main() racing with the SIGTERM handler).
+        # stop() is safe to call multiple times: every sub-stop() is
+        # idempotent, and a fully-completed stop() is short-circuited by
+        # the `if self.stopped: return` guard at the top.
+        while True:
+            try:
+                server.stop()
+                break
+            except KeyboardInterrupt:
+                logger.warning("KeyboardInterrupt received during shutdown, retrying stop...")
 
 
 def rebuild(args):

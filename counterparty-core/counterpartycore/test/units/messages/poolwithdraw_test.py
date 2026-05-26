@@ -1,6 +1,6 @@
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.messages import pooldeposit, poolwithdraw
+from counterpartycore.lib.messages import destroy, pooldeposit, poolwithdraw
 
 
 def create_pool(ledger_db, blockchain_mock, source, quantity_a, quantity_b):
@@ -84,6 +84,40 @@ def test_validate_min_quantity_b_overflow(ledger_db, defaults):
         min_quantity_b=config.MAX_INT + 1,
     )
     assert any("min_quantity_b exceeds maximum value" in p for p in problems)
+
+
+def test_validate_min_quantities_type_and_negative(ledger_db, defaults):
+    problems = poolwithdraw.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        100,
+        min_quantity_a="1",
+    )
+    assert any("min_quantity_a must be an integer" in p for p in problems)
+
+    problems = poolwithdraw.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        100,
+        min_quantity_b="1",
+    )
+    assert any("min_quantity_b must be an integer" in p for p in problems)
+
+    problems = poolwithdraw.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        100,
+        min_quantity_a=-1,
+        min_quantity_b=-1,
+    )
+    assert any("min_quantity_a cannot be negative" in p for p in problems)
+    assert any("min_quantity_b cannot be negative" in p for p in problems)
 
 
 def test_validate_no_pool(ledger_db, defaults):
@@ -321,8 +355,6 @@ def test_parse_partial_withdrawal(ledger_db, defaults, blockchain_mock, test_hel
 
 def test_lp_destroy_benefits_remaining_holders(ledger_db, defaults, blockchain_mock, test_helpers):
     """Destroying LP tokens locks reserves — remaining holders get more on withdrawal."""
-    from counterpartycore.lib.messages import destroy
-
     # Create pool with addr0
     create_pool(
         ledger_db,

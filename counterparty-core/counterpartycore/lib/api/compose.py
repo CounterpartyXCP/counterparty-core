@@ -266,7 +266,7 @@ def compose_mpma(
         if not quantity.isdigit():
             raise exceptions.ComposeError("Quantity must be an integer")
     quantity_list = [int(quantity) for quantity in quantity_list]
-    asset_dest_quant_list = list(zip(asset_list, destination_list, quantity_list))
+    asset_dest_quant_list = list(zip(asset_list, destination_list, quantity_list, strict=True))
 
     if memos:
         if not isinstance(memos, list):
@@ -306,7 +306,7 @@ def compose_order(
     :param give_quantity: The quantity of the asset that will be given (in satoshis, hence integer) (e.g. 1000)
     :param get_asset: The asset that will be received in the trade (e.g. $ASSET_1)
     :param get_quantity: The quantity of the asset that will be received (in satoshis, hence integer) (e.g. 1000)
-    :param expiration: The number of blocks for which the order should be valid (e.g. 100)
+    :param expiration: The number of blocks for which the order should be valid. Use 0 for indefinite (open until filled or cancelled). (e.g. 100)
     :param fee_required: The miners’ fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though) (e.g. 100)
     """
     params = {
@@ -539,9 +539,10 @@ def compose_pooldeposit(
     return composer.compose_transaction(db, "pooldeposit", params, construct_params)
 
 
-def get_pool_deposit_estimate_xcp_fee(db):
+def get_pool_deposit_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
     """
     Returns the estimated XCP fee for a pool deposit transaction.
+    :param address: The address depositing liquidity (e.g. $ADDRESS_1)
     """
     return gas.get_transaction_fee(db, 120, CurrentState().current_block_index())
 
@@ -583,9 +584,10 @@ def compose_poolwithdraw(
     return composer.compose_transaction(db, "poolwithdraw", params, construct_params)
 
 
-def get_pool_withdraw_estimate_xcp_fee(db):
+def get_pool_withdraw_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
     """
     Returns the estimated XCP fee for a pool withdrawal transaction.
+    :param address: The address withdrawing liquidity (e.g. $ADDRESS_1)
     """
     return gas.get_transaction_fee(db, 121, CurrentState().current_block_index())
 

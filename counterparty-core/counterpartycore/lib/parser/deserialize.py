@@ -17,6 +17,12 @@ class Deserializer(metaclass=SingletonMeta):
                 "rpc_address": rpc_address,
                 "rpc_user": config.BACKEND_USER,
                 "rpc_password": config.BACKEND_PASSWORD,
+                # Optional `X-API-Key` header for Cloud-Armor-style rate
+                # limiters; the Rust BatchRpcClient lazily initialised
+                # inside `parse_transaction` will use it on every parent-tx
+                # lookup, which is the hot path that gets 429-throttled
+                # during catchup against the public signet/testnet4 proxy.
+                "rpc_api_key": getattr(config, "BACKEND_API_KEY", None) or "",
                 "db_dir": config.FETCHER_DB,
                 "log_file": config.FETCHER_LOG,
                 "json_format": config.JSON_LOGS,

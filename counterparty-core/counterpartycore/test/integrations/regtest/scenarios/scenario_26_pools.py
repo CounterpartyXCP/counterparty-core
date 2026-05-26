@@ -282,7 +282,7 @@ SCENARIO = [
             "POOL_ORDER_HASH": "$TX_HASH",
             "POOL_ORDER_TX_INDEX": "$TX_INDEX",
             "POOL_ORDER_BLOCK_INDEX": "$BLOCK_INDEX",
-            "POOL_ORDER_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 21",
+            "POOL_ORDER_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 20",
         },
         "controls": [
             {
@@ -812,7 +812,7 @@ SCENARIO = [
         },
         "set_variables": {
             "POOL_NOFILL_ORDER_HASH": "$TX_HASH",
-            "POOL_NOFILL_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 21",
+            "POOL_NOFILL_EXPIRATION_BLOCK_INDEX": "$BLOCK_INDEX + 20",
         },
         "controls": [
             {

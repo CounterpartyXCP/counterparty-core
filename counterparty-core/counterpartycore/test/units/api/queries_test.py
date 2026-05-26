@@ -631,6 +631,69 @@ def test_prepare_dispenser_where_with_invalid_status():
     assert len(result) == 0
 
 
+def test_get_dispensers_by_asset_prices_divisible_lots(state_db):
+    """Test dispenser price is satoshis per whole asset unit for divisible assets."""
+    state_db.execute(
+        "INSERT INTO assets_info (asset, divisible) VALUES (?, ?)",
+        ("UNITTESTDIV", True),
+    )
+    state_db.execute(
+        """
+        INSERT INTO dispensers (
+            tx_index, tx_hash, block_index, source, asset, give_quantity,
+            escrow_quantity, satoshirate, status, give_remaining, origin,
+            dispense_count
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            9001,
+            "a" * 64,
+            9001,
+            "addr1",
+            "UNITTESTDIV",
+            100000000,
+            100000000,
+            12345,
+            0,
+            100000000,
+            "addr1",
+            0,
+        ),
+    )
+    state_db.execute(
+        """
+        INSERT INTO dispensers (
+            tx_index, tx_hash, block_index, source, asset, give_quantity,
+            escrow_quantity, satoshirate, status, give_remaining, origin,
+            dispense_count
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            9002,
+            "b" * 64,
+            9002,
+            "addr2",
+            "UNITTESTDIV",
+            200000000,
+            200000000,
+            12345,
+            0,
+            200000000,
+            "addr2",
+            0,
+        ),
+    )
+
+    result = queries.get_dispensers_by_asset(
+        state_db,
+        "UNITTESTDIV",
+        status="open",
+        sort="price:asc",
+    )
+
+    assert [row["price"] for row in result.result] == [6172.5, 12345]
+
+
 # =============================================================================
 # Tests for assets
 # =============================================================================
@@ -1073,6 +1136,47 @@ def test_get_pool_price_history(ledger_db):
     assert result is not None
 
 
+def test_get_pool_by_pair_case_insensitive(state_db):
+    """get_pool_by_pair returns same result for lower/upper case inputs."""
+    upper = queries.get_pool_by_pair(state_db, "POOLASSETA", "POOLASSETB")
+    lower = queries.get_pool_by_pair(state_db, "poolasseta", "poolassetb")
+    assert upper is not None
+    assert lower is not None
+    assert upper.result == lower.result
+
+
+def test_get_pool_deposits_by_pair_case_insensitive(state_db):
+    """get_pool_deposits_by_pair is case-insensitive on pair params."""
+    upper = queries.get_pool_deposits_by_pair(state_db, "POOLASSETA", "POOLASSETB")
+    lower = queries.get_pool_deposits_by_pair(state_db, "poolasseta", "poolassetb")
+    assert upper.result == lower.result
+    assert upper.result_count == lower.result_count
+
+
+def test_get_pool_withdrawals_by_pair_case_insensitive(state_db):
+    """get_pool_withdrawals_by_pair is case-insensitive on pair params."""
+    upper = queries.get_pool_withdrawals_by_pair(state_db, "POOLASSETA", "POOLASSETB")
+    lower = queries.get_pool_withdrawals_by_pair(state_db, "poolasseta", "poolassetb")
+    assert upper.result == lower.result
+    assert upper.result_count == lower.result_count
+
+
+def test_get_pool_matches_by_pair_case_insensitive(state_db):
+    """get_pool_matches_by_pair is case-insensitive on pair params."""
+    upper = queries.get_pool_matches_by_pair(state_db, "POOLASSETA", "POOLASSETB")
+    lower = queries.get_pool_matches_by_pair(state_db, "poolasseta", "poolassetb")
+    assert upper.result == lower.result
+    assert upper.result_count == lower.result_count
+
+
+def test_get_pool_price_history_case_insensitive(ledger_db):
+    """get_pool_price_history is case-insensitive on pair params."""
+    upper = queries.get_pool_price_history(ledger_db, "POOLASSETA", "POOLASSETB")
+    lower = queries.get_pool_price_history(ledger_db, "poolasseta", "poolassetb")
+    assert upper.result == lower.result
+    assert upper.result_count == lower.result_count
+
+
 def test_get_all_pool_matches_empty(state_db):
     """All pool matches returns results."""
     result = queries.get_all_pool_matches(state_db)
@@ -1099,3 +1203,27 @@ def test_get_pool_quote_withdraw_zero_supply(state_db):
     assert result["pool_exists"] is True
     assert result["supply"] == 0
     assert "No LP tokens" in result["message"]
+
+
+def test_get_pool_quote_case_insensitive(state_db):
+    """get_pool_quote returns the same result for upper and lower case asset names."""
+    upper = queries.get_pool_quote(state_db, "POOLASSETA", "POOLASSETB", 1_000_000)
+    lower = queries.get_pool_quote(state_db, "poolasseta", "poolassetb", 1_000_000)
+    assert upper == lower
+    assert lower["pool_exists"] is True
+
+
+def test_get_pool_quote_deposit_case_insensitive(state_db):
+    """get_pool_quote_deposit returns the same result for upper and lower case asset names."""
+    upper = queries.get_pool_quote_deposit(state_db, "POOLASSETA", "POOLASSETB", 10_000_000)
+    lower = queries.get_pool_quote_deposit(state_db, "poolasseta", "poolassetb", 10_000_000)
+    assert upper == lower
+    assert lower["first_deposit"] is False
+
+
+def test_get_pool_quote_withdraw_case_insensitive(state_db):
+    """get_pool_quote_withdraw returns the same result for upper and lower case asset names."""
+    upper = queries.get_pool_quote_withdraw(state_db, "POOLASSETA", "POOLASSETB", 1_000_000)
+    lower = queries.get_pool_quote_withdraw(state_db, "poolasseta", "poolassetb", 1_000_000)
+    assert upper == lower
+    assert lower["pool_exists"] is True

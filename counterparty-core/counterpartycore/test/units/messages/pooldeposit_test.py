@@ -2,7 +2,7 @@ import struct
 
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.messages import pooldeposit, poolwithdraw
+from counterpartycore.lib.messages import destroy, gas, pooldeposit, poolwithdraw
 
 
 def test_validate_valid(ledger_db, defaults):
@@ -512,8 +512,6 @@ def test_empty_pool_refund_respects_min_lp_quantity(ledger_db, defaults, blockch
 
 def test_restart_after_external_lp_destroy(ledger_db, defaults, blockchain_mock):
     """Pool is recoverable when every LP holder destroys their LP externally."""
-    from counterpartycore.lib.messages import destroy
-
     quantity = defaults["quantity"] // 4
     source = defaults["addresses"][0]
 
@@ -723,8 +721,6 @@ def test_create_pool_from_fairminter(ledger_db, defaults, test_helpers):
 
 def test_validate_xcp_fee_insufficient(ledger_db, defaults, blockchain_mock):
     """When gas fee > 0 and XCP balance is too low for fee + quantity, validation should fail."""
-    from counterpartycore.lib.messages import gas
-
     source = defaults["addresses"][0]
     quantity = defaults["quantity"]
 
@@ -747,6 +743,50 @@ def test_validate_xcp_fee_insufficient(ledger_db, defaults, blockchain_mock):
 
 
 # lp_asset / lp_asset_id plumbing for first-deposit txs.
+
+
+def test_validate_rejects_depleted_pool_reserve(ledger_db, defaults, blockchain_mock):
+    """A pool with a zero reserve must be rejected without raising (no div-by-zero)."""
+    quantity = defaults["quantity"] // 4
+    source = defaults["addresses"][0]
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", quantity, quantity)
+    pooldeposit.parse(ledger_db, tx, data[1:])
+
+    sorted_a, sorted_b = ledger.markets.sort_pair("XCP", "DIVISIBLE")
+    pool = ledger.markets.get_pool(ledger_db, sorted_a, sorted_b)
+    ledger.markets.update_pool(ledger_db, sorted_a, sorted_b, 0, pool["reserve_b"])
+
+    problems = pooldeposit.validate(ledger_db, source, "XCP", "DIVISIBLE", 1, 1)
+    assert any("pool has no liquidity" in p for p in problems)
+
+
+def test_parse_rejects_depleted_pool_reserve(ledger_db, defaults, blockchain_mock):
+    quantity = defaults["quantity"] // 4
+    source = defaults["addresses"][0]
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", quantity, quantity)
+    pooldeposit.parse(ledger_db, tx, data[1:])
+
+    sorted_a, sorted_b = ledger.markets.sort_pair("XCP", "DIVISIBLE")
+    pool = ledger.markets.get_pool(ledger_db, sorted_a, sorted_b)
+    ledger.markets.update_pool(ledger_db, sorted_a, sorted_b, 0, pool["reserve_b"])
+
+    tx2 = blockchain_mock.dummy_tx(ledger_db, source)
+    with pytest.raises(exceptions.ComposeError):
+        pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", 1, 1)
+
+    _, _, data2 = pooldeposit.compose(
+        ledger_db, source, "XCP", "DIVISIBLE", 1, 1, skip_validation=True
+    )
+    pooldeposit.parse(ledger_db, tx2, data2[1:])
+
+    cursor = ledger_db.cursor()
+    row = cursor.execute(
+        "SELECT status FROM pool_deposits WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
+        (tx2["tx_hash"],),
+    ).fetchone()
+    assert row["status"] == "invalid: pool has no liquidity"
 
 
 def test_validate_first_deposit_requires_lp_asset(ledger_db, defaults):
@@ -773,6 +813,30 @@ def test_validate_min_lp_quantity_overflow(ledger_db, defaults):
         min_lp_quantity=config.MAX_INT + 1,
     )
     assert any("min_lp_quantity exceeds maximum value" in p for p in problems)
+
+
+def test_validate_min_lp_quantity_type_and_negative(ledger_db, defaults):
+    problems = pooldeposit.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        defaults["quantity"],
+        defaults["quantity"],
+        min_lp_quantity="1",
+    )
+    assert any("min_lp_quantity must be an integer" in p for p in problems)
+
+    problems = pooldeposit.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        "DIVISIBLE",
+        defaults["quantity"],
+        defaults["quantity"],
+        min_lp_quantity=-1,
+    )
+    assert any("min_lp_quantity cannot be negative" in p for p in problems)
 
 
 def test_validate_lp_asset_rejects_xcp(ledger_db, defaults):

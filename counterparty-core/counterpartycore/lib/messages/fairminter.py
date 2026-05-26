@@ -40,6 +40,7 @@ def validate(
     mime_type="",
     pool_quantity=0,
     lp_asset="",
+    block_index=None,
 ):
     problems = []
 
@@ -100,7 +101,11 @@ def validate(
 
     existing_asset = ledger.issuances.get_asset(db, asset)
     if existing_asset and existing_asset["asset_longname"] and asset_parent == "":
-        asset_parent, asset = existing_asset["asset_longname"].split(".")
+        # split(".", 1): subasset longnames may contain non-consecutive periods
+        # in the child portion (validate_subasset_longname permits e.g.
+        # "PARENT.foo.bar"). Without maxsplit, unpacking 3+ parts to two vars
+        # raises ValueError -> ParseTransactionError -> halt.
+        asset_parent, asset = existing_asset["asset_longname"].split(".", 1)
 
     # check if asset exists
     asset_name = asset
@@ -159,7 +164,7 @@ def validate(
     if start_block > end_block > 0:
         problems.append("Start block must be <= end block.")  # could be one block fair minter
 
-    if protocol.enabled("fairminter_v2"):
+    if protocol.enabled("fairminter_v2", block_index=block_index):
         if soft_cap > hard_cap > 0:
             problems.append("Soft cap must be <= hard cap.")
         if hard_cap > 0 and price > 0 and hard_cap % quantity_by_price != 0:
@@ -175,7 +180,7 @@ def validate(
         elif soft_cap_deadline_block <= start_block:
             problems.append("Soft cap deadline block must be > start block.")
         elif (
-            protocol.enabled("fairminter_v2")
+            protocol.enabled("fairminter_v2", block_index=block_index)
             and premint_quantity > 0
             and soft_cap + premint_quantity > hard_cap > 0
         ):
@@ -233,8 +238,8 @@ def validate(
         elif ledger.issuances.get_active_fairminter_by_lp_asset(db, lp_asset):
             problems.append(f"lp_asset {lp_asset} is earmarked by an active fairminter")
 
-    if protocol.enabled("fairminter_v2"):
-        problems += helpers.check_content(mime_type, description)
+    if protocol.enabled("fairminter_v2", block_index=block_index):
+        problems += helpers.check_content(mime_type, description, block_index=block_index)
 
     return problems
 
@@ -294,6 +299,7 @@ def compose(
         mime_type,
         pool_quantity,
         lp_asset,
+        block_index=CurrentState().current_block_index(),
     )
     if len(problems) > 0 and not skip_validation:
         raise exceptions.ComposeError(problems)
@@ -374,7 +380,7 @@ def compose(
 def unpack(message, return_dict=False, block_index=None):
     if protocol.enabled("fairminter_v2", block_index=block_index):
         try:
-            return unpack_new(message, return_dict)
+            return unpack_new(message, return_dict, block_index=block_index)
         except Exception:  # pylint: disable=broad-exception-caught
             # Fallback to legacy unpacking
             return unpack_legacy(message, return_dict)
@@ -382,7 +388,7 @@ def unpack(message, return_dict=False, block_index=None):
         return unpack_legacy(message, return_dict)
 
 
-def unpack_new(message, return_dict=False):
+def unpack_new(message, return_dict=False, block_index=None):
     try:
         (
             asset_id,
@@ -408,7 +414,9 @@ def unpack_new(message, return_dict=False):
         pool_quantity = int(fields[19]) if len(fields) > 19 else 0
         lp_asset_id = int(fields[20]) if len(fields) > 20 else 0
         lp_asset = ledger.issuances.generate_asset_name(lp_asset_id) if lp_asset_id > 0 else None
-        description = helpers.bytes_to_content(description, mime_type or "text/plain")
+        description = helpers.bytes_to_content(
+            description, mime_type or "text/plain", block_index=block_index
+        )
         asset = ledger.issuances.generate_asset_name(asset_id)
         asset_parent = (
             ledger.issuances.generate_asset_name(asset_parent_id) if asset_parent_id != 0 else ""
@@ -622,7 +630,7 @@ def parse(db, tx, message):
         description,
         pool_quantity,
         lp_asset,
-    ) = unpack(message)
+    ) = unpack(message, block_index=tx["block_index"])
 
     problems = validate(
         db,
@@ -648,6 +656,7 @@ def parse(db, tx, message):
         mime_type,
         pool_quantity,
         lp_asset,
+        block_index=tx["block_index"],
     )
 
     if (
@@ -689,7 +698,11 @@ def parse(db, tx, message):
 
     existing_asset = ledger.issuances.get_asset(db, asset)
     if existing_asset and existing_asset["asset_longname"] and asset_parent == "":
-        asset_parent, asset = existing_asset["asset_longname"].split(".")
+        # split(".", 1): subasset longnames may contain non-consecutive periods
+        # in the child portion (validate_subasset_longname permits e.g.
+        # "PARENT.foo.bar"). Without maxsplit, unpacking 3+ parts to two vars
+        # raises ValueError -> ParseTransactionError -> halt.
+        asset_parent, asset = existing_asset["asset_longname"].split(".", 1)
 
     # is subasset ?
     asset_longname = ""
@@ -712,7 +725,13 @@ def parse(db, tx, message):
     else:
         # only new named assets have fees
         if existing_asset is None and not asset.startswith("A"):
+            # int (not float): issuances.fee_paid is INTEGER, debit uses int(fee).
+            # Other fee-paying messages (issuance, dividend) all hoist to int
+            # at compute time -- match the convention so SUM over REAL doesn't
+            # drift after enough fairminters and so the schema stays coherent.
             fee = 0.5 * config.UNIT
+            if protocol.enabled("fairminter_integer_fee_paid", block_index=tx["block_index"]):
+                fee = int(fee)
 
     # we only premint if the faireminter is open and soft cap reached,
     # otherwise we will do it at opening (`start_block`) or when

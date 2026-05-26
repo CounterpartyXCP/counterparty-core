@@ -32,6 +32,11 @@ where
     })? + 1;
     let mut start_height = db_start_height;
     if let Some(config_start_height) = config.start_height {
+        if config_start_height == 0 {
+            // start_height - 1 below would underflow u32 (panic in debug,
+            // wrap to u32::MAX in release -> giant erroneous rollback range).
+            return Err(Error::System("start_height must be >= 1".into()));
+        }
         start_height = config_start_height;
         db.write_batch(|batch| db.rollback_to_height(batch, start_height - 1))?;
     }

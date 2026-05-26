@@ -78,6 +78,13 @@ jobs:
           cargo +nightly install --path=.
 
       - name: Run tests
+        # `BACKEND_API_KEY` (when defined as a repo/org secret) lifts the
+        # per-IP rate-limit on the public signet/testnet4 RPC proxy from
+        # 120 req/min to the premium 1000 req/min bucket, which is what
+        # the bootstrap+catchup integration tests need to avoid hanging
+        # on 429-induced retry loops in `getrawtransaction`.
+        env:
+          BACKEND_API_KEY: ${{ secrets.BACKEND_API_KEY }}
         run: |
           cd counterparty-core
           hatch run pytest counterpartycore/test/${{ inputs.test-path }} \

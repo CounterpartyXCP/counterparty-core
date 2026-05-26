@@ -39,6 +39,7 @@ from scenarios import (
     scenario_25_issuance,
     scenario_26_pools,
     scenario_27_fairminter_pool,
+    scenario_28_indefinite_orders,
     scenario_last_mempool,
 )
 from termcolor import colored
@@ -69,6 +70,7 @@ SCENARIOS += scenario_22_chaining.SCENARIO
 SCENARIOS += scenario_23_detach.SCENARIO
 SCENARIOS += scenario_24_dispenser.SCENARIO
 SCENARIOS += scenario_25_issuance.SCENARIO
+SCENARIOS += scenario_28_indefinite_orders.SCENARIO
 SCENARIOS += scenario_26_pools.SCENARIO
 SCENARIOS += scenario_27_fairminter_pool.SCENARIO
 # more scenarios before this one
@@ -83,7 +85,7 @@ BASE_DIR = os.path.join(CURR_DIR, "../../../../../")
 def compare_strings(string1, string2):
     """Compare strings diff-style."""
     diff = list(difflib.unified_diff(string1.splitlines(1), string2.splitlines(1), n=0))
-    if len(diff):
+    if diff:
         print("\nDifferences:")
         print("\n".join(diff))
     return len(diff)
@@ -157,6 +159,8 @@ def control_result(
         for i in reversed(range(11)):
             address = node.addresses[i]
             control_url = control_url.replace(f"$ADDRESS_{i + 1}", address)
+        for name, value in context.items():
+            control_url = control_url.replace(f"${name}", value)
         result = node.api_call(control_url)
 
         if (
@@ -335,6 +339,7 @@ def run_item(node, item, context):
             value.replace("$TX_HASH", tx_hash)
             .replace("$BLOCK_HASH", block_hash)
             .replace("$TX_INDEX", str(tx_index))
+            .replace("$BLOCK_INDEX + 19", str(node.block_count + 19))
             .replace("$BLOCK_INDEX + 20", str(node.block_count + 20))
             .replace("$BLOCK_INDEX + 21", str(node.block_count + 21))
             .replace("$BLOCK_INDEX + 5", str(node.block_count + 5))

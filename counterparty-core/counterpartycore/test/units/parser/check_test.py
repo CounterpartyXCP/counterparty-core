@@ -1,9 +1,12 @@
+import json
 import threading
 from unittest.mock import MagicMock
 
 import pytest
+import requests
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.messages.data import checkpoints
 from counterpartycore.lib.parser import check
 
 
@@ -95,18 +98,20 @@ def test_software_version_connection_error(monkeypatch):
     monkeypatch.setattr("requests.get", mock_get)
 
     try:
-        with pytest.raises(
-            exceptions.VersionCheckError, match="Unable to check Counterparty version"
-        ):
+        with pytest.raises(exceptions.VersionCheckError) as exc_info:
             check.software_version()
+        message = str(exc_info.value)
+        assert "Unable to check Counterparty version from" in message
+        assert config.PROTOCOL_CHANGES_URL in message
+        assert "Connection refused" in message
+        assert "Use --force to ignore verification." in message
+        assert "verfication" not in message
     finally:
         config.FORCE = original_force
 
 
 def test_software_version_timeout_error(monkeypatch):
     """Test software_version with timeout error."""
-    import requests
-
     original_force = config.FORCE
     config.FORCE = False
 
@@ -116,10 +121,12 @@ def test_software_version_timeout_error(monkeypatch):
     monkeypatch.setattr("requests.get", mock_get)
 
     try:
-        with pytest.raises(
-            exceptions.VersionCheckError, match="Unable to check Counterparty version"
-        ):
+        with pytest.raises(exceptions.VersionCheckError) as exc_info:
             check.software_version()
+        message = str(exc_info.value)
+        assert "Unable to check Counterparty version from" in message
+        assert "Read timed out" in message
+        assert "Use --force to ignore verification." in message
     finally:
         config.FORCE = original_force
 
@@ -140,18 +147,18 @@ def test_software_version_json_decode_error(monkeypatch):
     monkeypatch.setattr("requests.get", mock_get)
 
     try:
-        with pytest.raises(
-            exceptions.VersionCheckError, match="Unable to check Counterparty version"
-        ):
+        with pytest.raises(exceptions.VersionCheckError) as exc_info:
             check.software_version()
+        message = str(exc_info.value)
+        assert "Unable to check Counterparty version from" in message
+        assert "Expecting value" in message
+        assert "Use --force to ignore verification." in message
     finally:
         config.FORCE = original_force
 
 
 def test_software_version_success(monkeypatch):
     """Test software_version with valid response."""
-    import json
-
     original_force = config.FORCE
     config.FORCE = False
 
@@ -546,8 +553,6 @@ def test_consensus_hash_mainnet_checkpoints():
 # Tests for lines 87-88: ConsensusError when hash doesn't match checkpoint
 def test_consensus_hash_checkpoint_mismatch():
     """Test consensus_hash raises ConsensusError when hash doesn't match checkpoint (lines 87-88)."""
-    from counterpartycore.lib.messages.data import checkpoints
-
     mock_db = MagicMock()
     mock_cursor = MagicMock()
     mock_db.cursor.return_value = mock_cursor

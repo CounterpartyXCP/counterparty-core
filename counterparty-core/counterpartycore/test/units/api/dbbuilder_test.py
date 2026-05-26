@@ -266,7 +266,7 @@ def test_consolidated_balances(state_db, ledger_db, apiv2_client):
     ).fetchall()
     api_balances = state_db.execute("SELECT * FROM balances ORDER BY asset, address").fetchall()
     assert len(ledger_balances) == len(api_balances)
-    for ledger_balance, api_balance in zip(ledger_balances, api_balances):
+    for ledger_balance, api_balance in zip(ledger_balances, api_balances, strict=True):
         assert ledger_balance["address"] == api_balance["address"]
         assert ledger_balance["asset"] == api_balance["asset"]
         assert ledger_balance["quantity"] == api_balance["quantity"]
@@ -327,7 +327,9 @@ def test_consolidated_order_matches(state_db, ledger_db, apiv2_client):
     ).fetchall()
     api_order_matches = state_db.execute("SELECT * FROM order_matches ORDER BY id").fetchall()
     assert len(ledger_order_matches) == len(api_order_matches)
-    for ledger_order_match, api_order_match in zip(ledger_order_matches, api_order_matches):
+    for ledger_order_match, api_order_match in zip(
+        ledger_order_matches, api_order_matches, strict=True
+    ):
         assert ledger_order_match["id"] == api_order_match["id"]
         assert ledger_order_match["status"] == api_order_match["status"]
         assert ledger_order_match["tx0_hash"] == api_order_match["tx0_hash"]
@@ -359,7 +361,54 @@ def test_consolidated_assets(state_db, ledger_db, apiv2_client):
         "SELECT asset FROM assets_info WHERE asset NOT IN ('XCP', 'BTC') ORDER BY asset"
     ).fetchall()
     assert len(ledger_assets_info) == len(api_assets_info)
-    for ledger_asset_info, api_asset_info in zip(ledger_assets_info, api_assets_info):
+    for ledger_asset_info, api_asset_info in zip(ledger_assets_info, api_assets_info, strict=True):
         assert ledger_asset_info["asset_name"] == api_asset_info["asset"]
         api_result = apiv2_client.get(f"/v2/assets/{api_asset_info['asset']}").json
         assert api_result["result"]["asset"] == api_asset_info["asset"]
+
+
+def test_migration_0004_latest_issuance_columns(state_db, ledger_db):
+    """Regression: migration 0004 used to select description/divisible/
+    mime_type/owner via bare-column SELECT alongside MIN/MAX aggregates.
+    SQLite picked bare columns "from one of" the min/max rows,
+    implementation-dependent, so snapshot-bootstrapped nodes diverged from
+    event-streamed nodes (which write latest-wins via apiwatcher). The
+    migration is now derived deterministically from the latest valid
+    issuance per asset; this test verifies that property on the current
+    state_db.
+    """
+    rows = state_db.execute(
+        "SELECT asset, description, divisible, mime_type, owner FROM assets_info "
+        "WHERE asset NOT IN ('XCP', 'BTC')"
+    ).fetchall()
+    for r in rows:
+        latest = ledger_db.execute(
+            "SELECT description, divisible, mime_type, issuer FROM issuances "
+            "WHERE asset = ? AND status = 'valid' ORDER BY rowid DESC LIMIT 1",
+            (r["asset"],),
+        ).fetchone()
+        if latest is None:
+            continue
+        assert r["description"] == latest["description"]
+        assert r["divisible"] == latest["divisible"]
+        assert r["mime_type"] == latest["mime_type"]
+        assert r["owner"] == latest["issuer"]
+
+
+def test_migration_0004_locked_columns_are_booleans(state_db):
+    """Regression: migration 0004 used to write SUM(locked) and
+    SUM(description_locked) into BOOL columns, yielding integer counts
+    (e.g. 3) when the streamed apiwatcher writes 0/1. The migration now
+    derives both as MAX(...) ∈ {0,1}; verify no row drifted to a count.
+    """
+    rows = state_db.execute(
+        "SELECT asset, locked, description_locked FROM assets_info "
+        "WHERE asset NOT IN ('XCP', 'BTC')"
+    ).fetchall()
+    for r in rows:
+        assert r["locked"] in (0, 1, None), (
+            f"asset {r['asset']} has locked={r['locked']} (must be 0/1 boolean)"
+        )
+        assert r["description_locked"] in (0, 1, None), (
+            f"asset {r['asset']} has description_locked={r['description_locked']}"
+        )
