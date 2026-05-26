@@ -323,6 +323,9 @@ def run_item(node, item, context):
                     print(f"Expected: {expected_result}")
                     print(f"Got: {str(e)}")
                     raise er from er
+                # the compose failed as expected: there is no transaction, block,
+                # set_variables or controls to process, so return early.
+                return context
             else:
                 raise e from e
 
