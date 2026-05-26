@@ -337,9 +337,9 @@ def test_hard_cap_closes_non_pool_fairminter_before_soft_cap_deadline(
     assert (fm.get("pool_quantity") or 0) == 0
 
     next_tx_index = [
-        ledger_db.execute("SELECT COALESCE(MAX(tx_index), -1) + 1 AS idx FROM transactions").fetchone()[
-            "idx"
-        ]
+        ledger_db.execute(
+            "SELECT COALESCE(MAX(tx_index), -1) + 1 AS idx FROM transactions"
+        ).fetchone()["idx"]
     ]
     for _ in range(2):
         tx = _unique_fairmint_tx(blockchain_mock, ledger_db, source, next_tx_index)
@@ -352,7 +352,7 @@ def test_hard_cap_closes_non_pool_fairminter_before_soft_cap_deadline(
 
     fm = ledger.issuances.get_fairminter_by_asset(ledger_db, asset)
     assert fm["status"] == "closed"
-    # non-pool hard cap: deadline is not moved; develop closes inline at hard cap
+    # non-pool: status closed inline; soft_cap_deadline_block stays at its original value
     assert fm["soft_cap_deadline_block"] == 400000
 
 
@@ -379,9 +379,9 @@ def test_hard_cap_keeps_pool_fairminter_open_before_deadline(
     fairminter.parse(ledger_db, tx, data[1:])
 
     next_tx_index = [
-        ledger_db.execute("SELECT COALESCE(MAX(tx_index), -1) + 1 AS idx FROM transactions").fetchone()[
-            "idx"
-        ]
+        ledger_db.execute(
+            "SELECT COALESCE(MAX(tx_index), -1) + 1 AS idx FROM transactions"
+        ).fetchone()["idx"]
     ]
     tx = _unique_fairmint_tx(blockchain_mock, ledger_db, source, next_tx_index)
     _, _, data = fairmint.compose(ledger_db, source, "HCAPPOOL", 60)

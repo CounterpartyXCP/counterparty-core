@@ -148,6 +148,29 @@ def unpack(message, return_dict=False, block_index=None):
         return ("", 0)
 
 
+def _handle_hard_cap_reached(db, fairminter, block_index):
+    if fairminter["soft_cap"] == 0:
+        ledger.issuances.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
+        return
+
+    pool_quantity = fairminter.get("pool_quantity") or 0
+    deadline = fairminter["soft_cap_deadline_block"]
+
+    if pool_quantity > 0:
+        # defer pool creation to after_block (anti-sandwich)
+        if deadline > block_index:
+            ledger.issuances.update_fairminter(
+                db, fairminter["tx_hash"], {"soft_cap_deadline_block": block_index}
+            )
+        elif deadline < block_index:
+            ledger.issuances.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
+        return
+
+    if deadline >= block_index:
+        fairminter_mod.soft_cap_deadline_reached(db, fairminter, block_index)
+    ledger.issuances.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
+
+
 def parse(db, tx, message):
     (asset, quantity) = unpack(message, block_index=tx["block_index"])
     problems = validate(db, tx["source"], asset, quantity)
@@ -329,29 +352,7 @@ def parse(db, tx, message):
                 bindings["locked"] = True
             if fairminter["lock_description"]:
                 bindings["description_locked"] = True
-            if fairminter["soft_cap"] > 0:
-                pool_quantity = fairminter.get("pool_quantity") or 0
-                if pool_quantity > 0:
-                    if fairminter["soft_cap_deadline_block"] > tx["block_index"]:
-                        ledger.issuances.update_fairminter(
-                            db,
-                            fairminter["tx_hash"],
-                            {"soft_cap_deadline_block": tx["block_index"]},
-                        )
-                    elif fairminter["soft_cap_deadline_block"] < tx["block_index"]:
-                        ledger.issuances.update_fairminter(
-                            db, fairminter["tx_hash"], {"status": "closed"}
-                        )
-                else:
-                    if fairminter["soft_cap_deadline_block"] >= tx["block_index"]:
-                        fairminter_mod.soft_cap_deadline_reached(
-                            db, fairminter, tx["block_index"]
-                        )
-                    ledger.issuances.update_fairminter(
-                        db, fairminter["tx_hash"], {"status": "closed"}
-                    )
-            else:
-                ledger.issuances.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
+            _handle_hard_cap_reached(db, fairminter, tx["block_index"])
 
     # we insert the new issuance
     ledger.events.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
