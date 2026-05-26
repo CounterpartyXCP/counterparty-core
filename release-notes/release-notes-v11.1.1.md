@@ -38,17 +38,12 @@ counterparty-server start
 ## Bugfixes
 
 - Close fairminter when hard cap is hit after the soft-cap deadline has passed
+- Close non-pool fairminter when hard cap is hit before the soft-cap deadline (was leaving the fairminter open after escrow distribution)
 - Fix stale-row lookup in `get_fairminters_by_soft_cap_deadline` (was returning superseded rows)
 
 ## API
 
 - Expose `lp_asset` field in `compose_fairminter` endpoint; extend `fairminters` table with `pool_quantity` and `lp_asset` columns
-
-## Codebase
-
-## Bugfixes
-
-## API
 
 ## Codebase
 

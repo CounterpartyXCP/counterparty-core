@@ -113,6 +113,18 @@ def validate(
         asset_name = f"{asset_parent}.{asset}"
     existing_asset = ledger.issuances.get_asset(db, asset_name)
 
+    # an asset earmarked as another fairminter's lp_asset cannot be claimed:
+    # the eventual pool creation would collide on the `assets.asset_name` UNIQUE index.
+    # Numeric lp_assets can only collide with a directly-named numeric `asset` (no
+    # subasset path), so restrict the check to top-level names.
+    if (
+        existing_asset is None
+        and asset_parent == ""
+        and protocol.enabled("fairmint_pool", block_index=block_index)
+        and ledger.issuances.get_active_fairminter_by_lp_asset(db, asset)
+    ):
+        problems.append(f"`{asset}` is earmarked as lp_asset by an active fairminter")
+
     if existing_asset:
         # check if a fair minter is already opened for this asset
         if existing_asset["fair_minting"]:
@@ -187,7 +199,7 @@ def validate(
             problems.append("Premint quantity + soft cap must be <= hard cap.")
 
     # pool_quantity validation
-    if pool_quantity > 0 and not protocol.enabled("fairmint_pool"):
+    if pool_quantity > 0 and not protocol.enabled("fairmint_pool", block_index=block_index):
         problems.append("pool_quantity is not yet enabled")
     elif pool_quantity > 0:
         if price <= 0:
@@ -211,9 +223,8 @@ def validate(
                 " when pool_quantity > 0"
             )
         # check issuer can afford pool deposit gas fee
-        pool_deposit_fee = gas.get_transaction_fee(
-            db, pooldeposit.ID, CurrentState().current_block_index()
-        )
+        fee_block_index = block_index or CurrentState().current_block_index()
+        pool_deposit_fee = gas.get_transaction_fee(db, pooldeposit.ID, fee_block_index)
         if pool_deposit_fee > 0:
             asset_fee = 0
             if existing_asset is None and asset_parent == "" and not asset.startswith("A"):
@@ -325,31 +336,36 @@ def compose(
             ledger.issuances.generate_asset_id(asset_parent) if asset_parent != "" else 0
         )
         lp_asset_id = ledger.issuances.generate_asset_id(lp_asset) if lp_asset else 0
-        data += cbor2.dumps(
-            [
-                asset_id,
-                asset_parent_id,
-                price,
-                quantity_by_price,
-                max_mint_per_tx,
-                max_mint_per_address,
-                hard_cap,
-                premint_quantity,
-                start_block,
-                end_block,
-                soft_cap,
-                soft_cap_deadline_block,
-                minted_asset_commission_int,
-                burn_payment,
-                lock_description,
-                lock_quantity,
-                divisible,
-                mime_type,
-                helpers.content_to_bytes(description, mime_type or "text/plain"),
-                pool_quantity,
-                lp_asset_id,
-            ]
-        )
+        # pool_quantity + lp_asset_id come BEFORE mime_type/description so that the
+        # ord-inscription path (which pops content then mime_type from the tail of
+        # the metadata array and lets the Rust decoder re-append them) preserves
+        # the pool fields without any fairminter-specific special casing.
+        fields = [
+            asset_id,
+            asset_parent_id,
+            price,
+            quantity_by_price,
+            max_mint_per_tx,
+            max_mint_per_address,
+            hard_cap,
+            premint_quantity,
+            start_block,
+            end_block,
+            soft_cap,
+            soft_cap_deadline_block,
+            minted_asset_commission_int,
+            burn_payment,
+            lock_description,
+            lock_quantity,
+            divisible,
+        ]
+        if pool_quantity > 0:
+            fields += [pool_quantity, lp_asset_id]
+        fields += [
+            mime_type,
+            helpers.content_to_bytes(description, mime_type or "text/plain"),
+        ]
+        data += cbor2.dumps(fields)
     else:
         packed_value += []
         packed_value += [
@@ -390,6 +406,7 @@ def unpack(message, return_dict=False, block_index=None):
 
 def unpack_new(message, return_dict=False, block_index=None):
     try:
+        fields = cbor2.loads(message)
         (
             asset_id,
             asset_parent_id,
@@ -408,11 +425,19 @@ def unpack_new(message, return_dict=False, block_index=None):
             lock_description,
             lock_quantity,
             divisible,
-            mime_type,
-            description,
-        ) = (fields := cbor2.loads(message))[:19]
-        pool_quantity = int(fields[19]) if len(fields) > 19 else 0
-        lp_asset_id = int(fields[20]) if len(fields) > 20 else 0
+        ) = fields[:17]
+        # Pool-enabled fairminters carry two extra fields (pool_quantity, lp_asset_id)
+        # inserted between `divisible` and `mime_type` — see compose() for why.
+        if len(fields) >= 21:
+            pool_quantity = int(fields[17])
+            lp_asset_id = int(fields[18])
+            mime_type = fields[19]
+            description = fields[20]
+        else:
+            pool_quantity = 0
+            lp_asset_id = 0
+            mime_type = fields[17] if len(fields) > 17 else ""
+            description = fields[18] if len(fields) > 18 else b""
         lp_asset = ledger.issuances.generate_asset_name(lp_asset_id) if lp_asset_id > 0 else None
         description = helpers.bytes_to_content(
             description, mime_type or "text/plain", block_index=block_index

@@ -438,12 +438,6 @@ def generate_envelope_script(data, construct_params):
         messages.broadcast.ID,
     ] and construct_params.get("inscription", False):
         message_data = cbor2.loads(message)
-        # For fairminters, pool_quantity (idx 19) and lp_asset_id (idx 20) trail the description (idx 18).
-        if message_type_id == messages.fairminter.ID:
-            if len(message_data) > 20:
-                message_data.pop()  # lp_asset_id
-            if len(message_data) > 19:
-                message_data.pop()  # pool_quantity
         content = message_data.pop()
         if content is not None and isinstance(content, (bytes, str)) and len(content) > 0:
             envelope_script = generate_ordinal_envelope_script(

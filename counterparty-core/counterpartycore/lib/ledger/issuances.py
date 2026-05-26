@@ -494,13 +494,20 @@ def get_fairminter_by_asset(db, asset):
 
 
 def get_active_fairminter_by_lp_asset(db, lp_asset):
+    # Pick the LATEST row per tx_hash (same pattern as get_fairminters_by_soft_cap_deadline)
+    # then filter by status; otherwise a closed fairminter whose intermediate 'open' row
+    # has the matching lp_asset would still be reported as active.
     cursor = db.cursor()
     query = """
-        SELECT * FROM fairminters
-        WHERE lp_asset = ? AND status IN ('open', 'pending')
+        SELECT * FROM (
+            SELECT *, MAX(rowid) AS rowid
+            FROM fairminters
+            WHERE lp_asset = :lp_asset
+            GROUP BY tx_hash
+        ) WHERE status IN ('open', 'pending')
         ORDER BY rowid DESC LIMIT 1
     """
-    bindings = (lp_asset,)
+    bindings = {"lp_asset": lp_asset}
     cursor.execute(query, bindings)
     return cursor.fetchone()
 

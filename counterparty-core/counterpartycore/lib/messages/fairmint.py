@@ -23,6 +23,7 @@ def validate(
     source,
     asset,
     quantity=0,
+    block_index=None,
 ):
     problems = []
 
@@ -59,7 +60,10 @@ def validate(
         if quantity > config.MAX_INT:
             problems.append("quantity exceeds maximum allowed value")
             return problems
-        if protocol.enabled("fairmint_pool") and quantity % fairminter["quantity_by_price"] != 0:
+        if (
+            protocol.enabled("fairmint_pool", block_index=block_index)
+            and quantity % fairminter["quantity_by_price"] != 0
+        ):
             problems.append("quantity is not a multiple of lot_size")
             return problems
         # check id we don't exceed the hard cap
@@ -74,7 +78,7 @@ def validate(
         if balance < xcp_total_price:
             problems.append("insufficient XCP balance")
     else:
-        if protocol.enabled("fairmint_pool") and quantity > 0:
+        if protocol.enabled("fairmint_pool", block_index=block_index) and quantity > 0:
             problems.append("quantity is not allowed for free fairminters")
         if not protocol.enabled("partial_mint_to_reach_hard_cap"):
             if (
@@ -163,7 +167,14 @@ def _handle_hard_cap_reached(db, fairminter, block_index):
                 db, fairminter["tx_hash"], {"soft_cap_deadline_block": block_index}
             )
         elif deadline < block_index:
-            ledger.issuances.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
+            # Unreachable: after_block(deadline) would have closed the fairminter
+            # already, so fairmint.validate would have rejected this mint upstream.
+            # Halt rather than silently close — closing here leaves the escrowed
+            # pool tokens stranded at UNSPENDABLE.
+            raise exceptions.ParseTransactionError(
+                f"fairminter {fairminter['tx_hash']}: hard cap reached at block {block_index} "
+                f"but soft_cap_deadline {deadline} already passed"
+            )
         return
 
     if deadline >= block_index:
@@ -173,7 +184,7 @@ def _handle_hard_cap_reached(db, fairminter, block_index):
 
 def parse(db, tx, message):
     (asset, quantity) = unpack(message, block_index=tx["block_index"])
-    problems = validate(db, tx["source"], asset, quantity)
+    problems = validate(db, tx["source"], asset, quantity, block_index=tx["block_index"])
 
     # if problems, insert into fairmints table with status invalid and return
     status = "valid"
