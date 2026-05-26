@@ -6,6 +6,7 @@ import struct
 import cbor2
 
 from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.messages import fairminter as fairminter_mod
 from counterpartycore.lib.parser import protocol
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -58,7 +59,7 @@ def validate(
         if quantity > config.MAX_INT:
             problems.append("quantity exceeds maximum allowed value")
             return problems
-        if quantity % fairminter["quantity_by_price"] != 0:
+        if protocol.enabled("fairmint_pool") and quantity % fairminter["quantity_by_price"] != 0:
             problems.append("quantity is not a multiple of lot_size")
             return problems
         # check id we don't exceed the hard cap
@@ -73,7 +74,7 @@ def validate(
         if balance < xcp_total_price:
             problems.append("insufficient XCP balance")
     else:
-        if quantity > 0:
+        if protocol.enabled("fairmint_pool") and quantity > 0:
             problems.append("quantity is not allowed for free fairminters")
         if not protocol.enabled("partial_mint_to_reach_hard_cap"):
             if (
@@ -96,13 +97,6 @@ def compose(db, source: str, asset: str, quantity: int = 0, skip_validation: boo
     problems = validate(db, source, asset, quantity)
     if len(problems) > 0 and not skip_validation:
         raise exceptions.ComposeError(problems)
-
-    if quantity != 0 and not skip_validation:
-        fairminter = ledger.issuances.get_fairminter_by_asset(db, asset)
-        if fairminter["price"] == 0:
-            raise exceptions.ComposeError("quantity is not allowed for free fairminters")
-        if quantity % fairminter["quantity_by_price"] != 0:
-            raise exceptions.ComposeError("quantity is not a multiple of lot_size")
 
     # create message
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
@@ -336,13 +330,23 @@ def parse(db, tx, message):
             if fairminter["lock_description"]:
                 bindings["description_locked"] = True
             if fairminter["soft_cap"] > 0:
-                if fairminter["soft_cap_deadline_block"] > tx["block_index"]:
-                    ledger.issuances.update_fairminter(
-                        db,
-                        fairminter["tx_hash"],
-                        {"soft_cap_deadline_block": tx["block_index"]},
-                    )
-                elif fairminter["soft_cap_deadline_block"] < tx["block_index"]:
+                pool_quantity = fairminter.get("pool_quantity") or 0
+                if pool_quantity > 0:
+                    if fairminter["soft_cap_deadline_block"] > tx["block_index"]:
+                        ledger.issuances.update_fairminter(
+                            db,
+                            fairminter["tx_hash"],
+                            {"soft_cap_deadline_block": tx["block_index"]},
+                        )
+                    elif fairminter["soft_cap_deadline_block"] < tx["block_index"]:
+                        ledger.issuances.update_fairminter(
+                            db, fairminter["tx_hash"], {"status": "closed"}
+                        )
+                else:
+                    if fairminter["soft_cap_deadline_block"] >= tx["block_index"]:
+                        fairminter_mod.soft_cap_deadline_reached(
+                            db, fairminter, tx["block_index"]
+                        )
                     ledger.issuances.update_fairminter(
                         db, fairminter["tx_hash"], {"status": "closed"}
                     )

@@ -551,7 +551,8 @@ def create_pool_from_fairminter(db, fairminter, block_index, asset, quantity_tok
     """Create an AMM pool from fairminter resolution.
 
     Called from fairminter.soft_cap_deadline_reached() when pool_quantity > 0.
-    The pool tokens are escrowed at UNSPENDABLE; the XCP is the collected payments.
+    Pool tokens and collected XCP are already unescrowed from UNSPENDABLE by the
+    bulk debit in soft_cap_deadline_reached(); this function only records the pool.
     LP tokens are permanently locked at UNSPENDABLE.
     """
     tx_hash = fairminter["tx_hash"]

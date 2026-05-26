@@ -1108,6 +1108,12 @@ def soft_cap_deadline_reached(db, fairminter, block_index):
                 paid_quantity,
             )
 
+        # for pool fairminters the window is exactly [start, soft_cap_deadline],
+        # so we close here; for regular soft_cap fairminters the fairminter stays
+        # open until hard_cap or end_block (original behaviour)
+        if pool_quantity > 0:
+            close_fairminter(db, fairminter, block_index)
+
 
 def perform_fairminter_soft_cap_operations(db, block_index):
     # get fairminters with `soft_cap_deadline_block` equal to `block_index`
