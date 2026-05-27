@@ -248,7 +248,9 @@ def unpack(message, block_index, return_dict=False):
     except AssertionError:
         timestamp, value, fee_fraction_int, mime_type, text = 0, None, 0, "", None
         status = "invalid: could not unpack text"
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        if not protocol.enabled("broadcast_safe_unpack", block_index=block_index):
+            raise
         # Consensus-safety net: unpack() is reached for *every* on-chain
         # broadcast message, including arbitrary attacker-crafted bytes.
         # Any uncaught exception here would propagate up to the parser
@@ -257,6 +259,7 @@ def unpack(message, block_index, return_dict=False):
         # VarIntSerializer.SerializationTruncationError, cbor2 decoder
         # errors, MemoryError on absurd lengths, etc. -- and mark the
         # message invalid so consensus stays uniform across nodes.
+        logger.warning("broadcast unpack error: %s", e)
         timestamp, value, fee_fraction_int, mime_type, text = 0, None, 0, "", None
         status = "invalid: could not unpack"
 
@@ -297,6 +300,8 @@ def parse(db, tx, message):
             if problems:
                 status = "invalid: " + "; ".join(problems)
         except (TypeError, ValueError, OverflowError, AssertionError) as e:
+            if not protocol.enabled("broadcast_safe_validate", block_index=tx["block_index"]):
+                raise
             logger.warning("broadcast validate error on tx %s: %s", tx["tx_hash"], e)
             timestamp, value, fee_fraction_int, text = 0, None, 0, None
             status = "invalid: validation error"

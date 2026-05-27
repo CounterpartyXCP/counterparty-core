@@ -321,6 +321,9 @@ def calculate_oracle_fee(
 
 
 def unpack(message, return_dict=False, block_index=None):
+    catch_classes = [exceptions.UnpackError, struct.error]
+    if protocol.enabled("catch_invalid_dispenser_asset_id", block_index=block_index):
+        catch_classes.append(exceptions.AssetIDError)
     try:
         action_address = None
         oracle_address = None
@@ -339,7 +342,7 @@ def unpack(message, return_dict=False, block_index=None):
             oracle_address = address_unpack(message[read : read + 21])
         asset = issuances.generate_asset_name(assetid)
         status = "valid"
-    except (exceptions.UnpackError, struct.error):
+    except tuple(catch_classes):
         (
             give_quantity,
             escrow_quantity,

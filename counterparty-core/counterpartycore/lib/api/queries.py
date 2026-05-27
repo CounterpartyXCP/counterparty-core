@@ -2893,7 +2893,14 @@ def prepare_dispenser_where(status, other_conditions=None, exclude_with_oracle=F
     return where
 
 
-SELECT_DISPENSERS = "*, (satoshirate * 1.0) / (give_quantity * 1.0) AS price"
+SELECT_DISPENSERS = """
+*,
+CASE
+    WHEN COALESCE((SELECT divisible FROM assets_info WHERE assets_info.asset = dispensers.asset), 0) = 1
+    THEN (satoshirate * 100000000.0) / (give_quantity * 1.0)
+    ELSE (satoshirate * 1.0) / (give_quantity * 1.0)
+END AS price
+"""
 
 
 def get_dispensers(
@@ -4552,7 +4559,7 @@ def get_pool_quote_deposit(state_db, asset1: str, asset2: str, quantity: int):
     pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
     pool = pool_row.result if pool_row else None
 
-    if pool is None or pool["reserve_a"] == 0:
+    if pool is None or not pool_has_liquidity(pool):
         return {
             "first_deposit": True,
             "asset_a": sorted_a,
@@ -4599,7 +4606,7 @@ def get_pool_quote_withdraw(state_db, asset1: str, asset2: str, quantity: int):
     sorted_a, sorted_b = sort_pair(asset1, asset2)
     pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
     pool = pool_row.result if pool_row else None
-    if pool is None or pool["reserve_a"] == 0:
+    if pool is None or not pool_has_liquidity(pool):
         return {"pool_exists": False, "message": "Pool does not exist or is empty."}
 
     lp_info = select_row(state_db, "assets_info", where={"asset": pool["lp_asset"]})
