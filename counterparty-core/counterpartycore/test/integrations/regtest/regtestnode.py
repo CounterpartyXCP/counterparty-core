@@ -1009,6 +1009,29 @@ class RegtestNode:
 
         print("Detach with a single OP_RETURN output transaction test successful")
 
+    def _wait_for_wallet_utxo(self, txid, vout, expected_value_sats, timeout=10.0):
+        """Block until `gettxout` (with mempool) reports the outpoint with the
+        expected satoshi value. This synchronises the wallet's view with the
+        mempool so that `signrawtransactionwithwallet` cannot race and pick a
+        stale amount when computing the BIP143 sighash for a chained input.
+        """
+        deadline = time.time() + timeout
+        last = None
+        while time.time() < deadline:
+            out = self.bitcoin_cli("gettxout", txid, vout, "true").strip()
+            if out and out != "null":
+                info = json.loads(out)
+                value_sats = int(D(str(info["value"])) * D(config.UNIT))
+                if value_sats == expected_value_sats:
+                    print(f"Wallet sees UTXO {txid}:{vout} = {value_sats} sats")
+                    return
+                last = value_sats
+            time.sleep(0.2)
+        raise AssertionError(
+            f"Wallet did not surface UTXO {txid}:{vout} with value "
+            f"{expected_value_sats} sats within {timeout}s (last seen: {last})"
+        )
+
     def test_transaction_chaining(self):
         print("Test transaction chaining...")
         # source address
@@ -1065,6 +1088,13 @@ class RegtestNode:
         )
         print(f"Transaction 1 sent: {tx_hash_1}")
 
+        # `sendrawtransaction` only guarantees mempool acceptance; the wallet's
+        # own UTXO view is updated asynchronously via notifications. Wait until
+        # the wallet sees the change output with the expected satoshi value,
+        # otherwise `signrawtransactionwithwallet` can race and sign tx2 with a
+        # stale/wrong amount, producing a NULLFAIL on broadcast.
+        self._wait_for_wallet_utxo(txid_1, vout_1, value_1)
+
         #####   Send BTC to new address using the change from the previous transaction #####
 
         # prepare transaction
@@ -1119,6 +1149,9 @@ class RegtestNode:
             signed_transaction_2, no_confirmation=True, dont_wait_mempool=True
         )
         print(f"Transaction 2 sent: {tx_hash_2}")
+
+        # same race as above before signing tx3
+        self._wait_for_wallet_utxo(txid_2, 0, value_2)
 
         #####   Create a dispenser using the BTC received from the second transactions #####
 
