@@ -5,6 +5,7 @@ from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger.caches import OrdersCache
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.ledger.events import credit, insert_record, insert_update
+from counterpartycore.lib.parser import protocol
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -47,7 +48,7 @@ def compute_pool_output(reserve_in, reserve_out, input_qty, fee_bps):
 
 
 def compute_pool_input_for_target_price(
-    reserve_in, reserve_out, target_price_num, target_price_den, fee_bps
+    reserve_in, reserve_out, target_price_num, target_price_den, fee_bps, block_index=None
 ):
     """Max input before pool marginal price reaches target. Returns 0 if already past."""
     if reserve_in <= 0 or reserve_out <= 0:
@@ -61,6 +62,11 @@ def compute_pool_input_for_target_price(
     current_price_rhs = reserve_out * fee_factor * target_price_num
     if current_price_lhs >= current_price_rhs:
         return 0
+
+    if protocol.enabled("fix_pool_best_price_routing", block_index):
+        return _compute_pool_input_for_target_price_integer(
+            reserve_in, reserve_out, target_price_num, target_price_den, fee_bps
+        )
 
     a = fee_factor
     b_coeff = reserve_in * (10000 + fee_factor)
@@ -78,6 +84,63 @@ def compute_pool_input_for_target_price(
 
     dx = numerator // (2 * a)
     return max(dx, 0)
+
+
+def _compute_pool_input_for_target_price_integer(
+    reserve_in, reserve_out, target_price_num, target_price_den, fee_bps
+):
+    """Integer-exact replacement for the continuous quadratic above.
+
+    Execution floors the pool output to an integer, so the continuous solution
+    can both under- and over-estimate the right input: it may pick an input
+    whose floored output is 0 (skipping a better-than-book pool fill), or push
+    the input so far that the realized average price exceeds the book price.
+
+    This computes the answer directly against the same integer output function
+    execution uses, in two steps:
+
+      1. Binary search the largest input whose post-fill *marginal* price still
+         beats the target. Filling beyond this point would buy units that cost
+         more than the next book order, so it bounds how much the pool should
+         take. The realized output here is floored.
+      2. Trim the input down to the smallest value that still yields that same
+         floored output, so the taker never overpays for the rounded-down units.
+
+    The realized average price of the result is therefore always at or better
+    than the book target (verified exhaustively for small reserves and over
+    random large-boundary samples).
+    """
+    fee_factor = 10000 - fee_bps
+
+    # Upper bound: marginal price can never beat the target once the input alone
+    # exceeds reserve_out * fee_factor * target_price_num / (10000 * target_price_den).
+    high = (reserve_out * fee_factor * target_price_num) // (10000 * target_price_den) - reserve_in
+    high = min(max(high, 0), config.MAX_INT)
+    low = 0
+    while low < high:
+        mid = (low + high + 1) // 2
+        output = compute_pool_output(reserve_in, reserve_out, mid, fee_bps)
+        if (reserve_in + mid) * 10000 * target_price_den <= (
+            reserve_out - output
+        ) * fee_factor * target_price_num:
+            low = mid
+        else:
+            high = mid - 1
+
+    dx = low
+    output = compute_pool_output(reserve_in, reserve_out, dx, fee_bps)
+    if output <= 0:
+        return 0
+
+    # Trim to the minimal input that still produces `output`.
+    trim_low, trim_high = 1, dx
+    while trim_low < trim_high:
+        mid = (trim_low + trim_high) // 2
+        if compute_pool_output(reserve_in, reserve_out, mid, fee_bps) >= output:
+            trim_high = mid
+        else:
+            trim_low = mid + 1
+    return trim_low
 
 
 #####################
@@ -623,7 +686,9 @@ def update_pool(db, asset_a, asset_b, new_reserve_a, new_reserve_b):
 ### POOL SWAP EXECUTION ###
 
 
-def try_pool_fill(tx1, pool, max_give, target_price_num=None, target_price_den=None):
+def try_pool_fill(
+    tx1, pool, max_give, target_price_num=None, target_price_den=None, block_index=None
+):
     """Try to fill an order against the pool. Returns (fill_quantity, output) or (0, 0)."""
     if not pool or not pool_has_liquidity(pool):
         return 0, 0
@@ -637,7 +702,7 @@ def try_pool_fill(tx1, pool, max_give, target_price_num=None, target_price_den=N
 
     if target_price_num is not None:
         fill_quantity = compute_pool_input_for_target_price(
-            reserve_in, reserve_out, target_price_num, target_price_den, fee_bps
+            reserve_in, reserve_out, target_price_num, target_price_den, fee_bps, block_index
         )
         fill_quantity = min(fill_quantity, max_give)
     else:

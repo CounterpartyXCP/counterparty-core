@@ -91,6 +91,65 @@ def test_order_fills_against_pool(ledger_db, defaults, blockchain_mock, test_hel
     assert pool_after["reserve_b"] != pool["reserve_b"]
 
 
+def test_pool_rounding_routes_to_better_pool_before_book(ledger_db, defaults, blockchain_mock):
+    """Underfill direction: the continuous solver rounded the pool output to 0 and skipped
+    a pool fill that was cheaper than the book. With fix_pool_best_price_routing the pool
+    fills first (2 XCP -> 1 NODIVISIBLE) instead of the worse 4:1 book order."""
+    source_lp = defaults["addresses"][0]
+    source_trader = defaults["addresses"][1]
+
+    create_pool(ledger_db, blockchain_mock, source_lp, "XCP", "NODIVISIBLE", 1, 2)
+
+    maker_tx = place_order(ledger_db, blockchain_mock, source_lp, "NODIVISIBLE", 1, "XCP", 4)
+    xcp_before = ledger.balances.get_balance(ledger_db, source_trader, "XCP")
+
+    trader_tx = place_order(ledger_db, blockchain_mock, source_trader, "XCP", 4, "NODIVISIBLE", 1)
+
+    assert xcp_before - ledger.balances.get_balance(ledger_db, source_trader, "XCP") == 2
+
+    cursor = ledger_db.cursor()
+    pool_matches = cursor.execute(
+        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (trader_tx["tx_hash"],)
+    ).fetchall()
+    assert len(pool_matches) == 1
+    assert pool_matches[0]["backward_quantity"] == 2  # XCP in
+    assert pool_matches[0]["forward_quantity"] == 1  # NODIVISIBLE out
+
+    maker_order = cursor.execute(
+        "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
+        (maker_tx["tx_hash"],),
+    ).fetchone()
+    assert maker_order["status"] == "open"  # worse book order untouched
+
+
+def test_pool_rounding_does_not_overfill_past_book(ledger_db, defaults, blockchain_mock):
+    """Overfill direction: bounding on the post-fill *marginal* price (rather than the
+    realized average) would push the pool input to 2 XCP for 1 NODIVISIBLE — worse than
+    both the book and the correct 1:1 fill. The fix trims the input to the minimum that
+    yields the floored output, so the taker pays 1 XCP, not 2."""
+    source_lp = defaults["addresses"][0]
+    source_trader = defaults["addresses"][1]
+
+    create_pool(ledger_db, blockchain_mock, source_lp, "XCP", "NODIVISIBLE", 1, 3)
+
+    # Book asks 5 XCP for 3 NODIVISIBLE (~1.67 XCP/unit).
+    place_order(ledger_db, blockchain_mock, source_lp, "NODIVISIBLE", 3, "XCP", 5)
+    xcp_before = ledger.balances.get_balance(ledger_db, source_trader, "XCP")
+
+    trader_tx = place_order(ledger_db, blockchain_mock, source_trader, "XCP", 2, "NODIVISIBLE", 1)
+
+    # 1 XCP for 1 NODIVISIBLE, not 2.
+    assert xcp_before - ledger.balances.get_balance(ledger_db, source_trader, "XCP") == 1
+
+    cursor = ledger_db.cursor()
+    pool_matches = cursor.execute(
+        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (trader_tx["tx_hash"],)
+    ).fetchall()
+    assert len(pool_matches) == 1
+    assert pool_matches[0]["backward_quantity"] == 1  # XCP in
+    assert pool_matches[0]["forward_quantity"] == 1  # NODIVISIBLE out
+
+
 def test_pool_tail_partial_fill_at_taker_limit(ledger_db, defaults, blockchain_mock):
     source_lp = defaults["addresses"][0]
     source_trader = defaults["addresses"][1]
