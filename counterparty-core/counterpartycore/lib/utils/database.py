@@ -123,8 +123,8 @@ class _ThreadLocalConnections:
         for db in self.connections:
             try:
                 db.close()
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as e:  # noqa: BLE001
+                logger.debug("Error closing connection: %s", e)
         self.connections = []
         if pool.closed:
             return

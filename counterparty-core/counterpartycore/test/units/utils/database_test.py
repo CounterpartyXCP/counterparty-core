@@ -1,3 +1,4 @@
+import gc
 import os
 import queue
 import tempfile
@@ -218,7 +219,6 @@ def test_thread_exit_releases_connections(connection_pool):
     new thread per request and each thread left its cached connections counted
     permanently in connection_count.
     """
-    import gc
 
     def use_pool():
         with connection_pool.connection():
@@ -358,7 +358,9 @@ def test_threading_violation_error(connection_pool):
             return getattr(self.real_conn, name)
 
     # Replace the real connection with our failing connection
-    connection_pool.thread_local.state.connections[0] = ValidationFailingConnection(original_connection)
+    connection_pool.thread_local.state.connections[0] = ValidationFailingConnection(
+        original_connection
+    )
 
     # Get a connection from the pool - should trigger validation failure
     with connection_pool.connection() as conn:
@@ -398,7 +400,9 @@ def test_busy_error(connection_pool):
             return getattr(self.real_conn, name)
 
     # Replace the real connection with our failing connection
-    connection_pool.thread_local.state.connections[0] = ValidationFailingConnection(original_connection)
+    connection_pool.thread_local.state.connections[0] = ValidationFailingConnection(
+        original_connection
+    )
 
     # Get a connection from the pool - should trigger validation failure
     with connection_pool.connection() as conn:
