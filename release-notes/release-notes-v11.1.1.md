@@ -35,6 +35,8 @@ counterparty-server start
 
 ## Bugfixes
 
+- Fix `connection_count` leak in `APSWConnectionPool` causing `MAINPROCESS_POOL` to exhaust over time (per-request threads in APIv1 left cached connections counted forever)
+
 ## API
 
 ## Codebase
