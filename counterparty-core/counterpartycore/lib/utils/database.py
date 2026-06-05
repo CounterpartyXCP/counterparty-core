@@ -123,7 +123,7 @@ class _ThreadLocalConnections:
         for db in self.connections:
             try:
                 db.close()
-            except Exception as e:  # noqa: BLE001
+            except apsw.Error as e:
                 logger.debug("Error closing connection: %s", e)
         self.connections = []
         if pool.closed:
