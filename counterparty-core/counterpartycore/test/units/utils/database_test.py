@@ -107,8 +107,8 @@ def test_basic_connection(connection_pool, temp_db_file):
         assert result == {"1": 1}
 
     # The connection should be in the pool
-    assert hasattr(connection_pool.thread_local, "connections")
-    assert len(connection_pool.thread_local.connections) == 1
+    assert hasattr(connection_pool.thread_local, "state")
+    assert len(connection_pool.thread_local.state.connections) == 1
     assert connection_pool.connection_count == 1
 
 
@@ -126,7 +126,7 @@ def test_connection_reuse(connection_pool):
     assert conn1_id == conn2_id
 
     # The connection should be back in the pool
-    assert len(connection_pool.thread_local.connections) == 1
+    assert len(connection_pool.thread_local.state.connections) == 1
     assert connection_pool.connection_count == 1
 
 
@@ -141,7 +141,7 @@ def test_pool_full(connection_pool, monkeypatch):
             connections_created.append(id(conn))
 
     # Verify that we have at least one connection in the pool
-    assert len(connection_pool.thread_local.connections) == 1
+    assert len(connection_pool.thread_local.state.connections) == 1
 
     # Verify the connection count is correct
     assert connection_pool.connection_count == 1
@@ -159,7 +159,7 @@ def test_closed_pool(connection_pool):
         assert result == {"1": 1}
 
     # The connection should be closed, not added to the pool
-    assert len(getattr(connection_pool.thread_local, "connections", [])) == 0
+    assert len(connection_pool.thread_local.state.connections) == 0
     # The connection count should not have changed (the temporary connection is not counted)
     assert connection_pool.connection_count == 0
 
@@ -206,9 +206,40 @@ def test_multithreaded_use(connection_pool):
 
     assert not failures, f"Thread failures: {failures}"
 
-    # The total number of connections should be greater than 0
-    # We can't predict the exact number because of thread timing
-    assert connection_pool.connection_count > 0
+    # After all threads exit, _ThreadLocalConnections.__del__ releases their
+    # cached connections, so the pool count returns to 0 (no leak).
+    assert connection_pool.connection_count == 0
+
+
+def test_thread_exit_releases_connections(connection_pool):
+    """Regression test: connection_count must return to 0 when short-lived threads exit.
+
+    This guards against the v1 API leak where Werkzeug's threaded=True spawns a
+    new thread per request and each thread left its cached connections counted
+    permanently in connection_count.
+    """
+    import gc
+
+    def use_pool():
+        with connection_pool.connection():
+            pass  # acquire then release to thread-local cache
+
+    num_threads = 10
+    threads = []
+    for _ in range(num_threads):
+        t = threading.Thread(target=use_pool)
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()
+
+    # Force GC so __del__ fires on any lingering _ThreadLocalConnections objects
+    gc.collect()
+
+    assert connection_pool.connection_count == 0, (
+        f"connection_count leaked to {connection_pool.connection_count} after threads exited"
+    )
 
 
 def test_close_with_active_connections(connection_pool):
@@ -225,7 +256,7 @@ def test_close_with_active_connections(connection_pool):
         assert result == {"1": 1}
 
     # The connection should have been closed, not returned to the pool
-    assert len(getattr(connection_pool.thread_local, "connections", [])) == 0
+    assert len(connection_pool.thread_local.state.connections) == 0
     # The connection count should be 0 as it is decremented after use
     assert connection_pool.connection_count == 0
 
@@ -241,7 +272,7 @@ def test_connection_exception(connection_pool):
         assert str(e) == str(expected_error)
 
     # The connection should still be in the pool
-    assert len(connection_pool.thread_local.connections) == 1
+    assert len(connection_pool.thread_local.state.connections) == 1
     assert connection_pool.connection_count == 1
 
 
@@ -296,7 +327,8 @@ def test_concurrent_close(connection_pool):
     assert len(connections_made) == 5
 
     # All connections should be closed
-    assert len(getattr(connection_pool.thread_local, "connections", [])) == 0
+    state = getattr(connection_pool.thread_local, "state", None)
+    assert state is None or len(state.connections) == 0
 
 
 # Handle connection validation errors with a different approach
@@ -307,7 +339,7 @@ def test_threading_violation_error(connection_pool):
         pass
 
     # Now we have a connection in the pool - retrieve it
-    original_connection = connection_pool.thread_local.connections[0]
+    original_connection = connection_pool.thread_local.state.connections[0]
 
     # Create a wrapper for the original connection that will fail validation
     class ValidationFailingConnection:
@@ -326,7 +358,7 @@ def test_threading_violation_error(connection_pool):
             return getattr(self.real_conn, name)
 
     # Replace the real connection with our failing connection
-    connection_pool.thread_local.connections[0] = ValidationFailingConnection(original_connection)
+    connection_pool.thread_local.state.connections[0] = ValidationFailingConnection(original_connection)
 
     # Get a connection from the pool - should trigger validation failure
     with connection_pool.connection() as conn:
@@ -336,9 +368,8 @@ def test_threading_violation_error(connection_pool):
         result = cursor.fetchone()
         assert result == {"1": 1}
 
-    # The connection count should have increased because a new connection
-    # should have been created when validation failed
-    assert connection_pool.connection_count > 1
+    # The bad connection slot is released and a new one created: net count stays at 1
+    assert connection_pool.connection_count == 1
 
 
 def test_busy_error(connection_pool):
@@ -348,7 +379,7 @@ def test_busy_error(connection_pool):
         pass
 
     # Now we have a connection in the pool - retrieve it
-    original_connection = connection_pool.thread_local.connections[0]
+    original_connection = connection_pool.thread_local.state.connections[0]
 
     # Create a wrapper for the original connection that will fail validation
     class ValidationFailingConnection:
@@ -367,7 +398,7 @@ def test_busy_error(connection_pool):
             return getattr(self.real_conn, name)
 
     # Replace the real connection with our failing connection
-    connection_pool.thread_local.connections[0] = ValidationFailingConnection(original_connection)
+    connection_pool.thread_local.state.connections[0] = ValidationFailingConnection(original_connection)
 
     # Get a connection from the pool - should trigger validation failure
     with connection_pool.connection() as conn:
@@ -377,9 +408,8 @@ def test_busy_error(connection_pool):
         result = cursor.fetchone()
         assert result == {"1": 1}
 
-    # The connection count should have increased because a new connection
-    # should have been created when validation failed
-    assert connection_pool.connection_count > 1
+    # The bad connection slot is released and a new one created: net count stays at 1
+    assert connection_pool.connection_count == 1
 
 
 def test_connection_count_increment(connection_pool):
@@ -422,7 +452,7 @@ def test_pool_close(connection_pool):
         pass
 
     # Verify that there is a connection in the pool
-    assert len(connection_pool.thread_local.connections) == 1
+    assert len(connection_pool.thread_local.state.connections) == 1
 
     # Close the pool
     connection_pool.close()
@@ -431,7 +461,7 @@ def test_pool_close(connection_pool):
     assert connection_pool.closed
 
     # Verify that the connections list is empty
-    assert len(connection_pool.thread_local.connections) == 0
+    assert len(connection_pool.thread_local.state.connections) == 0
 
 
 def test_close_with_threading_violation(connection_pool):
@@ -465,9 +495,9 @@ def test_close_with_threading_violation(connection_pool):
             return getattr(self.real_conn, name)
 
     # Replace connections with our wrapper
-    original_connections = connection_pool.thread_local.connections.copy()
+    original_connections = connection_pool.thread_local.state.connections.copy()
     wrapped_connections = [ConnectionCloseRaiser(conn) for conn in original_connections]
-    connection_pool.thread_local.connections = wrapped_connections
+    connection_pool.thread_local.state.connections = wrapped_connections
 
     # Patch logger.trace
     with patch("counterpartycore.lib.utils.database.logger.trace", mock_trace):
@@ -485,19 +515,19 @@ def test_multithreaded_init(temp_db_file):
 
     def worker():
         try:
-            # Verify that thread_local.connections does not yet exist
-            assert not hasattr(pool.thread_local, "connections")
+            # Verify that thread_local.state does not yet exist
+            assert not hasattr(pool.thread_local, "state")
 
-            # Get a connection that will initialize thread_local.connections
+            # Get a connection that will initialize thread_local.state
             with pool.connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("SELECT 1")
                 result = cursor.fetchone()
                 assert result == {"1": 1}
 
-            # Verify that thread_local.connections is initialized
-            assert hasattr(pool.thread_local, "connections")
-            assert len(pool.thread_local.connections) == 1
+            # Verify that thread_local.state is initialized
+            assert hasattr(pool.thread_local, "state")
+            assert len(pool.thread_local.state.connections) == 1
 
             results.put(True)
         except Exception as e:
@@ -577,7 +607,7 @@ def test_edge_case_config_pool_size_zero(monkeypatch):
 
         # All connections should be closed after use
         # because the pool size is 0
-        assert len(getattr(pool.thread_local, "connections", [])) == 0
+        assert len(pool.thread_local.state.connections) == 0
 
         # Clean up
         pool.close()
