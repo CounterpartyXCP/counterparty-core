@@ -304,6 +304,73 @@ def test_get_pool_withdraw_estimate_xcp_fee(apiv2_client, defaults):
     assert result is None or (isinstance(result, int) and result >= 0)
 
 
+def test_compose_responses_include_xcp_fee(ledger_db, defaults, monkeypatch):
+    def fake_compose_transaction(db, name, params, construct_params):  # noqa: ARG001
+        return {
+            "name": name,
+            "params": params,
+            "rawtransaction": "00",
+        }
+
+    monkeypatch.setattr(compose.composer, "compose_transaction", fake_compose_transaction)
+    monkeypatch.setattr(compose.messages.dividend, "get_estimate_xcp_fee", lambda db, asset: 11)
+    monkeypatch.setattr(
+        compose.messages.sweep, "get_total_fee", lambda db, address, block_index: 22
+    )
+    monkeypatch.setattr(compose.gas, "get_transaction_fee", lambda db, tx_id, block_index: tx_id)
+
+    assert (
+        compose.compose_dividend(
+            ledger_db,
+            defaults["addresses"][0],
+            quantity_per_unit=1,
+            asset="DIVISIBLE",
+            dividend_asset="XCP",
+        )["xcp_fee"]
+        == 11
+    )
+    assert (
+        compose.compose_sweep(
+            ledger_db,
+            defaults["addresses"][0],
+            destination=defaults["addresses"][1],
+            flags=1,
+            memo="",
+        )["xcp_fee"]
+        == 22
+    )
+    assert (
+        compose.compose_attach(
+            ledger_db,
+            defaults["addresses"][0],
+            asset="XCP",
+            quantity=1,
+        )["xcp_fee"]
+        == compose.UTXO_ID
+    )
+    assert (
+        compose.compose_pooldeposit(
+            ledger_db,
+            defaults["addresses"][0],
+            asset_a="XCP",
+            asset_b="DIVISIBLE",
+            quantity_a=1,
+            quantity_b=1,
+        )["xcp_fee"]
+        == 120
+    )
+    assert (
+        compose.compose_poolwithdraw(
+            ledger_db,
+            defaults["addresses"][0],
+            asset_a="XCP",
+            asset_b="DIVISIBLE",
+            quantity=1,
+        )["xcp_fee"]
+        == 121
+    )
+
+
 def test_compose_pooldeposit_with_lp_asset(apiv2_client, defaults):
     address = defaults["addresses"][0]
     response = apiv2_client.get(

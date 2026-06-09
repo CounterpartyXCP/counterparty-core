@@ -17,6 +17,11 @@ from counterpartycore.lib.parser import deserialize, gettxinfo, messagetype
 D = decimal.Decimal
 
 
+def _add_xcp_fee(result, xcp_fee):
+    result["xcp_fee"] = xcp_fee
+    return result
+
+
 def compose_bet(
     db,
     address: str,
@@ -181,7 +186,10 @@ def compose_dividend(
         "asset": asset,
         "dividend_asset": dividend_asset,
     }
-    return composer.compose_transaction(db, "dividend", params, construct_params)
+    return _add_xcp_fee(
+        composer.compose_transaction(db, "dividend", params, construct_params),
+        messages.dividend.get_estimate_xcp_fee(db, asset),
+    )
 
 
 def get_dividend_estimate_xcp_fee(db, address: str, asset: str):  # noqa # pylint: disable=W0613
@@ -396,7 +404,10 @@ def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **c
         "flags": flags,
         "memo": memo,
     }
-    return composer.compose_transaction(db, "sweep", params, construct_params)
+    return _add_xcp_fee(
+        composer.compose_transaction(db, "sweep", params, construct_params),
+        messages.sweep.get_total_fee(db, address, CurrentState().current_block_index()),
+    )
 
 
 def get_sweep_estimate_xcp_fee(db, address: str):
@@ -530,7 +541,10 @@ def compose_pooldeposit(
         "min_lp_quantity": min_lp_quantity,
         "lp_asset": lp_asset,
     }
-    return composer.compose_transaction(db, "pooldeposit", params, construct_params)
+    return _add_xcp_fee(
+        composer.compose_transaction(db, "pooldeposit", params, construct_params),
+        gas.get_transaction_fee(db, 120, CurrentState().current_block_index()),
+    )
 
 
 def get_pool_deposit_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
@@ -575,7 +589,10 @@ def compose_poolwithdraw(
         "min_quantity_a": min_quantity_a,
         "min_quantity_b": min_quantity_b,
     }
-    return composer.compose_transaction(db, "poolwithdraw", params, construct_params)
+    return _add_xcp_fee(
+        composer.compose_transaction(db, "poolwithdraw", params, construct_params),
+        gas.get_transaction_fee(db, 121, CurrentState().current_block_index()),
+    )
 
 
 def get_pool_withdraw_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
@@ -611,7 +628,10 @@ def compose_attach(
         "utxo_value": utxo_value,
         "destination_vout": destination_vout,
     }
-    return composer.compose_transaction(db, "attach", params, construct_params)
+    return _add_xcp_fee(
+        composer.compose_transaction(db, "attach", params, construct_params),
+        gas.get_transaction_fee(db, UTXO_ID, CurrentState().current_block_index()),
+    )
 
 
 def get_attach_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
