@@ -28,12 +28,34 @@ FLAG_BINARY_MEMO = 4
 FLAGS_ALL = FLAG_BINARY_MEMO | FLAG_BALANCES | FLAG_OWNERSHIP
 
 
-def get_total_fee(db, source, block_index):
+def get_sweep_balances(db, source, block_index):
+    balances = ledger.balances.get_address_balances(db, source)
+    if protocol.enabled("sweep_skip_zero_balances", block_index):
+        return [balance for balance in balances if balance["quantity"] > 0]
+    return balances
+
+
+def get_total_fee(db, source, block_index, flags=None):
     total_fee = ANTISPAM_FEE
     antispamfee = protocol.get_value_by_block_index("sweep_antispam_fee", block_index) * config.UNIT
     if antispamfee > 0:
-        balances_count = ledger.balances.get_balances_count(db, source)[0]["cnt"]
-        issuances_count = ledger.issuances.get_issuances_count(db, source)
+        if protocol.enabled("sweep_skip_zero_balances", block_index):
+            if (
+                not isinstance(flags, int)
+                or isinstance(flags, bool)
+                or flags > FLAGS_ALL
+                or not flags & (FLAG_BALANCES | FLAG_OWNERSHIP)
+            ):
+                flags = FLAGS_ALL
+            balances_count = len(get_sweep_balances(db, source, block_index))
+            if not flags & FLAG_BALANCES:
+                balances_count = 0
+            issuances_count = ledger.issuances.get_issuances_count(db, source)
+            if not flags & FLAG_OWNERSHIP:
+                issuances_count = 0
+        else:
+            balances_count = ledger.balances.get_balances_count(db, source)[0]["cnt"]
+            issuances_count = ledger.issuances.get_issuances_count(db, source)
         total_fee = int(balances_count * antispamfee * 2 + issuances_count * antispamfee * 4)
     return total_fee
 
@@ -48,7 +70,7 @@ def validate(db, source, destination, flags, memo, block_index):
 
     result = ledger.balances.get_balance(db, source, "XCP")
 
-    total_fee = get_total_fee(db, source, block_index)
+    total_fee = get_total_fee(db, source, block_index, flags)
 
     if result < total_fee:
         problems.append(
@@ -219,7 +241,9 @@ def parse(db, tx, message):
                 * config.UNIT
             )
 
-            if antispamfee > 0:
+            if antispamfee > 0 and (
+                total_fee > 0 or not protocol.enabled("sweep_skip_zero_balances", tx["block_index"])
+            ):
                 ledger.events.debit(
                     db,
                     tx["source"],
@@ -244,7 +268,7 @@ def parse(db, tx, message):
             status = "invalid: insufficient balance for antispam fee for sweep"
 
     if status == "valid":
-        balances = ledger.balances.get_address_balances(db, tx["source"])
+        balances = get_sweep_balances(db, tx["source"], tx["block_index"])
 
         if flags & FLAG_BALANCES:
             for balance in balances:
