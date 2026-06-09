@@ -106,6 +106,20 @@ def validate(db, asset_dest_quant_list):
     return problems
 
 
+def validate_compose(db, asset_dest_quant_list):
+    problems = validate(db, asset_dest_quant_list)
+    seen = set()
+    duplicate_problem = "cannot specify more than once a destination per asset"
+    for send in asset_dest_quant_list:
+        send_key = (send[0], send[1])
+        if send_key in seen and duplicate_problem not in problems:
+            problems.append(duplicate_problem)
+            break
+        seen.add(send_key)
+
+    return problems
+
+
 def compose(
     db,
     source: str,
@@ -150,7 +164,7 @@ def compose(
 
     cursor.close()
 
-    problems = validate(db, asset_dest_quant_list)
+    problems = validate_compose(db, asset_dest_quant_list)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
