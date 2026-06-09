@@ -106,6 +106,19 @@ def test_compose_rejects_overflow_btc_quantity(ledger_db, defaults):
         )
 
 
+def test_compose_rejects_non_boolean_memo_is_hex(ledger_db, defaults):
+    with pytest.raises(exceptions.ComposeError, match="`memo_is_hex` must be a boolean"):
+        enhancedsend.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            defaults["addresses"][1],
+            "XCP",
+            1000,
+            "abcdef",
+            "true",
+        )
+
+
 def test_unpack(ledger_db, defaults):
     assert enhancedsend.unpack(
         b"\x84\x01\x19\x03\xe8U\x01\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xecDmemo"
