@@ -560,7 +560,7 @@ def run_apiserver(
         if getattr(config, "MEMORY_PROFILE", False):
             mem_profiler = memory_profiler.start_memory_profiler(
                 interval_seconds=60,
-                enable_tracemalloc=False,
+                enable_tracemalloc=getattr(config, "MEMORY_PROFILE_TRACEMALLOC", False),
             )
 
         # Start connection pool monitor
