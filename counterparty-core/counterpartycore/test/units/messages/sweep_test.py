@@ -121,6 +121,11 @@ def test_compose(ledger_db, defaults, monkeypatch):
             (sweep.compose(ledger_db, defaults["addresses"][8], defaults["addresses"][5], 1, None),)
 
 
+def test_compose_rejects_invalid_hex_memo(ledger_db, defaults):
+    with pytest.raises(exceptions.ComposeError, match="memo must be valid hexadecimal"):
+        sweep.compose(ledger_db, defaults["addresses"][6], defaults["addresses"][5], 7, "not hex")
+
+
 def test_compose_2(ledger_db, defaults):
     assert sweep.compose(
         ledger_db, defaults["addresses"][0], defaults["addresses"][1], 1, None, False

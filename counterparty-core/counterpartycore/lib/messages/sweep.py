@@ -83,7 +83,10 @@ def compose(
     if memo is None:
         memo_bytes = b""
     elif flags & FLAG_BINARY_MEMO:
-        memo_bytes = bytes.fromhex(memo)
+        try:
+            memo_bytes = bytes.fromhex(memo)
+        except (TypeError, ValueError) as e:
+            raise exceptions.ComposeError("memo must be valid hexadecimal") from e
     else:
         memo_bytes = memo.encode("utf-8")
         memo_bytes = struct.pack(f">{len(memo_bytes)}s", memo_bytes)
