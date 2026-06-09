@@ -103,6 +103,7 @@ def test_argparser():
         "no_confirm": False,
         "data_dir": "datadir",
         "cache_dir": None,
+        "disable_api_cache": False,
         "log_file": False,
         "api_log_file": False,
         "no_log_files": False,
@@ -135,6 +136,13 @@ def test_argparser():
         "memory_profile": False,
         "enable_all_protocol_changes": False,
     }
+
+
+def test_argparser_disable_api_cache():
+    parser = cli.main.arg_parser(no_config_file=True, app_name="counterparty-test")
+    args = parser.parse_args(["--regtest", "--disable-api-cache", "start"])
+
+    assert vars(args)["disable_api_cache"] is True
 
 
 WELCOME_MSG_CONFIG_STUBS = [
@@ -216,6 +224,18 @@ def test_initialise_config_electrs_string_coerced_to_list(tmp_path, preserve_con
 
     assert config.ELECTRS_URLS == ["http://my-server:3000"]
     assert config.ELECTRS_URLS_IS_DEFAULT is False
+
+
+def test_initialise_config_disable_api_cache(tmp_path, preserve_config):
+    initialise.initialise_config(
+        disable_api_cache=True,
+        electrs_url=None,
+        data_dir=str(tmp_path),
+        cache_dir=str(tmp_path),
+        **INITIALISE_DEFAULTS,
+    )
+
+    assert config.DISABLE_API_CACHE is True
 
 
 def test_initialise_config_electrs_regtest_none(tmp_path, preserve_config):
