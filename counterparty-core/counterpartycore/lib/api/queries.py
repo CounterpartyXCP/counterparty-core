@@ -583,6 +583,26 @@ def get_transactions_by_addresses(
     )
 
 
+def get_address(ledger_db, address: str):
+    """
+    Returns the latest options for an address.
+    :param str address: The address to return (e.g. $ADDRESS_1)
+    """
+    query_result = select_row(ledger_db, "addresses", where={"address": address})
+    if query_result:
+        return query_result
+    return QueryResult(
+        {
+            "address": address,
+            "options": 0,
+            "block_index": None,
+        },
+        None,
+        "addresses",
+        1,
+    )
+
+
 def get_transaction_types_count(state_db):
     """
     Returns the count of each transaction type
