@@ -410,6 +410,26 @@ def test_compose_valid(ledger_db, defaults):
     )
 
 
+def test_compose_roundtrips_utf8_memo(ledger_db, defaults):
+    _source, _destination, data = mpma.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        [
+            ("XCP", defaults["addresses"][2], defaults["quantity"]),
+            ("XCP", defaults["addresses"][1], defaults["quantity"]),
+        ],
+        "∞",
+        False,
+    )
+
+    assert mpma.unpack(data[1:]) == {
+        "XCP": [
+            (defaults["addresses"][2], defaults["quantity"], "∞", False),
+            (defaults["addresses"][1], defaults["quantity"], "∞", False),
+        ]
+    }
+
+
 def test_compose_invalid(ledger_db, defaults):
     with pytest.raises(exceptions.ComposeError, match="insufficient funds for XCP"):
         mpma.compose(

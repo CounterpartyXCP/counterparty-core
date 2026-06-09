@@ -56,9 +56,10 @@ def _encode_memo(memo=None, is_hex=False):
             barr.append(memo)
         else:
             # signal a 0 bit for a string encoded memo
+            memo = memo.encode("utf-8")
             barr.append("0b0")
             barr.append(f"uint:6={len(memo)}")
-            barr.append(BitArray(memo.encode("utf-8")))
+            barr.append(BitArray(memo))
 
         return barr
     # if the memo is None, return just a 0 bit
