@@ -198,6 +198,36 @@ def test_compose_dispense(apiv2_client, defaults, ledger_db):
         assert response.status_code in [200, 400]
 
 
+def test_compose_dispense_verbose_params_use_api_names(monkeypatch, ledger_db, defaults):
+    """Test compose_dispense verbose params use public API field names."""
+
+    def mock_compose_transaction(db, name, params, construct_params):
+        assert db == ledger_db
+        assert name == "dispense"
+        assert construct_params == {"verbose": True}
+        return {
+            "rawtransaction": "00",
+            "params": params | {"skip_validation": False},
+            "name": "dispense",
+        }
+
+    monkeypatch.setattr(compose.composer, "compose_transaction", mock_compose_transaction)
+
+    result = compose.compose_dispense(
+        ledger_db,
+        defaults["addresses"][0],
+        defaults["addresses"][5],
+        1000,
+        verbose=True,
+    )
+
+    assert result["params"]["address"] == defaults["addresses"][0]
+    assert result["params"]["dispenser"] == defaults["addresses"][5]
+    assert "source" not in result["params"]
+    assert "destination" not in result["params"]
+    assert result["params"]["quantity_normalized"] == "0.00001000"
+
+
 def test_compose_sweep(apiv2_client, defaults):
     """Test compose_sweep function via API."""
     address = defaults["addresses"][0]
@@ -1660,6 +1690,13 @@ def test_info_by_tx_hash_invalid(apiv2_client):
     result = apiv2_client.get(f"/v2/transactions/{invalid_tx_hash}/info")
     # Will fail with 400 due to invalid format
     assert result.status_code in [400, 404]
+
+
+def test_bitcoin_info_by_tx_hash_route_invalid(apiv2_client):
+    """Test bitcoin info_by_tx_hash route with invalid transaction hash."""
+    invalid_tx_hash = "invalid_hash"
+    result = apiv2_client.get(f"/v2/bitcoin/transactions/{invalid_tx_hash}/info")
+    assert result.status_code == 400
 
 
 def test_info_invalid_rawtransaction(apiv2_client):
