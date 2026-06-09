@@ -147,6 +147,19 @@ def test_compose_2(ledger_db, defaults):
     )
 
 
+def test_compose_empty_address_reports_no_sweepable_content(ledger_db, defaults):
+    with pytest.raises(
+        exceptions.ComposeError, match="address has no balances or asset ownerships to sweep"
+    ):
+        sweep.compose(
+            ledger_db,
+            defaults["addresses"][7],
+            defaults["addresses"][5],
+            sweep.FLAG_BALANCES | sweep.FLAG_OWNERSHIP,
+            None,
+        )
+
+
 def test_new_unpack(defaults):
     assert sweep.unpack(
         b"\x83U\x01\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec\x01@"

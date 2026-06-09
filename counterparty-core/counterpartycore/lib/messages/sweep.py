@@ -77,6 +77,45 @@ def validate(db, source, destination, flags, memo, block_index):
     return problems, total_fee
 
 
+def has_asset_ownership_to_sweep(db, source, block_index):
+    for asset_issued in ledger.issuances.get_asset_issued(db, source):
+        issuances = ledger.issuances.get_issuances(
+            db,
+            asset=asset_issued["asset"],
+            status="valid",
+            first=True,
+            current_block_index=block_index,
+        )
+        if issuances and issuances[-1]["issuer"] == source:
+            return True
+    return False
+
+
+def empty_sweep_problem(db, source, flags, block_index):
+    if not isinstance(flags, int) or isinstance(flags, bool):
+        return None
+
+    requested = []
+    has_sweepable_content = False
+
+    if flags & FLAG_BALANCES:
+        requested.append("balances")
+        balances = ledger.balances.get_address_balances(db, source)
+        has_sweepable_content = any(balance["quantity"] > 0 for balance in balances)
+
+    if flags & FLAG_OWNERSHIP:
+        requested.append("asset ownerships")
+        has_sweepable_content = has_sweepable_content or has_asset_ownership_to_sweep(
+            db, source, block_index
+        )
+
+    if has_sweepable_content or not requested:
+        return None
+    if len(requested) == 1:
+        return f"address has no {requested[0]} to sweep"
+    return "address has no balances or asset ownerships to sweep"
+
+
 def compose(
     db, source: str, destination: str, flags: int, memo: str, skip_validation: bool = False
 ):
@@ -90,6 +129,10 @@ def compose(
 
     block_index = CurrentState().current_block_index()
     problems, _total_fee = validate(db, source, destination, flags, memo_bytes, block_index)
+    if not problems:
+        empty_problem = empty_sweep_problem(db, source, flags, block_index)
+        if empty_problem:
+            problems.append(empty_problem)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
