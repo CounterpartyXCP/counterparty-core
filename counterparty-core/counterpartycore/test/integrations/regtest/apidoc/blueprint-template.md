@@ -13,12 +13,23 @@ API routes are divided into groups:
 
 When the server is not ready, that is to say when all the extant blocks have not yet been parsed, every route will return a `503` error, except `/` and those routes that are in the `/blocks`, `/transactions` and `/backend` groups.
 
-All API responses contain the following 3 headers:
+All API responses include the following headers:
 
 * `X-COUNTERPARTY-HEIGHT` contains the last block parsed by Counterparty
 * `X-BITCOIN-HEIGHT` contains the last block known to Bitcoin Core
 * `X-COUNTERPARTY-READY` contains true if `X-COUNTERPARTY-HEIGHT` >= `X-BITCOIN-HEIGHT` - 1
 * `X-LEDGER-STATE` contains `Starting`, `Catching Up`, `Following` or `Stopping`
+
+The v2 API uses the following HTTP response codes:
+
+* `200 OK` for successful requests.
+* `204 No Content` for successful CORS preflight (`OPTIONS`) requests.
+* `400 Bad Request` for invalid parameters, invalid compose/unpack inputs, address or transaction hash validation errors, backend RPC errors returned while handling a request, and other request-level API errors.
+* `404 Not Found` when the requested route or resource does not exist.
+* `500 Internal Server Error` for unexpected server errors before route handling can complete.
+* `503 Service Unavailable` when the API or backend is not ready, or when an unexpected route-handling error is reported as temporarily unavailable.
+
+Routes in the `/v2/bitcoin` group proxy Bitcoin Core responses and may return the proxied status code and headers.
 
 ## Responses Format
 
