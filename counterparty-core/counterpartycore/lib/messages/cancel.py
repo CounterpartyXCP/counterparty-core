@@ -18,6 +18,15 @@ LENGTH = 32
 ID = 70
 
 
+def pack_offer_hash(offer_hash):
+    if not isinstance(offer_hash, str) or len(offer_hash) != 64:
+        raise exceptions.ComposeError("invalid offer_hash")
+    try:
+        return binascii.unhexlify(bytes(offer_hash, "utf-8"))
+    except binascii.Error as e:
+        raise exceptions.ComposeError("invalid offer_hash") from e
+
+
 def validate(db, source, offer_hash):
     problems = []
 
@@ -45,11 +54,12 @@ def validate(db, source, offer_hash):
 
 
 def compose(db, source: str, offer_hash: str, skip_validation: bool = False):
+    offer_hash_bytes = pack_offer_hash(offer_hash)
+
     _offer, _offer_type, problems = validate(db, source, offer_hash)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
-    offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, "utf-8"))
     data = messagetype.pack(ID)
     data += struct.pack(FORMAT, offer_hash_bytes)
     return (source, [], data)

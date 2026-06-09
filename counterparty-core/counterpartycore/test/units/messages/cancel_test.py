@@ -22,7 +22,7 @@ def test_compose(ledger_db, defaults):
         b"F\xfd\xcd]\xdf\x084\xb1\xf6\xe7\xd7\xe4\xb9^\x92=\xd5\x1a:\xd4\xdaW\x95\xc0\xf5\xf2q\xa5\x1f\xc3\xab\xb4.",
     )
 
-    with pytest.raises(exceptions.ComposeError, match="no open offer with that hash"):
+    with pytest.raises(exceptions.ComposeError, match="invalid offer_hash"):
         cancel.compose(ledger_db, defaults["addresses"][1], "bet_hash")
 
     with pytest.raises(exceptions.ComposeError, match="incorrect source address"):
@@ -35,6 +35,13 @@ def test_compose(ledger_db, defaults):
 
     with pytest.raises(exceptions.ComposeError, match="offer not open"):
         cancel.compose(ledger_db, closed_bet["source"], closed_bet["tx_hash"])
+
+
+def test_compose_rejects_malformed_offer_hash(ledger_db, defaults):
+    invalid_offer_hashes = ["bet_hash", "g" * 64, 1]
+    for offer_hash in invalid_offer_hashes:
+        with pytest.raises(exceptions.ComposeError, match="invalid offer_hash"):
+            cancel.compose(ledger_db, defaults["addresses"][0], offer_hash, skip_validation=True)
 
 
 def test_unpack_invalid_length():
