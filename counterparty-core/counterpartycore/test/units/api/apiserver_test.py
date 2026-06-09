@@ -21,9 +21,9 @@ def test_apiserver_root(apiv2_client, current_block_index):
             "backend_height": ledger.currentstate.CurrentState().current_backend_height(),
             "counterparty_height": current_block_index,
             "ledger_state": "Starting",
-            "documentation": "https://counterpartycore.docs.apiary.io/",
+            "documentation": "https://counterpartyxcp.github.io/counterparty-core/",
             "routes": "http://localhost/v2/routes",
-            "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
+            "openapi": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/openapi.json",
             "current_commit": helpers.get_current_commit_hash(),
         }
     }
@@ -369,9 +369,9 @@ def test_ledger_state(apiv2_client, current_block_index, ledger_db):
             "backend_height": ledger.currentstate.CurrentState().current_backend_height(),
             "counterparty_height": current_block_index,
             "ledger_state": "Rolling Back",
-            "documentation": "https://counterpartycore.docs.apiary.io/",
+            "documentation": "https://counterpartyxcp.github.io/counterparty-core/",
             "routes": "http://localhost/v2/routes",
-            "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
+            "openapi": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/openapi.json",
             "current_commit": helpers.get_current_commit_hash(),
         }
     }
@@ -387,9 +387,9 @@ def test_ledger_state(apiv2_client, current_block_index, ledger_db):
             "backend_height": ledger.currentstate.CurrentState().current_backend_height(),
             "counterparty_height": current_block_index,
             "ledger_state": "Reparsing",
-            "documentation": "https://counterpartycore.docs.apiary.io/",
+            "documentation": "https://counterpartyxcp.github.io/counterparty-core/",
             "routes": "http://localhost/v2/routes",
-            "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
+            "openapi": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/openapi.json",
             "current_commit": helpers.get_current_commit_hash(),
         }
     }

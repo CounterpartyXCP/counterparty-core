@@ -36,7 +36,7 @@ auth = HTTPBasicAuth()
 
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-BLUEPRINT_FILEPATH = os.path.join(CURR_DIR, "..", "..", "..", "..", "apiary.apib")
+OPENAPI_FILEPATH = os.path.join(CURR_DIR, "..", "..", "..", "..", "openapi.json")
 
 
 @auth.verify_password
@@ -77,9 +77,9 @@ def api_root():
         "backend_height": CurrentState().current_backend_height(),
         "counterparty_height": counterparty_height,
         "ledger_state": CurrentState().ledger_state(),
-        "documentation": "https://counterpartycore.docs.apiary.io/",
+        "documentation": "https://counterpartyxcp.github.io/counterparty-core/",
         "routes": f"{request.url_root}v2/routes",
-        "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
+        "openapi": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/openapi.json",
         "current_commit": config.CURRENT_COMMIT,
     }
 
@@ -426,7 +426,7 @@ def handle_not_found(_error):
 
 
 def handle_doc():
-    return flask.send_file(BLUEPRINT_FILEPATH)
+    return flask.send_file(OPENAPI_FILEPATH, mimetype="application/json")
 
 
 def handle_options():
@@ -455,7 +455,7 @@ def init_flask_app():
             provide_automatic_options=False,
         )
         app.add_url_rule(
-            "/v2/blueprint",
+            "/v2/openapi.json",
             view_func=handle_doc,
             methods=methods,
             strict_slashes=False,
