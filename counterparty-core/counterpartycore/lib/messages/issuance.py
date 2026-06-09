@@ -130,7 +130,7 @@ def validate(
             (not protocol.enabled("cip03", block_index)) or (not reset)
         ):
             problems.append("cannot change divisibility")
-        if not protocol.enabled("issuance_callability_parameters_removal", block_index):
+        if not protocol.enabled("issuance_callable_lock_fix", block_index):
             if bool(last_issuance["callable"]) != bool(callable_):
                 problems.append("cannot change callability")
             if last_issuance["call_date"] > call_date and (

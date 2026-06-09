@@ -5,6 +5,7 @@ import cbor2
 import pytest
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import apiwatcher
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import issuance
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
@@ -213,25 +214,8 @@ def test_validate(ledger_db, defaults, current_block_index):
         (defaults["addresses"][0], defaults["addresses"][0]),
     )
 
-    assert issuance.validate(
-        ledger_db,
-        defaults["addresses"][0],
-        "OLDCALLABLE",
-        0,
-        True,
-        True,
-        False,
-        False,
-        0,
-        0.0,
-        "",
-        None,
-        None,
-        current_block_index,
-    ) == (0, 0.0, [], 0, "", True, True, False, True, None)
-
-    with ProtocolChangesDisabled(["issuance_callability_parameters_removal"]):
-        assert issuance.validate(
+    def validate_callable_lock_at(block_index):
+        return issuance.validate(
             ledger_db,
             defaults["addresses"][0],
             "OLDCALLABLE",
@@ -245,8 +229,35 @@ def test_validate(ledger_db, defaults, current_block_index):
             "",
             None,
             None,
-            current_block_index,
-        )[2] == ["cannot change callability", "cannot reduce call price"]
+            block_index,
+        )[2]
+
+    current_state = CurrentState()
+    original_block_index = current_state.current_block_index()
+    original_network = (config.REGTEST, config.TESTNET3, config.TESTNET4, config.SIGNET)
+    try:
+        config.REGTEST = False
+        config.TESTNET3 = False
+        config.TESTNET4 = False
+        config.SIGNET = False
+
+        current_state.set_current_block_index(952799)
+        assert validate_callable_lock_at(952799) == [
+            "cannot change callability",
+            "cannot reduce call price",
+        ]
+
+        current_state.set_current_block_index(952800)
+        assert validate_callable_lock_at(952800) == []
+    finally:
+        config.REGTEST, config.TESTNET3, config.TESTNET4, config.SIGNET = original_network
+        current_state.set_current_block_index(original_block_index)
+
+    with ProtocolChangesDisabled(["issuance_callable_lock_fix"]):
+        assert validate_callable_lock_at(952800) == [
+            "cannot change callability",
+            "cannot reduce call price",
+        ]
 
     assert issuance.validate(
         ledger_db,
