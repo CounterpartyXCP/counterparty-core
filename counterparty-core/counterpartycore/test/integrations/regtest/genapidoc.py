@@ -341,7 +341,7 @@ def gen_root_path():
                                     "backend_height": 850214,
                                     "counterparty_height": 850214,
                                     "ledger_state": "Following",
-                                    "documentation": "https://counterpartyxcp.github.io/counterparty-core/",
+                                    "documentation": "https://apidocs.counterparty.io/",
                                     "routes": "http://localhost:4000/v2/routes",
                                     "openapi": "http://localhost:4000/v2/openapi.json",
                                 }

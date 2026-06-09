@@ -77,7 +77,7 @@ def api_root():
         "backend_height": CurrentState().current_backend_height(),
         "counterparty_height": counterparty_height,
         "ledger_state": CurrentState().ledger_state(),
-        "documentation": "https://counterpartyxcp.github.io/counterparty-core/",
+        "documentation": "https://apidocs.counterparty.io/",
         "routes": f"{request.url_root}v2/routes",
         "openapi": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/openapi.json",
         "current_commit": config.CURRENT_COMMIT,

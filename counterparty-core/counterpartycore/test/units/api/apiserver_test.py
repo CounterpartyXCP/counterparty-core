@@ -1,3 +1,4 @@
+import json
 from unittest.mock import Mock
 
 import pytest
@@ -21,12 +22,25 @@ def test_apiserver_root(apiv2_client, current_block_index):
             "backend_height": ledger.currentstate.CurrentState().current_backend_height(),
             "counterparty_height": current_block_index,
             "ledger_state": "Starting",
-            "documentation": "https://counterpartyxcp.github.io/counterparty-core/",
+            "documentation": "https://apidocs.counterparty.io/",
             "routes": "http://localhost/v2/routes",
             "openapi": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/openapi.json",
             "current_commit": helpers.get_current_commit_hash(),
         }
     }
+
+
+def test_apiserver_openapi_spec(apiv2_client):
+    response = apiv2_client.get("/v2/openapi.json")
+    assert response.status_code == 200
+    assert response.content_type.startswith("application/json")
+    spec = response.json
+    assert spec["openapi"].startswith("3.1")
+    assert spec["info"]["title"] == "Counterparty Core API"
+    assert spec["info"]["version"] == config.VERSION_STRING
+    assert "/v2/blocks" in spec["paths"]
+    # examples must contain no regtest data
+    assert "bcrt1" not in json.dumps(spec)
 
 
 def prepare_url(db, current_block_index, defaults, rawtransaction, route):
@@ -369,7 +383,7 @@ def test_ledger_state(apiv2_client, current_block_index, ledger_db):
             "backend_height": ledger.currentstate.CurrentState().current_backend_height(),
             "counterparty_height": current_block_index,
             "ledger_state": "Rolling Back",
-            "documentation": "https://counterpartyxcp.github.io/counterparty-core/",
+            "documentation": "https://apidocs.counterparty.io/",
             "routes": "http://localhost/v2/routes",
             "openapi": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/openapi.json",
             "current_commit": helpers.get_current_commit_hash(),
@@ -387,7 +401,7 @@ def test_ledger_state(apiv2_client, current_block_index, ledger_db):
             "backend_height": ledger.currentstate.CurrentState().current_backend_height(),
             "counterparty_height": current_block_index,
             "ledger_state": "Reparsing",
-            "documentation": "https://counterpartyxcp.github.io/counterparty-core/",
+            "documentation": "https://apidocs.counterparty.io/",
             "routes": "http://localhost/v2/routes",
             "openapi": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/openapi.json",
             "current_commit": helpers.get_current_commit_hash(),
