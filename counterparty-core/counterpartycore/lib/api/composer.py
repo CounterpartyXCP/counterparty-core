@@ -133,9 +133,17 @@ def multisig_dust_size(construct_params):
     return config.DEFAULT_MULTISIG_DUST_SIZE
 
 
+def segwit_dust_size(construct_params):
+    if construct_params.get("segwit_dust_size") is not None:
+        return construct_params["segwit_dust_size"]
+    return config.DEFAULT_SEGWIT_DUST_SIZE
+
+
 def dust_size(address, construct_params):
     if multisig.is_multisig(address):
         return multisig_dust_size(construct_params)
+    if is_segwit_address(address):
+        return segwit_dust_size(construct_params)
     return regular_dust_size(construct_params)
 
 
@@ -1157,10 +1165,7 @@ def check_transaction_sanity(tx_info, composed_tx, unspent_list, construct_param
         if value is not None:
             if value != out["value"]:
                 value_is_ok = False
-        elif out["value"] not in [
-            regular_dust_size(construct_params),
-            multisig_dust_size(construct_params),
-        ]:
+        elif out["value"] != dust_size(address, construct_params):
             value_is_ok = False
 
         if not value_is_ok:
