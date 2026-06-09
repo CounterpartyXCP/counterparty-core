@@ -6,6 +6,16 @@ from docstring_parser import parse as parse_docstring
 from counterpartycore.lib.api import apiv1, compose, composer, healthz, queries
 from counterpartycore.lib.backend import bitcoind, electrs
 
+CSV_ENUM_ANNOTATIONS = (
+    queries.TransactionType,
+    queries.SendType,
+    queries.IssuancesAssetEvents,
+    queries.DispenserStatus,
+    queries.OrderStatus,
+    queries.OrderMatchesStatus,
+    queries.FairmintersStatus,
+)
+
 
 def get_routes():
     """Return the API routes."""
@@ -359,6 +369,12 @@ def prepare_route_args(function):
         if route_arg["type"] == "Literal":
             route_arg["type"] = "enum[str]"
             route_arg["members"] = list(typing.get_args(annotation))
+            if annotation == queries.DispenserStatus:
+                route_arg["members"].extend(
+                    str(value) for value in queries.DispenserStatusNumber.values()
+                )
+            if annotation in CSV_ENUM_ANNOTATIONS:
+                route_arg["allow_csv"] = True
         if arg_name in args_description:
             route_arg["description"] = args_description[arg_name]
         args.append(route_arg)
