@@ -457,6 +457,51 @@ def test_sentry_context_includes_http_error_returned_to_user(apiv2_client, monke
     assert isinstance(captured[0], RuntimeError)
 
 
+def test_sentry_context_includes_outer_http_error_returned_to_user(apiv2_client, monkeypatch):
+    class FakeSentryScope:
+        def __init__(self):
+            self.contexts = {}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, _exc_type, _exc_value, _traceback):
+            return False
+
+        def set_transaction_name(self, _name):
+            pass
+
+        def set_context(self, name, data):
+            self.contexts[name] = data
+
+    scope = FakeSentryScope()
+    captured = []
+
+    def capture_exception_mock(error):
+        captured.append(error)
+        assert scope.contexts["api_response"] == {
+            "status_code": 500,
+            "error": "Internal server error",
+            "method": "GET",
+            "path": "/v2/transactions",
+        }
+
+    monkeypatch.setattr(apiserver, "configure_sentry_scope", lambda: scope)
+    monkeypatch.setattr(apiserver, "capture_exception", capture_exception_mock)
+    monkeypatch.setattr(
+        apiserver.verbose,
+        "clean_api_result",
+        lambda _result: (_ for _ in ()).throw(RuntimeError("post-processing failed")),
+    )
+
+    response = apiv2_client.get("/v2/transactions?limit=1")
+
+    assert response.status_code == 500
+    assert response.json["error"] == "Internal server error"
+    assert len(captured) == 1
+    assert isinstance(captured[0], RuntimeError)
+
+
 def test_get_all_transactions_verbose(apiv2_client):
     url = "/v2/transactions?verbose=true&show_unconfirmed=true"
     result = apiv2_client.get(url).json["result"]

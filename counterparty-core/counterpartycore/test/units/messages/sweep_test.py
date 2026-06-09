@@ -175,6 +175,37 @@ def test_compose_empty_address_reports_no_sweepable_content(ledger_db, defaults)
         )
 
 
+def test_empty_sweep_problem_reports_single_requested_kind(ledger_db, defaults):
+    assert (
+        sweep.empty_sweep_problem(
+            ledger_db, defaults["addresses"][7], sweep.FLAG_BALANCES, config.BURN_START
+        )
+        == "address has no balances to sweep"
+    )
+
+    assert (
+        sweep.empty_sweep_problem(ledger_db, defaults["addresses"][7], "1", config.BURN_START)
+        is None
+    )
+
+
+def test_has_asset_ownership_to_sweep(ledger_db, defaults, monkeypatch):
+    source = defaults["addresses"][0]
+
+    monkeypatch.setattr(
+        sweep.ledger.issuances,
+        "get_asset_issued",
+        lambda _db, _source: [{"asset": "TESTASSET"}],
+    )
+    monkeypatch.setattr(
+        sweep.ledger.issuances,
+        "get_issuances",
+        lambda _db, **_kwargs: [{"issuer": source}],
+    )
+
+    assert sweep.has_asset_ownership_to_sweep(ledger_db, source, config.BURN_START)
+
+
 def test_new_unpack(defaults):
     assert sweep.unpack(
         b"\x83U\x01\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec\x01@"
