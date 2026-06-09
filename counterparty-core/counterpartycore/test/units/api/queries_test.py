@@ -170,6 +170,26 @@ def test_select_row_returns_none(ledger_db):
     assert result is None
 
 
+def test_select_rows_can_skip_result_count(ledger_db):
+    """Test select_rows can skip the extra count query for single-row lookups."""
+    counted_result = queries.select_rows(
+        ledger_db,
+        "transactions",
+        limit=1,
+    )
+    assert counted_result is not None
+    assert counted_result.result_count is not None
+
+    result = queries.select_rows(
+        ledger_db,
+        "transactions",
+        limit=1,
+        with_count=False,
+    )
+    assert result is not None
+    assert result.result_count is None
+
+
 # =============================================================================
 # Tests for transaction queries
 # =============================================================================
