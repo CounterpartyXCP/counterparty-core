@@ -238,15 +238,6 @@ def validate(
     problems = []
     cursor = db.cursor()
 
-    # For SQLite3
-    if (
-        give_quantity > config.MAX_INT
-        or get_quantity > config.MAX_INT
-        or fee_required > config.MAX_INT
-        or block_index + expiration > config.MAX_INT
-    ):
-        problems.append("integer overflow")
-
     if give_asset == config.BTC and get_asset == config.BTC:
         problems.append(f"cannot trade {config.BTC} for itself")
 
@@ -262,6 +253,15 @@ def validate(
     if not isinstance(expiration, int):
         problems.append("expiration must be expressed as an integer block delta")
         return problems
+
+    # For SQLite3
+    if (
+        give_quantity > config.MAX_INT
+        or get_quantity > config.MAX_INT
+        or fee_required > config.MAX_INT
+        or block_index + expiration > config.MAX_INT
+    ):
+        problems.append("integer overflow")
 
     if give_quantity <= 0:
         problems.append("non‐positive give quantity")
