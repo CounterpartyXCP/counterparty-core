@@ -254,6 +254,50 @@ def test_compose_with_oracle(ledger_db, defaults, monkeypatch):
         )
 
 
+def test_compose_close_ignores_oracle_fee(ledger_db, defaults, monkeypatch):
+    def fail_calculate_oracle_fee(*args):
+        raise AssertionError("close dispenser should not calculate oracle fee")
+
+    monkeypatch.setattr(dispenser, "calculate_oracle_fee", fail_calculate_oracle_fee)
+
+    assert dispenser.compose(
+        ledger_db,
+        defaults["addresses"][5],
+        config.XCP,
+        0,
+        0,
+        0,
+        dispenser.STATUS_CLOSED,
+        None,
+        defaults["addresses"][1],
+        True,
+    ) == (
+        defaults["addresses"][5],
+        [],
+        b"\x0c\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\n",
+    )
+
+
+def test_validate_close_with_oracle_keeps_price_check(ledger_db, defaults, current_block_index):
+    assert dispenser.validate(
+        ledger_db,
+        defaults["addresses"][5],
+        config.XCP,
+        0,
+        0,
+        0,
+        dispenser.STATUS_CLOSED,
+        None,
+        current_block_index,
+        defaults["addresses"][1],
+    ) == (
+        None,
+        [
+            f"The oracle address {defaults['addresses'][1]} has not broadcasted any price yet",
+        ],
+    )
+
+
 def test_parse_open_dispenser(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
