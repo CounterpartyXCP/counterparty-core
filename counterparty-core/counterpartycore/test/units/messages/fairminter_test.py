@@ -23,6 +23,37 @@ def test_validate(ledger_db, defaults):
 
     assert fairminter.validate(
         ledger_db,
+        defaults["addresses"][1],
+        "FAIRMINTED",
+        max_mint_per_tx=10,
+        minted_asset_commission=0.0000001,
+    ) == ["minted_asset_commission must be 0 or greater than 0.0000001"]
+
+    with ProtocolChangesDisabled(["fix_fairminter_commission_minimum"]):
+        assert (
+            fairminter.validate(
+                ledger_db,
+                defaults["addresses"][1],
+                "FAIRMINTED",
+                max_mint_per_tx=10,
+                minted_asset_commission=0.0000001,
+            )
+            == []
+        )
+
+    assert (
+        fairminter.validate(
+            ledger_db,
+            defaults["addresses"][1],
+            "FAIRMINTED",
+            max_mint_per_tx=10,
+            minted_asset_commission=0.0000002,
+        )
+        == []
+    )
+
+    assert fairminter.validate(
+        ledger_db,
         defaults["addresses"][1],  # source
         "XCP",  # asset
         "",  # asset_parent,
