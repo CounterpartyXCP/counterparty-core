@@ -987,6 +987,15 @@ def test_prepare_fee_parameters():
         1000,
     )
 
+    with pytest.raises(exceptions.ComposeError, match="Invalid confirmation_target"):
+        composer.prepare_fee_parameters({"confirmation_target": 0})
+
+    with pytest.raises(exceptions.ComposeError, match="Invalid confirmation_target"):
+        composer.prepare_fee_parameters({"confirmation_target": -1})
+
+    with pytest.raises(exceptions.ComposeError, match="Invalid confirmation_target"):
+        composer.prepare_fee_parameters({"confirmation_target": 1009})
+
 
 def test_prepare_unspent_list(ledger_db, defaults, monkeypatch):
     txs = {
