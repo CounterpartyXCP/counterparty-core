@@ -25,6 +25,13 @@ def test_validate(ledger_db, defaults):
     assert fairmint.validate(
         ledger_db,
         defaults["addresses"][1],  # source
+        "PAIDFAIRMIN",  # asset
+        "10",  # quantity
+    ) == ["quantity must be an integer"]
+
+    assert fairmint.validate(
+        ledger_db,
+        defaults["addresses"][1],  # source
         "RAIDFAIRMIN",  # asset
         11,  # quantity
     ) == ["Quantity exceeds maximum allowed per transaction"]
@@ -78,6 +85,14 @@ def test_compose(ledger_db, defaults):
             defaults["addresses"][1],  # source
             "QAIDFAIRMIN",  # asset
             35,  # quantity
+        )
+
+    with pytest.raises(exceptions.ComposeError, match="quantity must be an integer"):
+        fairmint.compose(
+            ledger_db,
+            defaults["addresses"][1],  # source
+            "PAIDFAIRMIN",  # asset
+            "10",  # quantity
         )
 
     assert fairmint.compose(

@@ -26,12 +26,16 @@ def validate(
 ):
     problems = []
 
-    if not isinstance(quantity, int):
+    invalid_quantity = not isinstance(quantity, int)
+    if invalid_quantity:
         problems.append("quantity must be an integer")
 
     fairminter = ledger.issuances.get_fairminter_by_asset(db, asset)
     if not fairminter:
         problems.append(f"fairminter not found for asset: `{asset}`")
+        return problems
+
+    if invalid_quantity:
         return problems
 
     if fairminter["status"] != "open":
