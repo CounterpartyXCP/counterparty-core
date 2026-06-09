@@ -1257,6 +1257,7 @@ CONSTRUCT_PARAMS = {
         "Include additional information in the result including data and psbt",
     ),
     "return_only_data": (bool, False, "Return only the data part of the transaction"),
+    "message_only": (bool, False, "Alias for `return_only_data`"),
     "segwit_dust_size": (int, None, "The dust size for segwit outputs (default is 330)"),
     "inscription": (bool, False, "Use Ordinals inscription script when possible"),
     # deprecated parameters
@@ -1295,6 +1296,11 @@ def fee_per_kb_to_sat_per_vbyte(fee_per_kb):
 
 def prepare_construct_params(construct_params):
     cleaned_construct_params = construct_params.copy()
+    if "message_only" in construct_params:
+        if construct_params.get("message_only") and not construct_params.get("return_only_data"):
+            cleaned_construct_params["return_only_data"] = construct_params["message_only"]
+        cleaned_construct_params.pop("message_only")
+
     # copy deprecated parameters to new ones
     for deprecated_param, new_param, copyer in [
         ("fee_per_kb", "sat_per_vbyte", fee_per_kb_to_sat_per_vbyte),
