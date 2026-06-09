@@ -80,6 +80,9 @@ def validate(db, source, destination, flags, memo, block_index):
 def compose(
     db, source: str, destination: str, flags: int, memo: str, skip_validation: bool = False
 ):
+    if memo is not None and not isinstance(memo, str):
+        raise exceptions.ComposeError("memo must be a string")
+
     if memo is None:
         memo_bytes = b""
     elif flags & FLAG_BINARY_MEMO:
