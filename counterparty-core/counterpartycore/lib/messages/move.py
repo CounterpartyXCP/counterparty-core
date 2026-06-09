@@ -7,6 +7,8 @@ from counterpartycore.lib.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
+MAX_BTC_OUTPUT_VALUE = 21_000_000 * config.UNIT
+
 
 def compose(db, source, destination, utxo_value=None, skip_validation=False):
     if not skip_validation:
@@ -28,6 +30,8 @@ def compose(db, source, destination, utxo_value=None, skip_validation=False):
             value = int(utxo_value)
         except ValueError as e:
             raise exceptions.ComposeError(["utxo_value must be an integer"]) from e
+        if value < 0 or value > MAX_BTC_OUTPUT_VALUE:
+            raise exceptions.ComposeError(["utxo_value must be a valid bitcoin output amount"])
 
     return (source, [(destination, value)], None)
 
