@@ -35,6 +35,10 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
         ):  # Protocol change.
             problems.append(f"cannot pay dividends to holders of {config.XCP}")
 
+    if not isinstance(quantity_per_unit, int):
+        problems.append("quantity_per_unit must be an integer")
+        return None, None, problems, 0
+
     if quantity_per_unit <= 0:
         problems.append("non‐positive quantity per unit")
 

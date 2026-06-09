@@ -89,6 +89,17 @@ def test_validate(ledger_db, defaults, current_block_index):
     ) == (None, None, ["insufficient funds (XCP)"], 0)
 
 
+def test_validate_rejects_non_integer_quantity_per_unit(ledger_db, defaults, current_block_index):
+    assert dividend.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "100000000",
+        "DIVISIBLE",
+        "XCP",
+        current_block_index,
+    ) == (None, None, ["quantity_per_unit must be an integer"], 0)
+
+
 def test_compose(ledger_db, defaults):
     assert dividend.compose(
         ledger_db, defaults["addresses"][0], defaults["quantity"], "DIVISIBLE", "XCP"
