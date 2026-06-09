@@ -333,6 +333,47 @@ def test_validate(ledger_db, defaults, current_block_index):
     ) == (["integer overflow"], 15120)
 
 
+@pytest.mark.parametrize(
+    ("param_name", "param_value", "expected_problem"),
+    [
+        ("wager_quantity", "1000", "wager_quantity must be in satoshis"),
+        ("counterwager_quantity", "1000", "counterwager_quantity must be in satoshis"),
+        (
+            "expiration",
+            "10",
+            "expiration must be expressed as an integer block delta",
+        ),
+    ],
+)
+def test_validate_rejects_non_integer_parameters(
+    ledger_db, defaults, current_block_index, param_name, param_value, expected_problem
+):
+    params = {
+        "feed_address": defaults["addresses"][0],
+        "bet_type": 0,
+        "deadline": 1488000100,
+        "wager_quantity": defaults["small"],
+        "counterwager_quantity": defaults["small"],
+        "target_value": 0.0,
+        "leverage": 15120,
+        "expiration": defaults["expiration"],
+    }
+    params[param_name] = param_value
+
+    assert bet.validate(
+        ledger_db,
+        params["feed_address"],
+        params["bet_type"],
+        params["deadline"],
+        params["wager_quantity"],
+        params["counterwager_quantity"],
+        params["target_value"],
+        params["leverage"],
+        params["expiration"],
+        current_block_index,
+    ) == ([expected_problem], params["leverage"])
+
+
 def test_compose(ledger_db, defaults):
     with pytest.raises(exceptions.ComposeError, match="insufficient funds"):
         bet.compose(
