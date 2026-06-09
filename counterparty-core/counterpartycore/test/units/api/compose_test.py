@@ -418,6 +418,42 @@ def test_compose_detach(ledger_db, defaults):
         pass  # Expected to fail on validation
 
 
+def test_compose_multiple_detach_route(apiv2_client, defaults, monkeypatch):
+    txid_1 = "a" * 64
+    txid_2 = "b" * 64
+    script_pub_key = "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"
+    utxos = f"{txid_1}:0:546:{script_pub_key},{txid_2}:1:546:{script_pub_key}"
+
+    def fake_compose_transaction(db, name, params, construct_params):  # noqa: ARG001
+        return {
+            "name": name,
+            "params": params,
+            "construct_params": construct_params,
+        }
+
+    monkeypatch.setattr(compose.composer, "compose_transaction", fake_compose_transaction)
+
+    result = apiv2_client.get(
+        f"/v2/compose/detach?utxos={utxos}&destination={defaults['addresses'][0]}"
+    ).json["result"]
+
+    assert result["name"] == "detach"
+    assert result["params"] == {
+        "source": f"{txid_1}:0",
+        "destination": defaults["addresses"][0],
+    }
+    assert result["construct_params"]["inputs_set"] == utxos
+    assert result["construct_params"]["use_all_inputs_set"] is True
+    assert result["construct_params"]["use_utxos_with_balances"] is True
+
+
+def test_compose_multiple_detach_rejects_inputs_set(ledger_db):
+    txid = "a" * 64
+    utxo = f"{txid}:0"
+    with pytest.raises(exceptions.ComposeError, match="cannot be combined"):
+        compose.compose_detach_by_utxos(ledger_db, utxos=utxo, inputs_set=utxo)
+
+
 def test_compose_movetoutxo(ledger_db, defaults):
     """Test compose_movetoutxo function directly."""
     # Test compose_movetoutxo function directly to cover the code path

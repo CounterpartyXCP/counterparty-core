@@ -187,6 +187,7 @@ ALL_ROUTES = {
     ),
     "/v2/utxos/<utxo>/compose/detach": (compose.compose_detach, "compose"),
     "/v2/utxos/<utxo>/compose/movetoutxo": (compose.compose_movetoutxo, "compose"),
+    "/v2/compose/detach": (compose.compose_detach_by_utxos, "compose"),
     "/v2/compose/attach/estimatexcpfees": (compose.get_attach_estimate_xcp_fee, "compose"),
     ### /assets ###
     "/v2/assets": (queries.get_valid_assets, "assets"),
