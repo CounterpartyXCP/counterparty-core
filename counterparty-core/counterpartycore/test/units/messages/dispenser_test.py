@@ -141,6 +141,38 @@ def test_validate(ledger_db, defaults):
     ) == (None, ["dispenser must be created by source"])
 
 
+@pytest.mark.parametrize(
+    ("param_name", "param_value", "expected_problem"),
+    [
+        ("give_quantity", "100", "give_quantity must be an integer"),
+        ("escrow_quantity", "100", "escrow_quantity must be an integer"),
+        ("mainchainrate", "100", "mainchainrate must be an integer"),
+    ],
+)
+def test_validate_rejects_non_integer_parameters(
+    ledger_db, defaults, param_name, param_value, expected_problem
+):
+    params = {
+        "give_quantity": 100,
+        "escrow_quantity": 100,
+        "mainchainrate": 100,
+    }
+    params[param_name] = param_value
+
+    assert dispenser.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        params["give_quantity"],
+        params["escrow_quantity"],
+        params["mainchainrate"],
+        dispenser.STATUS_OPEN,
+        None,
+        config.BURN_START,
+        None,
+    ) == (None, [expected_problem])
+
+
 def test_compose(ledger_db, defaults):
     assert dispenser.compose(ledger_db, defaults["addresses"][0], config.XCP, 100, 100, 100, 0) == (
         defaults["addresses"][0],

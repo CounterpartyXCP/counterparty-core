@@ -76,6 +76,17 @@ def validate(
     # resolve subassets
     asset = issuances.resolve_subasset_longname(db, asset)
 
+    for param_name, param_value in {
+        "give_quantity": give_quantity,
+        "escrow_quantity": escrow_quantity,
+        "mainchainrate": mainchainrate,
+    }.items():
+        if not isinstance(param_value, int):
+            problems.append(f"{param_name} must be an integer")
+
+    if problems:
+        return None, problems
+
     if status in [STATUS_OPEN, STATUS_OPEN_EMPTY_ADDRESS]:
         if give_quantity <= 0:
             problems.append("give_quantity must be positive")
