@@ -1,3 +1,6 @@
+MAX_VOUT = 0xFFFFFFFF
+
+
 def is_utxo_format(value):
     if not isinstance(value, str):
         return False
@@ -6,7 +9,10 @@ def is_utxo_format(value):
         return False
     if not values[1].isnumeric():
         return False
-    if str(int(values[1])) != values[1]:
+    vout = int(values[1])
+    if str(vout) != values[1]:
+        return False
+    if vout > MAX_VOUT:
         return False
     try:
         int(values[0], 16)
