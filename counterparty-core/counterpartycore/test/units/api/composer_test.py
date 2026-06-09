@@ -113,10 +113,15 @@ def test_dust_size(defaults):
     assert composer.multisig_dust_size({}) == 1000
     assert composer.multisig_dust_size({"multisig_dust_size": 666}) == 666
     assert composer.multisig_dust_size({"multisig_dust_size": None}) == 1000
+    assert composer.segwit_dust_size({}) == 330
+    assert composer.segwit_dust_size({"segwit_dust_size": 666}) == 666
+    assert composer.segwit_dust_size({"segwit_dust_size": None}) == 330
     assert composer.dust_size(defaults["addresses"][0], {}) == 546
     assert composer.dust_size(defaults["addresses"][0], {"regular_dust_size": 666}) == 666
     assert composer.dust_size(defaults["p2ms_addresses"][0], {}) == 1000
     assert composer.dust_size(defaults["p2ms_addresses"][0], {"multisig_dust_size": 666}) == 666
+    assert composer.dust_size(defaults["p2wpkh_addresses"][0], {}) == 330
+    assert composer.dust_size(defaults["p2wpkh_addresses"][0], {"segwit_dust_size": 666}) == 666
 
 
 def test_prepare_non_data_outputs(defaults):
@@ -146,6 +151,11 @@ def test_prepare_non_data_outputs(defaults):
             )
         ]
     )
+
+    # P2WPKH address
+    assert str(
+        composer.perpare_non_data_outputs([(defaults["p2wpkh_addresses"][0], 0)], [], {})
+    ) == str([TxOutput(330, P2wpkhAddress(defaults["p2wpkh_addresses"][0]).to_script_pub_key())])
 
     # Custom amount
     assert str(
@@ -1486,7 +1496,27 @@ def test_check_transaction_sanity(defaults):
         {"exact_fee": 1000},
     )
 
-    # Test case 2: Invalid source address
+    # Test case 2: Valid segwit destination with automatic dust value
+    segwit_tx = Transaction(
+        [TxInput("62cfa1417799553e305c053c5c92a8bdcccfcf5ee01d2aeabf0450e06fcabd07", 0)],
+        [TxOutput(330, P2wpkhAddress(defaults["p2wpkh_addresses"][0]).to_script_pub_key())],
+    )
+    composer.check_transaction_sanity(
+        (defaults["addresses"][0], [(defaults["p2wpkh_addresses"][0], None)], None),
+        {
+            "btc_change": 0,
+            "btc_fee": 1000,
+            "btc_in": 1330,
+            "btc_out": 330,
+            "lock_scripts": [P2pkhAddress(defaults["addresses"][0]).to_script_pub_key().to_hex()],
+            "rawtransaction": segwit_tx.serialize(),
+            "inputs_values": [1330],
+        },
+        [],
+        {"exact_fee": 1000},
+    )
+
+    # Test case 3: Invalid source address
     with pytest.raises(
         exceptions.ComposeError,
         match="Sanity check error: source address does not match the first input address",
@@ -1507,7 +1537,7 @@ def test_check_transaction_sanity(defaults):
             {"exact_fee": 1000},
         )
 
-    # Test case 3: Invalid destination address
+    # Test case 4: Invalid destination address
     with pytest.raises(
         exceptions.ComposeError,
         match="Sanity check error: destination address does not match the output address",
@@ -1528,7 +1558,7 @@ def test_check_transaction_sanity(defaults):
             {"exact_fee": 1000},
         )
 
-    # Test case 4: Invalid destination value
+    # Test case 5: Invalid destination value
     with pytest.raises(
         exceptions.ComposeError,
         match="Sanity check error: destination value does not match the output value",
@@ -1549,7 +1579,7 @@ def test_check_transaction_sanity(defaults):
             {"exact_fee": 1000},
         )
 
-    # Test case 5: Invalid data
+    # Test case 6: Invalid data
     with pytest.raises(
         exceptions.ComposeError, match="Sanity check error: data does not match the output data"
     ):
