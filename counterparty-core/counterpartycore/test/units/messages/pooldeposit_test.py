@@ -3,6 +3,7 @@ import struct
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages import destroy, gas, pooldeposit, poolwithdraw
+from counterpartycore.lib.parser import protocol
 
 
 def test_validate_valid(ledger_db, defaults):
@@ -510,8 +511,8 @@ def test_empty_pool_refund_respects_min_lp_quantity(ledger_db, defaults, blockch
         )
 
 
-def test_restart_after_external_lp_destroy(ledger_db, defaults, blockchain_mock):
-    """Pool is recoverable when every LP holder destroys their LP externally."""
+def test_restart_after_full_withdraw(ledger_db, defaults, blockchain_mock):
+    """A pool fully drained via poolwithdraw (reserves back to zero) can be restarted."""
     quantity = defaults["quantity"] // 4
     source = defaults["addresses"][0]
 
@@ -523,24 +524,63 @@ def test_restart_after_external_lp_destroy(ledger_db, defaults, blockchain_mock)
     lp_asset = pool["lp_asset"]
     lp_balance = ledger.balances.get_balance(ledger_db, source, lp_asset)
 
+    # Withdraw 100% of the LP supply: reserves return to zero.
     tx = blockchain_mock.dummy_tx(ledger_db, source)
-    _, _, ddata = destroy.compose(ledger_db, source, lp_asset, lp_balance, b"brick")
-    destroy.parse(ledger_db, tx, ddata[1:])
+    _, _, wdata = poolwithdraw.compose(
+        ledger_db, source, pool["asset_a"], pool["asset_b"], lp_balance
+    )
+    poolwithdraw.parse(ledger_db, tx, wdata[1:])
 
     assert ledger.supplies.asset_supply(ledger_db, lp_asset) == 0
     pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
-    stranded_a, stranded_b = pool["reserve_a"], pool["reserve_b"]
-    assert stranded_a > 0 and stranded_b > 0
+    assert pool["reserve_a"] == 0 and pool["reserve_b"] == 0
 
+    # Redepositing restarts the empty pool, reusing the existing LP asset.
     tx = blockchain_mock.dummy_tx(ledger_db, source)
     _, _, rdata = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", quantity, quantity)
     pooldeposit.parse(ledger_db, tx, rdata[1:])
 
     pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
-    assert pool["reserve_a"] == stranded_a + quantity
-    assert pool["reserve_b"] == stranded_b + quantity
+    assert pool["reserve_a"] == quantity
+    assert pool["reserve_b"] == quantity
     assert ledger.supplies.asset_supply(ledger_db, lp_asset) > 0
     assert ledger.balances.get_balance(ledger_db, source, lp_asset) > 0
+
+
+def test_pooldeposit_rejects_stranded_reserves(ledger_db, defaults, blockchain_mock, monkeypatch):
+    """A pool with reserves but zero LP supply is inconsistent and cannot be restarted."""
+    quantity = defaults["quantity"] // 4
+    source = defaults["addresses"][0]
+
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", quantity, quantity)
+    pooldeposit.parse(ledger_db, tx, data[1:])
+
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    lp_asset = pool["lp_asset"]
+    lp_balance = ledger.balances.get_balance(ledger_db, source, lp_asset)
+
+    # Force the stranded state by destroying the whole LP supply with the guard
+    # disabled (this is what an unpatched node would have allowed).
+    real_enabled = protocol.enabled
+    monkeypatch.setattr(
+        "counterpartycore.lib.parser.protocol.enabled",
+        lambda name, block_index=None: (
+            False if name == "forbid_lp_token_destroy" else real_enabled(name, block_index)
+        ),
+    )
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    ddata = destroy.pack(ledger_db, lp_asset, lp_balance, b"brick")
+    destroy.parse(ledger_db, tx, ddata[1:])
+    monkeypatch.undo()
+
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    assert ledger.supplies.asset_supply(ledger_db, lp_asset) == 0
+    assert pool["reserve_a"] > 0 and pool["reserve_b"] > 0
+
+    # With the guard active again, the stranded pool cannot be restarted.
+    problems = pooldeposit.validate(ledger_db, source, "XCP", "DIVISIBLE", quantity, quantity)
+    assert any("stranded reserves" in p for p in problems)
 
 
 def test_validate_lp_token_cannot_be_pooled(ledger_db, defaults, blockchain_mock):

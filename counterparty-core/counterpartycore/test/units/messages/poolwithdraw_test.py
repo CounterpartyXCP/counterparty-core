@@ -353,8 +353,8 @@ def test_parse_partial_withdrawal(ledger_db, defaults, blockchain_mock, test_hel
     assert pool_after["reserve_b"] > 0
 
 
-def test_lp_destroy_benefits_remaining_holders(ledger_db, defaults, blockchain_mock, test_helpers):
-    """Destroying LP tokens locks reserves — remaining holders get more on withdrawal."""
+def test_lp_destroy_forbidden(ledger_db, defaults, blockchain_mock):
+    """LP tokens are redeem-only: destroying them is rejected, so reserves can't be stranded."""
     # Create pool with addr0
     create_pool(
         ledger_db,
@@ -367,41 +367,21 @@ def test_lp_destroy_benefits_remaining_holders(ledger_db, defaults, blockchain_m
     lp_asset = pool["lp_asset"]
     total_lp = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
 
-    # Destroy half the LP tokens
-    half = total_lp // 2
+    # Composing a destroy of LP tokens is rejected.
+    with pytest.raises(exceptions.ValidateError, match="cannot destroy LP token"):
+        destroy.compose(
+            ledger_db, defaults["addresses"][0], lp_asset, total_lp // 2, b"lock liquidity"
+        )
+
+    # Parsing one is recorded invalid: supply, balance and reserves stay untouched.
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    _, _, data = destroy.compose(
-        ledger_db, defaults["addresses"][0], lp_asset, half, b"lock liquidity"
-    )
+    data = destroy.pack(ledger_db, lp_asset, total_lp // 2, b"lock liquidity")
     destroy.parse(ledger_db, tx, data[1:])
 
-    # Remaining LP balance
-    remaining_lp = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset)
-    assert remaining_lp == total_lp - half
-
-    # Withdraw remaining — should get proportional share
-    xcp_before = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], "XCP")
-    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    _, _, wdata = poolwithdraw.compose(
-        ledger_db,
-        defaults["addresses"][0],
-        "XCP",
-        "DIVISIBLE",
-        remaining_lp,
-        skip_validation=True,
-    )
-    poolwithdraw.parse(ledger_db, tx, wdata[1:])
-    xcp_after = ledger.balances.get_balance(ledger_db, defaults["addresses"][0], "XCP")
-
-    # Remaining LP holder gets ALL reserves (destroying LP reduces supply,
-    # making remaining tokens claim 100% of pool)
+    assert ledger.balances.get_balance(ledger_db, defaults["addresses"][0], lp_asset) == total_lp
     pool_after = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
-    assert pool_after["reserve_a"] == 0, "All reserves withdrawn by remaining holder"
-    assert pool_after["reserve_b"] == 0, "All reserves withdrawn by remaining holder"
-
-    # LP holder got back MORE per token than they would have without the destroy
-    xcp_got = xcp_after - xcp_before
-    assert xcp_got > 0, "Holder received reserves"
+    assert pool_after["reserve_a"] == pool["reserve_a"]
+    assert pool_after["reserve_b"] == pool["reserve_b"]
 
 
 def test_parse_no_pool(ledger_db, defaults, blockchain_mock, test_helpers):

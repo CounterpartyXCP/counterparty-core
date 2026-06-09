@@ -6,7 +6,7 @@ import struct
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import gas
-from counterpartycore.lib.parser import messagetype
+from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import assetnames
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -96,7 +96,18 @@ def validate(
             # Abnormal: LP tokens exist but a reserve is zero — reject to prevent div-by-zero
             problems.append("pool has no liquidity")
             return problems
-        # total_lp_supply == 0 means pool fully drained; treat as restart below
+        # total_lp_supply == 0 means pool fully drained; treat as restart below.
+        # A restart is only well-defined when the pool is genuinely empty: a fully
+        # withdrawn pool returns its reserves to zero. If reserves remain while the
+        # LP supply is zero, the pool is in an inconsistent state and minting LP
+        # from the new deposit alone would hand the depositor the residual reserves.
+        if (
+            protocol.enabled("forbid_lp_token_destroy", block_index)
+            and total_lp_supply == 0
+            and (existing_pool["reserve_a"] > 0 or existing_pool["reserve_b"] > 0)
+        ):
+            problems.append("pool has stranded reserves; cannot restart")
+            return problems
 
     if total_lp_supply == 0:
         actual_a_sorted = sorted_quantity_a

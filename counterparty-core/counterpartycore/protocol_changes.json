@@ -1410,5 +1410,14 @@
         "testnet3_block_index": 4961300,
         "testnet4_block_index": 136300,
         "signet_block_index": 310300
+    },
+    "forbid_lp_token_destroy": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 2,
+        "minimum_version_revision": 0,
+        "block_index": 99999999,
+        "testnet3_block_index": 99999999,
+        "testnet4_block_index": 99999999,
+        "signet_block_index": 99999999
     }
 }

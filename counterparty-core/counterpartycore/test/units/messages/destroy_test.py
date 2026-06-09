@@ -1,6 +1,6 @@
 import pytest
-from counterpartycore.lib import exceptions
-from counterpartycore.lib.messages import destroy
+from counterpartycore.lib import exceptions, ledger
+from counterpartycore.lib.messages import destroy, pooldeposit
 
 
 def test_validate(ledger_db, defaults):
@@ -28,6 +28,22 @@ def test_validate(ledger_db, defaults):
 
     with pytest.raises(exceptions.BalanceError, match="balance insufficient"):
         destroy.validate(ledger_db, defaults["addresses"][0], None, "XCP", 2**62)
+
+
+def test_validate_lp_token_forbidden(ledger_db, defaults, blockchain_mock):
+    """An AMM LP token cannot be destroyed; it must be redeemed via poolwithdraw."""
+    quantity = defaults["quantity"] // 4
+    source = defaults["addresses"][0]
+
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", quantity, quantity)
+    pooldeposit.parse(ledger_db, tx, data[1:])
+
+    pool = ledger.markets.get_pool(ledger_db, "DIVISIBLE", "XCP")
+    lp_asset = pool["lp_asset"]
+
+    with pytest.raises(exceptions.ValidateError, match="cannot destroy LP token"):
+        destroy.validate(ledger_db, source, None, lp_asset, 1)
 
 
 def test_pack(ledger_db):

@@ -4,7 +4,7 @@ import logging
 import struct
 
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.parser import messagetype
+from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -50,7 +50,7 @@ def unpack(db, message, return_dict=False):
     return asset, quantity, tag
 
 
-def validate(db, source, destination, asset, quantity):
+def validate(db, source, destination, asset, quantity, block_index=None):
     try:
         ledger.issuances.get_asset_id(db, asset)
     except exceptions.AssetError as e:
@@ -66,6 +66,16 @@ def validate(db, source, destination, asset, quantity):
 
     if asset == config.BTC:
         raise exceptions.ValidateError(f"cannot destroy {config.BTC}")
+
+    # LP tokens are redeem-only: liquidity must be withdrawn through poolwithdraw,
+    # which returns the underlying reserves. Destroying LP tokens directly would
+    # burn the claim while leaving the reserves in the pool.
+    if protocol.enabled("forbid_lp_token_destroy", block_index) and (
+        ledger.markets.get_pool_by_lp_asset(db, asset) is not None
+    ):
+        raise exceptions.ValidateError(
+            f"cannot destroy LP token {asset}; use poolwithdraw to redeem liquidity"
+        )
 
     if not isinstance(quantity, int):
         raise exceptions.ValidateError("quantity not integer")
@@ -98,7 +108,7 @@ def parse(db, tx, message):
 
     try:
         asset, quantity, tag = unpack(db, message)
-        validate(db, tx["source"], tx["destination"], asset, quantity)
+        validate(db, tx["source"], tx["destination"], asset, quantity, tx["block_index"])
         ledger.events.debit(
             db, tx["source"], asset, quantity, tx["tx_index"], "destroy", tx["tx_hash"]
         )
