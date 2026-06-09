@@ -365,6 +365,20 @@ def test_compose(ledger_db, defaults):
         b"(\x00\x00X\xb1\x14d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
     )
 
+    _source, _destination, data = bet.compose(
+        ledger_db,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
+        2,
+        1488000100,
+        defaults["small"],
+        defaults["small"],
+        None,
+        5040,
+        defaults["expiration"],
+    )
+    assert bet.unpack(data[1:], return_dict=True)["target_value"] == 0.0
+
     assert bet.compose(
         ledger_db,
         defaults["p2sh_addresses"][0],
