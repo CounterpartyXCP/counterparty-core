@@ -80,9 +80,10 @@ def validate(db, source, destination, flags, memo, block_index):
 def compose(
     db, source: str, destination: str, flags: int, memo: str, skip_validation: bool = False
 ):
+    flags_is_int = isinstance(flags, int) and not isinstance(flags, bool)
     if memo is None:
         memo_bytes = b""
-    elif flags & FLAG_BINARY_MEMO:
+    elif flags_is_int and flags & FLAG_BINARY_MEMO:
         memo_bytes = bytes.fromhex(memo)
     else:
         memo_bytes = memo.encode("utf-8")
