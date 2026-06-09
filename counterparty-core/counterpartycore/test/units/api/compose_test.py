@@ -208,6 +208,18 @@ def test_compose_sweep(apiv2_client, defaults):
     assert response.status_code in [200, 400]
 
 
+def test_compose_sweep_empty_address_error(apiv2_client, defaults):
+    """Test compose_sweep returns a useful error for an empty source address."""
+    address = defaults["addresses"][7]
+    destination = defaults["addresses"][1]
+    response = apiv2_client.get(
+        f"/v2/addresses/{address}/compose/sweep?destination={destination}&flags=3&memo="
+    )
+
+    assert response.status_code == 400
+    assert "address has no balances or asset ownerships to sweep" in response.json["error"]
+
+
 def test_get_sweep_estimate_xcp_fee(apiv2_client, defaults):
     """Test get_sweep_estimate_xcp_fee function via API."""
     address = defaults["addresses"][0]
