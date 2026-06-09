@@ -924,6 +924,12 @@ def prepare_fee_parameters(construct_params):
     sat_per_vbyte = construct_params.get("sat_per_vbyte")
     confirmation_target = construct_params.get("confirmation_target")
     max_fee = construct_params.get("max_fee")
+    if exact_fee is not None and exact_fee < 0:
+        raise exceptions.ComposeError("Invalid exact_fee: must be non-negative")
+    if sat_per_vbyte is not None and sat_per_vbyte < 0:
+        raise exceptions.ComposeError("Invalid sat_per_vbyte: must be non-negative")
+    if max_fee is not None and max_fee < 0:
+        raise exceptions.ComposeError("Invalid max_fee: must be non-negative")
     if exact_fee is not None:
         sat_per_vbyte, confirmation_target, max_fee = None, None, None
     elif sat_per_vbyte is None:
