@@ -195,6 +195,7 @@ def select_rows(
     order="DESC",
     wrap_where=None,
     sort=None,
+    with_count=True,
 ):
     if offset is not None or sort is not None:
         last_cursor = None
@@ -344,10 +345,12 @@ def select_rows(
         cursor.execute(query, bindings)
         result = cursor.fetchall()
 
-    with start_sentry_span(op="db.sql.execute", description=query_count) as sql_span:
-        sql_span.set_tag("db.system", "sqlite3")
-        cursor.execute(query_count, bindings_count)
-        result_count = cursor.fetchone()["count"]
+    result_count = None
+    if with_count:
+        with start_sentry_span(op="db.sql.execute", description=query_count) as sql_span:
+            sql_span.set_tag("db.system", "sqlite3")
+            cursor.execute(query_count, bindings_count)
+            result_count = cursor.fetchone()["count"]
 
     if result and len(result) > limit:
         # Don't return a cursor when using sort or offset
@@ -374,7 +377,15 @@ def select_rows(
 
 
 def select_row(db, table, where, select="*", group_by=""):
-    query_result = select_rows(db, table, where, limit=1, select=select, group_by=group_by)
+    query_result = select_rows(
+        db,
+        table,
+        where,
+        limit=1,
+        select=select,
+        group_by=group_by,
+        with_count=False,
+    )
     if query_result.result:
         return QueryResult(query_result.result[0], None, table, 1)
     return None
