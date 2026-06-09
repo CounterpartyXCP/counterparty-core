@@ -53,6 +53,16 @@ All responses contain a `result_count` field allowing you to calculate the numbe
 
 Routes in the `/v2/bitcoin` group serve as a proxy to make requests to Bitcoin Core.
 
+## Counterparty Transaction Data
+
+Every Counterparty action is a Bitcoin transaction that carries an embedded Counterparty message. The embedded byte stream is identified by the 8-byte `CNTRPRTY` prefix. After the prefix is removed, the parser reads a message type identifier and passes the remaining bytes to the decoder for that message type.
+
+Message type identifiers are normally encoded as 4-byte big-endian integers. When the `short_tx_type_id` protocol change is active, nonzero message type identifiers below 256 may instead be encoded in one byte. The remaining payload is message-specific; for example, a send, issuance, order, or dispenser message each has its own unpacking logic.
+
+Counterparty data can be carried in Bitcoin outputs in different ways. The preferred compact form is `OP_RETURN` when the prefixed payload fits the configured size limit. Legacy or larger encodings may use multisig or P2SH-related data chunks, where the encoded chunks are recovered by the parser before the same `CNTRPRTY` prefix and message type rules are applied.
+
+For application code, prefer the compose and decode helpers rather than parsing scripts manually. Compose routes accept an `encoding` parameter and return the extracted `data` field; `/v2/transactions/unpack` decodes extracted Counterparty data into a `message_type`, `message_type_id`, and message-specific `message_data`. Transaction routes with `verbose=true` can also include `unpacked_data`.
+
 ## Events API
 
 One of the new features of API v2 is the ability to make requests by events. This is the most powerful way to recover the vast majority of data.
