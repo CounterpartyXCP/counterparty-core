@@ -1,4 +1,3 @@
-import datetime
 import json
 import os
 import re
@@ -6,15 +5,14 @@ import sys
 
 import requests
 import sh
-import yaml
 from counterparty_rs import utils as rs_utils
+from counterpartycore.lib import config
 from counterpartycore.lib.api import routes
 from counterpartycore.lib.api.composer import DEPRECATED_CONSTRUCT_PARAMS
 from counterpartycore.lib.utils import database
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../../../../apiary.apib")
-DREDD_FILE = os.path.join(CURR_DIR, "../../../../../dredd.yml")
+OPENAPI_FILE = os.path.join(CURR_DIR, "../../../../../openapi.json")
 CACHE_FILE = os.path.join(CURR_DIR, "apidoc", "apicache.json")
 API_ROOT = "http://localhost:24000"
 
@@ -125,17 +123,6 @@ EVENT_LIST = [
 ]
 
 
-DREDD_CONFIG = {
-    "loglevel": "error",
-    "language": "python",
-    "hookfiles": "./counterparty-core/counterpartycore/test/integrations/regtest/dreddhooks.py",
-    "path": [],
-    "blueprint": "apiary.apib",
-    "endpoint": "http://127.0.0.1:24000",
-    "only": [],
-}
-
-
 def get_example_output(path, args):
     print(f"args: {args}")
     url_keys = []
@@ -170,29 +157,6 @@ def get_example_output(path, args):
     return response.json()
 
 
-def include_in_dredd(group, path):
-    if "/bet" in path:
-        return False
-    if "_old" in path:
-        return False
-    if "/v2/bitcoin/addresses/" in path:
-        return False
-    return True
-
-
-def gen_groups_toc():
-    groups = []
-    for path, _route in routes.ROUTES.items():
-        route_group = get_groupe_name(path)
-        if route_group not in groups:
-            groups.append(route_group)
-
-    toc = ""
-    for group in groups:
-        toc += f"- [`{group}`](#/reference/{group})\n"
-    return toc
-
-
 def get_groupe_name(path):
     if "healthz" in path:
         return "Z-Pages"
@@ -203,83 +167,115 @@ def get_groupe_name(path):
     return "v1"
 
 
-def gen_blueprint(db):
-    md = ""
-    dredd = DREDD_CONFIG.copy()
-    current_group = None
+TYPE_MAP = {
+    "int": "integer",
+    "float": "number",
+    "bool": "boolean",
+    "str": "string",
+    "list": "array",
+    "dict": "object",
+}
+
+
+def openapi_path(path):
+    return re.sub(r"<(?:int:|path:)?([^>]+)>", r"{\1}", path)
+
+
+def make_title(function_name):
+    title = " ".join([part.capitalize() for part in str(function_name).split("_")])
+    title = title.replace("Pubkeyhash", "PubKeyHash")
+    title = title.replace("Mpma", "MPMA")
+    title = title.replace("Btcpay", "BTCPay")
+    return title.strip()
+
+
+def typed_value(value, arg_type):
+    if arg_type == "int":
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return value
+    if arg_type == "bool":
+        if isinstance(value, bool):
+            return value
+        return str(value).lower() == "true"
+    return value
+
+
+def build_parameter(arg, oas_path, description, example_args):
+    in_path = f"{{{arg['name']}}}" in oas_path
+    base_type = "str" if arg["type"].startswith("enum") else arg["type"]
+    schema = {"type": TYPE_MAP.get(base_type, "string")}
+    if "members" in arg:
+        schema["enum"] = arg["members"]
+    if not arg["required"] and arg.get("default") is not None:
+        schema["default"] = typed_value(arg["default"], base_type)
+    parameter = {
+        "name": arg["name"],
+        "in": "path" if in_path else "query",
+        "required": True if in_path else arg["required"],
+        "description": description.split("(e.g. ")[0].replace("\n", " ").strip(),
+        "schema": schema,
+    }
+    if arg["name"] in example_args:
+        parameter["example"] = typed_value(example_args[arg["name"]], base_type)
+    elif arg["name"] == "verbose":
+        parameter["example"] = True
+    return parameter
+
+
+def gen_tags(db):
+    tags = []
+    seen = set()
+    for path in routes.ROUTES:
+        group = get_groupe_name(path)
+        if group in seen:
+            continue
+        seen.add(group)
+        description = ""
+        group_doc_path = os.path.join(CURR_DIR, "apidoc", f"group-{group.lower()}.md")
+        if os.path.exists(group_doc_path):
+            with open(group_doc_path, "r") as f:
+                description = f.read()
+        if group == "transactions":
+            description += gen_unpack_doc(db)
+        tag = {"name": group.capitalize()}
+        if description:
+            tag["description"] = description
+        tags.append(tag)
+    return tags
+
+
+def gen_paths(db):
+    paths = {}
+    regtest_fixtures = generate_regtest_fixtures(db)
     for path, route in routes.ROUTES.items():
-        route_group = get_groupe_name(path)
-        if route_group != current_group:
-            current_group = route_group
-            md += f"\n## Group {current_group.capitalize()}\n"
-
-            group_doc_path = os.path.join(CURR_DIR, "apidoc", f"group-{current_group.lower()}.md")
-            if os.path.exists(group_doc_path):
-                with open(group_doc_path, "r") as f:
-                    md += f.read()
-            if current_group == "transactions":
-                md += gen_unpack_doc(db)
-
-        blueprint_path = (
-            path.replace("<", "{").replace(">", "}").replace("int:", "").replace("path:", "")
-        )
-        title = " ".join([part.capitalize() for part in str(route["function"].__name__).split("_")])
-        title = title.replace("Pubkeyhash", "PubKeyHash")
-        title = title.replace("Mpma", "MPMA")
-        title = title.replace("Btcpay", "BTCPay")
-        title = title.strip()
-
-        if include_in_dredd(current_group, blueprint_path):
-            dredd_name = f"{current_group.capitalize()} > {title} > {title}"
-            dredd["only"].append(dredd_name)
-
-        md += f"\n### {title} "
-
-        query_params = []
-        for arg in route["args"]:
-            if f"{{{arg['name']}}}" in blueprint_path:
-                continue
-            if arg["name"] in DEPRECATED_CONSTRUCT_PARAMS:
-                continue
-            query_params.append(arg["name"])
-        blueprint_path += f"{{?{','.join(query_params)}}}" if query_params else ""
-        md += f"[GET {blueprint_path}]\n\n"
-
-        md += route["description"].strip()
+        group = get_groupe_name(path)
+        oas_path = openapi_path(path)
 
         example_args = {}
-        regtest_fixtures = generate_regtest_fixtures(db)
+        parameters = []
+        for arg in route["args"]:
+            if arg["name"] in DEPRECATED_CONSTRUCT_PARAMS:
+                continue
+            description = arg.get("description", "") or ""
+            if group.lower() == "compose" and arg["name"] == "exact_fee":
+                description += " (e.g. 0)"
+            if "(e.g. " in description:
+                example = description.split("(e.g. ")[1].replace(")", "")
+                for key, value in regtest_fixtures.items():
+                    example = example.replace(key, str(value))
+                example_args[arg["name"]] = example
+            parameters.append(build_parameter(arg, oas_path, description, example_args))
 
-        if len(route["args"]) > 0:
-            md += "\n\n+ Parameters\n"
-            for arg in route["args"]:
-                if arg["name"] in DEPRECATED_CONSTRUCT_PARAMS:
-                    continue
-                required = "required" if arg["required"] else "optional"
-                description = arg.get("description", "")
-                if current_group.lower() == "compose" and arg["name"] == "exact_fee":
-                    description += " (e.g. 0)"
-                example_arg = ""
-                if "(e.g. " in description:
-                    desc_arr = description.split("(e.g. ")
-                    description = desc_arr[0].replace("\n", " ").strip()
-                    example_args[arg["name"]] = desc_arr[1].replace(")", "")
-
-                    for key, value in regtest_fixtures.items():
-                        example_args[arg["name"]] = example_args[arg["name"]].replace(
-                            key, str(value)
-                        )
-
-                    example_arg = f": `{example_args[arg['name']]}`"
-                elif arg["name"] == "verbose":
-                    example_arg = ": `true`"
-                md += f"    + {arg['name']}{example_arg} ({arg['type']}, {required}) - {description.replace('_', '-')}\n"
-                if not arg["required"]:
-                    md += f"        + Default: `{arg.get('default', '') or 'null'}`\n"
-                if "members" in arg:
-                    md += "        + Members\n"
-                    for member in arg["members"]:
-                        md += f"            + `{member}`\n"
+        operation = {
+            "operationId": route["function"].__name__,
+            "summary": make_title(route["function"].__name__),
+            "description": route["description"].strip(),
+            "tags": [group.capitalize()],
+            "parameters": parameters,
+            "responses": {"200": {"description": "Successful response"}},
+        }
 
         if (
             example_args != {}
@@ -288,42 +284,68 @@ def gen_blueprint(db):
             or "getmempoolinfo" in path
         ):  # min 1 for verbose arg
             if not USE_API_CACHE or path not in API_CACHE:
-                example_output = get_example_output(path, example_args)
-                API_CACHE[path] = example_output
-            else:
-                example_output = API_CACHE[path]
-            example_output_json = json.dumps(example_output, indent=4)
-            md += "\n+ Response 200 (application/json)\n\n"
-            md += "    ```\n"
-            for line in example_output_json.split("\n"):
-                md += f"        {line}\n"
-            md += "    ```\n"
-    return md, dredd
+                API_CACHE[path] = get_example_output(path, dict(example_args))
+            operation["responses"]["200"]["content"] = {
+                "application/json": {"example": API_CACHE[path]}
+            }
+
+        paths[oas_path] = {"get": operation}
+    return paths
 
 
-def update_blueprint(db):
-    md = ""
-    with open(os.path.join(CURR_DIR, "apidoc", "blueprint-template.md"), "r") as f:
-        md += f.read()
+def gen_root_path():
+    return {
+        "get": {
+            "operationId": "api_root",
+            "summary": "Get Server Info",
+            "description": "Returns server information and the list of documented routes in JSON format.",
+            "tags": ["Root"],
+            "parameters": [],
+            "responses": {
+                "200": {
+                    "description": "Successful response",
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "result": {
+                                    "server_ready": True,
+                                    "network": "mainnet",
+                                    "version": config.VERSION_STRING,
+                                    "backend_height": 850214,
+                                    "counterparty_height": 850214,
+                                    "ledger_state": "Following",
+                                    "documentation": "https://counterpartyxcp.github.io/counterparty-core/",
+                                    "routes": "http://localhost:4000/v2/routes",
+                                    "openapi": "http://localhost:4000/v2/openapi.json",
+                                }
+                            }
+                        }
+                    },
+                }
+            },
+        }
+    }
 
-    blueprint, dredd = gen_blueprint(db)
 
-    md = md.replace("<GROUP_TOC>", gen_groups_toc())
-    md = md.replace("<EVENTS_DOC>", gen_events_doc())
-    md = md.replace("<API_BLUEPRINT>", blueprint)
+def update_openapi_spec(db):
+    with open(os.path.join(CURR_DIR, "apidoc", "intro.md"), "r") as f:
+        intro = f.read().replace("<EVENTS_DOC>", gen_events_doc())
 
-    md = (
-        f"[//]: # (Generated by genapidoc.py on {datetime.datetime.now()}. Do not edit manually.)\n"
-        + md
-    )
+    spec = {
+        "openapi": "3.1.0",
+        "info": {
+            "title": "Counterparty Core API",
+            "version": config.VERSION_STRING,
+            "description": intro,
+        },
+        "servers": [{"url": "https://api.counterparty.io:4000"}],
+        "tags": [{"name": "Root"}] + gen_tags(db),
+        "paths": {"/v2/": gen_root_path()} | gen_paths(db),
+    }
 
-    with open(API_BLUEPRINT_FILE, "w") as f:
-        f.write(md)
-        print(f"API documentation written to {API_BLUEPRINT_FILE}")
-
-    with open(DREDD_FILE, "w") as f:
-        yaml.dump(dredd, f)
-        print(f"Dredd file written to {DREDD_FILE}")
+    with open(OPENAPI_FILE, "w") as f:
+        json.dump(spec, f, indent=4)
+        print(f"API documentation written to {OPENAPI_FILE}")
 
 
 def gen_events_doc():
@@ -413,7 +435,7 @@ def gen_unpack_doc(db):
 
 
 def update_doc(db):
-    update_blueprint(db)
+    update_openapi_spec(db)
 
     with open(CACHE_FILE, "w") as f:
         json.dump(API_CACHE, f, indent=4)
@@ -670,10 +692,10 @@ def convert_hashes_to_placeholder(content: str) -> tuple[str, int]:
     return content, len(hash_mapping)
 
 
-def convert_apiary_to_mainnet(filepath: str = None):
-    """Replace all regtest addresses and hashes with mainnet equivalents in apiary.apib."""
+def convert_doc_to_mainnet(filepath: str = None):
+    """Replace all regtest addresses and hashes with mainnet equivalents in openapi.json."""
     if filepath is None:
-        filepath = API_BLUEPRINT_FILE
+        filepath = OPENAPI_FILE
 
     print(f"Converting regtest data to mainnet format in {filepath}...")
 
