@@ -324,7 +324,9 @@ def select_rows(
                 sort_order = "ASC"
             if sort_order.upper() not in ["ASC", "DESC"]:
                 sort_order = "ASC"
-            if sort_name in SUPPORTED_SORT_FIELDS.get(table, []):
+            if table == "balances" and sort_name == "asset":
+                order_by.append(f"COALESCE(asset_longname, asset) {sort_order.upper()}")
+            elif sort_name in SUPPORTED_SORT_FIELDS.get(table, []):
                 order_by.append(f"{sort_name} {sort_order.upper()}")
     elif table == "all_transactions_with_status":
         order_by.append("confirmed ASC")
