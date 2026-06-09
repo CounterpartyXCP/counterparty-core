@@ -122,6 +122,10 @@ def compose(
     :param memo: optional memo for the entire send
     :param memo_is_hex: optional boolean indicating if the memo is in hex format
     """
+    for send in asset_dest_quant_list:
+        if not send[1] and not skip_validation:
+            raise exceptions.ComposeError([f"destination is required for {send[0]}"])
+
     cursor = db.cursor()
 
     for send in asset_dest_quant_list:
