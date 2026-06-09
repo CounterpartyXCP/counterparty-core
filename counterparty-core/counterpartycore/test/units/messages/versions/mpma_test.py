@@ -467,6 +467,21 @@ def test_compose_invalid(ledger_db, defaults, monkeypatch):
             None,
         )
 
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape("destination is required for XCP"),
+    ):
+        mpma.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            [
+                ("XCP", None, defaults["quantity"]),
+                ("DIVISIBLE", defaults["addresses"][1], defaults["quantity"]),
+            ],
+            None,
+            None,
+        )
+
     with pytest.raises(exceptions.ComposeError, match="`memo` must be a string"):
         mpma.compose(
             ledger_db,
