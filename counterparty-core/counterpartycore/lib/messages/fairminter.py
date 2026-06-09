@@ -45,6 +45,7 @@ def validate(
         problems.append(f"`{asset}` can't be fairminted.")
 
     # check integer parameters
+    invalid_integer_parameter = False
     for param_name, param_value in {
         "price": price,
         "quantity_by_price": quantity_by_price,
@@ -60,10 +61,13 @@ def validate(
         if param_value != 0:
             if not isinstance(param_value, int):
                 problems.append(f"`{param_name}` must be an integer")
+                invalid_integer_parameter = True
             elif param_value < 0:
                 problems.append(f"`{param_name}` must be >= 0.")
             elif param_value > config.MAX_INT:
                 problems.append(f"`{param_name}` exceeds maximum value")
+    if invalid_integer_parameter:
+        return problems
     if quantity_by_price < 1:
         problems.append("quantity_by_price must be >= 1")
     # check boolean parameters
