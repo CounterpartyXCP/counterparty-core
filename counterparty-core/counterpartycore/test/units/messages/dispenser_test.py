@@ -254,6 +254,40 @@ def test_compose_with_oracle(ledger_db, defaults, monkeypatch):
         )
 
 
+def test_compose_close_with_oracle_does_not_pay_fee(ledger_db, defaults, monkeypatch):
+    oracle_fee = config.DEFAULT_REGULAR_DUST_SIZE + 1
+    monkeypatch.setattr(dispenser, "calculate_oracle_fee", lambda *args: oracle_fee)
+
+    assert dispenser.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        "PARENT",
+        100,
+        1000000000,
+        0,
+        dispenser.STATUS_OPEN,
+        None,
+        defaults["addresses"][1],
+        True,
+    )[1] == [(defaults["addresses"][1], oracle_fee)]
+
+    assert dispenser.compose(
+        ledger_db,
+        defaults["addresses"][5],
+        config.XCP,
+        0,
+        0,
+        0,
+        dispenser.STATUS_CLOSED,
+        None,
+        defaults["addresses"][1],
+    ) == (
+        defaults["addresses"][5],
+        [],
+        b"\x0c\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\no\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec",
+    )
+
+
 def test_parse_open_dispenser(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):

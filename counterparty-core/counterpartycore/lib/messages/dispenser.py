@@ -219,7 +219,11 @@ def validate(
 
     cursor.close()
 
-    if oracle_address is not None and protocol.enabled("oracle_dispensers", block_index):
+    if (
+        oracle_address is not None
+        and protocol.enabled("oracle_dispensers", block_index)
+        and status in [STATUS_OPEN, STATUS_OPEN_EMPTY_ADDRESS]
+    ):
         last_price, _last_fee, _last_label, _last_updated = other.get_oracle_last_price(
             db, oracle_address, block_index
         )
@@ -284,17 +288,18 @@ def compose(
     ):
         data += address_pack(open_address)
     if oracle_address is not None and protocol.enabled("oracle_dispensers"):
-        oracle_fee = calculate_oracle_fee(
-            db,
-            escrow_quantity,
-            give_quantity,
-            mainchainrate,
-            oracle_address,
-            CurrentState().current_block_index(),
-        )
+        if status in [STATUS_OPEN, STATUS_OPEN_EMPTY_ADDRESS]:
+            oracle_fee = calculate_oracle_fee(
+                db,
+                escrow_quantity,
+                give_quantity,
+                mainchainrate,
+                oracle_address,
+                CurrentState().current_block_index(),
+            )
 
-        if oracle_fee >= config.DEFAULT_REGULAR_DUST_SIZE:
-            destination.append((oracle_address, oracle_fee))
+            if oracle_fee >= config.DEFAULT_REGULAR_DUST_SIZE:
+                destination.append((oracle_address, oracle_fee))
         data += address_pack(oracle_address)
 
     return (source, destination, data)
