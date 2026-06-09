@@ -35,6 +35,7 @@ from counterpartycore.lib.parser import deserialize, messagetype, utxosinfo
 from counterpartycore.lib.utils import helpers, multisig, script
 
 MAX_INPUTS_SET = 100
+MAX_BTC_OUTPUT_VALUE = 21_000_000 * config.UNIT
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -503,6 +504,8 @@ def prepare_more_outputs(more_outputs, unspent_list, construct_params):
             value = int(value)
         except ValueError as e:
             raise exceptions.ComposeError(f"Invalid value for output: {':'.join(output)}") from e
+        if value < 0 or value > MAX_BTC_OUTPUT_VALUE:
+            raise exceptions.ComposeError(f"Invalid value for output: {':'.join(output)}")
         # create output
         tx_output = create_tx_output(value, address_or_script, unspent_list, construct_params)
         outputs.append(tx_output)
