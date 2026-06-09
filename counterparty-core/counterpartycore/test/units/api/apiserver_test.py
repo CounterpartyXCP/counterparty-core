@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 from counterpartycore.lib import config, ledger
 from counterpartycore.lib.api import apiserver, apiwatcher, composer
-from counterpartycore.lib.api.routes import ALL_ROUTES
+from counterpartycore.lib.api.routes import ALL_ROUTES, ROUTES
 from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.lib.parser import blocks
 from counterpartycore.lib.utils import helpers
@@ -27,6 +27,22 @@ def test_apiserver_root(apiv2_client, current_block_index):
             "current_commit": helpers.get_current_commit_hash(),
         }
     }
+
+
+def test_routes_document_sort_fields():
+    orders_sort_arg = next(arg for arg in ROUTES["/v2/orders"]["args"] if arg["name"] == "sort")
+
+    assert orders_sort_arg["supported_values"] == [
+        "block_index",
+        "give_asset",
+        "give_quantity",
+        "get_asset",
+        "get_quantity",
+        "expiration",
+        "give_price",
+        "get_price",
+    ]
+    assert "Sortable fields:" in orders_sort_arg["description"]
 
 
 def prepare_url(db, current_block_index, defaults, rawtransaction, route):

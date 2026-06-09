@@ -327,7 +327,7 @@ def function_needs_db(function):
     return " ".join(dbs)
 
 
-def prepare_route_args(function):
+def prepare_route_args(function, route_category=None):
     args = []
     function_args = inspect.signature(function).parameters
     args_description = get_args_description(function)
@@ -361,6 +361,13 @@ def prepare_route_args(function):
             route_arg["members"] = list(typing.get_args(annotation))
         if arg_name in args_description:
             route_arg["description"] = args_description[arg_name]
+        if arg_name == "sort" and route_category in queries.SUPPORTED_SORT_FIELDS:
+            sort_fields = queries.SUPPORTED_SORT_FIELDS[route_category]
+            route_arg["supported_values"] = sort_fields
+            route_arg["description"] = (
+                f"{route_arg.get('description', 'The sort order to return')}. "
+                f"Sortable fields: {', '.join(sort_fields)}."
+            )
         args.append(route_arg)
     if not function.__name__.endswith("_v1"):
         args.append(
@@ -388,7 +395,7 @@ def prepare_routes(routes):
         prepared_routes[route] = {
             "function": route_function,
             "description": get_function_description(route_function),
-            "args": prepare_route_args(route_function),
+            "args": prepare_route_args(route_function, route_category),
             "category": route_category,
         }
     return prepared_routes
