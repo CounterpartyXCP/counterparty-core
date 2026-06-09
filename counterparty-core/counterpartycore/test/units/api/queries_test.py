@@ -694,6 +694,52 @@ def test_get_dispensers_by_asset_prices_divisible_lots(state_db):
     assert [row["price"] for row in result.result] == [6172.5, 12345]
 
 
+def test_get_dispensers_by_origin_filters_origin_address(state_db):
+    """Test get_dispensers_by_origin returns dispensers created by an origin address."""
+    state_db.execute(
+        "INSERT INTO assets_info (asset, divisible) VALUES (?, ?)",
+        ("ORIGINFILTER", False),
+    )
+    for tx_index, tx_hash, source, origin in [
+        (9101, "c" * 64, "source1", "origin1"),
+        (9102, "d" * 64, "source2", "origin1"),
+        (9103, "e" * 64, "source3", "origin2"),
+    ]:
+        state_db.execute(
+            """
+            INSERT INTO dispensers (
+                tx_index, tx_hash, block_index, source, asset, give_quantity,
+                escrow_quantity, satoshirate, status, give_remaining, origin,
+                dispense_count
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                tx_index,
+                tx_hash,
+                tx_index,
+                source,
+                "ORIGINFILTER",
+                1,
+                1,
+                100,
+                0,
+                1,
+                origin,
+                0,
+            ),
+        )
+
+    result = queries.get_dispensers_by_origin(
+        state_db,
+        "origin1",
+        status="open",
+        sort="block_index:asc",
+    )
+
+    assert [row["source"] for row in result.result] == ["source1", "source2"]
+    assert [row["origin"] for row in result.result] == ["origin1", "origin1"]
+
+
 # =============================================================================
 # Tests for assets
 # =============================================================================
