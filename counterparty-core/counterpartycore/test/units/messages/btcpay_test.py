@@ -83,6 +83,32 @@ def test_validate_no_order_match(ledger_db):
     assert "no such order match" in problems[0]
 
 
+def test_compose_rejects_malformed_order_match_id(ledger_db, defaults):
+    """BTCPay compose must not leak index/assert/hexlify errors for bad IDs."""
+    invalid_order_match_ids = [
+        "abc_def",
+        "0" * 64 + "-" + "0" * 64,
+        "g" * 64 + "_" + "0" * 64,
+    ]
+    for order_match_id in invalid_order_match_ids:
+        with pytest.raises(exceptions.ComposeError, match="invalid order_match_id"):
+            btcpay.compose(
+                ledger_db, defaults["addresses"][0], order_match_id, skip_validation=True
+            )
+
+
+def test_compose_requires_existing_order_match(ledger_db, defaults):
+    """A missing order match is not skippable because compose needs its terms."""
+    fake_order_match_id = (
+        "0000000000000000000000000000000000000000000000000000000000000001_"
+        "0000000000000000000000000000000000000000000000000000000000000002"
+    )
+    with pytest.raises(exceptions.ComposeError, match="no such order match"):
+        btcpay.compose(
+            ledger_db, defaults["addresses"][0], fake_order_match_id, skip_validation=True
+        )
+
+
 def test_validate_expired_order_match(ledger_db, defaults, monkeypatch):
     """Test btcpay validate with an expired order match."""
     fake_order_match_id = "abc_def"

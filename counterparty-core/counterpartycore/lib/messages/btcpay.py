@@ -18,6 +18,24 @@ LENGTH = 32 + 32
 ID = 11
 
 
+def unpack_order_match_id(order_match_id):
+    if not isinstance(order_match_id, str):
+        raise exceptions.ComposeError("invalid order_match_id")
+    if len(order_match_id) != 129 or order_match_id[64] != "_":
+        raise exceptions.ComposeError("invalid order_match_id")
+
+    tx0_hash, tx1_hash = order_match_id[:64], order_match_id[65:]
+    try:
+        tx0_hash_bytes, tx1_hash_bytes = (
+            binascii.unhexlify(bytes(tx0_hash, "utf-8")),
+            binascii.unhexlify(bytes(tx1_hash, "utf-8")),
+        )
+    except binascii.Error as e:
+        raise exceptions.ComposeError("invalid order_match_id") from e
+
+    return tx0_hash_bytes, tx1_hash_bytes
+
+
 def validate(db, source, order_match_id, block_index):  # pylint: disable=unused-argument
     problems = []
     order_match = None
@@ -66,15 +84,13 @@ def validate(db, source, order_match_id, block_index):  # pylint: disable=unused
 
 
 def compose(db, source: str, order_match_id: str, skip_validation: bool = False):
-    assert order_match_id[64] == "_"
-    tx0_hash, tx1_hash = (
-        order_match_id[:64],
-        order_match_id[65:],
-    )  # UTF-8 encoding means that the indices are doubled.
+    tx0_hash_bytes, tx1_hash_bytes = unpack_order_match_id(order_match_id)
 
     destination, btc_quantity, _escrowed_asset, _escrowed_quantity, order_match, problems = (
         validate(db, source, order_match_id, CurrentState().current_block_index())
     )
+    if problems and order_match is None:
+        raise exceptions.ComposeError(problems)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
@@ -88,10 +104,6 @@ def compose(db, source: str, order_match_id: str, skip_validation: bool = False)
     if 10 - time_left < 4:
         logger.warning("Order match has only %s confirmation(s).", 10 - time_left)
 
-    tx0_hash_bytes, tx1_hash_bytes = (
-        binascii.unhexlify(bytes(tx0_hash, "utf-8")),
-        binascii.unhexlify(bytes(tx1_hash, "utf-8")),
-    )
     data = messagetype.pack(ID)
     data += struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
     return (source, [(destination, btc_quantity)], data)
