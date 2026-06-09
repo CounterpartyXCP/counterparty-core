@@ -421,6 +421,22 @@ def test_get_all_transactions_verbose(apiv2_client):
         assert "message_data" in tx["unpacked_data"]
 
 
+def test_get_address_options(apiv2_client, defaults):
+    result = apiv2_client.get(f"/v2/addresses/{defaults['addresses'][4]}").json["result"]
+    assert result == {
+        "address": defaults["addresses"][4],
+        "options": 0,
+        "block_index": None,
+    }
+
+    result = apiv2_client.get(f"/v2/addresses/{defaults['addresses'][4]}/options").json["result"]
+    assert result == {
+        "address": defaults["addresses"][4],
+        "options": 0,
+        "block_index": None,
+    }
+
+
 def test_get_balances_by_addresses(apiv2_client, defaults):
     url = f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&verbose=true"
     result = apiv2_client.get(url).json["result"]
