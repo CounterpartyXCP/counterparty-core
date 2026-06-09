@@ -413,6 +413,20 @@ def test_get_transactions(apiv2_client, monkeypatch):
     assert result[0]["unpacked_data"]["error"] == "Could not unpack data"
 
 
+def test_rejects_unknown_query_parameters(apiv2_client):
+    response = apiv2_client.get("/v2/transactions?limit=1&unknown_param=1&another_bad=2")
+
+    assert response.status_code == 400
+    assert response.json["error"] == "Unrecognized parameter(s): another_bad, unknown_param"
+
+
+def test_verbose_query_parameter_is_still_allowed(apiv2_client):
+    response = apiv2_client.get("/v2/transactions?limit=1&verbose=true")
+
+    assert response.status_code == 200
+    assert "unpacked_data" in response.json["result"][0]
+
+
 def test_get_all_transactions_verbose(apiv2_client):
     url = "/v2/transactions?verbose=true&show_unconfirmed=true"
     result = apiv2_client.get(url).json["result"]

@@ -177,6 +177,12 @@ def return_result(
 
 def prepare_args(route, **kwargs):
     function_args = dict(kwargs)
+    request_params = query_params()
+    allowed_args = {arg["name"] for arg in route["args"]}
+    unknown_args = sorted(set(request_params) - allowed_args)
+    if unknown_args:
+        raise ValueError(f"Unrecognized parameter(s): {', '.join(unknown_args)}")
+
     # inject args from request.args
     for arg in route["args"]:
         arg_name = arg["name"]
@@ -185,7 +191,7 @@ def prepare_args(route, **kwargs):
         if arg_name in function_args:
             continue
 
-        str_arg = query_params().get(arg_name)
+        str_arg = request_params.get(arg_name)
         if str_arg is not None and isinstance(str_arg, str) and str_arg.lower() in ["none", "null"]:
             str_arg = None
         if str_arg is None and arg["required"]:
