@@ -227,6 +227,53 @@ def test_get_transactions_by_addresses_with_valid_filter(ledger_db, defaults):
     assert result is not None
 
 
+def test_transaction_queries_return_zero_btc_amount_for_null(ledger_db, current_block_index):
+    """Test transaction endpoints do not expose null btc_amount values."""
+    block = ledger_db.execute(
+        "SELECT block_hash, block_time FROM blocks WHERE block_index = ?",
+        (current_block_index,),
+    ).fetchone()
+    tx_index = (
+        ledger_db.execute("SELECT MAX(tx_index) AS tx_index FROM transactions").fetchone()[
+            "tx_index"
+        ]
+        + 1
+    )
+    tx_hash = "ab" * 32
+    ledger_db.execute(
+        """INSERT INTO transactions(
+            tx_index, tx_hash, block_index, block_hash, block_time, source, destination,
+            btc_amount, fee, data, supported, utxos_info, transaction_type
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            tx_index,
+            tx_hash,
+            current_block_index,
+            block["block_hash"],
+            block["block_time"],
+            "",
+            "",
+            None,
+            None,
+            None,
+            True,
+            "",
+            "utxomove",
+        ),
+    )
+    ledger_db.execute(
+        "INSERT INTO transactions_status(tx_index, valid) VALUES(?, ?)",
+        (tx_index, True),
+    )
+
+    query_result = queries.get_transaction_by_hash(ledger_db, tx_hash)
+    assert query_result.result["btc_amount"] == 0
+
+    query_result = queries.get_transactions(ledger_db, type="utxomove", limit=1)
+    assert query_result.result[0]["tx_hash"] == tx_hash
+    assert query_result.result[0]["btc_amount"] == 0
+
+
 # =============================================================================
 # Tests for event queries
 # =============================================================================

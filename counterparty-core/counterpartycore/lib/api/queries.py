@@ -182,6 +182,12 @@ class QueryResult:
         self.table = table
 
 
+def normalize_transaction_rows(result):
+    for row in result:
+        if "btc_amount" in row and row["btc_amount"] is None:
+            row["btc_amount"] = 0
+
+
 def select_rows(
     db,
     table,
@@ -365,6 +371,9 @@ def select_rows(
             if "params" not in row:
                 break
             row["params"] = json.loads(row["params"])
+
+    if table in ["all_transactions_with_status", "transactions_with_status"]:
+        normalize_transaction_rows(result)
 
     if table == "all_transactions_with_status":
         for row in result:
