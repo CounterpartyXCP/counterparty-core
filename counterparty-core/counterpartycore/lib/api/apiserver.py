@@ -132,6 +132,19 @@ def set_cors_headers(response):
         response.headers["Access-Control-Allow-Methods"] = "*"
 
 
+def set_sentry_api_response_context(http_code, error):
+    with configure_sentry_scope() as scope:
+        scope.set_context(
+            "api_response",
+            {
+                "status_code": http_code,
+                "error": str(error),
+                "method": request.method,
+                "path": request.path,
+            },
+        )
+
+
 def return_result(
     http_code,
     result=None,
@@ -366,11 +379,11 @@ def handle_route(**kwargs):
         except Exception as e:  # pylint: disable=broad-except
             # import traceback
             # print(traceback.format_exc())
+            error = "Unknown error"
+            set_sentry_api_response_context(503, error)
             capture_exception(e)
             logger.error("Error in API: %s", e)
-            return return_result(
-                503, error="Unknown error", start_time=start_time, query_args=query_args
-            )
+            return return_result(503, error=error, start_time=start_time, query_args=query_args)
 
         if isinstance(result, requests.Response):
             message = f"API Request - {request.remote_addr} {request.method} {request.url}"
@@ -416,9 +429,11 @@ def handle_route(**kwargs):
     except Exception as e:  # pylint: disable=broad-except
         # import traceback
         # print(traceback.format_exc())
+        error = "Internal server error"
+        set_sentry_api_response_context(500, error)
         capture_exception(e)
         logger.error("Error in API: %s", e)
-        return return_result(500, error="Internal server error")
+        return return_result(500, error=error)
 
 
 def handle_not_found(_error):
