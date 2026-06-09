@@ -132,6 +132,15 @@ def set_cors_headers(response):
         response.headers["Access-Control-Allow-Methods"] = "*"
 
 
+def parse_bool_arg(arg_name, str_arg):
+    value = str_arg.lower()
+    if value in ["true", "1"]:
+        return True
+    if value in ["false", "0"]:
+        return False
+    raise ValueError(f"Invalid boolean: {arg_name}")
+
+
 def return_result(
     http_code,
     result=None,
@@ -181,6 +190,11 @@ def prepare_args(route, **kwargs):
     for arg in route["args"]:
         arg_name = arg["name"]
         if arg_name in ["verbose"] and "compose" not in route["function"].__name__:
+            str_arg = query_params().get(arg_name)
+            if str_arg is not None:
+                if isinstance(str_arg, list):
+                    str_arg = str_arg[0]
+                parse_bool_arg(arg_name, str_arg)
             continue
         if arg_name in function_args:
             continue
@@ -197,7 +211,7 @@ def prepare_args(route, **kwargs):
         if str_arg is None:
             function_args[arg_name] = arg["default"]
         elif arg["type"] == "bool":
-            function_args[arg_name] = str_arg.lower() in ["true", "1"]
+            function_args[arg_name] = parse_bool_arg(arg_name, str_arg)
         elif arg["type"] == "int":
             try:
                 function_args[arg_name] = int(str_arg)
