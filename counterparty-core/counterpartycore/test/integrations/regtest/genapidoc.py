@@ -248,6 +248,7 @@ def gen_tags(db):
 
 def gen_paths(db):
     paths = {}
+    operation_ids = set()
     regtest_fixtures = generate_regtest_fixtures(db)
     for path, route in routes.ROUTES.items():
         group = get_groupe_name(path)
@@ -255,9 +256,13 @@ def gen_paths(db):
 
         example_args = {}
         parameters = []
+        seen_args = set()
         for arg in route["args"]:
             if arg["name"] in DEPRECATED_CONSTRUCT_PARAMS:
                 continue
+            if arg["name"] in seen_args:
+                continue
+            seen_args.add(arg["name"])
             description = arg.get("description", "") or ""
             if group.lower() == "compose" and arg["name"] == "exact_fee":
                 description += " (e.g. 0)"
@@ -268,8 +273,30 @@ def gen_paths(db):
                 example_args[arg["name"]] = example
             parameters.append(build_parameter(arg, oas_path, description, example_args))
 
+        # path parameters missing from the handler signature must still be declared
+        declared = {parameter["name"] for parameter in parameters if parameter["in"] == "path"}
+        for match in re.finditer(r"<(int:|path:)?([^>]+)>", path):
+            name = match.group(2)
+            if name not in declared:
+                parameters.append(
+                    {
+                        "name": name,
+                        "in": "path",
+                        "required": True,
+                        "schema": {"type": "integer" if match.group(1) == "int:" else "string"},
+                    }
+                )
+
+        # the same handler can serve several routes; operation ids must be unique
+        operation_id = route["function"].__name__
+        suffix = 1
+        while operation_id in operation_ids:
+            suffix += 1
+            operation_id = f"{route['function'].__name__}_{suffix}"
+        operation_ids.add(operation_id)
+
         operation = {
-            "operationId": route["function"].__name__,
+            "operationId": operation_id,
             "summary": make_title(route["function"].__name__),
             "description": route["description"].strip(),
             "tags": [group.capitalize()],
