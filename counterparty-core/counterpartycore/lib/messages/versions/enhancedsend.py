@@ -145,6 +145,9 @@ def compose(
 ):
     send1.validate_compose_quantity(quantity)
 
+    if memo_is_hex and not isinstance(memo_is_hex, bool):
+        raise exceptions.ComposeError("`memo_is_hex` must be a boolean")
+
     cursor = db.cursor()
 
     # Just send BTC?
