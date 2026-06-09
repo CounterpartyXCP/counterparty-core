@@ -86,6 +86,12 @@ Routes in the `/v2/bitcoin` group serve as a proxy to make requests to Bitcoin C
 
 One of the new features of API v2 is the ability to make requests by events. This is the most powerful way to recover the vast majority of data.
 
+### Messages table
+
+Counterparty Core is a deterministic state machine. As each block and transaction is parsed, Core writes deterministic event records to the `messages` table. These records form an internal event journal that is used for `messages_hash` calculations, comparing state across nodes or versions, feeding API and ZeroMQ event consumers, rebuilding secondary explorer or indexer databases, and supporting deterministic logging and mempool handling.
+
+The `messages` table is useful for operators and integrators, but it is not a stable public data model. Field names, event payloads, and backfilled historical records may change across releases. Applications that need compatibility guarantees should prefer the documented API v2 event routes instead of depending directly on the raw table.
+
 For example to retrieve events concerning dispensers for a given block:
 
 ```
