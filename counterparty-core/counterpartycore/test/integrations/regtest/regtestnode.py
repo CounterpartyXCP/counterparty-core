@@ -1206,7 +1206,9 @@ class RegtestNode:
 
         print("Fees: ", unsigned_tx["btc_fee"])
         print("VSize After signing: ", transaction2.get_vsize())
-        assert unsigned_tx["btc_fee"] == transaction2.get_vsize()
+        estimated_vsize = unsigned_tx["signed_tx_estimated_size"]["adjusted_vsize"]
+        assert unsigned_tx["btc_fee"] == estimated_vsize
+        assert unsigned_tx["btc_fee"] >= transaction2.get_vsize()
 
         unsigned_tx = self.compose(
             self.addresses[0],
