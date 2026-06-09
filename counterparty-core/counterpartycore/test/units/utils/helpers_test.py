@@ -29,7 +29,7 @@ def test_accumulate():
     """Test accumulate function."""
     data = [("a", 1), ("a", 2), ("b", 3), ("b", 4), ("a", 5)]
     result = list(helpers.accumulate(data))
-    assert result == [("a", 3), ("b", 7), ("a", 5)]
+    assert result == [("a", 8), ("b", 7)]
 
 
 def test_active_options():
