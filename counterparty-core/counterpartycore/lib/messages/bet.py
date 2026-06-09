@@ -208,6 +208,9 @@ def compose(
     expiration: int,
     skip_validation: bool = False,
 ):
+    if target_value is None:
+        target_value = 0.0
+
     if ledger.balances.get_balance(db, source, config.XCP) < wager_quantity:
         raise exceptions.ComposeError("insufficient funds")
 
