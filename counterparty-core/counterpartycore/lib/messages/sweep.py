@@ -81,6 +81,9 @@ def compose(
     db, source: str, destination: str, flags: int, memo: str, skip_validation: bool = False
 ):
     flags_is_int = isinstance(flags, int) and not isinstance(flags, bool)
+    if memo is not None and not isinstance(memo, str):
+        raise exceptions.ComposeError("memo must be a string")
+
     if memo is None:
         memo_bytes = b""
     elif flags_is_int and flags & FLAG_BINARY_MEMO:

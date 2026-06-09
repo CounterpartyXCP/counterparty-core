@@ -131,6 +131,11 @@ def test_compose_rejects_non_integer_flags_with_memo(ledger_db, defaults):
         sweep.compose(ledger_db, defaults["addresses"][6], defaults["addresses"][5], "1", "memo")
 
 
+def test_compose_rejects_non_string_memo(ledger_db, defaults):
+    with pytest.raises(exceptions.ComposeError, match="memo must be a string"):
+        sweep.compose(ledger_db, defaults["addresses"][6], defaults["addresses"][5], 1, ["memo"])
+
+
 def test_compose_2(ledger_db, defaults):
     assert sweep.compose(
         ledger_db, defaults["addresses"][0], defaults["addresses"][1], 1, None, False

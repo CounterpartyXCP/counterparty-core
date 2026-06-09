@@ -163,6 +163,9 @@ def compose(
     if balance < quantity and not skip_validation:
         raise exceptions.ComposeError("insufficient funds")
 
+    if memo is not None and not isinstance(memo, str):
+        raise exceptions.ComposeError("memo must be a string")
+
     # convert memo to memo_bytes based on memo_is_hex setting
     if memo is None:
         memo_bytes = b""
