@@ -395,6 +395,26 @@ def test_ledger_state(apiv2_client, current_block_index, ledger_db):
     }
 
 
+def test_api_cache_control_headers(apiv2_client, monkeypatch):
+    monkeypatch.setattr(config, "DISABLE_API_CACHE", False)
+
+    response = apiv2_client.get("/v2/blocks")
+    assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "public, max-age=60"
+
+    response = apiv2_client.get("/v2/transactions?show_unconfirmed=true&limit=1")
+    assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "no-store"
+
+    response = apiv2_client.get("/v2/healthz")
+    assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "no-store"
+
+    response = apiv2_client.get("/v2/transactions?limit=0")
+    assert response.status_code == 400
+    assert response.headers["Cache-Control"] == "no-store"
+
+
 def test_get_transactions(apiv2_client, monkeypatch):
     url = "/v2/transactions?limit=1&verbose=true"
     result = apiv2_client.get(url).json["result"]

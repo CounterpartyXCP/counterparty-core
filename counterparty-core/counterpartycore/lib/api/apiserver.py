@@ -132,6 +132,17 @@ def set_cors_headers(response):
         response.headers["Access-Control-Allow-Methods"] = "*"
 
 
+def set_cache_control_headers(response, http_code, result):
+    if http_code == 200 and result is not None:
+        url_rule = getattr(request, "url_rule", None)
+        rule = str(url_rule.rule) if url_rule else request.path
+        route = ROUTES.get(rule)
+        if is_cachable(rule, route=route, result=result):
+            response.headers["Cache-Control"] = "public, max-age=60"
+            return
+    response.headers["Cache-Control"] = "no-store"
+
+
 def return_result(
     http_code,
     result=None,
@@ -157,6 +168,7 @@ def return_result(
     response.headers["X-BITCOIN-HEIGHT"] = CurrentState().current_backend_height()
     response.headers["X-LEDGER-STATE"] = CurrentState().ledger_state()
     response.headers["Content-Type"] = "application/json"
+    set_cache_control_headers(response, http_code, result)
     set_cors_headers(response)
 
     if http_code != 404:
