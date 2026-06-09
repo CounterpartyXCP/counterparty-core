@@ -477,6 +477,18 @@ def test_get_balances_by_addresses(apiv2_client, defaults):
     result = apiv2_client.get(url).json["result"]
     assert len(result) == 0
 
+    url = f"/v2/addresses/{defaults['addresses'][0]}/balances/PARENT.already.issued?verbose=true"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) > 0
+    assert result[0]["asset"] == "A95428959342453541"
+    assert result[0]["asset_longname"] == "PARENT.already.issued"
+
+    url = "/v2/assets/PARENT.already.issued/balances?verbose=true"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) > 0
+    assert result[0]["asset"] == "A95428959342453541"
+    assert result[0]["asset_longname"] == "PARENT.already.issued"
+
 
 def test_get_transactions_valid(apiv2_client, monkeypatch):
     url = "/v2/transactions"

@@ -2145,11 +2145,12 @@ def get_balances_by_address_and_asset(
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    asset_name = asset.upper()
     where = [
-        {"address": address, "asset": asset.upper(), "quantity__gt": 0},
-        {"address": address, "asset_longname": asset.upper(), "quantity__gt": 0},
-        {"utxo_address": address, "asset": asset.upper(), "quantity__gt": 0},
-        {"utxo_address": address, "asset_longname": asset.upper(), "quantity__gt": 0},
+        {"address": address, "asset": asset_name, "quantity__gt": 0},
+        {"address": address, "asset_longname": asset, "quantity__gt": 0},
+        {"utxo_address": address, "asset": asset_name, "quantity__gt": 0},
+        {"utxo_address": address, "asset_longname": asset, "quantity__gt": 0},
     ]
     if type == "utxo":
         where.pop(0)
@@ -2846,9 +2847,10 @@ def get_asset_balances(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the balances to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
+    asset_name = asset.upper()
     where = [
-        {"asset": asset.upper(), "quantity__gt": 0},
-        {"asset_longname": asset.upper(), "quantity__gt": 0},
+        {"asset": asset_name, "quantity__gt": 0},
+        {"asset_longname": asset, "quantity__gt": 0},
     ]
     if type == "utxo":
         where[0]["utxo__notnull"] = True
