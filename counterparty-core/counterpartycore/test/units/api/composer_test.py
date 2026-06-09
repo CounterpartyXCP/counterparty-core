@@ -1616,6 +1616,7 @@ def test_prepare_construct_params(defaults):
         "p2sh_pretx_txid": "aabbb",
         "segwit": True,
         "unspent_tx_hash": "aabbcc",
+        "custom_inputs": "ccddee:0",
     }
 
     expected_params = {
@@ -1630,6 +1631,7 @@ def test_prepare_construct_params(defaults):
         "p2sh_pretx_txid": "aabbb",
         "segwit": True,
         "unspent_tx_hash": "aabbcc",
+        "inputs_set": "ccddee:0",
     }
 
     expected_warnings = [
@@ -1644,6 +1646,7 @@ def test_prepare_construct_params(defaults):
         "The `p2sh_pretx_txid` parameter is ignored, p2sh disabled",
         "The `segwit` parameter is ignored, segwit automatically detected",
         "The `unspent_tx_hash` parameter is deprecated, use `inputs_set` instead",
+        "The `custom_inputs` parameter is deprecated, use `inputs_set` instead",
     ]
 
     result_params, result_warnings = composer.prepare_construct_params(params)
@@ -1663,6 +1666,7 @@ def test_prepare_construct_params(defaults):
         "p2sh_pretx_txid": "aabbb",
         "segwit": True,
         "unspent_tx_hash": "aabbcc",
+        "custom_inputs": "ccddee:0",
     }
 
     expected_params = {
@@ -1677,11 +1681,22 @@ def test_prepare_construct_params(defaults):
         "p2sh_pretx_txid": "aabbb",
         "segwit": True,
         "unspent_tx_hash": "aabbcc",
+        "inputs_set": "ccddee:0",
     }
 
     result_params, result_warnings = composer.prepare_construct_params(params)
     assert result_params == expected_params
     assert result_warnings == expected_warnings
+
+    # Test case 3: Explicit inputs_set takes precedence over custom_inputs
+    result_params, result_warnings = composer.prepare_construct_params(
+        {"inputs_set": "aabbcc:0", "custom_inputs": "ccddee:0"}
+    )
+    assert result_params["inputs_set"] == "aabbcc:0"
+    assert "custom_inputs" not in result_params
+    assert result_warnings == [
+        "The `custom_inputs` parameter is deprecated, use `inputs_set` instead"
+    ]
 
 
 def test_compose_transaction(ledger_db, defaults, monkeypatch):
@@ -2396,6 +2411,20 @@ def test_compose_attach(ledger_db, defaults):
         },
     )
     assert result == expected
+
+    result = composer.compose_transaction(
+        ledger_db,
+        "attach",
+        params,
+        {
+            "verbose": True,
+            "custom_inputs": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:1052:76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+            "disable_utxo_locks": True,
+        },
+    )
+    assert result == expected | {
+        "warnings": ["The `custom_inputs` parameter is deprecated, use `inputs_set` instead"]
+    }
 
     with pytest.raises(
         exceptions.ComposeError, match="Insufficient funds for the target amount: 546 < 1052"
