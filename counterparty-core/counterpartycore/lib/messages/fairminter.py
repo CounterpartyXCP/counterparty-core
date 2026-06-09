@@ -13,6 +13,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
 
 ID = 90
+MIN_MINTED_ASSET_COMMISSION = D("0.0000001")
 
 
 def validate(
@@ -83,6 +84,11 @@ def validate(
             problems.append(
                 "`minted_asset_commission` must be less than 0 or greater than or equal to 1"
             )
+        elif (
+            protocol.enabled("fix_fairminter_commission_minimum", block_index=block_index)
+            and 0 < D(str(minted_asset_commission)) <= MIN_MINTED_ASSET_COMMISSION
+        ):
+            problems.append("minted_asset_commission must be 0 or greater than 0.0000001")
 
     if max_mint_per_tx > max_mint_per_address > 0:
         problems.append("max_mint_per_tx must be <= max_mint_per_address.")
