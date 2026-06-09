@@ -35,6 +35,7 @@ from counterpartycore.lib.parser import deserialize, messagetype, utxosinfo
 from counterpartycore.lib.utils import helpers, multisig, script
 
 MAX_INPUTS_SET = 100
+MAX_CONFIRMATION_TARGET = 1008
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -928,6 +929,10 @@ def prepare_fee_parameters(construct_params):
         sat_per_vbyte, confirmation_target, max_fee = None, None, None
     elif sat_per_vbyte is None:
         if confirmation_target is not None:
+            if confirmation_target < 1 or confirmation_target > MAX_CONFIRMATION_TARGET:
+                raise exceptions.ComposeError(
+                    f"Invalid confirmation_target: must be between 1 and {MAX_CONFIRMATION_TARGET}"
+                )
             sat_per_vbyte = backend.bitcoind.satoshis_per_vbyte(confirmation_target)
         else:
             sat_per_vbyte = backend.bitcoind.satoshis_per_vbyte()
