@@ -149,6 +149,38 @@ SUPPORTED_SORT_FIELDS = {
         "satoshirate",
         "price",
     ],
+    "issuances": [
+        "block_index",
+        "asset",
+        "asset_longname",
+        "quantity",
+        "fee_paid",
+    ],
+    "broadcasts": [
+        "block_index",
+        "timestamp",
+        "value",
+        "fee_fraction_int",
+    ],
+    "dispenses": [
+        "block_index",
+        "asset",
+        "dispense_quantity",
+        "btc_amount",
+    ],
+    "dividends": [
+        "block_index",
+        "asset",
+        "dividend_asset",
+        "quantity_per_unit",
+        "fee_paid",
+    ],
+    "sends": [
+        "block_index",
+        "asset",
+        "quantity",
+        "fee_paid",
+    ],
     "xcp_holders": [
         "quantity",
         "holding_type",
