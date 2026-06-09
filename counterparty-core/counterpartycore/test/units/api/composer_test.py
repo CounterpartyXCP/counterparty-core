@@ -599,6 +599,17 @@ def test_prepare_inputs_set(defaults):
             "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aagh"
         )
 
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(
+            "invalid UTXOs: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aa00 (duplicate UTXO)"
+        ),
+    ):
+        composer.prepare_inputs_set(
+            "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aa00,"
+            "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aa00"
+        )
+
     # Test case 6: Valid single input
     assert composer.prepare_inputs_set(
         "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aa00"
