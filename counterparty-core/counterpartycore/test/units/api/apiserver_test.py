@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 from counterpartycore.lib import config, ledger
 from counterpartycore.lib.api import apiserver, apiwatcher, composer
-from counterpartycore.lib.api.routes import ALL_ROUTES
+from counterpartycore.lib.api.routes import ALL_ROUTES, ROUTES
 from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.lib.parser import blocks
 from counterpartycore.lib.utils import helpers
@@ -27,6 +27,33 @@ def test_apiserver_root(apiv2_client, current_block_index):
             "current_commit": helpers.get_current_commit_hash(),
         }
     }
+
+
+def get_route_args(route, name):
+    return [arg for arg in ROUTES[route]["args"] if arg["name"] == name]
+
+
+def test_routes_only_document_available_verbose_args():
+    assert get_route_args("/v2/transactions", "verbose")
+    assert get_route_args("/v2/orders", "verbose")
+
+    assert not get_route_args("/v2/routes", "verbose")
+    assert not get_route_args("/v2/healthz", "verbose")
+    assert not get_route_args("/healthz", "verbose")
+    assert not get_route_args("/v2/bitcoin/getmempoolinfo", "verbose")
+    assert not get_route_args("/v2/addresses/<address>/compose/dividend/estimatexcpfees", "verbose")
+
+    compose_verbose_args = get_route_args("/v2/addresses/<address>/compose/send", "verbose")
+    assert len(compose_verbose_args) == 1
+    assert compose_verbose_args[0]["category"] == "secondary"
+
+
+def test_routes_only_document_available_show_unconfirmed_args():
+    assert get_route_args("/v2/transactions", "show_unconfirmed")
+    assert get_route_args("/v2/blocks/<int:block_index>/transactions", "show_unconfirmed")
+
+    assert not get_route_args("/v2/transactions/counts", "show_unconfirmed")
+    assert not get_route_args("/v2/routes", "show_unconfirmed")
 
 
 def prepare_url(db, current_block_index, defaults, rawtransaction, route):
