@@ -410,7 +410,7 @@ def test_compose_valid(ledger_db, defaults):
     )
 
 
-def test_compose_invalid(ledger_db, defaults):
+def test_compose_invalid(ledger_db, defaults, monkeypatch):
     with pytest.raises(exceptions.ComposeError, match="insufficient funds for XCP"):
         mpma.compose(
             ledger_db,
@@ -431,6 +431,25 @@ def test_compose_invalid(ledger_db, defaults):
             None,
             None,
         )
+
+    with monkeypatch.context() as m:
+        m.setattr(
+            mpma.ledger.balances,
+            "get_balance",
+            lambda db, source, asset: 150 if asset == "XCP" else 10_000,
+        )
+        with pytest.raises(exceptions.ComposeError, match="insufficient funds for XCP"):
+            mpma.compose(
+                ledger_db,
+                defaults["addresses"][0],
+                [
+                    ("XCP", defaults["addresses"][2], 100),
+                    ("DIVISIBLE", defaults["addresses"][1], 1),
+                    ("XCP", defaults["addresses"][3], 100),
+                ],
+                None,
+                None,
+            )
 
     with pytest.raises(exceptions.ComposeError, match="`memo` must be a string"):
         mpma.compose(

@@ -1,13 +1,11 @@
 import binascii
 import decimal
 import hashlib
-import itertools
 import json
 import mimetypes
 import os
 import string
 import threading
-from operator import itemgetter
 from urllib.parse import urlparse
 
 import pygit2
@@ -27,9 +25,10 @@ def flat(z):
 
 
 def accumulate(l):  # noqa: E741
-    it = itertools.groupby(l, itemgetter(0))
-    for key, subiter in it:
-        yield key, sum(item[1] for item in subiter)
+    totals = {}
+    for key, value in l:
+        totals[key] = totals.get(key, 0) + value
+    yield from totals.items()
 
 
 def active_options(given_config, options):
