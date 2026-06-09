@@ -123,12 +123,16 @@ def create_tx_output(value, address_or_script, unspent_list, construct_params):
 
 def regular_dust_size(construct_params):
     if construct_params.get("regular_dust_size") is not None:
+        if construct_params["regular_dust_size"] < 0:
+            raise exceptions.ComposeError("Invalid regular_dust_size: must be non-negative")
         return construct_params["regular_dust_size"]
     return config.DEFAULT_REGULAR_DUST_SIZE
 
 
 def multisig_dust_size(construct_params):
     if construct_params.get("multisig_dust_size") is not None:
+        if construct_params["multisig_dust_size"] < 0:
+            raise exceptions.ComposeError("Invalid multisig_dust_size: must be non-negative")
         return construct_params["multisig_dust_size"]
     return config.DEFAULT_MULTISIG_DUST_SIZE
 
