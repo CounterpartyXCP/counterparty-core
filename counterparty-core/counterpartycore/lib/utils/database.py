@@ -2,6 +2,7 @@ import logging
 import os
 import threading
 import time
+import weakref
 from contextlib import contextmanager
 
 import apsw
@@ -100,6 +101,39 @@ def get_connection(read_only=True, check_wal=True):
     return get_db_connection(config.DATABASE, read_only=read_only, check_wal=check_wal)
 
 
+class _ThreadLocalConnections:
+    """
+    Per-thread connection cache. When CPython GCs this object (on thread exit),
+    __del__ closes any cached connections and decrements the pool counter,
+    preventing the connection_count leak caused by short-lived per-request
+    threads (e.g. Werkzeug threaded=True spawns one thread per HTTP request).
+    """
+
+    __slots__ = ("connections", "_pool_ref")
+
+    def __init__(self, pool):
+        self.connections = []
+        self._pool_ref = weakref.ref(pool)
+
+    def __del__(self):
+        pool = self._pool_ref()
+        if pool is None or not self.connections:
+            return
+        n = len(self.connections)
+        for db in self.connections:
+            try:
+                db.close()
+            except apsw.Error as e:
+                logger.debug("Error closing connection: %s", e)
+        self.connections = []
+        if pool.closed:
+            return
+        with pool.connection_available:
+            pool.connection_count -= n
+            if n > 0:
+                pool.connection_available.notify_all()
+
+
 class APSWConnectionPool:
     def __init__(self, db_file, name):
         self.db_file = db_file
@@ -177,8 +211,8 @@ class APSWConnectionPool:
     @contextmanager
     def connection(self):
         # Fast path: initialize thread-local storage if needed
-        if not hasattr(self.thread_local, "connections"):
-            self.thread_local.connections = []
+        if not hasattr(self.thread_local, "state"):
+            self.thread_local.state = _ThreadLocalConnections(self)
 
         # Quick check without acquiring lock
         if self.closed:
@@ -190,20 +224,23 @@ class APSWConnectionPool:
                 db.close()
             return
 
+        thread_connections = self.thread_local.state.connections
+
         # Get or create a connection
-        if self.thread_local.connections:
+        if thread_connections:
             # Reuse existing connection - fast path without locking
-            db = self.thread_local.connections.pop()
+            db = thread_connections.pop()
             try:
                 # Minimal validation - use a cheap operation
                 cursor = db.execute("SELECT 1")
                 cursor.fetchone()
             except (apsw.ThreadingViolationError, apsw.BusyError):
-                # Close the bad connection before creating a new one
+                # Release the slot for the bad connection before acquiring a new one
                 try:
                     db.close()
                 except apsw.Error:  # noqa: S110
                     pass  # Connection may already be closed or in bad state
+                self._release_connection()
                 db = self._create_connection_with_limit()
         else:
             db = self._create_connection_with_limit()
@@ -217,8 +254,8 @@ class APSWConnectionPool:
                 self._release_connection()
             else:
                 # Fast path: return to local pool without locking
-                if len(self.thread_local.connections) < config.DB_CONNECTION_POOL_SIZE:
-                    self.thread_local.connections.append(db)
+                if len(thread_connections) < config.DB_CONNECTION_POOL_SIZE:
+                    thread_connections.append(db)
                 else:
                     # Close connection and notify waiters
                     db.close()
@@ -236,14 +273,14 @@ class APSWConnectionPool:
             self.connection_available.notify_all()
 
         # Close connections in current thread
-        if hasattr(self.thread_local, "connections"):
-            for db in self.thread_local.connections:
+        if hasattr(self.thread_local, "state"):
+            for db in self.thread_local.state.connections:
                 try:
                     db.close()
                 except apsw.ThreadingViolationError:
                     logger.trace("ThreadingViolationError occurred while closing connection.")
             # Clear thread local connections
-            self.thread_local.connections = []
+            self.thread_local.state.connections = []
 
     def get_stats(self):
         """Get current connection pool statistics."""
