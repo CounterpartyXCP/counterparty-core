@@ -588,6 +588,27 @@ def test_prepare_inputs_set(defaults):
             "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:aa"
         )
 
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(
+            "invalid UTXOs: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:-1 (invalid value)"
+        ),
+    ):
+        composer.prepare_inputs_set(
+            "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:-1"
+        )
+
+    too_large_value = 21_000_000 * config.UNIT + 1
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(
+            f"invalid UTXOs: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:{too_large_value} (invalid value)"
+        ),
+    ):
+        composer.prepare_inputs_set(
+            f"ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:{too_large_value}"
+        )
+
     # Test case 5: Invalid script_pub_key
     with pytest.raises(
         exceptions.ComposeError,
