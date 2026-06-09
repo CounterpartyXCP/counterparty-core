@@ -72,6 +72,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     outputs = []
     addresses = []
     dividend_total = 0
+    btc_dust_outputs_skipped = False
     for holder in asset_holders:
         if (
             not protocol.enabled("price_as_fraction") and not protocol.is_test_network()
@@ -94,6 +95,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
             dividend_quantity /= config.UNIT  # Pre-fix behaviour
 
         if dividend_asset == config.BTC and dividend_quantity < config.DEFAULT_MULTISIG_DUST_SIZE:
+            btc_dust_outputs_skipped = True
             continue  # A bit hackish.
         dividend_quantity = int(dividend_quantity)
 
@@ -108,7 +110,10 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
         dividend_total += dividend_quantity
 
     if not dividend_total:
-        problems.append("zero dividend")
+        if dividend_asset == config.BTC and btc_dust_outputs_skipped:
+            problems.append("BTC dividend output below dust threshold")
+        else:
+            problems.append("zero dividend")
 
     if dividend_asset != config.BTC:
         dividend_balances = ledger.balances.get_balance(db, source, dividend_asset)
