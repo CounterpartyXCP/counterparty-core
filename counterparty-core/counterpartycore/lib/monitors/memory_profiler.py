@@ -18,6 +18,7 @@ import tracemalloc
 
 from counterpartycore.lib import config
 from counterpartycore.lib.api.blockcache import BLOCK_CACHE
+from counterpartycore.lib.backend import bitcoind
 from counterpartycore.lib.ledger.caches import AssetCache, OrdersCache, UTXOBalancesCache
 from counterpartycore.lib.parser.follow import NotSupportedTransactionsCache
 from counterpartycore.lib.utils import helpers
@@ -179,6 +180,24 @@ def get_cache_sizes():
         sizes["BLOCK_CACHE_bytes"] = total_size
     except RuntimeError:
         sizes["BLOCK_CACHE_bytes"] = "skipped"
+
+    # Backend module-level caches (lib/backend/bitcoind.py)
+    sizes["bitcoind.TRANSACTIONS_CACHE"] = len(bitcoind.TRANSACTIONS_CACHE)
+    sizes["bitcoind.TRANSACTIONS_CACHE_MB"] = estimate_dict_memory(bitcoind.TRANSACTIONS_CACHE) / (
+        1024 * 1024
+    )
+    sizes["bitcoind.BLOCKS_CACHE"] = len(bitcoind.BLOCKS_CACHE)
+    sizes["bitcoind.BLOCKS_CACHE_MB"] = estimate_dict_memory(bitcoind.BLOCKS_CACHE) / (1024 * 1024)
+
+    # functools.lru_cache wrappers (entry counts only; payload sizes are not
+    # directly measurable). Test fixtures monkey-patch these with plain
+    # functions, so guard with hasattr.
+    if hasattr(bitcoind.getrawtransaction, "cache_info"):
+        sizes["bitcoind.getrawtransaction_lru"] = bitcoind.getrawtransaction.cache_info().currsize
+    if hasattr(bitcoind.get_utxo_address_and_value, "cache_info"):
+        sizes["bitcoind.get_utxo_address_and_value_lru"] = (
+            bitcoind.get_utxo_address_and_value.cache_info().currsize
+        )
 
     # Connection pool sizes
     # pylint: disable=protected-access
