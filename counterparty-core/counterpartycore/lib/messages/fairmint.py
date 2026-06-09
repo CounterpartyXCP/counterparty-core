@@ -18,6 +18,10 @@ def D(value):  # pylint: disable=invalid-name
     return decimal.Decimal(str(value))
 
 
+def resolve_asset_name(db, asset):
+    return ledger.issuances.resolve_subasset_longname(db, asset)
+
+
 def validate(
     db,
     source,
@@ -29,7 +33,8 @@ def validate(
     if not isinstance(quantity, int):
         problems.append("quantity must be an integer")
 
-    fairminter = ledger.issuances.get_fairminter_by_asset(db, asset)
+    resolved_asset = resolve_asset_name(db, asset)
+    fairminter = ledger.issuances.get_fairminter_by_asset(db, resolved_asset)
     if not fairminter:
         problems.append(f"fairminter not found for asset: `{asset}`")
         return problems
@@ -82,12 +87,13 @@ def validate(
 
 
 def compose(db, source: str, asset: str, quantity: int = 0, skip_validation: bool = False):
+    resolved_asset = resolve_asset_name(db, asset)
     problems = validate(db, source, asset, quantity)
     if len(problems) > 0 and not skip_validation:
         raise exceptions.ComposeError(problems)
 
     if quantity != 0 and not skip_validation:
-        fairminter = ledger.issuances.get_fairminter_by_asset(db, asset)
+        fairminter = ledger.issuances.get_fairminter_by_asset(db, resolved_asset)
         if fairminter["price"] == 0:
             raise exceptions.ComposeError("quantity is not allowed for free fairminters")
         if quantity % fairminter["quantity_by_price"] != 0:
@@ -97,14 +103,14 @@ def compose(db, source: str, asset: str, quantity: int = 0, skip_validation: boo
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
 
     if protocol.enabled("fairminter_v2"):
-        asset_id = ledger.issuances.generate_asset_id(asset)
+        asset_id = ledger.issuances.generate_asset_id(resolved_asset)
         data += cbor2.dumps([asset_id, quantity])
     else:
         data_content = "|".join(
             [
                 str(value)
                 for value in [
-                    asset,
+                    resolved_asset,
                     quantity,
                 ]
             ]
