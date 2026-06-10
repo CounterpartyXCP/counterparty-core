@@ -140,6 +140,44 @@ def test_validate(ledger_db, defaults, current_block_index):
     ) == ["integer overflow"]
 
 
+@pytest.mark.parametrize(
+    ("param_name", "param_value", "expected_problem"),
+    [
+        ("give_quantity", "1000", "give_quantity must be in satoshis"),
+        ("get_quantity", "1000", "get_quantity must be in satoshis"),
+        ("fee_required", "0", "fee_required must be in satoshis"),
+        (
+            "expiration",
+            "10",
+            "expiration must be expressed as an integer block delta",
+        ),
+    ],
+)
+def test_validate_rejects_non_integer_parameters(
+    ledger_db, defaults, current_block_index, param_name, param_value, expected_problem
+):
+    params = {
+        "give_asset": "DIVISIBLE",
+        "give_quantity": defaults["quantity"],
+        "get_asset": "XCP",
+        "get_quantity": defaults["quantity"],
+        "expiration": 2000,
+        "fee_required": 0,
+    }
+    params[param_name] = param_value
+
+    assert order.validate(
+        ledger_db,
+        params["give_asset"],
+        params["give_quantity"],
+        params["get_asset"],
+        params["get_quantity"],
+        params["expiration"],
+        params["fee_required"],
+        current_block_index,
+    ) == [expected_problem]
+
+
 def test_compose(ledger_db, defaults, current_block_index):
     assert order.compose(
         ledger_db,
