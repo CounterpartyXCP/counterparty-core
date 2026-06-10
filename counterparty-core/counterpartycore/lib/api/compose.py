@@ -12,7 +12,8 @@ from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import gas
 from counterpartycore.lib.messages.attach import ID as UTXO_ID
-from counterpartycore.lib.parser import deserialize, gettxinfo, messagetype
+from counterpartycore.lib.parser import deserialize, gettxinfo, messagetype, p2sh
+from counterpartycore.lib.utils import script
 
 D = decimal.Decimal
 
@@ -721,6 +722,104 @@ def info_by_tx_hash(db, tx_hash: str):
     return info(db, rawtransaction)
 
 
+def _get_first_witness_stack(decoded_tx):
+    witness_stacks = decoded_tx.get("vtxinwit") or []
+    if len(witness_stacks) == 0:
+        return []
+    first_stack = witness_stacks[0]
+    if isinstance(first_stack, list | tuple):
+        return first_stack
+    return witness_stacks
+
+
+def _get_p2wpkh_source_from_witness(decoded_tx):
+    witness_stack = _get_first_witness_stack(decoded_tx)
+    if len(witness_stack) < 2:
+        return None
+
+    pubkey = witness_stack[-1]
+    if isinstance(pubkey, str):
+        try:
+            pubkey = binascii.unhexlify(pubkey)
+        except (binascii.Error, TypeError):
+            return None
+    if not isinstance(pubkey, bytes):
+        return None
+    if len(pubkey) not in (33, 65) or pubkey[0] not in (2, 3, 4):
+        return None
+
+    try:
+        return script.script_to_address(b"\x00\x14" + p2sh.hash160(pubkey))
+    except exceptions.DecodeError:
+        return None
+
+
+def _get_p2wpkh_source_from_script_sig(decoded_tx):
+    for vin in decoded_tx.get("vin", []):
+        script_sig = vin.get("script_sig")
+        if isinstance(script_sig, str):
+            try:
+                script_sig = binascii.unhexlify(script_sig)
+            except (binascii.Error, TypeError):
+                continue
+        if not isinstance(script_sig, bytes):
+            continue
+
+        if len(script_sig) == 22 and script_sig[0] == 0 and script_sig[1] == 20:
+            source_script = script_sig
+        elif (
+            len(script_sig) == 23
+            and script_sig[0] == 22
+            and script_sig[1] == 0
+            and script_sig[2] == 20
+        ):
+            source_script = script_sig[1:]
+        else:
+            continue
+
+        try:
+            return script.script_to_address(source_script)
+        except exceptions.DecodeError:
+            continue
+
+    return None
+
+
+def _get_p2wpkh_source_from_input(decoded_tx):
+    return _get_p2wpkh_source_from_script_sig(decoded_tx) or _get_p2wpkh_source_from_witness(
+        decoded_tx
+    )
+
+
+def _get_btc_only_info_from_decoded_tx(decoded_tx):
+    source = _get_p2wpkh_source_from_input(decoded_tx)
+    addressable_outputs = []
+
+    for vout in decoded_tx.get("vout", []):
+        script_pub_key = vout.get("script_pub_key")
+        if not script_pub_key:
+            continue
+        try:
+            address = script.script_to_address(script_pub_key)
+        except exceptions.DecodeError:
+            continue
+        addressable_outputs.append((address, vout.get("value")))
+
+    if len(addressable_outputs) == 0:
+        return source, None, None, None, None
+
+    payment_outputs = [
+        (address, value)
+        for address, value in addressable_outputs
+        if source is None or address != source
+    ]
+    if len(payment_outputs) == 0:
+        payment_outputs = addressable_outputs
+
+    destination, btc_amount = payment_outputs[0]
+    return source, destination, btc_amount, None, None
+
+
 def info(db, rawtransaction: str, block_index: int = None):
     """
     Returns Counterparty information from a raw transaction in hex format.
@@ -745,7 +844,7 @@ def info(db, rawtransaction: str, block_index: int = None):
             )
         )
     except exceptions.BitcoindRPCError:
-        source, destination, btc_amount, fee, data = None, None, None, None, None
+        source, destination, btc_amount, fee, data = _get_btc_only_info_from_decoded_tx(decoded_tx)
 
     result = {
         "source": source,

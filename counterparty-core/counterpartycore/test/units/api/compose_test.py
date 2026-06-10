@@ -2,6 +2,7 @@ import pytest
 from counterpartycore.lib import exceptions, ledger
 from counterpartycore.lib.api import compose
 from counterpartycore.lib.messages import pooldeposit
+from counterpartycore.lib.utils import script
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 # ============================================================================
@@ -1840,3 +1841,31 @@ def test_info_rawtransaction_without_data(apiv2_client):
     result = apiv2_client.get(f"/v2/transactions/info?rawtransaction={simple_tx}")
     # This should parse but return None for data
     assert result.status_code in [200, 400]
+
+
+def test_info_btc_only_rawtransaction_without_prevout(ledger_db, monkeypatch):
+    """BTC-only raw transactions should still expose output info if prevouts are unavailable."""
+    rawtransaction = (
+        "02000000000101bfbeaeb997dcc7b5038687e03b378ed69dd708629a13f915c9bed670f6fc83f3"
+        "01000000160014dfc964bf32517b3ca8fea9227c5756c887e911c3ffffffff02e80300000000"
+        "00001600146fe470998ced5d0f475546787d5cfefdfb7365b7d547000000000000160014df"
+        "c964bf32517b3ca8fea9227c5756c887e911c302000000000000"
+    )
+
+    def get_tx_info_raises(*args, **kwargs):
+        raise exceptions.BitcoindRPCError("prevout not available")
+
+    monkeypatch.setattr(compose.gettxinfo, "get_tx_info", get_tx_info_raises)
+
+    result = compose.info(ledger_db, rawtransaction, block_index=800000)
+
+    assert result["source"] == script.script_to_address(
+        "0014dfc964bf32517b3ca8fea9227c5756c887e911c3"
+    )
+    assert result["destination"] == script.script_to_address(
+        "00146fe470998ced5d0f475546787d5cfefdfb7365b7"
+    )
+    assert result["btc_amount"] == 1000
+    assert result["fee"] is None
+    assert result["data"] is None
+    assert result["unpacked_data"] is None
