@@ -466,6 +466,36 @@ def test_compose_multiple_detach_rejects_inputs_set(ledger_db):
         compose.compose_detach_by_utxos(ledger_db, utxos=utxo, inputs_set=utxo)
 
 
+def test_compose_multiple_detach_includes_all_utxos(ledger_db, defaults):
+    """End-to-end (no mock): every provided UTXO is pulled in as an input and
+    the balance-bearing UTXO is selected as the validation source."""
+    script_pub_key = "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"
+    utxo_with_balance = ledger_db.execute("""
+        SELECT utxo FROM balances
+        WHERE quantity > 0 AND utxo IS NOT NULL
+        ORDER BY rowid DESC LIMIT 1
+    """).fetchone()["utxo"]
+    # A UTXO without any balance, listed first to ensure the source-selection
+    # loop skips it and picks the balance-bearing UTXO that follows.
+    extra_utxo = f"{'a' * 64}:1"
+    utxos = f"{extra_utxo}:546:{script_pub_key},{utxo_with_balance}:546:{script_pub_key}"
+
+    result = compose.compose_detach_by_utxos(
+        ledger_db,
+        utxos=utxos,
+        destination=defaults["addresses"][1],
+        verbose=True,
+        disable_utxo_locks=True,
+        exact_fee=0,
+    )
+
+    # the balance-bearing UTXO (second in the list) is chosen as source
+    assert result["name"] == "detach"
+    assert result["params"]["source"] == utxo_with_balance
+    # both provided UTXOs are forced in as inputs by `use_all_inputs_set`
+    assert len(result["inputs_values"]) == 2
+
+
 def test_compose_movetoutxo(ledger_db, defaults):
     """Test compose_movetoutxo function directly."""
     # Test compose_movetoutxo function directly to cover the code path

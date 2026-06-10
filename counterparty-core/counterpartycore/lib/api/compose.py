@@ -648,7 +648,7 @@ def compose_detach_by_utxos(
 ):
     """
     Composes a transaction to detach assets from multiple UTXOs to an address.
-    :param utxos: A comma-separated list of UTXOs from which assets are detached (e.g. $UTXO_WITH_BALANCE,$UTXO_WITH_BALANCE_2)
+    :param utxos: A comma-separated list of UTXOs from which assets are detached (e.g. $UTXO_WITH_BALANCE)
     :param destination: The address to detach the assets to, if not provided the address corresponding to each UTXO is used (e.g. $ADDRESS_1)
     """
     if construct_params.get("inputs_set") is not None:
@@ -657,9 +657,13 @@ def compose_detach_by_utxos(
     parsed_utxos = composer.prepare_inputs_set(utxos)
     source = f"{parsed_utxos[0]['txid']}:{parsed_utxos[0]['vout']}"
     if construct_params.get("validate", True):
+        # pick a UTXO that actually holds assets as the source, so the detach
+        # composer's "no assets to detach" check passes. `get_utxo_balances`
+        # can return zero-quantity rows, hence the explicit `quantity > 0` check.
         for parsed_utxo in parsed_utxos:
             utxo_id = f"{parsed_utxo['txid']}:{parsed_utxo['vout']}"
-            if ledger.balances.get_utxo_balances(db, utxo_id):
+            utxo_balances = ledger.balances.get_utxo_balances(db, utxo_id)
+            if any(balance["quantity"] > 0 for balance in utxo_balances):
                 source = utxo_id
                 break
 
