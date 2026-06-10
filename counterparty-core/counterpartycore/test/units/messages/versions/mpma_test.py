@@ -4,6 +4,7 @@ import re
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages.versions import mpma
+from counterpartycore.lib.utils.mpmaencoding import _decode_mpma_send_decode, _encode_mpma_send
 
 
 def test_unpack(defaults, current_block_index):
@@ -150,6 +151,26 @@ def test_unpack(defaults, current_block_index):
         "PEPEKFC": [("172nmZbxDR6erc5PqNqV28fnMj7g6besru", 5)],
         "PEPEWYATT": [("172nmZbxDR6erc5PqNqV28fnMj7g6besru", 5)],
         "XCHAINPEPE": [("172nmZbxDR6erc5PqNqV28fnMj7g6besru", 1)],
+    }
+
+
+def test_utf8_memo_roundtrip(defaults, monkeypatch):
+    monkeypatch.setattr(ledger.issuances, "resolve_subasset_longname", lambda db, asset: asset)
+    monkeypatch.setattr(ledger.issuances, "get_asset_id", lambda db, asset: 1)
+
+    payload = _encode_mpma_send(
+        None,
+        [
+            ("XCP", defaults["addresses"][1], 1, "∞", False),
+            ("XCP", defaults["addresses"][2], 2),
+        ],
+    )
+
+    assert _decode_mpma_send_decode(payload) == {
+        "XCP": [
+            (defaults["addresses"][1], 1, "∞", False),
+            (defaults["addresses"][2], 2),
+        ]
     }
 
 
