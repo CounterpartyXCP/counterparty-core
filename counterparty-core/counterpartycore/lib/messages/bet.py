@@ -126,17 +126,6 @@ def validate(
     if leverage is None:
         leverage = 5040
 
-    # For SQLite3
-    if (
-        wager_quantity > config.MAX_INT  # pylint: disable=too-many-boolean-expressions
-        or counterwager_quantity > config.MAX_INT
-        or bet_type > config.MAX_INT
-        or deadline > config.MAX_INT
-        or leverage > config.MAX_INT
-        or block_index + expiration > config.MAX_INT
-    ):
-        problems.append("integer overflow")
-
     # Look at feed to be bet on.
     broadcasts = ledger.other.get_broadcasts_by_source(db, feed_address, "valid", order_by="ASC")
     if not broadcasts:
@@ -171,6 +160,17 @@ def validate(
     if not isinstance(expiration, int):
         problems.append("expiration must be expressed as an integer block delta")
         return problems, leverage
+
+    # For SQLite3
+    if (
+        wager_quantity > config.MAX_INT  # pylint: disable=too-many-boolean-expressions
+        or counterwager_quantity > config.MAX_INT
+        or bet_type > config.MAX_INT
+        or deadline > config.MAX_INT
+        or leverage > config.MAX_INT
+        or block_index + expiration > config.MAX_INT
+    ):
+        problems.insert(0, "integer overflow")
 
     if wager_quantity <= 0:
         problems.append("non‐positive wager")
