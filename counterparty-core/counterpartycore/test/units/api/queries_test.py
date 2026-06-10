@@ -6,6 +6,7 @@ Tests focus on covering uncovered lines in the module.
 import inspect
 
 import pytest
+from counterpartycore.lib import config
 from counterpartycore.lib.api import queries, routes
 
 # =============================================================================
@@ -389,6 +390,27 @@ def test_select_rows_can_skip_result_count(ledger_db):
     )
     assert result is not None
     assert result.result_count is None
+
+
+def test_get_address_options(ledger_db, defaults):
+    unset_address = defaults["addresses"][4]
+    result = queries.get_address(ledger_db, unset_address)
+    assert result.result == {
+        "address": unset_address,
+        "options": 0,
+        "block_index": None,
+    }
+
+    address_with_options = defaults["addresses"][6]
+    ledger_db.execute(
+        "INSERT INTO addresses (address, options, block_index) VALUES (?, ?, ?)",
+        (address_with_options, config.ADDRESS_OPTION_REQUIRE_MEMO, 123),
+    )
+
+    result = queries.get_address(ledger_db, address_with_options)
+    assert result.result["address"] == address_with_options
+    assert result.result["options"] == config.ADDRESS_OPTION_REQUIRE_MEMO
+    assert result.result["block_index"] == 123
 
 
 # =============================================================================

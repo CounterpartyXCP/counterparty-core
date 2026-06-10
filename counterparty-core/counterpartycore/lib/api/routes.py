@@ -82,6 +82,8 @@ ALL_ROUTES = {
     "/v2/addresses/transactions": (queries.get_transactions_by_addresses, "addresses"),
     "/v2/addresses/events": (queries.get_events_by_addresses, "addresses"),
     "/v2/addresses/mempool": (queries.get_mempool_events_by_addresses, "addresses"),
+    "/v2/addresses/<address>": (queries.get_address, "addresses"),
+    "/v2/addresses/<address>/options": (queries.get_address, "addresses"),
     "/v2/addresses/<address>/balances": (queries.get_address_balances, "addresses"),
     "/v2/addresses/<address>/balances/<asset>": (
         queries.get_balances_by_address_and_asset,
