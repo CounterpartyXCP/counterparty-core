@@ -298,6 +298,55 @@ def test_new_get_asset_info(apiv2_client):
     }
 
 
+def test_get_address_dispensers_by_source_and_origin(state_db, apiv2_client, defaults):
+    source_address = defaults["addresses"][0]
+    origin_address = defaults["addresses"][1]
+    state_db.execute(
+        "INSERT INTO assets_info (asset, divisible) VALUES (?, ?)",
+        ("ORIGINAPI", False),
+    )
+    for tx_index, tx_hash, source, origin in [
+        (9201, "f" * 64, source_address, origin_address),
+        (9202, "1" * 64, origin_address, origin_address),
+        (9203, "2" * 64, source_address, defaults["addresses"][2]),
+    ]:
+        state_db.execute(
+            """
+            INSERT INTO dispensers (
+                tx_index, tx_hash, block_index, source, asset, give_quantity,
+                escrow_quantity, satoshirate, status, give_remaining, origin,
+                dispense_count
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                tx_index,
+                tx_hash,
+                tx_index,
+                source,
+                "ORIGINAPI",
+                1,
+                1,
+                100,
+                0,
+                1,
+                origin,
+                0,
+            ),
+        )
+
+    source_response = apiv2_client.get(
+        f"/v2/addresses/{source_address}/dispensers/source?sort=block_index:asc"
+    )
+    origin_response = apiv2_client.get(
+        f"/v2/addresses/{origin_address}/dispensers/origin?sort=block_index:asc"
+    )
+
+    assert source_response.status_code == 200
+    assert origin_response.status_code == 200
+    assert [row["tx_hash"] for row in source_response.json["result"]] == ["f" * 64, "2" * 64]
+    assert [row["tx_hash"] for row in origin_response.json["result"]] == ["f" * 64, "1" * 64]
+
+
 def test_get_asset_by_longname_case_insensitive(state_db, apiv2_client):
     """Test that asset lookup by longname is case-insensitive (uses COLLATE NOCASE)."""
     # Insert a test asset with mixed-case longname directly into state_db

@@ -107,6 +107,14 @@ ALL_ROUTES = {
         "addresses",
     ),
     "/v2/addresses/<address>/dispensers": (queries.get_dispensers_by_address, "addresses"),
+    "/v2/addresses/<address>/dispensers/source": (
+        queries.get_dispensers_by_address,
+        "addresses",
+    ),
+    "/v2/addresses/<address>/dispensers/origin": (
+        queries.get_dispensers_by_origin,
+        "addresses",
+    ),
     "/v2/addresses/<address>/dispensers/<asset>": (
         queries.get_dispenser_by_address_and_asset,
         "addresses",

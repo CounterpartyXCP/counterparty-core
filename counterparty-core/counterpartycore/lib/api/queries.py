@@ -2784,6 +2784,40 @@ def get_dispensers_by_address(
     )
 
 
+def get_dispensers_by_origin(
+    state_db,
+    address: str,
+    status: DispenserStatus = "all",
+    exclude_with_oracle: bool = False,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
+):
+    """
+    Returns the dispensers whose origin is an address
+    :param str address: The dispenser origin address to return (e.g. $ADDRESS_1)
+    :param str status: The status of the dispensers to return
+    :param bool exclude_with_oracle: Whether to exclude dispensers with an oracle
+    :param int cursor: The last index of the dispensers to return
+    :param int limit: The maximum number of dispensers to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the dispensers to return (overrides the `cursor` parameter) (e.g. give_quantity:desc)
+    """
+    return select_rows(
+        state_db,
+        "dispensers",
+        where=prepare_dispenser_where(
+            status, {"origin": address}, exclude_with_oracle=exclude_with_oracle
+        ),
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+        sort=sort,
+        select=SELECT_DISPENSERS,
+    )
+
+
 def get_dispensers_by_asset(
     state_db,
     asset: str,
