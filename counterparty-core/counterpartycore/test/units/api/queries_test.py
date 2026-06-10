@@ -3,6 +3,9 @@ Unit tests for counterpartycore.lib.api.queries module.
 Tests focus on covering uncovered lines in the module.
 """
 
+import inspect
+
+import pytest
 from counterpartycore.lib.api import queries, routes
 
 # =============================================================================
@@ -317,6 +320,34 @@ def test_quantitative_endpoints_expose_sort():
     for getter in getters:
         arg_names = [arg["name"] for arg in routes.prepare_route_args(getter)]
         assert "sort" in arg_names, f"{getter.__name__} does not expose a `sort` query parameter"
+
+
+def test_sort_forwarding_tables_are_registered():
+    """Every table passed to select_rows(..., sort=...) must be a SUPPORTED_SORT_FIELDS
+    key, otherwise the sort is silently dropped at runtime.
+
+    Regression: the orders endpoints query the `orders_info` view, but the fields
+    were registered under `orders`, so sorting orders never applied.
+    """
+    missing = []
+    for name, function in inspect.getmembers(queries, inspect.isfunction):
+        for table in queries._select_rows_sort_tables(function):
+            if table not in queries.SUPPORTED_SORT_FIELDS:
+                missing.append((name, table))
+    assert not missing, f"sort tables missing from SUPPORTED_SORT_FIELDS: {missing}"
+
+
+def test_get_orders_sort_is_applied(state_db):
+    """The orders endpoints sort on the `orders_info` view; an ascending sort must
+    reverse the default descending order (regression for the orders_info key)."""
+    desc = queries.get_orders(state_db, sort="give_quantity:desc").result
+    asc = queries.get_orders(state_db, sort="give_quantity:asc").result
+    if len(asc) < 2:
+        pytest.skip("not enough orders in fixture to assert ordering")
+    assert [row["give_quantity"] for row in asc] == sorted(row["give_quantity"] for row in asc)
+    assert [row["give_quantity"] for row in desc] == list(
+        reversed([row["give_quantity"] for row in asc])
+    )
 
 
 def test_select_rows_with_offset(ledger_db):

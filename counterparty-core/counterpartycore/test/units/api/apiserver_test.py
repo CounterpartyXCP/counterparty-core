@@ -29,8 +29,12 @@ def test_apiserver_root(apiv2_client, current_block_index):
     }
 
 
+def _sort_arg(route):
+    return next((arg for arg in ROUTES[route]["args"] if arg["name"] == "sort"), None)
+
+
 def test_routes_document_sort_fields():
-    orders_sort_arg = next(arg for arg in ROUTES["/v2/orders"]["args"] if arg["name"] == "sort")
+    orders_sort_arg = _sort_arg("/v2/orders")
 
     assert orders_sort_arg["supported_values"] == [
         "block_index",
@@ -43,6 +47,51 @@ def test_routes_document_sort_fields():
         "get_price",
     ]
     assert "Sortable fields:" in orders_sort_arg["description"]
+
+
+def test_routes_document_sort_fields_match_query_table():
+    # Routes whose query table differs from their route category must document
+    # the fields of the table actually queried, not the category's fields.
+    cases = {
+        "/v2/order_matches": [
+            "block_index",
+            "forward_asset",
+            "forward_quantity",
+            "backward_asset",
+            "backward_quantity",
+            "match_expire_index",
+        ],
+        "/v2/dispenses": [
+            "block_index",
+            "asset",
+            "dispense_quantity",
+            "btc_amount",
+        ],
+        "/v2/pool_matches": [
+            "block_index",
+            "forward_quantity",
+            "backward_quantity",
+        ],
+        # Previously undocumented: category "assets" is not a sort table key.
+        "/v2/issuances": [
+            "block_index",
+            "asset",
+            "asset_longname",
+            "quantity",
+            "fee_paid",
+        ],
+    }
+    for route, expected in cases.items():
+        sort_arg = _sort_arg(route)
+        assert sort_arg is not None, route
+        assert sort_arg["supported_values"] == expected, route
+        assert "Sortable fields:" in sort_arg["description"], route
+
+
+def test_routes_do_not_expose_unsupported_sort():
+    # get_balances_by_addresses builds its own SQL and cannot honour `sort`
+    # (its result is grouped/aggregated), so the route must not expose it at all.
+    assert _sort_arg("/v2/addresses/balances") is None
 
 
 def prepare_url(db, current_block_index, defaults, rawtransaction, route):

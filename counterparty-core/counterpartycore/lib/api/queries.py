@@ -1,6 +1,9 @@
 # pylint: disable=too-many-lines
 
+import ast
+import inspect
 import json
+import textwrap
 import typing
 from typing import Literal
 
@@ -130,7 +133,9 @@ SUPPORTED_SORT_FIELDS = {
         "backward_quantity",
         "match_expire_index",
     ],
-    "orders": [
+    # The orders endpoints query the `orders_info` view, so the key must match
+    # the table name passed to select_rows() (the runtime sort lookup key).
+    "orders_info": [
         "block_index",
         "give_asset",
         "give_quantity",
@@ -204,6 +209,82 @@ SUPPORTED_SORT_FIELDS = {
 }
 
 ADDRESS_FIELDS = ["source", "address", "issuer", "destination"]
+
+
+def _possible_str_values(node):
+    """The `str` values an expression can evaluate to.
+
+    For a ternary we take both branches (e.g. get_asset_holders chooses between
+    `asset_holders` and `xcp_holders`) while ignoring literals in the condition.
+    Other shapes fall back to any string constant in the subtree.
+    """
+    if isinstance(node, ast.Constant):
+        return [node.value] if isinstance(node.value, str) else []
+    if isinstance(node, ast.IfExp):
+        return _possible_str_values(node.body) + _possible_str_values(node.orelse)
+    return [
+        sub.value
+        for sub in ast.walk(node)
+        if isinstance(sub, ast.Constant) and isinstance(sub.value, str)
+    ]
+
+
+def _select_rows_sort_tables(function):
+    """Tables passed to `select_rows(..., sort=...)` inside `function`.
+
+    The runtime sort logic in `select_rows()` keys `SUPPORTED_SORT_FIELDS` by
+    the SQL table/view name, so documentation must resolve the same table to
+    stay truthful. We only collect tables from calls that actually forward a
+    `sort` argument: a getter that builds its own SQL (or never forwards sort)
+    therefore advertises nothing, which is the honest result.
+    """
+    try:
+        source = textwrap.dedent(inspect.getsource(function))
+    except (OSError, TypeError):
+        return []
+    tree = ast.parse(source)
+
+    # Resolve a table passed as a local variable (e.g. get_asset_holders picks
+    # asset_holders/xcp_holders depending on the asset) back to its literals.
+    assigned = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and len(node.targets) == 1:
+            target = node.targets[0]
+            if isinstance(target, ast.Name):
+                assigned[target.id] = _possible_str_values(node.value)
+
+    tables = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        called = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
+        if called != "select_rows":
+            continue
+        if not any(kw.arg == "sort" for kw in node.keywords):
+            continue
+        if len(node.args) < 2:
+            continue
+        table_arg = node.args[1]
+        if isinstance(table_arg, ast.Constant) and isinstance(table_arg.value, str):
+            tables.append(table_arg.value)
+        elif isinstance(table_arg, ast.Name):
+            tables.extend(assigned.get(table_arg.id, []))
+    return tables
+
+
+def get_sortable_fields(function):
+    """Sortable fields to document for a route function.
+
+    Resolves the SQL table(s) the function sorts on and returns the matching
+    `SUPPORTED_SORT_FIELDS`, de-duplicated and order-preserving. Returns `None`
+    when the function exposes no sortable fields.
+    """
+    fields = []
+    for table in _select_rows_sort_tables(function):
+        for field in SUPPORTED_SORT_FIELDS.get(table, []):
+            if field not in fields:
+                fields.append(field)
+    return fields or None
 
 
 class QueryResult:
@@ -2116,7 +2197,7 @@ def utxos_with_balances(state_db, utxos: str):
     return QueryResult(result, None, "balances", len(utxo_list))
 
 
-def get_balances_by_addresses(  # pylint: disable=unused-argument
+def get_balances_by_addresses(
     state_db,
     addresses: str,
     type: BalanceType = "all",  # pylint: disable=W0622
@@ -2124,7 +2205,6 @@ def get_balances_by_addresses(  # pylint: disable=unused-argument
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
-    sort: str = None,
 ):
     """
     Returns the balances of several addresses
@@ -2134,7 +2214,6 @@ def get_balances_by_addresses(  # pylint: disable=unused-argument
     :param str cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
-    :param str sort: The sort order of the balances to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     address_list = addresses.split(",")
     cursor_db = state_db.cursor()
