@@ -56,6 +56,7 @@ ALL_ROUTES = {
     "/v2/transactions/counts": (queries.get_transaction_types_count, "transactions"),
     "/v2/transactions/info": (compose.info, "transactions"),
     "/v2/transactions/<tx_hash>/info": (compose.info_by_tx_hash, "transactions"),
+    "/v2/bitcoin/transactions/<tx_hash>/info": (compose.info_by_tx_hash, "bitcoin"),
     "/v2/transactions/unpack": (compose.unpack, "transactions"),
     "/v2/transactions/<int:tx_index>": (queries.get_transaction_by_tx_index, "transactions"),
     "/v2/transactions/<tx_hash>": (queries.get_transaction_by_hash, "transactions"),

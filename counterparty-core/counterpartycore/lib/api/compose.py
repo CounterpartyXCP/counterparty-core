@@ -384,7 +384,14 @@ def compose_dispense(
         "destination": dispenser,
         "quantity": quantity,
     }
-    return composer.compose_transaction(db, "dispense", params, construct_params)
+    result = composer.compose_transaction(db, "dispense", params, construct_params)
+    if "params" in result:
+        result["params"]["address"] = result["params"].pop("source")
+        result["params"]["dispenser"] = result["params"].pop("destination")
+        result["params"]["quantity_normalized"] = (
+            f"{D(result['params']['quantity']) / D(config.UNIT):.8f}"
+        )
+    return result
 
 
 def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **construct_params):
