@@ -844,6 +844,18 @@ def test_get_balances_by_address_and_asset_address_type(state_db, defaults):
     assert result is not None
 
 
+def test_get_balances_by_address_and_asset_subasset_longname(state_db, defaults):
+    result = queries.get_balances_by_address_and_asset(
+        state_db,
+        address=defaults["addresses"][0],
+        asset="PARENT.already.issued",
+    )
+
+    assert len(result.result) > 0
+    assert result.result[0]["asset"] == "A95428959342453541"
+    assert result.result[0]["asset_longname"] == "PARENT.already.issued"
+
+
 # =============================================================================
 # Tests for dispensers
 # =============================================================================
@@ -1052,6 +1064,14 @@ def test_get_asset_balances_address_type(state_db):
         type="address",
     )
     assert result is not None
+
+
+def test_get_asset_balances_subasset_longname(state_db):
+    result = queries.get_asset_balances(state_db, asset="PARENT.already.issued")
+
+    assert len(result.result) > 0
+    assert result.result[0]["asset"] == "A95428959342453541"
+    assert result.result[0]["asset_longname"] == "PARENT.already.issued"
 
 
 # =============================================================================
