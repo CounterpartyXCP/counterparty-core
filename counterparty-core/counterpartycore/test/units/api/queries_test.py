@@ -149,6 +149,111 @@ def test_select_rows_with_unsupported_sort_field(state_db):
     assert result is not None
 
 
+def test_select_rows_sort_additional_quantitative_tables(ledger_db):
+    """Test sort fields added for quantitative API tables."""
+    block_hash = ledger_db.execute(
+        "SELECT block_hash FROM blocks WHERE block_index = 101"
+    ).fetchone()["block_hash"]
+    ledger_db.executemany(
+        """
+        INSERT INTO transactions (
+            tx_index, tx_hash, block_index, block_hash, block_time, source,
+            destination, btc_amount, fee, data, supported, utxos_info,
+            transaction_type
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (900001, "a" * 64, 101, block_hash, 1, "source", "dest", 0, 0, b"", 1, "", "send"),
+            (900002, "b" * 64, 101, block_hash, 2, "source", "dest", 0, 0, b"", 1, "", "send"),
+            (900003, "c" * 64, 101, block_hash, 3, "source", "dest", 0, 0, b"", 1, "", "issuance"),
+            (900004, "d" * 64, 101, block_hash, 4, "source", "dest", 0, 0, b"", 1, "", "issuance"),
+            (900005, "e" * 64, 101, block_hash, 5, "source", "dest", 0, 0, b"", 1, "", "broadcast"),
+            (900006, "f" * 64, 101, block_hash, 6, "source", "dest", 0, 0, b"", 1, "", "broadcast"),
+            (900007, "1" * 64, 101, block_hash, 7, "source", "dest", 0, 0, b"", 1, "", "dispense"),
+            (900008, "3" * 64, 101, block_hash, 8, "source", "dest", 0, 0, b"", 1, "", "dispense"),
+            (900009, "5" * 64, 101, block_hash, 9, "source", "dest", 0, 0, b"", 1, "", "dividend"),
+            (900010, "6" * 64, 101, block_hash, 10, "source", "dest", 0, 0, b"", 1, "", "dividend"),
+        ],
+    )
+    ledger_db.executemany(
+        """
+        INSERT INTO sends (
+            tx_index, tx_hash, block_index, source, destination, asset,
+            quantity, status, msg_index, fee_paid, send_type
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (900001, "a" * 64, 101, "source", "dest", "SORTSEND", 10, "valid", 0, 1, "send"),
+            (900002, "b" * 64, 101, "source", "dest", "SORTSEND", 20, "valid", 0, 2, "send"),
+        ],
+    )
+    ledger_db.executemany(
+        """
+        INSERT INTO issuances (
+            tx_index, tx_hash, msg_index, block_index, asset, quantity,
+            source, issuer, fee_paid, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (900003, "c" * 64, 0, 101, "SORTISSUE", 10, "source", "issuer", 1, "valid"),
+            (900004, "d" * 64, 0, 101, "SORTISSUE", 20, "source", "issuer", 2, "valid"),
+        ],
+    )
+    ledger_db.executemany(
+        """
+        INSERT INTO broadcasts (
+            tx_index, tx_hash, block_index, source, timestamp, value,
+            fee_fraction_int, text, locked, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (900005, "e" * 64, 101, "sort-source", 1, 1.0, 1, "low", 0, "valid"),
+            (900006, "f" * 64, 101, "sort-source", 2, 2.0, 2, "high", 0, "valid"),
+        ],
+    )
+    ledger_db.executemany(
+        """
+        INSERT INTO dispenses (
+            tx_index, dispense_index, tx_hash, block_index, source,
+            destination, asset, dispense_quantity, dispenser_tx_hash, btc_amount
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (900007, 0, "1" * 64, 101, "source", "dest", "SORTDISP", 10, "2" * 64, 1),
+            (900008, 0, "3" * 64, 101, "source", "dest", "SORTDISP", 20, "4" * 64, 2),
+        ],
+    )
+    ledger_db.executemany(
+        """
+        INSERT INTO dividends (
+            tx_index, tx_hash, block_index, source, asset, dividend_asset,
+            quantity_per_unit, fee_paid, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (900009, "5" * 64, 101, "source", "SORTDIV", "XCP", 10, 1, "valid"),
+            (900010, "6" * 64, 101, "source", "SORTDIV", "XCP", 20, 2, "valid"),
+        ],
+    )
+
+    cases = [
+        ("sends", {"asset": "SORTSEND"}, "quantity", [10, 20]),
+        ("issuances", {"asset": "SORTISSUE"}, "quantity", [10, 20]),
+        ("broadcasts", {"source": "sort-source"}, "value", [1.0, 2.0]),
+        ("dispenses", {"asset": "SORTDISP"}, "dispense_quantity", [10, 20]),
+        ("dividends", {"asset": "SORTDIV"}, "quantity_per_unit", [10, 20]),
+    ]
+    for table, where, sort_field, expected in cases:
+        result = queries.select_rows(
+            ledger_db,
+            table,
+            where=where,
+            sort=f"{sort_field}:asc",
+            limit=2,
+        )
+        assert [row[sort_field] for row in result.result] == expected
+
+
 def test_select_rows_with_offset(ledger_db):
     """Test select_rows with offset parameter (lines 321-323)."""
     result = queries.select_rows(
