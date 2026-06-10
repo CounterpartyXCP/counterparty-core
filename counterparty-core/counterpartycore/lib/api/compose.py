@@ -640,6 +640,36 @@ def compose_detach(
     return composer.compose_transaction(db, "detach", params, construct_params)
 
 
+def compose_detach_by_utxos(
+    db,
+    utxos: str,
+    destination: str = None,
+    **construct_params,
+):
+    """
+    Composes a transaction to detach assets from multiple UTXOs to an address.
+    :param utxos: A comma-separated list of UTXOs from which assets are detached (e.g. $UTXO_WITH_BALANCE,$UTXO_WITH_BALANCE_2)
+    :param destination: The address to detach the assets to, if not provided the address corresponding to each UTXO is used (e.g. $ADDRESS_1)
+    """
+    if construct_params.get("inputs_set") is not None:
+        raise exceptions.ComposeError("`utxos` cannot be combined with `inputs_set`")
+
+    parsed_utxos = composer.prepare_inputs_set(utxos)
+    source = f"{parsed_utxos[0]['txid']}:{parsed_utxos[0]['vout']}"
+    if construct_params.get("validate", True):
+        for parsed_utxo in parsed_utxos:
+            utxo_id = f"{parsed_utxo['txid']}:{parsed_utxo['vout']}"
+            if ledger.balances.get_utxo_balances(db, utxo_id):
+                source = utxo_id
+                break
+
+    construct_params["inputs_set"] = utxos
+    construct_params["use_all_inputs_set"] = True
+    construct_params["use_utxos_with_balances"] = True
+
+    return compose_detach(db, source, destination, **construct_params)
+
+
 def compose_movetoutxo(db, utxo: str, destination: str, utxo_value: int = None, **construct_params):
     """
     Composes a transaction like a send but for moving from one UTXO to another, with the destination is specified as an address.
