@@ -3,7 +3,7 @@ Unit tests for counterpartycore.lib.api.queries module.
 Tests focus on covering uncovered lines in the module.
 """
 
-from counterpartycore.lib.api import queries
+from counterpartycore.lib.api import queries, routes
 
 # =============================================================================
 # Tests for select_rows function - where clause handling
@@ -149,8 +149,8 @@ def test_select_rows_with_unsupported_sort_field(state_db):
     assert result is not None
 
 
-def test_select_rows_sort_additional_quantitative_tables(ledger_db):
-    """Test sort fields added for quantitative API tables."""
+def _insert_quantitative_sort_fixtures(ledger_db):
+    """Insert two rows per quantitative table (quantities 10 then 20) used by the sort tests."""
     block_hash = ledger_db.execute(
         "SELECT block_hash FROM blocks WHERE block_index = 101"
     ).fetchone()["block_hash"]
@@ -236,6 +236,11 @@ def test_select_rows_sort_additional_quantitative_tables(ledger_db):
         ],
     )
 
+
+def test_select_rows_sort_additional_quantitative_tables(ledger_db):
+    """Test sort fields added for quantitative API tables."""
+    _insert_quantitative_sort_fixtures(ledger_db)
+
     cases = [
         ("sends", {"asset": "SORTSEND"}, "quantity", [10, 20]),
         ("issuances", {"asset": "SORTISSUE"}, "quantity", [10, 20]),
@@ -252,6 +257,66 @@ def test_select_rows_sort_additional_quantitative_tables(ledger_db):
             limit=2,
         )
         assert [row[sort_field] for row in result.result] == expected
+
+
+def test_quantitative_getters_pass_sort_through(ledger_db):
+    """The list getters for quantitative tables must forward `sort` to select_rows.
+
+    The default order is descending (newest first), so an ascending sort proves the
+    getter actually applied the requested order rather than ignoring it.
+    """
+    _insert_quantitative_sort_fixtures(ledger_db)
+
+    cases = [
+        (queries.get_sends_by_asset, ("SORTSEND",), "quantity", [10, 20]),
+        (queries.get_issuances_by_asset, ("SORTISSUE",), "quantity", [10, 20]),
+        (queries.get_broadcasts_by_source, ("sort-source",), "value", [1.0, 2.0]),
+        (queries.get_dispenses_by_asset, ("SORTDISP",), "dispense_quantity", [10, 20]),
+        (queries.get_dividends_by_asset, ("SORTDIV",), "quantity_per_unit", [10, 20]),
+    ]
+    for getter, getter_args, sort_field, expected in cases:
+        result = getter(ledger_db, *getter_args, sort=f"{sort_field}:asc")
+        assert [row[sort_field] for row in result.result] == expected, getter.__name__
+
+
+def test_quantitative_endpoints_expose_sort():
+    """Every quantitative list endpoint must expose `sort` as a query parameter.
+
+    The API only injects parameters declared in the function signature, so a getter
+    that does not declare `sort` silently ignores the query parameter. This guards
+    against re-introducing that gap.
+    """
+    getters = [
+        queries.get_sends,
+        queries.get_sends_by_block,
+        queries.get_sends_by_transaction_hash,
+        queries.get_sends_by_asset,
+        queries.get_sends_by_address,
+        queries.get_sends_by_address_and_asset,
+        queries.get_receive_by_address,
+        queries.get_receive_by_address_and_asset,
+        queries.get_issuances,
+        queries.get_issuances_by_block,
+        queries.get_issuances_by_asset,
+        queries.get_issuances_by_address,
+        queries.get_dispenses,
+        queries.get_dispenses_by_block,
+        queries.get_dispenses_by_transaction_hash,
+        queries.get_dispenses_by_dispenser,
+        queries.get_dispenses_by_source,
+        queries.get_dispenses_by_destination,
+        queries.get_dispenses_by_asset,
+        queries.get_dispenses_by_source_and_asset,
+        queries.get_dispenses_by_destination_and_asset,
+        queries.get_valid_broadcasts,
+        queries.get_broadcasts_by_source,
+        queries.get_dividends,
+        queries.get_dividends_by_asset,
+        queries.get_dividends_distributed_by_address,
+    ]
+    for getter in getters:
+        arg_names = [arg["name"] for arg in routes.prepare_route_args(getter)]
+        assert "sort" in arg_names, f"{getter.__name__} does not expose a `sort` query parameter"
 
 
 def test_select_rows_with_offset(ledger_db):
