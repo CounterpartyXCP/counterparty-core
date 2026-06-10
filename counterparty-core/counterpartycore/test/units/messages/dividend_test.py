@@ -1,4 +1,5 @@
-from counterpartycore.lib import ledger
+import pytest
+from counterpartycore.lib import exceptions, ledger
 from counterpartycore.lib.messages import dividend
 
 
@@ -55,6 +56,10 @@ def test_validate(ledger_db, defaults, current_block_index):
     assert dividend.validate(
         ledger_db, defaults["addresses"][0], 0, "DIVISIBLE", "XCP", current_block_index
     ) == (None, None, ["non‐positive quantity per unit", "zero dividend"], 0)
+
+    assert dividend.validate(
+        ledger_db, defaults["addresses"][0], 1, "DIVISIBLE", "BTC", current_block_index
+    ) == (None, None, ["BTC dividend output below dust threshold"], 0)
 
     assert dividend.validate(
         ledger_db,
@@ -122,6 +127,9 @@ def test_compose(ledger_db, defaults):
         [],
         b'2\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\xa2[\xe3Kf\x01S\x08"\x06\xe4c%',
     )
+
+    with pytest.raises(exceptions.ComposeError, match="BTC dividend output below dust threshold"):
+        dividend.compose(ledger_db, defaults["addresses"][0], 1, "DIVISIBLE", "BTC")
 
 
 def test_parse_dividend(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
