@@ -106,6 +106,35 @@ def test_validate(ledger_db, defaults, current_block_index):
     ) == ["options not an integer"]
 
 
+@pytest.mark.parametrize(
+    ("param_name", "param_value", "expected_problem"),
+    [
+        ("timestamp", "1588000000", "timestamp must be an integer"),
+        ("value", "1", "value must be numeric"),
+        ("fee_fraction_int", "5000000", "fee_fraction_int must be numeric"),
+    ],
+)
+def test_validate_rejects_invalid_numeric_parameters(
+    ledger_db, defaults, param_name, param_value, expected_problem
+):
+    params = {
+        "timestamp": 1588000000,
+        "value": 1,
+        "fee_fraction_int": defaults["fee_multiplier"],
+    }
+    params[param_name] = param_value
+
+    assert broadcast.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        params["timestamp"],
+        params["value"],
+        params["fee_fraction_int"],
+        "Unit Test",
+        "",
+    ) == [expected_problem]
+
+
 def test_compose(ledger_db, defaults):
     with ProtocolChangesDisabled(["broadcast_pack_text", "short_tx_type_id"]):
         assert broadcast.compose(

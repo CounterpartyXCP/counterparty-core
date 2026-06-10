@@ -75,6 +75,16 @@ def validate_address_options(options):
 def validate(db, source, timestamp, value, fee_fraction_int, text, mime_type, block_index=None):
     problems = []
 
+    if not isinstance(timestamp, int):
+        problems.append("timestamp must be an integer")
+        return problems
+    if not isinstance(value, (int, float, D, Fraction)):
+        problems.append("value must be numeric")
+        return problems
+    if not isinstance(fee_fraction_int, (int, float, D, Fraction)):
+        problems.append("fee_fraction_int must be numeric")
+        return problems
+
     # For SQLite3
     if timestamp > config.MAX_INT or value > config.MAX_INT or fee_fraction_int > config.MAX_INT:
         problems.append("integer overflow")
