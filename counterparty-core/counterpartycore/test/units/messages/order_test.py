@@ -178,6 +178,22 @@ def test_validate_rejects_non_integer_parameters(
     ) == [expected_problem]
 
 
+def test_validate_problem_ordering_is_consensus_stable(ledger_db, defaults, current_block_index):
+    # The overflow problem must be appended before the BTC-for-BTC problem:
+    # `parse` joins this list into the stored `status` string, so reordering
+    # would change consensus state for historical transactions. Lock the order.
+    assert order.validate(
+        ledger_db,
+        "BTC",
+        2**63 + 10,
+        "BTC",
+        defaults["quantity"],
+        2000,
+        0,
+        current_block_index,
+    ) == ["integer overflow", "cannot trade BTC for itself"]
+
+
 def test_compose(ledger_db, defaults, current_block_index):
     assert order.compose(
         ledger_db,
