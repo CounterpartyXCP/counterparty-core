@@ -6,6 +6,8 @@ from docstring_parser import parse as parse_docstring
 from counterpartycore.lib.api import apiv1, compose, composer, healthz, queries
 from counterpartycore.lib.backend import bitcoind, electrs
 
+ROUTE_CATEGORIES_WITHOUT_VERBOSE = {"bitcoin", "compose", "healthz", "routes", "v1"}
+
 
 def get_routes():
     """Return the API routes."""
@@ -328,7 +330,13 @@ def function_needs_db(function):
     return " ".join(dbs)
 
 
-def prepare_route_args(function):
+def should_include_verbose_arg(function, route_category=None):
+    if route_category in ROUTE_CATEGORIES_WITHOUT_VERBOSE:
+        return False
+    return not function.__name__.endswith("_v1")
+
+
+def prepare_route_args(function, route_category=None):
     args = []
     function_args = inspect.signature(function).parameters
     args_description = get_args_description(function)
@@ -371,7 +379,7 @@ def prepare_route_args(function):
                     f"Sortable fields: {', '.join(sort_fields)}."
                 )
         args.append(route_arg)
-    if not function.__name__.endswith("_v1"):
+    if should_include_verbose_arg(function, route_category):
         args.append(
             {
                 "name": "verbose",
@@ -397,7 +405,7 @@ def prepare_routes(routes):
         prepared_routes[route] = {
             "function": route_function,
             "description": get_function_description(route_function),
-            "args": prepare_route_args(route_function),
+            "args": prepare_route_args(route_function, route_category),
             "category": route_category,
         }
     return prepared_routes
