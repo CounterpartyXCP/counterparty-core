@@ -125,6 +125,58 @@ def test_compose(ledger_db, defaults):
         )
 
 
+def test_compose_resolves_subasset_longname(ledger_db, defaults):
+    asset_longname = "PARENT.already.issued"
+    asset_name = "A95428959342453541"
+    ledger_db.execute(
+        """
+        INSERT INTO fairminters (
+            tx_hash, tx_index, block_index, source, asset, asset_parent,
+            asset_longname, description, price, quantity_by_price, hard_cap,
+            burn_payment, max_mint_per_tx, premint_quantity, start_block,
+            end_block, minted_asset_commission_int, soft_cap,
+            soft_cap_deadline_block, lock_description, lock_quantity,
+            divisible, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "a" * 64,
+            10_000,
+            1,
+            defaults["addresses"][0],
+            asset_name,
+            "PARENT",
+            asset_longname,
+            "",
+            0,
+            1,
+            0,
+            False,
+            10,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            False,
+            False,
+            True,
+            "open",
+        ),
+    )
+
+    assert fairmint.validate(ledger_db, defaults["addresses"][1], asset_longname, 0) == []
+    assert fairmint.compose(
+        ledger_db, defaults["addresses"][1], asset_longname, 0
+    ) == fairmint.compose(
+        ledger_db,
+        defaults["addresses"][1],
+        asset_name,
+        0,
+    )
+
+
 def test_unpack():
     assert fairmint.unpack(b"\x82\x1b\x00\x02\xd6\xb1\x16H\xdbu\x00", False) == ("FREEFAIRMIN", 0)
     assert fairmint.unpack(b"\x82\x1b\x00\x02\xd6\xb1\x16H\xdbu\x00", True) == {
