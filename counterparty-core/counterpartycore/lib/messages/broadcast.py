@@ -75,15 +75,13 @@ def validate_address_options(options):
 def validate(db, source, timestamp, value, fee_fraction_int, text, mime_type, block_index=None):
     problems = []
 
-    if not isinstance(timestamp, int):
-        problems.append("timestamp must be an integer")
-        return problems
-    if not isinstance(value, (int, float, D, Fraction)):
-        problems.append("value must be numeric")
-        return problems
-    if not isinstance(fee_fraction_int, (int, float, D, Fraction)):
-        problems.append("fee_fraction_int must be numeric")
-        return problems
+    # NOTE: no numeric type checks here. validate() is on the consensus path
+    # (parse() calls it for every on-chain broadcast). Unlike order/bet, after
+    # `taproot_support` broadcasts are CBOR-decoded (see load_cbor), so a crafted
+    # message could carry a float timestamp or non-numeric fee_fraction_int.
+    # Rejecting those here would change the stored `status` (and flip a float
+    # timestamp from valid to invalid) without a protocol change. API-level type
+    # validation lives in compose() instead, off the consensus path.
 
     # For SQLite3
     if timestamp > config.MAX_INT or value > config.MAX_INT or fee_fraction_int > config.MAX_INT:
@@ -139,6 +137,17 @@ def compose(
     mime_type: str = "",
     skip_validation: bool = False,
 ):
+    # Numeric type checks for the API/compose path only. These are intentionally
+    # NOT in validate(), which is shared with the consensus parse path. Done
+    # before any arithmetic below so non-numeric inputs return a clean
+    # ComposeError instead of raising a TypeError.
+    if not isinstance(timestamp, int):
+        raise exceptions.ComposeError(["timestamp must be an integer"])
+    if not isinstance(value, (int, float, D, Fraction)):
+        raise exceptions.ComposeError(["value must be numeric"])
+    if not isinstance(fee_fraction, (int, float, D, Fraction)):
+        raise exceptions.ComposeError(["fee_fraction must be numeric"])
+
     # Store the fee fraction as an integer.
     fee_fraction_int = int(fee_fraction * 1e8)
 
