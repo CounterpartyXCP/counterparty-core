@@ -22,6 +22,12 @@ def test_compose(ledger_db, defaults):
     with pytest.raises(exceptions.ComposeError, match=error):
         assert dispense.compose(ledger_db, defaults["addresses"][0], defaults["addresses"][5], 10)
 
+    with pytest.raises(exceptions.ComposeError, match=str(["quantity must be positive"])):
+        dispense.compose(ledger_db, defaults["addresses"][0], defaults["addresses"][5], -100)
+
+    with pytest.raises(exceptions.ComposeError, match=str(["quantity must be in satoshis"])):
+        dispense.compose(ledger_db, defaults["addresses"][0], defaults["addresses"][5], "100")
+
     error = str(
         [
             "dispenser for XCP doesn't have enough asset to give",
