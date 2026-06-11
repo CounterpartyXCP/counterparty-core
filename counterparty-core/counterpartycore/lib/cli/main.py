@@ -448,6 +448,14 @@ CONFIG_ARGS = [
         },
     ],
     [
+        ("--memory-profile-tracemalloc",),
+        {
+            "action": "store_true",
+            "default": False,
+            "help": "Enable tracemalloc allocation tracking in the memory profiler; logs top allocation sites (adds overhead, implies --memory-profile)",
+        },
+    ],
+    [
         ("--enable-all-protocol-changes",),
         {
             "action": "store_true",
