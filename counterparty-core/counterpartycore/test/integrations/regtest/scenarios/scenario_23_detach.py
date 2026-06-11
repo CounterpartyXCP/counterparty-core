@@ -223,7 +223,6 @@ SCENARIO = [
         "source": "$ATTACH2_DETACHA_TX_HASH:0",
         "params": {
             "destination": "$ADDRESS_9",
-            "quantity": 1 * 10**8,
             "utxo_value": 10000,
         },
         "controls": [
