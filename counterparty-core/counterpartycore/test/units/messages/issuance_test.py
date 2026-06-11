@@ -7,6 +7,7 @@ from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import apiwatcher
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import issuance
+from counterpartycore.lib.parser import protocol
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
@@ -241,16 +242,18 @@ def test_validate(ledger_db, defaults, current_block_index):
         config.TESTNET4 = False
         config.SIGNET = False
 
-        current_state.set_current_block_index(952799)
+        activation_block = protocol.get_change_block_index("issuance_callable_lock_fix")
+
+        current_state.set_current_block_index(activation_block - 1)
         # `cannot change callability` must NOT appear here: it was already disabled
         # at block 819300 by `issuance_callability_parameters_removal`. Only the
         # call price check should still fire before the lock-fix activation.
-        assert validate_callable_lock_at(952799) == [
+        assert validate_callable_lock_at(activation_block - 1) == [
             "cannot reduce call price",
         ]
 
-        current_state.set_current_block_index(952800)
-        assert validate_callable_lock_at(952800) == []
+        current_state.set_current_block_index(activation_block)
+        assert validate_callable_lock_at(activation_block) == []
     finally:
         config.REGTEST, config.TESTNET3, config.TESTNET4, config.SIGNET = original_network
         current_state.set_current_block_index(original_block_index)

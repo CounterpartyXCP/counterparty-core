@@ -122,7 +122,7 @@ def get_tx_index(node, tx_hash):
         return node.tx_index
     if tx_hash == "null":
         return node.tx_index
-    result = node.api_call(f"transactions/{tx_hash}?limit=1")
+    result = node.api_call(f"transactions/{tx_hash}")
     if "result" in result:
         return result["result"]["tx_index"]
     return 0
