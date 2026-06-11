@@ -1728,6 +1728,17 @@ def test_prepare_construct_params(defaults):
         "The `custom_inputs` parameter is deprecated, use `inputs_set` instead"
     ]
 
+    # Test case 4: message_only is a public alias for return_only_data
+    result_params, result_warnings = composer.prepare_construct_params({"message_only": True})
+    assert result_params == {"return_only_data": True}
+    assert result_warnings == []
+
+    result_params, result_warnings = composer.prepare_construct_params(
+        {"return_only_data": True, "message_only": False}
+    )
+    assert result_params == {"return_only_data": True}
+    assert result_warnings == []
+
 
 def test_compose_transaction(ledger_db, defaults, monkeypatch):
     # Test case 1: Order transaction
@@ -1766,6 +1777,16 @@ def test_compose_transaction(ledger_db, defaults, monkeypatch):
 
     result = composer.compose_transaction(ledger_db, "send", params, {})
     assert result == expected
+
+    message_only_result = composer.compose_transaction(
+        ledger_db, "send", params, {"message_only": True}
+    )
+    return_only_data_result = composer.compose_transaction(
+        ledger_db, "send", params, {"return_only_data": True}
+    )
+    assert message_only_result == return_only_data_result
+    assert message_only_result["data"].startswith(config.PREFIX)
+    assert "rawtransaction" not in message_only_result
 
     params = {
         "source": defaults["addresses"][0],
