@@ -141,6 +141,7 @@ def test_argparser():
         "api_only": False,
         "profile": False,
         "memory_profile": False,
+        "memory_profile_tracemalloc": False,
         "enable_all_protocol_changes": False,
     }
 

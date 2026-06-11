@@ -163,7 +163,7 @@ class CounterpartyServer(threading.Thread):
         if getattr(config, "MEMORY_PROFILE", False):
             self.mem_profiler = memory_profiler.start_memory_profiler(
                 interval_seconds=60,
-                enable_tracemalloc=False,
+                enable_tracemalloc=getattr(config, "MEMORY_PROFILE_TRACEMALLOC", False),
             )
 
         # download bootstrap if necessary
