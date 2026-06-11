@@ -1216,6 +1216,7 @@ CONSTRUCT_PARAMS = {
         None,
         "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>:<script_pub_key>`.",
     ),
+    "custom_inputs": (str, None, "Deprecated, use `inputs_set` instead"),
     "allow_unconfirmed_inputs": (
         bool,
         False,
@@ -1289,6 +1290,7 @@ DEPRECATED_CONSTRUCT_PARAMS = [
     "p2sh_pretx_txid",
     "segwit",
     "unspent_tx_hash",
+    "custom_inputs",
 ]
 
 
@@ -1306,6 +1308,7 @@ def prepare_construct_params(construct_params):
         ("fee_provided", "max_fee", lambda x: x),
         ("dust_return_pubkey", "multisig_pubkey", lambda x: x),
         ("return_psbt", "verbose", lambda x: x),
+        ("custom_inputs", "inputs_set", lambda x: x),
     ]:
         if deprecated_param in construct_params:
             if (
