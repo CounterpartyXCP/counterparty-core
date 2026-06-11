@@ -1040,6 +1040,15 @@ def test_prepare_fee_parameters():
     with pytest.raises(exceptions.ComposeError, match="Invalid max_fee"):
         composer.prepare_fee_parameters({"max_fee": -1, "sat_per_vbyte": 1})
 
+    with pytest.raises(exceptions.ComposeError, match="Invalid confirmation_target"):
+        composer.prepare_fee_parameters({"confirmation_target": 0})
+
+    with pytest.raises(exceptions.ComposeError, match="Invalid confirmation_target"):
+        composer.prepare_fee_parameters({"confirmation_target": -1})
+
+    with pytest.raises(exceptions.ComposeError, match="Invalid confirmation_target"):
+        composer.prepare_fee_parameters({"confirmation_target": 1009})
+
 
 def test_prepare_unspent_list(ledger_db, defaults, monkeypatch):
     txs = {
