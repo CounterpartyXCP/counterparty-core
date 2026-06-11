@@ -242,8 +242,10 @@ def test_validate(ledger_db, defaults, current_block_index):
         config.SIGNET = False
 
         current_state.set_current_block_index(952799)
+        # `cannot change callability` must NOT appear here: it was already disabled
+        # at block 819300 by `issuance_callability_parameters_removal`. Only the
+        # call price check should still fire before the lock-fix activation.
         assert validate_callable_lock_at(952799) == [
-            "cannot change callability",
             "cannot reduce call price",
         ]
 
@@ -255,7 +257,6 @@ def test_validate(ledger_db, defaults, current_block_index):
 
     with ProtocolChangesDisabled(["issuance_callable_lock_fix"]):
         assert validate_callable_lock_at(952800) == [
-            "cannot change callability",
             "cannot reduce call price",
         ]
 
