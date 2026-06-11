@@ -800,15 +800,6 @@
         "testnet4_block_index": 0,
         "signet_block_index": 0
     },
-    "sweep_skip_zero_balances": {
-        "minimum_version_major": 11,
-        "minimum_version_minor": 1,
-        "minimum_version_revision": 0,
-        "block_index": 952800,
-        "testnet3_block_index": 4961300,
-        "testnet4_block_index": 136300,
-        "signet_block_index": 310300
-    },
     "dispenser_origin_permission_extended": {
         "minimum_version_major": 9,
         "minimum_version_minor": 59,
@@ -1420,31 +1411,40 @@
         "testnet4_block_index": 136300,
         "signet_block_index": 310300
     },
+    "sweep_skip_zero_balances": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 1,
+        "block_index": 9999999,
+        "testnet3_block_index": 9999999,
+        "testnet4_block_index": 9999999,
+        "signet_block_index": 9999999
+    },
     "fix_fairminter_commission_minimum": {
         "minimum_version_major": 11,
         "minimum_version_minor": 1,
-        "minimum_version_revision": 0,
-        "block_index": 952800,
-        "testnet3_block_index": 4961300,
-        "testnet4_block_index": 136300,
-        "signet_block_index": 310300
+        "minimum_version_revision": 1,
+        "block_index": 9999999,
+        "testnet3_block_index": 9999999,
+        "testnet4_block_index": 9999999,
+        "signet_block_index": 9999999
     },
     "multisig_utxo_addresses": {
         "minimum_version_major": 11,
         "minimum_version_minor": 1,
-        "minimum_version_revision": 0,
-        "block_index": 952800,
-        "testnet3_block_index": 4961300,
-        "testnet4_block_index": 136300,
-        "signet_block_index": 310300
+        "minimum_version_revision": 1,
+        "block_index": 9999999,
+        "testnet3_block_index": 9999999,
+        "testnet4_block_index": 9999999,
+        "signet_block_index": 9999999
     },
     "issuance_callable_lock_fix": {
         "minimum_version_major": 11,
         "minimum_version_minor": 1,
-        "minimum_version_revision": 0,
-        "block_index": 952800,
-        "testnet3_block_index": 4961300,
-        "testnet4_block_index": 136300,
-        "signet_block_index": 310300
+        "minimum_version_revision": 1,
+        "block_index": 9999999,
+        "testnet3_block_index": 9999999,
+        "testnet4_block_index": 9999999,
+        "signet_block_index": 9999999
     }
 }
