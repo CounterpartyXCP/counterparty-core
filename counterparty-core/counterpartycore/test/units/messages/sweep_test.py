@@ -1,6 +1,6 @@
 import cbor2
 import pytest
-from counterpartycore.lib import config, exceptions
+from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages import sweep
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
@@ -8,11 +8,11 @@ from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 def test_validate(ledger_db, defaults, monkeypatch):
     assert sweep.validate(
         ledger_db, defaults["addresses"][6], defaults["addresses"][5], 1, None, config.BURN_START
-    ) == ([], 800000)
+    ) == ([], 400000)
 
     assert sweep.validate(
         ledger_db, defaults["addresses"][6], defaults["addresses"][5], 2, None, config.BURN_START
-    ) == ([], 800000)
+    ) == ([], 400000)
 
     assert sweep.validate(
         ledger_db, defaults["addresses"][6], defaults["addresses"][5], 3, None, config.BURN_START
@@ -20,11 +20,11 @@ def test_validate(ledger_db, defaults, monkeypatch):
 
     assert sweep.validate(
         ledger_db, defaults["addresses"][6], defaults["addresses"][5], 1, "test", config.BURN_START
-    ) == ([], 800000)
+    ) == ([], 400000)
 
     assert sweep.validate(
         ledger_db, defaults["addresses"][6], defaults["addresses"][5], 1, b"test", config.BURN_START
-    ) == ([], 800000)
+    ) == ([], 400000)
 
     assert sweep.validate(
         ledger_db, defaults["addresses"][6], defaults["addresses"][5], 0, None, config.BURN_START
@@ -32,7 +32,7 @@ def test_validate(ledger_db, defaults, monkeypatch):
 
     assert sweep.validate(
         ledger_db, defaults["addresses"][6], defaults["addresses"][6], 1, None, config.BURN_START
-    ) == (["destination cannot be the same as source"], 800000)
+    ) == (["destination cannot be the same as source"], 400000)
 
     assert sweep.validate(
         ledger_db, defaults["addresses"][6], defaults["addresses"][5], 8, None, config.BURN_START
@@ -45,11 +45,11 @@ def test_validate(ledger_db, defaults, monkeypatch):
         1,
         "012345678900123456789001234567890012345",
         config.BURN_START,
-    ) == (["memo too long"], 800000)
+    ) == (["memo too long"], 400000)
 
     monkeypatch.setattr(
         "counterpartycore.lib.messages.sweep.get_total_fee",
-        lambda db, source, block_index: 1000000000000,
+        lambda db, source, block_index, flags=None: 1000000000000,
     )
 
     assert sweep.validate(
@@ -111,7 +111,7 @@ def test_compose(ledger_db, defaults, monkeypatch):
 
         monkeypatch.setattr(
             "counterpartycore.lib.messages.sweep.get_total_fee",
-            lambda db, source, block_index: 1000000000000,
+            lambda db, source, block_index, flags=None: 1000000000000,
         )
 
         with pytest.raises(
@@ -291,7 +291,7 @@ def test_parse_flag_1(ledger_db, blockchain_mock, defaults, test_helpers, curren
                         "block_index": current_block_index,
                         "calling_function": "sweep",
                         "event": tx["tx_hash"],
-                        "quantity": 91391199693,
+                        "quantity": 91397199693,
                     },
                 },
                 {
@@ -302,7 +302,7 @@ def test_parse_flag_1(ledger_db, blockchain_mock, defaults, test_helpers, curren
                         "asset": "XCP",
                         "block_index": current_block_index,
                         "event": tx["tx_hash"],
-                        "quantity": 91391199693,
+                        "quantity": 91397199693,
                     },
                 },
                 {
@@ -336,6 +336,98 @@ def test_parse_flag_1(ledger_db, blockchain_mock, defaults, test_helpers, curren
                 },
             ],
         )
+
+
+def add_zero_balance(ledger_db, address, asset, tx_index, event):
+    ledger.events.credit(ledger_db, address, asset, 1, tx_index, action="test setup", event=event)
+    ledger.events.debit(ledger_db, address, asset, 1, tx_index, action="test setup", event=event)
+
+
+def test_parse_skips_zero_quantity_balances(ledger_db, blockchain_mock, defaults):
+    source = defaults["addresses"][0]
+    destination = defaults["addresses"][1]
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    add_zero_balance(ledger_db, source, "ZEROASSET", tx["tx_index"], "zero-balance-setup")
+
+    message = b"\x83U\x01\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec\x01@"
+    sweep.parse(ledger_db, tx, message)
+
+    zero_sweep_records = ledger_db.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM (
+            SELECT quantity FROM credits
+            WHERE address = ? AND asset = ? AND calling_function = ? AND event = ?
+            UNION ALL
+            SELECT quantity FROM debits
+            WHERE address = ? AND asset = ? AND action = ? AND event = ?
+        )
+        """,
+        (
+            destination,
+            "ZEROASSET",
+            "sweep",
+            tx["tx_hash"],
+            source,
+            "ZEROASSET",
+            "sweep",
+            tx["tx_hash"],
+        ),
+    ).fetchone()["count"]
+
+    assert zero_sweep_records == 0
+
+
+def test_parse_zero_quantity_balances_legacy_path(ledger_db, blockchain_mock, defaults):
+    source = defaults["addresses"][0]
+    destination = defaults["addresses"][1]
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    add_zero_balance(ledger_db, source, "ZEROASSET", tx["tx_index"], "zero-balance-setup")
+
+    message = b"\x83U\x01\x8dj\xe8\xa3\xb3\x81f1\x18\xb4\xe1\xef\xf4\xcf\xc7\xd0\x95M\xd6\xec\x01@"
+    with ProtocolChangesDisabled(["sweep_skip_zero_balances"]):
+        sweep.parse(ledger_db, tx, message)
+
+    zero_sweep_records = ledger_db.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM (
+            SELECT quantity FROM credits
+            WHERE address = ? AND asset = ? AND calling_function = ? AND event = ?
+            UNION ALL
+            SELECT quantity FROM debits
+            WHERE address = ? AND asset = ? AND action = ? AND event = ?
+        )
+        """,
+        (
+            destination,
+            "ZEROASSET",
+            "sweep",
+            tx["tx_hash"],
+            source,
+            "ZEROASSET",
+            "sweep",
+            tx["tx_hash"],
+        ),
+    ).fetchone()["count"]
+
+    assert zero_sweep_records == 2
+
+
+def test_total_fee_ignores_zero_quantity_balances(ledger_db, blockchain_mock, defaults):
+    source = defaults["addresses"][0]
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    fee_before = sweep.get_total_fee(ledger_db, source, tx["block_index"], sweep.FLAG_BALANCES)
+
+    add_zero_balance(ledger_db, source, "ZEROASSET", tx["tx_index"], "zero-balance-setup")
+
+    fee_after = sweep.get_total_fee(ledger_db, source, tx["block_index"], sweep.FLAG_BALANCES)
+    assert fee_after == fee_before
+
+    with ProtocolChangesDisabled(["sweep_skip_zero_balances"]):
+        legacy_fee = sweep.get_total_fee(ledger_db, source, tx["block_index"], sweep.FLAG_BALANCES)
+
+    assert legacy_fee > fee_after
 
 
 def test_parse_flag_2(ledger_db, blockchain_mock, defaults, test_helpers):
