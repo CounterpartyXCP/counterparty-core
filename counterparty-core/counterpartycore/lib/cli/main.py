@@ -430,7 +430,7 @@ CONFIG_ARGS = [
     [
         ("--catch-up",),
         {
-            "choices": ["normal", "bootstrap", "bootstrap-always"],
+            "choices": ["normal", "bootstrap", "bootstrap-once", "bootstrap-always"],
             "default": "normal",
             "help": "Catch up mode (default: normal)",
         },

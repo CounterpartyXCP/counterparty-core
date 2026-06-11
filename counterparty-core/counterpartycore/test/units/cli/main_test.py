@@ -51,6 +51,13 @@ def test_argparser_no_electrs_url():
     assert vars(args)["electrs_url"] is None
 
 
+def test_argparser_accepts_bootstrap_once_catch_up():
+    parser = cli.main.arg_parser(no_config_file=True, app_name="counterparty-test")
+    args = parser.parse_args(["start", "--catch-up=bootstrap-once"])
+
+    assert args.catch_up == "bootstrap-once"
+
+
 def test_argparser():
     parser = cli.main.arg_parser(no_config_file=True, app_name="counterparty-test")
     args = parser.parse_args(

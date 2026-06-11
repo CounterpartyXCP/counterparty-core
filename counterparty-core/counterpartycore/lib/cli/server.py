@@ -39,6 +39,14 @@ def ensure_backend_is_up():
         backend.bitcoind.getblockcount()
 
 
+def should_bootstrap_database(catch_up_mode, database_exists):
+    if catch_up_mode == "bootstrap-always":
+        return True
+    if catch_up_mode in ["bootstrap", "bootstrap-once"] and not database_exists:
+        return True
+    return False
+
+
 class AssetConservationChecker(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self, name="AssetConservationChecker")
@@ -159,9 +167,7 @@ class CounterpartyServer(threading.Thread):
             )
 
         # download bootstrap if necessary
-        if (
-            not os.path.exists(config.DATABASE) and self.args.catch_up == "bootstrap"
-        ) or self.args.catch_up == "bootstrap-always":
+        if should_bootstrap_database(self.args.catch_up, os.path.exists(config.DATABASE)):
             bootstrap.bootstrap(no_confirm=True, snapshot_url=self.args.bootstrap_url)
 
         # Initialise database
