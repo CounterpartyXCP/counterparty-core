@@ -131,6 +131,16 @@ def test_validate(ledger_db, defaults):
         "FAIRMINTED",  # asset
         "",  # asset_parent,
         0,  # price=0,
+        "1",  # quantity_by_price,
+        10,  # max_mint_per_tx,
+    ) == ["`quantity_by_price` must be an integer"]
+
+    assert fairminter.validate(
+        ledger_db,
+        defaults["addresses"][1],  # source
+        "FAIRMINTED",  # asset
+        "",  # asset_parent,
+        0,  # price=0,
         1,  # quantity_by_price,
         -10,  # max_mint_per_tx,
         0,  # max_mint_per_address,
@@ -429,6 +439,17 @@ def test_compose(ledger_db, defaults):
         [],
         b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x00\x00\x00\x00\x00\x00\x00\xf4\xf4\xf4\xf5`@",
     )
+
+    with pytest.raises(exceptions.ComposeError, match="quantity_by_price.*integer"):
+        fairminter.compose(
+            ledger_db,
+            defaults["addresses"][1],  # source
+            "FAIRMINTED",  # asset
+            "",  # asset_parent,
+            0,  # price=0,
+            "1",  # quantity_by_price,
+            10,  # max_mint_per_tx,
+        )
 
     assert fairminter.compose(
         ledger_db,
