@@ -1,3 +1,4 @@
+import inspect
 import os
 import random
 import urllib.parse
@@ -167,14 +168,18 @@ def random_verbose():
     return random.choice(["true", "false"])  # noqa S311
 
 
-def random_params():
-    return "&".join(
-        [
-            urllib.parse.urlencode({"offset": random_offset()}),
-            urllib.parse.urlencode({"limit": random_limit()}),
-            urllib.parse.urlencode({"verbose": random_verbose()}),
-        ]
-    )
+def random_params(route):
+    # Since "Reject unknown v2 API parameters", sending a param a route's handler
+    # doesn't declare raises a 400. Only add `offset`/`limit` to paginated routes;
+    # `verbose` is read globally and tolerated on every route.
+    function_params = inspect.signature(ALL_ROUTES[route][0]).parameters
+    params = []
+    if "offset" in function_params:
+        params.append(urllib.parse.urlencode({"offset": random_offset()}))
+    if "limit" in function_params:
+        params.append(urllib.parse.urlencode({"limit": random_limit()}))
+    params.append(urllib.parse.urlencode({"verbose": random_verbose()}))
+    return "&".join(params)
 
 
 def prepare_url(route, MainnetFixtures):
@@ -260,7 +265,7 @@ def prepare_url(route, MainnetFixtures):
             return None
 
     chr = "&" if "?" in url else "?"
-    url = url + chr + random_params()
+    url = url + chr + random_params(route)
 
     return url
 
