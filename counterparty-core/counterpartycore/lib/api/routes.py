@@ -8,6 +8,16 @@ from counterpartycore.lib.backend import bitcoind, electrs
 
 ROUTE_CATEGORIES_WITHOUT_VERBOSE = {"bitcoin", "compose", "healthz", "routes", "v1"}
 
+CSV_ENUM_ANNOTATIONS = (
+    queries.TransactionType,
+    queries.SendType,
+    queries.IssuancesAssetEvents,
+    queries.DispenserStatus,
+    queries.OrderStatus,
+    queries.OrderMatchesStatus,
+    queries.FairmintersStatus,
+)
+
 
 def get_routes():
     """Return the API routes."""
@@ -379,6 +389,12 @@ def prepare_route_args(function, route_category=None):
         if route_arg["type"] == "Literal":
             route_arg["type"] = "enum[str]"
             route_arg["members"] = list(typing.get_args(annotation))
+            if annotation == queries.DispenserStatus:
+                route_arg["members"].extend(
+                    str(value) for value in queries.DispenserStatusNumber.values()
+                )
+            if annotation in CSV_ENUM_ANNOTATIONS:
+                route_arg["allow_csv"] = True
         if arg_name in args_description:
             route_arg["description"] = args_description[arg_name]
         if arg_name == "sort":

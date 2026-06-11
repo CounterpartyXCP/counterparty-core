@@ -249,6 +249,22 @@ def prepare_args(route, **kwargs):
         else:
             function_args[arg_name] = str_arg
 
+        if "members" in arg:
+            arg_values = (
+                function_args[arg_name].split(",")
+                if arg.get("allow_csv") and isinstance(function_args[arg_name], str)
+                else [function_args[arg_name]]
+            )
+            invalid_values = [value for value in arg_values if value not in arg["members"]]
+            if invalid_values:
+                allowed_values = ", ".join(
+                    "null" if member is None else str(member) for member in arg["members"]
+                )
+                raise ValueError(
+                    f"Invalid value for {arg_name}: {', '.join(map(str, invalid_values))} "
+                    f"(expected one of: {allowed_values})"
+                )
+
     for arg_name, str_arg in function_args.items():
         if str_arg is not None and str_arg != "":
             if arg_name.startswith("address"):

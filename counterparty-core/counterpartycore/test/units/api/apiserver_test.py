@@ -1104,6 +1104,44 @@ def test_limit_param_negative_rejected(apiv2_client):
     assert response.status_code != 200 or "error" in response.json
 
 
+def test_invalid_enum_param_rejected(apiv2_client, defaults):
+    """Literal/enum route arguments must reject unsupported values before query execution."""
+    response = apiv2_client.get("/v2/orders?status=invalid-status")
+    assert response.status_code == 400
+    assert "Invalid value for status" in response.json["error"]
+
+    response = apiv2_client.get("/v2/orders?status=open,invalid-status")
+    assert response.status_code == 400
+    assert "Invalid value for status" in response.json["error"]
+
+    response = apiv2_client.get(
+        f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&type=invalid-type"
+    )
+    assert response.status_code == 400
+    assert "Invalid value for type" in response.json["error"]
+
+    response = apiv2_client.get(
+        f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&type=address,utxo"
+    )
+    assert response.status_code == 400
+    assert "Invalid value for type" in response.json["error"]
+
+
+def test_valid_csv_enum_param_accepted(apiv2_client):
+    """Enum routes that already support comma-separated filters must keep accepting them."""
+    response = apiv2_client.get("/v2/orders?status=open,filled")
+    assert response.status_code == 200
+    assert "result" in response.json
+
+    response = apiv2_client.get("/v2/transactions?type=send,order")
+    assert response.status_code == 200
+    assert "result" in response.json
+
+    response = apiv2_client.get("/v2/dispensers?status=0")
+    assert response.status_code == 200
+    assert "result" in response.json
+
+
 def test_limit_param_unlimited_when_zero(apiv2_client, monkeypatch):
     """When config.API_LIMIT_ROWS == 0 the cap is disabled."""
     monkeypatch.setattr(config, "API_LIMIT_ROWS", 0)
