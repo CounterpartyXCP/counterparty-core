@@ -414,7 +414,7 @@ def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **c
     }
     return _add_xcp_fee(
         composer.compose_transaction(db, "sweep", params, construct_params),
-        messages.sweep.get_total_fee(db, address, CurrentState().current_block_index()),
+        messages.sweep.get_total_fee(db, address, CurrentState().current_block_index(), flags),
     )
 
 

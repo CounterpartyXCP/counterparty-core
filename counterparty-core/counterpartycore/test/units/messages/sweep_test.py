@@ -2,6 +2,7 @@ import cbor2
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages import sweep
+from counterpartycore.lib.utils import address as address_util
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
@@ -428,6 +429,63 @@ def test_total_fee_ignores_zero_quantity_balances(ledger_db, blockchain_mock, de
         legacy_fee = sweep.get_total_fee(ledger_db, source, tx["block_index"], sweep.FLAG_BALANCES)
 
     assert legacy_fee > fee_after
+
+
+def test_parse_empty_ownership_sweep_charges_no_fee(ledger_db, blockchain_mock, defaults):
+    # An address that holds XCP but owns no assets, sweeping ownership-only, has
+    # total_fee == 0 under the gate. It must be charged nothing rather than falling
+    # back to the legacy flat fee_paid (which would charge for a no-op sweep, the
+    # exact behavior #3089 fixes).
+    source = next(
+        a
+        for a in defaults["addresses"]
+        if ledger.balances.get_balance(ledger_db, a, "XCP") > config.UNIT
+        and ledger.issuances.get_issuances_count(ledger_db, a) == 0
+    )
+    destination = next(a for a in defaults["addresses"] if a != source)
+
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    assert sweep.get_total_fee(ledger_db, source, tx["block_index"], sweep.FLAG_OWNERSHIP) == 0
+
+    xcp_before = ledger.balances.get_balance(ledger_db, source, "XCP")
+
+    message = cbor2.dumps([address_util.pack(destination), sweep.FLAG_OWNERSHIP, b""])
+    sweep.parse(ledger_db, tx, message)
+
+    fee_debits = ledger_db.execute(
+        "SELECT quantity FROM debits WHERE address = ? AND asset = 'XCP' "
+        "AND action = 'sweep fee' AND event = ?",
+        (source, tx["tx_hash"]),
+    ).fetchall()
+    assert fee_debits == []
+    assert ledger.balances.get_balance(ledger_db, source, "XCP") == xcp_before
+
+
+def test_parse_empty_ownership_sweep_legacy_path_charges_fee(ledger_db, blockchain_mock, defaults):
+    # With the gate disabled, the same sweep keeps charging the legacy fee.
+    source = next(
+        a
+        for a in defaults["addresses"]
+        if ledger.balances.get_balance(ledger_db, a, "XCP") > config.UNIT
+        and ledger.issuances.get_issuances_count(ledger_db, a) == 0
+    )
+    destination = next(a for a in defaults["addresses"] if a != source)
+
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    xcp_before = ledger.balances.get_balance(ledger_db, source, "XCP")
+
+    message = cbor2.dumps([address_util.pack(destination), sweep.FLAG_OWNERSHIP, b""])
+    with ProtocolChangesDisabled(["sweep_skip_zero_balances"]):
+        sweep.parse(ledger_db, tx, message)
+
+    fee_debits = ledger_db.execute(
+        "SELECT quantity FROM debits WHERE address = ? AND asset = 'XCP' "
+        "AND action = 'sweep fee' AND event = ?",
+        (source, tx["tx_hash"]),
+    ).fetchall()
+    assert len(fee_debits) == 1
+    assert fee_debits[0]["quantity"] > 0
+    assert ledger.balances.get_balance(ledger_db, source, "XCP") < xcp_before
 
 
 def test_parse_flag_2(ledger_db, blockchain_mock, defaults, test_helpers):

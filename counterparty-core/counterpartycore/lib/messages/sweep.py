@@ -291,18 +291,22 @@ def parse(db, tx, message):
                 * config.UNIT
             )
 
-            if antispamfee > 0 and (
-                total_fee > 0 or not protocol.enabled("sweep_skip_zero_balances", tx["block_index"])
-            ):
-                ledger.events.debit(
-                    db,
-                    tx["source"],
-                    "XCP",
-                    total_fee,
-                    tx["tx_index"],
-                    action="sweep fee",
-                    event=tx["tx_hash"],
-                )
+            if antispamfee > 0:
+                # Under the gate, a sweep with no sweepable balances/ownership has
+                # total_fee == 0; charge nothing rather than falling back to the
+                # legacy flat fee_paid (which would charge for a no-op sweep).
+                if total_fee > 0 or not protocol.enabled(
+                    "sweep_skip_zero_balances", tx["block_index"]
+                ):
+                    ledger.events.debit(
+                        db,
+                        tx["source"],
+                        "XCP",
+                        total_fee,
+                        tx["tx_index"],
+                        action="sweep fee",
+                        event=tx["tx_hash"],
+                    )
             else:
                 ledger.events.debit(
                     db,

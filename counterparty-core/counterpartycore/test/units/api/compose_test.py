@@ -358,7 +358,7 @@ def test_compose_responses_include_xcp_fee(ledger_db, defaults, monkeypatch):
     monkeypatch.setattr(compose.composer, "compose_transaction", fake_compose_transaction)
     monkeypatch.setattr(compose.messages.dividend, "get_estimate_xcp_fee", lambda db, asset: 11)
     monkeypatch.setattr(
-        compose.messages.sweep, "get_total_fee", lambda db, address, block_index: 22
+        compose.messages.sweep, "get_total_fee", lambda db, address, block_index, flags=None: 22
     )
     monkeypatch.setattr(compose.gas, "get_transaction_fee", lambda db, tx_id, block_index: tx_id)
 
