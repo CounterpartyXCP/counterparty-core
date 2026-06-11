@@ -1027,6 +1027,15 @@ def test_prepare_fee_parameters():
         1000,
     )
 
+    with pytest.raises(exceptions.ComposeError, match="Invalid exact_fee"):
+        composer.prepare_fee_parameters({"exact_fee": -1})
+
+    with pytest.raises(exceptions.ComposeError, match="Invalid sat_per_vbyte"):
+        composer.prepare_fee_parameters({"sat_per_vbyte": -0.1})
+
+    with pytest.raises(exceptions.ComposeError, match="Invalid max_fee"):
+        composer.prepare_fee_parameters({"max_fee": -1, "sat_per_vbyte": 1})
+
 
 def test_prepare_unspent_list(ledger_db, defaults, monkeypatch):
     txs = {
