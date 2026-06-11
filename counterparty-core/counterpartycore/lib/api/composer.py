@@ -661,6 +661,8 @@ def prepare_inputs_set(inputs_set):
                 unspent["value"] = int(value)
             except ValueError as e:
                 raise exceptions.ComposeError(f"invalid UTXOs: {utxo} (invalid value)") from e
+            if unspent["value"] < 0 or unspent["value"] > MAX_BTC_OUTPUT_VALUE:
+                raise exceptions.ComposeError(f"invalid UTXOs: {utxo} (invalid value)")
 
         if script_pub_key is not None:
             try:
