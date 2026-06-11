@@ -1,5 +1,5 @@
 import pytest
-from counterpartycore.lib import exceptions
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.messages import move
 
 DUMMY_UTXO = 64 * "0" + ":0"
@@ -223,3 +223,18 @@ def test_compose(ledger_db, defaults):
 
     with pytest.raises(exceptions.ComposeError, match="utxo_value must be an integer"):
         move.compose(ledger_db, utxo, defaults["addresses"][0], utxo_value="string")
+
+    with pytest.raises(
+        exceptions.ComposeError, match="utxo_value must be a valid bitcoin output amount"
+    ):
+        move.compose(ledger_db, utxo, defaults["addresses"][0], utxo_value=-1)
+
+    with pytest.raises(
+        exceptions.ComposeError, match="utxo_value must be a valid bitcoin output amount"
+    ):
+        move.compose(
+            ledger_db,
+            utxo,
+            defaults["addresses"][0],
+            utxo_value=21_000_000 * config.UNIT + 1,
+        )
