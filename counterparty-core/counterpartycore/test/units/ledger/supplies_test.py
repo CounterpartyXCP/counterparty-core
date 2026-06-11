@@ -1,6 +1,19 @@
 from counterpartycore.lib.ledger import supplies
 
 
+def test_get_holders_keeps_highest_rowid_for_duplicate_id():
+    records = [
+        {"asset": "XCP", "address": "addr1", "quantity": 7, "rowid": 10},
+        {"asset": "XCP", "address": "addr1", "quantity": 2, "rowid": 1},
+    ]
+
+    assert supplies._get_holders(  # pylint: disable=protected-access
+        records,
+        ["asset", "address"],
+        {"address": "address", "address_quantity": "quantity"},
+    ) == [{"address": "addr1", "address_quantity": 7, "escrow": None}]
+
+
 def test_supplies_functions(ledger_db, defaults):
     assert supplies.xcp_created(ledger_db) == 604514652382
     assert supplies.xcp_destroyed(ledger_db) == 900000000
