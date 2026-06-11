@@ -1,3 +1,4 @@
+import fractions
 import logging
 import math
 
@@ -48,7 +49,13 @@ def compute_pool_output(reserve_in, reserve_out, input_qty, fee_bps):
 
 
 def compute_pool_input_for_target_price(
-    reserve_in, reserve_out, target_price_num, target_price_den, fee_bps, block_index=None
+    reserve_in,
+    reserve_out,
+    target_price_num,
+    target_price_den,
+    fee_bps,
+    block_index=None,
+    max_input=None,
 ):
     """Max input before pool marginal price reaches target. Returns 0 if already past."""
     if reserve_in <= 0 or reserve_out <= 0:
@@ -65,7 +72,7 @@ def compute_pool_input_for_target_price(
 
     if protocol.enabled("fix_pool_best_price_routing", block_index):
         return _compute_pool_input_for_target_price_integer(
-            reserve_in, reserve_out, target_price_num, target_price_den, fee_bps
+            reserve_in, reserve_out, target_price_num, target_price_den, fee_bps, max_input
         )
 
     a = fee_factor
@@ -86,36 +93,74 @@ def compute_pool_input_for_target_price(
     return max(dx, 0)
 
 
+def _book_input_for_output(output, target_price_num, target_price_den):
+    """Input the book would charge for `output` units of the taker's get asset.
+
+    Mirrors the backward-quantity rounding in order.match():
+    ``round(forward_quantity * price(get_quantity, give_quantity))`` on the
+    ``price_as_fraction`` path (always active once the AMM is live) — banker's
+    rounding on an exact fraction, no floating point.
+    """
+    return round(fractions.Fraction(output * target_price_num, target_price_den))
+
+
+def _min_pool_input_for_output(reserve_in, reserve_out, output, fee_bps, high):
+    """Smallest input whose floored pool output is at least `output`.
+
+    `high` must already produce at least `output`; since the pool output is
+    non-decreasing in the input, this is the cheapest input for those units.
+    """
+    low = 1
+    while low < high:
+        mid = (low + high) // 2
+        if compute_pool_output(reserve_in, reserve_out, mid, fee_bps) >= output:
+            high = mid
+        else:
+            low = mid + 1
+    return low
+
+
 def _compute_pool_input_for_target_price_integer(
-    reserve_in, reserve_out, target_price_num, target_price_den, fee_bps
+    reserve_in, reserve_out, target_price_num, target_price_den, fee_bps, max_input
 ):
     """Integer-exact replacement for the continuous quadratic above.
 
     Execution floors the pool output to an integer, so the continuous solution
     can both under- and over-estimate the right input: it may pick an input
-    whose floored output is 0 (skipping a better-than-book pool fill), or push
-    the input so far that the realized average price exceeds the book price.
+    whose floored output is 0 (skipping a pool fill cheaper than the book), or
+    push the input so far that the *realized* average price — output floored —
+    exceeds the book price (overpaying the pool versus the book).
 
-    This computes the answer directly against the same integer output function
-    execution uses, in two steps:
+    Keeping the documented routing rule (fill from the pool while its marginal
+    price beats the book), this computes the answer directly against the same
+    integer output function execution uses, with a one-directional guarantee:
+    the taker never pays the pool more than the book would charge for the same
+    units (it may instead leave a dust unit to the book). Three steps:
 
       1. Binary search the largest input whose post-fill *marginal* price still
-         beats the target. Filling beyond this point would buy units that cost
-         more than the next book order, so it bounds how much the pool should
-         take. The realized output here is floored.
-      2. Trim the input down to the smallest value that still yields that same
-         floored output, so the taker never overpays for the rounded-down units.
+         beats the book — the routing bound. Capped by `max_input` (the taker
+         can never give more than it holds); the cap must be applied before the
+         gate below, since flooring a capped fill can turn it into an overpay.
+      2. Gate on the book's integer cost: step the output down one unit at a
+         time until the cheapest input producing it costs no more than the book
+         would for those units. Flooring can inflate the realized average past
+         the book even when the continuous marginal bound does not.
+      3. Trim to that cheapest input, so the taker never overpays for the
+         rounded-down units.
 
-    The realized average price of the result is therefore always at or better
-    than the book target (verified exhaustively for small reserves and over
-    random large-boundary samples).
+    Verified exhaustively for small reserves (every taker cap) and over random
+    large-boundary samples: zero overpays, matching an independent integer
+    book-cost oracle.
     """
     fee_factor = 10000 - fee_bps
 
-    # Upper bound: marginal price can never beat the target once the input alone
-    # exceeds reserve_out * fee_factor * target_price_num / (10000 * target_price_den).
+    # Step 1: largest input whose post-fill marginal price still beats the book,
+    # then the taker's hard cap. Marginal price can never beat the target once
+    # the input alone exceeds reserve_out * fee_factor * num / (10000 * den).
     high = (reserve_out * fee_factor * target_price_num) // (10000 * target_price_den) - reserve_in
     high = min(max(high, 0), config.MAX_INT)
+    if max_input is not None:
+        high = min(high, max_input)
     low = 0
     while low < high:
         mid = (low + high + 1) // 2
@@ -127,20 +172,18 @@ def _compute_pool_input_for_target_price_integer(
         else:
             high = mid - 1
 
+    # Steps 2 & 3: gate on the book's integer cost and trim to the cheapest input.
     dx = low
     output = compute_pool_output(reserve_in, reserve_out, dx, fee_bps)
-    if output <= 0:
-        return 0
+    while output > 0:
+        min_input = _min_pool_input_for_output(reserve_in, reserve_out, output, fee_bps, dx)
+        if min_input <= _book_input_for_output(output, target_price_num, target_price_den):
+            return min_input
+        # These units overpay the book; try one fewer.
+        dx = min_input - 1
+        output = compute_pool_output(reserve_in, reserve_out, dx, fee_bps)
 
-    # Trim to the minimal input that still produces `output`.
-    trim_low, trim_high = 1, dx
-    while trim_low < trim_high:
-        mid = (trim_low + trim_high) // 2
-        if compute_pool_output(reserve_in, reserve_out, mid, fee_bps) >= output:
-            trim_high = mid
-        else:
-            trim_low = mid + 1
-    return trim_low
+    return 0
 
 
 #####################
@@ -702,7 +745,13 @@ def try_pool_fill(
 
     if target_price_num is not None:
         fill_quantity = compute_pool_input_for_target_price(
-            reserve_in, reserve_out, target_price_num, target_price_den, fee_bps, block_index
+            reserve_in,
+            reserve_out,
+            target_price_num,
+            target_price_den,
+            fee_bps,
+            block_index,
+            max_give,
         )
         fill_quantity = min(fill_quantity, max_give)
     else:

@@ -150,6 +150,41 @@ def test_pool_rounding_does_not_overfill_past_book(ledger_db, defaults, blockcha
     assert pool_matches[0]["forward_quantity"] == 1  # NODIVISIBLE out
 
 
+def test_pool_declines_when_book_cheaper_than_cheapest_pool_unit(
+    ledger_db, defaults, blockchain_mock
+):
+    """Overfill direction, gate case: trimming to the cheapest input for a floored
+    output is not enough on its own — the taker's max_give cap can still land on a
+    fill that overpays the book. Here the pool needs 2 XCP to deliver 1 NODIVISIBLE
+    (1 XCP floors to 0 output), but the book delivers that unit for round(1*10/7)=1
+    XCP. Gating on the book's integer cost makes the pool decline, so the taker takes
+    the unit from the book at 1 XCP (matching pre-fix master), never 2 via the pool.
+
+    Reported by droplister: the marginal bound + trim alone fills 2 XCP -> 1
+    NODIVISIBLE here, worse than both the book and master."""
+    source_lp = defaults["addresses"][0]
+    source_trader = defaults["addresses"][1]
+
+    create_pool(ledger_db, blockchain_mock, source_lp, "XCP", "NODIVISIBLE", 5, 6)
+
+    # Book asks 10 XCP for 7 NODIVISIBLE (~1.43 XCP/unit).
+    place_order(ledger_db, blockchain_mock, source_lp, "NODIVISIBLE", 7, "XCP", 10)
+    xcp_before = ledger.balances.get_balance(ledger_db, source_trader, "XCP")
+    nodiv_before = ledger.balances.get_balance(ledger_db, source_trader, "NODIVISIBLE")
+
+    trader_tx = place_order(ledger_db, blockchain_mock, source_trader, "XCP", 2, "NODIVISIBLE", 1)
+
+    # 1 NODIVISIBLE received for 1 XCP via the book — not 2 XCP via the pool.
+    assert ledger.balances.get_balance(ledger_db, source_trader, "NODIVISIBLE") - nodiv_before == 1
+    assert xcp_before - ledger.balances.get_balance(ledger_db, source_trader, "XCP") == 1
+
+    cursor = ledger_db.cursor()
+    pool_matches = cursor.execute(
+        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (trader_tx["tx_hash"],)
+    ).fetchall()
+    assert len(pool_matches) == 0  # pool declined; the gate kept it off the overpay
+
+
 def test_pool_tail_partial_fill_at_taker_limit(ledger_db, defaults, blockchain_mock):
     source_lp = defaults["addresses"][0]
     source_trader = defaults["addresses"][1]
