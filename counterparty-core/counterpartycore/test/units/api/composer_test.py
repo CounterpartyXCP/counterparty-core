@@ -474,6 +474,15 @@ def test_prepare_more_outputs(defaults):
         ]
     )
 
+    with pytest.raises(exceptions.ComposeError, match="Invalid value for output: -1:00aaff"):
+        composer.prepare_more_outputs("-1:00aaff", [], {})
+
+    too_large_value = 21_000_000 * config.UNIT + 1
+    with pytest.raises(
+        exceptions.ComposeError, match=f"Invalid value for output: {too_large_value}:00aaff"
+    ):
+        composer.prepare_more_outputs(f"{too_large_value}:00aaff", [], {})
+
 
 def test_prepare_outputs(ledger_db, defaults):
     # Test case 1 & 2: Simple OP_RETURN output
