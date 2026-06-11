@@ -21,6 +21,7 @@ because it is stored as a four‐byte integer, it may not be greater than about
 
 import decimal
 import logging
+import math
 import struct
 from fractions import Fraction
 
@@ -147,6 +148,18 @@ def compose(
         raise exceptions.ComposeError(["value must be numeric"])
     if not isinstance(fee_fraction, (int, float, D, Fraction)):
         raise exceptions.ComposeError(["fee_fraction must be numeric"])
+
+    # Reject non-finite floats (NaN / ±inf). They pass the isinstance checks
+    # above (they *are* floats) but a non-finite fee_fraction would raise an
+    # uncaught OverflowError/ValueError at the `int(fee_fraction * 1e8)`
+    # conversion below, and a non-finite value would be packed as a
+    # meaningless payload -- both surfacing as an internal error instead of a
+    # clean ComposeError. Guarded here on the API path only, never in
+    # validate() (the consensus parse path).
+    if isinstance(value, float) and not math.isfinite(value):
+        raise exceptions.ComposeError(["value must be finite"])
+    if isinstance(fee_fraction, float) and not math.isfinite(fee_fraction):
+        raise exceptions.ComposeError(["fee_fraction must be finite"])
 
     # Store the fee fraction as an integer.
     fee_fraction_int = int(fee_fraction * 1e8)

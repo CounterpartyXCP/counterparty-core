@@ -139,6 +139,44 @@ def test_compose_rejects_invalid_numeric_parameters(
         )
 
 
+@pytest.mark.parametrize(
+    ("param_name", "param_value", "expected_problem"),
+    [
+        ("value", float("nan"), "value must be finite"),
+        ("value", float("inf"), "value must be finite"),
+        ("fee_fraction", float("nan"), "fee_fraction must be finite"),
+        ("fee_fraction", float("inf"), "fee_fraction must be finite"),
+    ],
+)
+def test_compose_rejects_non_finite_numeric_parameters(
+    ledger_db, defaults, param_name, param_value, expected_problem
+):
+    # Non-finite floats (NaN / inf) pass the isinstance type checks but a
+    # non-finite fee_fraction raises an uncaught OverflowError/ValueError at
+    # `int(fee_fraction * 1e8)`, and a non-finite value gets packed as a
+    # meaningless payload -- both surfacing as an internal error instead of a
+    # clean ComposeError. Guarded in compose() (API path), not validate()
+    # (consensus parse path). Runs without skip_validation since the guard is
+    # reached before validate().
+    params = {
+        "timestamp": 1588000000,
+        "value": 1,
+        "fee_fraction": defaults["fee_multiplier"],
+    }
+    params[param_name] = param_value
+
+    with pytest.raises(exceptions.ComposeError, match=expected_problem):
+        broadcast.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            params["timestamp"],
+            params["value"],
+            params["fee_fraction"],
+            "Unit Test",
+            "",
+        )
+
+
 def test_validate_does_not_reject_non_integer_consensus_values(ledger_db, defaults):
     # Consensus-safety guard: validate() must NOT reject a non-integer timestamp
     # or fee_fraction_int. After `taproot_support`, broadcasts are CBOR-decoded
