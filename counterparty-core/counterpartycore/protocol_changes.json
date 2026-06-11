@@ -1419,5 +1419,14 @@
         "testnet3_block_index": 99999999,
         "testnet4_block_index": 99999999,
         "signet_block_index": 99999999
+    },
+    "fix_pool_deposit_product_overflow": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 1,
+        "block_index": 99999999,
+        "testnet3_block_index": 99999999,
+        "testnet4_block_index": 99999999,
+        "signet_block_index": 99999999
     }
 }
