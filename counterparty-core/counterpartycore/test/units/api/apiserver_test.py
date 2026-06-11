@@ -1142,6 +1142,21 @@ def test_valid_csv_enum_param_accepted(apiv2_client):
     assert "result" in response.json
 
 
+def test_invalid_bool_param_rejected(apiv2_client):
+    """Boolean route arguments must reject unsupported values instead of coercing to false."""
+    response = apiv2_client.get("/v2/transactions?show_unconfirmed=maybe")
+    assert response.status_code == 400
+    assert "Invalid boolean: show_unconfirmed" in response.json["error"]
+
+
+def test_verbose_param_accepted_when_ignored(apiv2_client):
+    """`verbose` is ignored on non-compose routes and must be accepted even with an
+    unsupported value, never raising a boolean validation error."""
+    response = apiv2_client.get("/v2/transactions?verbose=maybe")
+    assert response.status_code == 200
+    assert "result" in response.json
+
+
 def test_limit_param_unlimited_when_zero(apiv2_client, monkeypatch):
     """When config.API_LIMIT_ROWS == 0 the cap is disabled."""
     monkeypatch.setattr(config, "API_LIMIT_ROWS", 0)

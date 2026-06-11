@@ -156,6 +156,15 @@ def set_cache_control_headers(response, http_code, result):
     response.headers["Cache-Control"] = "no-store"
 
 
+def parse_bool_arg(arg_name, str_arg):
+    value = str_arg.lower()
+    if value in ["true", "1"]:
+        return True
+    if value in ["false", "0"]:
+        return False
+    raise ValueError(f"Invalid boolean: {arg_name}")
+
+
 def return_result(
     http_code,
     result=None,
@@ -214,6 +223,8 @@ def prepare_args(route, **kwargs):
     for arg in route["args"]:
         arg_name = arg["name"]
         if arg_name in ["verbose"] and "compose" not in route["function"].__name__:
+            # `verbose` is read globally (see return_result); on non-compose routes it is
+            # ignored, so accept it without validation even when the value is unsupported.
             continue
         if arg_name in function_args:
             continue
@@ -230,7 +241,7 @@ def prepare_args(route, **kwargs):
         if str_arg is None:
             function_args[arg_name] = arg["default"]
         elif arg["type"] == "bool":
-            function_args[arg_name] = str_arg.lower() in ["true", "1"]
+            function_args[arg_name] = parse_bool_arg(arg_name, str_arg)
         elif arg["type"] == "int":
             try:
                 function_args[arg_name] = int(str_arg)
