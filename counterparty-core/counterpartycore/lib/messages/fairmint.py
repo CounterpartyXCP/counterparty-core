@@ -34,8 +34,13 @@ def validate(
     if invalid_quantity:
         problems.append("quantity must be an integer")
 
-    resolved_asset = resolve_asset_name(db, asset)
-    fairminter = ledger.issuances.get_fairminter_by_asset(db, resolved_asset)
+    # NOTE: do not resolve subasset longnames here. validate() is on the
+    # consensus parse path (parse() calls it with the asset returned by
+    # unpack(), which is already canonical for v2/CBOR fairmints and the raw
+    # message string for legacy ones). Resolving here would change the stored
+    # `status` of a legacy-format fairmint carrying a subasset longname without
+    # a protocol change. Longname resolution happens in compose() instead.
+    fairminter = ledger.issuances.get_fairminter_by_asset(db, asset)
     if not fairminter:
         problems.append(f"fairminter not found for asset: `{asset}`")
         return problems
@@ -92,7 +97,7 @@ def validate(
 
 def compose(db, source: str, asset: str, quantity: int = 0, skip_validation: bool = False):
     resolved_asset = resolve_asset_name(db, asset)
-    problems = validate(db, source, asset, quantity)
+    problems = validate(db, source, resolved_asset, quantity)
     if len(problems) > 0 and not skip_validation:
         raise exceptions.ComposeError(problems)
 

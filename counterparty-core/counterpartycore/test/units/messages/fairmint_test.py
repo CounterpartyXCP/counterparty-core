@@ -181,7 +181,16 @@ def test_compose_resolves_subasset_longname(ledger_db, defaults):
         ),
     )
 
-    assert fairmint.validate(ledger_db, defaults["addresses"][1], asset_longname, 0) == []
+    # validate() operates on the canonical (resolved) asset name and must NOT
+    # resolve subasset longnames itself: it is on the consensus parse path, so
+    # resolving there would alter the stored status of a legacy-format fairmint
+    # carrying a subasset longname without a protocol change.
+    assert fairmint.validate(ledger_db, defaults["addresses"][1], asset_name, 0) == []
+    assert fairmint.validate(ledger_db, defaults["addresses"][1], asset_longname, 0) == [
+        f"fairminter not found for asset: `{asset_longname}`"
+    ]
+    # compose() resolves the longname before validating, so composing with the
+    # longname is equivalent to composing with the canonical asset name.
     assert fairmint.compose(
         ledger_db, defaults["addresses"][1], asset_longname, 0
     ) == fairmint.compose(
