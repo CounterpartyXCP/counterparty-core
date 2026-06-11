@@ -635,6 +635,7 @@ def complete_unspent_list(unspent_list):
 def prepare_inputs_set(inputs_set):
     unspent_list = []
     utxos_list = inputs_set.split(",")
+    seen_utxos = set()
     if len(utxos_list) > MAX_INPUTS_SET:
         raise exceptions.ComposeError(
             f"too many UTXOs in inputs_set (max. {MAX_INPUTS_SET}): {len(utxos_list)}"
@@ -655,6 +656,10 @@ def prepare_inputs_set(inputs_set):
 
         if not utxosinfo.is_utxo_format(f"{txid}:{vout}"):
             raise exceptions.ComposeError(f"invalid UTXOs: {utxo} (invalid format)")
+        utxo_id = f"{txid}:{vout}"
+        if utxo_id in seen_utxos:
+            raise exceptions.ComposeError(f"invalid UTXOs: {utxo} (duplicate UTXO)")
+        seen_utxos.add(utxo_id)
 
         unspent = {
             "txid": txid,
