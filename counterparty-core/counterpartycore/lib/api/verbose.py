@@ -596,7 +596,10 @@ def clean_dictionary(data):
         # Recursively clean nested structures
         cleaned_value = clean_api_result(value)
 
-        if key in {"divisible", "locked", "reset", "callable"}:
+        if (
+            key in {"divisible", "locked", "reset", "callable", "valid"}
+            and cleaned_value is not None
+        ):
             cleaned_value = bool(cleaned_value)
 
         cleaned[key] = cleaned_value

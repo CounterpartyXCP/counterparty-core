@@ -778,6 +778,49 @@ def test_get_transactions_valid(apiv2_client, monkeypatch):
     assert len(result) == 0
 
 
+def test_transaction_valid_flag_without_verbose(apiv2_client, ledger_db):
+    last_tx = ledger_db.execute(
+        "SELECT tx_index, block_index, block_hash, block_time FROM transactions ORDER BY tx_index DESC LIMIT 1"
+    ).fetchone()
+    tx_index = last_tx["tx_index"] + 1
+    tx_hash = "f" * 64
+    ledger_db.execute(
+        """
+        INSERT INTO transactions(
+            tx_index, tx_hash, block_index, block_hash, block_time, source, destination,
+            btc_amount, fee, data, supported, utxos_info, transaction_type
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            tx_index,
+            tx_hash,
+            last_tx["block_index"],
+            last_tx["block_hash"],
+            last_tx["block_time"],
+            "source",
+            "",
+            0,
+            0,
+            b"\x0c",
+            True,
+            "",
+            "send",
+        ),
+    )
+    ledger.blocks.set_transaction_status(ledger_db, tx_index, False)
+    ledger_db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    apiserver.LedgerDBConnectionPool().close()
+    apiserver.BLOCK_CACHE.clear()
+
+    result = apiv2_client.get(f"/v2/transactions/{tx_hash}").json["result"]
+    assert result["valid"] is False
+    assert "unpacked_data" not in result
+
+    result = apiv2_client.get("/v2/transactions?valid=false&limit=1").json["result"]
+    assert result[0]["valid"] is False
+
+
 def test_order_prices(apiv2_client, defaults):
     url = "/v2/assets/NODIVISIBLE/orders"
     result = apiv2_client.get(url).json["result"]
