@@ -283,10 +283,16 @@ def gen_blueprint(db):
 
         if (
             example_args != {}
-            or len(route["args"]) == 1
+            # parameterless route (only the `verbose` flag): safe to GET as-is.
+            # Routes in the bitcoin/compose/healthz/routes/v1 categories no longer
+            # carry a `verbose` arg, so a bare `len == 1` here would wrongly match
+            # routes whose single parameter is a *required* payload (e.g.
+            # `sendrawtransaction`/`signedhex`), GET them without it, and crash on
+            # the non-JSON error body.
+            or (len(route["args"]) == 1 and route["args"][0]["name"] == "verbose")
             or "healthz" in path
             or "getmempoolinfo" in path
-        ):  # min 1 for verbose arg
+        ):
             if not USE_API_CACHE or path not in API_CACHE:
                 example_output = get_example_output(path, example_args)
                 API_CACHE[path] = example_output
