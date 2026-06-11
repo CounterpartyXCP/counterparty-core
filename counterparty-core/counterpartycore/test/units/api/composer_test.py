@@ -110,9 +110,13 @@ def test_dust_size(defaults):
     assert composer.regular_dust_size({}) == 546
     assert composer.regular_dust_size({"regular_dust_size": 666}) == 666
     assert composer.regular_dust_size({"regular_dust_size": None}) == 546
+    with pytest.raises(exceptions.ComposeError, match="Invalid regular_dust_size"):
+        composer.regular_dust_size({"regular_dust_size": -1})
     assert composer.multisig_dust_size({}) == 1000
     assert composer.multisig_dust_size({"multisig_dust_size": 666}) == 666
     assert composer.multisig_dust_size({"multisig_dust_size": None}) == 1000
+    with pytest.raises(exceptions.ComposeError, match="Invalid multisig_dust_size"):
+        composer.multisig_dust_size({"multisig_dust_size": -1})
     assert composer.segwit_dust_size({}) == 330
     assert composer.segwit_dust_size({"segwit_dust_size": 666}) == 666
     assert composer.segwit_dust_size({"segwit_dust_size": None}) == 330
