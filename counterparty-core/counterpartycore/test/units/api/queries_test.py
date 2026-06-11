@@ -141,6 +141,47 @@ def test_select_rows_with_sort_invalid_order(state_db):
     assert result is not None
 
 
+def test_select_rows_balances_sort_asset_uses_asset_longname(state_db):
+    cursor = state_db.cursor()
+    address = "mnTESTBalanceSortAddress"
+    cursor.executemany(
+        """
+        INSERT INTO balances (address, asset, asset_longname, quantity)
+        VALUES (?, ?, ?, ?)
+        """,
+        [
+            (address, "MYASSET", None, 1),
+            (address, "A999999999999999999", "MYASSET.CHILD", 1),
+            (address, "A888888888888888888", "ANOTHER.CHILD", 1),
+        ],
+    )
+
+    result = queries.select_rows(
+        state_db,
+        "balances",
+        where={"address": address},
+        sort="asset",
+        limit=10,
+    )
+
+    assert [row["asset"] for row in result.result] == [
+        "A888888888888888888",
+        "MYASSET",
+        "A999999999999999999",
+    ]
+
+
+def test_select_rows_non_balance_asset_sort_uses_asset_field(state_db):
+    result = queries.select_rows(
+        state_db,
+        "dispensers",
+        sort="asset",
+        limit=10,
+    )
+
+    assert result is not None
+
+
 def test_select_rows_with_unsupported_sort_field(state_db):
     """Test select_rows with unsupported sort field (line 310-311)."""
     result = queries.select_rows(
