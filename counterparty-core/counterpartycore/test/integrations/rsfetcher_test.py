@@ -16,6 +16,9 @@ TEST_CONFIG = {
     "rpc_address": "https://api.counterparty.io:8332",
     "rpc_user": "rpc",
     "rpc_password": "rpc",
+    # Lifts the public proxy 120 req/min limit to the 1000 req/min bucket,
+    # avoiding 429-induced None `info` on vin entries. Set in CI as a secret.
+    "rpc_api_key": os.environ.get("BACKEND_API_KEY") or "",
     "db_dir": TEST_DB_PATH,
     "log_file": os.path.join(tempfile.gettempdir(), "rsfetcher_test.log"),
     "log_level": "debug",

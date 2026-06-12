@@ -49,6 +49,20 @@ def validate(
             if ledger.markets.get_pool_by_lp_asset(db, asset):
                 problems.append(f"{asset} is an LP token; LP tokens cannot be pooled")
 
+    # Block pool creation during active fairmint-pool
+    for asset in [asset_a, asset_b]:
+        if asset != config.XCP:
+            fairminter = ledger.issuances.get_fairminter_by_asset(db, asset)
+            if (
+                fairminter
+                and fairminter["status"] in ("open", "pending")
+                and (fairminter.get("pool_quantity") or 0) > 0
+            ):
+                problems.append(
+                    f"fairminter with pool_quantity is active for {asset}; "
+                    f"pool creation blocked until fairmint resolves"
+                )
+
     for param_name, param_value in {"quantity_a": quantity_a, "quantity_b": quantity_b}.items():
         if not isinstance(param_value, int):
             problems.append(f"{param_name} must be an integer")
@@ -91,6 +105,8 @@ def validate(
             problems.append("lp_asset must be a numeric asset")
         elif ledger.issuances.get_issuances(db, asset=lp_asset, status="valid"):
             problems.append(f"lp_asset {lp_asset} is already in use")
+        elif ledger.issuances.get_active_fairminter_by_lp_asset(db, lp_asset):
+            problems.append(f"lp_asset {lp_asset} is earmarked by an active fairminter")
 
     if asset_a == sorted_a:
         sorted_quantity_a, sorted_quantity_b = quantity_a, quantity_b
@@ -540,3 +556,120 @@ def subsequent_deposit(db, tx, pool, asset_a, asset_b, quantity_a, quantity_b):
     ledger.markets.update_pool(db, asset_a, asset_b, new_reserve_a, new_reserve_b)
 
     return quantity_minted, actual_a, actual_b
+
+
+def create_pool_from_fairminter(db, fairminter, block_index, asset, quantity_tokens, quantity_xcp):
+    """Create an AMM pool from fairminter resolution.
+
+    Called from fairminter.soft_cap_deadline_reached() when pool_quantity > 0.
+    Pool tokens and collected XCP are already unescrowed from UNSPENDABLE by the
+    bulk debit in soft_cap_deadline_reached(); this function only records the pool.
+    LP tokens are permanently locked at UNSPENDABLE.
+    """
+    tx_hash = fairminter["tx_hash"]
+    tx_index = fairminter["tx_index"]
+    source = fairminter["source"]
+    lp_destination = config.UNSPENDABLE  # LP always locked for fairminter pools
+
+    sorted_a, sorted_b = ledger.markets.sort_pair(asset, config.XCP)
+    if asset == sorted_a:
+        quantity_a, quantity_b = quantity_tokens, quantity_xcp
+    else:
+        quantity_a, quantity_b = quantity_xcp, quantity_tokens
+
+    if ledger.markets.get_pool(db, sorted_a, sorted_b) is not None:
+        raise exceptions.ParseTransactionError(
+            f"fairminter {tx_hash}: pool already exists at soft-cap close"
+        )
+
+    lp_asset_name = fairminter["lp_asset"] if "lp_asset" in fairminter.keys() else None
+    if not lp_asset_name:
+        raise exceptions.ParseTransactionError(
+            f"fairminter {tx_hash} has pool_quantity>0 but missing lp_asset"
+        )
+    lp_asset_id = ledger.issuances.generate_asset_id(lp_asset_name)
+    total_lp = ledger.markets.isqrt(quantity_a * quantity_b)
+
+    # Register LP token
+    ledger.events.insert_record(
+        db,
+        "assets",
+        {
+            "asset_id": str(lp_asset_id),
+            "asset_name": lp_asset_name,
+            "block_index": block_index,
+            "asset_longname": None,
+        },
+        "ASSET_CREATION",
+    )
+
+    # Record LP issuance
+    pseudo_tx = {"tx_index": tx_index, "tx_hash": tx_hash, "block_index": block_index}
+    issuance_bindings = make_lp_issuance_bindings(
+        db,
+        pseudo_tx,
+        lp_asset_name,
+        total_lp,
+        sorted_a,
+        sorted_b,
+        "fairminter_pool_creation",
+    )
+    ledger.events.insert_record(db, "issuances", issuance_bindings, "ASSET_ISSUANCE")
+
+    # Credit LP tokens
+    ledger.events.credit(
+        db,
+        lp_destination,
+        lp_asset_name,
+        total_lp,
+        tx_index,
+        action="fairminter pool deposit",
+        event=tx_hash,
+    )
+
+    # Create pool record
+    ledger.markets.insert_pool(
+        db,
+        {
+            "tx_index": tx_index,
+            "tx_hash": tx_hash,
+            "block_index": block_index,
+            "source": source,
+            "asset_a": sorted_a,
+            "asset_b": sorted_b,
+            "reserve_a": quantity_a,
+            "reserve_b": quantity_b,
+            "lp_asset": lp_asset_name,
+        },
+    )
+
+    # Record deposit event
+    ledger.events.insert_record(
+        db,
+        "pool_deposits",
+        {
+            "tx_index": tx_index,
+            "tx_hash": tx_hash,
+            "block_index": block_index,
+            "source": source,
+            "asset_a": sorted_a,
+            "asset_b": sorted_b,
+            "quantity_a": quantity_a,
+            "quantity_b": quantity_b,
+            "quantity_minted": total_lp,
+            "status": "valid",
+        },
+        "NEW_POOL_DEPOSIT",
+    )
+
+    logger.info(
+        "Fairminter pool: %s %s + %s %s -> %s LP [%s]",
+        quantity_a,
+        sorted_a,
+        quantity_b,
+        sorted_b,
+        total_lp,
+        tx_hash,
+    )
+
+    return total_lp
