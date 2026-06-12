@@ -261,9 +261,17 @@ def gen_blueprint(db):
                     description += " (e.g. 0)"
                 example_arg = ""
                 if "(e.g. " in description:
-                    desc_arr = description.split("(e.g. ")
-                    description = desc_arr[0].replace("\n", " ").strip()
-                    example_args[arg["name"]] = desc_arr[1].replace(")", "")
+                    before, _, after = description.partition("(e.g. ")
+                    # The example value ends at the first closing paren. Any text
+                    # after it (e.g. the "Sortable fields: ..." suffix appended to
+                    # `sort` descriptions) belongs to the description, not the
+                    # example — keep it out, otherwise it pollutes the example arg
+                    # (e.g. `sort=timestamp:desc. Sortable fields: ...`), which the
+                    # server silently downgrades to `ASC` and which makes the
+                    # generated blueprint disagree with the live response in Dredd.
+                    example_value, _, trailing = after.partition(")")
+                    description = f"{before.rstrip()}{trailing}".replace("\n", " ").strip()
+                    example_args[arg["name"]] = example_value
 
                     for key, value in regtest_fixtures.items():
                         example_args[arg["name"]] = example_args[arg["name"]].replace(
