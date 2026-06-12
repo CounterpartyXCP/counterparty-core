@@ -3,7 +3,7 @@ Unit tests for counterpartycore.lib.api.queries module.
 Tests focus on covering uncovered lines in the module.
 """
 
-from counterpartycore.lib.api import queries
+from counterpartycore.lib.api import queries, verbose
 
 # =============================================================================
 # Tests for select_rows function - where clause handling
@@ -408,8 +408,6 @@ def test_get_debits_by_asset_with_action(ledger_db):
 def test_credits_expose_unique_index(ledger_db):
     """credits rows expose a stable `credit_index` (rowid) so identical rows
     within a single tx can be told apart (issue #3320)."""
-    from counterpartycore.lib.api import verbose
-
     result = queries.select_rows(ledger_db, "credits", limit=50)
     assert len(result.result) > 0
     for row in result.result:
@@ -428,8 +426,6 @@ def test_credits_expose_unique_index(ledger_db):
 
 def test_debits_expose_unique_index(ledger_db):
     """debits rows expose a stable `debit_index` (rowid)."""
-    from counterpartycore.lib.api import verbose
-
     result = queries.select_rows(ledger_db, "debits", limit=50)
     assert len(result.result) > 0
     for row in result.result:
