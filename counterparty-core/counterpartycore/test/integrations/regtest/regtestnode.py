@@ -179,31 +179,26 @@ class RegtestNode:
         self.wait_for_counterparty_server()
         return tx_hash, block_hash, block_time
 
-    def wait_for_utxo(self, txid, vout, expected_value=None, timeout=30):
-        """Wait until the node sees `txid:vout` (mempool included) with the expected
-        value before signing a child transaction that spends it.
+    def wait_for_utxo(self, txid, vout, timeout=30):
+        """Wait until the node sees `txid:vout` (mempool included) and return its
+        authoritative value in satoshis.
 
-        Signing a child that spends a still-unconfirmed parent can otherwise produce
-        intermittent BIP143 `NULLFAIL` signature mismatches: the wallet computes the
-        sighash over an input amount that disagrees with the one the node ends up
-        using at verification time. Blocking until the parent output is settled in the
-        node/mempool view removes that race (and, if the output is missing or has an
-        unexpected value, fails here with an explicit message instead of an opaque
-        `mandatory-script-verify-flag-failed` at broadcast)."""
+        This must be used to value an unconfirmed parent output before signing a child
+        that spends it. Reading the value from `decoderawtransaction` via `json.loads`
+        decodes the BTC amount as a float and can be off by one satoshi; the BIP143
+        sighash commits to the input amount, so signing over that wrong value makes the
+        node reject the child with `mandatory-script-verify-flag-failed` (NULLFAIL).
+        `gettxout` is the value the node actually verifies against, and it is parsed
+        here with `parse_float=Decimal` to stay exact."""
         start = time.time()
-        last_seen = None
         while True:
             raw = self.bitcoin_wallet("gettxout", txid, vout, "true").strip()
             if raw:
-                info = json.loads(raw)
-                value_sats = int(D(str(info["value"])) * D(config.UNIT))
-                last_seen = value_sats
-                if expected_value is None or value_sats == expected_value:
-                    return value_sats
+                info = json.loads(raw, parse_float=D)
+                return int(info["value"] * D(config.UNIT))
             if time.time() - start > timeout:
                 raise Exception(  # noqa: TRY002
-                    f"UTXO {txid}:{vout} not visible with expected value "
-                    f"{expected_value} after {timeout}s (last seen: {last_seen})"
+                    f"UTXO {txid}:{vout} not visible after {timeout}s"
                 )
             time.sleep(0.5)
 
@@ -1130,10 +1125,12 @@ class RegtestNode:
         )
         print(f"Transaction 1 sent: {tx_hash_1}")
 
-        # wait until the node/mempool view of tx1's change output is settled before
-        # signing tx2 — avoids intermittent BIP143 NULLFAIL signature mismatches when
-        # signing a child that spends a still-unconfirmed parent
-        self.wait_for_utxo(txid_1, vout_1, value_1)
+        # re-read tx1's change output value from the node (gettxout) before composing
+        # and signing tx2. The decoded value above can be off by one satoshi (float
+        # parsing of the BTC amount), which would make tx2's BIP143 signature commit to
+        # the wrong input amount and be rejected with NULLFAIL at broadcast.
+        value_1 = self.wait_for_utxo(txid_1, vout_1)
+        print(f"tx1 node value_1={value_1} sats")
 
         #####   Send BTC to new address using the change from the previous transaction #####
 
@@ -1190,8 +1187,9 @@ class RegtestNode:
         )
         print(f"Transaction 2 sent: {tx_hash_2}")
 
-        # same as above: settle the node view of tx2's first output before signing tx3
-        self.wait_for_utxo(txid_2, vout_2, value_2)
+        # same as above: take tx2's output value from the node before signing tx3
+        value_2 = self.wait_for_utxo(txid_2, vout_2)
+        print(f"tx2 node value_2={value_2} sats")
 
         #####   Create a dispenser using the BTC received from the second transactions #####
 
