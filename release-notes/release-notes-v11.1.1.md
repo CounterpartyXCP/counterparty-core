@@ -40,6 +40,7 @@ counterparty-server start
 - Close fairminter when hard cap is hit after the soft-cap deadline has passed
 - Close non-pool fairminter when hard cap is hit before the soft-cap deadline (was leaving the fairminter open after escrow distribution)
 - Fix stale-row lookup in `get_fairminters_by_soft_cap_deadline` (was returning superseded rows)
+- Fix `connection_count` leak in `APSWConnectionPool` causing `MAINPROCESS_POOL` to exhaust over time (per-request threads in APIv1 left cached connections counted forever)
 
 ## API
 

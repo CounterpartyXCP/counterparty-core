@@ -90,21 +90,26 @@ def test_validate_overflow_quantity(ledger_db, defaults):
     assert any("exceeds maximum" in p for p in problems)
 
 
-def test_validate_product_overflow(ledger_db, defaults):
-    quantity = config.MAX_INT // 2 + 1
+def test_validate_large_product_with_individually_valid_quantities(ledger_db, defaults):
+    # Once fix_pool_deposit_product_overflow is active (always on regtest), a deposit
+    # whose quantity_a * quantity_b exceeds MAX_INT is accepted as long as each quantity
+    # and the resulting LP quantity are individually valid. 100 units per side has a
+    # product of 1e20 (> MAX_INT) but isqrt(product) == 1e10 (< MAX_INT).
+    quantity = 10_000_000_000
     problems = pooldeposit.validate(
         ledger_db,
         defaults["addresses"][0],
         "XCP",
         "DIVISIBLE",
         quantity,
-        3,
+        quantity,
+        lp_asset="A99999999999999999",
     )
-    assert any("quantity_a * quantity_b exceeds" in p for p in problems)
+    assert problems == []
 
 
 def test_validate_insufficient_balance(ledger_db, defaults):
-    # Large enough to exceed balance, small enough that product fits MAX_INT
+    # Large enough to exceed the fixture balance.
     huge = config.MAX_INT // 2
     problems = pooldeposit.validate(
         ledger_db,

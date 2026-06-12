@@ -140,6 +140,7 @@ def initialise_config(
     api_only=False,
     profile=False,
     memory_profile=False,
+    memory_profile_tracemalloc=False,
     enable_all_protocol_changes=False,
 ):
     # log config already initialized
@@ -564,7 +565,9 @@ def initialise_config(
 
     config.API_ONLY = api_only
     config.PROFILE = profile
-    config.MEMORY_PROFILE = memory_profile
+    # tracemalloc tracking is an extension of the memory profiler
+    config.MEMORY_PROFILE = memory_profile or memory_profile_tracemalloc
+    config.MEMORY_PROFILE_TRACEMALLOC = memory_profile_tracemalloc
     config.ENABLE_ALL_PROTOCOL_CHANGES = enable_all_protocol_changes
 
 
@@ -617,6 +620,7 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "api_only": args.api_only,
         "profile": args.profile,
         "memory_profile": args.memory_profile,
+        "memory_profile_tracemalloc": getattr(args, "memory_profile_tracemalloc", False),
         "enable_all_protocol_changes": args.enable_all_protocol_changes,
     }
     # for tests

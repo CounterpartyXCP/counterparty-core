@@ -6,7 +6,7 @@ import struct
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import gas
-from counterpartycore.lib.parser import messagetype
+from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import assetnames
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -78,7 +78,18 @@ def validate(
     elif min_lp_quantity > config.MAX_INT:
         problems.append("min_lp_quantity exceeds maximum value")
 
-    if not problems and quantity_a > 0 and quantity_b > config.MAX_INT // quantity_a:
+    # The product quantity_a * quantity_b is only ever consumed by arbitrary-precision
+    # Python integer arithmetic (math.isqrt) and is never stored, so it cannot overflow
+    # any persisted value: with both quantities <= MAX_INT, isqrt(quantity_a * quantity_b)
+    # <= MAX_INT, and quantity_minted is bounded separately below. The original check
+    # therefore rejected otherwise valid deposits (capping balanced divisible deposits at
+    # ~30.37 units/side). It is retained, gated, for pre-activation consensus compatibility.
+    if (
+        not protocol.enabled("fix_pool_deposit_product_overflow", block_index)
+        and not problems
+        and quantity_a > 0
+        and quantity_b > config.MAX_INT // quantity_a
+    ):
         problems.append("quantity_a * quantity_b exceeds maximum value")
 
     if problems:
