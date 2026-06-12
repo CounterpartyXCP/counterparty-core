@@ -186,6 +186,24 @@ def _compute_pool_input_for_target_price_integer(
     return 0
 
 
+def compute_pool_fill(reserve_in, reserve_out, max_give, fee_bps, block_index=None):
+    """Input the pool actually consumes (and its output) when filling up to
+    `max_give` with no price limit — e.g. an order's remainder once the book is
+    exhausted, or a swap quote. Mirrors execution's integer gate in
+    ``try_pool_fill``: once ``fix_pool_best_price_routing`` is live the input is
+    trimmed to the cheapest that still yields the floored output, so the
+    over-paid dust is refunded to the taker instead of handed to the pool.
+    Returns ``(fill, output)``."""
+    output = compute_pool_output(reserve_in, reserve_out, max_give, fee_bps)
+    if output <= 0:
+        return 0, 0
+    if protocol.enabled("fix_pool_best_price_routing", block_index):
+        fill = _min_pool_input_for_output(reserve_in, reserve_out, output, fee_bps, max_give)
+    else:
+        fill = max_give
+    return fill, output
+
+
 #####################
 #       ORDERS      #
 #####################
