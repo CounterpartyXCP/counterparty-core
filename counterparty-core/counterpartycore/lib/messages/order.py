@@ -614,6 +614,7 @@ def match(db, tx, block_index=None):
                 tx1_give_remaining,
                 target_price_num=tx0["get_quantity"],
                 target_price_den=tx0["give_quantity"],
+                block_index=block_index,
             )
             if pool_fill_quantity > 0:
                 ledger.markets.execute_pool_match(
@@ -903,6 +904,7 @@ def match(db, tx, block_index=None):
             tx1_give_remaining,
             target_price_num=tx1["give_quantity"],
             target_price_den=tx1["get_quantity"],
+            block_index=block_index,
         )
         if pool_fill_quantity > 0:
             ledger.markets.execute_pool_match(
