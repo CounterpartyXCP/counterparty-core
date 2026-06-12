@@ -136,7 +136,7 @@ DREDD_CONFIG = {
 }
 
 
-def get_example_output(path, args):
+def get_example_output(path, args, add_verbose=True):
     print(f"args: {args}")
     url_keys = []
     for key, value in args.items():
@@ -149,10 +149,17 @@ def get_example_output(path, args):
         args.pop(key)
     url = f"{API_ROOT}{path}"
     print(f"GET {url}")
-    if "v2/" in path:
+    # Only request verbose output when the route actually documents a `verbose`
+    # parameter; otherwise the captured (verbose) example carries `asset_info`
+    # and `*_normalized` fields that Dredd's non-verbose replay can't reproduce
+    # (e.g. the `bitcoin` category endpoints, which expose no `verbose` arg).
+    if add_verbose and "v2/" in path:
         args["verbose"] = "true"
 
-    if "/compose" in path:
+    # The `estimatexcpfees` compose sub-routes don't accept the composer's
+    # construct params, so injecting them returns an "Unrecognized parameter(s)"
+    # error at capture time that the param-less Dredd replay never reproduces.
+    if "/compose" in path and "estimatexcpfees" not in path:
         source = None
         if "/addresses/" in path:
             source = path.split("/addresses/")[1].split("/")[0]
@@ -167,7 +174,7 @@ def get_example_output(path, args):
             args["validate"] = False
 
     response = requests.get(url, params=args)  # noqa S113
-    return response.json()
+    return response.json(), response.status_code
 
 
 def include_in_dredd(group, path):
@@ -301,13 +308,17 @@ def gen_blueprint(db):
             or "healthz" in path
             or "getmempoolinfo" in path
         ):
+            has_verbose = any(arg["name"] == "verbose" for arg in route["args"])
             if not USE_API_CACHE or path not in API_CACHE:
-                example_output = get_example_output(path, example_args)
+                example_output, status_code = get_example_output(
+                    path, example_args, add_verbose=has_verbose
+                )
                 API_CACHE[path] = example_output
             else:
                 example_output = API_CACHE[path]
+                status_code = 200
             example_output_json = json.dumps(example_output, indent=4)
-            md += "\n+ Response 200 (application/json)\n\n"
+            md += f"\n+ Response {status_code} (application/json)\n\n"
             md += "    ```\n"
             for line in example_output_json.split("\n"):
                 md += f"        {line}\n"
@@ -348,7 +359,9 @@ def gen_events_doc():
             md += f"\n#### `{event}`\n\n"
             path = f"/v2/events/{event}"
             if not USE_API_CACHE or path not in API_CACHE:
-                example_output = get_example_output(path, {"limit": "1", "verbose": "true"})
+                example_output, _status_code = get_example_output(
+                    path, {"limit": "1", "verbose": "true"}
+                )
                 API_CACHE[path] = example_output
             else:
                 example_output = API_CACHE[path]
