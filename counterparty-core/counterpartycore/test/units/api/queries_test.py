@@ -405,6 +405,43 @@ def test_get_debits_by_asset_with_action(ledger_db):
     assert result is not None
 
 
+def test_credits_expose_unique_index(ledger_db):
+    """credits rows expose a stable `credit_index` (rowid) so identical rows
+    within a single tx can be told apart (issue #3320)."""
+    from counterpartycore.lib.api import verbose
+
+    result = queries.select_rows(ledger_db, "credits", limit=50)
+    assert len(result.result) > 0
+    for row in result.result:
+        assert "credit_index" in row
+        assert row["credit_index"] == row["rowid"]
+
+    # `credit_index` survives API cleaning while `rowid` is stripped.
+    cleaned = verbose.clean_api_result(result.result)
+    indexes = [row["credit_index"] for row in cleaned]
+    for row in cleaned:
+        assert "rowid" not in row
+        assert "credit_index" in row
+    # Unique per row, even for otherwise byte-identical credits.
+    assert len(indexes) == len(set(indexes))
+
+
+def test_debits_expose_unique_index(ledger_db):
+    """debits rows expose a stable `debit_index` (rowid)."""
+    from counterpartycore.lib.api import verbose
+
+    result = queries.select_rows(ledger_db, "debits", limit=50)
+    assert len(result.result) > 0
+    for row in result.result:
+        assert "debit_index" in row
+        assert row["debit_index"] == row["rowid"]
+
+    cleaned = verbose.clean_api_result(result.result)
+    for row in cleaned:
+        assert "rowid" not in row
+        assert "debit_index" in row
+
+
 # =============================================================================
 # Tests for sends
 # =============================================================================
