@@ -40,8 +40,9 @@ counterparty-server start
 
 ## Protocol Changes
 
-The activation block height is not yet set (placeholder `9999999`):
+The activation block height is not yet set for the caydyan gates below (placeholder `9999999`):
 
+- Add **fairmint pool seeding** behind a new `fairmint_pool` gate: `compose_fairminter` accepts two new optional fields — `pool_quantity` (tokens to reserve for the AMM pool) and `lp_asset` (numeric asset to use as LP token, auto-generated if omitted) — which, when the fairminter closes at soft cap, automatically creates a constant-product AMM pool seeded with `pool_quantity` of the minted asset and the corresponding XCP proceeds; `hard_cap` must equal `existing_supply + premint_quantity + pool_quantity + soft_cap` (all mintable supply is reserved for buyers or the pool), `burn_payment` is disallowed, and the issuer must hold sufficient XCP to cover the pool-deposit gas fee at compose time; pool creation is deferred to the `after_block` hook so it is gated on the same block as fairminter close; the LP token is earmarked against the active fairminter to prevent griefing.
 - `sweep_skip_zero_balances`: sweeps no longer include zero-quantity balances, the anti-spam fee is computed only over the balances/ownerships selected by the sweep `flags`, and an empty sweep is no longer charged the legacy flat fee.
 - `issuance_callable_lock_fix`: removes the obsolete "cannot change callability / advance call date / reduce call price" reissuance restrictions (the `issuance_callability_parameters_removal` guard is preserved).
 - `multisig_utxo_addresses`: bare multisig (P2MS) UTXOs now resolve to an address instead of failing with "vout does not have an address".
@@ -49,6 +50,9 @@ The activation block height is not yet set (placeholder `9999999`):
 
 ## Bugfixes
 
+- Close fairminter when hard cap is hit after the soft-cap deadline has passed
+- Close non-pool fairminter when hard cap is hit before the soft-cap deadline (was leaving the fairminter open after escrow distribution)
+- Fix stale-row lookup in `get_fairminters_by_soft_cap_deadline` (was returning superseded rows)
 - Fix `connection_count` leak in `APSWConnectionPool` causing `MAINPROCESS_POOL` to exhaust over time (per-request threads in APIv1 left cached connections counted forever)
 - Don't charge an oracle fee when closing a dispenser
 - Preserve subasset longname case in balance lookups and sort balances by `asset` using the subasset longname
@@ -59,6 +63,7 @@ The activation block height is not yet set (placeholder `9999999`):
 
 ## API
 
+- Expose `lp_asset` field in `compose_fairminter` endpoint; extend `fairminters` table with `pool_quantity` and `lp_asset` columns
 - New routes: `GET /v2/addresses/<address>` (and `/options`), `GET /v2/addresses/<address>/dispensers/source` and `/dispensers/origin`, `GET /v2/bitcoin/transactions/<tx_hash>/info`, and `POST /v2/compose/detach` (detach assets from several UTXOs at once)
 - `sort` parameter support added to the sends, issuances, dispenses, broadcasts and dividends routes, with sortable fields documented per route
 - Compose responses now include `xcp_fee` (dividend, sweep, pooldeposit, poolwithdraw, attach); order and order-match results include `market_price_normalized`

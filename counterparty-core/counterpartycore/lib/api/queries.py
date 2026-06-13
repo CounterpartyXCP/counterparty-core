@@ -10,6 +10,7 @@ from typing import Literal
 from sentry_sdk import start_span as start_sentry_span
 
 from counterpartycore.lib.ledger.markets import (
+    compute_pool_fill,
     compute_pool_input_for_target_price,
     compute_pool_output,
     get_pool_fee_bps,
@@ -4381,11 +4382,11 @@ def get_pool_quote(state_db, asset1: str, asset2: str, quantity: int):
             book_orders_matched += 1
 
     if give_remaining > 0 and has_pool and sim_ri > 0 and sim_ro > 0:
-        pout = compute_pool_output(sim_ri, sim_ro, give_remaining, fee_bps)
+        pool_fill, pout = compute_pool_fill(sim_ri, sim_ro, give_remaining, fee_bps)
         if pout > 0:
             pool_output_total += pout
-            pool_input_total += give_remaining
-            give_remaining = 0
+            pool_input_total += pool_fill
+            give_remaining -= pool_fill
 
     total_output = pool_output_total + book_output
     if has_pool and give_asset == pool["asset_a"]:

@@ -493,6 +493,25 @@ def get_fairminter_by_asset(db, asset):
     return cursor.fetchone()
 
 
+def get_active_fairminter_by_lp_asset(db, lp_asset):
+    # Pick the LATEST row per tx_hash (same pattern as get_fairminters_by_soft_cap_deadline)
+    # then filter by status; otherwise a closed fairminter whose intermediate 'open' row
+    # has the matching lp_asset would still be reported as active.
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM (
+            SELECT *, MAX(rowid) AS rowid
+            FROM fairminters
+            WHERE lp_asset = :lp_asset
+            GROUP BY tx_hash
+        ) WHERE status IN ('open', 'pending')
+        ORDER BY rowid DESC LIMIT 1
+    """
+    bindings = {"lp_asset": lp_asset}
+    cursor.execute(query, bindings)
+    return cursor.fetchone()
+
+
 def get_fairmint_quantities(db, fairminter_tx_hash):
     cursor = db.cursor()
     query = """
@@ -529,9 +548,9 @@ def get_fairminters_by_soft_cap_deadline(db, block_index):
         SELECT * FROM (
             SELECT *, MAX(rowid) AS rowid
             FROM fairminters
-            WHERE soft_cap > 0 AND soft_cap_deadline_block = :block_index
+            WHERE soft_cap > 0
             GROUP BY tx_hash
-        ) WHERE status = :status
+        ) WHERE status = :status AND soft_cap_deadline_block = :block_index
         ORDER BY tx_index
     """
     bindings = {

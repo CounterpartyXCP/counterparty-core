@@ -2,7 +2,7 @@ import struct
 
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.messages import destroy, gas, pooldeposit, poolwithdraw
+from counterpartycore.lib.messages import destroy, fairminter, gas, pooldeposit, poolwithdraw
 
 
 def test_validate_valid(ledger_db, defaults):
@@ -548,6 +548,58 @@ def test_restart_after_external_lp_destroy(ledger_db, defaults, blockchain_mock)
     assert ledger.balances.get_balance(ledger_db, source, lp_asset) > 0
 
 
+def test_validate_blocks_pool_during_active_fairmint(ledger_db, defaults, blockchain_mock):
+    """Manual pool creation is blocked while a fairmint-pool is active for the asset."""
+    source = defaults["addresses"][0]
+    tx = blockchain_mock.dummy_tx(ledger_db, source, use_first_tx=True)
+    # FAIRMINTED, price=1, hard_cap=100, soft_cap=60, pool_quantity=40, lp_asset=A95428956661682177
+    message = b"\x95\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x01\x00\x00\x18d\x00\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x18<\x1a\x00\x0c\xf8P\x00\xf4\xf4\xf5\xf5\x18(\x1b\x01S\x08!g\x1b\x10\x01`@"
+    fairminter.parse(ledger_db, tx, message)
+
+    problems = pooldeposit.validate(ledger_db, source, "FAIRMINTED", "XCP", 100, 100)
+    assert any("fairminter with pool_quantity is active" in p for p in problems)
+
+
+def test_validate_blocks_pool_during_active_fairmint_reverse_pair(
+    ledger_db, defaults, blockchain_mock
+):
+    """Earmark check runs on both asset_a and asset_b — (XCP, FAIRMINTED) is equally blocked."""
+    source = defaults["addresses"][0]
+    tx = blockchain_mock.dummy_tx(ledger_db, source, use_first_tx=True)
+    message = b"\x95\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x01\x00\x00\x18d\x00\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x18<\x1a\x00\x0c\xf8P\x00\xf4\xf4\xf5\xf5\x18(\x1b\x01S\x08!g\x1b\x10\x01`@"
+    fairminter.parse(ledger_db, tx, message)
+
+    problems = pooldeposit.validate(ledger_db, source, "XCP", "FAIRMINTED", 100, 100)
+    assert any("fairminter with pool_quantity is active" in p for p in problems)
+
+
+def test_validate_blocks_pool_with_earmarked_lp_asset(ledger_db, defaults, blockchain_mock):
+    """lp_asset earmarked by an active fairminter is rejected in pooldeposit.validate."""
+    source = defaults["addresses"][0]
+    tx = blockchain_mock.dummy_tx(ledger_db, source, use_first_tx=True)
+    message = b"\x95\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x01\x00\x00\x18d\x00\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x18<\x1a\x00\x0c\xf8P\x00\xf4\xf4\xf5\xf5\x18(\x1b\x01S\x08!g\x1b\x10\x01`@"
+    fairminter.parse(ledger_db, tx, message)
+
+    problems = pooldeposit.validate(
+        ledger_db, source, "XCP", "DIVISIBLE", 100, 100, lp_asset="A95428956661682177"
+    )
+    assert any("earmarked by an active fairminter" in p for p in problems)
+
+
+def test_validate_allows_pool_after_fairminter_closes(ledger_db, defaults, blockchain_mock):
+    """Once the fairminter is closed, the earmark is released and a pool may be created."""
+    source = defaults["addresses"][0]
+    tx = blockchain_mock.dummy_tx(ledger_db, source, use_first_tx=True)
+    message = b"\x95\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x01\x01\x00\x00\x18d\x00\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x18<\x1a\x00\x0c\xf8P\x00\xf4\xf4\xf5\xf5\x18(\x1b\x01S\x08!g\x1b\x10\x01`@"
+    fairminter.parse(ledger_db, tx, message)
+
+    fm_row = ledger.issuances.get_fairminter_by_asset(ledger_db, "FAIRMINTED")
+    ledger.issuances.update_fairminter(ledger_db, fm_row["tx_hash"], {"status": "closed"})
+
+    problems = pooldeposit.validate(ledger_db, source, "FAIRMINTED", "XCP", 100, 100)
+    assert not any("fairminter with pool_quantity is active" in p for p in problems)
+
+
 def test_validate_lp_token_cannot_be_pooled(ledger_db, defaults, blockchain_mock):
     """LP token from an existing pool cannot itself be deposited into a new pool."""
     quantity = defaults["quantity"] // 4
@@ -578,6 +630,90 @@ def test_validate_subsequent_deposit_too_small(ledger_db, defaults, blockchain_m
 
     problems = pooldeposit.validate(ledger_db, source, sorted_a, sorted_b, 1, 1)
     assert any("deposit too small" in p for p in problems)
+
+
+def test_create_pool_from_fairminter_halts_if_pool_exists(ledger_db, defaults, blockchain_mock):
+    """Reaching create_pool_from_fairminter with an existing pool is an invariant
+    violation (fairminter.validate and pooldeposit.validate both block it); halt cleanly."""
+    source = defaults["addresses"][0]
+    quantity = defaults["quantity"] // 4
+
+    tx = blockchain_mock.dummy_tx(ledger_db, source)
+    _, _, data = pooldeposit.compose(ledger_db, source, "XCP", "DIVISIBLE", quantity, quantity)
+    pooldeposit.parse(ledger_db, tx, data[1:])
+
+    fairminter = {
+        "tx_hash": "b" * 64,
+        "tx_index": 999,
+        "source": source,
+        "lp_asset": "A95428956661682177",
+    }
+    with pytest.raises(
+        exceptions.ParseTransactionError, match="pool already exists at soft-cap close"
+    ):
+        pooldeposit.create_pool_from_fairminter(
+            ledger_db,
+            fairminter,
+            block_index=9999,
+            asset="DIVISIBLE",
+            quantity_tokens=quantity,
+            quantity_xcp=quantity,
+        )
+
+
+def test_create_pool_from_fairminter(ledger_db, defaults, test_helpers):
+    """Test trustless pool creation from fairminter resolution."""
+    source = defaults["addresses"][0]
+    quantity = defaults["quantity"]
+
+    fairminter = {
+        "tx_hash": "a" * 64,
+        "tx_index": 999,
+        "source": source,
+        "lp_asset": "A95428956661682177",
+    }
+
+    lp = pooldeposit.create_pool_from_fairminter(
+        ledger_db,
+        fairminter,
+        block_index=9999,
+        asset="NODIVISIBLE",
+        quantity_tokens=quantity,
+        quantity_xcp=quantity,
+    )
+    assert lp > 0
+
+    # Verify pool was created
+    sorted_a, sorted_b = ledger.markets.sort_pair("NODIVISIBLE", config.XCP)
+    pool = ledger.markets.get_pool(ledger_db, sorted_a, sorted_b)
+    assert pool is not None
+    assert pool["reserve_a"] == quantity
+    assert pool["reserve_b"] == quantity
+
+    # Verify LP tokens credited to UNSPENDABLE
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "credits",
+                "values": {
+                    "address": defaults["unspendable"],
+                    "asset": pool["lp_asset"],
+                    "quantity": lp,
+                    "calling_function": "fairminter pool deposit",
+                },
+            },
+            {
+                "table": "pool_deposits",
+                "values": {
+                    "tx_hash": "a" * 64,
+                    "asset_a": sorted_a,
+                    "asset_b": sorted_b,
+                    "status": "valid",
+                },
+            },
+        ],
+    )
 
 
 def test_validate_xcp_fee_insufficient(ledger_db, defaults, blockchain_mock):
