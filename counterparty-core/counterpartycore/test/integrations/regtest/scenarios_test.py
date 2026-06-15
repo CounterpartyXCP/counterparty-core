@@ -448,20 +448,26 @@ def run_scenarios(serve=False, wsgi_server="gunicorn"):
                 _err_to_out=True,
                 _cwd=CURR_DIR,
             )
-            print("Running Schemathesis...")
-            sh.schemathesis(
-                "run",
-                "openapi.json",
-                "--url=http://127.0.0.1:24000",
-                "--phases=examples",
-                "--checks=not_a_server_error",
-                "--exclude-path-regex=(/bet|_old|/v2/bitcoin/addresses/)",
-                _cwd=BASE_DIR,
-                _out=sys.stdout,
-                _err_to_out=True,
-            )
-            print("Converting API doc addresses to mainnet...")
-            convert_doc_to_mainnet()
+            # Schemathesis must run against the raw regtest examples, so the
+            # mainnet conversion has to happen afterwards. Guard it with
+            # try/finally: a Schemathesis failure must never leave regtest data
+            # (bcrt1... addresses, real tx hashes) in the committed openapi.json.
+            try:
+                print("Running Schemathesis...")
+                sh.schemathesis(
+                    "run",
+                    "openapi.json",
+                    "--url=http://127.0.0.1:24000",
+                    "--phases=examples",
+                    "--checks=not_a_server_error",
+                    "--exclude-path-regex=(/bet|_old|/v2/bitcoin/addresses/)",
+                    _cwd=BASE_DIR,
+                    _out=sys.stdout,
+                    _err_to_out=True,
+                )
+            finally:
+                print("Converting API doc addresses to mainnet...")
+                convert_doc_to_mainnet()
             print("Testing invalid detach...")
             regtest_node_thread.node.test_invalid_detach()
             print("Testing transaction chaining...")

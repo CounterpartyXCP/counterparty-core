@@ -784,6 +784,17 @@ def convert_doc_to_mainnet(filepath: str = None):
 
     print(f"Conversion complete: {address_count} addresses, {hash_count} hashes.")
 
+    # Safety net: regtest_to_mainnet_address() returns the address unchanged when
+    # pack/unpack fails, which would silently leave regtest data in the published
+    # doc (and hang `test_apiserver_openapi_spec`). Fail loudly so a bad refresh is
+    # caught here instead of being committed.
+    remaining = content.count("bcrt1")
+    if remaining:
+        raise AssertionError(
+            f"{remaining} regtest (bcrt1) address(es) still present in {filepath} "
+            "after conversion to mainnet"
+        )
+
 
 if __name__ == "__main__":
     print("Generating API documentation...")

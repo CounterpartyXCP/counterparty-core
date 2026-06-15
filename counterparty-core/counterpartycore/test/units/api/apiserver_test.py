@@ -39,8 +39,14 @@ def test_apiserver_openapi_spec(apiv2_client):
     assert spec["info"]["title"] == "Counterparty Core API"
     assert spec["info"]["version"] == config.VERSION_STRING
     assert "/v2/blocks" in spec["paths"]
-    # examples must contain no regtest data
-    assert "bcrt1" not in json.dumps(spec)
+    # examples must contain no regtest data. Assert on a count (int == int) rather
+    # than `"bcrt1" not in json.dumps(spec)`: on failure the latter makes pytest run
+    # difflib over the ~800 KB spec string, which effectively hangs the whole suite.
+    # If this fails, regenerate the doc and run genapidoc.convert_doc_to_mainnet().
+    assert json.dumps(spec).count("bcrt1") == 0, (
+        "openapi.json contains regtest (bcrt1) data; scrub it with "
+        "genapidoc.convert_doc_to_mainnet()"
+    )
 
 
 def _sort_arg(route):
