@@ -107,6 +107,8 @@ def validate(
 def compose(db, source: str, asset: str, quantity: int = 0, skip_validation: bool = False):
     resolved_asset = resolve_asset_name(db, asset)
     if quantity != 0 and not skip_validation:
+        if not isinstance(quantity, int):
+            raise exceptions.ComposeError("quantity must be an integer")
         fairminter = ledger.issuances.get_fairminter_by_asset(db, resolved_asset)
         if fairminter and fairminter["price"] == 0:
             raise exceptions.ComposeError("quantity is not allowed for free fairminters")
