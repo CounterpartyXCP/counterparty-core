@@ -1,9 +1,10 @@
+import json
 from unittest.mock import Mock
 
 import pytest
 from counterpartycore.lib import config, ledger
 from counterpartycore.lib.api import apiserver, apiwatcher, composer
-from counterpartycore.lib.api.routes import ALL_ROUTES
+from counterpartycore.lib.api.routes import ALL_ROUTES, ROUTES
 from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.lib.parser import blocks
 from counterpartycore.lib.utils import helpers
@@ -21,12 +22,123 @@ def test_apiserver_root(apiv2_client, current_block_index):
             "backend_height": ledger.currentstate.CurrentState().current_backend_height(),
             "counterparty_height": current_block_index,
             "ledger_state": "Starting",
-            "documentation": "https://counterpartycore.docs.apiary.io/",
+            "documentation": "https://apidocs.counterparty.io/",
             "routes": "http://localhost/v2/routes",
-            "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
+            "openapi": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/openapi.json",
             "current_commit": helpers.get_current_commit_hash(),
         }
     }
+
+
+def test_apiserver_openapi_spec(apiv2_client):
+    response = apiv2_client.get("/v2/openapi.json")
+    assert response.status_code == 200
+    assert response.content_type.startswith("application/json")
+    spec = response.json
+    assert spec["openapi"].startswith("3.1")
+    assert spec["info"]["title"] == "Counterparty Core API"
+    assert spec["info"]["version"] == config.VERSION_STRING
+    assert "/v2/blocks" in spec["paths"]
+    # examples must contain no regtest data. Assert on a count (int == int) rather
+    # than `"bcrt1" not in json.dumps(spec)`: on failure the latter makes pytest run
+    # difflib over the ~800 KB spec string, which effectively hangs the whole suite.
+    # If this fails, regenerate the doc and run genapidoc.convert_doc_to_mainnet().
+    assert json.dumps(spec).count("bcrt1") == 0, (
+        "openapi.json contains regtest (bcrt1) data; scrub it with "
+        "genapidoc.convert_doc_to_mainnet()"
+    )
+
+
+def _sort_arg(route):
+    return next((arg for arg in ROUTES[route]["args"] if arg["name"] == "sort"), None)
+
+
+def test_routes_document_sort_fields():
+    orders_sort_arg = _sort_arg("/v2/orders")
+
+    assert orders_sort_arg["supported_values"] == [
+        "block_index",
+        "give_asset",
+        "give_quantity",
+        "get_asset",
+        "get_quantity",
+        "expiration",
+        "give_price",
+        "get_price",
+    ]
+    assert "Sortable fields:" in orders_sort_arg["description"]
+
+
+def test_routes_document_sort_fields_match_query_table():
+    # Routes whose query table differs from their route category must document
+    # the fields of the table actually queried, not the category's fields.
+    cases = {
+        "/v2/order_matches": [
+            "block_index",
+            "forward_asset",
+            "forward_quantity",
+            "backward_asset",
+            "backward_quantity",
+            "match_expire_index",
+        ],
+        "/v2/dispenses": [
+            "block_index",
+            "asset",
+            "dispense_quantity",
+            "btc_amount",
+        ],
+        "/v2/pool_matches": [
+            "block_index",
+            "forward_quantity",
+            "backward_quantity",
+        ],
+        # Previously undocumented: category "assets" is not a sort table key.
+        "/v2/issuances": [
+            "block_index",
+            "asset",
+            "asset_longname",
+            "quantity",
+            "fee_paid",
+        ],
+    }
+    for route, expected in cases.items():
+        sort_arg = _sort_arg(route)
+        assert sort_arg is not None, route
+        assert sort_arg["supported_values"] == expected, route
+        assert "Sortable fields:" in sort_arg["description"], route
+
+
+def test_routes_do_not_expose_unsupported_sort():
+    # get_balances_by_addresses builds its own SQL and cannot honour `sort`
+    # (its result is grouped/aggregated), so the route must not expose it at all.
+    assert _sort_arg("/v2/addresses/balances") is None
+
+
+def get_route_args(route, name):
+    return [arg for arg in ROUTES[route]["args"] if arg["name"] == name]
+
+
+def test_routes_only_document_available_verbose_args():
+    assert get_route_args("/v2/transactions", "verbose")
+    assert get_route_args("/v2/orders", "verbose")
+
+    assert not get_route_args("/v2/routes", "verbose")
+    assert not get_route_args("/v2/healthz", "verbose")
+    assert not get_route_args("/healthz", "verbose")
+    assert not get_route_args("/v2/bitcoin/getmempoolinfo", "verbose")
+    assert not get_route_args("/v2/addresses/<address>/compose/dividend/estimatexcpfees", "verbose")
+
+    compose_verbose_args = get_route_args("/v2/addresses/<address>/compose/send", "verbose")
+    assert len(compose_verbose_args) == 1
+    assert compose_verbose_args[0]["category"] == "secondary"
+
+
+def test_routes_only_document_available_show_unconfirmed_args():
+    assert get_route_args("/v2/transactions", "show_unconfirmed")
+    assert get_route_args("/v2/blocks/<int:block_index>/transactions", "show_unconfirmed")
+
+    assert not get_route_args("/v2/transactions/counts", "show_unconfirmed")
+    assert not get_route_args("/v2/routes", "show_unconfirmed")
 
 
 def prepare_url(db, current_block_index, defaults, rawtransaction, route):
@@ -206,6 +318,55 @@ def test_new_get_asset_info(apiv2_client):
     }
 
 
+def test_get_address_dispensers_by_source_and_origin(state_db, apiv2_client, defaults):
+    source_address = defaults["addresses"][0]
+    origin_address = defaults["addresses"][1]
+    state_db.execute(
+        "INSERT INTO assets_info (asset, divisible) VALUES (?, ?)",
+        ("ORIGINAPI", False),
+    )
+    for tx_index, tx_hash, source, origin in [
+        (9201, "f" * 64, source_address, origin_address),
+        (9202, "1" * 64, origin_address, origin_address),
+        (9203, "2" * 64, source_address, defaults["addresses"][2]),
+    ]:
+        state_db.execute(
+            """
+            INSERT INTO dispensers (
+                tx_index, tx_hash, block_index, source, asset, give_quantity,
+                escrow_quantity, satoshirate, status, give_remaining, origin,
+                dispense_count
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                tx_index,
+                tx_hash,
+                tx_index,
+                source,
+                "ORIGINAPI",
+                1,
+                1,
+                100,
+                0,
+                1,
+                origin,
+                0,
+            ),
+        )
+
+    source_response = apiv2_client.get(
+        f"/v2/addresses/{source_address}/dispensers/source?sort=block_index:asc"
+    )
+    origin_response = apiv2_client.get(
+        f"/v2/addresses/{origin_address}/dispensers/origin?sort=block_index:asc"
+    )
+
+    assert source_response.status_code == 200
+    assert origin_response.status_code == 200
+    assert [row["tx_hash"] for row in source_response.json["result"]] == ["f" * 64, "2" * 64]
+    assert [row["tx_hash"] for row in origin_response.json["result"]] == ["f" * 64, "1" * 64]
+
+
 def test_get_asset_by_longname_case_insensitive(state_db, apiv2_client):
     """Test that asset lookup by longname is case-insensitive (uses COLLATE NOCASE)."""
     # Insert a test asset with mixed-case longname directly into state_db
@@ -379,9 +540,9 @@ def test_ledger_state(apiv2_client, current_block_index, ledger_db):
             "backend_height": ledger.currentstate.CurrentState().current_backend_height(),
             "counterparty_height": current_block_index,
             "ledger_state": "Rolling Back",
-            "documentation": "https://counterpartycore.docs.apiary.io/",
+            "documentation": "https://apidocs.counterparty.io/",
             "routes": "http://localhost/v2/routes",
-            "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
+            "openapi": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/openapi.json",
             "current_commit": helpers.get_current_commit_hash(),
         }
     }
@@ -397,12 +558,32 @@ def test_ledger_state(apiv2_client, current_block_index, ledger_db):
             "backend_height": ledger.currentstate.CurrentState().current_backend_height(),
             "counterparty_height": current_block_index,
             "ledger_state": "Reparsing",
-            "documentation": "https://counterpartycore.docs.apiary.io/",
+            "documentation": "https://apidocs.counterparty.io/",
             "routes": "http://localhost/v2/routes",
-            "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
+            "openapi": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/openapi.json",
             "current_commit": helpers.get_current_commit_hash(),
         }
     }
+
+
+def test_api_cache_control_headers(apiv2_client, monkeypatch):
+    monkeypatch.setattr(config, "DISABLE_API_CACHE", False)
+
+    response = apiv2_client.get("/v2/blocks")
+    assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "public, max-age=60"
+
+    response = apiv2_client.get("/v2/transactions?show_unconfirmed=true&limit=1")
+    assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "no-store"
+
+    response = apiv2_client.get("/v2/healthz")
+    assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "no-store"
+
+    response = apiv2_client.get("/v2/transactions?limit=0")
+    assert response.status_code == 400
+    assert response.headers["Cache-Control"] == "no-store"
 
 
 def test_get_transactions(apiv2_client, monkeypatch):
@@ -423,12 +604,131 @@ def test_get_transactions(apiv2_client, monkeypatch):
     assert result[0]["unpacked_data"]["error"] == "Could not unpack data"
 
 
+def test_sentry_context_includes_http_error_returned_to_user(apiv2_client, monkeypatch):
+    class FakeSentryScope:
+        def __init__(self):
+            self.contexts = {}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, _exc_type, _exc_value, _traceback):
+            return False
+
+        def set_transaction_name(self, _name):
+            pass
+
+        def set_context(self, name, data):
+            self.contexts[name] = data
+
+    scope = FakeSentryScope()
+    captured = []
+
+    def execute_api_function_mock(_rule, _route, _function_args):
+        raise RuntimeError("boom")
+
+    def capture_exception_mock(error):
+        captured.append(error)
+        assert scope.contexts["api_response"] == {
+            "status_code": 503,
+            "error": "Unknown error",
+            "method": "GET",
+            "path": "/v2/transactions",
+        }
+
+    monkeypatch.setattr(apiserver, "configure_sentry_scope", lambda: scope)
+    monkeypatch.setattr(apiserver, "execute_api_function", execute_api_function_mock)
+    monkeypatch.setattr(apiserver, "capture_exception", capture_exception_mock)
+
+    response = apiv2_client.get("/v2/transactions?limit=1")
+
+    assert response.status_code == 503
+    assert response.json["error"] == "Unknown error"
+    assert len(captured) == 1
+    assert isinstance(captured[0], RuntimeError)
+
+
+def test_sentry_context_includes_outer_http_error_returned_to_user(apiv2_client, monkeypatch):
+    class FakeSentryScope:
+        def __init__(self):
+            self.contexts = {}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, _exc_type, _exc_value, _traceback):
+            return False
+
+        def set_transaction_name(self, _name):
+            pass
+
+        def set_context(self, name, data):
+            self.contexts[name] = data
+
+    scope = FakeSentryScope()
+    captured = []
+
+    def capture_exception_mock(error):
+        captured.append(error)
+        assert scope.contexts["api_response"] == {
+            "status_code": 500,
+            "error": "Internal server error",
+            "method": "GET",
+            "path": "/v2/transactions",
+        }
+
+    monkeypatch.setattr(apiserver, "configure_sentry_scope", lambda: scope)
+    monkeypatch.setattr(apiserver, "capture_exception", capture_exception_mock)
+    monkeypatch.setattr(
+        apiserver.verbose,
+        "clean_api_result",
+        lambda _result: (_ for _ in ()).throw(RuntimeError("post-processing failed")),
+    )
+
+    response = apiv2_client.get("/v2/transactions?limit=1")
+
+    assert response.status_code == 500
+    assert response.json["error"] == "Internal server error"
+    assert len(captured) == 1
+    assert isinstance(captured[0], RuntimeError)
+
+
+def test_rejects_unknown_query_parameters(apiv2_client):
+    response = apiv2_client.get("/v2/transactions?limit=1&unknown_param=1&another_bad=2")
+
+    assert response.status_code == 400
+    assert response.json["error"] == "Unrecognized parameter(s): another_bad, unknown_param"
+
+
+def test_verbose_query_parameter_is_still_allowed(apiv2_client):
+    response = apiv2_client.get("/v2/transactions?limit=1&verbose=true")
+
+    assert response.status_code == 200
+    assert "unpacked_data" in response.json["result"][0]
+
+
 def test_get_all_transactions_verbose(apiv2_client):
     url = "/v2/transactions?verbose=true&show_unconfirmed=true"
     result = apiv2_client.get(url).json["result"]
     for tx in result:
         assert "unpacked_data" in tx
         assert "message_data" in tx["unpacked_data"]
+
+
+def test_get_address_options(apiv2_client, defaults):
+    result = apiv2_client.get(f"/v2/addresses/{defaults['addresses'][4]}").json["result"]
+    assert result == {
+        "address": defaults["addresses"][4],
+        "options": 0,
+        "block_index": None,
+    }
+
+    result = apiv2_client.get(f"/v2/addresses/{defaults['addresses'][4]}/options").json["result"]
+    assert result == {
+        "address": defaults["addresses"][4],
+        "options": 0,
+        "block_index": None,
+    }
 
 
 def test_get_balances_by_addresses(apiv2_client, defaults):
@@ -487,6 +787,18 @@ def test_get_balances_by_addresses(apiv2_client, defaults):
     result = apiv2_client.get(url).json["result"]
     assert len(result) == 0
 
+    url = f"/v2/addresses/{defaults['addresses'][0]}/balances/PARENT.already.issued?verbose=true"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) > 0
+    assert result[0]["asset"] == "A95428959342453541"
+    assert result[0]["asset_longname"] == "PARENT.already.issued"
+
+    url = "/v2/assets/PARENT.already.issued/balances?verbose=true"
+    result = apiv2_client.get(url).json["result"]
+    assert len(result) > 0
+    assert result[0]["asset"] == "A95428959342453541"
+    assert result[0]["asset_longname"] == "PARENT.already.issued"
+
 
 def test_get_transactions_valid(apiv2_client, monkeypatch):
     url = "/v2/transactions"
@@ -508,6 +820,49 @@ def test_get_transactions_valid(apiv2_client, monkeypatch):
     url = "/v2/transactions?valid=false&show_unconfirmed=true"
     result = apiv2_client.get(url).json["result"]
     assert len(result) == 0
+
+
+def test_transaction_valid_flag_without_verbose(apiv2_client, ledger_db):
+    last_tx = ledger_db.execute(
+        "SELECT tx_index, block_index, block_hash, block_time FROM transactions ORDER BY tx_index DESC LIMIT 1"
+    ).fetchone()
+    tx_index = last_tx["tx_index"] + 1
+    tx_hash = "f" * 64
+    ledger_db.execute(
+        """
+        INSERT INTO transactions(
+            tx_index, tx_hash, block_index, block_hash, block_time, source, destination,
+            btc_amount, fee, data, supported, utxos_info, transaction_type
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            tx_index,
+            tx_hash,
+            last_tx["block_index"],
+            last_tx["block_hash"],
+            last_tx["block_time"],
+            "source",
+            "",
+            0,
+            0,
+            b"\x0c",
+            True,
+            "",
+            "send",
+        ),
+    )
+    ledger.blocks.set_transaction_status(ledger_db, tx_index, False)
+    ledger_db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    apiserver.LedgerDBConnectionPool().close()
+    apiserver.BLOCK_CACHE.clear()
+
+    result = apiv2_client.get(f"/v2/transactions/{tx_hash}").json["result"]
+    assert result["valid"] is False
+    assert "unpacked_data" not in result
+
+    result = apiv2_client.get("/v2/transactions?valid=false&limit=1").json["result"]
+    assert result[0]["valid"] is False
 
 
 def test_order_prices(apiv2_client, defaults):
@@ -777,6 +1132,59 @@ def test_limit_param_negative_rejected(apiv2_client):
     """A negative limit must be rejected."""
     response = apiv2_client.get("/v2/transactions?limit=-1")
     assert response.status_code != 200 or "error" in response.json
+
+
+def test_invalid_enum_param_rejected(apiv2_client, defaults):
+    """Literal/enum route arguments must reject unsupported values before query execution."""
+    response = apiv2_client.get("/v2/orders?status=invalid-status")
+    assert response.status_code == 400
+    assert "Invalid value for status" in response.json["error"]
+
+    response = apiv2_client.get("/v2/orders?status=open,invalid-status")
+    assert response.status_code == 400
+    assert "Invalid value for status" in response.json["error"]
+
+    response = apiv2_client.get(
+        f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&type=invalid-type"
+    )
+    assert response.status_code == 400
+    assert "Invalid value for type" in response.json["error"]
+
+    response = apiv2_client.get(
+        f"/v2/addresses/balances?addresses={defaults['addresses'][0]}&type=address,utxo"
+    )
+    assert response.status_code == 400
+    assert "Invalid value for type" in response.json["error"]
+
+
+def test_valid_csv_enum_param_accepted(apiv2_client):
+    """Enum routes that already support comma-separated filters must keep accepting them."""
+    response = apiv2_client.get("/v2/orders?status=open,filled")
+    assert response.status_code == 200
+    assert "result" in response.json
+
+    response = apiv2_client.get("/v2/transactions?type=send,order")
+    assert response.status_code == 200
+    assert "result" in response.json
+
+    response = apiv2_client.get("/v2/dispensers?status=0")
+    assert response.status_code == 200
+    assert "result" in response.json
+
+
+def test_invalid_bool_param_rejected(apiv2_client):
+    """Boolean route arguments must reject unsupported values instead of coercing to false."""
+    response = apiv2_client.get("/v2/transactions?show_unconfirmed=maybe")
+    assert response.status_code == 400
+    assert "Invalid boolean: show_unconfirmed" in response.json["error"]
+
+
+def test_verbose_param_accepted_when_ignored(apiv2_client):
+    """`verbose` is ignored on non-compose routes and must be accepted even with an
+    unsupported value, never raising a boolean validation error."""
+    response = apiv2_client.get("/v2/transactions?verbose=maybe")
+    assert response.status_code == 200
+    assert "result" in response.json
 
 
 def test_limit_param_unlimited_when_zero(apiv2_client, monkeypatch):

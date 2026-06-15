@@ -34,6 +34,7 @@ MIGRATIONS_AFTER_ROLLBACK = [
     "0011.create_orders_views",
     "0013.add_performance_indexes",
     "0014.add_pool_consolidated_tables",
+    "0015.add_dispenser_origin_index",
 ]
 
 ROLLBACKABLE_TABLES = [

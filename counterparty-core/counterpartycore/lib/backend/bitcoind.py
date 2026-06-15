@@ -21,8 +21,8 @@ from requests.exceptions import (  # pylint: disable=redefined-builtin
 
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.parser import deserialize, utxosinfo
-from counterpartycore.lib.utils import script
+from counterpartycore.lib.parser import deserialize, p2sh, protocol, utxosinfo
+from counterpartycore.lib.utils import multisig, script
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -363,9 +363,27 @@ def get_utxo_address_and_value(utxo, no_retry=False):
         raise exceptions.InvalidUTXOError(f"Could not find UTXO {utxo}") from e
     if vout >= len(transaction["vout"]):
         raise exceptions.InvalidUTXOError("vout index out of range")
-    if "address" not in transaction["vout"][vout]["scriptPubKey"]:
+    script_pub_key = transaction["vout"][vout]["scriptPubKey"]
+    address = script_pub_key.get("address")
+    if address is None and protocol.enabled("multisig_utxo_addresses"):
+        address = get_multisig_address_from_script_pub_key(script_pub_key)
+    if address is None:
         raise exceptions.InvalidUTXOError("vout does not have an address")
-    return transaction["vout"][vout]["scriptPubKey"]["address"], transaction["vout"][vout]["value"]
+    return address, transaction["vout"][vout]["value"]
+
+
+def get_multisig_address_from_script_pub_key(script_pub_key):
+    if "hex" not in script_pub_key:
+        return None
+    try:
+        if script.get_output_type(script_pub_key["hex"]) != "P2MS":
+            return None
+        asm = script.script_to_asm(script_pub_key["hex"])
+        pubkeys = asm[1:-2]
+        pubkeyhashes = [p2sh.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
+        return multisig.construct_array(asm[0], pubkeyhashes, asm[-2])
+    except (exceptions.DecodeError, exceptions.MultiSigAddressError):
+        return None
 
 
 def safe_get_utxo_address(utxo):

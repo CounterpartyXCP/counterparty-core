@@ -9,7 +9,7 @@ def _get_holders(cursor, id_fields, hold_fields_1, exclude_empty_holders=False):
     save_records = {}
     for record in cursor:
         record_id = " ".join([str(record[field]) for field in id_fields])
-        if id not in save_records:
+        if record_id not in save_records:
             save_records[record_id] = record
             continue
         if save_records[record_id]["rowid"] < record["rowid"]:

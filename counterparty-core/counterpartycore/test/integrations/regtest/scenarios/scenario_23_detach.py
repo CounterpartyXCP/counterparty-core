@@ -155,7 +155,6 @@ SCENARIO = [
         "source": "$ATTACH_DETACHB_TX_HASH:0",
         "params": {
             "exact_fee": 0,
-            "inputs_source": "$ADDRESS_10",
         },
         "controls": [
             {
@@ -224,7 +223,6 @@ SCENARIO = [
         "source": "$ATTACH2_DETACHA_TX_HASH:0",
         "params": {
             "destination": "$ADDRESS_9",
-            "quantity": 1 * 10**8,
             "utxo_value": 10000,
         },
         "controls": [

@@ -1,7 +1,10 @@
 # pylint: disable=too-many-lines
 
+import ast
+import inspect
 import json
 import re
+import textwrap
 import typing
 import weakref
 from typing import Literal
@@ -10,6 +13,7 @@ import apsw
 from sentry_sdk import start_span as start_sentry_span
 
 from counterpartycore.lib.ledger.markets import (
+    compute_pool_fill,
     compute_pool_input_for_target_price,
     compute_pool_output,
     get_pool_fee_bps,
@@ -371,7 +375,9 @@ SUPPORTED_SORT_FIELDS = {
         "backward_quantity",
         "match_expire_index",
     ],
-    "orders": [
+    # The orders endpoints query the `orders_info` view, so the key must match
+    # the table name passed to select_rows() (the runtime sort lookup key).
+    "orders_info": [
         "block_index",
         "give_asset",
         "give_quantity",
@@ -389,6 +395,38 @@ SUPPORTED_SORT_FIELDS = {
         "dispense_count",
         "satoshirate",
         "price",
+    ],
+    "issuances": [
+        "block_index",
+        "asset",
+        "asset_longname",
+        "quantity",
+        "fee_paid",
+    ],
+    "broadcasts": [
+        "block_index",
+        "timestamp",
+        "value",
+        "fee_fraction_int",
+    ],
+    "dispenses": [
+        "block_index",
+        "asset",
+        "dispense_quantity",
+        "btc_amount",
+    ],
+    "dividends": [
+        "block_index",
+        "asset",
+        "dividend_asset",
+        "quantity_per_unit",
+        "fee_paid",
+    ],
+    "sends": [
+        "block_index",
+        "asset",
+        "quantity",
+        "fee_paid",
     ],
     "xcp_holders": [
         "quantity",
@@ -415,12 +453,94 @@ SUPPORTED_SORT_FIELDS = {
 ADDRESS_FIELDS = ["source", "address", "issuer", "destination"]
 
 
+def _possible_str_values(node):
+    """The `str` values an expression can evaluate to.
+
+    For a ternary we take both branches (e.g. get_asset_holders chooses between
+    `asset_holders` and `xcp_holders`) while ignoring literals in the condition.
+    Other shapes fall back to any string constant in the subtree.
+    """
+    if isinstance(node, ast.Constant):
+        return [node.value] if isinstance(node.value, str) else []
+    if isinstance(node, ast.IfExp):
+        return _possible_str_values(node.body) + _possible_str_values(node.orelse)
+    return [
+        sub.value
+        for sub in ast.walk(node)
+        if isinstance(sub, ast.Constant) and isinstance(sub.value, str)
+    ]
+
+
+def _select_rows_sort_tables(function):
+    """Tables passed to `select_rows(..., sort=...)` inside `function`.
+
+    The runtime sort logic in `select_rows()` keys `SUPPORTED_SORT_FIELDS` by
+    the SQL table/view name, so documentation must resolve the same table to
+    stay truthful. We only collect tables from calls that actually forward a
+    `sort` argument: a getter that builds its own SQL (or never forwards sort)
+    therefore advertises nothing, which is the honest result.
+    """
+    try:
+        source = textwrap.dedent(inspect.getsource(function))
+    except (OSError, TypeError):
+        return []
+    tree = ast.parse(source)
+
+    # Resolve a table passed as a local variable (e.g. get_asset_holders picks
+    # asset_holders/xcp_holders depending on the asset) back to its literals.
+    assigned = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and len(node.targets) == 1:
+            target = node.targets[0]
+            if isinstance(target, ast.Name):
+                assigned[target.id] = _possible_str_values(node.value)
+
+    tables = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        called = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
+        if called != "select_rows":
+            continue
+        if not any(kw.arg == "sort" for kw in node.keywords):
+            continue
+        if len(node.args) < 2:
+            continue
+        table_arg = node.args[1]
+        if isinstance(table_arg, ast.Constant) and isinstance(table_arg.value, str):
+            tables.append(table_arg.value)
+        elif isinstance(table_arg, ast.Name):
+            tables.extend(assigned.get(table_arg.id, []))
+    return tables
+
+
+def get_sortable_fields(function):
+    """Sortable fields to document for a route function.
+
+    Resolves the SQL table(s) the function sorts on and returns the matching
+    `SUPPORTED_SORT_FIELDS`, de-duplicated and order-preserving. Returns `None`
+    when the function exposes no sortable fields.
+    """
+    fields = []
+    for table in _select_rows_sort_tables(function):
+        for field in SUPPORTED_SORT_FIELDS.get(table, []):
+            if field not in fields:
+                fields.append(field)
+    return fields or None
+
+
 class QueryResult:
     def __init__(self, result, next_cursor, table, result_count=None):
         self.result = result
         self.next_cursor = next_cursor
         self.result_count = result_count
         self.table = table
+
+
+def normalize_transaction_rows(result):
+    for row in result:
+        if "btc_amount" in row and row["btc_amount"] is None:
+            row["btc_amount"] = 0
 
 
 def select_rows(
@@ -436,6 +556,7 @@ def select_rows(
     order="DESC",
     wrap_where=None,
     sort=None,
+    with_count=True,
 ):
     if offset is not None or sort is not None:
         last_cursor = None
@@ -620,6 +741,15 @@ def select_rows(
         # qualify the reference so SQLite knows we mean the dispense row.
         dest_ref = "__m.destination" if table_has_hash_fk else "destination"
         select += f", NULLIF({dest_ref}, '') AS destination"
+    # `credits` and `debits` rows carry no natural unique key: several identical
+    # rows can be written within a single transaction (e.g. an MPMA send or a
+    # dividend crediting the same address+asset more than once). The rows are
+    # then byte-identical and only distinguishable by their (stripped) rowid, so
+    # consumers replicating the API silently collapse them. Expose the row's
+    # stable unique id under a non-stripped name so they can be told apart.
+    # See https://github.com/CounterpartyXCP/counterparty-core/issues/3320
+    if table in ["credits", "debits"] and "COUNT(*)" not in select:
+        select += f", rowid AS {table[:-1]}_index"
 
     # Rewrite ``SELECT ... tx_hash ... FROM messages`` to project
     # ``transactions.tx_hash`` through the join we set up above.
@@ -764,7 +894,9 @@ def select_rows(
                 sort_order = "ASC"
             if sort_order.upper() not in ["ASC", "DESC"]:
                 sort_order = "ASC"
-            if sort_name in SUPPORTED_SORT_FIELDS.get(table, []):
+            if table == "balances" and sort_name == "asset":
+                order_by.append(f"COALESCE(asset_longname, asset) {sort_order.upper()}")
+            elif sort_name in SUPPORTED_SORT_FIELDS.get(table, []):
                 order_by.append(f"{sort_name} {sort_order.upper()}")
     elif table == "all_transactions_with_status":
         order_by.append("confirmed ASC")
@@ -784,10 +916,12 @@ def select_rows(
         cursor.execute(query, bindings)
         result = cursor.fetchall()
 
-    with start_sentry_span(op="db.sql.execute", description=query_count) as sql_span:
-        sql_span.set_tag("db.system", "sqlite3")
-        cursor.execute(query_count, bindings_count)
-        result_count = cursor.fetchone()["count"]
+    result_count = None
+    if with_count:
+        with start_sentry_span(op="db.sql.execute", description=query_count) as sql_span:
+            sql_span.set_tag("db.system", "sqlite3")
+            cursor.execute(query_count, bindings_count)
+            result_count = cursor.fetchone()["count"]
 
     if result and len(result) > limit:
         # Don't return a cursor when using sort or offset
@@ -806,6 +940,9 @@ def select_rows(
                 break
             row["params"] = json.loads(row["params"])
 
+    if table in ["all_transactions_with_status", "transactions_with_status"]:
+        normalize_transaction_rows(result)
+
     if table == "all_transactions_with_status":
         for row in result:
             row["confirmed"] = bool(row["confirmed"])
@@ -814,7 +951,15 @@ def select_rows(
 
 
 def select_row(db, table, where, select="*", group_by=""):
-    query_result = select_rows(db, table, where, limit=1, select=select, group_by=group_by)
+    query_result = select_rows(
+        db,
+        table,
+        where,
+        limit=1,
+        select=select,
+        group_by=group_by,
+        with_count=False,
+    )
     if query_result.result:
         return QueryResult(query_result.result[0], None, table, 1)
     return None
@@ -1020,6 +1165,26 @@ def get_transactions_by_addresses(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+    )
+
+
+def get_address(ledger_db, address: str):
+    """
+    Returns the latest options for an address.
+    :param str address: The address to return (e.g. $ADDRESS_1)
+    """
+    query_result = select_row(ledger_db, "addresses", where={"address": address})
+    if query_result:
+        return query_result
+    return QueryResult(
+        {
+            "address": address,
+            "options": 0,
+            "block_index": None,
+        },
+        None,
+        "addresses",
+        1,
     )
 
 
@@ -1723,7 +1888,12 @@ def prepare_sends_where(send_type: SendType, other_conditions=None):
 
 
 def get_sends(
-    ledger_db, send_type: SendType = "all", cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    send_type: SendType = "all",
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns all the sends include Enhanced and MPMA sends
@@ -1731,6 +1901,7 @@ def get_sends(
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -1739,6 +1910,7 @@ def get_sends(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -1749,6 +1921,7 @@ def get_sends_by_block(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of a block
@@ -1757,6 +1930,7 @@ def get_sends_by_block(
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -1765,6 +1939,7 @@ def get_sends_by_block(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -1775,6 +1950,7 @@ def get_sends_by_transaction_hash(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of a block
@@ -1783,6 +1959,7 @@ def get_sends_by_transaction_hash(
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -1791,6 +1968,7 @@ def get_sends_by_transaction_hash(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -1801,6 +1979,7 @@ def get_sends_by_asset(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of an asset
@@ -1809,6 +1988,7 @@ def get_sends_by_asset(
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -1817,6 +1997,7 @@ def get_sends_by_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -1962,6 +2143,7 @@ def get_issuances(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns all the issuances
@@ -1969,6 +2151,7 @@ def get_issuances(
     :param str asset_events: Filter result by one or several comma separated asset events
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     where = prepare_issuance_where(asset_events, {"status": "valid"})
     return select_rows(
@@ -1978,6 +2161,7 @@ def get_issuances(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -1988,6 +2172,7 @@ def get_issuances_by_block(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the issuances of a block
@@ -1996,6 +2181,7 @@ def get_issuances_by_block(
     :param int cursor: The last index of the issuances to return
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     where = prepare_issuance_where(asset_events, {"block_index": block_index, "status": "valid"})
     return select_rows(
@@ -2005,6 +2191,7 @@ def get_issuances_by_block(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2023,6 +2210,7 @@ def get_issuances_by_asset(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the issuances of an asset
@@ -2031,6 +2219,7 @@ def get_issuances_by_asset(
     :param int cursor: The last index of the issuances to return
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     where = prepare_issuance_where(
         asset_events, {"asset": asset.upper(), "status": "valid"}
@@ -2044,6 +2233,7 @@ def get_issuances_by_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2054,6 +2244,7 @@ def get_issuances_by_address(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the issuances of an address
@@ -2062,6 +2253,7 @@ def get_issuances_by_address(
     :param int cursor: The last index of the issuances to return
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     where = prepare_issuance_where(asset_events, {"issuer": address, "status": "valid"})
     return select_rows(
@@ -2071,15 +2263,19 @@ def get_issuances_by_address(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
-def get_dispenses(ledger_db, cursor: int = None, limit: int = 100, offset: int = None):
+def get_dispenses(
+    ledger_db, cursor: int = None, limit: int = 100, offset: int = None, sort: str = None
+):
     """
     Returns all the dispenses
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. dispense_quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -2087,6 +2283,7 @@ def get_dispenses(ledger_db, cursor: int = None, limit: int = 100, offset: int =
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2106,7 +2303,12 @@ def get_dispense(ledger_db, tx_hash: str):
 
 
 def get_dispenses_by_block(
-    ledger_db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    block_index: int,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dispenses of a block
@@ -2114,6 +2316,7 @@ def get_dispenses_by_block(
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. dispense_quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -2122,11 +2325,17 @@ def get_dispenses_by_block(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
 def get_dispenses_by_transaction_hash(
-    ledger_db, tx_hash: str, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    tx_hash: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dispenses of a block
@@ -2134,6 +2343,7 @@ def get_dispenses_by_transaction_hash(
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. dispense_quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -2142,11 +2352,17 @@ def get_dispenses_by_transaction_hash(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
 def get_dispenses_by_dispenser(
-    ledger_db, dispenser_hash: str, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    dispenser_hash: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dispenses of a dispenser
@@ -2154,6 +2370,7 @@ def get_dispenses_by_dispenser(
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. dispense_quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -2162,11 +2379,17 @@ def get_dispenses_by_dispenser(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
 def get_dispenses_by_source(
-    ledger_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    address: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dispenses of a source
@@ -2174,6 +2397,7 @@ def get_dispenses_by_source(
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. dispense_quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -2182,11 +2406,17 @@ def get_dispenses_by_source(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
 def get_dispenses_by_destination(
-    ledger_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    address: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dispenses of a destination
@@ -2194,6 +2424,7 @@ def get_dispenses_by_destination(
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. dispense_quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -2202,6 +2433,7 @@ def get_dispenses_by_destination(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2212,6 +2444,7 @@ def get_dispenses_by_asset(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dispenses of an asset
@@ -2220,6 +2453,7 @@ def get_dispenses_by_asset(
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. dispense_quantity:desc)
     """
     where = {"asset": asset.upper()}
     if block_index:
@@ -2231,11 +2465,18 @@ def get_dispenses_by_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
 def get_dispenses_by_source_and_asset(
-    ledger_db, address: str, asset: str, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    address: str,
+    asset: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dispenses of an address and an asset
@@ -2244,6 +2485,7 @@ def get_dispenses_by_source_and_asset(
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. dispense_quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -2252,11 +2494,18 @@ def get_dispenses_by_source_and_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
 def get_dispenses_by_destination_and_asset(
-    ledger_db, address: str, asset: str, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    address: str,
+    asset: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dispenses of an address and an asset
@@ -2265,6 +2514,7 @@ def get_dispenses_by_destination_and_asset(
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. dispense_quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -2273,6 +2523,7 @@ def get_dispenses_by_destination_and_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2429,7 +2680,7 @@ def utxos_with_balances(state_db, utxos: str):
     return QueryResult(result, None, "balances", len(utxo_list))
 
 
-def get_balances_by_addresses(  # pylint: disable=unused-argument
+def get_balances_by_addresses(
     state_db,
     addresses: str,
     type: BalanceType = "all",  # pylint: disable=W0622
@@ -2437,7 +2688,6 @@ def get_balances_by_addresses(  # pylint: disable=unused-argument
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
-    sort: str = None,
 ):
     """
     Returns the balances of several addresses
@@ -2447,7 +2697,6 @@ def get_balances_by_addresses(  # pylint: disable=unused-argument
     :param str cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
-    :param str sort: The sort order of the balances to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     address_list = addresses.split(",")
     cursor_db = state_db.cursor()
@@ -2585,11 +2834,12 @@ def get_balances_by_address_and_asset(
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    asset_name = asset.upper()
     where = [
-        {"address": address, "asset": asset.upper(), "quantity__gt": 0},
-        {"address": address, "asset_longname": asset.upper(), "quantity__gt": 0},
-        {"utxo_address": address, "asset": asset.upper(), "quantity__gt": 0},
-        {"utxo_address": address, "asset_longname": asset.upper(), "quantity__gt": 0},
+        {"address": address, "asset": asset_name, "quantity__gt": 0},
+        {"address": address, "asset_longname": asset, "quantity__gt": 0},
+        {"utxo_address": address, "asset": asset_name, "quantity__gt": 0},
+        {"utxo_address": address, "asset_longname": asset, "quantity__gt": 0},
     ]
     if type == "utxo":
         where.pop(0)
@@ -2669,12 +2919,14 @@ def get_valid_broadcasts(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns all valid broadcasts
     :param int cursor: The last index of the broadcasts to return
     :param int limit: The maximum number of broadcasts to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. timestamp:desc)
     """
     return select_rows(
         ledger_db,
@@ -2684,6 +2936,7 @@ def get_valid_broadcasts(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2693,6 +2946,7 @@ def get_broadcasts_by_source(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the broadcasts of a source
@@ -2700,6 +2954,7 @@ def get_broadcasts_by_source(
     :param int cursor: The last index of the broadcasts to return
     :param int limit: The maximum number of broadcasts to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. timestamp:desc)
     """
     return select_rows(
         ledger_db,
@@ -2709,6 +2964,7 @@ def get_broadcasts_by_source(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2751,6 +3007,7 @@ def get_sends_by_address(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of an address
@@ -2759,6 +3016,7 @@ def get_sends_by_address(
     :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -2775,6 +3033,7 @@ def get_sends_by_address(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2786,6 +3045,7 @@ def get_sends_by_address_and_asset(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of an address and asset
@@ -2795,6 +3055,7 @@ def get_sends_by_address_and_asset(
     :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -2811,6 +3072,7 @@ def get_sends_by_address_and_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2821,6 +3083,7 @@ def get_receive_by_address(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the receives of an address
@@ -2829,6 +3092,7 @@ def get_receive_by_address(
     :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -2837,6 +3101,7 @@ def get_receive_by_address(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2848,6 +3113,7 @@ def get_receive_by_address_and_asset(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the receives of an address and asset
@@ -2857,6 +3123,7 @@ def get_receive_by_address_and_asset(
     :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -2865,6 +3132,7 @@ def get_receive_by_address_and_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2959,6 +3227,40 @@ def get_dispensers_by_address(
         "dispensers",
         where=prepare_dispenser_where(
             status, {"source": address}, exclude_with_oracle=exclude_with_oracle
+        ),
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+        sort=sort,
+        select=SELECT_DISPENSERS,
+    )
+
+
+def get_dispensers_by_origin(
+    state_db,
+    address: str,
+    status: DispenserStatus = "all",
+    exclude_with_oracle: bool = False,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
+):
+    """
+    Returns the dispensers whose origin is an address
+    :param str address: The dispenser origin address to return (e.g. $ADDRESS_1)
+    :param str status: The status of the dispensers to return
+    :param bool exclude_with_oracle: Whether to exclude dispensers with an oracle
+    :param int cursor: The last index of the dispensers to return
+    :param int limit: The maximum number of dispensers to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the dispensers to return (overrides the `cursor` parameter) (e.g. give_quantity:desc)
+    """
+    return select_rows(
+        state_db,
+        "dispensers",
+        where=prepare_dispenser_where(
+            status, {"origin": address}, exclude_with_oracle=exclude_with_oracle
         ),
         last_cursor=cursor,
         limit=limit,
@@ -3179,12 +3481,15 @@ def get_valid_assets_by_issuer_or_owner(
     )
 
 
-def get_dividends(ledger_db, cursor: int = None, limit: int = 100, offset: int = None):
+def get_dividends(
+    ledger_db, cursor: int = None, limit: int = 100, offset: int = None, sort: str = None
+):
     """
     Returns all the dividends
     :param int cursor: The last index of the dividend to return
     :param int limit: The maximum number of dividend to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity_per_unit:desc)
     """
     return select_rows(
         ledger_db,
@@ -3193,6 +3498,7 @@ def get_dividends(ledger_db, cursor: int = None, limit: int = 100, offset: int =
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -3209,7 +3515,12 @@ def get_dividend(ledger_db, dividend_hash: str):
 
 
 def get_dividends_by_asset(
-    ledger_db, asset: str, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    asset: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dividends of an asset
@@ -3217,6 +3528,7 @@ def get_dividends_by_asset(
     :param int cursor: The last index of the dividend to return
     :param int limit: The maximum number of dividend to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity_per_unit:desc)
     """
     return select_rows(
         ledger_db,
@@ -3225,11 +3537,17 @@ def get_dividends_by_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
 def get_dividends_distributed_by_address(
-    ledger_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    address: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dividends distributed by an address
@@ -3237,6 +3555,7 @@ def get_dividends_distributed_by_address(
     :param int cursor: The last index of the assets to return
     :param int limit: The maximum number of assets to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity_per_unit:desc)
     """
     return select_rows(
         ledger_db,
@@ -3245,6 +3564,7 @@ def get_dividends_distributed_by_address(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -3286,9 +3606,10 @@ def get_asset_balances(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the balances to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
+    asset_name = asset.upper()
     where = [
-        {"asset": asset.upper(), "quantity__gt": 0},
-        {"asset_longname": asset.upper(), "quantity__gt": 0},
+        {"asset": asset_name, "quantity__gt": 0},
+        {"asset_longname": asset, "quantity__gt": 0},
     ]
     if type == "utxo":
         where[0]["utxo__notnull"] = True
@@ -4510,11 +4831,11 @@ def get_pool_quote(state_db, asset1: str, asset2: str, quantity: int):
             book_orders_matched += 1
 
     if give_remaining > 0 and has_pool and sim_ri > 0 and sim_ro > 0:
-        pout = compute_pool_output(sim_ri, sim_ro, give_remaining, fee_bps)
+        pool_fill, pout = compute_pool_fill(sim_ri, sim_ro, give_remaining, fee_bps)
         if pout > 0:
             pool_output_total += pout
-            pool_input_total += give_remaining
-            give_remaining = 0
+            pool_input_total += pool_fill
+            give_remaining -= pool_fill
 
     total_output = pool_output_total + book_output
     if has_pool and give_asset == pool["asset_a"]:

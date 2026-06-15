@@ -177,7 +177,6 @@ SCENARIO = [
         "params": {
             "destination": "$ADDRESS_4",
             "exact_fee": 0,
-            "inputs_source": "$ADDRESS_1",
             "utxo_value": 10000,
         },
         "set_variables": {
@@ -295,7 +294,6 @@ SCENARIO = [
         "source": "$UTXO_MOVE_1_TX_HASH:0",
         "params": {
             "destination": "$ADDRESS_5",
-            "inputs_source": "$ADDRESS_4",
         },
         "set_variables": {
             "UTXO_DETACH_1_TX_HASH": "$TX_HASH",

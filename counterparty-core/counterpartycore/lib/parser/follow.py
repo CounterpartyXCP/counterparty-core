@@ -538,10 +538,18 @@ class RawMempoolParser(threading.Thread):
 
 
 class NotSupportedTransactionsCache(metaclass=helpers.SingletonMeta):
+    # Maximum number of tx hashes kept in memory and on disk. The cache only
+    # needs to cover transactions that may still reappear in the mempool;
+    # evicting a hash early is harmless (the tx is just re-parsed and
+    # re-added the next time it is seen), while an unbounded cache grows by
+    # every non-Counterparty transaction on the network (~50-120MB/day on
+    # mainnet) and is persisted across restarts, so it never resets.
+    MAX_SIZE = 1_000_000
+
     def __init__(self):
         # Use set for O(1) lookups instead of O(n) list
         self.not_suppported_txs = set()
-        # Keep a list for ordering (for backup/restore)
+        # Keep a list for ordering (for backup/restore and FIFO eviction)
         self._ordered_txs = []
         self.cache_path = os.path.join(
             config.CACHE_DIR, f"not_supported_tx_cache.{config.NETWORK_NAME}.txt"
@@ -551,15 +559,30 @@ class NotSupportedTransactionsCache(metaclass=helpers.SingletonMeta):
     def restore(self):
         if os.path.exists(self.cache_path):
             with open(self.cache_path, "r", encoding="utf-8") as f:
-                self._ordered_txs = [line.strip() for line in f]
-                self.not_suppported_txs = set(self._ordered_txs)
+                lines = [stripped for line in f if (stripped := line.strip())]
+            # Deduplicate (the file is append-only between compactions),
+            # keeping the most recent occurrence, then keep only the last
+            # MAX_SIZE entries.
+            seen = set()
+            deduped_reversed = []
+            for tx_hash in reversed(lines):
+                if tx_hash not in seen:
+                    seen.add(tx_hash)
+                    deduped_reversed.append(tx_hash)
+            deduped_reversed.reverse()
+            self._ordered_txs = deduped_reversed[-self.MAX_SIZE :]
+            self.not_suppported_txs = set(self._ordered_txs)
+            # Rewrite once at startup: compacts the file and guarantees the
+            # trailing-newline format that add() relies on when appending
+            # (legacy files were written without a trailing newline).
+            self.backup()
             logger.debug(
                 "Restored %d not supported transactions from cache", len(self.not_suppported_txs)
             )
 
     def backup(self):
         with open(self.cache_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(self._ordered_txs))
+            f.writelines(tx_hash + "\n" for tx_hash in self._ordered_txs)
         logger.trace(
             f"Backed up {len(self.not_suppported_txs)} not supported transactions to cache"
         )
@@ -571,11 +594,25 @@ class NotSupportedTransactionsCache(metaclass=helpers.SingletonMeta):
             os.remove(self.cache_path)
 
     def add(self, more_not_supported_txs):
+        new_txs = []
         for tx in more_not_supported_txs:
             if tx not in self.not_suppported_txs:
                 self.not_suppported_txs.add(tx)
                 self._ordered_txs.append(tx)
-        self.backup()
+                new_txs.append(tx)
+        if not new_txs:
+            return
+        if len(self._ordered_txs) > self.MAX_SIZE:
+            # Evict oldest entries and compact the file.
+            evicted = self._ordered_txs[: -self.MAX_SIZE]
+            self._ordered_txs = self._ordered_txs[-self.MAX_SIZE :]
+            for tx_hash in evicted:
+                self.not_suppported_txs.discard(tx_hash)
+            self.backup()
+        else:
+            # Append only the new hashes instead of rewriting the whole file.
+            with open(self.cache_path, "a", encoding="utf-8") as f:
+                f.writelines(tx_hash + "\n" for tx_hash in new_txs)
 
     def is_not_supported(self, tx_hash):
         return tx_hash in self.not_suppported_txs

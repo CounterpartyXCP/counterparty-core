@@ -3,7 +3,7 @@ import struct
 import cbor2
 import pytest
 from bitcoin.core import VarIntSerializer
-from counterpartycore.lib import config
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.messages import broadcast
 from counterpartycore.lib.utils import hashcodec
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
@@ -105,6 +105,97 @@ def test_validate(ledger_db, defaults, current_block_index):
         "OPTIONS XCP",
         "",
     ) == ["options not an integer"]
+
+
+@pytest.mark.parametrize(
+    ("param_name", "param_value", "expected_problem"),
+    [
+        ("timestamp", "1588000000", "timestamp must be an integer"),
+        ("value", "1", "value must be numeric"),
+        ("fee_fraction", "5000000", "fee_fraction must be numeric"),
+    ],
+)
+def test_compose_rejects_invalid_numeric_parameters(
+    ledger_db, defaults, param_name, param_value, expected_problem
+):
+    # Type validation lives in compose() (the API path), not validate() (the
+    # consensus parse path). Non-numeric inputs must surface as a clean
+    # ComposeError rather than raising a TypeError in the arithmetic/comparisons.
+    params = {
+        "timestamp": 1588000000,
+        "value": 1,
+        "fee_fraction": defaults["fee_multiplier"],
+    }
+    params[param_name] = param_value
+
+    with pytest.raises(exceptions.ComposeError, match=expected_problem):
+        broadcast.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            params["timestamp"],
+            params["value"],
+            params["fee_fraction"],
+            "Unit Test",
+            "",
+        )
+
+
+@pytest.mark.parametrize(
+    ("param_name", "param_value", "expected_problem"),
+    [
+        ("value", float("nan"), "value must be finite"),
+        ("value", float("inf"), "value must be finite"),
+        ("fee_fraction", float("nan"), "fee_fraction must be finite"),
+        ("fee_fraction", float("inf"), "fee_fraction must be finite"),
+    ],
+)
+def test_compose_rejects_non_finite_numeric_parameters(
+    ledger_db, defaults, param_name, param_value, expected_problem
+):
+    # Non-finite floats (NaN / inf) pass the isinstance type checks but a
+    # non-finite fee_fraction raises an uncaught OverflowError/ValueError at
+    # `int(fee_fraction * 1e8)`, and a non-finite value gets packed as a
+    # meaningless payload -- both surfacing as an internal error instead of a
+    # clean ComposeError. Guarded in compose() (API path), not validate()
+    # (consensus parse path). Runs without skip_validation since the guard is
+    # reached before validate().
+    params = {
+        "timestamp": 1588000000,
+        "value": 1,
+        "fee_fraction": defaults["fee_multiplier"],
+    }
+    params[param_name] = param_value
+
+    with pytest.raises(exceptions.ComposeError, match=expected_problem):
+        broadcast.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            params["timestamp"],
+            params["value"],
+            params["fee_fraction"],
+            "Unit Test",
+            "",
+        )
+
+
+def test_validate_does_not_reject_non_integer_consensus_values(ledger_db, defaults):
+    # Consensus-safety guard: validate() must NOT reject a non-integer timestamp
+    # or fee_fraction_int. After `taproot_support`, broadcasts are CBOR-decoded
+    # (load_cbor), so parse() can legitimately reach validate() with a float
+    # timestamp; rejecting it here would flip valid->invalid and change the
+    # stored status without a protocol change.
+    assert (
+        broadcast.validate(
+            ledger_db,
+            defaults["addresses"][0],
+            1588000000.0,  # float timestamp, as a crafted CBOR broadcast could carry
+            1,
+            defaults["fee_multiplier"],
+            "Unit Test",
+            "",
+        )
+        == []
+    )
 
 
 def test_compose(ledger_db, defaults):

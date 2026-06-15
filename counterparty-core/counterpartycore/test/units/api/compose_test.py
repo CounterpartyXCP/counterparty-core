@@ -2,6 +2,7 @@ import pytest
 from counterpartycore.lib import exceptions, ledger
 from counterpartycore.lib.api import compose
 from counterpartycore.lib.messages import pooldeposit
+from counterpartycore.lib.utils import script
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 # ============================================================================
@@ -198,6 +199,36 @@ def test_compose_dispense(apiv2_client, defaults, ledger_db):
         assert response.status_code in [200, 400]
 
 
+def test_compose_dispense_verbose_params_use_api_names(monkeypatch, ledger_db, defaults):
+    """Test compose_dispense verbose params use public API field names."""
+
+    def mock_compose_transaction(db, name, params, construct_params):
+        assert db == ledger_db
+        assert name == "dispense"
+        assert construct_params == {"verbose": True}
+        return {
+            "rawtransaction": "00",
+            "params": params | {"skip_validation": False},
+            "name": "dispense",
+        }
+
+    monkeypatch.setattr(compose.composer, "compose_transaction", mock_compose_transaction)
+
+    result = compose.compose_dispense(
+        ledger_db,
+        defaults["addresses"][0],
+        defaults["addresses"][5],
+        1000,
+        verbose=True,
+    )
+
+    assert result["params"]["address"] == defaults["addresses"][0]
+    assert result["params"]["dispenser"] == defaults["addresses"][5]
+    assert "source" not in result["params"]
+    assert "destination" not in result["params"]
+    assert result["params"]["quantity_normalized"] == "0.00001000"
+
+
 def test_compose_sweep(apiv2_client, defaults):
     """Test compose_sweep function via API."""
     address = defaults["addresses"][0]
@@ -206,6 +237,18 @@ def test_compose_sweep(apiv2_client, defaults):
         f"/v2/addresses/{address}/compose/sweep?destination={destination}&flags=7&memo=FFFF"
     )
     assert response.status_code in [200, 400]
+
+
+def test_compose_sweep_empty_address_error(apiv2_client, defaults):
+    """Test compose_sweep returns a useful error for an empty source address."""
+    address = defaults["addresses"][7]
+    destination = defaults["addresses"][1]
+    response = apiv2_client.get(
+        f"/v2/addresses/{address}/compose/sweep?destination={destination}&flags=3&memo="
+    )
+
+    assert response.status_code == 400
+    assert "address has no balances or asset ownerships to sweep" in response.json["error"]
 
 
 def test_get_sweep_estimate_xcp_fee(apiv2_client, defaults):
@@ -302,6 +345,73 @@ def test_get_pool_withdraw_estimate_xcp_fee(apiv2_client, defaults):
     assert "result" in response.json
     result = response.json["result"]
     assert result is None or (isinstance(result, int) and result >= 0)
+
+
+def test_compose_responses_include_xcp_fee(ledger_db, defaults, monkeypatch):
+    def fake_compose_transaction(db, name, params, construct_params):  # noqa: ARG001
+        return {
+            "name": name,
+            "params": params,
+            "rawtransaction": "00",
+        }
+
+    monkeypatch.setattr(compose.composer, "compose_transaction", fake_compose_transaction)
+    monkeypatch.setattr(compose.messages.dividend, "get_estimate_xcp_fee", lambda db, asset: 11)
+    monkeypatch.setattr(
+        compose.messages.sweep, "get_total_fee", lambda db, address, block_index, flags=None: 22
+    )
+    monkeypatch.setattr(compose.gas, "get_transaction_fee", lambda db, tx_id, block_index: tx_id)
+
+    assert (
+        compose.compose_dividend(
+            ledger_db,
+            defaults["addresses"][0],
+            quantity_per_unit=1,
+            asset="DIVISIBLE",
+            dividend_asset="XCP",
+        )["xcp_fee"]
+        == 11
+    )
+    assert (
+        compose.compose_sweep(
+            ledger_db,
+            defaults["addresses"][0],
+            destination=defaults["addresses"][1],
+            flags=1,
+            memo="",
+        )["xcp_fee"]
+        == 22
+    )
+    assert (
+        compose.compose_attach(
+            ledger_db,
+            defaults["addresses"][0],
+            asset="XCP",
+            quantity=1,
+        )["xcp_fee"]
+        == compose.UTXO_ID
+    )
+    assert (
+        compose.compose_pooldeposit(
+            ledger_db,
+            defaults["addresses"][0],
+            asset_a="XCP",
+            asset_b="DIVISIBLE",
+            quantity_a=1,
+            quantity_b=1,
+        )["xcp_fee"]
+        == 120
+    )
+    assert (
+        compose.compose_poolwithdraw(
+            ledger_db,
+            defaults["addresses"][0],
+            asset_a="XCP",
+            asset_b="DIVISIBLE",
+            quantity=1,
+        )["xcp_fee"]
+        == 121
+    )
 
 
 def test_compose_pooldeposit_with_lp_asset(apiv2_client, defaults):
@@ -416,6 +526,72 @@ def test_compose_detach(ledger_db, defaults):
         )
     except exceptions.ComposeError:
         pass  # Expected to fail on validation
+
+
+def test_compose_multiple_detach_route(apiv2_client, defaults, monkeypatch):
+    txid_1 = "a" * 64
+    txid_2 = "b" * 64
+    script_pub_key = "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"
+    utxos = f"{txid_1}:0:546:{script_pub_key},{txid_2}:1:546:{script_pub_key}"
+
+    def fake_compose_transaction(db, name, params, construct_params):  # noqa: ARG001
+        return {
+            "name": name,
+            "params": params,
+            "construct_params": construct_params,
+        }
+
+    monkeypatch.setattr(compose.composer, "compose_transaction", fake_compose_transaction)
+
+    result = apiv2_client.get(
+        f"/v2/compose/detach?utxos={utxos}&destination={defaults['addresses'][0]}"
+    ).json["result"]
+
+    assert result["name"] == "detach"
+    assert result["params"] == {
+        "source": f"{txid_1}:0",
+        "destination": defaults["addresses"][0],
+    }
+    assert result["construct_params"]["inputs_set"] == utxos
+    assert result["construct_params"]["use_all_inputs_set"] is True
+    assert result["construct_params"]["use_utxos_with_balances"] is True
+
+
+def test_compose_multiple_detach_rejects_inputs_set(ledger_db):
+    txid = "a" * 64
+    utxo = f"{txid}:0"
+    with pytest.raises(exceptions.ComposeError, match="cannot be combined"):
+        compose.compose_detach_by_utxos(ledger_db, utxos=utxo, inputs_set=utxo)
+
+
+def test_compose_multiple_detach_includes_all_utxos(ledger_db, defaults):
+    """End-to-end (no mock): every provided UTXO is pulled in as an input and
+    the balance-bearing UTXO is selected as the validation source."""
+    script_pub_key = "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"
+    utxo_with_balance = ledger_db.execute("""
+        SELECT utxo FROM balances
+        WHERE quantity > 0 AND utxo IS NOT NULL
+        ORDER BY rowid DESC LIMIT 1
+    """).fetchone()["utxo"]
+    # A UTXO without any balance, listed first to ensure the source-selection
+    # loop skips it and picks the balance-bearing UTXO that follows.
+    extra_utxo = f"{'a' * 64}:1"
+    utxos = f"{extra_utxo}:546:{script_pub_key},{utxo_with_balance}:546:{script_pub_key}"
+
+    result = compose.compose_detach_by_utxos(
+        ledger_db,
+        utxos=utxos,
+        destination=defaults["addresses"][1],
+        verbose=True,
+        disable_utxo_locks=True,
+        exact_fee=0,
+    )
+
+    # the balance-bearing UTXO (second in the list) is chosen as source
+    assert result["name"] == "detach"
+    assert result["params"]["source"] == utxo_with_balance
+    # both provided UTXOs are forced in as inputs by `use_all_inputs_set`
+    assert len(result["inputs_values"]) == 2
 
 
 def test_compose_movetoutxo(ledger_db, defaults):
@@ -1662,6 +1838,13 @@ def test_info_by_tx_hash_invalid(apiv2_client):
     assert result.status_code in [400, 404]
 
 
+def test_bitcoin_info_by_tx_hash_route_invalid(apiv2_client):
+    """Test bitcoin info_by_tx_hash route with invalid transaction hash."""
+    invalid_tx_hash = "invalid_hash"
+    result = apiv2_client.get(f"/v2/bitcoin/transactions/{invalid_tx_hash}/info")
+    assert result.status_code == 400
+
+
 def test_info_invalid_rawtransaction(apiv2_client):
     """Test info with invalid raw transaction."""
     result = apiv2_client.get("/v2/transactions/info?rawtransaction=invalid")
@@ -1695,3 +1878,31 @@ def test_info_rawtransaction_without_data(apiv2_client):
     result = apiv2_client.get(f"/v2/transactions/info?rawtransaction={simple_tx}")
     # This should parse but return None for data
     assert result.status_code in [200, 400]
+
+
+def test_info_btc_only_rawtransaction_without_prevout(ledger_db, monkeypatch):
+    """BTC-only raw transactions should still expose output info if prevouts are unavailable."""
+    rawtransaction = (
+        "02000000000101bfbeaeb997dcc7b5038687e03b378ed69dd708629a13f915c9bed670f6fc83f3"
+        "01000000160014dfc964bf32517b3ca8fea9227c5756c887e911c3ffffffff02e80300000000"
+        "00001600146fe470998ced5d0f475546787d5cfefdfb7365b7d547000000000000160014df"
+        "c964bf32517b3ca8fea9227c5756c887e911c302000000000000"
+    )
+
+    def get_tx_info_raises(*args, **kwargs):
+        raise exceptions.BitcoindRPCError("prevout not available")
+
+    monkeypatch.setattr(compose.gettxinfo, "get_tx_info", get_tx_info_raises)
+
+    result = compose.info(ledger_db, rawtransaction, block_index=800000)
+
+    assert result["source"] == script.script_to_address(
+        "0014dfc964bf32517b3ca8fea9227c5756c887e911c3"
+    )
+    assert result["destination"] == script.script_to_address(
+        "00146fe470998ced5d0f475546787d5cfefdfb7365b7"
+    )
+    assert result["btc_amount"] == 1000
+    assert result["fee"] is None
+    assert result["data"] is None
+    assert result["unpacked_data"] is None

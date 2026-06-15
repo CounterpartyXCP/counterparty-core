@@ -6,6 +6,13 @@ from unittest.mock import MagicMock
 from counterpartycore.lib.api import wsgi
 
 
+def test_format_bind_address():
+    assert wsgi.format_bind_address("127.0.0.1", 4000) == "127.0.0.1:4000"
+    assert wsgi.format_bind_address("localhost", 4000) == "localhost:4000"
+    assert wsgi.format_bind_address("::1", 4000) == "[::1]:4000"
+    assert wsgi.format_bind_address("::", 4000) == "[::]:4000"
+
+
 def test_lazy_logger(caplog, test_helpers):
     lazy_logger = wsgi.LazyLogger()
     assert lazy_logger.last_message is None
@@ -243,3 +250,12 @@ def test_gunicorn_application_run_and_stop(monkeypatch):
     app.stop()
     assert app.arbiter.killed is True
     assert server_ready_value.value == 2
+
+
+def test_gunicorn_application_uses_ipv6_bind(monkeypatch):
+    monkeypatch.setattr(wsgi.config, "API_HOST", "::1")
+    monkeypatch.setattr(wsgi.config, "API_PORT", 4000)
+
+    app = wsgi.GunicornApplication(lambda *_args, **_kwargs: None)
+
+    assert app.options["bind"] == "[::1]:4000"

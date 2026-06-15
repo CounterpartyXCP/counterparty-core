@@ -246,6 +246,19 @@ def test_migration_0013_rollback(state_db):
         assert index_exists(state_db, idx), f"Index {idx} should exist after re-apply"
 
 
+def test_migration_0015_rollback(state_db):
+    """Test rollback of 0015.add_dispenser_origin_index migration."""
+    assert index_exists(state_db, "dispensers_origin_idx")
+
+    dbbuilder.rollback_migration(state_db, "0015.add_dispenser_origin_index")
+
+    assert not index_exists(state_db, "dispensers_origin_idx")
+
+    dbbuilder.apply_migration(state_db, "0015.add_dispenser_origin_index")
+
+    assert index_exists(state_db, "dispensers_origin_idx")
+
+
 # =============================================================================
 # Tests for consolidated tables
 # =============================================================================

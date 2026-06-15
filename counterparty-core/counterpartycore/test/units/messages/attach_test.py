@@ -50,6 +50,16 @@ def test_compose(ledger_db, defaults):
         b"eXCP|100|",
     )
 
+    with pytest.raises(
+        exceptions.ComposeError, match="utxo_value must be a valid bitcoin output amount"
+    ):
+        attach.compose(ledger_db, address_0, "XCP", 100, -1)
+
+    with pytest.raises(
+        exceptions.ComposeError, match="utxo_value must be a valid bitcoin output amount"
+    ):
+        attach.compose(ledger_db, address_0, "XCP", 100, 21_000_000 * config.UNIT + 1)
+
     with pytest.raises(exceptions.ComposeError, match="invalid source address"):
         attach.compose(ledger_db, DUMMY_UTXO, "XCP", 100)
 

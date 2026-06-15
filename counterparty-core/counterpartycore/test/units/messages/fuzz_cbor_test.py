@@ -29,6 +29,8 @@ from counterpartycore.lib.messages.versions import enhancedsend
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+pytestmark = pytest.mark.slow
+
 # Generate values with mixed valid / adversarial types. CBOR can carry any
 # of these; struct format would have rejected most.
 any_scalar = st.one_of(

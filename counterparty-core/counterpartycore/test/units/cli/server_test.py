@@ -85,6 +85,22 @@ def test_ensure_backend_is_up_force_skips(monkeypatch):
     mock_getblockcount.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    ("catch_up_mode", "database_exists", "expected"),
+    [
+        ("normal", False, False),
+        ("bootstrap", False, True),
+        ("bootstrap", True, False),
+        ("bootstrap-once", False, True),
+        ("bootstrap-once", True, False),
+        ("bootstrap-always", False, True),
+        ("bootstrap-always", True, True),
+    ],
+)
+def test_should_bootstrap_database(catch_up_mode, database_exists, expected):
+    assert server.should_bootstrap_database(catch_up_mode, database_exists) is expected
+
+
 def test_generate_move_random_hash(monkeypatch):
     monkeypatch.setattr(server.os, "urandom", lambda n: b"\x01" * n)
 
