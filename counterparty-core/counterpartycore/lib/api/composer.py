@@ -453,7 +453,7 @@ def generate_envelope_script(data, construct_params):
     ] and construct_params.get("inscription", False):
         message_data = cbor2.loads(message)
         content = message_data.pop()
-        if content is not None and len(content) > 0:
+        if content is not None and isinstance(content, (bytes, str)) and len(content) > 0:
             envelope_script = generate_ordinal_envelope_script(
                 message_data, message_type_id, content, source_pubkey
             )

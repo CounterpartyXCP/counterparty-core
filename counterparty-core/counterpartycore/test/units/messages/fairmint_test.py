@@ -1,7 +1,16 @@
 import pytest
-from counterpartycore.lib import exceptions
-from counterpartycore.lib.messages import fairmint
+from counterpartycore.lib import exceptions, ledger
+from counterpartycore.lib.messages import fairmint, fairminter
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
+
+
+def _unique_fairmint_tx(blockchain_mock, ledger_db, source, tx_index_counter):
+    """Return a tx dict with a fresh (tx_index, tx_hash) pair for each fairmint.parse call."""
+    tx = dict(blockchain_mock.dummy_tx(ledger_db, source))
+    tx["tx_index"] = tx_index_counter[0]
+    tx_index_counter[0] += 1
+    tx["tx_hash"] = blockchain_mock.get_dummy_tx_hash(source)
+    return tx
 
 
 def test_validate(ledger_db, defaults):
@@ -391,3 +400,69 @@ def test_parse_escrowed_fairmint(
             },
         ],
     )
+
+
+def test_hard_cap_closes_non_pool_fairminter_before_soft_cap_deadline(
+    ledger_db, blockchain_mock, defaults
+):
+    """Non-pool fairminters close when hard cap is hit before the soft-cap deadline."""
+    source = defaults["addresses"][1]
+    asset = "QAIDFAIRMIN"
+    fm = ledger.issuances.get_fairminter_by_asset(ledger_db, asset)
+    assert fm["status"] == "open"
+    assert (fm.get("pool_quantity") or 0) == 0
+
+    next_tx_index = [
+        ledger_db.execute(
+            "SELECT COALESCE(MAX(tx_index), -1) + 1 AS idx FROM transactions"
+        ).fetchone()["idx"]
+    ]
+    for _ in range(2):
+        tx = _unique_fairmint_tx(blockchain_mock, ledger_db, source, next_tx_index)
+        _, _, data = fairmint.compose(ledger_db, source, asset, 10)
+        fairmint.parse(ledger_db, tx, data[1:])
+
+    tx = _unique_fairmint_tx(blockchain_mock, ledger_db, source, next_tx_index)
+    _, _, data = fairmint.compose(ledger_db, source, asset, 10)
+    fairmint.parse(ledger_db, tx, data[1:])
+
+    fm = ledger.issuances.get_fairminter_by_asset(ledger_db, asset)
+    assert fm["status"] == "closed"
+    # non-pool: status closed inline; soft_cap_deadline_block stays at its original value
+    assert fm["soft_cap_deadline_block"] == 400000
+
+
+def test_hard_cap_keeps_pool_fairminter_open_before_deadline(
+    ledger_db, blockchain_mock, defaults, current_block_index
+):
+    """Pool fairminters stay open until after_block at the advanced deadline."""
+    source = defaults["addresses"][0]
+    deadline = current_block_index + 100
+    tx = blockchain_mock.dummy_tx(ledger_db, source, use_first_tx=True)
+    _, _, data = fairminter.compose(
+        ledger_db,
+        source,
+        "HCAPPOOL",
+        price=1,
+        quantity_by_price=1,
+        hard_cap=100,
+        soft_cap=60,
+        soft_cap_deadline_block=deadline,
+        pool_quantity=40,
+        lp_asset="A95428956661682177",
+        start_block=0,
+    )
+    fairminter.parse(ledger_db, tx, data[1:])
+
+    next_tx_index = [
+        ledger_db.execute(
+            "SELECT COALESCE(MAX(tx_index), -1) + 1 AS idx FROM transactions"
+        ).fetchone()["idx"]
+    ]
+    tx = _unique_fairmint_tx(blockchain_mock, ledger_db, source, next_tx_index)
+    _, _, data = fairmint.compose(ledger_db, source, "HCAPPOOL", 60)
+    fairmint.parse(ledger_db, tx, data[1:])
+
+    fm = ledger.issuances.get_fairminter_by_asset(ledger_db, "HCAPPOOL")
+    assert fm["status"] == "open"
+    assert fm["soft_cap_deadline_block"] == tx["block_index"]

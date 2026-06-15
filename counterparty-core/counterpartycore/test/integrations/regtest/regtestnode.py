@@ -1147,25 +1147,19 @@ class RegtestNode:
         raw_transaction_2 = result["result"]["rawtransaction"]
 
         # sign transaction
-        # format the amount as an exact BTC decimal string — going through
-        # float would introduce IEEE-754 rounding that breaks the SegWit
-        # signature (BIP143 commits to the input amount)
-        quot, rem = divmod(value_1, config.UNIT)
-        prevtx = [
-            {
-                "txid": txid_1,
-                "vout": vout_1,
-                "scriptPubKey": pubkey_source,
-                "amount": D(f"{quot}.{rem:08d}"),
-            }
-        ]
-        prevtx = json.dumps(prevtx, default=str)
+        # tx1 was already broadcast above, so the wallet sees its change output
+        # (paid to source_address, a wallet address) as an unconfirmed UTXO with
+        # the exact amount. Sign from that view rather than passing a `prevtx`
+        # hint: serializing the amount through JSON (float -> IEEE-754 rounding,
+        # or Decimal -> a quoted string Core does not honor) corrupts the BIP143
+        # input amount and produces a signature that verifies offline but is
+        # rejected on broadcast (mandatory-script-verify-flag-failed / NULLFAIL).
         signed_transaction_2_json = json.loads(
-            self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_2, prevtx).strip()
+            self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_2).strip()
         )
         print(
             f"Sign tx2: complete={signed_transaction_2_json.get('complete')} "
-            f"errors={signed_transaction_2_json.get('errors')} prevtx={prevtx}"
+            f"errors={signed_transaction_2_json.get('errors')}"
         )
         assert signed_transaction_2_json["complete"], (
             f"tx2 sign incomplete: {signed_transaction_2_json.get('errors')}"
@@ -1206,22 +1200,15 @@ class RegtestNode:
         raw_transaction_3 = result["result"]["rawtransaction"]
 
         # sign transaction
-        quot, rem = divmod(value_2, config.UNIT)
-        prevtx = [
-            {
-                "txid": txid_2,
-                "vout": 0,
-                "scriptPubKey": pubkey_new_address,
-                "amount": D(f"{quot}.{rem:08d}"),
-            }
-        ]
-        prevtx = json.dumps(prevtx, default=str)
+        # tx2 was already broadcast above; the new_address change output it pays
+        # is a wallet UTXO, so sign from the wallet's own view (see tx2 note on
+        # why a JSON-serialized `prevtx` amount breaks the SegWit signature).
         signed_transaction_3_json = json.loads(
-            self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_3, prevtx).strip()
+            self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_3).strip()
         )
         print(
             f"Sign tx3: complete={signed_transaction_3_json.get('complete')} "
-            f"errors={signed_transaction_3_json.get('errors')} prevtx={prevtx}"
+            f"errors={signed_transaction_3_json.get('errors')}"
         )
         assert signed_transaction_3_json["complete"], (
             f"tx3 sign incomplete: {signed_transaction_3_json.get('errors')}"
