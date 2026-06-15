@@ -294,6 +294,15 @@ def select_rows(
         and "COUNT(*)" not in select
     ):
         select += ", NULLIF(destination, '') AS destination"
+    # `credits` and `debits` rows carry no natural unique key: several identical
+    # rows can be written within a single transaction (e.g. an MPMA send or a
+    # dividend crediting the same address+asset more than once). The rows are
+    # then byte-identical and only distinguishable by their (stripped) rowid, so
+    # consumers replicating the API silently collapse them. Expose the row's
+    # stable unique id under a non-stripped name so they can be told apart.
+    # See https://github.com/CounterpartyXCP/counterparty-core/issues/3320
+    if table in ["credits", "debits"] and "COUNT(*)" not in select:
+        select += f", rowid AS {table[:-1]}_index"
 
     query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
     query_count = f"SELECT {select} FROM {table} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608

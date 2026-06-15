@@ -42,7 +42,7 @@ counterparty-server start
 - Fix stale-row lookup in `get_fairminters_by_soft_cap_deadline` (was returning superseded rows)
 - Fix `connection_count` leak in `APSWConnectionPool` causing `MAINPROCESS_POOL` to exhaust over time (per-request threads in APIv1 left cached connections counted forever)
 
-## API
+- Expose a unique `credit_index` / `debit_index` field on `credits` / `debits` rows. Identical rows can be written within a single transaction (e.g. an MPMA send or a dividend crediting the same address+asset more than once), making them byte-identical and indistinguishable to API consumers; the new field carries the row's stable unique id so they can be told apart (#3320)
 
 - Expose `lp_asset` field in `compose_fairminter` endpoint; extend `fairminters` table with `pool_quantity` and `lp_asset` columns
 
