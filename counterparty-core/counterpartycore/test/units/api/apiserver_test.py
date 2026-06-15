@@ -1,3 +1,4 @@
+import json
 from unittest.mock import Mock
 
 import pytest
@@ -21,12 +22,31 @@ def test_apiserver_root(apiv2_client, current_block_index):
             "backend_height": ledger.currentstate.CurrentState().current_backend_height(),
             "counterparty_height": current_block_index,
             "ledger_state": "Starting",
-            "documentation": "https://counterpartycore.docs.apiary.io/",
+            "documentation": "https://apidocs.counterparty.io/",
             "routes": "http://localhost/v2/routes",
-            "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
+            "openapi": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/openapi.json",
             "current_commit": helpers.get_current_commit_hash(),
         }
     }
+
+
+def test_apiserver_openapi_spec(apiv2_client):
+    response = apiv2_client.get("/v2/openapi.json")
+    assert response.status_code == 200
+    assert response.content_type.startswith("application/json")
+    spec = response.json
+    assert spec["openapi"].startswith("3.1")
+    assert spec["info"]["title"] == "Counterparty Core API"
+    assert spec["info"]["version"] == config.VERSION_STRING
+    assert "/v2/blocks" in spec["paths"]
+    # examples must contain no regtest data. Assert on a count (int == int) rather
+    # than `"bcrt1" not in json.dumps(spec)`: on failure the latter makes pytest run
+    # difflib over the ~800 KB spec string, which effectively hangs the whole suite.
+    # If this fails, regenerate the doc and run genapidoc.convert_doc_to_mainnet().
+    assert json.dumps(spec).count("bcrt1") == 0, (
+        "openapi.json contains regtest (bcrt1) data; scrub it with "
+        "genapidoc.convert_doc_to_mainnet()"
+    )
 
 
 def _sort_arg(route):
@@ -510,9 +530,9 @@ def test_ledger_state(apiv2_client, current_block_index, ledger_db):
             "backend_height": ledger.currentstate.CurrentState().current_backend_height(),
             "counterparty_height": current_block_index,
             "ledger_state": "Rolling Back",
-            "documentation": "https://counterpartycore.docs.apiary.io/",
+            "documentation": "https://apidocs.counterparty.io/",
             "routes": "http://localhost/v2/routes",
-            "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
+            "openapi": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/openapi.json",
             "current_commit": helpers.get_current_commit_hash(),
         }
     }
@@ -528,9 +548,9 @@ def test_ledger_state(apiv2_client, current_block_index, ledger_db):
             "backend_height": ledger.currentstate.CurrentState().current_backend_height(),
             "counterparty_height": current_block_index,
             "ledger_state": "Reparsing",
-            "documentation": "https://counterpartycore.docs.apiary.io/",
+            "documentation": "https://apidocs.counterparty.io/",
             "routes": "http://localhost/v2/routes",
-            "blueprint": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/apiary.apib",
+            "openapi": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/openapi.json",
             "current_commit": helpers.get_current_commit_hash(),
         }
     }

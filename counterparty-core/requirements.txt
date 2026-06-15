@@ -35,7 +35,7 @@ waitress==3.0.1
 hypothesis==6.116.0
 bitcoin-utils==0.7.1
 pyzstd==0.16.2
-dredd_hooks==0.2.0
+schemathesis==4.21.4
 sh==2.0.6
 PyYAML==6.0.2
 multiprocessing-logging==0.3.4

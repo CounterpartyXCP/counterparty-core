@@ -71,7 +71,6 @@ jobs:
           sudo cp bitcoin-28.0/bin/bitcoin-cli /usr/local/bin/bitcoin-cli
           sudo cp bitcoin-28.0/bin/bitcoind /usr/local/bin/bitcoind
           sudo cp bitcoin-28.0/bin/bitcoin-wallet /usr/local/bin/bitcoin-wallet
-          npm install dredd --global
           git clone https://github.com/mempool/electrs && cd electrs
           rustup toolchain install nightly
           cargo +nightly update
@@ -92,6 +91,13 @@ jobs:
           if [ "${{ !inputs.no_cov_report }}" = "true" ]; then
             mv .coverage ../
           fi
+
+      - name: Upload generated OpenAPI spec
+        if: inputs.test-path == 'integrations/regtest/scenarios_test.py'
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-spec
+          path: openapi.json
 
       - name: Save integration cache
         if: always() && inputs.integration_cache_network != ''

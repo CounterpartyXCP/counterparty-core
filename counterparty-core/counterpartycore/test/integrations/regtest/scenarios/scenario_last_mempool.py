@@ -1,5 +1,5 @@
 SCENARIO = [
-    # open order for dredd Cancel test
+    # open order for the API contract-test Cancel example
     {
         "title": "Open Sell UTXOASSET for BTC order",
         "transaction": "order",
@@ -14,7 +14,7 @@ SCENARIO = [
             "exclude_utxos_with_balances": True,
         },
     },
-    # order match for dredd test
+    # order match for the API contract-test examples
     {
         "title": "Open Sell UTXOASSET for BTC order",
         "transaction": "order",
@@ -29,7 +29,7 @@ SCENARIO = [
             "exclude_utxos_with_balances": True,
         },
     },
-    # fairmint for dredd test
+    # fairmint for the API contract-test examples
     {
         "title": "Create fairminter OPENFAIR",
         "transaction": "fairminter",

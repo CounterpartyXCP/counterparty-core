@@ -28,10 +28,14 @@ jobs:
         pip install --upgrade pylint pylint-sarif-unofficial
         cd counterparty-rs && pip install -e . && cd ..
         cd counterparty-core && pip install -e . && cd ..
+        # pylint2sarif (via python_jsonschema_objects) breaks with the
+        # jsonschema>=4.18 resolver that schemathesis pulls in; pin it back
+        # for this scan-only environment
+        pip install "jsonschema<4.18"
     - name: Analysing the code with pylint
       run: |
         pylint2sarif $(git ls-files '*.py' | grep -v counterparty-rs/tests/ | grep -v counterparty-core/counterpartycore/test/ | grep -v counterparty-core/tools/) || true
     - name: Upload SARIF
-      uses: github/codeql-action/upload-sarif/@v2
+      uses: github/codeql-action/upload-sarif/@v3
       with:
         sarif_file: pylint.sarif
