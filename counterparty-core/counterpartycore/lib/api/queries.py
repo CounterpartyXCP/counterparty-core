@@ -21,7 +21,7 @@ from counterpartycore.lib.ledger.markets import (
     sort_pair,
 )
 from counterpartycore.lib.utils import hashcodec
-from counterpartycore.lib.utils.helpers import divide
+from counterpartycore.lib.utils.helpers import MATCH_ID_SQL, divide
 
 
 def _convert_hash_value(field, value):
@@ -62,6 +62,33 @@ _HASH_FK_PROJECTIONS = {
     "fairmints": ("fairminter_tx_index", "fairminter_tx_hash"),
     "pool_matches": ("order_tx_index", "order_tx_hash"),
     "cancels": ("offer_tx_index", "offer_hash"),
+}
+
+# Match tables that dropped the composite TEXT ``id`` column. ``select_rows``
+# re-exposes ``id`` from the local ``tx0_hash``/``tx1_hash`` BLOB columns the
+# tables still carry (no JOIN needed) via the ``hex_lower`` UDF.
+_MATCH_ID_LOCAL_TABLES = frozenset({"order_matches", "bet_matches", "rps_matches"})
+
+# Tables (read from the Ledger DB) whose single TEXT ``*_match_id`` column was
+# replaced by a ``(*_tx0_index, *_tx1_index)`` integer pair. ``select_rows``
+# hides the two FK columns and re-exposes the legacy id via two correlated
+# subqueries against ``transactions`` so the API row shape is preserved.
+# Mapping: table -> (tx0_index_col, tx1_index_col, legacy_id_col)
+_MATCH_ID_FK_PROJECTIONS = {
+    "btcpays": ("order_match_tx0_index", "order_match_tx1_index", "order_match_id"),
+    "bet_match_resolutions": ("bet_match_tx0_index", "bet_match_tx1_index", "bet_match_id"),
+    "rpsresolves": ("rps_match_tx0_index", "rps_match_tx1_index", "rps_match_id"),
+}
+
+# Pseudo WHERE keys used by match-id callers: the value is a single tx_hash that
+# must match either leg of the composite match id. ``select_rows`` resolves the
+# hash to a tx_index and ORs it against both ``*_tx0_index``/``*_tx1_index``
+# columns (the old ``*_match_id LIKE '%hash%'`` matched either half).
+# Mapping: key -> (tx0_index_col, tx1_index_col)
+_MATCH_ID_HASH_WHERE = {
+    "order_match_hash": ("order_match_tx0_index", "order_match_tx1_index"),
+    "bet_match_hash": ("bet_match_tx0_index", "bet_match_tx1_index"),
+    "rps_match_hash": ("rps_match_tx0_index", "rps_match_tx1_index"),
 }
 
 
@@ -209,6 +236,34 @@ def _hash_fk_public_columns(db, table):
         cols.append(name)
     cols_tuple = tuple(cols)
     _HASH_FK_PUBLIC_COLUMNS[table] = cols_tuple
+    return cols_tuple
+
+
+# Cache of table -> public columns for ``_MATCH_ID_FK_PROJECTIONS`` tables
+# (everything except the two ``*_tx_index`` FK columns that replaced the
+# legacy ``*_match_id``).
+_MATCH_ID_PUBLIC_COLUMNS: dict[str, tuple[str, ...]] = {}
+
+
+def _match_id_public_columns(db, table):
+    """Return the columns to expose for a ``_MATCH_ID_FK_PROJECTIONS`` table:
+    every column except the two internal ``*_tx_index`` FK columns that
+    replaced the legacy ``*_match_id`` (which the caller re-hydrates via two
+    correlated subqueries against ``transactions``)."""
+    cached = _MATCH_ID_PUBLIC_COLUMNS.get(table)
+    if cached is not None:
+        return cached
+    tx0_col, tx1_col, _id_col = _MATCH_ID_FK_PROJECTIONS[table]
+    cursor = db.cursor()
+    rows = cursor.execute(f"PRAGMA table_info({table})").fetchall()  # nosec B608  # noqa: S608
+    cols = []
+    for row in rows:
+        name = row["name"] if isinstance(row, dict) else row[1]
+        if name in (tx0_col, tx1_col):
+            continue
+        cols.append(name)
+    cols_tuple = tuple(cols)
+    _MATCH_ID_PUBLIC_COLUMNS[table] = cols_tuple
     return cols_tuple
 
 
@@ -658,7 +713,20 @@ def select_rows(
                 where_field.append(f"{_qualify(field)} = ? COLLATE NOCASE")
                 bindings.append(_convert_hash_value(field, value))
             else:
-                if key in _HASH_FK_WHERE_REWRITE:
+                if key in _MATCH_ID_HASH_WHERE:
+                    # ``*_match_hash``: resolve the hex tx_hash to a tx_index and
+                    # OR it against both legs of the composite match id (the old
+                    # ``*_match_id LIKE '%hash%'`` matched either half).
+                    tx0_col, tx1_col = _MATCH_ID_HASH_WHERE[key]
+                    if _where_tx_table is None:
+                        where_field.append("(0 = 1)")
+                    else:
+                        subq = f"(SELECT tx_index FROM {_safe_tx_table(_where_tx_table)} WHERE tx_hash = ?)"  # noqa: S608  # nosec B608
+                        where_field.append(f"({tx0_col} = {subq} OR {tx1_col} = {subq})")
+                        bindings.append(hashcodec.hash_to_db(value))
+                        bindings.append(hashcodec.hash_to_db(value))
+                    field = key
+                elif key in _HASH_FK_WHERE_REWRITE:
                     new_field = _HASH_FK_WHERE_REWRITE[key]
                     if _where_tx_table is None:
                         where_field.append("(0 = 1)")
@@ -808,9 +876,38 @@ def select_rows(
                 )
             else:
                 select_rewritten = f"{select}, __txjoin.tx_hash AS {hash_col}"
+    elif table in _MATCH_ID_FK_PROJECTIONS:
+        # Re-expose the legacy ``*_match_id`` (``tx0hash_tx1hash``) via two
+        # correlated subqueries against ``transactions`` and hide the internal
+        # ``*_tx_index`` FK columns so the API row shape is preserved.
+        tx0_col, tx1_col, id_col = _MATCH_ID_FK_PROJECTIONS[table]
+        public_cols = _match_id_public_columns(db, table)
+        explicit_cols = ", ".join(public_cols)
+        from_clause = table
+        txtable = _resolve_transactions_table_name(db)
+        if txtable is None:
+            id_expr = f"NULL AS {id_col}"
+        else:
+            t = _safe_tx_table(txtable)
+            # ``t`` is validated by ``_safe_tx_table``; the column names come
+            # from the constant ``_MATCH_ID_FK_PROJECTIONS`` map -- no user input.
+            id_expr = (
+                f"(SELECT hex_lower(tx_hash) FROM {t} WHERE tx_index = {tx0_col})"  # noqa: S608  # nosec B608
+                f" || '_' || "
+                f"(SELECT hex_lower(tx_hash) FROM {t} WHERE tx_index = {tx1_col}) AS {id_col}"
+            )
+        if "*" in select:
+            select_rewritten = select.replace("*", f"{explicit_cols}, {id_expr}", 1)
+        else:
+            select_rewritten = f"{select}, {id_expr}"
     else:
         from_clause = table
         select_rewritten = select
+
+    # Match tables keep ``tx0_hash``/``tx1_hash`` BLOB; re-expose the dropped
+    # composite TEXT ``id`` locally via the ``hex_lower`` UDF (no JOIN).
+    if table in _MATCH_ID_LOCAL_TABLES:
+        select_rewritten = f"{select_rewritten}, {MATCH_ID_SQL} AS id"
 
     query = f"SELECT {select_rewritten} FROM {from_clause} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
 
@@ -842,6 +939,12 @@ def select_rows(
             # to expose the legacy hash column to the SELECT. Skip it
             # entirely for COUNT.
             count_fast_from = f"{table} AS __m"
+        elif table in _MATCH_ID_FK_PROJECTIONS or table in _MATCH_ID_LOCAL_TABLES:
+            # The match-id projection only adds SELECT-clause subqueries (and,
+            # for ``_MATCH_ID_FK_PROJECTIONS``, a WHERE rewritten to the FK
+            # columns of the same table); the row count is unaffected, so we
+            # COUNT against the table directly and skip the projection work.
+            count_fast_from = table
         elif table in _COUNT_FROM_OVERRIDE:
             # Views like ``transactions_with_status`` wrap a LEFT JOIN
             # against ``blocks`` / ``transactions_status``; counting from
@@ -4041,7 +4144,7 @@ def get_btcpays_by_order(
     return select_rows(
         ledger_db,
         "btcpays",
-        where={"order_match_id__like": f"%{order_hash}%"},
+        where={"order_match_hash": order_hash},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -4102,7 +4205,7 @@ def get_resolutions_by_bet(
     return select_rows(
         ledger_db,
         "bet_match_resolutions",
-        where={"bet_match_id__like": f"%{bet_hash}%"},
+        where={"bet_match_hash": bet_hash},
         last_cursor=cursor,
         limit=limit,
         offset=offset,

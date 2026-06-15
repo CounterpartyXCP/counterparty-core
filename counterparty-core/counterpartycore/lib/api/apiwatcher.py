@@ -14,13 +14,13 @@ logger = logging.getLogger(config.LOGGER_NAME)
 UPDATE_EVENTS_ID_FIELDS = {
     "BLOCK_PARSED": ["block_index"],
     "TRANSACTION_PARSED": ["tx_hash"],
-    "BET_MATCH_UPDATE": ["id"],
+    "BET_MATCH_UPDATE": ["tx0_index", "tx1_index"],
     "BET_UPDATE": ["tx_hash"],
     "DISPENSER_UPDATE": ["tx_hash"],
     "ORDER_FILLED": ["tx_hash"],
-    "ORDER_MATCH_UPDATE": ["id"],
+    "ORDER_MATCH_UPDATE": ["tx0_index", "tx1_index"],
     "ORDER_UPDATE": ["tx_hash"],
-    "RPS_MATCH_UPDATE": ["id"],
+    "RPS_MATCH_UPDATE": ["tx0_index", "tx1_index"],
     "RPS_UPDATE": ["tx_hash"],
     "ADDRESS_OPTIONS_UPDATE": ["address"],
     "FAIRMINTER_UPDATE": ["tx_hash"],
@@ -203,6 +203,53 @@ def _resolve_state_db_fk_columns(ledger_db, table, event_bindings):
     cursor.close()
 
 
+# Match tables replicated into the State DB whose composite TEXT ``id`` was
+# dropped (the State DB mirrors the migrated ledger schema). The event JSON
+# still carries ``id`` (consensus-stable); the apiwatcher strips it and uses
+# the ``(tx0_index, tx1_index)`` pair instead. INSERT events (ORDER_MATCH ...)
+# already carry the pair; UPDATE events (ORDER_MATCH_UPDATE ...) carry only
+# ``{id, status}`` so the pair is derived by splitting/resolving the id.
+# (``btcpays`` / ``*_match_expirations`` / ``*_resolutions`` are NOT in
+# ``STATE_DB_TABLES`` -- they are not replicated -- so they need no handling.)
+_STATE_DB_MATCH_ID_TABLES = ("order_matches", "bet_matches", "rps_matches")
+
+
+def _resolve_match_id_to_indexes(ledger_db, match_id):
+    """Split a composite ``tx0hash_tx1hash`` match id and resolve each half to
+    its ``tx_index`` via ``ledger_db.transactions``. Returns ``(None, None)``
+    for a ``None``/malformed id."""
+    if ledger_db is None or not isinstance(match_id, str) or match_id.count("_") != 1:
+        return None, None
+    part0, part1 = match_id.split("_")
+    cursor = ledger_db.cursor()
+    try:
+        indexes = []
+        for part in (part0, part1):
+            blob = hashcodec.hash_to_db(part)
+            row = cursor.execute(
+                "SELECT tx_index FROM transactions WHERE tx_hash = ?", (blob,)
+            ).fetchone()
+            indexes.append(row["tx_index"] if row else None)
+    finally:
+        cursor.close()
+    return indexes[0], indexes[1]
+
+
+def _resolve_state_db_match_id_columns(ledger_db, table, event_bindings):
+    """For the replicated match tables, derive the ``(tx0_index, tx1_index)``
+    pair when only the composite ``id`` is present (UPDATE events) and drop the
+    dropped TEXT ``id``/``*_match_id`` keys so the INSERT/UPDATE targets the
+    migrated state_db schema."""
+    if table not in _STATE_DB_MATCH_ID_TABLES:
+        return
+    if "tx0_index" not in event_bindings and "id" in event_bindings:
+        tx0_index, tx1_index = _resolve_match_id_to_indexes(ledger_db, event_bindings["id"])
+        event_bindings["tx0_index"] = tx0_index
+        event_bindings["tx1_index"] = tx1_index
+    for dropped in ("id", "order_match_id", "bet_match_id", "rps_match_id"):
+        event_bindings.pop(dropped, None)
+
+
 def _normalize_event_bindings_for_state_db(event_bindings):
     """Convert any hash-typed values from hex-string (JSON form) to BLOB(32)
     so they can be bound against state_db columns that mirror the BLOB
@@ -217,6 +264,7 @@ def insert_event_to_sql(event, ledger_db=None):
     event_bindings = get_event_bindings(event)
     event_bindings["block_index"] = event["block_index"]
     _resolve_state_db_fk_columns(ledger_db, event["category"], event_bindings)
+    _resolve_state_db_match_id_columns(ledger_db, event["category"], event_bindings)
     _normalize_event_bindings_for_state_db(event_bindings)
     sql_bindings = []
     sql = f"INSERT INTO {event['category']} "
@@ -236,6 +284,7 @@ def update_event_to_sql(event, ledger_db=None):
         return None, []
 
     _resolve_state_db_fk_columns(ledger_db, event["category"], event_bindings)
+    _resolve_state_db_match_id_columns(ledger_db, event["category"], event_bindings)
     _normalize_event_bindings_for_state_db(event_bindings)
 
     id_field_names = UPDATE_EVENTS_ID_FIELDS[event["event"]]

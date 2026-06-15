@@ -1,6 +1,7 @@
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger.events import insert_update
 from counterpartycore.lib.utils import hashcodec
+from counterpartycore.lib.utils.helpers import MATCH_ID_SQL
 
 #####################
 #    BROADCASTS     #
@@ -140,14 +141,14 @@ def get_issuance_msg_index(db, tx_hash):
 
 def get_pending_bet_matches(db, feed_address, order_by=None):
     cursor = db.cursor()
-    query = """
+    query = f"""
         SELECT * FROM (
-            SELECT *, MAX(rowid) as rowid
+            SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid) as rowid
             FROM bet_matches
             WHERE feed_address = ?
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = ?
-    """
+    """  # noqa: S608 # nosec B608
     if order_by is not None:
         query += f" ORDER BY {order_by}"
     else:
@@ -159,15 +160,15 @@ def get_pending_bet_matches(db, feed_address, order_by=None):
 
 def get_bet_matches_to_expire(db, block_time):
     cursor = db.cursor()
-    query = """
+    query = f"""
         SELECT * FROM (
-            SELECT *, MAX(rowid) as rowid
+            SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid) as rowid
             FROM bet_matches
             WHERE deadline < ? AND deadline > ?
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = ?
         ORDER BY rowid
-    """
+    """  # noqa: S608 # nosec B608
     bindings = (
         block_time - config.TWO_WEEKS,
         block_time

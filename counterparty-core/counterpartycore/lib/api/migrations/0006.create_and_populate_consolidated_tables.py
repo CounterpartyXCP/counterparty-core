@@ -16,12 +16,14 @@ CONSOLIDATED_TABLES = {
     "balances": "address, utxo, asset",
     "addresses": "address",
     "dispensers": "source, asset, tx_hash",
-    "bet_matches": "id",
+    # match tables: the composite TEXT ``id`` was dropped; the match is keyed
+    # by the ``(tx0_index, tx1_index)`` pair (compact-hash storage migration).
+    "bet_matches": "tx0_index, tx1_index",
     "bets": "tx_hash",
-    "order_matches": "id",
+    "order_matches": "tx0_index, tx1_index",
     "orders": "tx_hash",
     "rps": "tx_hash",
-    "rps_matches": "id",
+    "rps_matches": "tx0_index, tx1_index",
 }
 
 ADDITONAL_COLUMNS = {

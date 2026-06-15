@@ -114,7 +114,7 @@ INDEXES_AFTER_REWRITE = [
     "CREATE INDEX IF NOT EXISTS order_matches_block_index_idx ON order_matches (block_index)",
     "CREATE INDEX IF NOT EXISTS order_matches_forward_asset_idx ON order_matches (forward_asset)",
     "CREATE INDEX IF NOT EXISTS order_matches_backward_asset_idx ON order_matches (backward_asset)",
-    "CREATE INDEX IF NOT EXISTS order_matches_id_idx ON order_matches (id)",
+    "CREATE INDEX IF NOT EXISTS order_matches_tx0_index_tx1_index_idx ON order_matches (tx0_index, tx1_index)",
     "CREATE INDEX IF NOT EXISTS order_matches_tx0_address_forward_asset_idx ON order_matches (tx0_address, forward_asset)",
     "CREATE INDEX IF NOT EXISTS order_matches_tx1_address_backward_asset_idx ON order_matches (tx1_address, backward_asset)",
     "CREATE INDEX IF NOT EXISTS order_matches_match_expire_index_idx ON order_matches (match_expire_index)",
@@ -124,10 +124,15 @@ INDEXES_AFTER_REWRITE = [
     # order_expirations
     "CREATE INDEX IF NOT EXISTS order_expirations_block_index_idx ON order_expirations (block_index)",
     "CREATE INDEX IF NOT EXISTS order_expirations_source_idx ON order_expirations (source)",
+    # order_match_expirations (rewritten: order_match_id -> tx index pair)
+    "CREATE INDEX IF NOT EXISTS order_match_expirations_block_index_idx ON order_match_expirations (block_index)",
+    "CREATE INDEX IF NOT EXISTS order_match_expirations_tx0_address_idx ON order_match_expirations (tx0_address)",
+    "CREATE INDEX IF NOT EXISTS order_match_expirations_tx1_address_idx ON order_match_expirations (tx1_address)",
     # btcpays
     "CREATE INDEX IF NOT EXISTS btcpays_block_index_idx ON btcpays (block_index)",
     "CREATE INDEX IF NOT EXISTS btcpays_source_idx ON btcpays (source)",
     "CREATE INDEX IF NOT EXISTS btcpays_destination_idx ON btcpays (destination)",
+    "CREATE INDEX IF NOT EXISTS btcpays_order_match_tx_index_idx ON btcpays (order_match_tx0_index, order_match_tx1_index)",
     # issuances
     "CREATE INDEX IF NOT EXISTS issuances_block_index_idx ON issuances (block_index)",
     "CREATE INDEX IF NOT EXISTS issuances_asset_status_idx ON issuances (asset, status)",
@@ -152,7 +157,7 @@ INDEXES_AFTER_REWRITE = [
     "CREATE INDEX IF NOT EXISTS bets_feed_address_bet_type_idx ON bets (feed_address, bet_type)",
     # bet_matches
     "CREATE INDEX IF NOT EXISTS bet_matches_block_index_idx ON bet_matches (block_index)",
-    "CREATE INDEX IF NOT EXISTS bet_matches_id_idx ON bet_matches (id)",
+    "CREATE INDEX IF NOT EXISTS bet_matches_tx0_index_tx1_index_idx ON bet_matches (tx0_index, tx1_index)",
     "CREATE INDEX IF NOT EXISTS bet_matches_status_idx ON bet_matches (status)",
     "CREATE INDEX IF NOT EXISTS bet_matches_deadline_idx ON bet_matches (deadline)",
     "CREATE INDEX IF NOT EXISTS bet_matches_tx0_address_idx ON bet_matches (tx0_address)",
@@ -160,6 +165,10 @@ INDEXES_AFTER_REWRITE = [
     # bet_expirations
     "CREATE INDEX IF NOT EXISTS bet_expirations_block_index_idx ON bet_expirations (block_index)",
     "CREATE INDEX IF NOT EXISTS bet_expirations_source_idx ON bet_expirations (source)",
+    # bet_match_expirations (rewritten: bet_match_id -> tx index pair)
+    "CREATE INDEX IF NOT EXISTS bet_match_expirations_block_index_idx ON bet_match_expirations (block_index)",
+    "CREATE INDEX IF NOT EXISTS bet_match_expirations_tx0_address_idx ON bet_match_expirations (tx0_address)",
+    "CREATE INDEX IF NOT EXISTS bet_match_expirations_tx1_address_idx ON bet_match_expirations (tx1_address)",
     # dividends
     "CREATE INDEX IF NOT EXISTS dividends_block_index_idx ON dividends (block_index)",
     "CREATE INDEX IF NOT EXISTS dividends_source_idx ON dividends (source)",
@@ -183,15 +192,19 @@ INDEXES_AFTER_REWRITE = [
     "CREATE INDEX IF NOT EXISTS rps_matches_tx0_address_idx ON rps_matches (tx0_address)",
     "CREATE INDEX IF NOT EXISTS rps_matches_tx1_address_idx ON rps_matches (tx1_address)",
     "CREATE INDEX IF NOT EXISTS rps_matches_status_idx ON rps_matches (status)",
-    "CREATE INDEX IF NOT EXISTS rps_matches_id_idx ON rps_matches (id)",
+    "CREATE INDEX IF NOT EXISTS rps_matches_tx0_index_tx1_index_idx ON rps_matches (tx0_index, tx1_index)",
     "CREATE INDEX IF NOT EXISTS rps_matches_match_expire_index_idx ON rps_matches (match_expire_index)",
     # rps_expirations
     "CREATE INDEX IF NOT EXISTS rps_expirations_block_index_idx ON rps_expirations (block_index)",
     "CREATE INDEX IF NOT EXISTS rps_expirations_source_idx ON rps_expirations (source)",
+    # rps_match_expirations (rewritten: rps_match_id -> tx index pair)
+    "CREATE INDEX IF NOT EXISTS rps_match_expirations_block_index_idx ON rps_match_expirations (block_index)",
+    "CREATE INDEX IF NOT EXISTS rps_match_expirations_tx0_address_idx ON rps_match_expirations (tx0_address)",
+    "CREATE INDEX IF NOT EXISTS rps_match_expirations_tx1_address_idx ON rps_match_expirations (tx1_address)",
     # rpsresolves
     "CREATE INDEX IF NOT EXISTS rpsresolves_block_index_idx ON rpsresolves (block_index)",
     "CREATE INDEX IF NOT EXISTS rpsresolves_source_idx ON rpsresolves (source)",
-    "CREATE INDEX IF NOT EXISTS rpsresolves_rps_match_id_idx ON rpsresolves (rps_match_id)",
+    "CREATE INDEX IF NOT EXISTS rpsresolves_rps_match_tx_index_idx ON rpsresolves (rps_match_tx0_index, rps_match_tx1_index)",
     # sweeps
     "CREATE INDEX IF NOT EXISTS sweeps_block_index_idx ON sweeps (block_index)",
     "CREATE INDEX IF NOT EXISTS sweeps_source_idx ON sweeps (source)",
@@ -373,25 +386,37 @@ VIEWS_AFTER_REWRITE = [
         CONCAT(CAST(block_index AS VARCHAR), '_order_', CAST(rowid AS VARCHAR)) AS cursor_id
         FROM order_expirations
          UNION ALL
-        SELECT 'order_match' AS type, order_match_id AS object_id, block_index,
+        SELECT 'order_match' AS type,
+        (SELECT hex_lower(t0.tx_hash) FROM transactions t0 WHERE t0.tx_index = e.order_match_tx0_index)
+        || '_' ||
+        (SELECT hex_lower(t1.tx_hash) FROM transactions t1 WHERE t1.tx_index = e.order_match_tx1_index) AS object_id,
+        block_index,
         CONCAT(CAST(block_index AS VARCHAR), '_order_match_', CAST(rowid AS VARCHAR)) AS cursor_id
-        FROM order_match_expirations
+        FROM order_match_expirations e
          UNION ALL
         SELECT 'bet' AS type, hex_lower(bet_hash) AS object_id, block_index,
         CONCAT(CAST(block_index AS VARCHAR), '_bet_', CAST(rowid AS VARCHAR)) AS cursor_id
         FROM bet_expirations
          UNION ALL
-        SELECT 'bet_match' AS type, bet_match_id AS object_id, block_index,
+        SELECT 'bet_match' AS type,
+        (SELECT hex_lower(t0.tx_hash) FROM transactions t0 WHERE t0.tx_index = e.bet_match_tx0_index)
+        || '_' ||
+        (SELECT hex_lower(t1.tx_hash) FROM transactions t1 WHERE t1.tx_index = e.bet_match_tx1_index) AS object_id,
+        block_index,
         CONCAT(CAST(block_index AS VARCHAR), '_bet_match_', CAST(rowid AS VARCHAR)) AS cursor_id
-        FROM bet_match_expirations
+        FROM bet_match_expirations e
          UNION ALL
         SELECT 'rps' AS type, hex_lower(rps_hash) AS object_id, block_index,
         CONCAT(CAST(block_index AS VARCHAR), '_rps_', CAST(rowid AS VARCHAR)) AS cursor_id
         FROM rps_expirations
          UNION ALL
-        SELECT 'rps_match' AS type, rps_match_id AS object_id, block_index,
+        SELECT 'rps_match' AS type,
+        (SELECT hex_lower(t0.tx_hash) FROM transactions t0 WHERE t0.tx_index = e.rps_match_tx0_index)
+        || '_' ||
+        (SELECT hex_lower(t1.tx_hash) FROM transactions t1 WHERE t1.tx_index = e.rps_match_tx1_index) AS object_id,
+        block_index,
         CONCAT(CAST(block_index AS VARCHAR), '_rps_match_', CAST(rowid AS VARCHAR)) AS cursor_id
-        FROM rps_match_expirations""",
+        FROM rps_match_expirations e""",
     """CREATE VIEW IF NOT EXISTS all_holders AS
         SELECT asset, address, quantity, NULL AS escrow, MAX(rowid) AS rowid,
             CONCAT('balances_', CAST(rowid AS VARCHAR)) AS cursor_id, 'balances' AS holding_type, NULL AS status
@@ -408,18 +433,18 @@ VIEWS_AFTER_REWRITE = [
          UNION ALL
         SELECT * FROM (
             SELECT forward_asset AS asset, tx0_address AS address, forward_quantity AS quantity,
-                id AS escrow, MAX(rowid) AS rowid, CONCAT('order_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
+                hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, MAX(rowid) AS rowid, CONCAT('order_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
                 'pending_order_match' AS holding_type, status
             FROM order_matches
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = 'pending'
          UNION ALL
         SELECT * FROM (
             SELECT backward_asset AS asset, tx1_address AS address, backward_quantity AS quantity,
-                id AS escrow, MAX(rowid) AS rowid, CONCAT('order_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
+                hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, MAX(rowid) AS rowid, CONCAT('order_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
                 'pending_order_match' AS holding_type, status
             FROM order_matches
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = 'pending'
          UNION ALL
         SELECT * FROM (
@@ -432,18 +457,18 @@ VIEWS_AFTER_REWRITE = [
          UNION ALL
         SELECT * FROM (
             SELECT 'XCP' AS asset, tx0_address AS address, forward_quantity AS quantity,
-            id AS escrow, MAX(rowid) AS rowid, CONCAT('bet_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
+            hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, MAX(rowid) AS rowid, CONCAT('bet_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
             'pending_bet_match' AS holding_type, status
             FROM bet_matches
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = 'pending'
          UNION ALL
         SELECT * FROM (
             SELECT 'XCP' AS asset, tx1_address AS address, backward_quantity AS quantity,
-            id AS escrow, MAX(rowid) AS rowid, CONCAT('bet_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
+            hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, MAX(rowid) AS rowid, CONCAT('bet_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
             'pending_bet_match' AS holding_type, status
             FROM bet_matches
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = 'pending'
          UNION ALL
         SELECT * FROM (
@@ -456,18 +481,18 @@ VIEWS_AFTER_REWRITE = [
          UNION ALL
         SELECT * FROM (
             SELECT 'XCP' AS asset, tx0_address AS address, wager AS quantity,
-            id AS escrow, MAX(rowid) AS rowid, CONCAT('rps_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
+            hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, MAX(rowid) AS rowid, CONCAT('rps_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
             'pending_rps_match' AS holding_type, status
             FROM rps_matches
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
          UNION ALL
         SELECT * FROM (
             SELECT 'XCP' AS asset, tx1_address AS address, wager AS quantity,
-            id AS escrow, MAX(rowid) AS rowid, CONCAT('rps_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
+            hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, MAX(rowid) AS rowid, CONCAT('rps_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
             'pending_rps_match' AS holding_type, status
             FROM rps_matches
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
          UNION ALL
         SELECT * FROM (
@@ -623,6 +648,110 @@ CUSTOM_INSERT_SELECT = {
             destination,
             btc_amount
         FROM transaction_outputs_old
+        """
+    ),
+    # --------------------------------------------------------------------
+    # Composite match-id normalization. The legacy TEXT id is
+    # ``tx0hash_tx1hash`` (64 hex + '_' + 64 hex); split it on the fixed
+    # offsets and resolve each half to its tx_index via ``transactions_old``
+    # (still hex at this point in the migration). LEFT JOINs so an
+    # unresolvable / NULL id (e.g. an invalid btcpay) yields NULL indexes.
+    # --------------------------------------------------------------------
+    # btcpays: order_match_id -> (order_match_tx0_index, order_match_tx1_index)
+    "btcpays": (
+        """
+        SELECT
+            b.tx_index,
+            __hex_to_blob(b.tx_hash) AS tx_hash,
+            b.block_index,
+            b.source,
+            b.destination,
+            b.btc_amount,
+            t0.tx_index AS order_match_tx0_index,
+            t1.tx_index AS order_match_tx1_index,
+            b.status
+        FROM btcpays_old b
+        LEFT JOIN transactions_old t0 ON t0.tx_hash = substr(b.order_match_id, 1, 64)
+        LEFT JOIN transactions_old t1 ON t1.tx_hash = substr(b.order_match_id, 66)
+        """
+    ),
+    # rpsresolves: rps_match_id -> (rps_match_tx0_index, rps_match_tx1_index)
+    "rpsresolves": (
+        """
+        SELECT
+            r.tx_index,
+            __hex_to_blob(r.tx_hash) AS tx_hash,
+            r.block_index,
+            r.source,
+            r.move,
+            r.random,
+            t0.tx_index AS rps_match_tx0_index,
+            t1.tx_index AS rps_match_tx1_index,
+            r.status
+        FROM rpsresolves_old r
+        LEFT JOIN transactions_old t0 ON t0.tx_hash = substr(r.rps_match_id, 1, 64)
+        LEFT JOIN transactions_old t1 ON t1.tx_hash = substr(r.rps_match_id, 66)
+        """
+    ),
+    # order_match_expirations: order_match_id -> (tx0_index, tx1_index)
+    "order_match_expirations": (
+        """
+        SELECT
+            t0.tx_index AS order_match_tx0_index,
+            t1.tx_index AS order_match_tx1_index,
+            e.tx0_address,
+            e.tx1_address,
+            e.block_index
+        FROM order_match_expirations_old e
+        LEFT JOIN transactions_old t0 ON t0.tx_hash = substr(e.order_match_id, 1, 64)
+        LEFT JOIN transactions_old t1 ON t1.tx_hash = substr(e.order_match_id, 66)
+        """
+    ),
+    # bet_match_expirations: bet_match_id -> (tx0_index, tx1_index)
+    "bet_match_expirations": (
+        """
+        SELECT
+            t0.tx_index AS bet_match_tx0_index,
+            t1.tx_index AS bet_match_tx1_index,
+            e.tx0_address,
+            e.tx1_address,
+            e.block_index
+        FROM bet_match_expirations_old e
+        LEFT JOIN transactions_old t0 ON t0.tx_hash = substr(e.bet_match_id, 1, 64)
+        LEFT JOIN transactions_old t1 ON t1.tx_hash = substr(e.bet_match_id, 66)
+        """
+    ),
+    # rps_match_expirations: rps_match_id -> (tx0_index, tx1_index)
+    "rps_match_expirations": (
+        """
+        SELECT
+            t0.tx_index AS rps_match_tx0_index,
+            t1.tx_index AS rps_match_tx1_index,
+            e.tx0_address,
+            e.tx1_address,
+            e.block_index
+        FROM rps_match_expirations_old e
+        LEFT JOIN transactions_old t0 ON t0.tx_hash = substr(e.rps_match_id, 1, 64)
+        LEFT JOIN transactions_old t1 ON t1.tx_hash = substr(e.rps_match_id, 66)
+        """
+    ),
+    # bet_match_resolutions: bet_match_id -> (tx0_index, tx1_index)
+    "bet_match_resolutions": (
+        """
+        SELECT
+            t0.tx_index AS bet_match_tx0_index,
+            t1.tx_index AS bet_match_tx1_index,
+            r.bet_match_type_id,
+            r.block_index,
+            r.winner,
+            r.settled,
+            r.bull_credit,
+            r.bear_credit,
+            r.escrow_less_fee,
+            r.fee
+        FROM bet_match_resolutions_old r
+        LEFT JOIN transactions_old t0 ON t0.tx_hash = substr(r.bet_match_id, 1, 64)
+        LEFT JOIN transactions_old t1 ON t1.tx_hash = substr(r.bet_match_id, 66)
         """
     ),
 }

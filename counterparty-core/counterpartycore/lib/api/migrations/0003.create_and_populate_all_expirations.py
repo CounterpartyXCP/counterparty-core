@@ -75,10 +75,16 @@ def apply(db):
         SELECT hex_lower(order_hash) AS object_id, block_index, 'order' AS type
         FROM ledger_db.order_expirations
         """,
+        # ``*_match_id`` was replaced by a ``(*_tx0_index, *_tx1_index)`` pair;
+        # reconstruct the composite ``tx0hash_tx1hash`` object_id by joining the
+        # two tx indexes back to ``transactions``.
         """
         INSERT INTO all_expirations (object_id, block_index, type)
-        SELECT order_match_id AS object_id, block_index, 'order_match' AS type
-        FROM ledger_db.order_match_expirations
+        SELECT hex_lower(t0.tx_hash) || '_' || hex_lower(t1.tx_hash) AS object_id,
+               e.block_index, 'order_match' AS type
+        FROM ledger_db.order_match_expirations e
+        JOIN ledger_db.transactions t0 ON t0.tx_index = e.order_match_tx0_index
+        JOIN ledger_db.transactions t1 ON t1.tx_index = e.order_match_tx1_index
         """,
         """
         INSERT INTO all_expirations (object_id, block_index, type)
@@ -87,8 +93,11 @@ def apply(db):
         """,
         """
         INSERT INTO all_expirations (object_id, block_index, type)
-        SELECT bet_match_id AS object_id, block_index, 'bet_match' AS type
-        FROM ledger_db.bet_match_expirations
+        SELECT hex_lower(t0.tx_hash) || '_' || hex_lower(t1.tx_hash) AS object_id,
+               e.block_index, 'bet_match' AS type
+        FROM ledger_db.bet_match_expirations e
+        JOIN ledger_db.transactions t0 ON t0.tx_index = e.bet_match_tx0_index
+        JOIN ledger_db.transactions t1 ON t1.tx_index = e.bet_match_tx1_index
         """,
         """
         INSERT INTO all_expirations (object_id, block_index, type)
@@ -97,8 +106,11 @@ def apply(db):
         """,
         """
         INSERT INTO all_expirations (object_id, block_index, type)
-        SELECT rps_match_id AS object_id, block_index, 'rps_match' AS type
-        FROM ledger_db.rps_match_expirations
+        SELECT hex_lower(t0.tx_hash) || '_' || hex_lower(t1.tx_hash) AS object_id,
+               e.block_index, 'rps_match' AS type
+        FROM ledger_db.rps_match_expirations e
+        JOIN ledger_db.transactions t0 ON t0.tx_index = e.rps_match_tx0_index
+        JOIN ledger_db.transactions t1 ON t1.tx_index = e.rps_match_tx1_index
         """,
         """
         CREATE INDEX all_expirations_type_idx ON all_expirations (type)

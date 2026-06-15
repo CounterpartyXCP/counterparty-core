@@ -133,12 +133,12 @@ def apply(db):
                 FROM orders WHERE status = 'open'
              UNION ALL
                 SELECT forward_asset AS asset, tx0_address AS address, forward_quantity AS quantity,
-                    id AS escrow, ('order_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+                    hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, ('order_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                     'pending_order_match' AS holding_type, status
                 FROM order_matches WHERE status = 'pending'
              UNION ALL
                 SELECT backward_asset AS asset, tx1_address AS address, backward_quantity AS quantity,
-                    id AS escrow, ('order_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+                    hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, ('order_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                     'pending_order_match' AS holding_type, status
                 FROM order_matches WHERE status = 'pending'
              UNION ALL
@@ -172,12 +172,12 @@ def apply(db):
                 FROM bets WHERE status = 'open'
              UNION ALL
                 SELECT 'XCP' AS asset, tx0_address AS address, forward_quantity AS quantity,
-                id AS escrow, ('bet_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+                hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, ('bet_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                 'pending_bet_match' AS holding_type, status
                 FROM bet_matches WHERE status = 'pending'
              UNION ALL
                 SELECT 'XCP' AS asset, tx1_address AS address, backward_quantity AS quantity,
-                id AS escrow, ('bet_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+                hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, ('bet_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                 'pending_bet_match' AS holding_type, status
                 FROM bet_matches WHERE status = 'pending'
              UNION ALL
@@ -187,12 +187,12 @@ def apply(db):
                 FROM rps WHERE status = 'open'
              UNION ALL
                 SELECT 'XCP' AS asset, tx0_address AS address, wager AS quantity,
-                id AS escrow, ('rps_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+                hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, ('rps_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                 'pending_rps_match' AS holding_type, status
                 FROM rps_matches WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
              UNION ALL
                 SELECT 'XCP' AS asset, tx1_address AS address, wager AS quantity,
-                id AS escrow, ('rps_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+                hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, ('rps_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                 'pending_rps_match' AS holding_type, status
                 FROM rps_matches WHERE status IN ('pending', 'pending and resolved', 'resolved and pending');
         """)

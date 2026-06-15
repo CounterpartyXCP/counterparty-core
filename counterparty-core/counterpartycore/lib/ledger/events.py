@@ -85,6 +85,33 @@ HASH_TO_TX_INDEX_FK = {
 }
 
 
+# Match tables whose composite TEXT ``id`` (``tx0hash_tx1hash``) has been
+# dropped in the optimized schema: the match is keyed by the existing
+# ``(tx0_index, tx1_index)`` pair. ``insert_record`` strips the ``id`` binding
+# before INSERT; the journal keeps it (consensus-critical).
+MATCH_ID_TABLES = ("order_matches", "bet_matches", "rps_matches")
+
+
+# Tables that referenced a match through a single TEXT ``*_match_id`` column.
+# That column is replaced by a ``(*_tx0_index, *_tx1_index)`` integer pair;
+# ``insert_record`` splits the hex id and resolves each half to its tx_index
+# just before INSERT, so message handlers keep passing the legacy field.
+#
+# Mapping: table -> (legacy_id_column, tx0_index_column, tx1_index_column)
+MATCH_ID_TO_TX_INDEX_FK = {
+    "order_match_expirations": (
+        "order_match_id",
+        "order_match_tx0_index",
+        "order_match_tx1_index",
+    ),
+    "bet_match_expirations": ("bet_match_id", "bet_match_tx0_index", "bet_match_tx1_index"),
+    "rps_match_expirations": ("rps_match_id", "rps_match_tx0_index", "rps_match_tx1_index"),
+    "bet_match_resolutions": ("bet_match_id", "bet_match_tx0_index", "bet_match_tx1_index"),
+    "btcpays": ("order_match_id", "order_match_tx0_index", "order_match_tx1_index"),
+    "rpsresolves": ("rps_match_id", "rps_match_tx0_index", "rps_match_tx1_index"),
+}
+
+
 def _resolve_tx_index(db, tx_hash_hex):
     """Look up ``tx_index`` for a hex ``tx_hash``. Returns ``None`` if the
     value is ``None`` or the tx is not (yet) in the table; callers must
@@ -102,6 +129,19 @@ def _resolve_tx_index(db, tx_hash_hex):
     return row["tx_index"]
 
 
+def _resolve_match_indexes(db, match_id):
+    """Split a composite ``tx0hash_tx1hash`` match id and resolve each half to
+    its ``tx_index``. Returns ``(None, None)`` when the id is ``None`` or
+    malformed (mirrors the permissive ``_resolve_tx_index`` contract: an
+    unresolvable id -- e.g. an invalid btcpay -- yields NULL indexes)."""
+    if match_id is None:
+        return None, None
+    parts = match_id.split(helpers.ID_SEPARATOR)
+    if len(parts) != 2:
+        return None, None
+    return _resolve_tx_index(db, parts[0]), _resolve_tx_index(db, parts[1])
+
+
 def _prepare_record_for_insert(db, table_name, record):
     """Return a copy of ``record`` with hash columns normalized to BLOB and
     any legacy hash columns resolved to their new ``*_tx_index`` FK form."""
@@ -115,6 +155,22 @@ def _prepare_record_for_insert(db, table_name, record):
                 out[new_col] = _resolve_tx_index(db, out.pop(legacy_col))
             elif legacy_col in out and new_col in out:
                 out.pop(legacy_col)
+
+    # Drop the composite TEXT ``id`` on match tables (the match is keyed by
+    # the existing ``(tx0_index, tx1_index)`` pair, which the handlers already
+    # supply in the bindings).
+    if table_name in MATCH_ID_TABLES:
+        out.pop("id", None)
+
+    # Split the legacy composite ``*_match_id`` into its ``(tx0_index,
+    # tx1_index)`` pair on referencing tables.
+    match_fk = MATCH_ID_TO_TX_INDEX_FK.get(table_name)
+    if match_fk:
+        legacy_col, tx0_col, tx1_col = match_fk
+        if legacy_col in out:
+            tx0_index, tx1_index = _resolve_match_indexes(db, out.pop(legacy_col))
+            out.setdefault(tx0_col, tx0_index)
+            out.setdefault(tx1_col, tx1_index)
 
     # Convert hex strings to BLOB for known hash columns. We tolerate
     # both bytes (already converted) and None.
@@ -181,18 +237,32 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     # with INSERT paths for synthetic test fixtures). Only triggered for
     # ``id_name``s that are actually hash columns; non-hash ids like
     # ``rowid`` / ``id`` (composite text) / ``address`` are bound as-is.
-    if id_name in hashcodec.HASH_COLUMN_NAMES:
-        id_bind = hashcodec.hash_to_db(id_value)
+    if table_name in MATCH_ID_TABLES and id_name == "id":
+        # The composite TEXT ``id`` is no longer a stored column; match on the
+        # ``(tx0_index, tx1_index)`` pair resolved from the text id. The
+        # journal below still records the original text id (consensus).
+        tx0_index, tx1_index = _resolve_match_indexes(db, id_value)
+        select_query = f"""
+            SELECT *, rowid
+            FROM {table_name}
+            WHERE tx0_index = ? AND tx1_index = ?
+            ORDER BY rowid DESC
+            LIMIT 1
+        """  # nosec B608  # noqa: S608 # nosec B608
+        bindings = (tx0_index, tx1_index)
     else:
-        id_bind = id_value
-    select_query = f"""
-        SELECT *, rowid
-        FROM {table_name}
-        WHERE {id_name} = ?
-        ORDER BY rowid DESC
-        LIMIT 1
-    """  # nosec B608  # noqa: S608 # nosec B608
-    bindings = (id_bind,)
+        if id_name in hashcodec.HASH_COLUMN_NAMES:
+            id_bind = hashcodec.hash_to_db(id_value)
+        else:
+            id_bind = id_value
+        select_query = f"""
+            SELECT *, rowid
+            FROM {table_name}
+            WHERE {id_name} = ?
+            ORDER BY rowid DESC
+            LIMIT 1
+        """  # nosec B608  # noqa: S608 # nosec B608
+        bindings = (id_bind,)
     need_update_record = cursor.execute(select_query, bindings).fetchone()
 
     # update record

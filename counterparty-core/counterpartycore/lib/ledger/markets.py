@@ -7,7 +7,8 @@ from counterpartycore.lib.ledger.caches import OrdersCache
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.ledger.events import credit, insert_record, insert_update
 from counterpartycore.lib.parser import protocol
-from counterpartycore.lib.utils import hashcodec
+from counterpartycore.lib.utils import hashcodec, helpers
+from counterpartycore.lib.utils.helpers import MATCH_ID_SQL
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -214,17 +215,17 @@ def compute_pool_fill(reserve_in, reserve_out, max_give, fee_bps, block_index=No
 
 def get_pending_order_matches(db, tx0_hash, tx1_hash):
     cursor = db.cursor()
-    query = """
+    query = f"""
         SELECT * FROM (
-            SELECT *, MAX(rowid) as rowid FROM order_matches
+            SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid) as rowid FROM order_matches
             WHERE (
                 tx0_hash in (:tx0_hash, :tx1_hash) OR
                 tx1_hash in (:tx0_hash, :tx1_hash)
             )
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = :status
         ORDER BY rowid
-    """
+    """  # noqa: S608 # nosec B608
     bindings = {
         "status": "pending",
         "tx0_hash": hashcodec.hash_to_db(tx0_hash),
@@ -236,14 +237,14 @@ def get_pending_order_matches(db, tx0_hash, tx1_hash):
 
 def get_pending_btc_order_matches(db, address):
     cursor = db.cursor()
-    query = """
+    query = f"""
         SELECT * FROM (
-            SELECT *, MAX(rowid) AS rowid
+            SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid) AS rowid
             FROM order_matches
             WHERE (tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?)
         ) WHERE status = ?
         ORDER BY rowid
-    """
+    """  # noqa: S608 # nosec B608
     bindings = (address, config.BTC, address, config.BTC, "pending")
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -251,26 +252,33 @@ def get_pending_btc_order_matches(db, address):
 
 def get_order_match(db, match_id):
     cursor = db.cursor()
-    query = """
-        SELECT *, rowid
+    # ``match_id`` is the composite ``tx0hash_tx1hash`` text; split it and match
+    # on the underlying hash pair (the TEXT ``id`` column no longer exists).
+    # A malformed/None id matches nothing, mirroring the old ``WHERE id = ?``.
+    parts = match_id.split(helpers.ID_SEPARATOR) if isinstance(match_id, str) else []
+    if len(parts) != 2:
+        return []
+    tx0_hash, tx1_hash = parts
+    query = f"""
+        SELECT *, {MATCH_ID_SQL} AS id, rowid
         FROM order_matches
-        WHERE id = ?
-        ORDER BY rowid DESC LIMIT 1"""
-    bindings = (match_id,)
+        WHERE tx0_hash = ? AND tx1_hash = ?
+        ORDER BY rowid DESC LIMIT 1"""  # noqa: S608 # nosec B608
+    bindings = (hashcodec.hash_to_db(tx0_hash), hashcodec.hash_to_db(tx1_hash))
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
 
 def get_order_matches_to_expire(db, block_index):
     cursor = db.cursor()
-    query = """SELECT * FROM (
-        SELECT *, MAX(rowid) AS rowid
+    query = f"""SELECT * FROM (
+        SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid) AS rowid
         FROM order_matches
         WHERE match_expire_index = ? - 1
-        GROUP BY id
+        GROUP BY tx0_index, tx1_index
     ) WHERE status = ?
     ORDER BY rowid
-    """
+    """  # noqa: S608 # nosec B608
     bindings = (block_index, "pending")
     cursor.execute(query, bindings)
     return cursor.fetchall()

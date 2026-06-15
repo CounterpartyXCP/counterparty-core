@@ -328,8 +328,13 @@ def test_consolidated_orders(state_db, ledger_db, apiv2_client):
 
 
 def test_consolidated_order_matches(state_db, ledger_db, apiv2_client):
+    # The composite TEXT ``id`` was dropped from match tables; reconstruct it
+    # from the kept ``tx0_hash``/``tx1_hash`` BLOB columns and key by the
+    # ``(tx0_index, tx1_index)`` pair.
+    match_id_sql = "hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash)"
     sql_ledger = (
-        "SELECT count(*) AS count FROM (SELECT *, MAX(rowid) FROM order_matches GROUP BY id)"
+        "SELECT count(*) AS count FROM "
+        "(SELECT *, MAX(rowid) FROM order_matches GROUP BY tx0_index, tx1_index)"
     )
     sql_api = "SELECT count(*) AS count FROM order_matches"
     assert (
@@ -338,9 +343,12 @@ def test_consolidated_order_matches(state_db, ledger_db, apiv2_client):
     )
 
     ledger_order_matches = ledger_db.execute(
-        "SELECT *, MAX(rowid) FROM order_matches GROUP BY id ORDER BY id"
+        f"SELECT *, {match_id_sql} AS id, MAX(rowid) FROM order_matches "  # noqa: S608
+        "GROUP BY tx0_index, tx1_index ORDER BY id"
     ).fetchall()
-    api_order_matches = state_db.execute("SELECT * FROM order_matches ORDER BY id").fetchall()
+    api_order_matches = state_db.execute(
+        f"SELECT *, {match_id_sql} AS id FROM order_matches ORDER BY id"  # noqa: S608
+    ).fetchall()
     assert len(ledger_order_matches) == len(api_order_matches)
     for ledger_order_match, api_order_match in zip(
         ledger_order_matches, api_order_matches, strict=True

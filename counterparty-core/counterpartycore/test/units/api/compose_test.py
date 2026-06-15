@@ -44,9 +44,12 @@ def test_compose_broadcast(apiv2_client, defaults):
 
 def test_compose_btcpay(apiv2_client, defaults, ledger_db):
     """Test compose_btcpay function via API."""
-    # Get an existing order match from the database
+    # Get an existing order match from the database. The composite TEXT ``id``
+    # was dropped from match tables; reconstruct it from the kept
+    # ``tx0_hash``/``tx1_hash`` BLOB columns.
     order_match = ledger_db.execute(
-        "SELECT id FROM order_matches WHERE status = 'pending' LIMIT 1"
+        "SELECT hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS id "
+        "FROM order_matches WHERE status = 'pending' LIMIT 1"
     ).fetchone()
     if order_match:
         address = defaults["addresses"][0]

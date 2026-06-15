@@ -1,6 +1,7 @@
 from counterpartycore.lib import config
 from counterpartycore.lib.ledger.caches import AssetCache
 from counterpartycore.lib.parser import protocol
+from counterpartycore.lib.utils.helpers import MATCH_ID_SQL
 
 
 # Ugly way to get holders but we want to preserve the order with the old query
@@ -89,14 +90,14 @@ def holders(db, asset, exclude_empty_holders=False):
     )
 
     # Funds escrowed in pending order matches. (Protocol change.)
-    query = """
+    query = f"""
         SELECT * FROM (
-            SELECT *, MAX(rowid)
+            SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid)
             FROM order_matches
             WHERE forward_asset = ?
-            GROUP BY id
+            GROUP BY {MATCH_ID_SQL}
         ) WHERE status = ?
-    """
+    """  # noqa: S608 # nosec B608
     bindings = (asset, "pending")
     cursor.execute(query, bindings)
     all_holders += _get_holders(
@@ -106,14 +107,14 @@ def holders(db, asset, exclude_empty_holders=False):
         # exclude_empty_holders=exclude_empty_holders,
     )
 
-    query = """
+    query = f"""
         SELECT * FROM (
-            SELECT *, MAX(rowid) AS rowid
+            SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid) AS rowid
             FROM order_matches
             WHERE backward_asset = ?
         ) WHERE status = ?
         ORDER BY rowid
-    """
+    """  # noqa: S608 # nosec B608
     bindings = (asset, "pending")
     cursor.execute(query, bindings)
     all_holders += _get_holders(
@@ -142,13 +143,13 @@ def holders(db, asset, exclude_empty_holders=False):
             # exclude_empty_holders=exclude_empty_holders,
         )
 
-        query = """
+        query = f"""
             SELECT * FROM (
-                SELECT *, MAX(rowid)
+                SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid)
                 FROM bet_matches
-                GROUP BY id
+                GROUP BY {MATCH_ID_SQL}
             ) WHERE status = ?
-        """
+        """  # noqa: S608 # nosec B608
         bindings = ("pending",)
         cursor.execute(query, bindings)
         all_holders += _get_holders(
@@ -176,13 +177,13 @@ def holders(db, asset, exclude_empty_holders=False):
             # exclude_empty_holders=exclude_empty_holders,
         )
 
-        query = """
+        query = f"""
             SELECT * FROM (
-                SELECT *, MAX(rowid)
+                SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid)
                 FROM rps_matches
-                GROUP BY id
+                GROUP BY {MATCH_ID_SQL}
             ) WHERE status IN (?, ?, ?)
-        """
+        """  # noqa: S608 # nosec B608
         bindings = ("pending", "pending and resolved", "resolved and pending")
         cursor.execute(query, bindings)
         all_holders += _get_holders(
@@ -421,14 +422,14 @@ def held(db):
         SELECT forward_asset AS asset, SUM(forward_quantity) AS total FROM (
             SELECT forward_asset, forward_quantity, status, MAX(rowid)
             FROM order_matches
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = 'pending' GROUP BY asset
         """,
         """
         SELECT backward_asset AS asset, SUM(backward_quantity) AS total FROM (
             SELECT backward_asset, backward_quantity, status, MAX(rowid)
             FROM order_matches
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = 'pending' GROUP BY asset
         """,
         """
@@ -442,14 +443,14 @@ def held(db):
         SELECT 'XCP' AS asset, SUM(forward_quantity) AS total FROM (
             SELECT forward_quantity, status, MAX(rowid)
             FROM bet_matches
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = 'pending'
         """,
         """
         SELECT 'XCP' AS asset, SUM(backward_quantity) AS total FROM (
             SELECT backward_quantity, status, MAX(rowid)
             FROM bet_matches
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = 'pending'
         """,
         """
@@ -463,7 +464,7 @@ def held(db):
         SELECT 'XCP' AS asset, SUM(wager * 2) AS total FROM (
             SELECT wager, status, MAX(rowid)
             FROM rps_matches
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
         """,
         """

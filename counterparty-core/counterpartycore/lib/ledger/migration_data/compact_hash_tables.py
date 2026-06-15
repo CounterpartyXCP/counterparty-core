@@ -207,12 +207,13 @@ TABLE_REWRITES = [
                             status TEXT)""",
         ("tx_hash",),
     ),
-    # order_matches: tx0_hash, tx1_hash BLOB; ``id`` stays TEXT (composite
-    # match-id compaction is out of scope for this migration).
+    # order_matches: tx0_hash, tx1_hash BLOB; the composite TEXT ``id`` is
+    # dropped -- the match is keyed by the existing ``(tx0_index, tx1_index)``
+    # pair. The text id is reconstructed on read via
+    # ``hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash)``.
     (
         "order_matches",
         (
-            "id",
             "tx0_index",
             "tx0_hash",
             "tx0_address",
@@ -233,7 +234,6 @@ TABLE_REWRITES = [
             "status",
         ),
         """CREATE TABLE order_matches(
-                                    id TEXT,
                                     tx0_index INTEGER,
                                     tx0_hash BLOB,
                                     tx0_address TEXT,
@@ -273,7 +273,8 @@ TABLE_REWRITES = [
             "source",
             "destination",
             "btc_amount",
-            "order_match_id",
+            "order_match_tx0_index",
+            "order_match_tx1_index",
             "status",
         ),
         """CREATE TABLE btcpays(
@@ -283,7 +284,8 @@ TABLE_REWRITES = [
                           source TEXT,
                           destination TEXT,
                           btc_amount INTEGER,
-                          order_match_id TEXT,
+                          order_match_tx0_index INTEGER,
+                          order_match_tx1_index INTEGER,
                           status TEXT,
                           FOREIGN KEY (tx_index) REFERENCES transactions(tx_index))""",
         ("tx_hash",),
@@ -418,7 +420,6 @@ TABLE_REWRITES = [
     (
         "bet_matches",
         (
-            "id",
             "tx0_index",
             "tx0_hash",
             "tx0_address",
@@ -444,7 +445,6 @@ TABLE_REWRITES = [
             "status",
         ),
         """CREATE TABLE bet_matches(
-                                id TEXT,
                                 tx0_index INTEGER,
                                 tx0_hash BLOB,
                                 tx0_address TEXT,
@@ -573,7 +573,6 @@ TABLE_REWRITES = [
     (
         "rps_matches",
         (
-            "id",
             "tx0_index",
             "tx0_hash",
             "tx0_address",
@@ -593,7 +592,6 @@ TABLE_REWRITES = [
             "status",
         ),
         """CREATE TABLE rps_matches(
-                                id TEXT,
                                 tx0_index INTEGER,
                                 tx0_hash BLOB,
                                 tx0_address TEXT,
@@ -633,7 +631,8 @@ TABLE_REWRITES = [
             "source",
             "move",
             "random",
-            "rps_match_id",
+            "rps_match_tx0_index",
+            "rps_match_tx1_index",
             "status",
         ),
         """CREATE TABLE rpsresolves(
@@ -643,7 +642,8 @@ TABLE_REWRITES = [
                           source TEXT,
                           move INTEGER,
                           random TEXT,
-                          rps_match_id TEXT,
+                          rps_match_tx0_index INTEGER,
+                          rps_match_tx1_index INTEGER,
                           status TEXT,
                           FOREIGN KEY (tx_index) REFERENCES transactions(tx_index))""",
         ("tx_hash",),
@@ -1048,5 +1048,99 @@ TABLE_REWRITES = [
     status TEXT
 )""",
         ("tx_hash",),
+    ),
+    # ------------------------------------------------------------------
+    # Composite match-id normalization: the four tables below referenced a
+    # match through a single TEXT ``*_match_id`` (``tx0hash_tx1hash``). They
+    # are rewritten to a ``(*_tx0_index, *_tx1_index)`` integer pair resolved
+    # via JOIN on ``transactions`` (see CUSTOM_INSERT_SELECT). They have no
+    # hash columns of their own, which is why they were skipped by the
+    # original hex->BLOB pass.
+    # ------------------------------------------------------------------
+    (
+        "order_match_expirations",
+        (
+            "order_match_tx0_index",
+            "order_match_tx1_index",
+            "tx0_address",
+            "tx1_address",
+            "block_index",
+        ),
+        """CREATE TABLE order_match_expirations(
+                                          order_match_tx0_index INTEGER,
+                                          order_match_tx1_index INTEGER,
+                                          tx0_address TEXT,
+                                          tx1_address TEXT,
+                                          block_index INTEGER,
+                                          PRIMARY KEY (order_match_tx0_index, order_match_tx1_index),
+                                          FOREIGN KEY (block_index) REFERENCES blocks(block_index))""",
+        (),
+    ),
+    (
+        "bet_match_expirations",
+        (
+            "bet_match_tx0_index",
+            "bet_match_tx1_index",
+            "tx0_address",
+            "tx1_address",
+            "block_index",
+        ),
+        """CREATE TABLE bet_match_expirations(
+                                          bet_match_tx0_index INTEGER,
+                                          bet_match_tx1_index INTEGER,
+                                          tx0_address TEXT,
+                                          tx1_address TEXT,
+                                          block_index INTEGER,
+                                          PRIMARY KEY (bet_match_tx0_index, bet_match_tx1_index),
+                                          FOREIGN KEY (block_index) REFERENCES blocks(block_index))""",
+        (),
+    ),
+    (
+        "rps_match_expirations",
+        (
+            "rps_match_tx0_index",
+            "rps_match_tx1_index",
+            "tx0_address",
+            "tx1_address",
+            "block_index",
+        ),
+        """CREATE TABLE rps_match_expirations(
+                                          rps_match_tx0_index INTEGER,
+                                          rps_match_tx1_index INTEGER,
+                                          tx0_address TEXT,
+                                          tx1_address TEXT,
+                                          block_index INTEGER,
+                                          PRIMARY KEY (rps_match_tx0_index, rps_match_tx1_index),
+                                          FOREIGN KEY (block_index) REFERENCES blocks(block_index))""",
+        (),
+    ),
+    (
+        "bet_match_resolutions",
+        (
+            "bet_match_tx0_index",
+            "bet_match_tx1_index",
+            "bet_match_type_id",
+            "block_index",
+            "winner",
+            "settled",
+            "bull_credit",
+            "bear_credit",
+            "escrow_less_fee",
+            "fee",
+        ),
+        """CREATE TABLE bet_match_resolutions(
+                                          bet_match_tx0_index INTEGER,
+                                          bet_match_tx1_index INTEGER,
+                                          bet_match_type_id INTEGER,
+                                          block_index INTEGER,
+                                          winner TEXT,
+                                          settled BOOL,
+                                          bull_credit INTEGER,
+                                          bear_credit INTEGER,
+                                          escrow_less_fee INTEGER,
+                                          fee INTEGER,
+                                          PRIMARY KEY (bet_match_tx0_index, bet_match_tx1_index),
+                                          FOREIGN KEY (block_index) REFERENCES blocks(block_index))""",
+        (),
     ),
 ]

@@ -52,6 +52,7 @@ The activation block height is not yet set (placeholder `9999999`):
 ## Performance
 
 - Compact hash storage in the Ledger DB: transaction hashes, block hashes and other fixed-size hex strings are now stored as raw 32-byte BLOBs instead of 64-char hex strings, cutting hash-column storage roughly in half. A new migration (`0010.compact_hash_storage`) rewrites all affected tables and runs `VACUUM` afterwards; a new `hashcodec` module handles encoding/decoding transparently so the rest of the codebase is unaffected.
+- Composite match-ID normalization (folded into `0010.compact_hash_storage`): the 129-char `tx0hash_tx1hash` TEXT match id is replaced by an integer `(tx0_index, tx1_index)` foreign-key pair on `order_matches`, `bet_matches`, `rps_matches`, the three `*_match_expirations` tables, `bet_match_resolutions`, `btcpays` and `rpsresolves`. The textual `id` / `*_match_id` is reconstructed on read at the API and consensus boundaries, so the public API surface and the consensus hashes are unchanged.
 
 ## Bugfixes
 
