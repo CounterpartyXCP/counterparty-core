@@ -7,7 +7,7 @@ from counterpartycore.lib.api import apiserver, apiwatcher, composer
 from counterpartycore.lib.api.routes import ALL_ROUTES, ROUTES
 from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.lib.parser import blocks
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import hashcodec, helpers
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
@@ -824,23 +824,22 @@ def test_get_transactions_valid(apiv2_client, monkeypatch):
 
 def test_transaction_valid_flag_without_verbose(apiv2_client, ledger_db):
     last_tx = ledger_db.execute(
-        "SELECT tx_index, block_index, block_hash, block_time FROM transactions ORDER BY tx_index DESC LIMIT 1"
+        "SELECT tx_index, block_index, block_time FROM transactions ORDER BY tx_index DESC LIMIT 1"
     ).fetchone()
     tx_index = last_tx["tx_index"] + 1
     tx_hash = "f" * 64
     ledger_db.execute(
         """
         INSERT INTO transactions(
-            tx_index, tx_hash, block_index, block_hash, block_time, source, destination,
+            tx_index, tx_hash, block_index, block_time, source, destination,
             btc_amount, fee, data, supported, utxos_info, transaction_type
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             tx_index,
-            tx_hash,
+            hashcodec.hash_to_db(tx_hash),
             last_tx["block_index"],
-            last_tx["block_hash"],
             last_tx["block_time"],
             "source",
             "",

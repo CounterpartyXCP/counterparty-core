@@ -116,7 +116,7 @@ def test_pool_rounding_routes_to_better_pool_before_book(ledger_db, defaults, bl
 
     cursor = ledger_db.cursor()
     pool_matches = cursor.execute(
-        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (trader_tx["tx_hash"],)
+        _POOL_MATCHES_BY_ORDER, (hashcodec.hash_to_db(trader_tx["tx_hash"]),)
     ).fetchall()
     assert len(pool_matches) == 1
     assert pool_matches[0]["backward_quantity"] == 2  # XCP in
@@ -124,7 +124,7 @@ def test_pool_rounding_routes_to_better_pool_before_book(ledger_db, defaults, bl
 
     maker_order = cursor.execute(
         "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
-        (maker_tx["tx_hash"],),
+        (hashcodec.hash_to_db(maker_tx["tx_hash"]),),
     ).fetchone()
     assert maker_order["status"] == "open"  # worse book order untouched
 
@@ -150,7 +150,7 @@ def test_pool_rounding_does_not_overfill_past_book(ledger_db, defaults, blockcha
 
     cursor = ledger_db.cursor()
     pool_matches = cursor.execute(
-        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (trader_tx["tx_hash"],)
+        _POOL_MATCHES_BY_ORDER, (hashcodec.hash_to_db(trader_tx["tx_hash"]),)
     ).fetchall()
     assert len(pool_matches) == 1
     assert pool_matches[0]["backward_quantity"] == 1  # XCP in
@@ -187,7 +187,7 @@ def test_pool_declines_when_book_cheaper_than_cheapest_pool_unit(
 
     cursor = ledger_db.cursor()
     pool_matches = cursor.execute(
-        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (trader_tx["tx_hash"],)
+        _POOL_MATCHES_BY_ORDER, (hashcodec.hash_to_db(trader_tx["tx_hash"]),)
     ).fetchall()
     assert len(pool_matches) == 0  # pool declined; the gate kept it off the overpay
 

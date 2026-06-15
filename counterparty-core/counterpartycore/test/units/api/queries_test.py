@@ -8,6 +8,7 @@ import inspect
 import pytest
 from counterpartycore.lib import config
 from counterpartycore.lib.api import queries, routes, verbose
+from counterpartycore.lib.utils import hashcodec
 
 # =============================================================================
 # Tests for select_rows function - where clause handling
@@ -196,28 +197,25 @@ def test_select_rows_with_unsupported_sort_field(state_db):
 
 def _insert_quantitative_sort_fixtures(ledger_db):
     """Insert two rows per quantitative table (quantities 10 then 20) used by the sort tests."""
-    block_hash = ledger_db.execute(
-        "SELECT block_hash FROM blocks WHERE block_index = 101"
-    ).fetchone()["block_hash"]
     ledger_db.executemany(
         """
         INSERT INTO transactions (
-            tx_index, tx_hash, block_index, block_hash, block_time, source,
+            tx_index, tx_hash, block_index, block_time, source,
             destination, btc_amount, fee, data, supported, utxos_info,
             transaction_type
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         [
-            (900001, "a" * 64, 101, block_hash, 1, "source", "dest", 0, 0, b"", 1, "", "send"),
-            (900002, "b" * 64, 101, block_hash, 2, "source", "dest", 0, 0, b"", 1, "", "send"),
-            (900003, "c" * 64, 101, block_hash, 3, "source", "dest", 0, 0, b"", 1, "", "issuance"),
-            (900004, "d" * 64, 101, block_hash, 4, "source", "dest", 0, 0, b"", 1, "", "issuance"),
-            (900005, "e" * 64, 101, block_hash, 5, "source", "dest", 0, 0, b"", 1, "", "broadcast"),
-            (900006, "f" * 64, 101, block_hash, 6, "source", "dest", 0, 0, b"", 1, "", "broadcast"),
-            (900007, "1" * 64, 101, block_hash, 7, "source", "dest", 0, 0, b"", 1, "", "dispense"),
-            (900008, "3" * 64, 101, block_hash, 8, "source", "dest", 0, 0, b"", 1, "", "dispense"),
-            (900009, "5" * 64, 101, block_hash, 9, "source", "dest", 0, 0, b"", 1, "", "dividend"),
-            (900010, "6" * 64, 101, block_hash, 10, "source", "dest", 0, 0, b"", 1, "", "dividend"),
+            (900001, "a" * 64, 101, 1, "source", "dest", 0, 0, b"", 1, "", "send"),
+            (900002, "b" * 64, 101, 2, "source", "dest", 0, 0, b"", 1, "", "send"),
+            (900003, "c" * 64, 101, 3, "source", "dest", 0, 0, b"", 1, "", "issuance"),
+            (900004, "d" * 64, 101, 4, "source", "dest", 0, 0, b"", 1, "", "issuance"),
+            (900005, "e" * 64, 101, 5, "source", "dest", 0, 0, b"", 1, "", "broadcast"),
+            (900006, "f" * 64, 101, 6, "source", "dest", 0, 0, b"", 1, "", "broadcast"),
+            (900007, "1" * 64, 101, 7, "source", "dest", 0, 0, b"", 1, "", "dispense"),
+            (900008, "3" * 64, 101, 8, "source", "dest", 0, 0, b"", 1, "", "dispense"),
+            (900009, "5" * 64, 101, 9, "source", "dest", 0, 0, b"", 1, "", "dividend"),
+            (900010, "6" * 64, 101, 10, "source", "dest", 0, 0, b"", 1, "", "dividend"),
         ],
     )
     ledger_db.executemany(
@@ -260,12 +258,12 @@ def _insert_quantitative_sort_fixtures(ledger_db):
         """
         INSERT INTO dispenses (
             tx_index, dispense_index, tx_hash, block_index, source,
-            destination, asset, dispense_quantity, dispenser_tx_hash, btc_amount
+            destination, asset, dispense_quantity, dispenser_tx_index, btc_amount
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         [
-            (900007, 0, "1" * 64, 101, "source", "dest", "SORTDISP", 10, "2" * 64, 1),
-            (900008, 0, "3" * 64, 101, "source", "dest", "SORTDISP", 20, "4" * 64, 2),
+            (900007, 0, "1" * 64, 101, "source", "dest", "SORTDISP", 10, 900001, 1),
+            (900008, 0, "3" * 64, 101, "source", "dest", "SORTDISP", 20, 900002, 2),
         ],
     )
     ledger_db.executemany(
@@ -514,7 +512,7 @@ def test_get_transactions_by_addresses_with_valid_filter(ledger_db, defaults):
 def test_transaction_queries_return_zero_btc_amount_for_null(ledger_db, current_block_index):
     """Test transaction endpoints do not expose null btc_amount values."""
     block = ledger_db.execute(
-        "SELECT block_hash, block_time FROM blocks WHERE block_index = ?",
+        "SELECT block_time FROM blocks WHERE block_index = ?",
         (current_block_index,),
     ).fetchone()
     tx_index = (
@@ -526,14 +524,13 @@ def test_transaction_queries_return_zero_btc_amount_for_null(ledger_db, current_
     tx_hash = "ab" * 32
     ledger_db.execute(
         """INSERT INTO transactions(
-            tx_index, tx_hash, block_index, block_hash, block_time, source, destination,
+            tx_index, tx_hash, block_index, block_time, source, destination,
             btc_amount, fee, data, supported, utxos_info, transaction_type
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             tx_index,
-            tx_hash,
+            hashcodec.hash_to_db(tx_hash),
             current_block_index,
-            block["block_hash"],
             block["block_time"],
             "",
             "",
