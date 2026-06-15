@@ -38,6 +38,7 @@ from scenarios import (
     scenario_24_dispenser,
     scenario_25_issuance,
     scenario_26_pools,
+    scenario_27_fairminter_pool,
     scenario_28_indefinite_orders,
     scenario_last_mempool,
 )
@@ -71,13 +72,14 @@ SCENARIOS += scenario_24_dispenser.SCENARIO
 SCENARIOS += scenario_25_issuance.SCENARIO
 SCENARIOS += scenario_28_indefinite_orders.SCENARIO
 SCENARIOS += scenario_26_pools.SCENARIO
+SCENARIOS += scenario_27_fairminter_pool.SCENARIO
 # more scenarios before this one
 SCENARIOS += scenario_last_mempool.SCENARIO
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../../")
 
-# SCENARIOS = scenario_25_issuance.SCENARIO
+# SCENARIOS = scenario_27_fairminter_pool.SCENARIO
 
 
 def compare_strings(string1, string2):
@@ -122,7 +124,7 @@ def get_tx_index(node, tx_hash):
         return node.tx_index
     if tx_hash == "null":
         return node.tx_index
-    result = node.api_call(f"transactions/{tx_hash}?limit=1")
+    result = node.api_call(f"transactions/{tx_hash}")
     if "result" in result:
         return result["result"]["tx_index"]
     return 0
@@ -321,6 +323,9 @@ def run_item(node, item, context):
                     print(f"Expected: {expected_result}")
                     print(f"Got: {str(e)}")
                     raise er from er
+                # the compose failed as expected: there is no transaction, block,
+                # set_variables or controls to process, so return early.
+                return context
             else:
                 raise e from e
 
@@ -340,8 +345,10 @@ def run_item(node, item, context):
             .replace("$BLOCK_INDEX + 19", str(node.block_count + 19))
             .replace("$BLOCK_INDEX + 20", str(node.block_count + 20))
             .replace("$BLOCK_INDEX + 21", str(node.block_count + 21))
-            .replace("$BLOCK_INDEX + 1", str(node.block_count + 1))
+            .replace("$BLOCK_INDEX + 5", str(node.block_count + 5))
+            .replace("$BLOCK_INDEX + 3", str(node.block_count + 3))
             .replace("$BLOCK_INDEX + 2", str(node.block_count + 2))
+            .replace("$BLOCK_INDEX + 1", str(node.block_count + 1))
             .replace("$BLOCK_INDEX", str(node.block_count))
         )
         print(f"Set variable {name} to {context[name]}")

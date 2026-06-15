@@ -4,12 +4,23 @@ The Counterparty Core API is the recommended way to query the state of a Counter
 
 When the server is not ready, that is to say when all the extant blocks have not yet been parsed, every route will return a `503` error, except `/` and those routes that are in the `/blocks`, `/transactions` and `/backend` groups.
 
-All API responses contain the following 3 headers:
+All API responses include the following headers:
 
 * `X-COUNTERPARTY-HEIGHT` contains the last block parsed by Counterparty
 * `X-BITCOIN-HEIGHT` contains the last block known to Bitcoin Core
 * `X-COUNTERPARTY-READY` contains true if `X-COUNTERPARTY-HEIGHT` >= `X-BITCOIN-HEIGHT` - 1
 * `X-LEDGER-STATE` contains `Starting`, `Catching Up`, `Following` or `Stopping`
+
+The v2 API uses the following HTTP response codes:
+
+* `200 OK` for successful requests.
+* `204 No Content` for successful CORS preflight (`OPTIONS`) requests.
+* `400 Bad Request` for invalid parameters, invalid compose/unpack inputs, address or transaction hash validation errors, backend RPC errors returned while handling a request, and other request-level API errors.
+* `404 Not Found` when the requested route or resource does not exist.
+* `500 Internal Server Error` for unexpected server errors before route handling can complete.
+* `503 Service Unavailable` when the API or backend is not ready, or when an unexpected route-handling error is reported as temporarily unavailable.
+
+Routes in the `/v2/bitcoin` group proxy Bitcoin Core responses and may return the proxied status code and headers.
 
 ## Responses Format
 
@@ -44,9 +55,25 @@ All responses contain a `result_count` field allowing you to calculate the numbe
 
 Routes in the `/v2/bitcoin` group serve as a proxy to make requests to Bitcoin Core.
 
+## Counterparty Transaction Data
+
+Every Counterparty action is a Bitcoin transaction that carries an embedded Counterparty message. The embedded byte stream is identified by the 8-byte `CNTRPRTY` prefix. After the prefix is removed, the parser reads a message type identifier and passes the remaining bytes to the decoder for that message type.
+
+Message type identifiers are normally encoded as 4-byte big-endian integers. When the `short_tx_type_id` protocol change is active, nonzero message type identifiers below 256 may instead be encoded in one byte. The remaining payload is message-specific; for example, a send, issuance, order, or dispenser message each has its own unpacking logic.
+
+Counterparty data can be carried in Bitcoin outputs in different ways. The preferred compact form is `OP_RETURN` when the prefixed payload fits the configured size limit. Legacy or larger encodings may use multisig or P2SH-related data chunks, where the encoded chunks are recovered by the parser before the same `CNTRPRTY` prefix and message type rules are applied.
+
+For application code, prefer the compose and decode helpers rather than parsing scripts manually. Compose routes accept an `encoding` parameter and return the extracted `data` field; `/v2/transactions/unpack` decodes extracted Counterparty data into a `message_type`, `message_type_id`, and message-specific `message_data`. Transaction routes with `verbose=true` can also include `unpacked_data`.
+
 ## Events API
 
 One of the new features of API v2 is the ability to make requests by events. This is the most powerful way to recover the vast majority of data.
+
+### Messages table
+
+Counterparty Core is a deterministic state machine. As each block and transaction is parsed, Core writes deterministic event records to the `messages` table. These records form an internal event journal that is used for `messages_hash` calculations, comparing state across nodes or versions, feeding API and ZeroMQ event consumers, rebuilding secondary explorer or indexer databases, and supporting deterministic logging and mempool handling.
+
+The `messages` table is useful for operators and integrators, but it is not a stable public data model. Field names, event payloads, and backfilled historical records may change across releases. Applications that need compatibility guarantees should prefer the documented API v2 event routes instead of depending directly on the raw table.
 
 For example to retrieve events concerning dispensers for a given block:
 

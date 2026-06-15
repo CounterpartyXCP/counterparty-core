@@ -19,19 +19,11 @@ class Profiler:
         self.profiler = None
         self.active_profiling = False
         self.last_report_time = None
-
-        # Check Python version - disable for 3.12+
-        if sys.version_info >= (3, 12):
-            logger.warning(
-                "Profiler is not supported on Python 3.12 and above - functionality disabled"
-            )
-            self._is_supported = False
-        else:
-            self._is_supported = True
-            logger.info(
-                "Profiler initialized with configured interval of %s minutes",
-                config.PROFILE_INTERVAL_MINUTES,
-            )
+        self._is_supported = True
+        logger.info(
+            "Profiler initialized with configured interval of %s minutes",
+            config.PROFILE_INTERVAL_MINUTES,
+        )
 
     def start(self):
         """Starts a profiling session"""

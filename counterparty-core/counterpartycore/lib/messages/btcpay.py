@@ -65,12 +65,31 @@ def validate(db, source, order_match_id, block_index):  # pylint: disable=unused
     return destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems
 
 
-def compose(db, source: str, order_match_id: str, skip_validation: bool = False):
-    assert order_match_id[64] == "_"
+def _decode_order_match_id(order_match_id: str):
+    # API/compose path only: surface a malformed order_match_id as a clean
+    # ComposeError instead of leaking an IndexError/AssertionError (bad length
+    # or missing "_" separator) or a binascii.Error (non-hex halves).
+    if (
+        not isinstance(order_match_id, str)
+        or len(order_match_id) != 129
+        or order_match_id[64] != "_"
+    ):
+        raise exceptions.ComposeError(["invalid order match id"])
     tx0_hash, tx1_hash = (
         order_match_id[:64],
         order_match_id[65:],
     )  # UTF-8 encoding means that the indices are doubled.
+    try:
+        return (
+            binascii.unhexlify(bytes(tx0_hash, "utf-8")),
+            binascii.unhexlify(bytes(tx1_hash, "utf-8")),
+        )
+    except binascii.Error as exc:
+        raise exceptions.ComposeError(["invalid order match id"]) from exc
+
+
+def compose(db, source: str, order_match_id: str, skip_validation: bool = False):
+    tx0_hash_bytes, tx1_hash_bytes = _decode_order_match_id(order_match_id)
 
     destination, btc_quantity, _escrowed_asset, _escrowed_quantity, order_match, problems = (
         validate(db, source, order_match_id, CurrentState().current_block_index())
@@ -88,10 +107,6 @@ def compose(db, source: str, order_match_id: str, skip_validation: bool = False)
     if 10 - time_left < 4:
         logger.warning("Order match has only %s confirmation(s).", 10 - time_left)
 
-    tx0_hash_bytes, tx1_hash_bytes = (
-        binascii.unhexlify(bytes(tx0_hash, "utf-8")),
-        binascii.unhexlify(bytes(tx1_hash, "utf-8")),
-    )
     data = messagetype.pack(ID)
     data += struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
     return (source, [(destination, btc_quantity)], data)

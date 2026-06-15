@@ -17,6 +17,12 @@ jobs:
       with:
         python-version: "3.11"
     - name: Install dependencies
+      # Mitigate transient crates.io download failures ("Recv failure:
+      # Connection reset by peer") by disabling cargo's HTTP/2 multiplexing
+      # and bumping the network retry count.
+      env:
+        CARGO_NET_RETRY: "10"
+        CARGO_HTTP_MULTIPLEXING: "false"
       run: |
         python -m pip install --upgrade pip
         pip install --upgrade pylint pylint-sarif-unofficial

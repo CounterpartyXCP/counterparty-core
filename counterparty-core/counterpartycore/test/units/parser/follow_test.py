@@ -868,6 +868,63 @@ class TestNotSupportedTransactionsCache:
         assert "tx1" in cache.not_suppported_txs
         assert "tx2" in cache.not_suppported_txs
 
+    def test_max_size_eviction(self, reset_not_supported_cache, temp_cache_dir, monkeypatch):
+        """Test oldest entries are evicted when MAX_SIZE is exceeded"""
+        monkeypatch.setattr(follow.NotSupportedTransactionsCache, "MAX_SIZE", 3)
+        cache = follow.NotSupportedTransactionsCache()
+
+        cache.add(["tx1", "tx2", "tx3"])
+        cache.add(["tx4", "tx5"])
+
+        assert cache._ordered_txs == ["tx3", "tx4", "tx5"]
+        assert cache.not_suppported_txs == {"tx3", "tx4", "tx5"}
+        assert cache.is_not_supported("tx1") is False
+
+        # The compacted file matches the in-memory state
+        cache_path = os.path.join(temp_cache_dir, "not_supported_tx_cache.regtest.txt")
+        with open(cache_path, "r", encoding="utf-8") as f:
+            assert [line.strip() for line in f] == ["tx3", "tx4", "tx5"]
+
+    def test_restore_trims_to_max_size(
+        self, reset_not_supported_cache, temp_cache_dir, monkeypatch
+    ):
+        """Test restore keeps only the most recent MAX_SIZE entries"""
+        monkeypatch.setattr(follow.NotSupportedTransactionsCache, "MAX_SIZE", 2)
+        cache_path = os.path.join(temp_cache_dir, "not_supported_tx_cache.regtest.txt")
+        with open(cache_path, "w", encoding="utf-8") as f:
+            f.write("tx1\ntx2\ntx3\n")
+
+        cache = follow.NotSupportedTransactionsCache()
+
+        assert cache._ordered_txs == ["tx2", "tx3"]
+        # The oversized file is compacted on restore
+        with open(cache_path, "r", encoding="utf-8") as f:
+            assert [line.strip() for line in f] == ["tx2", "tx3"]
+
+    def test_add_appends_to_legacy_file(self, reset_not_supported_cache, temp_cache_dir):
+        """Test appending after restoring a legacy file without trailing newline"""
+        cache_path = os.path.join(temp_cache_dir, "not_supported_tx_cache.regtest.txt")
+        with open(cache_path, "w", encoding="utf-8") as f:
+            f.write("tx1\ntx2")  # legacy format: no trailing newline
+
+        cache = follow.NotSupportedTransactionsCache()
+        cache.add(["tx3"])
+
+        with open(cache_path, "r", encoding="utf-8") as f:
+            assert [line.strip() for line in f] == ["tx1", "tx2", "tx3"]
+
+    def test_persistence_across_restart(self, reset_not_supported_cache, temp_cache_dir):
+        """Test appended entries survive a singleton reset (process restart)"""
+        cache = follow.NotSupportedTransactionsCache()
+        cache.add(["tx1", "tx2"])
+        cache.add(["tx3"])
+
+        del helpers.SingletonMeta._instances[follow.NotSupportedTransactionsCache]
+        restored = follow.NotSupportedTransactionsCache()
+
+        assert restored._ordered_txs == ["tx1", "tx2", "tx3"]
+        assert restored.not_suppported_txs == {"tx1", "tx2", "tx3"}
+
 
 # ============================================================================
 # Tests for receive_multipart (using asyncio.run)

@@ -123,7 +123,7 @@ EVENT_LIST = [
 ]
 
 
-def get_example_output(path, args):
+def get_example_output(path, args, add_verbose=True):
     print(f"args: {args}")
     url_keys = []
     for key, value in args.items():
@@ -136,10 +136,17 @@ def get_example_output(path, args):
         args.pop(key)
     url = f"{API_ROOT}{path}"
     print(f"GET {url}")
-    if "v2/" in path:
+    # Only request verbose output when the route actually documents a `verbose`
+    # parameter; otherwise the captured (verbose) example carries `asset_info`
+    # and `*_normalized` fields that the route can't return by default
+    # (e.g. the `bitcoin` category endpoints, which expose no `verbose` arg).
+    if add_verbose and "v2/" in path:
         args["verbose"] = "true"
 
-    if "/compose" in path:
+    # The `estimatexcpfees` compose sub-routes don't accept the composer's
+    # construct params, so injecting them returns an "Unrecognized parameter(s)"
+    # error at capture time rather than a usable example.
+    if "/compose" in path and "estimatexcpfees" not in path:
         source = None
         if "/addresses/" in path:
             source = path.split("/addresses/")[1].split("/")[0]
@@ -154,7 +161,7 @@ def get_example_output(path, args):
             args["validate"] = False
 
     response = requests.get(url, params=args)  # noqa S113
-    return response.json()
+    return response.json(), response.status_code
 
 
 def get_groupe_name(path):
@@ -267,7 +274,10 @@ def gen_paths(db):
             if group.lower() == "compose" and arg["name"] == "exact_fee":
                 description += " (e.g. 0)"
             if "(e.g. " in description:
-                example = description.split("(e.g. ")[1].replace(")", "")
+                # The example value ends at the first closing paren; any trailing
+                # text (e.g. the "Sortable fields: ..." suffix appended to `sort`
+                # descriptions) belongs to the description, not the example.
+                example = description.split("(e.g. ")[1].split(")")[0]
                 for key, value in regtest_fixtures.items():
                     example = example.replace(key, str(value))
                 example_args[arg["name"]] = example
@@ -306,12 +316,22 @@ def gen_paths(db):
 
         if (
             example_args != {}
-            or len(route["args"]) == 1
+            # parameterless route (only the `verbose` flag): safe to GET as-is.
+            # Routes in the bitcoin/compose/healthz/routes/v1 categories no longer
+            # carry a `verbose` arg, so a bare `len == 1` here would wrongly match
+            # routes whose single parameter is a *required* payload (e.g.
+            # `sendrawtransaction`/`signedhex`), GET them without it, and crash on
+            # the non-JSON error body.
+            or (len(route["args"]) == 1 and route["args"][0]["name"] == "verbose")
             or "healthz" in path
             or "getmempoolinfo" in path
-        ):  # min 1 for verbose arg
+        ):
+            has_verbose = any(arg["name"] == "verbose" for arg in route["args"])
             if not USE_API_CACHE or path not in API_CACHE:
-                API_CACHE[path] = get_example_output(path, dict(example_args))
+                example_output, _status_code = get_example_output(
+                    path, dict(example_args), add_verbose=has_verbose
+                )
+                API_CACHE[path] = example_output
             operation["responses"]["200"]["content"] = {
                 "application/json": {"example": API_CACHE[path]}
             }
@@ -383,7 +403,9 @@ def gen_events_doc():
             md += f"\n#### `{event}`\n\n"
             path = f"/v2/events/{event}"
             if not USE_API_CACHE or path not in API_CACHE:
-                example_output = get_example_output(path, {"limit": "1", "verbose": "true"})
+                example_output, _status_code = get_example_output(
+                    path, {"limit": "1", "verbose": "true"}
+                )
                 API_CACHE[path] = example_output
             else:
                 example_output = API_CACHE[path]

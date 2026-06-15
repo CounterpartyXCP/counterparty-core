@@ -3,7 +3,11 @@ Unit tests for counterpartycore.lib.api.queries module.
 Tests focus on covering uncovered lines in the module.
 """
 
-from counterpartycore.lib.api import queries
+import inspect
+
+import pytest
+from counterpartycore.lib import config
+from counterpartycore.lib.api import queries, routes, verbose
 
 # =============================================================================
 # Tests for select_rows function - where clause handling
@@ -137,6 +141,47 @@ def test_select_rows_with_sort_invalid_order(state_db):
     assert result is not None
 
 
+def test_select_rows_balances_sort_asset_uses_asset_longname(state_db):
+    cursor = state_db.cursor()
+    address = "mnTESTBalanceSortAddress"
+    cursor.executemany(
+        """
+        INSERT INTO balances (address, asset, asset_longname, quantity)
+        VALUES (?, ?, ?, ?)
+        """,
+        [
+            (address, "MYASSET", None, 1),
+            (address, "A999999999999999999", "MYASSET.CHILD", 1),
+            (address, "A888888888888888888", "ANOTHER.CHILD", 1),
+        ],
+    )
+
+    result = queries.select_rows(
+        state_db,
+        "balances",
+        where={"address": address},
+        sort="asset",
+        limit=10,
+    )
+
+    assert [row["asset"] for row in result.result] == [
+        "A888888888888888888",
+        "MYASSET",
+        "A999999999999999999",
+    ]
+
+
+def test_select_rows_non_balance_asset_sort_uses_asset_field(state_db):
+    result = queries.select_rows(
+        state_db,
+        "dispensers",
+        sort="asset",
+        limit=10,
+    )
+
+    assert result is not None
+
+
 def test_select_rows_with_unsupported_sort_field(state_db):
     """Test select_rows with unsupported sort field (line 310-311)."""
     result = queries.select_rows(
@@ -147,6 +192,204 @@ def test_select_rows_with_unsupported_sort_field(state_db):
         limit=10,
     )
     assert result is not None
+
+
+def _insert_quantitative_sort_fixtures(ledger_db):
+    """Insert two rows per quantitative table (quantities 10 then 20) used by the sort tests."""
+    block_hash = ledger_db.execute(
+        "SELECT block_hash FROM blocks WHERE block_index = 101"
+    ).fetchone()["block_hash"]
+    ledger_db.executemany(
+        """
+        INSERT INTO transactions (
+            tx_index, tx_hash, block_index, block_hash, block_time, source,
+            destination, btc_amount, fee, data, supported, utxos_info,
+            transaction_type
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (900001, "a" * 64, 101, block_hash, 1, "source", "dest", 0, 0, b"", 1, "", "send"),
+            (900002, "b" * 64, 101, block_hash, 2, "source", "dest", 0, 0, b"", 1, "", "send"),
+            (900003, "c" * 64, 101, block_hash, 3, "source", "dest", 0, 0, b"", 1, "", "issuance"),
+            (900004, "d" * 64, 101, block_hash, 4, "source", "dest", 0, 0, b"", 1, "", "issuance"),
+            (900005, "e" * 64, 101, block_hash, 5, "source", "dest", 0, 0, b"", 1, "", "broadcast"),
+            (900006, "f" * 64, 101, block_hash, 6, "source", "dest", 0, 0, b"", 1, "", "broadcast"),
+            (900007, "1" * 64, 101, block_hash, 7, "source", "dest", 0, 0, b"", 1, "", "dispense"),
+            (900008, "3" * 64, 101, block_hash, 8, "source", "dest", 0, 0, b"", 1, "", "dispense"),
+            (900009, "5" * 64, 101, block_hash, 9, "source", "dest", 0, 0, b"", 1, "", "dividend"),
+            (900010, "6" * 64, 101, block_hash, 10, "source", "dest", 0, 0, b"", 1, "", "dividend"),
+        ],
+    )
+    ledger_db.executemany(
+        """
+        INSERT INTO sends (
+            tx_index, tx_hash, block_index, source, destination, asset,
+            quantity, status, msg_index, fee_paid, send_type
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (900001, "a" * 64, 101, "source", "dest", "SORTSEND", 10, "valid", 0, 1, "send"),
+            (900002, "b" * 64, 101, "source", "dest", "SORTSEND", 20, "valid", 0, 2, "send"),
+        ],
+    )
+    ledger_db.executemany(
+        """
+        INSERT INTO issuances (
+            tx_index, tx_hash, msg_index, block_index, asset, quantity,
+            source, issuer, fee_paid, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (900003, "c" * 64, 0, 101, "SORTISSUE", 10, "source", "issuer", 1, "valid"),
+            (900004, "d" * 64, 0, 101, "SORTISSUE", 20, "source", "issuer", 2, "valid"),
+        ],
+    )
+    ledger_db.executemany(
+        """
+        INSERT INTO broadcasts (
+            tx_index, tx_hash, block_index, source, timestamp, value,
+            fee_fraction_int, text, locked, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (900005, "e" * 64, 101, "sort-source", 1, 1.0, 1, "low", 0, "valid"),
+            (900006, "f" * 64, 101, "sort-source", 2, 2.0, 2, "high", 0, "valid"),
+        ],
+    )
+    ledger_db.executemany(
+        """
+        INSERT INTO dispenses (
+            tx_index, dispense_index, tx_hash, block_index, source,
+            destination, asset, dispense_quantity, dispenser_tx_hash, btc_amount
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (900007, 0, "1" * 64, 101, "source", "dest", "SORTDISP", 10, "2" * 64, 1),
+            (900008, 0, "3" * 64, 101, "source", "dest", "SORTDISP", 20, "4" * 64, 2),
+        ],
+    )
+    ledger_db.executemany(
+        """
+        INSERT INTO dividends (
+            tx_index, tx_hash, block_index, source, asset, dividend_asset,
+            quantity_per_unit, fee_paid, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (900009, "5" * 64, 101, "source", "SORTDIV", "XCP", 10, 1, "valid"),
+            (900010, "6" * 64, 101, "source", "SORTDIV", "XCP", 20, 2, "valid"),
+        ],
+    )
+
+
+def test_select_rows_sort_additional_quantitative_tables(ledger_db):
+    """Test sort fields added for quantitative API tables."""
+    _insert_quantitative_sort_fixtures(ledger_db)
+
+    cases = [
+        ("sends", {"asset": "SORTSEND"}, "quantity", [10, 20]),
+        ("issuances", {"asset": "SORTISSUE"}, "quantity", [10, 20]),
+        ("broadcasts", {"source": "sort-source"}, "value", [1.0, 2.0]),
+        ("dispenses", {"asset": "SORTDISP"}, "dispense_quantity", [10, 20]),
+        ("dividends", {"asset": "SORTDIV"}, "quantity_per_unit", [10, 20]),
+    ]
+    for table, where, sort_field, expected in cases:
+        result = queries.select_rows(
+            ledger_db,
+            table,
+            where=where,
+            sort=f"{sort_field}:asc",
+            limit=2,
+        )
+        assert [row[sort_field] for row in result.result] == expected
+
+
+def test_quantitative_getters_pass_sort_through(ledger_db):
+    """The list getters for quantitative tables must forward `sort` to select_rows.
+
+    The default order is descending (newest first), so an ascending sort proves the
+    getter actually applied the requested order rather than ignoring it.
+    """
+    _insert_quantitative_sort_fixtures(ledger_db)
+
+    cases = [
+        (queries.get_sends_by_asset, ("SORTSEND",), "quantity", [10, 20]),
+        (queries.get_issuances_by_asset, ("SORTISSUE",), "quantity", [10, 20]),
+        (queries.get_broadcasts_by_source, ("sort-source",), "value", [1.0, 2.0]),
+        (queries.get_dispenses_by_asset, ("SORTDISP",), "dispense_quantity", [10, 20]),
+        (queries.get_dividends_by_asset, ("SORTDIV",), "quantity_per_unit", [10, 20]),
+    ]
+    for getter, getter_args, sort_field, expected in cases:
+        result = getter(ledger_db, *getter_args, sort=f"{sort_field}:asc")
+        assert [row[sort_field] for row in result.result] == expected, getter.__name__
+
+
+def test_quantitative_endpoints_expose_sort():
+    """Every quantitative list endpoint must expose `sort` as a query parameter.
+
+    The API only injects parameters declared in the function signature, so a getter
+    that does not declare `sort` silently ignores the query parameter. This guards
+    against re-introducing that gap.
+    """
+    getters = [
+        queries.get_sends,
+        queries.get_sends_by_block,
+        queries.get_sends_by_transaction_hash,
+        queries.get_sends_by_asset,
+        queries.get_sends_by_address,
+        queries.get_sends_by_address_and_asset,
+        queries.get_receive_by_address,
+        queries.get_receive_by_address_and_asset,
+        queries.get_issuances,
+        queries.get_issuances_by_block,
+        queries.get_issuances_by_asset,
+        queries.get_issuances_by_address,
+        queries.get_dispenses,
+        queries.get_dispenses_by_block,
+        queries.get_dispenses_by_transaction_hash,
+        queries.get_dispenses_by_dispenser,
+        queries.get_dispenses_by_source,
+        queries.get_dispenses_by_destination,
+        queries.get_dispenses_by_asset,
+        queries.get_dispenses_by_source_and_asset,
+        queries.get_dispenses_by_destination_and_asset,
+        queries.get_valid_broadcasts,
+        queries.get_broadcasts_by_source,
+        queries.get_dividends,
+        queries.get_dividends_by_asset,
+        queries.get_dividends_distributed_by_address,
+    ]
+    for getter in getters:
+        arg_names = [arg["name"] for arg in routes.prepare_route_args(getter)]
+        assert "sort" in arg_names, f"{getter.__name__} does not expose a `sort` query parameter"
+
+
+def test_sort_forwarding_tables_are_registered():
+    """Every table passed to select_rows(..., sort=...) must be a SUPPORTED_SORT_FIELDS
+    key, otherwise the sort is silently dropped at runtime.
+
+    Regression: the orders endpoints query the `orders_info` view, but the fields
+    were registered under `orders`, so sorting orders never applied.
+    """
+    missing = []
+    for name, function in inspect.getmembers(queries, inspect.isfunction):
+        for table in queries._select_rows_sort_tables(function):
+            if table not in queries.SUPPORTED_SORT_FIELDS:
+                missing.append((name, table))
+    assert not missing, f"sort tables missing from SUPPORTED_SORT_FIELDS: {missing}"
+
+
+def test_get_orders_sort_is_applied(state_db):
+    """The orders endpoints sort on the `orders_info` view; an ascending sort must
+    reverse the default descending order (regression for the orders_info key)."""
+    desc = queries.get_orders(state_db, sort="give_quantity:desc").result
+    asc = queries.get_orders(state_db, sort="give_quantity:asc").result
+    if len(asc) < 2:
+        pytest.skip("not enough orders in fixture to assert ordering")
+    assert [row["give_quantity"] for row in asc] == sorted(row["give_quantity"] for row in asc)
+    assert [row["give_quantity"] for row in desc] == list(
+        reversed([row["give_quantity"] for row in asc])
+    )
 
 
 def test_select_rows_with_offset(ledger_db):
@@ -168,6 +411,47 @@ def test_select_row_returns_none(ledger_db):
         where={"tx_hash": "nonexistent_hash_that_does_not_exist"},
     )
     assert result is None
+
+
+def test_select_rows_can_skip_result_count(ledger_db):
+    """Test select_rows can skip the extra count query for single-row lookups."""
+    counted_result = queries.select_rows(
+        ledger_db,
+        "transactions",
+        limit=1,
+    )
+    assert counted_result is not None
+    assert counted_result.result_count is not None
+
+    result = queries.select_rows(
+        ledger_db,
+        "transactions",
+        limit=1,
+        with_count=False,
+    )
+    assert result is not None
+    assert result.result_count is None
+
+
+def test_get_address_options(ledger_db, defaults):
+    unset_address = defaults["addresses"][4]
+    result = queries.get_address(ledger_db, unset_address)
+    assert result.result == {
+        "address": unset_address,
+        "options": 0,
+        "block_index": None,
+    }
+
+    address_with_options = defaults["addresses"][6]
+    ledger_db.execute(
+        "INSERT INTO addresses (address, options, block_index) VALUES (?, ?, ?)",
+        (address_with_options, config.ADDRESS_OPTION_REQUIRE_MEMO, 123),
+    )
+
+    result = queries.get_address(ledger_db, address_with_options)
+    assert result.result["address"] == address_with_options
+    assert result.result["options"] == config.ADDRESS_OPTION_REQUIRE_MEMO
+    assert result.result["block_index"] == 123
 
 
 # =============================================================================
@@ -225,6 +509,53 @@ def test_get_transactions_by_addresses_with_valid_filter(ledger_db, defaults):
         valid=True,
     )
     assert result is not None
+
+
+def test_transaction_queries_return_zero_btc_amount_for_null(ledger_db, current_block_index):
+    """Test transaction endpoints do not expose null btc_amount values."""
+    block = ledger_db.execute(
+        "SELECT block_hash, block_time FROM blocks WHERE block_index = ?",
+        (current_block_index,),
+    ).fetchone()
+    tx_index = (
+        ledger_db.execute("SELECT MAX(tx_index) AS tx_index FROM transactions").fetchone()[
+            "tx_index"
+        ]
+        + 1
+    )
+    tx_hash = "ab" * 32
+    ledger_db.execute(
+        """INSERT INTO transactions(
+            tx_index, tx_hash, block_index, block_hash, block_time, source, destination,
+            btc_amount, fee, data, supported, utxos_info, transaction_type
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            tx_index,
+            tx_hash,
+            current_block_index,
+            block["block_hash"],
+            block["block_time"],
+            "",
+            "",
+            None,
+            None,
+            None,
+            True,
+            "",
+            "utxomove",
+        ),
+    )
+    ledger_db.execute(
+        "INSERT INTO transactions_status(tx_index, valid) VALUES(?, ?)",
+        (tx_index, True),
+    )
+
+    query_result = queries.get_transaction_by_hash(ledger_db, tx_hash)
+    assert query_result.result["btc_amount"] == 0
+
+    query_result = queries.get_transactions(ledger_db, type="utxomove", limit=1)
+    assert query_result.result[0]["tx_hash"] == tx_hash
+    assert query_result.result[0]["btc_amount"] == 0
 
 
 # =============================================================================
@@ -403,6 +734,39 @@ def test_get_debits_by_asset_with_action(ledger_db):
         action="send",
     )
     assert result is not None
+
+
+def test_credits_expose_unique_index(ledger_db):
+    """credits rows expose a stable `credit_index` (rowid) so identical rows
+    within a single tx can be told apart (issue #3320)."""
+    result = queries.select_rows(ledger_db, "credits", limit=50)
+    assert len(result.result) > 0
+    for row in result.result:
+        assert "credit_index" in row
+        assert row["credit_index"] == row["rowid"]
+
+    # `credit_index` survives API cleaning while `rowid` is stripped.
+    cleaned = verbose.clean_api_result(result.result)
+    indexes = [row["credit_index"] for row in cleaned]
+    for row in cleaned:
+        assert "rowid" not in row
+        assert "credit_index" in row
+    # Unique per row, even for otherwise byte-identical credits.
+    assert len(indexes) == len(set(indexes))
+
+
+def test_debits_expose_unique_index(ledger_db):
+    """debits rows expose a stable `debit_index` (rowid)."""
+    result = queries.select_rows(ledger_db, "debits", limit=50)
+    assert len(result.result) > 0
+    for row in result.result:
+        assert "debit_index" in row
+        assert row["debit_index"] == row["rowid"]
+
+    cleaned = verbose.clean_api_result(result.result)
+    for row in cleaned:
+        assert "rowid" not in row
+        assert "debit_index" in row
 
 
 # =============================================================================
@@ -596,6 +960,18 @@ def test_get_balances_by_address_and_asset_address_type(state_db, defaults):
     assert result is not None
 
 
+def test_get_balances_by_address_and_asset_subasset_longname(state_db, defaults):
+    result = queries.get_balances_by_address_and_asset(
+        state_db,
+        address=defaults["addresses"][0],
+        asset="PARENT.already.issued",
+    )
+
+    assert len(result.result) > 0
+    assert result.result[0]["asset"] == "A95428959342453541"
+    assert result.result[0]["asset_longname"] == "PARENT.already.issued"
+
+
 # =============================================================================
 # Tests for dispensers
 # =============================================================================
@@ -692,6 +1068,52 @@ def test_get_dispensers_by_asset_prices_divisible_lots(state_db):
     )
 
     assert [row["price"] for row in result.result] == [6172.5, 12345]
+
+
+def test_get_dispensers_by_origin_filters_origin_address(state_db):
+    """Test get_dispensers_by_origin returns dispensers created by an origin address."""
+    state_db.execute(
+        "INSERT INTO assets_info (asset, divisible) VALUES (?, ?)",
+        ("ORIGINFILTER", False),
+    )
+    for tx_index, tx_hash, source, origin in [
+        (9101, "c" * 64, "source1", "origin1"),
+        (9102, "d" * 64, "source2", "origin1"),
+        (9103, "e" * 64, "source3", "origin2"),
+    ]:
+        state_db.execute(
+            """
+            INSERT INTO dispensers (
+                tx_index, tx_hash, block_index, source, asset, give_quantity,
+                escrow_quantity, satoshirate, status, give_remaining, origin,
+                dispense_count
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                tx_index,
+                tx_hash,
+                tx_index,
+                source,
+                "ORIGINFILTER",
+                1,
+                1,
+                100,
+                0,
+                1,
+                origin,
+                0,
+            ),
+        )
+
+    result = queries.get_dispensers_by_origin(
+        state_db,
+        "origin1",
+        status="open",
+        sort="block_index:asc",
+    )
+
+    assert [row["source"] for row in result.result] == ["source1", "source2"]
+    assert [row["origin"] for row in result.result] == ["origin1", "origin1"]
 
 
 # =============================================================================
@@ -804,6 +1226,14 @@ def test_get_asset_balances_address_type(state_db):
         type="address",
     )
     assert result is not None
+
+
+def test_get_asset_balances_subasset_longname(state_db):
+    result = queries.get_asset_balances(state_db, asset="PARENT.already.issued")
+
+    assert len(result.result) > 0
+    assert result.result[0]["asset"] == "A95428959342453541"
+    assert result.result[0]["asset_longname"] == "PARENT.already.issued"
 
 
 # =============================================================================

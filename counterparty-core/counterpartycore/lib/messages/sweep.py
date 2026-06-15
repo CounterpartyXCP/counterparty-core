@@ -28,12 +28,34 @@ FLAG_BINARY_MEMO = 4
 FLAGS_ALL = FLAG_BINARY_MEMO | FLAG_BALANCES | FLAG_OWNERSHIP
 
 
-def get_total_fee(db, source, block_index):
+def get_sweep_balances(db, source, block_index):
+    balances = ledger.balances.get_address_balances(db, source)
+    if protocol.enabled("sweep_skip_zero_balances", block_index):
+        return [balance for balance in balances if balance["quantity"] > 0]
+    return balances
+
+
+def get_total_fee(db, source, block_index, flags=None):
     total_fee = ANTISPAM_FEE
     antispamfee = protocol.get_value_by_block_index("sweep_antispam_fee", block_index) * config.UNIT
     if antispamfee > 0:
-        balances_count = ledger.balances.get_balances_count(db, source)[0]["cnt"]
-        issuances_count = ledger.issuances.get_issuances_count(db, source)
+        if protocol.enabled("sweep_skip_zero_balances", block_index):
+            if (
+                not isinstance(flags, int)
+                or isinstance(flags, bool)
+                or flags > FLAGS_ALL
+                or not flags & (FLAG_BALANCES | FLAG_OWNERSHIP)
+            ):
+                flags = FLAGS_ALL
+            balances_count = len(get_sweep_balances(db, source, block_index))
+            if not flags & FLAG_BALANCES:
+                balances_count = 0
+            issuances_count = ledger.issuances.get_issuances_count(db, source)
+            if not flags & FLAG_OWNERSHIP:
+                issuances_count = 0
+        else:
+            balances_count = ledger.balances.get_balances_count(db, source)[0]["cnt"]
+            issuances_count = ledger.issuances.get_issuances_count(db, source)
         total_fee = int(balances_count * antispamfee * 2 + issuances_count * antispamfee * 4)
     return total_fee
 
@@ -48,7 +70,7 @@ def validate(db, source, destination, flags, memo, block_index):
 
     result = ledger.balances.get_balance(db, source, "XCP")
 
-    total_fee = get_total_fee(db, source, block_index)
+    total_fee = get_total_fee(db, source, block_index, flags)
 
     if result < total_fee:
         problems.append(
@@ -77,19 +99,69 @@ def validate(db, source, destination, flags, memo, block_index):
     return problems, total_fee
 
 
+def has_asset_ownership_to_sweep(db, source, block_index):
+    for asset_issued in ledger.issuances.get_asset_issued(db, source):
+        issuances = ledger.issuances.get_issuances(
+            db,
+            asset=asset_issued["asset"],
+            status="valid",
+            first=True,
+            current_block_index=block_index,
+        )
+        if issuances and issuances[-1]["issuer"] == source:
+            return True
+    return False
+
+
+def empty_sweep_problem(db, source, flags, block_index):
+    if not isinstance(flags, int) or isinstance(flags, bool):
+        return None
+
+    requested = []
+    has_sweepable_content = False
+
+    if flags & FLAG_BALANCES:
+        requested.append("balances")
+        balances = ledger.balances.get_address_balances(db, source)
+        has_sweepable_content = any(balance["quantity"] > 0 for balance in balances)
+
+    if flags & FLAG_OWNERSHIP:
+        requested.append("asset ownerships")
+        has_sweepable_content = has_sweepable_content or has_asset_ownership_to_sweep(
+            db, source, block_index
+        )
+
+    if has_sweepable_content or not requested:
+        return None
+    if len(requested) == 1:
+        return f"address has no {requested[0]} to sweep"
+    return "address has no balances or asset ownerships to sweep"
+
+
 def compose(
     db, source: str, destination: str, flags: int, memo: str, skip_validation: bool = False
 ):
+    flags_is_int = isinstance(flags, int) and not isinstance(flags, bool)
+    if memo is not None and not isinstance(memo, str):
+        raise exceptions.ComposeError("memo must be a string")
+
     if memo is None:
         memo_bytes = b""
-    elif flags & FLAG_BINARY_MEMO:
-        memo_bytes = bytes.fromhex(memo)
+    elif flags_is_int and flags & FLAG_BINARY_MEMO:
+        try:
+            memo_bytes = bytes.fromhex(memo)
+        except (TypeError, ValueError) as e:
+            raise exceptions.ComposeError("memo must be valid hexadecimal") from e
     else:
         memo_bytes = memo.encode("utf-8")
         memo_bytes = struct.pack(f">{len(memo_bytes)}s", memo_bytes)
 
     block_index = CurrentState().current_block_index()
     problems, _total_fee = validate(db, source, destination, flags, memo_bytes, block_index)
+    if not problems:
+        empty_problem = empty_sweep_problem(db, source, flags, block_index)
+        if empty_problem:
+            problems.append(empty_problem)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
@@ -220,15 +292,21 @@ def parse(db, tx, message):
             )
 
             if antispamfee > 0:
-                ledger.events.debit(
-                    db,
-                    tx["source"],
-                    "XCP",
-                    total_fee,
-                    tx["tx_index"],
-                    action="sweep fee",
-                    event=tx["tx_hash"],
-                )
+                # Under the gate, a sweep with no sweepable balances/ownership has
+                # total_fee == 0; charge nothing rather than falling back to the
+                # legacy flat fee_paid (which would charge for a no-op sweep).
+                if total_fee > 0 or not protocol.enabled(
+                    "sweep_skip_zero_balances", tx["block_index"]
+                ):
+                    ledger.events.debit(
+                        db,
+                        tx["source"],
+                        "XCP",
+                        total_fee,
+                        tx["tx_index"],
+                        action="sweep fee",
+                        event=tx["tx_hash"],
+                    )
             else:
                 ledger.events.debit(
                     db,
@@ -244,7 +322,7 @@ def parse(db, tx, message):
             status = "invalid: insufficient balance for antispam fee for sweep"
 
     if status == "valid":
-        balances = ledger.balances.get_address_balances(db, tx["source"])
+        balances = get_sweep_balances(db, tx["source"], tx["block_index"])
 
         if flags & FLAG_BALANCES:
             for balance in balances:

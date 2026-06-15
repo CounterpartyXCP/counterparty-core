@@ -23,6 +23,44 @@ def test_normalize_price_custom_precision():
     assert verbose.normalize_price("1.234567", precision=2) == "1.23"
 
 
+def test_inject_normalized_quantities_adds_market_price_normalized():
+    result = verbose.inject_normalized_quantities(
+        [
+            {
+                "give_quantity": 100000000,
+                "get_quantity": 50000000,
+                "give_asset_info": {"divisible": True},
+                "get_asset_info": {"divisible": True},
+                "market_dir": "SELL",
+            }
+        ]
+    )[0]
+
+    assert result["give_quantity_normalized"] == decimal.Decimal("1")
+    assert result["get_quantity_normalized"] == decimal.Decimal("0.5")
+    assert result["market_price_normalized"] == decimal.Decimal("0.5")
+    assert result["market_price"] == result["market_price_normalized"]
+
+
+def test_inject_normalized_quantities_adds_order_match_market_price_normalized():
+    result = verbose.inject_normalized_quantities(
+        [
+            {
+                "forward_quantity": 100000000,
+                "backward_quantity": 150,
+                "forward_asset_info": {"divisible": True},
+                "backward_asset_info": {"divisible": False},
+                "market_dir": "SELL",
+            }
+        ]
+    )[0]
+
+    assert result["forward_quantity_normalized"] == decimal.Decimal("1")
+    assert result["backward_quantity_normalized"] == "150"
+    assert result["market_price_normalized"] == decimal.Decimal("150")
+    assert result["market_price"] == result["market_price_normalized"]
+
+
 def test_normalize_price_does_not_leak_prec_to_caller_thread():
     """normalize_price must NOT mutate the thread-local Decimal precision
     of the caller; previously it called `decimal.getcontext().prec = 32`

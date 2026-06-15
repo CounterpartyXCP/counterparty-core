@@ -48,6 +48,13 @@ def validate_compose(db, source, destination, quantity):
     if source == destination:
         raise exceptions.ComposeError("source and destination must be different")
 
+    if not isinstance(quantity, int):
+        problems.append("quantity must be in satoshis")
+        return problems
+    if quantity <= 0:
+        problems.append("quantity must be positive")
+        return problems
+
     dispensers = ledger.markets.get_dispensers(db, address=destination)
     if len(dispensers) == 0:
         problems.append("address doesn't have any open dispenser")

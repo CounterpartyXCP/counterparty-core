@@ -401,13 +401,27 @@ def inject_normalized_quantities(result_list):
 
         if "get_quantity" in item and "give_quantity" in item and "market_dir" in item:
             if item["market_dir"] == "SELL":
-                item["market_price"] = helpers.divide(
+                market_price = helpers.divide(
                     item["get_quantity_normalized"], item["give_quantity_normalized"]
                 )
             else:
-                item["market_price"] = helpers.divide(
+                market_price = helpers.divide(
                     item["give_quantity_normalized"], item["get_quantity_normalized"]
                 )
+            item["market_price"] = market_price
+            item["market_price_normalized"] = market_price
+
+        if "forward_quantity" in item and "backward_quantity" in item and "market_dir" in item:
+            if item["market_dir"] == "SELL":
+                market_price = helpers.divide(
+                    item["backward_quantity_normalized"], item["forward_quantity_normalized"]
+                )
+            else:
+                market_price = helpers.divide(
+                    item["forward_quantity_normalized"], item["backward_quantity_normalized"]
+                )
+            item["market_price"] = market_price
+            item["market_price_normalized"] = market_price
 
         enriched_result_list.append(item)
 
@@ -582,7 +596,10 @@ def clean_dictionary(data):
         # Recursively clean nested structures
         cleaned_value = clean_api_result(value)
 
-        if key in {"divisible", "locked", "reset", "callable"}:
+        if (
+            key in {"divisible", "locked", "reset", "callable", "valid"}
+            and cleaned_value is not None
+        ):
             cleaned_value = bool(cleaned_value)
 
         cleaned[key] = cleaned_value

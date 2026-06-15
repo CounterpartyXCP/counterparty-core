@@ -6,6 +6,18 @@ from docstring_parser import parse as parse_docstring
 from counterpartycore.lib.api import apiv1, compose, composer, healthz, queries
 from counterpartycore.lib.backend import bitcoind, electrs
 
+ROUTE_CATEGORIES_WITHOUT_VERBOSE = {"bitcoin", "compose", "healthz", "routes", "v1"}
+
+CSV_ENUM_ANNOTATIONS = (
+    queries.TransactionType,
+    queries.SendType,
+    queries.IssuancesAssetEvents,
+    queries.DispenserStatus,
+    queries.OrderStatus,
+    queries.OrderMatchesStatus,
+    queries.FairmintersStatus,
+)
+
 
 def get_routes():
     """Return the API routes."""
@@ -54,6 +66,7 @@ ALL_ROUTES = {
     "/v2/transactions/counts": (queries.get_transaction_types_count, "transactions"),
     "/v2/transactions/info": (compose.info, "transactions"),
     "/v2/transactions/<tx_hash>/info": (compose.info_by_tx_hash, "transactions"),
+    "/v2/bitcoin/transactions/<tx_hash>/info": (compose.info_by_tx_hash, "bitcoin"),
     "/v2/transactions/unpack": (compose.unpack, "transactions"),
     "/v2/transactions/<int:tx_index>": (queries.get_transaction_by_tx_index, "transactions"),
     "/v2/transactions/<tx_hash>": (queries.get_transaction_by_hash, "transactions"),
@@ -80,6 +93,8 @@ ALL_ROUTES = {
     "/v2/addresses/transactions": (queries.get_transactions_by_addresses, "addresses"),
     "/v2/addresses/events": (queries.get_events_by_addresses, "addresses"),
     "/v2/addresses/mempool": (queries.get_mempool_events_by_addresses, "addresses"),
+    "/v2/addresses/<address>": (queries.get_address, "addresses"),
+    "/v2/addresses/<address>/options": (queries.get_address, "addresses"),
     "/v2/addresses/<address>/balances": (queries.get_address_balances, "addresses"),
     "/v2/addresses/<address>/balances/<asset>": (
         queries.get_balances_by_address_and_asset,
@@ -102,6 +117,14 @@ ALL_ROUTES = {
         "addresses",
     ),
     "/v2/addresses/<address>/dispensers": (queries.get_dispensers_by_address, "addresses"),
+    "/v2/addresses/<address>/dispensers/source": (
+        queries.get_dispensers_by_address,
+        "addresses",
+    ),
+    "/v2/addresses/<address>/dispensers/origin": (
+        queries.get_dispensers_by_origin,
+        "addresses",
+    ),
     "/v2/addresses/<address>/dispensers/<asset>": (
         queries.get_dispenser_by_address_and_asset,
         "addresses",
@@ -187,6 +210,7 @@ ALL_ROUTES = {
     ),
     "/v2/utxos/<utxo>/compose/detach": (compose.compose_detach, "compose"),
     "/v2/utxos/<utxo>/compose/movetoutxo": (compose.compose_movetoutxo, "compose"),
+    "/v2/compose/detach": (compose.compose_detach_by_utxos, "compose"),
     "/v2/compose/attach/estimatexcpfees": (compose.get_attach_estimate_xcp_fee, "compose"),
     ### /assets ###
     "/v2/assets": (queries.get_valid_assets, "assets"),
@@ -327,7 +351,13 @@ def function_needs_db(function):
     return " ".join(dbs)
 
 
-def prepare_route_args(function):
+def should_include_verbose_arg(function, route_category=None):
+    if route_category in ROUTE_CATEGORIES_WITHOUT_VERBOSE:
+        return False
+    return not function.__name__.endswith("_v1")
+
+
+def prepare_route_args(function, route_category=None):
     args = []
     function_args = inspect.signature(function).parameters
     args_description = get_args_description(function)
@@ -359,10 +389,24 @@ def prepare_route_args(function):
         if route_arg["type"] == "Literal":
             route_arg["type"] = "enum[str]"
             route_arg["members"] = list(typing.get_args(annotation))
+            if annotation == queries.DispenserStatus:
+                route_arg["members"].extend(
+                    str(value) for value in queries.DispenserStatusNumber.values()
+                )
+            if annotation in CSV_ENUM_ANNOTATIONS:
+                route_arg["allow_csv"] = True
         if arg_name in args_description:
             route_arg["description"] = args_description[arg_name]
+        if arg_name == "sort":
+            sort_fields = queries.get_sortable_fields(function)
+            if sort_fields:
+                route_arg["supported_values"] = sort_fields
+                route_arg["description"] = (
+                    f"{route_arg.get('description', 'The sort order to return')}. "
+                    f"Sortable fields: {', '.join(sort_fields)}."
+                )
         args.append(route_arg)
-    if not function.__name__.endswith("_v1"):
+    if should_include_verbose_arg(function, route_category):
         args.append(
             {
                 "name": "verbose",
@@ -388,7 +432,7 @@ def prepare_routes(routes):
         prepared_routes[route] = {
             "function": route_function,
             "description": get_function_description(route_function),
-            "args": prepare_route_args(route_function),
+            "args": prepare_route_args(route_function, route_category),
             "category": route_category,
         }
     return prepared_routes
