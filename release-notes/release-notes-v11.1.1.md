@@ -50,7 +50,7 @@ counterparty-server start
 
 - Fix intermittent BIP143 signature mismatches in regtest by broadcasting tx1 before signing tx2, so the wallet sees tx1's UTXOs in its mempool view
 - Update Python dependencies: Flask 3.0.0→3.1.3, pytest 7.4.4→9.0.3, requests 2.32.4→2.33.0, Werkzeug 3.1.4→3.1.6, itsdangerous 2.1.2→2.2.0
-- Update Rust dependencies: openssl 0.10.79→0.10.80, openssl-sys 0.9.115→0.9.116
+- Update Rust dependencies: openssl 0.10.79→0.10.81, openssl-sys 0.9.115→0.9.117, pyo3 0.24.2→0.25.1 (migrate `IntoPy`/`into_py` to the `IntoPyObject` API, since the old trait was removed in pyo3 0.25)
 
 # Credits
 

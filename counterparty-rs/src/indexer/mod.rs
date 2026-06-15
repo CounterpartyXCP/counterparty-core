@@ -21,8 +21,8 @@ use bitcoin;
 use bitcoin::consensus::deserialize;
 use bitcoin::{blockdata::transaction::Transaction, Block};
 
-#[allow(deprecated)]
 use pyo3::prelude::*;
+use pyo3::IntoPyObjectExt;
 use types::pipeline::ChanOut;
 
 use self::{
@@ -76,12 +76,12 @@ impl Indexer {
     pub fn get_block(&self, py: Python<'_>) -> PyResult<PyObject> {
         let block =
             py.allow_threads(|| get_block::new(self.stopper.clone(), self.chan.1.clone()))?;
-        Ok(block.into_py(py))
+        block.into_py_any(py)
     }
 
     pub fn get_block_non_blocking(&self, py: Python<'_>) -> PyResult<PyObject> {
         let block = get_block::new_non_blocking(self.stopper.clone(), self.chan.1.clone())?;
-        Ok(block.map(|b| b.into_py(py)).into_py(py))
+        block.map(|b| *b).into_py_any(py)
     }
 
     pub fn get_version(&self) -> PyResult<String> {
@@ -121,7 +121,7 @@ impl Deserializer {
             height,
             parse_vouts,
         );
-        return Ok(deserialized_transaction.into_py(py));
+        return deserialized_transaction.into_py_any(py);
     }
 
     pub fn parse_block(
@@ -140,7 +140,7 @@ impl Deserializer {
 
         let deserialized_block =
             self::bitcoin_client::parse_block(block, &self.config, height, parse_vouts);
-        return Ok(deserialized_block?.into_py(py));
+        return deserialized_block?.into_py_any(py);
     }
 }
 
