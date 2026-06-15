@@ -4,11 +4,34 @@ import time
 from unittest.mock import patch
 
 import pytest
-from counterpartycore.lib import exceptions
+from bitcoinutils.transactions import Script
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.backend import bitcoind
 from counterpartycore.lib.utils import helpers
 from counterpartycore.test.fixtures import decodedtxs
 from counterpartycore.test.mocks.bitcoind import original_get_vin_info
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
+
+ORIGINAL_GET_UTXO_ADDRESS_AND_VALUE = bitcoind.get_utxo_address_and_value
+MULTISIG_PUBKEYS = [
+    "0427db4059d24bab05df3f6bcc768fb01bd976b973f93e72cce2dfbfbed5a32056c9040a2c2ea4c10c812a54fed7ff2e6a917dbc843362d398f6ace4000fafa5c6",
+    "043e12a6cb1c7c156f789110abf8397b714047414b5a32c742f17ccf93ff23bdf3128f946207086bcef012558240cd16182c741123e93ed18327c4cd6ebac668a9",
+    "04e4168c172283c7dfaa85d2004f763a28bf6d0f1602fc1452ccec62a7c8a66e422af1410fbf24a47355ddc43dfe3491cb1b806574ccd1c434680466dcff926f01",
+]
+MULTISIG_ADDRESS = "2_16KsHvVQj6aGvVQpAUgRcfpVug3regjiUs_17yjtboB7RjK2BoQ78k51NtJ4cDQGYZQyb_1NNXBUF3rqXtFbWhK5nujSpvt9yApsRUT7_3"
+
+
+def multisig_script_pub_key():
+    return {
+        "asm": f"2 {' '.join(MULTISIG_PUBKEYS)} 3 OP_CHECKMULTISIG",
+        "hex": Script([2, *MULTISIG_PUBKEYS, 3, "OP_CHECKMULTISIG"]).to_hex(),
+        "type": "multisig",
+    }
+
+
+def clear_get_utxo_address_and_value_cache():
+    if hasattr(ORIGINAL_GET_UTXO_ADDRESS_AND_VALUE, "cache_clear"):
+        ORIGINAL_GET_UTXO_ADDRESS_AND_VALUE.cache_clear()
 
 
 class MockResponse:
@@ -579,6 +602,52 @@ def test_reset_caches_clears_dicts():
 
     assert "sentinel_tx" not in bitcoind.TRANSACTIONS_CACHE
     assert 123 not in bitcoind.BLOCKS_CACHE
+
+
+def test_get_multisig_address_from_script_pub_key():
+    old_address_version = config.ADDRESSVERSION
+    config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+    try:
+        address = bitcoind.get_multisig_address_from_script_pub_key(multisig_script_pub_key())
+    finally:
+        config.ADDRESSVERSION = old_address_version
+
+    assert address == MULTISIG_ADDRESS
+
+
+def test_get_utxo_address_and_value_supports_multisig_when_protocol_enabled(monkeypatch):
+    def mock_getrawtransaction(*args, **kwargs):
+        return {"vout": [{"scriptPubKey": multisig_script_pub_key(), "value": 0.001}]}
+
+    old_address_version = config.ADDRESSVERSION
+    config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+    clear_get_utxo_address_and_value_cache()
+    monkeypatch.setattr(bitcoind, "getrawtransaction", mock_getrawtransaction)
+    try:
+        assert ORIGINAL_GET_UTXO_ADDRESS_AND_VALUE("multisig-txid:0") == (
+            MULTISIG_ADDRESS,
+            0.001,
+        )
+    finally:
+        clear_get_utxo_address_and_value_cache()
+        config.ADDRESSVERSION = old_address_version
+
+
+def test_get_utxo_address_and_value_rejects_multisig_when_protocol_disabled(monkeypatch):
+    def mock_getrawtransaction(*args, **kwargs):
+        return {"vout": [{"scriptPubKey": multisig_script_pub_key(), "value": 0.001}]}
+
+    old_address_version = config.ADDRESSVERSION
+    config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+    clear_get_utxo_address_and_value_cache()
+    monkeypatch.setattr(bitcoind, "getrawtransaction", mock_getrawtransaction)
+    try:
+        with ProtocolChangesDisabled(["multisig_utxo_addresses"]):
+            with pytest.raises(exceptions.InvalidUTXOError, match="vout does not have an address"):
+                ORIGINAL_GET_UTXO_ADDRESS_AND_VALUE("legacy-multisig-txid:0")
+    finally:
+        clear_get_utxo_address_and_value_cache()
+        config.ADDRESSVERSION = old_address_version
 
 
 def test_reset_caches_handles_missing_lru_cache_clear(monkeypatch):

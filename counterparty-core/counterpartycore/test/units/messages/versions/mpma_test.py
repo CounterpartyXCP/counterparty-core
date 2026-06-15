@@ -4,6 +4,7 @@ import re
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages.versions import mpma
+from counterpartycore.lib.utils.mpmaencoding import _decode_mpma_send_decode, _encode_mpma_send
 
 
 def test_unpack(defaults, current_block_index):
@@ -150,6 +151,26 @@ def test_unpack(defaults, current_block_index):
         "PEPEKFC": [("172nmZbxDR6erc5PqNqV28fnMj7g6besru", 5)],
         "PEPEWYATT": [("172nmZbxDR6erc5PqNqV28fnMj7g6besru", 5)],
         "XCHAINPEPE": [("172nmZbxDR6erc5PqNqV28fnMj7g6besru", 1)],
+    }
+
+
+def test_utf8_memo_roundtrip(defaults, monkeypatch):
+    monkeypatch.setattr(ledger.issuances, "resolve_subasset_longname", lambda db, asset: asset)
+    monkeypatch.setattr(ledger.issuances, "get_asset_id", lambda db, asset: 1)
+
+    payload = _encode_mpma_send(
+        None,
+        [
+            ("XCP", defaults["addresses"][1], 1, "∞", False),
+            ("XCP", defaults["addresses"][2], 2),
+        ],
+    )
+
+    assert _decode_mpma_send_decode(payload) == {
+        "XCP": [
+            (defaults["addresses"][1], 1, "∞", False),
+            (defaults["addresses"][2], 2),
+        ]
     }
 
 
@@ -410,7 +431,7 @@ def test_compose_valid(ledger_db, defaults):
     )
 
 
-def test_compose_invalid(ledger_db, defaults):
+def test_compose_invalid(ledger_db, defaults, monkeypatch):
     with pytest.raises(exceptions.ComposeError, match="insufficient funds for XCP"):
         mpma.compose(
             ledger_db,
@@ -427,6 +448,56 @@ def test_compose_invalid(ledger_db, defaults):
             [
                 ("XCP", defaults["addresses"][2], defaults["quantity"]),
                 ("XCP", defaults["addresses"][1], defaults["quantity"] * 10000),
+            ],
+            None,
+            None,
+        )
+
+    with monkeypatch.context() as m:
+        m.setattr(
+            mpma.ledger.balances,
+            "get_balance",
+            lambda db, source, asset: 150 if asset == "XCP" else 10_000,
+        )
+        with pytest.raises(exceptions.ComposeError, match="insufficient funds for XCP"):
+            mpma.compose(
+                ledger_db,
+                defaults["addresses"][0],
+                [
+                    ("XCP", defaults["addresses"][2], 100),
+                    ("DIVISIBLE", defaults["addresses"][1], 1),
+                    ("XCP", defaults["addresses"][3], 100),
+                ],
+                None,
+                None,
+            )
+
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape("cannot specify more than once a destination per asset"),
+    ):
+        mpma.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            [
+                ("XCP", defaults["addresses"][2], defaults["quantity"]),
+                ("DIVISIBLE", defaults["addresses"][1], defaults["quantity"]),
+                ("XCP", defaults["addresses"][2], defaults["quantity"]),
+            ],
+            None,
+            None,
+        )
+
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape("destination is required for XCP"),
+    ):
+        mpma.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            [
+                ("XCP", None, defaults["quantity"]),
+                ("DIVISIBLE", defaults["addresses"][1], defaults["quantity"]),
             ],
             None,
             None,

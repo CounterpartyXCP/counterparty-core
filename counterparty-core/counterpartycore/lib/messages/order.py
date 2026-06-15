@@ -238,18 +238,10 @@ def validate(
     problems = []
     cursor = db.cursor()
 
-    # For SQLite3
-    if (
-        give_quantity > config.MAX_INT
-        or get_quantity > config.MAX_INT
-        or fee_required > config.MAX_INT
-        or block_index + expiration > config.MAX_INT
-    ):
-        problems.append("integer overflow")
-
-    if give_asset == config.BTC and get_asset == config.BTC:
-        problems.append(f"cannot trade {config.BTC} for itself")
-
+    # Type checks first so non-integer parameters return a clear validation
+    # error instead of raising a TypeError in the comparisons below. These are
+    # never triggered by parse() (struct.unpack always yields ints), so this
+    # block is a no-op on the consensus path.
     if not isinstance(give_quantity, int):
         problems.append("give_quantity must be in satoshis")
         return problems
@@ -262,6 +254,20 @@ def validate(
     if not isinstance(expiration, int):
         problems.append("expiration must be expressed as an integer block delta")
         return problems
+
+    # For SQLite3. Kept before the BTC-for-BTC check to preserve the exact
+    # `problems` ordering (and thus the stored `status` string) on the parse
+    # path, avoiding a protocol change.
+    if (
+        give_quantity > config.MAX_INT
+        or get_quantity > config.MAX_INT
+        or fee_required > config.MAX_INT
+        or block_index + expiration > config.MAX_INT
+    ):
+        problems.append("integer overflow")
+
+    if give_asset == config.BTC and get_asset == config.BTC:
+        problems.append(f"cannot trade {config.BTC} for itself")
 
     if give_quantity <= 0:
         problems.append("non‐positive give quantity")

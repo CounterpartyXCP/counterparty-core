@@ -39,6 +39,8 @@ from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+pytestmark = pytest.mark.slow
+
 msg_bytes = st.binary(min_size=0, max_size=512)
 
 

@@ -132,6 +132,39 @@ def set_cors_headers(response):
         response.headers["Access-Control-Allow-Methods"] = "*"
 
 
+def set_sentry_api_response_context(http_code, error):
+    with configure_sentry_scope() as scope:
+        scope.set_context(
+            "api_response",
+            {
+                "status_code": http_code,
+                "error": str(error),
+                "method": request.method,
+                "path": request.path,
+            },
+        )
+
+
+def set_cache_control_headers(response, http_code, result):
+    if http_code == 200 and result is not None:
+        url_rule = getattr(request, "url_rule", None)
+        rule = str(url_rule.rule) if url_rule else request.path
+        route = ROUTES.get(rule)
+        if is_cachable(rule, route=route, result=result):
+            response.headers["Cache-Control"] = "public, max-age=60"
+            return
+    response.headers["Cache-Control"] = "no-store"
+
+
+def parse_bool_arg(arg_name, str_arg):
+    value = str_arg.lower()
+    if value in ["true", "1"]:
+        return True
+    if value in ["false", "0"]:
+        return False
+    raise ValueError(f"Invalid boolean: {arg_name}")
+
+
 def return_result(
     http_code,
     result=None,
@@ -157,6 +190,7 @@ def return_result(
     response.headers["X-BITCOIN-HEIGHT"] = CurrentState().current_backend_height()
     response.headers["X-LEDGER-STATE"] = CurrentState().ledger_state()
     response.headers["Content-Type"] = "application/json"
+    set_cache_control_headers(response, http_code, result)
     set_cors_headers(response)
 
     if http_code != 404:
@@ -177,15 +211,25 @@ def return_result(
 
 def prepare_args(route, **kwargs):
     function_args = dict(kwargs)
+    request_params = query_params()
+    # `verbose` is read globally (see return_result) and tolerated on every route,
+    # even those whose args don't declare it, so never treat it as unknown.
+    allowed_args = {arg["name"] for arg in route["args"]} | {"verbose"}
+    unknown_args = sorted(set(request_params) - allowed_args)
+    if unknown_args:
+        raise ValueError(f"Unrecognized parameter(s): {', '.join(unknown_args)}")
+
     # inject args from request.args
     for arg in route["args"]:
         arg_name = arg["name"]
         if arg_name in ["verbose"] and "compose" not in route["function"].__name__:
+            # `verbose` is read globally (see return_result); on non-compose routes it is
+            # ignored, so accept it without validation even when the value is unsupported.
             continue
         if arg_name in function_args:
             continue
 
-        str_arg = query_params().get(arg_name)
+        str_arg = request_params.get(arg_name)
         if str_arg is not None and isinstance(str_arg, str) and str_arg.lower() in ["none", "null"]:
             str_arg = None
         if str_arg is None and arg["required"]:
@@ -197,7 +241,7 @@ def prepare_args(route, **kwargs):
         if str_arg is None:
             function_args[arg_name] = arg["default"]
         elif arg["type"] == "bool":
-            function_args[arg_name] = str_arg.lower() in ["true", "1"]
+            function_args[arg_name] = parse_bool_arg(arg_name, str_arg)
         elif arg["type"] == "int":
             try:
                 function_args[arg_name] = int(str_arg)
@@ -215,6 +259,22 @@ def prepare_args(route, **kwargs):
                 function_args[arg_name] = str_arg
         else:
             function_args[arg_name] = str_arg
+
+        if "members" in arg:
+            arg_values = (
+                function_args[arg_name].split(",")
+                if arg.get("allow_csv") and isinstance(function_args[arg_name], str)
+                else [function_args[arg_name]]
+            )
+            invalid_values = [value for value in arg_values if value not in arg["members"]]
+            if invalid_values:
+                allowed_values = ", ".join(
+                    "null" if member is None else str(member) for member in arg["members"]
+                )
+                raise ValueError(
+                    f"Invalid value for {arg_name}: {', '.join(map(str, invalid_values))} "
+                    f"(expected one of: {allowed_values})"
+                )
 
     for arg_name, str_arg in function_args.items():
         if str_arg is not None and str_arg != "":
@@ -366,11 +426,11 @@ def handle_route(**kwargs):
         except Exception as e:  # pylint: disable=broad-except
             # import traceback
             # print(traceback.format_exc())
+            error = "Unknown error"
+            set_sentry_api_response_context(503, error)
             capture_exception(e)
             logger.error("Error in API: %s", e)
-            return return_result(
-                503, error="Unknown error", start_time=start_time, query_args=query_args
-            )
+            return return_result(503, error=error, start_time=start_time, query_args=query_args)
 
         if isinstance(result, requests.Response):
             message = f"API Request - {request.remote_addr} {request.method} {request.url}"
@@ -416,9 +476,11 @@ def handle_route(**kwargs):
     except Exception as e:  # pylint: disable=broad-except
         # import traceback
         # print(traceback.format_exc())
+        error = "Internal server error"
+        set_sentry_api_response_context(500, error)
         capture_exception(e)
         logger.error("Error in API: %s", e)
-        return return_result(500, error="Internal server error")
+        return return_result(500, error=error)
 
 
 def handle_not_found(_error):

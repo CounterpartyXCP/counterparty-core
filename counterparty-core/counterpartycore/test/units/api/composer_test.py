@@ -110,13 +110,22 @@ def test_dust_size(defaults):
     assert composer.regular_dust_size({}) == 546
     assert composer.regular_dust_size({"regular_dust_size": 666}) == 666
     assert composer.regular_dust_size({"regular_dust_size": None}) == 546
+    with pytest.raises(exceptions.ComposeError, match="Invalid regular_dust_size"):
+        composer.regular_dust_size({"regular_dust_size": -1})
     assert composer.multisig_dust_size({}) == 1000
     assert composer.multisig_dust_size({"multisig_dust_size": 666}) == 666
     assert composer.multisig_dust_size({"multisig_dust_size": None}) == 1000
+    with pytest.raises(exceptions.ComposeError, match="Invalid multisig_dust_size"):
+        composer.multisig_dust_size({"multisig_dust_size": -1})
+    assert composer.segwit_dust_size({}) == 330
+    assert composer.segwit_dust_size({"segwit_dust_size": 666}) == 666
+    assert composer.segwit_dust_size({"segwit_dust_size": None}) == 330
     assert composer.dust_size(defaults["addresses"][0], {}) == 546
     assert composer.dust_size(defaults["addresses"][0], {"regular_dust_size": 666}) == 666
     assert composer.dust_size(defaults["p2ms_addresses"][0], {}) == 1000
     assert composer.dust_size(defaults["p2ms_addresses"][0], {"multisig_dust_size": 666}) == 666
+    assert composer.dust_size(defaults["p2wpkh_addresses"][0], {}) == 330
+    assert composer.dust_size(defaults["p2wpkh_addresses"][0], {"segwit_dust_size": 666}) == 666
 
 
 def test_prepare_non_data_outputs(defaults):
@@ -146,6 +155,11 @@ def test_prepare_non_data_outputs(defaults):
             )
         ]
     )
+
+    # P2WPKH address
+    assert str(
+        composer.perpare_non_data_outputs([(defaults["p2wpkh_addresses"][0], 0)], [], {})
+    ) == str([TxOutput(330, P2wpkhAddress(defaults["p2wpkh_addresses"][0]).to_script_pub_key())])
 
     # Custom amount
     assert str(
@@ -464,6 +478,15 @@ def test_prepare_more_outputs(defaults):
         ]
     )
 
+    with pytest.raises(exceptions.ComposeError, match="Invalid value for output: -1:00aaff"):
+        composer.prepare_more_outputs("-1:00aaff", [], {})
+
+    too_large_value = 21_000_000 * config.UNIT + 1
+    with pytest.raises(
+        exceptions.ComposeError, match=f"Invalid value for output: {too_large_value}:00aaff"
+    ):
+        composer.prepare_more_outputs(f"{too_large_value}:00aaff", [], {})
+
 
 def test_prepare_outputs(ledger_db, defaults):
     # Test case 1 & 2: Simple OP_RETURN output
@@ -588,6 +611,27 @@ def test_prepare_inputs_set(defaults):
             "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:aa"
         )
 
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(
+            "invalid UTXOs: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:-1 (invalid value)"
+        ),
+    ):
+        composer.prepare_inputs_set(
+            "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:-1"
+        )
+
+    too_large_value = 21_000_000 * config.UNIT + 1
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(
+            f"invalid UTXOs: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:{too_large_value} (invalid value)"
+        ),
+    ):
+        composer.prepare_inputs_set(
+            f"ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:{too_large_value}"
+        )
+
     # Test case 5: Invalid script_pub_key
     with pytest.raises(
         exceptions.ComposeError,
@@ -597,6 +641,17 @@ def test_prepare_inputs_set(defaults):
     ):
         composer.prepare_inputs_set(
             "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aagh"
+        )
+
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(
+            "invalid UTXOs: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aa00 (duplicate UTXO)"
+        ),
+    ):
+        composer.prepare_inputs_set(
+            "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aa00,"
+            "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aa00"
         )
 
     # Test case 6: Valid single input
@@ -986,6 +1041,24 @@ def test_prepare_fee_parameters():
         2,
         1000,
     )
+
+    with pytest.raises(exceptions.ComposeError, match="Invalid exact_fee"):
+        composer.prepare_fee_parameters({"exact_fee": -1})
+
+    with pytest.raises(exceptions.ComposeError, match="Invalid sat_per_vbyte"):
+        composer.prepare_fee_parameters({"sat_per_vbyte": -0.1})
+
+    with pytest.raises(exceptions.ComposeError, match="Invalid max_fee"):
+        composer.prepare_fee_parameters({"max_fee": -1, "sat_per_vbyte": 1})
+
+    with pytest.raises(exceptions.ComposeError, match="Invalid confirmation_target"):
+        composer.prepare_fee_parameters({"confirmation_target": 0})
+
+    with pytest.raises(exceptions.ComposeError, match="Invalid confirmation_target"):
+        composer.prepare_fee_parameters({"confirmation_target": -1})
+
+    with pytest.raises(exceptions.ComposeError, match="Invalid confirmation_target"):
+        composer.prepare_fee_parameters({"confirmation_target": 1009})
 
 
 def test_prepare_unspent_list(ledger_db, defaults, monkeypatch):
@@ -1486,7 +1559,27 @@ def test_check_transaction_sanity(defaults):
         {"exact_fee": 1000},
     )
 
-    # Test case 2: Invalid source address
+    # Test case 2: Valid segwit destination with automatic dust value
+    segwit_tx = Transaction(
+        [TxInput("62cfa1417799553e305c053c5c92a8bdcccfcf5ee01d2aeabf0450e06fcabd07", 0)],
+        [TxOutput(330, P2wpkhAddress(defaults["p2wpkh_addresses"][0]).to_script_pub_key())],
+    )
+    composer.check_transaction_sanity(
+        (defaults["addresses"][0], [(defaults["p2wpkh_addresses"][0], None)], None),
+        {
+            "btc_change": 0,
+            "btc_fee": 1000,
+            "btc_in": 1330,
+            "btc_out": 330,
+            "lock_scripts": [P2pkhAddress(defaults["addresses"][0]).to_script_pub_key().to_hex()],
+            "rawtransaction": segwit_tx.serialize(),
+            "inputs_values": [1330],
+        },
+        [],
+        {"exact_fee": 1000},
+    )
+
+    # Test case 3: Invalid source address
     with pytest.raises(
         exceptions.ComposeError,
         match="Sanity check error: source address does not match the first input address",
@@ -1507,7 +1600,7 @@ def test_check_transaction_sanity(defaults):
             {"exact_fee": 1000},
         )
 
-    # Test case 3: Invalid destination address
+    # Test case 4: Invalid destination address
     with pytest.raises(
         exceptions.ComposeError,
         match="Sanity check error: destination address does not match the output address",
@@ -1528,7 +1621,7 @@ def test_check_transaction_sanity(defaults):
             {"exact_fee": 1000},
         )
 
-    # Test case 4: Invalid destination value
+    # Test case 5: Invalid destination value
     with pytest.raises(
         exceptions.ComposeError,
         match="Sanity check error: destination value does not match the output value",
@@ -1549,7 +1642,7 @@ def test_check_transaction_sanity(defaults):
             {"exact_fee": 1000},
         )
 
-    # Test case 5: Invalid data
+    # Test case 6: Invalid data
     with pytest.raises(
         exceptions.ComposeError, match="Sanity check error: data does not match the output data"
     ):
@@ -1616,6 +1709,7 @@ def test_prepare_construct_params(defaults):
         "p2sh_pretx_txid": "aabbb",
         "segwit": True,
         "unspent_tx_hash": "aabbcc",
+        "custom_inputs": "ccddee:0",
     }
 
     expected_params = {
@@ -1630,6 +1724,7 @@ def test_prepare_construct_params(defaults):
         "p2sh_pretx_txid": "aabbb",
         "segwit": True,
         "unspent_tx_hash": "aabbcc",
+        "inputs_set": "ccddee:0",
     }
 
     expected_warnings = [
@@ -1644,6 +1739,7 @@ def test_prepare_construct_params(defaults):
         "The `p2sh_pretx_txid` parameter is ignored, p2sh disabled",
         "The `segwit` parameter is ignored, segwit automatically detected",
         "The `unspent_tx_hash` parameter is deprecated, use `inputs_set` instead",
+        "The `custom_inputs` parameter is deprecated, use `inputs_set` instead",
     ]
 
     result_params, result_warnings = composer.prepare_construct_params(params)
@@ -1663,6 +1759,7 @@ def test_prepare_construct_params(defaults):
         "p2sh_pretx_txid": "aabbb",
         "segwit": True,
         "unspent_tx_hash": "aabbcc",
+        "custom_inputs": "ccddee:0",
     }
 
     expected_params = {
@@ -1677,11 +1774,33 @@ def test_prepare_construct_params(defaults):
         "p2sh_pretx_txid": "aabbb",
         "segwit": True,
         "unspent_tx_hash": "aabbcc",
+        "inputs_set": "ccddee:0",
     }
 
     result_params, result_warnings = composer.prepare_construct_params(params)
     assert result_params == expected_params
     assert result_warnings == expected_warnings
+
+    # Test case 3: Explicit inputs_set takes precedence over custom_inputs
+    result_params, result_warnings = composer.prepare_construct_params(
+        {"inputs_set": "aabbcc:0", "custom_inputs": "ccddee:0"}
+    )
+    assert result_params["inputs_set"] == "aabbcc:0"
+    assert "custom_inputs" not in result_params
+    assert result_warnings == [
+        "The `custom_inputs` parameter is deprecated, use `inputs_set` instead"
+    ]
+
+    # Test case 4: message_only is a public alias for return_only_data
+    result_params, result_warnings = composer.prepare_construct_params({"message_only": True})
+    assert result_params == {"return_only_data": True}
+    assert result_warnings == []
+
+    result_params, result_warnings = composer.prepare_construct_params(
+        {"return_only_data": True, "message_only": False}
+    )
+    assert result_params == {"return_only_data": True}
+    assert result_warnings == []
 
 
 def test_compose_transaction(ledger_db, defaults, monkeypatch):
@@ -1721,6 +1840,16 @@ def test_compose_transaction(ledger_db, defaults, monkeypatch):
 
     result = composer.compose_transaction(ledger_db, "send", params, {})
     assert result == expected
+
+    message_only_result = composer.compose_transaction(
+        ledger_db, "send", params, {"message_only": True}
+    )
+    return_only_data_result = composer.compose_transaction(
+        ledger_db, "send", params, {"return_only_data": True}
+    )
+    assert message_only_result == return_only_data_result
+    assert message_only_result["data"].startswith(config.PREFIX)
+    assert "rawtransaction" not in message_only_result
 
     params = {
         "source": defaults["addresses"][0],
@@ -2396,6 +2525,20 @@ def test_compose_attach(ledger_db, defaults):
         },
     )
     assert result == expected
+
+    result = composer.compose_transaction(
+        ledger_db,
+        "attach",
+        params,
+        {
+            "verbose": True,
+            "custom_inputs": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:1052:76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+            "disable_utxo_locks": True,
+        },
+    )
+    assert result == expected | {
+        "warnings": ["The `custom_inputs` parameter is deprecated, use `inputs_set` instead"]
+    }
 
     with pytest.raises(
         exceptions.ComposeError, match="Insufficient funds for the target amount: 546 < 1052"

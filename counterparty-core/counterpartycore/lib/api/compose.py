@@ -12,9 +12,15 @@ from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import gas
 from counterpartycore.lib.messages.attach import ID as UTXO_ID
-from counterpartycore.lib.parser import deserialize, gettxinfo, messagetype
+from counterpartycore.lib.parser import deserialize, gettxinfo, messagetype, p2sh
+from counterpartycore.lib.utils import script
 
 D = decimal.Decimal
+
+
+def _add_xcp_fee(result, xcp_fee):
+    result["xcp_fee"] = xcp_fee
+    return result
 
 
 def compose_bet(
@@ -181,7 +187,10 @@ def compose_dividend(
         "asset": asset,
         "dividend_asset": dividend_asset,
     }
-    return composer.compose_transaction(db, "dividend", params, construct_params)
+    return _add_xcp_fee(
+        composer.compose_transaction(db, "dividend", params, construct_params),
+        messages.dividend.get_estimate_xcp_fee(db, asset),
+    )
 
 
 def get_dividend_estimate_xcp_fee(db, address: str, asset: str):  # noqa # pylint: disable=W0613
@@ -375,7 +384,14 @@ def compose_dispense(
         "destination": dispenser,
         "quantity": quantity,
     }
-    return composer.compose_transaction(db, "dispense", params, construct_params)
+    result = composer.compose_transaction(db, "dispense", params, construct_params)
+    if "params" in result:
+        result["params"]["address"] = result["params"].pop("source")
+        result["params"]["dispenser"] = result["params"].pop("destination")
+        result["params"]["quantity_normalized"] = (
+            f"{D(result['params']['quantity']) / D(config.UNIT):.8f}"
+        )
+    return result
 
 
 def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **construct_params):
@@ -396,7 +412,10 @@ def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **c
         "flags": flags,
         "memo": memo,
     }
-    return composer.compose_transaction(db, "sweep", params, construct_params)
+    return _add_xcp_fee(
+        composer.compose_transaction(db, "sweep", params, construct_params),
+        messages.sweep.get_total_fee(db, address, CurrentState().current_block_index(), flags),
+    )
 
 
 def get_sweep_estimate_xcp_fee(db, address: str):
@@ -536,7 +555,10 @@ def compose_pooldeposit(
         "min_lp_quantity": min_lp_quantity,
         "lp_asset": lp_asset,
     }
-    return composer.compose_transaction(db, "pooldeposit", params, construct_params)
+    return _add_xcp_fee(
+        composer.compose_transaction(db, "pooldeposit", params, construct_params),
+        gas.get_transaction_fee(db, 120, CurrentState().current_block_index()),
+    )
 
 
 def get_pool_deposit_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
@@ -581,7 +603,10 @@ def compose_poolwithdraw(
         "min_quantity_a": min_quantity_a,
         "min_quantity_b": min_quantity_b,
     }
-    return composer.compose_transaction(db, "poolwithdraw", params, construct_params)
+    return _add_xcp_fee(
+        composer.compose_transaction(db, "poolwithdraw", params, construct_params),
+        gas.get_transaction_fee(db, 121, CurrentState().current_block_index()),
+    )
 
 
 def get_pool_withdraw_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
@@ -617,7 +642,10 @@ def compose_attach(
         "utxo_value": utxo_value,
         "destination_vout": destination_vout,
     }
-    return composer.compose_transaction(db, "attach", params, construct_params)
+    return _add_xcp_fee(
+        composer.compose_transaction(db, "attach", params, construct_params),
+        gas.get_transaction_fee(db, UTXO_ID, CurrentState().current_block_index()),
+    )
 
 
 def get_attach_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
@@ -644,6 +672,40 @@ def compose_detach(
         "destination": destination,
     }
     return composer.compose_transaction(db, "detach", params, construct_params)
+
+
+def compose_detach_by_utxos(
+    db,
+    utxos: str,
+    destination: str = None,
+    **construct_params,
+):
+    """
+    Composes a transaction to detach assets from multiple UTXOs to an address.
+    :param utxos: A comma-separated list of UTXOs from which assets are detached (e.g. $UTXO_WITH_BALANCE)
+    :param destination: The address to detach the assets to, if not provided the address corresponding to each UTXO is used (e.g. $ADDRESS_1)
+    """
+    if construct_params.get("inputs_set") is not None:
+        raise exceptions.ComposeError("`utxos` cannot be combined with `inputs_set`")
+
+    parsed_utxos = composer.prepare_inputs_set(utxos)
+    source = f"{parsed_utxos[0]['txid']}:{parsed_utxos[0]['vout']}"
+    if construct_params.get("validate", True):
+        # pick a UTXO that actually holds assets as the source, so the detach
+        # composer's "no assets to detach" check passes. `get_utxo_balances`
+        # can return zero-quantity rows, hence the explicit `quantity > 0` check.
+        for parsed_utxo in parsed_utxos:
+            utxo_id = f"{parsed_utxo['txid']}:{parsed_utxo['vout']}"
+            utxo_balances = ledger.balances.get_utxo_balances(db, utxo_id)
+            if any(balance["quantity"] > 0 for balance in utxo_balances):
+                source = utxo_id
+                break
+
+    construct_params["inputs_set"] = utxos
+    construct_params["use_all_inputs_set"] = True
+    construct_params["use_utxos_with_balances"] = True
+
+    return compose_detach(db, source, destination, **construct_params)
 
 
 def compose_movetoutxo(db, utxo: str, destination: str, utxo_value: int = None, **construct_params):
@@ -673,6 +735,104 @@ def info_by_tx_hash(db, tx_hash: str):
     return info(db, rawtransaction)
 
 
+def _get_first_witness_stack(decoded_tx):
+    witness_stacks = decoded_tx.get("vtxinwit") or []
+    if len(witness_stacks) == 0:
+        return []
+    first_stack = witness_stacks[0]
+    if isinstance(first_stack, list | tuple):
+        return first_stack
+    return witness_stacks
+
+
+def _get_p2wpkh_source_from_witness(decoded_tx):
+    witness_stack = _get_first_witness_stack(decoded_tx)
+    if len(witness_stack) < 2:
+        return None
+
+    pubkey = witness_stack[-1]
+    if isinstance(pubkey, str):
+        try:
+            pubkey = binascii.unhexlify(pubkey)
+        except (binascii.Error, TypeError):
+            return None
+    if not isinstance(pubkey, bytes):
+        return None
+    if len(pubkey) not in (33, 65) or pubkey[0] not in (2, 3, 4):
+        return None
+
+    try:
+        return script.script_to_address(b"\x00\x14" + p2sh.hash160(pubkey))
+    except exceptions.DecodeError:
+        return None
+
+
+def _get_p2wpkh_source_from_script_sig(decoded_tx):
+    for vin in decoded_tx.get("vin", []):
+        script_sig = vin.get("script_sig")
+        if isinstance(script_sig, str):
+            try:
+                script_sig = binascii.unhexlify(script_sig)
+            except (binascii.Error, TypeError):
+                continue
+        if not isinstance(script_sig, bytes):
+            continue
+
+        if len(script_sig) == 22 and script_sig[0] == 0 and script_sig[1] == 20:
+            source_script = script_sig
+        elif (
+            len(script_sig) == 23
+            and script_sig[0] == 22
+            and script_sig[1] == 0
+            and script_sig[2] == 20
+        ):
+            source_script = script_sig[1:]
+        else:
+            continue
+
+        try:
+            return script.script_to_address(source_script)
+        except exceptions.DecodeError:
+            continue
+
+    return None
+
+
+def _get_p2wpkh_source_from_input(decoded_tx):
+    return _get_p2wpkh_source_from_script_sig(decoded_tx) or _get_p2wpkh_source_from_witness(
+        decoded_tx
+    )
+
+
+def _get_btc_only_info_from_decoded_tx(decoded_tx):
+    source = _get_p2wpkh_source_from_input(decoded_tx)
+    addressable_outputs = []
+
+    for vout in decoded_tx.get("vout", []):
+        script_pub_key = vout.get("script_pub_key")
+        if not script_pub_key:
+            continue
+        try:
+            address = script.script_to_address(script_pub_key)
+        except exceptions.DecodeError:
+            continue
+        addressable_outputs.append((address, vout.get("value")))
+
+    if len(addressable_outputs) == 0:
+        return source, None, None, None, None
+
+    payment_outputs = [
+        (address, value)
+        for address, value in addressable_outputs
+        if source is None or address != source
+    ]
+    if len(payment_outputs) == 0:
+        payment_outputs = addressable_outputs
+
+    destination, btc_amount = payment_outputs[0]
+    return source, destination, btc_amount, None, None
+
+
 def info(db, rawtransaction: str, block_index: int = None):
     """
     Returns Counterparty information from a raw transaction in hex format.
@@ -697,7 +857,7 @@ def info(db, rawtransaction: str, block_index: int = None):
             )
         )
     except exceptions.BitcoindRPCError:
-        source, destination, btc_amount, fee, data = None, None, None, None, None
+        source, destination, btc_amount, fee, data = _get_btc_only_info_from_decoded_tx(decoded_tx)
 
     result = {
         "source": source,

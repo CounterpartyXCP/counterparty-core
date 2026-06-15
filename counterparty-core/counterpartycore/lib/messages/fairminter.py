@@ -14,6 +14,7 @@ logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
 
 ID = 90
+MIN_MINTED_ASSET_COMMISSION = D("0.0000001")
 
 
 def validate(
@@ -48,6 +49,7 @@ def validate(
         problems.append(f"`{asset}` can't be fairminted.")
 
     # check integer parameters
+    invalid_integer_parameter = False
     for param_name, param_value in {
         "price": price,
         "quantity_by_price": quantity_by_price,
@@ -64,10 +66,13 @@ def validate(
         if param_value != 0:
             if not isinstance(param_value, int):
                 problems.append(f"`{param_name}` must be an integer")
+                invalid_integer_parameter = True
             elif param_value < 0:
                 problems.append(f"`{param_name}` must be >= 0.")
             elif param_value > config.MAX_INT:
                 problems.append(f"`{param_name}` exceeds maximum value")
+    if invalid_integer_parameter:
+        return problems
     if quantity_by_price < 1:
         problems.append("quantity_by_price must be >= 1")
     # check boolean parameters
@@ -87,6 +92,11 @@ def validate(
             problems.append(
                 "`minted_asset_commission` must be less than 0 or greater than or equal to 1"
             )
+        elif (
+            protocol.enabled("fix_fairminter_commission_minimum", block_index=block_index)
+            and 0 < D(str(minted_asset_commission)) <= MIN_MINTED_ASSET_COMMISSION
+        ):
+            problems.append("minted_asset_commission must be 0 or greater than 0.0000001")
 
     if max_mint_per_tx > max_mint_per_address > 0:
         problems.append("max_mint_per_tx must be <= max_mint_per_address.")

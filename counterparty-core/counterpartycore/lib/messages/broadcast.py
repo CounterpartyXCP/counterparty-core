@@ -21,6 +21,7 @@ because it is stored as a four‐byte integer, it may not be greater than about
 
 import decimal
 import logging
+import math
 import struct
 from fractions import Fraction
 
@@ -74,6 +75,14 @@ def validate_address_options(options):
 
 def validate(db, source, timestamp, value, fee_fraction_int, text, mime_type, block_index=None):
     problems = []
+
+    # NOTE: no numeric type checks here. validate() is on the consensus path
+    # (parse() calls it for every on-chain broadcast). Unlike order/bet, after
+    # `taproot_support` broadcasts are CBOR-decoded (see load_cbor), so a crafted
+    # message could carry a float timestamp or non-numeric fee_fraction_int.
+    # Rejecting those here would change the stored `status` (and flip a float
+    # timestamp from valid to invalid) without a protocol change. API-level type
+    # validation lives in compose() instead, off the consensus path.
 
     # For SQLite3
     if timestamp > config.MAX_INT or value > config.MAX_INT or fee_fraction_int > config.MAX_INT:
@@ -129,6 +138,29 @@ def compose(
     mime_type: str = "",
     skip_validation: bool = False,
 ):
+    # Numeric type checks for the API/compose path only. These are intentionally
+    # NOT in validate(), which is shared with the consensus parse path. Done
+    # before any arithmetic below so non-numeric inputs return a clean
+    # ComposeError instead of raising a TypeError.
+    if not isinstance(timestamp, int):
+        raise exceptions.ComposeError(["timestamp must be an integer"])
+    if not isinstance(value, (int, float, D, Fraction)):
+        raise exceptions.ComposeError(["value must be numeric"])
+    if not isinstance(fee_fraction, (int, float, D, Fraction)):
+        raise exceptions.ComposeError(["fee_fraction must be numeric"])
+
+    # Reject non-finite floats (NaN / ±inf). They pass the isinstance checks
+    # above (they *are* floats) but a non-finite fee_fraction would raise an
+    # uncaught OverflowError/ValueError at the `int(fee_fraction * 1e8)`
+    # conversion below, and a non-finite value would be packed as a
+    # meaningless payload -- both surfacing as an internal error instead of a
+    # clean ComposeError. Guarded here on the API path only, never in
+    # validate() (the consensus parse path).
+    if isinstance(value, float) and not math.isfinite(value):
+        raise exceptions.ComposeError(["value must be finite"])
+    if isinstance(fee_fraction, float) and not math.isfinite(fee_fraction):
+        raise exceptions.ComposeError(["fee_fraction must be finite"])
+
     # Store the fee fraction as an integer.
     fee_fraction_int = int(fee_fraction * 1e8)
 

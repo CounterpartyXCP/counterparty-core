@@ -34,6 +34,13 @@ def test_validate(ledger_db, defaults):
     assert fairmint.validate(
         ledger_db,
         defaults["addresses"][1],  # source
+        "PAIDFAIRMIN",  # asset
+        "10",  # quantity
+    ) == ["quantity must be an integer"]
+
+    assert fairmint.validate(
+        ledger_db,
+        defaults["addresses"][1],  # source
         "RAIDFAIRMIN",  # asset
         11,  # quantity
     ) == ["Quantity exceeds maximum allowed per transaction"]
@@ -89,6 +96,14 @@ def test_compose(ledger_db, defaults):
             35,  # quantity
         )
 
+    with pytest.raises(exceptions.ComposeError, match="quantity must be an integer"):
+        fairmint.compose(
+            ledger_db,
+            defaults["addresses"][1],  # source
+            "PAIDFAIRMIN",  # asset
+            "10",  # quantity
+        )
+
     assert fairmint.compose(
         ledger_db,
         defaults["addresses"][1],  # source
@@ -132,6 +147,67 @@ def test_compose(ledger_db, defaults):
             [],
             b"[QAIDFAIRMIN|10",
         )
+
+
+def test_compose_resolves_subasset_longname(ledger_db, defaults):
+    asset_longname = "PARENT.already.issued"
+    asset_name = "A95428959342453541"
+    ledger_db.execute(
+        """
+        INSERT INTO fairminters (
+            tx_hash, tx_index, block_index, source, asset, asset_parent,
+            asset_longname, description, price, quantity_by_price, hard_cap,
+            burn_payment, max_mint_per_tx, premint_quantity, start_block,
+            end_block, minted_asset_commission_int, soft_cap,
+            soft_cap_deadline_block, lock_description, lock_quantity,
+            divisible, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "a" * 64,
+            10_000,
+            1,
+            defaults["addresses"][0],
+            asset_name,
+            "PARENT",
+            asset_longname,
+            "",
+            0,
+            1,
+            0,
+            False,
+            10,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            False,
+            False,
+            True,
+            "open",
+        ),
+    )
+
+    # validate() operates on the canonical (resolved) asset name and must NOT
+    # resolve subasset longnames itself: it is on the consensus parse path, so
+    # resolving there would alter the stored status of a legacy-format fairmint
+    # carrying a subasset longname without a protocol change.
+    assert fairmint.validate(ledger_db, defaults["addresses"][1], asset_name, 0) == []
+    assert fairmint.validate(ledger_db, defaults["addresses"][1], asset_longname, 0) == [
+        f"fairminter not found for asset: `{asset_longname}`"
+    ]
+    # compose() resolves the longname before validating, so composing with the
+    # longname is equivalent to composing with the canonical asset name.
+    assert fairmint.compose(
+        ledger_db, defaults["addresses"][1], asset_longname, 0
+    ) == fairmint.compose(
+        ledger_db,
+        defaults["addresses"][1],
+        asset_name,
+        0,
+    )
 
 
 def test_unpack():

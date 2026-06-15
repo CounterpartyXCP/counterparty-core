@@ -26,6 +26,12 @@ multiprocessing.set_start_method("spawn", force=True)
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
+def format_bind_address(host, port):
+    if ":" in host and not host.startswith("["):
+        return f"[{host}]:{port}"
+    return f"{host}:{port}"
+
+
 class LazyLogger(metaclass=helpers.SingletonMeta):
     def __init__(self):
         self.last_message = None
@@ -215,7 +221,7 @@ class GunicornArbiter(Arbiter):
 class GunicornApplication(gunicorn.app.base.BaseApplication):  # pylint: disable=abstract-method
     def __init__(self, app, args=None):
         self.options = {
-            "bind": f"{config.API_HOST}:{config.API_PORT}",
+            "bind": format_bind_address(config.API_HOST, config.API_PORT),
             "timeout": 10,
             "graceful_timeout": 10,
             "max_requests": 1000,

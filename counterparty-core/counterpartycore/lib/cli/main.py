@@ -259,6 +259,10 @@ CONFIG_ARGS = [
     [("--data-dir",), {"default": None, "help": "the path to the data directory"}],
     [("--cache-dir",), {"default": None, "help": "the path to the cache directory"}],
     [
+        ("--disable-api-cache",),
+        {"action": "store_true", "default": False, "help": "disable the API response cache"},
+    ],
+    [
         ("--log-file",),
         {"nargs": "?", "const": None, "default": False, "help": "log to the specified file"},
     ],
@@ -426,7 +430,7 @@ CONFIG_ARGS = [
     [
         ("--catch-up",),
         {
-            "choices": ["normal", "bootstrap", "bootstrap-always"],
+            "choices": ["normal", "bootstrap", "bootstrap-once", "bootstrap-always"],
             "default": "normal",
             "help": "Catch up mode (default: normal)",
         },
