@@ -9,7 +9,7 @@ from counterparty_rs import utils as rs_utils
 from counterpartycore.lib import config
 from counterpartycore.lib.api import routes
 from counterpartycore.lib.api.composer import DEPRECATED_CONSTRUCT_PARAMS
-from counterpartycore.lib.utils import database, hashcodec
+from counterpartycore.lib.utils import database, hashcodec, helpers
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 OPENAPI_FILE = os.path.join(CURR_DIR, "../../../../../openapi.json")
@@ -647,14 +647,22 @@ def generate_regtest_fixtures(db):
     regtest_fixtures["$LAST_SWEEP_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_SWEEP_TX_HASH"] = row["tx_hash"]
 
-    # block and tx with btcpay
+    # block and tx with btcpay. ``btcpays.order_match_id`` was replaced by the
+    # ``(order_match_tx0_index, order_match_tx1_index)`` FK pair in the compact
+    # match-id migration; re-hydrate tx0's hash via JOIN on ``transactions``.
+    # ``$ORDER_WITH_BTCPAY_HASH`` is just tx0's hash (the first half of the old
+    # composite id). ``hex_lower`` returns a hex string the rowtracer leaves as-is.
     cursor.execute(
-        "SELECT block_index, tx_hash, order_match_id FROM btcpays ORDER BY rowid DESC LIMIT 1"
+        """SELECT b.block_index AS block_index, b.tx_hash AS tx_hash,
+                  hex_lower(t0.tx_hash) AS order_match_tx0_hash
+           FROM btcpays b
+           LEFT JOIN transactions t0 ON t0.tx_index = b.order_match_tx0_index
+           ORDER BY b.rowid DESC LIMIT 1"""
     )
     row = cursor.fetchone()
     regtest_fixtures["$LAST_BTCPAY_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_BTCPAY_TX_HASH"] = row["tx_hash"]
-    regtest_fixtures["$ORDER_WITH_BTCPAY_HASH"] = row["order_match_id"].split("_")[0]
+    regtest_fixtures["$ORDER_WITH_BTCPAY_HASH"] = row["order_match_tx0_hash"]
 
     # block and tx with broadcasts
     cursor.execute("SELECT block_index, tx_hash FROM broadcasts ORDER BY rowid DESC LIMIT 1")
@@ -662,12 +670,18 @@ def generate_regtest_fixtures(db):
     regtest_fixtures["$LAST_BROADCAST_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_BROADCAST_TX_HASH"] = row["tx_hash"]
 
-    # block and tx with order_matches
-    cursor.execute("SELECT block_index, id FROM order_matches ORDER BY rowid DESC LIMIT 1")
+    # block and tx with order_matches. The composite TEXT ``id`` was dropped in
+    # the compact match-id migration; reconstruct it from the BLOB
+    # ``tx0_hash``/``tx1_hash`` pair (mirrors ``helpers.MATCH_ID_SQL``).
+    # ``$ORDER_WITH_MATCH_HASH`` is just tx0's hash (the rowtracer hexifies it).
+    cursor.execute(
+        f"SELECT block_index, tx0_hash, {helpers.MATCH_ID_SQL} AS id "  # noqa: S608
+        "FROM order_matches ORDER BY rowid DESC LIMIT 1"
+    )
     row = cursor.fetchone()
     regtest_fixtures["$LAST_ORDER_MATCH_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_ORDER_MATCH_ID"] = row["id"]
-    regtest_fixtures["$ORDER_WITH_MATCH_HASH"] = row["id"].split("_")[0]
+    regtest_fixtures["$ORDER_WITH_MATCH_HASH"] = row["tx0_hash"]
 
     # block with cancels
     cursor.execute("SELECT block_index FROM cancels ORDER BY rowid DESC LIMIT 1")

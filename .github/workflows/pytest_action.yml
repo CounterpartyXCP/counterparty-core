@@ -43,9 +43,11 @@ jobs:
         with:
           path: ~/.cache/counterparty-integration-cache/${{ inputs.integration_cache_network }}
           # Cache key version: increment to invalidate corrupted caches
-          key: integration-v2-${{ inputs.integration_cache_network }}-${{ github.run_id }}
+          # v3: compact-hash match tables re-keyed on (tx0_index, tx1_index);
+          # the v2 cached DBs carry the old TEXT `id` schema and are incompatible.
+          key: integration-v3-${{ inputs.integration_cache_network }}-${{ github.run_id }}
           restore-keys: |
-            integration-v2-${{ inputs.integration_cache_network }}-
+            integration-v3-${{ inputs.integration_cache_network }}-
 
       - name: Set up Python
         uses: actions/setup-python@v3
@@ -105,7 +107,7 @@ jobs:
         with:
           path: ~/.cache/counterparty-integration-cache/${{ inputs.integration_cache_network }}
           # Cache key version: increment to invalidate corrupted caches
-          key: integration-v2-${{ inputs.integration_cache_network }}-${{ github.run_id }}
+          key: integration-v3-${{ inputs.integration_cache_network }}-${{ github.run_id }}
 
       - name: Upload coverage
         uses: codecov/codecov-action@v5
