@@ -11,7 +11,7 @@ from counterpartycore.lib.ledger.caches import AssetCache
 from counterpartycore.lib.ledger.events import insert_update
 from counterpartycore.lib.ledger.supplies import asset_supply
 from counterpartycore.lib.parser import protocol
-from counterpartycore.lib.utils import assetnames, hashcodec
+from counterpartycore.lib.utils import assetnames, database, hashcodec
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -165,7 +165,7 @@ def is_divisible(db, asset):
         WHERE (status = ? AND asset = ?)
         ORDER BY tx_index DESC
     """
-    bindings = ("valid", asset)
+    bindings = ("valid", database.asset_index_from_name(db, asset))
     cursor.execute(query, bindings)
     issuances = cursor.fetchall()
     if not issuances:
@@ -255,7 +255,7 @@ def get_asset_issuer(db, asset):
         WHERE (status = ? AND asset = ?)
         ORDER BY tx_index DESC
     """
-    bindings = ("valid", asset)
+    bindings = ("valid", database.asset_index_from_name(db, asset))
     cursor.execute(query, bindings)
     issuances = cursor.fetchall()
     if not issuances:
@@ -273,7 +273,7 @@ def get_asset_description(db, asset):
         WHERE (status = ? AND asset = ?)
         ORDER BY tx_index DESC
     """
-    bindings = ("valid", asset)
+    bindings = ("valid", database.asset_index_from_name(db, asset))
     cursor.execute(query, bindings)
     issuances = cursor.fetchall()
     if not issuances:
@@ -375,7 +375,7 @@ def get_issuances(
         bindings.append(status)
     if asset is not None:
         where.append("asset = ?")
-        bindings.append(asset)
+        bindings.append(database.asset_index_from_name(db, asset))
     if locked is not None:
         where.append("locked = ?")
         bindings.append(locked)
@@ -425,7 +425,11 @@ def get_asset(db, asset):
         WHERE ({name_field} = ? AND status = ?)
         ORDER BY tx_index DESC
     """  # nosec B608  # noqa: S608 # nosec B608
-    bindings = (asset, "valid")
+    # ``asset_longname`` stays TEXT; only the ``asset`` column is the index FK.
+    bind_asset = (
+        asset if name_field == "asset_longname" else database.asset_index_from_name(db, asset)
+    )
+    bindings = (bind_asset, "valid")
     cursor.execute(query, bindings)
     issuances = cursor.fetchall()
     if not issuances:
@@ -488,7 +492,7 @@ def get_fairminter_by_asset(db, asset):
         WHERE asset = ?
         ORDER BY rowid DESC LIMIT 1
     """
-    bindings = (asset,)
+    bindings = (database.asset_index_from_name(db, asset),)
     cursor.execute(query, bindings)
     return cursor.fetchone()
 

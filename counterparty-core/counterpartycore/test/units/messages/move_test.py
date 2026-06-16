@@ -7,8 +7,10 @@ DUMMY_UTXO = 64 * "0" + ":0"
 
 
 def get_utxo(ledger_db, address, asset="XCP"):
+    # balances stores the compact asset_index; resolve the name for the filter.
     return ledger_db.execute(
-        "SELECT * FROM balances WHERE utxo_address = ? and asset = ? AND quantity > 0",
+        "SELECT * FROM balances WHERE utxo_address = ? "
+        "AND asset = (SELECT asset_index FROM assets WHERE asset_name = ?) AND quantity > 0",
         (
             address,
             asset,
@@ -185,14 +187,16 @@ def test_move_assets_with_zero_balance(
 
     # The zero balance should not create a send record
     zero_sends = ledger_db.execute(
-        "SELECT * FROM sends WHERE tx_hash = ? AND asset = 'ZEROVAL'",
+        "SELECT * FROM sends WHERE tx_hash = ? "
+        "AND asset = (SELECT asset_index FROM assets WHERE asset_name = 'ZEROVAL')",
         (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchall()
     assert len(zero_sends) == 0
 
     # But XCP should still be moved
     xcp_sends = ledger_db.execute(
-        "SELECT * FROM sends WHERE tx_hash = ? AND asset = 'XCP'",
+        "SELECT * FROM sends WHERE tx_hash = ? "
+        "AND asset = (SELECT asset_index FROM assets WHERE asset_name = 'XCP')",
         (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchall()
     assert len(xcp_sends) == 1

@@ -27,6 +27,116 @@ apsw.ext.log_sqlite(logger=logger)
 _HASH_COLUMN_NAMES = hashcodec.HASH_COLUMN_NAMES
 
 
+# Columns that store the compact integer ``asset_index`` foreign key (see the
+# asset-normalization rewrite in ``0010``). On read the rowtracer transparently
+# decodes the index back to the asset *name* so the rest of the codebase
+# (consensus handlers, API, tests) keeps seeing names exactly as before the
+# normalization. This frozenset MUST stay in sync with the union of
+# ``migration_data.compact_hash_tables.ASSET_NAME_COLUMNS`` values; it is
+# duplicated here (rather than imported) because ``database`` is a low-level
+# module and importing ``lib.ledger.*`` at load time would create a cycle. A
+# unit test asserts the two stay identical.
+ASSET_INDEX_COLUMN_NAMES = frozenset(
+    {
+        "asset",
+        "give_asset",
+        "get_asset",
+        "forward_asset",
+        "backward_asset",
+        "dividend_asset",
+        "asset_parent",
+        "asset_a",
+        "asset_b",
+    }
+)
+
+# Per-connection asset_index<->name caches. Asset rows are append-only (never
+# renamed or deleted), and ``asset_index`` is monotonic, so:
+#   * index->name hits and misses are both permanently valid (a stored index
+#     always references an asset that already exists), so misses are cached.
+#   * name->index misses may later become hits (the asset gets registered), so
+#     only hits are cached there.
+_CACHE_MISS = object()
+_ASSET_NAME_BY_INDEX = weakref.WeakKeyDictionary()
+_ASSET_INDEX_BY_NAME = weakref.WeakKeyDictionary()
+# Per-connection name of the ``assets`` table. On a Ledger DB connection it is
+# ``assets``; on a read-only State DB connection (which ATTACHes the Ledger DB
+# as ``ledger_db``) it is ``ledger_db.assets``. ``None`` => not resolvable.
+_ASSETS_TABLE_NAME = weakref.WeakKeyDictionary()
+
+
+def _resolve_assets_table(db):
+    cached = _ASSETS_TABLE_NAME.get(db, _CACHE_MISS)
+    if cached is not _CACHE_MISS:
+        return cached
+    name = None
+    for candidate in ("assets", "ledger_db.assets"):
+        try:
+            db.cursor().execute(f"SELECT 1 FROM {candidate} LIMIT 0")  # nosec B608  # noqa: S608
+        except apsw.SQLError:
+            continue
+        name = candidate
+        break
+    _ASSETS_TABLE_NAME[db] = name
+    return name
+
+
+def asset_name_from_index(db, index):
+    """Resolve a stored ``asset_index`` to its asset name. Returns the raw
+    index unchanged if it cannot be resolved (e.g. the ``assets`` table is not
+    reachable from this connection)."""
+    cache = _ASSET_NAME_BY_INDEX.get(db)
+    if cache is None:
+        cache = {}
+        _ASSET_NAME_BY_INDEX[db] = cache
+    name = cache.get(index, _CACHE_MISS)
+    if name is _CACHE_MISS:
+        table = _resolve_assets_table(db)
+        if table is None:
+            return index
+        row = (
+            db.cursor()
+            .execute(
+                f"SELECT asset_name FROM {table} WHERE asset_index = ?",  # nosec B608  # noqa: S608
+                (index,),
+            )
+            .fetchone()
+        )
+        name = row["asset_name"] if row else None
+        cache[index] = name
+    return name if name is not None else index
+
+
+def asset_index_from_name(db, asset_name):
+    """Resolve an asset name to its compact ``asset_index``. Returns ``None``
+    when the asset is not registered (e.g. an invalid record referencing a
+    never-issued asset), which stores as NULL."""
+    if asset_name is None:
+        return None
+    cache = _ASSET_INDEX_BY_NAME.get(db)
+    if cache is None:
+        cache = {}
+        _ASSET_INDEX_BY_NAME[db] = cache
+    index = cache.get(asset_name, _CACHE_MISS)
+    if index is _CACHE_MISS:
+        table = _resolve_assets_table(db)
+        if table is None:
+            return None
+        row = (
+            db.cursor()
+            .execute(
+                f"SELECT asset_index FROM {table} WHERE asset_name = ?",  # nosec B608  # noqa: S608
+                (asset_name,),
+            )
+            .fetchone()
+        )
+        index = row["asset_index"] if row else None
+        if index is not None:
+            # Only cache hits: a miss can become a hit once the asset is issued.
+            cache[asset_name] = index
+    return index
+
+
 def _convert_value(name, field_type, value):
     # Fast path: most columns are non-NULL primitives (int, str, ...) and
     # not BOOL/BLOB hashes. Putting the cheapest checks first avoids the
@@ -54,13 +164,24 @@ def _convert_value(name, field_type, value):
 
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style. Auto-converts BLOB hash
-    columns back to lowercase hex strings, preserving the legacy contract that
-    ``row['tx_hash']`` etc. are hex strings.
+    columns back to lowercase hex strings, and the compact integer
+    ``asset_index`` foreign keys back to asset names, preserving the legacy
+    contract that ``row['tx_hash']`` is hex and ``row['asset']`` is a name.
     """
-    return {
-        name: _convert_value(name, field_type, value)
-        for (name, field_type), value in zip(cursor.getdescription(), sql, strict=True)
-    }
+    db = None
+    out = {}
+    for (name, field_type), value in zip(cursor.getdescription(), sql, strict=True):
+        # Asset-index columns hold a small integer at rest; decode to the asset
+        # name. A name already materialized as TEXT (e.g. ``assets.asset_name``,
+        # ``assets_info.asset``, or a view that pre-resolves the name) is left
+        # untouched, as is a NULL (invalid record with no asset).
+        if value.__class__ is int and name in ASSET_INDEX_COLUMN_NAMES:
+            if db is None:
+                db = cursor.getconnection()
+            out[name] = asset_name_from_index(db, value)
+        else:
+            out[name] = _convert_value(name, field_type, value)
+    return out
 
 
 def get_file_openers(filename):

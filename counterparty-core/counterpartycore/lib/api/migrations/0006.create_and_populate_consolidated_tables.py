@@ -5,6 +5,7 @@ import logging
 import time
 
 from counterpartycore.lib import config
+from counterpartycore.lib.utils.database import ASSET_INDEX_COLUMN_NAMES
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -113,9 +114,19 @@ def build_consolidated_table(state_db, table_name):
         CREATE INDEX temp.latest_ids_idx ON latest_ids(max_id)
     """)
 
-    columns = [
-        f"b.{column['name']}" for column in state_db.execute(f"PRAGMA table_info({table_name})")
-    ]
+    # The State DB stores asset *names* (it must read its own rows without the
+    # Ledger DB attached). Asset columns are stored as the compact
+    # ``asset_index`` in ``ledger_db``, so decode them back to names here while
+    # ``ledger_db`` is attached (the INSERT ... SELECT bypasses the rowtracer).
+    columns = []
+    for column in state_db.execute(f"PRAGMA table_info({table_name})"):
+        col = column["name"]
+        if col in ASSET_INDEX_COLUMN_NAMES:
+            columns.append(
+                f"(SELECT asset_name FROM ledger_db.assets WHERE asset_index = b.{col}) AS {col}"  # noqa: S608  # nosec B608
+            )
+        else:
+            columns.append(f"b.{col}")
     select_fields = ", ".join(columns)
 
     state_db.execute(f"""

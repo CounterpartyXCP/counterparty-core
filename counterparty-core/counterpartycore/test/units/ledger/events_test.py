@@ -37,6 +37,11 @@ def test_events_functions(ledger_db, defaults):
 
 def test_insert_record(ledger_db, defaults):
     caches.AssetCache(ledger_db)
+    # Register the synthetic asset so its compact asset_index resolves
+    # (destructions.asset is the integer asset_index FK, not the name).
+    ledger_db.execute(
+        "INSERT OR IGNORE INTO assets (asset_id, asset_name) VALUES ('999999999', 'foobar')"
+    )
     events.insert_record(
         ledger_db,
         "destructions",
@@ -48,7 +53,9 @@ def test_insert_record(ledger_db, defaults):
         "ASSET_DESTRUCTION",
         event_info={"key": "value"},
     )
-    last_record = ledger_db.execute("SELECT * FROM destructions WHERE asset = 'foobar'").fetchone()
+    last_record = ledger_db.execute(
+        "SELECT * FROM destructions WHERE asset = (SELECT asset_index FROM assets WHERE asset_name = 'foobar')"
+    ).fetchone()
     assert last_record["asset"] == "foobar"
 
 

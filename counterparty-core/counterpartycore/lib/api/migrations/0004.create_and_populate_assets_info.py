@@ -80,53 +80,53 @@ def apply(db):
         a.asset_longname,
         (
             SELECT i.issuer FROM ledger_db.issuances i
-            WHERE i.asset = a.asset_name AND i.status = 'valid'
+            WHERE i.asset = a.asset_index AND i.status = 'valid'
             ORDER BY i.rowid ASC LIMIT 1
         ) AS issuer,
         (
             SELECT i.issuer FROM ledger_db.issuances i
-            WHERE i.asset = a.asset_name AND i.status = 'valid'
+            WHERE i.asset = a.asset_index AND i.status = 'valid'
             ORDER BY i.rowid DESC LIMIT 1
         ) AS owner,
         (
             SELECT i.divisible FROM ledger_db.issuances i
-            WHERE i.asset = a.asset_name AND i.status = 'valid'
+            WHERE i.asset = a.asset_index AND i.status = 'valid'
             ORDER BY i.rowid DESC LIMIT 1
         ) AS divisible,
         COALESCE((
             SELECT MAX(i.locked) FROM ledger_db.issuances i
-            WHERE i.asset = a.asset_name AND i.status = 'valid'
+            WHERE i.asset = a.asset_index AND i.status = 'valid'
         ), 0) AS locked,
         COALESCE((
             SELECT SUM(i.quantity) FROM ledger_db.issuances i
-            WHERE i.asset = a.asset_name AND i.status = 'valid'
+            WHERE i.asset = a.asset_index AND i.status = 'valid'
         ), 0) AS supply,
         (
             SELECT i.description FROM ledger_db.issuances i
-            WHERE i.asset = a.asset_name AND i.status = 'valid'
+            WHERE i.asset = a.asset_index AND i.status = 'valid'
             ORDER BY i.rowid DESC LIMIT 1
         ) AS description,
         COALESCE((
             SELECT MAX(i.description_locked) FROM ledger_db.issuances i
-            WHERE i.asset = a.asset_name AND i.status = 'valid'
+            WHERE i.asset = a.asset_index AND i.status = 'valid'
         ), 0) AS description_locked,
         (
             SELECT MIN(i.block_index) FROM ledger_db.issuances i
-            WHERE i.asset = a.asset_name AND i.status = 'valid'
+            WHERE i.asset = a.asset_index AND i.status = 'valid'
         ) AS first_issuance_block_index,
         (
             SELECT MAX(i.block_index) FROM ledger_db.issuances i
-            WHERE i.asset = a.asset_name AND i.status = 'valid'
+            WHERE i.asset = a.asset_index AND i.status = 'valid'
         ) AS last_issuance_block_index,
         (
             SELECT i.mime_type FROM ledger_db.issuances i
-            WHERE i.asset = a.asset_name AND i.status = 'valid'
+            WHERE i.asset = a.asset_index AND i.status = 'valid'
             ORDER BY i.rowid DESC LIMIT 1
         ) AS mime_type
     FROM ledger_db.assets a
     WHERE EXISTS (
         SELECT 1 FROM ledger_db.issuances i
-        WHERE i.asset = a.asset_name AND i.status = 'valid'
+        WHERE i.asset = a.asset_index AND i.status = 'valid'
     );
     """
     cursor = db.cursor()
@@ -157,13 +157,22 @@ def apply(db):
     start_time_supply = time.time()
     logger.debug("Updating the `supply` field...")
 
+    # ``issuances``/``destructions`` resolve to ``ledger_db`` (the State DB has
+    # no such tables) where ``asset`` is the compact ``asset_index``; decode to
+    # the asset name so the supply UPDATE below matches ``assets_info.asset``.
     db.execute("""
         CREATE TEMP TABLE issuances_quantity AS
-        SELECT asset, SUM(quantity) AS quantity FROM issuances WHERE status = 'valid' GROUP BY asset
+        SELECT a.asset_name AS asset, SUM(i.quantity) AS quantity
+        FROM ledger_db.issuances i
+        JOIN ledger_db.assets a ON a.asset_index = i.asset
+        WHERE i.status = 'valid' GROUP BY i.asset
     """)
     db.execute("""
         CREATE TEMP TABLE destructions_quantity AS
-        SELECT asset, SUM(quantity) AS quantity FROM destructions WHERE status = 'valid' GROUP BY asset
+        SELECT a.asset_name AS asset, SUM(d.quantity) AS quantity
+        FROM ledger_db.destructions d
+        JOIN ledger_db.assets a ON a.asset_index = d.asset
+        WHERE d.status = 'valid' GROUP BY d.asset
     """)
 
     db.execute("""

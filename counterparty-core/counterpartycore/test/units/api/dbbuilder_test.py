@@ -276,10 +276,19 @@ def test_consolidated_balances(state_db, ledger_db, apiv2_client):
     )
 
     ledger_balances = ledger_db.execute(
-        "SELECT *, MAX(rowid) FROM balances GROUP BY address, asset ORDER BY asset, address"
+        "SELECT *, MAX(rowid) FROM balances GROUP BY address, asset"
     ).fetchall()
-    api_balances = state_db.execute("SELECT * FROM balances ORDER BY asset, address").fetchall()
+    api_balances = state_db.execute("SELECT * FROM balances").fetchall()
     assert len(ledger_balances) == len(api_balances)
+
+    # The Ledger DB stores the compact ``asset_index`` (so SQL ``ORDER BY asset``
+    # sorts by index) while the State DB stores asset names; both decode to the
+    # same names on read, so align the two lists by (name, address, utxo).
+    def _balance_key(b):
+        return (b["asset"] or "", b["address"] or "", b["utxo"] or "")
+
+    ledger_balances = sorted(ledger_balances, key=_balance_key)
+    api_balances = sorted(api_balances, key=_balance_key)
     for ledger_balance, api_balance in zip(ledger_balances, api_balances, strict=True):
         assert ledger_balance["address"] == api_balance["address"]
         assert ledger_balance["asset"] == api_balance["asset"]

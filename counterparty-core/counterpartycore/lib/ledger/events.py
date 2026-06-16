@@ -8,8 +8,9 @@ from counterpartycore.lib.cli import log
 from counterpartycore.lib.ledger.balances import get_balance
 from counterpartycore.lib.ledger.caches import AssetCache, UTXOBalancesCache
 from counterpartycore.lib.ledger.currentstate import ConsensusHashBuilder, CurrentState
+from counterpartycore.lib.ledger.migration_data.compact_hash_tables import ASSET_NAME_COLUMNS
 from counterpartycore.lib.parser import protocol, utxosinfo
-from counterpartycore.lib.utils import hashcodec, helpers
+from counterpartycore.lib.utils import database, hashcodec, helpers
 
 # Per-table list of BLOB hash columns that need automatic ``hex -> bytes``
 # normalization at insert time. The values are still passed around as hex
@@ -180,6 +181,16 @@ def _prepare_record_for_insert(db, table_name, record):
             if col in out:
                 out[col] = hashcodec.hash_to_db(out[col])
 
+    # Convert asset *name* columns to the compact integer ``asset_index`` FK.
+    # The journal keeps the original ``record`` (names), so the consensus
+    # ``bindings_string`` stays name-based; only the stored row uses the index.
+    # An unregistered name (invalid record) resolves to NULL.
+    asset_cols = ASSET_NAME_COLUMNS.get(table_name)
+    if asset_cols:
+        for col in asset_cols:
+            if col in out and isinstance(out[col], str):
+                out[col] = database.asset_index_from_name(db, out[col])
+
     return out
 
 
@@ -192,11 +203,30 @@ def get_cursor(db):
         cursor.close()
 
 
+def ensure_asset(db, asset_id, asset_name, block_index, asset_longname):
+    """Create the ``assets`` row (DB only, no journal) if it does not exist
+    yet, so records inserted *before* their ``ASSET_CREATION`` event -- e.g. a
+    fairminter referencing the asset it is about to mint -- can still resolve
+    the compact ``asset_index``. The subsequent ``ASSET_CREATION`` insert is
+    idempotent (``INSERT OR IGNORE`` on ``assets``), so the consensus event
+    order is preserved while the storage row exists early."""
+    with get_cursor(db) as cursor:
+        cursor.execute(
+            "INSERT OR IGNORE INTO assets (asset_id, asset_name, block_index, asset_longname) "
+            "VALUES (?, ?, ?, ?)",
+            (str(asset_id), asset_name, block_index, asset_longname),
+        )
+
+
 def insert_record(db, table_name, record, event, event_info=None):
     record_for_db = _prepare_record_for_insert(db, table_name, record)
     fields = list(record_for_db.keys())
     placeholders = ", ".join(["?" for _ in fields])
-    query = f"INSERT INTO {table_name} ({', '.join(fields)}) VALUES ({placeholders})"  # noqa: S608 # nosec B608
+    # ``assets`` may have been pre-created (DB only) by ``ensure_asset`` so an
+    # earlier record could resolve its ``asset_index``; tolerate the duplicate
+    # while still emitting the ASSET_CREATION journal entry below.
+    or_ignore = "OR IGNORE " if table_name == "assets" else ""
+    query = f"INSERT {or_ignore}INTO {table_name} ({', '.join(fields)}) VALUES ({placeholders})"  # noqa: S608 # nosec B608
 
     with get_cursor(db) as cursor:
         cursor.execute(query, list(record_for_db.values()))
@@ -436,7 +466,9 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
             "address": balance_address,
             "utxo": utxo,
             "utxo_address": utxo_address,
-            "asset": asset,
+            # balances stores the compact ``asset_index``; the name always
+            # resolves here (a balance only exists for an issued asset).
+            "asset": database.asset_index_from_name(db, asset),
             "block_index": CurrentState().current_block_index(),
             "tx_index": tx_index,
         }
@@ -518,7 +550,8 @@ def add_to_balance(db, address, asset, quantity, tx_index, utxo_address=None):
         "address": balance_address,
         "utxo": utxo,
         "utxo_address": utxo_address,
-        "asset": asset,
+        # balances stores the compact ``asset_index`` (resolved from the name).
+        "asset": database.asset_index_from_name(db, asset),
         "block_index": CurrentState().current_block_index(),
         "tx_index": tx_index,
     }

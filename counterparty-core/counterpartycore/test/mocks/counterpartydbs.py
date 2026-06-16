@@ -222,6 +222,12 @@ def check_record(ledger_db, record):
                     )
                     if isinstance(value, str):
                         value = hashcodec.hash_to_db(value)
+                elif field in database.ASSET_INDEX_COLUMN_NAMES and isinstance(value, str):
+                    # Asset-name columns are stored as the compact asset_index;
+                    # resolve the expected name to its index for the match.
+                    conditions.append(
+                        f"{field} = (SELECT asset_index FROM assets WHERE asset_name = ?)"  # nosec B608  # noqa: S608
+                    )
                 else:
                     conditions.append(f"{field} = ?")
                     if field in hashcodec.HASH_COLUMN_NAMES and isinstance(value, str):

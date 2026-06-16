@@ -3,6 +3,7 @@ import logging
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger.caches import UTXOBalancesCache
 from counterpartycore.lib.parser import protocol, utxosinfo
+from counterpartycore.lib.utils import database
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -20,7 +21,7 @@ def get_balance(db, address, asset, raise_error_if_no_balance=False, return_list
         WHERE ({field_name} = ? AND asset = ?)
         ORDER BY rowid DESC LIMIT 1
     """  # noqa: S608 # nosec B608
-    bindings = (address, asset)
+    bindings = (address, database.asset_index_from_name(db, asset))
     balances = list(cursor.execute(query, bindings))
     cursor.close()
     if return_list:
@@ -47,11 +48,18 @@ def get_address_balances(db, address: str):
     if protocol.enabled("utxo_support") and utxosinfo.is_utxo_format(address):
         field_name = "utxo"
 
+    # ``asset`` is stored as the compact asset_index; ordering by it would
+    # return assets in index order, but the iteration order here is
+    # consensus-relevant: move/detach/sweep handlers process each balance in
+    # this order (msg_index, debit/credit -> ledger_hash). Order by the
+    # resolved asset *name* to reproduce the exact pre-normalization ordering
+    # (the GROUP BY previously emitted rows in asset-name order).
     query = f"""
         SELECT {field_name}, asset, quantity, utxo_address, MAX(rowid)
         FROM balances
         WHERE {field_name} = ?
         GROUP BY {field_name}, asset
+        ORDER BY (SELECT asset_name FROM assets WHERE asset_index = asset)
     """  # noqa: S608 # nosec B608
     bindings = (address,)
     cursor.execute(query, bindings)
@@ -120,6 +128,6 @@ def get_asset_balances(db, asset: str, exclude_zero_balances: bool = True):
                 {query}
             ) WHERE quantity > 0
         """  # nosec B608  # noqa: S608 # nosec B608
-    bindings = (asset,)
+    bindings = (database.asset_index_from_name(db, asset),)
     cursor.execute(query, bindings)
     return cursor.fetchall()

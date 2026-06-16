@@ -22,6 +22,91 @@ to keep individual modules under pylint's per-module line cap.
 # INSERT SELECT; all other columns are copied verbatim.
 
 TABLE_REWRITES = [
+    # assets: the legacy ``asset_id`` TEXT remains (it is the protocol id,
+    # exposed verbatim by the API). A compact sequential ``asset_index``
+    # INTEGER PRIMARY KEY is added: it is auto-assigned in stable insertion
+    # order (see CUSTOM_INSERT_SELECT, ``ORDER BY rowid``) and is the FK target
+    # every other table's asset column now points at. Must be FIRST in this
+    # list so the new ``assets`` table is fully populated before any other
+    # rewrite resolves an asset name to its ``asset_index``.
+    (
+        "assets",
+        ("asset_id", "asset_name", "block_index", "asset_longname"),
+        """CREATE TABLE assets(
+                          asset_index INTEGER PRIMARY KEY,
+                          asset_id TEXT UNIQUE,
+                          asset_name TEXT UNIQUE,
+                          block_index INTEGER,
+                          asset_longname TEXT)""",
+        (),
+    ),
+    # balances/credits/debits: high-volume tables whose ``asset`` name TEXT is
+    # replaced by the compact ``asset_index`` INTEGER. They have no hash
+    # columns, so the original hex->BLOB pass skipped them; they are added here
+    # purely for the asset normalization (see ASSET_NAME_COLUMNS).
+    (
+        "balances",
+        ("address", "asset", "quantity", "block_index", "tx_index", "utxo", "utxo_address"),
+        """CREATE TABLE balances(
+                          address TEXT,
+                          asset INTEGER,
+                          quantity INTEGER,
+                          block_index INTEGER,
+                          tx_index INTEGER,
+                          utxo TEXT,
+                          utxo_address TEXT)""",
+        (),
+    ),
+    (
+        "credits",
+        (
+            "block_index",
+            "address",
+            "asset",
+            "quantity",
+            "calling_function",
+            "event",
+            "tx_index",
+            "utxo",
+            "utxo_address",
+        ),
+        """CREATE TABLE credits(
+                          block_index INTEGER,
+                          address TEXT,
+                          asset INTEGER,
+                          quantity INTEGER,
+                          calling_function TEXT,
+                          event TEXT,
+                          tx_index INTEGER,
+                          utxo TEXT,
+                          utxo_address TEXT)""",
+        (),
+    ),
+    (
+        "debits",
+        (
+            "block_index",
+            "address",
+            "asset",
+            "quantity",
+            "action",
+            "event",
+            "tx_index",
+            "utxo",
+            "utxo_address",
+        ),
+        """CREATE TABLE debits(
+                          block_index INTEGER,
+                          address TEXT,
+                          asset INTEGER,
+                          quantity INTEGER,
+                          action TEXT,
+                          event TEXT,
+                          tx_index INTEGER,
+                          utxo TEXT,
+                          utxo_address TEXT)""",
+        (),
+    ),
     # blocks: 5 hash columns
     (
         "blocks",
@@ -192,10 +277,10 @@ TABLE_REWRITES = [
                             tx_hash BLOB,
                             block_index INTEGER,
                             source TEXT,
-                            give_asset TEXT,
+                            give_asset INTEGER,
                             give_quantity INTEGER,
                             give_remaining INTEGER,
-                            get_asset TEXT,
+                            get_asset INTEGER,
                             get_quantity INTEGER,
                             get_remaining INTEGER,
                             expiration INTEGER,
@@ -240,9 +325,9 @@ TABLE_REWRITES = [
                                     tx1_index INTEGER,
                                     tx1_hash BLOB,
                                     tx1_address TEXT,
-                                    forward_asset TEXT,
+                                    forward_asset INTEGER,
                                     forward_quantity INTEGER,
-                                    backward_asset TEXT,
+                                    backward_asset INTEGER,
                                     backward_quantity INTEGER,
                                     tx0_block_index INTEGER,
                                     tx1_block_index INTEGER,
@@ -322,7 +407,7 @@ TABLE_REWRITES = [
                 tx_hash BLOB,
                 msg_index INTEGER DEFAULT 0,
                 block_index INTEGER,
-                asset TEXT,
+                asset INTEGER,
                 quantity INTEGER,
                 divisible BOOL,
                 source TEXT,
@@ -499,8 +584,8 @@ TABLE_REWRITES = [
                           tx_hash BLOB UNIQUE,
                           block_index INTEGER,
                           source TEXT,
-                          asset TEXT,
-                          dividend_asset TEXT,
+                          asset INTEGER,
+                          dividend_asset INTEGER,
                           quantity_per_unit INTEGER,
                           fee_paid INTEGER,
                           status TEXT,
@@ -699,7 +784,7 @@ TABLE_REWRITES = [
                                 tx_hash BLOB,
                                 block_index INTEGER,
                                 source TEXT,
-                                asset TEXT,
+                                asset INTEGER,
                                 give_quantity INTEGER,
                                 escrow_quantity INTEGER,
                                 satoshirate INTEGER,
@@ -734,7 +819,7 @@ TABLE_REWRITES = [
                                 block_index INTEGER,
                                 source TEXT,
                                 destination TEXT,
-                                asset TEXT,
+                                asset INTEGER,
                                 dispense_quantity INTEGER,
                                 dispenser_tx_index INTEGER,
                                 btc_amount INTEGER,
@@ -760,7 +845,7 @@ TABLE_REWRITES = [
                                         block_index INTEGER,
                                         source TEXT,
                                         destination TEXT,
-                                        asset TEXT,
+                                        asset INTEGER,
                                         dispense_quantity INTEGER,
                                         dispenser_tx_index INTEGER,
                                         PRIMARY KEY (tx_index, source, destination),
@@ -803,8 +888,8 @@ TABLE_REWRITES = [
             tx_index INTEGER,
             block_index INTEGER,
             source TEXT,
-            asset TEXT,
-            asset_parent TEXT,
+            asset INTEGER,
+            asset_parent INTEGER,
             asset_longname TEXT,
             description TEXT,
             price INTEGER,
@@ -848,7 +933,7 @@ TABLE_REWRITES = [
             block_index INTEGER,
             source TEXT,
             fairminter_tx_index INTEGER,
-            asset TEXT,
+            asset INTEGER,
             earn_quantity INTEGER,
             paid_quantity INTEGER,
             commission INTEGER,
@@ -880,7 +965,7 @@ TABLE_REWRITES = [
                               block_index INTEGER,
                               source TEXT,
                               destination TEXT,
-                              asset TEXT,
+                              asset INTEGER,
                               quantity INTEGER,
                               status TEXT,
                               msg_index INTEGER DEFAULT 0,
@@ -949,8 +1034,8 @@ TABLE_REWRITES = [
     tx_hash BLOB,
     block_index INTEGER,
     source TEXT,
-    asset_a TEXT,
-    asset_b TEXT,
+    asset_a INTEGER,
+    asset_b INTEGER,
     reserve_a INTEGER,
     reserve_b INTEGER,
     lp_asset TEXT
@@ -976,8 +1061,8 @@ TABLE_REWRITES = [
     tx_hash BLOB,
     block_index INTEGER,
     source TEXT,
-    asset_a TEXT,
-    asset_b TEXT,
+    asset_a INTEGER,
+    asset_b INTEGER,
     quantity_a INTEGER,
     quantity_b INTEGER,
     quantity_minted INTEGER,
@@ -1004,8 +1089,8 @@ TABLE_REWRITES = [
     tx_hash BLOB,
     block_index INTEGER,
     source TEXT,
-    asset_a TEXT,
-    asset_b TEXT,
+    asset_a INTEGER,
+    asset_b INTEGER,
     quantity_destroyed INTEGER,
     quantity_a INTEGER,
     quantity_b INTEGER,
@@ -1036,11 +1121,11 @@ TABLE_REWRITES = [
     tx_hash BLOB,
     block_index INTEGER,
     source TEXT,
-    asset_a TEXT,
-    asset_b TEXT,
-    forward_asset TEXT,
+    asset_a INTEGER,
+    asset_b INTEGER,
+    forward_asset INTEGER,
     forward_quantity INTEGER,
-    backward_asset TEXT,
+    backward_asset INTEGER,
     backward_quantity INTEGER,
     fee_quantity INTEGER,
     fee_bps INTEGER,
@@ -1144,3 +1229,46 @@ TABLE_REWRITES = [
         (),
     ),
 ]
+
+
+# ---------------------------------------------------------------------------
+# Asset normalization: columns that store an asset *name* (TEXT) and are
+# rewritten to the compact integer ``asset_index`` foreign key on ``assets``.
+#
+# Single source of truth shared by:
+#   * the migration (``0010``): the auto INSERT/SELECT path resolves each of
+#     these columns to its ``asset_index`` via a subquery on the new ``assets``
+#     table (only for columns also present in the table's column list, so the
+#     not-yet-added ``fairminters.lp_asset`` is naturally skipped at migration
+#     time and handled at runtime once ``0011`` adds it).
+#   * the write path (``ledger.events._prepare_record_for_insert``): converts
+#     the in-memory asset name to its ``asset_index`` just before INSERT.
+#
+# ``assets``/``assets_info`` are intentionally absent: ``asset_id``/``asset_name``
+# there are the source-of-truth values, not foreign keys.
+# ---------------------------------------------------------------------------
+ASSET_NAME_COLUMNS = {
+    "balances": ("asset",),
+    "credits": ("asset",),
+    "debits": ("asset",),
+    "sends": ("asset",),
+    "orders": ("give_asset", "get_asset"),
+    "order_matches": ("forward_asset", "backward_asset"),
+    "issuances": ("asset",),
+    "dividends": ("asset", "dividend_asset"),
+    "dispensers": ("asset",),
+    "dispenses": ("asset",),
+    "dispenser_refills": ("asset",),
+    # NB: ``lp_asset`` (on ``fairminters``/``pools``) is intentionally NOT
+    # normalized: an LP token is referenced (earmarked on the fairminter)
+    # before it is created when the pool opens, so it cannot resolve to an
+    # ``asset_index`` at write time. LP names are numeric (``A...``) anyway, so
+    # the saving would be marginal. It stays a TEXT asset name.
+    "fairminters": ("asset", "asset_parent"),
+    "fairmints": ("asset",),
+    "destructions": ("asset",),
+    "pools": ("asset_a", "asset_b"),
+    "pool_deposits": ("asset_a", "asset_b"),
+    "pool_withdrawals": ("asset_a", "asset_b"),
+    "pool_matches": ("asset_a", "asset_b", "forward_asset", "backward_asset"),
+}

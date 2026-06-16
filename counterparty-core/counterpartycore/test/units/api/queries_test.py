@@ -197,6 +197,13 @@ def test_select_rows_with_unsupported_sort_field(state_db):
 
 def _insert_quantitative_sort_fixtures(ledger_db):
     """Insert two rows per quantitative table (quantities 10 then 20) used by the sort tests."""
+    # Asset columns store the compact asset_index, so register the synthetic
+    # assets and reference them by index in the INSERTs below.
+    for idx, asset_name in enumerate(("SORTSEND", "SORTISSUE", "SORTDISP", "SORTDIV"), start=1):
+        ledger_db.execute(
+            "INSERT OR IGNORE INTO assets (asset_id, asset_name) VALUES (?, ?)",
+            (str(900000 + idx), asset_name),
+        )
     ledger_db.executemany(
         """
         INSERT INTO transactions (
@@ -223,7 +230,7 @@ def _insert_quantitative_sort_fixtures(ledger_db):
         INSERT INTO sends (
             tx_index, tx_hash, block_index, source, destination, asset,
             quantity, status, msg_index, fee_paid, send_type
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, (SELECT asset_index FROM assets WHERE asset_name = ?), ?, ?, ?, ?, ?)
         """,
         [
             (900001, "a" * 64, 101, "source", "dest", "SORTSEND", 10, "valid", 0, 1, "send"),
@@ -235,7 +242,7 @@ def _insert_quantitative_sort_fixtures(ledger_db):
         INSERT INTO issuances (
             tx_index, tx_hash, msg_index, block_index, asset, quantity,
             source, issuer, fee_paid, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, (SELECT asset_index FROM assets WHERE asset_name = ?), ?, ?, ?, ?, ?)
         """,
         [
             (900003, "c" * 64, 0, 101, "SORTISSUE", 10, "source", "issuer", 1, "valid"),
@@ -259,7 +266,7 @@ def _insert_quantitative_sort_fixtures(ledger_db):
         INSERT INTO dispenses (
             tx_index, dispense_index, tx_hash, block_index, source,
             destination, asset, dispense_quantity, dispenser_tx_index, btc_amount
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, (SELECT asset_index FROM assets WHERE asset_name = ?), ?, ?, ?)
         """,
         [
             (900007, 0, "1" * 64, 101, "source", "dest", "SORTDISP", 10, 900001, 1),
@@ -271,7 +278,8 @@ def _insert_quantitative_sort_fixtures(ledger_db):
         INSERT INTO dividends (
             tx_index, tx_hash, block_index, source, asset, dividend_asset,
             quantity_per_unit, fee_paid, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, (SELECT asset_index FROM assets WHERE asset_name = ?),
+            (SELECT asset_index FROM assets WHERE asset_name = ?), ?, ?, ?)
         """,
         [
             (900009, "5" * 64, 101, "source", "SORTDIV", "XCP", 10, 1, "valid"),

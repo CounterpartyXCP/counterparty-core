@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 from counterpartycore.lib import config
-from counterpartycore.lib.ledger import caches
+from counterpartycore.lib.ledger import caches, issuances
 from counterpartycore.lib.utils import hashcodec, helpers
 
 
@@ -154,6 +154,16 @@ def test_get_asset_cache_miss_regular_asset_found(ledger_db, defaults):
     """Test cache miss with regular asset name that is found in DB."""
     caches.reset_caches()
 
+    # ``issuances.asset`` is the compact ``asset_index`` FK, so the asset must
+    # be registered first; the cache-miss query resolves the name to that index.
+    ledger_db.execute(
+        "INSERT INTO assets (asset_id, asset_name, block_index, asset_longname) VALUES (?, ?, ?, ?)",
+        (str(issuances.generate_asset_id("NEWASSET")), "NEWASSET", 310000, None),
+    )
+    new_asset_index = ledger_db.execute(
+        "SELECT asset_index FROM assets WHERE asset_name = ?", ("NEWASSET",)
+    ).fetchone()["asset_index"]
+
     # Insert a valid issuance into the DB
     ledger_db.execute(
         """
@@ -163,13 +173,13 @@ def test_get_asset_cache_miss_regular_asset_found(ledger_db, defaults):
             call_price, description, fee_paid, locked, reset, status,
             asset_longname
         ) VALUES (
-            999, 'test_hash_regular', 0, 310000, 'NEWASSET', 1000,
+            999, 'test_hash_regular', 0, 310000, ?, 1000,
             1, ?, ?, 0, 0, 0,
             0.0, 'Test asset', 0, 0, 0, 'valid',
             NULL
         )
         """,
-        (defaults["addresses"][0], defaults["addresses"][0]),
+        (new_asset_index, defaults["addresses"][0], defaults["addresses"][0]),
     )
 
     asset_cache = caches.AssetCache(ledger_db)

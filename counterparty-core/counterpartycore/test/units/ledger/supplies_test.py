@@ -189,10 +189,15 @@ def test_supplies_functions(ledger_db, defaults):
         },
     ]
 
+    # Register the synthetic asset and store its compact asset_index
+    # (destructions.asset is the integer asset_index FK, not the name).
+    ledger_db.execute(
+        "INSERT OR IGNORE INTO assets (asset_id, asset_name) VALUES ('999999999', 'foobar')"
+    )
     ledger_db.execute(
         """
-        INSERT INTO destructions (asset, quantity, source, status) 
-        VALUES ('foobar', 1000, ?, 'valid')
+        INSERT INTO destructions (asset, quantity, source, status)
+        VALUES ((SELECT asset_index FROM assets WHERE asset_name = 'foobar'), 1000, ?, 'valid')
         """,
         (defaults["addresses"][0],),
     )

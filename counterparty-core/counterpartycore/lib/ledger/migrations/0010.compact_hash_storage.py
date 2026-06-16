@@ -45,6 +45,7 @@ import sqlite3
 import apsw
 from counterpartycore.lib import config
 from counterpartycore.lib.ledger.migration_data.compact_hash_schema import (
+    ASSET_NAME_COLUMNS,
     CUSTOM_INSERT_SELECT,
     INDEXES_AFTER_REWRITE,
     NO_UPDATE_TRIGGERS,
@@ -224,10 +225,23 @@ def apply(conn):
                 f"INSERT INTO {table} ({', '.join(columns)}) {select_sql}"  # nosec B608  # noqa: S608
             )
         else:
+            # Asset-name columns are resolved to the compact ``asset_index`` via
+            # a correlated subquery on the freshly-populated ``assets`` table
+            # (``assets`` is first in TABLE_REWRITES, so it is fully rewritten
+            # before any other table runs). Only columns present in this
+            # table's column list are touched, so an asset column that does not
+            # yet exist at migration time (e.g. ``fairminters.lp_asset``, added
+            # by 0011) is naturally skipped.
+            asset_cols = ASSET_NAME_COLUMNS.get(table, ())
             select_cols = []
             for col in columns:
                 if col in hex_columns:
                     select_cols.append(f"__hex_to_blob({col}) AS {col}")
+                elif col in asset_cols:
+                    select_cols.append(
+                        f"(SELECT a.asset_index FROM assets a "  # nosec B608  # noqa: S608
+                        f"WHERE a.asset_name = {table}_old.{col}) AS {col}"
+                    )
                 else:
                     select_cols.append(col)
             cursor.execute(

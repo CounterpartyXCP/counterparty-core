@@ -152,6 +152,12 @@ def test_compose(ledger_db, defaults):
 def test_compose_resolves_subasset_longname(ledger_db, defaults):
     asset_longname = "PARENT.already.issued"
     asset_name = "A95428959342453541"
+    # Register the asset so its compact asset_index can be stored/resolved
+    # (fairminters.asset / asset_parent are integer asset_index FKs, not names).
+    ledger_db.execute(
+        "INSERT OR IGNORE INTO assets (asset_id, asset_name) VALUES (?, ?)",
+        (str(ledger.issuances.generate_asset_id(asset_name)), asset_name),
+    )
     ledger_db.execute(
         """
         INSERT INTO fairminters (
@@ -161,7 +167,11 @@ def test_compose_resolves_subasset_longname(ledger_db, defaults):
             end_block, minted_asset_commission_int, soft_cap,
             soft_cap_deadline_block, lock_description, lock_quantity,
             divisible, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (
+            ?, ?, ?, ?,
+            (SELECT asset_index FROM assets WHERE asset_name = ?),
+            (SELECT asset_index FROM assets WHERE asset_name = ?),
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             "a" * 64,

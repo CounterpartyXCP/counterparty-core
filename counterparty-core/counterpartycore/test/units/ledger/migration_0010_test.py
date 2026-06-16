@@ -6,6 +6,8 @@ import sqlite3
 from unittest.mock import MagicMock, patch
 
 import pytest
+from counterpartycore.lib.ledger.migration_data.compact_hash_tables import ASSET_NAME_COLUMNS
+from counterpartycore.lib.utils import database
 
 # The migration filename starts with a digit, so we can't use a normal import.
 # We patch yoyo.step so the module-level `steps = [step(apply, rollback)]`
@@ -18,6 +20,21 @@ _spec = importlib.util.spec_from_file_location("m0010", str(_MIG_PATH))
 m0010 = importlib.util.module_from_spec(_spec)
 with patch("yoyo.step", return_value=MagicMock()):
     _spec.loader.exec_module(m0010)
+
+
+# ---------------------------------------------------------------------------
+# Asset normalization: the flat asset-column set duplicated in
+# ``utils.database`` (used by the rowtracer hot path, which must not import
+# ``lib.ledger.*``) MUST stay in sync with ``ASSET_NAME_COLUMNS``.
+# ``lp_asset`` is intentionally excluded (it is not normalized: an LP token is
+# referenced before it is created when a pool opens).
+# ---------------------------------------------------------------------------
+
+
+def test_asset_index_column_names_in_sync():
+    expected = {col for cols in ASSET_NAME_COLUMNS.values() for col in cols}
+    expected.discard("lp_asset")
+    assert database.ASSET_INDEX_COLUMN_NAMES == expected
 
 
 # ---------------------------------------------------------------------------

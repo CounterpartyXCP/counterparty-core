@@ -7,9 +7,13 @@ CREATE TABLE statements; together they replace what used to be a single
 oversized migration file.
 """
 
-from counterpartycore.lib.ledger.migration_data.compact_hash_tables import TABLE_REWRITES
+from counterpartycore.lib.ledger.migration_data.compact_hash_tables import (
+    ASSET_NAME_COLUMNS,
+    TABLE_REWRITES,
+)
 
 __all__ = [
+    "ASSET_NAME_COLUMNS",
     "CUSTOM_INSERT_SELECT",
     "INDEXES_AFTER_REWRITE",
     "NO_UPDATE_TRIGGERS",
@@ -65,6 +69,38 @@ NO_UPDATE_TRIGGERS = [
 # index set from ``0001.initial_migration.sql`` plus the messages_tx_index_idx
 # replacement for the runtime ``messages_tx_hash_idx``.
 INDEXES_AFTER_REWRITE = [
+    # assets (asset_index is the INTEGER PRIMARY KEY, auto-indexed)
+    "CREATE INDEX IF NOT EXISTS assets_asset_name_idx ON assets (asset_name)",
+    "CREATE INDEX IF NOT EXISTS assets_asset_id_idx ON assets (asset_id)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS assets_asset_longname_idx ON assets (asset_longname)",
+    # debits
+    "CREATE INDEX IF NOT EXISTS debits_address_idx ON debits (address)",
+    "CREATE INDEX IF NOT EXISTS debits_asset_idx ON debits (asset)",
+    "CREATE INDEX IF NOT EXISTS debits_block_index_idx ON debits (block_index)",
+    "CREATE INDEX IF NOT EXISTS debits_event_idx ON debits (event)",
+    "CREATE INDEX IF NOT EXISTS debits_action_idx ON debits (action)",
+    "CREATE INDEX IF NOT EXISTS debits_quantity_idx ON debits (quantity)",
+    "CREATE INDEX IF NOT EXISTS debits_utxo_idx ON debits (utxo)",
+    "CREATE INDEX IF NOT EXISTS debits_utxo_address_idx ON debits (utxo_address)",
+    # credits
+    "CREATE INDEX IF NOT EXISTS credits_address_idx ON credits (address)",
+    "CREATE INDEX IF NOT EXISTS credits_asset_idx ON credits (asset)",
+    "CREATE INDEX IF NOT EXISTS credits_block_index_idx ON credits (block_index)",
+    "CREATE INDEX IF NOT EXISTS credits_event_idx ON credits (event)",
+    "CREATE INDEX IF NOT EXISTS credits_calling_function_idx ON credits (calling_function)",
+    "CREATE INDEX IF NOT EXISTS credits_quantity_idx ON credits (quantity)",
+    "CREATE INDEX IF NOT EXISTS credits_utxo_idx ON credits (utxo)",
+    "CREATE INDEX IF NOT EXISTS credits_utxo_address_idx ON credits (utxo_address)",
+    # balances
+    "CREATE INDEX IF NOT EXISTS balances_address_asset_idx ON balances (address, asset)",
+    "CREATE INDEX IF NOT EXISTS balances_address_idx ON balances (address)",
+    "CREATE INDEX IF NOT EXISTS balances_asset_idx ON balances (asset)",
+    "CREATE INDEX IF NOT EXISTS balances_block_index_idx ON balances (block_index)",
+    "CREATE INDEX IF NOT EXISTS balances_quantity_idx ON balances (quantity)",
+    "CREATE INDEX IF NOT EXISTS balances_utxo_idx ON balances (utxo)",
+    "CREATE INDEX IF NOT EXISTS balances_utxo_address_idx ON balances (utxo_address)",
+    "CREATE INDEX IF NOT EXISTS balances_utxo_asset_idx ON balances (utxo, asset)",
+    "CREATE INDEX IF NOT EXISTS balances_address_utxo_asset_idx ON balances (address, utxo, asset)",
     # blocks
     "CREATE INDEX IF NOT EXISTS blocks_block_index_idx ON blocks (block_index)",
     "CREATE INDEX IF NOT EXISTS blocks_block_index_block_hash_idx ON blocks (block_index, block_hash)",
@@ -418,13 +454,14 @@ VIEWS_AFTER_REWRITE = [
         CONCAT(CAST(block_index AS VARCHAR), '_rps_match_', CAST(rowid AS VARCHAR)) AS cursor_id
         FROM rps_match_expirations e""",
     """CREATE VIEW IF NOT EXISTS all_holders AS
-        SELECT asset, address, quantity, NULL AS escrow, MAX(rowid) AS rowid,
+        SELECT (SELECT asset_name FROM assets WHERE asset_index = balances.asset) AS asset,
+            address, quantity, NULL AS escrow, MAX(rowid) AS rowid,
             CONCAT('balances_', CAST(rowid AS VARCHAR)) AS cursor_id, 'balances' AS holding_type, NULL AS status
         FROM balances
         GROUP BY asset, address
          UNION ALL
         SELECT * FROM (
-            SELECT give_asset AS asset, source AS address, give_remaining AS quantity, hex_lower(tx_hash) AS escrow,
+            SELECT (SELECT asset_name FROM assets WHERE asset_index = give_asset) AS asset, source AS address, give_remaining AS quantity, hex_lower(tx_hash) AS escrow,
                 MAX(rowid) AS rowid, CONCAT('open_order_', CAST(rowid AS VARCHAR)) AS cursor_id,
                 'open_order' AS holding_type, status
             FROM orders
@@ -432,7 +469,7 @@ VIEWS_AFTER_REWRITE = [
         ) WHERE status = 'open'
          UNION ALL
         SELECT * FROM (
-            SELECT forward_asset AS asset, tx0_address AS address, forward_quantity AS quantity,
+            SELECT (SELECT asset_name FROM assets WHERE asset_index = forward_asset) AS asset, tx0_address AS address, forward_quantity AS quantity,
                 hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, MAX(rowid) AS rowid, CONCAT('order_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
                 'pending_order_match' AS holding_type, status
             FROM order_matches
@@ -440,7 +477,7 @@ VIEWS_AFTER_REWRITE = [
         ) WHERE status = 'pending'
          UNION ALL
         SELECT * FROM (
-            SELECT backward_asset AS asset, tx1_address AS address, backward_quantity AS quantity,
+            SELECT (SELECT asset_name FROM assets WHERE asset_index = backward_asset) AS asset, tx1_address AS address, backward_quantity AS quantity,
                 hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, MAX(rowid) AS rowid, CONCAT('order_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
                 'pending_order_match' AS holding_type, status
             FROM order_matches
@@ -496,7 +533,7 @@ VIEWS_AFTER_REWRITE = [
         ) WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
          UNION ALL
         SELECT * FROM (
-            SELECT asset, source AS address, give_remaining AS quantity,
+            SELECT (SELECT asset_name FROM assets WHERE asset_index = dispensers.asset) AS asset, source AS address, give_remaining AS quantity,
             hex_lower(tx_hash) AS escrow, MAX(rowid) AS rowid, CONCAT('open_dispenser_', CAST(rowid AS VARCHAR)) AS cursor_id,
             'open_dispenser' AS holding_type, status
             FROM dispensers
@@ -511,6 +548,23 @@ VIEWS_AFTER_REWRITE = [
 # ---------------------------------------------------------------------------
 
 CUSTOM_INSERT_SELECT = {
+    # assets: copy the legacy columns verbatim and let the new
+    # ``asset_index INTEGER PRIMARY KEY`` auto-assign in stable insertion
+    # order. ``ORDER BY rowid`` makes the assignment deterministic (it is
+    # consensus- and API-irrelevant -- only internal FK consistency matters).
+    # This entry MUST run before every other rewrite that resolves an asset
+    # name to its ``asset_index`` (``assets`` is first in TABLE_REWRITES).
+    "assets": (
+        """
+        SELECT
+            asset_id,
+            asset_name,
+            block_index,
+            asset_longname
+        FROM assets_old
+        ORDER BY rowid
+        """
+    ),
     # messages: drop tx_hash, add tx_index via JOIN; convert event_hash hex
     # to BLOB.
     "messages": (
@@ -574,7 +628,7 @@ CUSTOM_INSERT_SELECT = {
             d.block_index,
             d.source,
             d.destination,
-            d.asset,
+            (SELECT a.asset_index FROM assets a WHERE a.asset_name = d.asset) AS asset,
             d.dispense_quantity,
             t.tx_index AS dispenser_tx_index,
             d.btc_amount
@@ -591,7 +645,7 @@ CUSTOM_INSERT_SELECT = {
             r.block_index,
             r.source,
             r.destination,
-            r.asset,
+            (SELECT a.asset_index FROM assets a WHERE a.asset_name = r.asset) AS asset,
             r.dispense_quantity,
             t.tx_index AS dispenser_tx_index
         FROM dispenser_refills_old r
@@ -607,7 +661,7 @@ CUSTOM_INSERT_SELECT = {
             f.block_index,
             f.source,
             t.tx_index AS fairminter_tx_index,
-            f.asset,
+            (SELECT a.asset_index FROM assets a WHERE a.asset_name = f.asset) AS asset,
             f.earn_quantity,
             f.paid_quantity,
             f.commission,
@@ -624,11 +678,11 @@ CUSTOM_INSERT_SELECT = {
             __hex_to_blob(p.tx_hash) AS tx_hash,
             p.block_index,
             p.source,
-            p.asset_a,
-            p.asset_b,
-            p.forward_asset,
+            (SELECT a.asset_index FROM assets a WHERE a.asset_name = p.asset_a) AS asset_a,
+            (SELECT a.asset_index FROM assets a WHERE a.asset_name = p.asset_b) AS asset_b,
+            (SELECT a.asset_index FROM assets a WHERE a.asset_name = p.forward_asset) AS forward_asset,
             p.forward_quantity,
-            p.backward_asset,
+            (SELECT a.asset_index FROM assets a WHERE a.asset_name = p.backward_asset) AS backward_asset,
             p.backward_quantity,
             p.fee_quantity,
             p.fee_bps,

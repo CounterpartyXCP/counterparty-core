@@ -588,9 +588,13 @@ def generate_regtest_fixtures(db):
     regtest_fixtures["$LAST_ORDER_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_ORDER_TX_HASH"] = row["tx_hash"]
 
-    # block and tx with UTXOASSET orders
+    # block and tx with UTXOASSET orders. ``orders.give_asset`` now stores the
+    # compact ``asset_index`` (the rowtracer decodes it back to a name on read),
+    # so filter via the name->index subquery rather than the literal asset name.
     cursor.execute(
-        "SELECT block_index, tx_hash FROM orders WHERE give_asset='UTXOASSET' ORDER BY rowid DESC LIMIT 1"
+        "SELECT block_index, tx_hash FROM orders "
+        "WHERE give_asset=(SELECT asset_index FROM assets WHERE asset_name='UTXOASSET') "
+        "ORDER BY rowid DESC LIMIT 1"
     )
     row = cursor.fetchone()
     regtest_fixtures["$LAST_UTXOASSET_ORDER_BLOCK"] = row["block_index"]
@@ -629,9 +633,13 @@ def generate_regtest_fixtures(db):
 
     regtest_fixtures["$UTXO_1_ADDRESS_1"] = utxo
 
-    # get utxo with balance
+    # get utxo with balance. ``balances.asset`` now stores the compact
+    # ``asset_index`` (decoded back to a name by the rowtracer on read), so
+    # filter via the name->index subquery rather than the literal asset name.
     cursor.execute(
-        "SELECT utxo FROM balances WHERE utxo IS NOT NULL AND quantity > 0 AND asset='UTXOASSET' ORDER BY rowid DESC LIMIT 1"
+        "SELECT utxo FROM balances WHERE utxo IS NOT NULL AND quantity > 0 "
+        "AND asset=(SELECT asset_index FROM assets WHERE asset_name='UTXOASSET') "
+        "ORDER BY rowid DESC LIMIT 1"
     )
     row = cursor.fetchone()
     regtest_fixtures["$UTXO_WITH_BALANCE"] = row["utxo"]

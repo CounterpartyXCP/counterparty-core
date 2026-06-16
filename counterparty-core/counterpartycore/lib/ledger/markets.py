@@ -7,7 +7,7 @@ from counterpartycore.lib.ledger.caches import OrdersCache
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.ledger.events import credit, insert_record, insert_update
 from counterpartycore.lib.parser import protocol
-from counterpartycore.lib.utils import hashcodec, helpers
+from counterpartycore.lib.utils import database, hashcodec, helpers
 from counterpartycore.lib.utils.helpers import MATCH_ID_SQL
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -245,7 +245,8 @@ def get_pending_btc_order_matches(db, address):
         ) WHERE status = ?
         ORDER BY rowid
     """  # noqa: S608 # nosec B608
-    bindings = (address, config.BTC, address, config.BTC, "pending")
+    btc_idx = database.asset_index_from_name(db, config.BTC)
+    bindings = (address, btc_idx, address, btc_idx, "pending")
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -338,7 +339,7 @@ def get_open_btc_orders(db, address):
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     """
-    bindings = (address, config.BTC, "open")
+    bindings = (address, database.asset_index_from_name(db, config.BTC), "open")
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -370,7 +371,12 @@ def get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset):
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     """
-    bindings = (hashcodec.hash_to_db(tx_hash), get_asset, give_asset, "open")
+    bindings = (
+        hashcodec.hash_to_db(tx_hash),
+        database.asset_index_from_name(db, get_asset),
+        database.asset_index_from_name(db, give_asset),
+        "open",
+    )
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -584,7 +590,7 @@ def get_dispensers(
         bindings += source_in
     if asset is not None:
         first_where.append("asset = ?")
-        bindings.append(asset)
+        bindings.append(database.asset_index_from_name(db, asset))
     if origin is not None:
         first_where.append("origin = ?")
         bindings.append(origin)
@@ -603,7 +609,16 @@ def get_dispensers(
     second_where_str = " AND ".join(second_where)
     if second_where_str != "":
         second_where_str = f"WHERE ({second_where_str})"
-    order_clause = f"ORDER BY {order_by}" if order_by is not None else "ORDER BY tx_index"
+    if order_by == "asset":
+        # ``asset`` is stored as the compact asset_index; ordering by it would
+        # change the (consensus-relevant) dispenser processing order in
+        # ``dispense.parse``. Order by the resolved asset *name* to reproduce
+        # the exact pre-normalization ordering.
+        order_clause = "ORDER BY (SELECT asset_name FROM assets WHERE asset_index = asset)"
+    elif order_by is not None:
+        order_clause = f"ORDER BY {order_by}"
+    else:
+        order_clause = "ORDER BY tx_index"
     group_clause = f"GROUP BY {group_by}" if group_by is not None else "GROUP BY asset, source"
     # no sql injection here
     query = f"""
@@ -649,7 +664,10 @@ def get_pool(db, asset_a, asset_b):
         WHERE asset_a = ? AND asset_b = ?
         ORDER BY rowid DESC LIMIT 1
     """
-    bindings = (asset_a, asset_b)
+    bindings = (
+        database.asset_index_from_name(db, asset_a),
+        database.asset_index_from_name(db, asset_b),
+    )
     cursor.execute(query, bindings)
     pools = cursor.fetchall()
     cursor.close()
@@ -695,7 +713,13 @@ def get_pool_deposits(db, asset_a, asset_b):
         WHERE asset_a = ? AND asset_b = ? AND status = 'valid'
         ORDER BY block_index, tx_index
     """
-    cursor.execute(query, (asset_a, asset_b))
+    cursor.execute(
+        query,
+        (
+            database.asset_index_from_name(db, asset_a),
+            database.asset_index_from_name(db, asset_b),
+        ),
+    )
     return cursor.fetchall()
 
 
@@ -706,7 +730,13 @@ def get_pool_withdrawals(db, asset_a, asset_b):
         WHERE asset_a = ? AND asset_b = ? AND status = 'valid'
         ORDER BY block_index, tx_index
     """
-    cursor.execute(query, (asset_a, asset_b))
+    cursor.execute(
+        query,
+        (
+            database.asset_index_from_name(db, asset_a),
+            database.asset_index_from_name(db, asset_b),
+        ),
+    )
     return cursor.fetchall()
 
 
@@ -721,7 +751,14 @@ def get_open_orders_for_pair(db, give_asset, get_asset):
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     """
-    cursor.execute(query, (give_asset, get_asset, "open"))
+    cursor.execute(
+        query,
+        (
+            database.asset_index_from_name(db, give_asset),
+            database.asset_index_from_name(db, get_asset),
+            "open",
+        ),
+    )
     return cursor.fetchall()
 
 
@@ -752,7 +789,10 @@ def update_pool(db, asset_a, asset_b, new_reserve_a, new_reserve_b):
     cursor = db.cursor()
     cursor.execute(
         "SELECT rowid FROM pools WHERE asset_a = ? AND asset_b = ? ORDER BY rowid DESC LIMIT 1",
-        (asset_a, asset_b),
+        (
+            database.asset_index_from_name(db, asset_a),
+            database.asset_index_from_name(db, asset_b),
+        ),
     )
     row = cursor.fetchone()
     cursor.close()

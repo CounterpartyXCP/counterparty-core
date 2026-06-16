@@ -20,7 +20,7 @@ from counterpartycore.lib.ledger.markets import (
     pool_has_liquidity,
     sort_pair,
 )
-from counterpartycore.lib.utils import hashcodec
+from counterpartycore.lib.utils import database, hashcodec
 from counterpartycore.lib.utils.helpers import MATCH_ID_SQL, divide
 
 
@@ -664,6 +664,22 @@ def select_rows(
     # when no transactions table is reachable from this connection).
     _where_tx_table = _resolve_transactions_table_name(db)
 
+    # Asset-name columns are stored as the compact integer ``asset_index`` on
+    # Ledger DB tables, while the State DB consolidated tables keep the name.
+    # Detect a Ledger DB connection by probing for a *local* ``main.assets``
+    # table: on a State DB connection ``assets`` is only reachable as the
+    # ATTACHed ``ledger_db.assets`` (so unqualified ``assets`` resolves there
+    # too -- ``main.`` makes the probe connection-specific). Only Ledger DB
+    # asset filters need the name->index subquery rewrite.
+    try:
+        db.cursor().execute("SELECT 1 FROM main.assets LIMIT 0")
+        _assets_index_table = "main.assets"
+    except apsw.SQLError:
+        _assets_index_table = None
+
+    def _is_asset_index_col(field):
+        return _assets_index_table is not None and field in database.ASSET_INDEX_COLUMN_NAMES
+
     or_where = []
     for where_dict in where:
         where_field = []
@@ -674,11 +690,21 @@ def select_rows(
                 bindings.append(_convert_hash_value(field, value))
             elif key.endswith("__like"):
                 field = key[:-6]
-                where_field.append(f"{_qualify(field)} LIKE ?")
+                if _is_asset_index_col(field):
+                    where_field.append(
+                        f"{_qualify(field)} IN (SELECT asset_index FROM {_assets_index_table} WHERE asset_name LIKE ?)"  # noqa: S608  # nosec B608
+                    )
+                else:
+                    where_field.append(f"{_qualify(field)} LIKE ?")
                 bindings.append(value)
             elif key.endswith("__notlike"):
                 field = key[:-9]
-                where_field.append(f"{_qualify(field)} NOT LIKE ?")
+                if _is_asset_index_col(field):
+                    where_field.append(
+                        f"{_qualify(field)} NOT IN (SELECT asset_index FROM {_assets_index_table} WHERE asset_name LIKE ?)"  # noqa: S608  # nosec B608
+                    )
+                else:
+                    where_field.append(f"{_qualify(field)} NOT LIKE ?")
                 bindings.append(value)
             elif key.endswith("__in"):
                 field = key[:-4]
@@ -699,6 +725,12 @@ def select_rows(
                     # ``_COUNT_FROM_OVERRIDE`` gate sees the actual schema
                     # column rather than the legacy hex hash alias.
                     field = new_field
+                elif _is_asset_index_col(field):
+                    where_field.append(
+                        f"{_qualify(field)} IN (SELECT asset_index FROM {_assets_index_table} "  # noqa: S608  # nosec B608
+                        f"WHERE asset_name IN ({','.join(['?'] * len(value))}))"
+                    )
+                    bindings += list(value)
                 else:
                     where_field.append(f"{_qualify(field)} IN ({','.join(['?'] * len(value))})")
                     bindings += [_convert_hash_value(field, v) for v in value]
@@ -742,6 +774,12 @@ def select_rows(
                 elif key in ADDRESS_FIELDS and len(value.split(",")) > 1:
                     where_field.append(f"{key} IN ({','.join(['?'] * len(value.split(',')))})")
                     bindings += value.split(",")
+                    field = key
+                elif _is_asset_index_col(key):
+                    where_field.append(
+                        f"{_qualify(key)} = (SELECT asset_index FROM {_assets_index_table} WHERE asset_name = ?)"  # noqa: S608  # nosec B608
+                    )
+                    bindings.append(value)
                     field = key
                 else:
                     where_field.append(f"{_qualify(key)} = ?")

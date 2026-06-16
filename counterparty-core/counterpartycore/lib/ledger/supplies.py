@@ -1,6 +1,7 @@
 from counterpartycore.lib import config
 from counterpartycore.lib.ledger.caches import AssetCache
 from counterpartycore.lib.parser import protocol
+from counterpartycore.lib.utils import database
 from counterpartycore.lib.utils.helpers import MATCH_ID_SQL
 
 
@@ -37,6 +38,9 @@ def holders(db, asset, exclude_empty_holders=False):
     """Return holders of the asset."""
     all_holders = []
     cursor = db.cursor()
+    # Asset columns are stored as the compact asset_index; resolve the name once
+    # for the WHERE filters below (``asset`` stays the name for the XCP check).
+    asset_idx = database.asset_index_from_name(db, asset)
 
     # Balances
 
@@ -45,7 +49,7 @@ def holders(db, asset, exclude_empty_holders=False):
         FROM balances
         WHERE asset = ? AND address IS NOT NULL
     """
-    bindings = (asset,)
+    bindings = (asset_idx,)
     cursor.execute(query, bindings)
     all_holders += _get_holders(
         cursor,
@@ -61,7 +65,7 @@ def holders(db, asset, exclude_empty_holders=False):
         ORDER BY utxo
     """
 
-    bindings = (asset,)
+    bindings = (asset_idx,)
     cursor.execute(query, bindings)
     all_holders += _get_holders(
         cursor,
@@ -80,7 +84,7 @@ def holders(db, asset, exclude_empty_holders=False):
         ) WHERE status = ?
         ORDER BY tx_index
     """
-    bindings = (asset, "open")
+    bindings = (asset_idx, "open")
     cursor.execute(query, bindings)
     all_holders += _get_holders(
         cursor,
@@ -98,7 +102,7 @@ def holders(db, asset, exclude_empty_holders=False):
             GROUP BY {MATCH_ID_SQL}
         ) WHERE status = ?
     """  # noqa: S608 # nosec B608
-    bindings = (asset, "pending")
+    bindings = (asset_idx, "pending")
     cursor.execute(query, bindings)
     all_holders += _get_holders(
         cursor,
@@ -115,7 +119,7 @@ def holders(db, asset, exclude_empty_holders=False):
         ) WHERE status = ?
         ORDER BY rowid
     """  # noqa: S608 # nosec B608
-    bindings = (asset, "pending")
+    bindings = (asset_idx, "pending")
     cursor.execute(query, bindings)
     all_holders += _get_holders(
         cursor,
@@ -205,7 +209,7 @@ def holders(db, asset, exclude_empty_holders=False):
             ) WHERE status = ?
             ORDER BY tx_index
         """
-        bindings = (asset, 0)
+        bindings = (asset_idx, 0)
         cursor.execute(query, bindings)
         all_holders += _get_holders(
             cursor,
@@ -242,7 +246,7 @@ def xcp_destroyed(db):
         FROM destructions
         WHERE (status = ? AND asset = ?)
     """
-    bindings = ("valid", config.XCP)
+    bindings = ("valid", database.asset_index_from_name(db, config.XCP))
     cursor.execute(query, bindings)
     destroyed_total = list(cursor)[0]["total"] or 0
 
@@ -316,7 +320,7 @@ def destructions(db):
         WHERE (status = ? AND asset != ?)
         GROUP BY asset
     """
-    bindings = ("valid", config.XCP)
+    bindings = ("valid", database.asset_index_from_name(db, config.XCP))
     cursor.execute(query, bindings)
 
     for destruction in cursor:
@@ -336,7 +340,7 @@ def asset_issued_total_no_cache(db, asset):
         FROM issuances
         WHERE (status = ? AND asset = ?)
     """
-    bindings = ("valid", asset)
+    bindings = ("valid", database.asset_index_from_name(db, asset))
     cursor.execute(query, bindings)
     issued_total = list(cursor)[0]["total"] or 0
     cursor.close()
@@ -351,7 +355,7 @@ def asset_destroyed_total_no_cache(db, asset):
         FROM destructions
         WHERE (status = ? AND asset = ?)
     """
-    bindings = ("valid", asset)
+    bindings = ("valid", database.asset_index_from_name(db, asset))
     cursor.execute(query, bindings)
     destroyed_total = list(cursor)[0]["total"] or 0
     cursor.close()
@@ -414,7 +418,8 @@ def held(db):
         SELECT give_asset AS asset, SUM(give_remaining) AS total FROM (
             SELECT give_asset, give_remaining, status, MAX(rowid)
             FROM orders
-            WHERE give_asset = 'XCP' AND get_asset = 'BTC'
+            WHERE give_asset = (SELECT asset_index FROM assets WHERE asset_name = 'XCP')
+              AND get_asset = (SELECT asset_index FROM assets WHERE asset_name = 'BTC')
             GROUP BY tx_hash
         ) WHERE status = 'filled' GROUP BY asset
         """,
@@ -433,35 +438,35 @@ def held(db):
         ) WHERE status = 'pending' GROUP BY asset
         """,
         """
-        SELECT 'XCP' AS asset, SUM(wager_remaining) AS total FROM (
+        SELECT (SELECT asset_index FROM assets WHERE asset_name = 'XCP') AS asset, SUM(wager_remaining) AS total FROM (
             SELECT wager_remaining, status, MAX(rowid)
             FROM bets
             GROUP BY tx_hash
         ) WHERE status = 'open'
         """,
         """
-        SELECT 'XCP' AS asset, SUM(forward_quantity) AS total FROM (
+        SELECT (SELECT asset_index FROM assets WHERE asset_name = 'XCP') AS asset, SUM(forward_quantity) AS total FROM (
             SELECT forward_quantity, status, MAX(rowid)
             FROM bet_matches
             GROUP BY tx0_index, tx1_index
         ) WHERE status = 'pending'
         """,
         """
-        SELECT 'XCP' AS asset, SUM(backward_quantity) AS total FROM (
+        SELECT (SELECT asset_index FROM assets WHERE asset_name = 'XCP') AS asset, SUM(backward_quantity) AS total FROM (
             SELECT backward_quantity, status, MAX(rowid)
             FROM bet_matches
             GROUP BY tx0_index, tx1_index
         ) WHERE status = 'pending'
         """,
         """
-        SELECT 'XCP' AS asset, SUM(wager) AS total FROM (
+        SELECT (SELECT asset_index FROM assets WHERE asset_name = 'XCP') AS asset, SUM(wager) AS total FROM (
             SELECT wager, status, MAX(rowid)
             FROM rps
             GROUP BY tx_hash
         ) WHERE status = 'open'
         """,
         """
-        SELECT 'XCP' AS asset, SUM(wager * 2) AS total FROM (
+        SELECT (SELECT asset_index FROM assets WHERE asset_name = 'XCP') AS asset, SUM(wager * 2) AS total FROM (
             SELECT wager, status, MAX(rowid)
             FROM rps_matches
             GROUP BY tx0_index, tx1_index

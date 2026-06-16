@@ -81,7 +81,16 @@ class AssetCache(metaclass=helpers.SingletonMeta):
             ORDER BY tx_index DESC
             LIMIT 1
         """  # nosec B608  # noqa: S608
-        cursor.execute(sql, (asset_name,))
+        # ``asset_longname`` stays TEXT; the ``asset`` column is now the compact
+        # ``asset_index`` FK, so resolve the name to its index before binding
+        # (mirrors ``issuances.get_asset``). An unregistered asset resolves to
+        # NULL and matches nothing, correctly returning no issuance.
+        bind_asset = (
+            asset_name
+            if name_field == "asset_longname"
+            else database.asset_index_from_name(self.db, asset_name)
+        )
+        cursor.execute(sql, (bind_asset,))
         result = cursor.fetchone()
 
         if result:
