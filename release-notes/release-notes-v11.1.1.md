@@ -60,6 +60,7 @@ The activation block height is not yet set (placeholder `9999999`):
 - Fix MPMA sends: correct per-asset balance accumulation, byte-accurate text-memo length encoding, require a destination per asset, and reject duplicate asset/destination pairs
 - Fix holder/supply consolidation that skipped deduplication (`id` used instead of the record key)
 - Default a missing bet `target_value` to zero and clarify BTC dividend "below dust" errors
+- Stop reporting shutdown interrupts as errors: when the server is stopping, `RawMempoolParser.stop()` calls `db.interrupt()` on the connection shared with the blockchain watcher, aborting any in-flight parse as `ParseTransactionError("interrupted")`; the watcher now treats this as expected teardown noise (logged at debug) instead of logging an error, paging Sentry, and forcing a "fail loud" restart
 
 - Expose a unique `credit_index` / `debit_index` field on `credits` / `debits` rows. Identical rows can be written within a single transaction (e.g. an MPMA send or a dividend crediting the same address+asset more than once), making them byte-identical and indistinguishable to API consumers; the new field carries the row's stable unique id so they can be told apart (#3320)
 

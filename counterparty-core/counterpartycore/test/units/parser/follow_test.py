@@ -1148,6 +1148,68 @@ def test_receive_multipart_message_processing_error():
     asyncio.run(run_test())
 
 
+def test_receive_multipart_swallows_interrupt_during_shutdown():
+    """When stop() has interrupted the shared DB connection mid-parse, the
+    resulting ParseTransactionError("interrupted") must be treated as expected
+    teardown noise: logged at debug, NOT sent to Sentry, and NOT re-raised
+    (which would force a spurious "fail loud" restart of an already-stopping
+    process). Pins the stop_event guard in receive_multipart."""
+
+    async def run_test():
+        with mock.patch("counterpartycore.lib.backend.bitcoind") as mock_bitcoind:
+            mock_bitcoind.get_zmq_notifications.return_value = [
+                {"type": "pubrawtx", "address": "tcp://127.0.0.1:28332"},
+                {"type": "pubhashtx", "address": "tcp://127.0.0.1:28332"},
+                {"type": "pubsequence", "address": "tcp://127.0.0.1:28332"},
+                {"type": "pubrawblock", "address": "tcp://127.0.0.1:28333"},
+            ]
+
+            original_backend_connect = config.BACKEND_CONNECT
+            original_no_mempool = config.NO_MEMPOOL
+            config.BACKEND_CONNECT = "127.0.0.1"
+            config.NO_MEMPOOL = True
+
+            try:
+                with mock.patch("counterpartycore.lib.monitors.sentry.init"):
+                    with mock.patch("zmq.asyncio.Context"):
+                        with mock.patch("asyncio.new_event_loop"):
+                            with mock.patch("asyncio.set_event_loop"):
+                                with mock.patch("counterpartycore.lib.parser.follow.CurrentState"):
+                                    with mock.patch(
+                                        "counterpartycore.lib.parser.follow.capture_exception"
+                                    ) as mock_capture:
+                                        db = mock.MagicMock()
+                                        watcher = follow.BlockchainWatcher(db)
+                                        # Simulate shutdown already in progress.
+                                        watcher.stop_event.set()
+
+                                        mock_socket = mock.AsyncMock()
+                                        mock_socket.recv_multipart.return_value = (
+                                            b"rawblock",
+                                            b"body",
+                                            b"\x01\x00\x00\x00",
+                                        )
+
+                                        with mock.patch.object(
+                                            watcher,
+                                            "receive_message",
+                                            side_effect=exceptions.ParseTransactionError(
+                                                "interrupted"
+                                            ),
+                                        ):
+                                            # MUST NOT raise during shutdown...
+                                            await watcher.receive_multipart(
+                                                mock_socket, "rawblock"
+                                            )
+                                            # ...and MUST NOT page Sentry.
+                                            mock_capture.assert_not_called()
+            finally:
+                config.BACKEND_CONNECT = original_backend_connect
+                config.NO_MEMPOOL = original_no_mempool
+
+    asyncio.run(run_test())
+
+
 # ============================================================================
 # Tests for receive_rawblock generic exception handler (lines 189-190)
 # ============================================================================
