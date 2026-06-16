@@ -1198,9 +1198,7 @@ def test_receive_multipart_swallows_interrupt_during_shutdown():
                                             ),
                                         ):
                                             # MUST NOT raise during shutdown...
-                                            await watcher.receive_multipart(
-                                                mock_socket, "rawblock"
-                                            )
+                                            await watcher.receive_multipart(mock_socket, "rawblock")
                                             # ...and MUST NOT page Sentry.
                                             mock_capture.assert_not_called()
             finally:
