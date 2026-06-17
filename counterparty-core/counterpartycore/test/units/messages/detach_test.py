@@ -6,8 +6,11 @@ DUMMY_UTXO = 64 * "0" + ":1"
 
 
 def get_utxo(ledger_db, address):
+    # ``utxo_address`` is the compact ``address_id`` FK; resolve it. ``SELECT *``
+    # lets the rowtracer reconstruct the ``utxo`` string.
     return ledger_db.execute(
-        "SELECT * FROM balances WHERE utxo_address = ? AND quantity > 0",
+        "SELECT * FROM balances "
+        "WHERE utxo_address = (SELECT address_id FROM address_list WHERE address = ?) AND quantity > 0",
         (address,),
     ).fetchone()["utxo"]
 

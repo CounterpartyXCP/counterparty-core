@@ -139,9 +139,10 @@ def test_rollback(ledger_db, test_helpers, caplog):
     utxos = ledger_db.execute(
         """
         SELECT * FROM (
-            SELECT utxo, MAX(rowid), quantity FROM balances GROUP BY utxo
+            SELECT utxo_tx_hash, utxo_vout, MAX(rowid), quantity FROM balances
+            GROUP BY utxo_tx_hash, utxo_vout
         )
-        WHERE utxo IS NOT NULL AND quantity > 0
+        WHERE utxo_tx_hash IS NOT NULL AND quantity > 0
         """,
     ).fetchall()
     for utxo in utxos:
@@ -203,9 +204,10 @@ def test_reparse(ledger_db, test_helpers, caplog):
     utxos = ledger_db.execute(
         """
         SELECT * FROM (
-            SELECT utxo, MAX(rowid), quantity FROM balances GROUP BY utxo
+            SELECT utxo_tx_hash, utxo_vout, MAX(rowid), quantity FROM balances
+            GROUP BY utxo_tx_hash, utxo_vout
         )
-        WHERE utxo IS NOT NULL AND quantity > 0
+        WHERE utxo_tx_hash IS NOT NULL AND quantity > 0
         """,
     ).fetchall()
     for utxo in utxos:
@@ -868,7 +870,8 @@ def test_parse_tx_cancel(ledger_db, defaults, blockchain_mock):
     """Test parse_tx with cancel message"""
     # Get an open order to cancel
     open_order = ledger_db.execute(
-        "SELECT * FROM orders WHERE source = ? AND status = 'open' LIMIT 1",
+        "SELECT * FROM orders WHERE source = (SELECT address_id FROM address_list WHERE address = ?) "
+        "AND status = 'open' LIMIT 1",
         (defaults["addresses"][0],),
     ).fetchone()
 

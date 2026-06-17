@@ -7,9 +7,12 @@ DUMMY_UTXO = 64 * "0" + ":0"
 
 
 def get_utxo(ledger_db, address, asset="XCP"):
-    # balances stores the compact asset_index; resolve the name for the filter.
+    # balances stores the compact asset_index and address_id; resolve both for
+    # the filter. ``SELECT *`` lets the rowtracer reconstruct the ``utxo`` string
+    # from the stored ``(utxo_tx_index, utxo_vout)`` pair.
     return ledger_db.execute(
-        "SELECT * FROM balances WHERE utxo_address = ? "
+        "SELECT * FROM balances "
+        "WHERE utxo_address = (SELECT address_id FROM address_list WHERE address = ?) "
         "AND asset = (SELECT asset_index FROM assets WHERE asset_name = ?) AND quantity > 0",
         (
             address,
@@ -171,13 +174,19 @@ def test_move_assets_with_zero_balance(
     """Test move_assets skips balances with quantity == 0."""
     utxo = get_utxo(ledger_db, defaults["addresses"][0])
 
-    # Insert a balance with quantity 0 for the same utxo
+    # Insert a balance with quantity 0 for the same utxo. ``utxo`` is stored as
+    # the compact ``(utxo_tx_hash BLOB, utxo_vout)`` pair; ``utxo_address`` is
+    # the ``address_id`` FK.
     ledger_db.execute(
         """
-        INSERT INTO balances (address, asset, quantity, utxo, utxo_address)
-        VALUES (NULL, 'ZEROVAL', 0, ?, ?)
+        INSERT INTO balances (address, asset, quantity, utxo_tx_hash, utxo_vout, utxo_address)
+        VALUES (NULL, 'ZEROVAL', 0, ?, ?, (SELECT address_id FROM address_list WHERE address = ?))
         """,
-        (utxo, defaults["addresses"][0]),
+        (
+            hashcodec.hash_to_db(utxo.split(":")[0]),
+            int(utxo.split(":")[1]),
+            defaults["addresses"][0],
+        ),
     )
 
     tx = blockchain_mock.dummy_tx(

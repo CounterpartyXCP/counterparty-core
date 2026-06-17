@@ -29,7 +29,8 @@ def test_compose(ledger_db, defaults):
         cancel.compose(ledger_db, "addresses", open_order["tx_hash"])
 
     closed_bet = ledger_db.execute(
-        "SELECT * FROM bets WHERE source = ? ORDER BY rowid DESC LIMIT 1",
+        "SELECT * FROM bets WHERE source = (SELECT address_id FROM address_list WHERE address = ?) "
+        "ORDER BY rowid DESC LIMIT 1",
         (defaults["addresses"][1],),
     ).fetchone()
 

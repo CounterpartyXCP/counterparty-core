@@ -5,7 +5,10 @@ import logging
 import time
 
 from counterpartycore.lib import config
-from counterpartycore.lib.utils.database import ASSET_INDEX_COLUMN_NAMES
+from counterpartycore.lib.utils.database import (
+    ADDRESS_INDEX_COLUMN_NAMES,
+    ASSET_INDEX_COLUMN_NAMES,
+)
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -68,6 +71,11 @@ def build_table(state_db, table_name, group_by):
         if name in ASSET_INDEX_COLUMN_NAMES:
             columns.append(
                 f"(SELECT asset_name FROM ledger_db.assets WHERE asset_index = b.{name}) AS {name}"  # noqa: S608  # nosec B608
+            )
+        elif name in ADDRESS_INDEX_COLUMN_NAMES:
+            # decode the compact ``address_id`` back to the address string
+            columns.append(
+                f"(SELECT address FROM ledger_db.address_list WHERE address_id = b.{name}) AS {name}"  # noqa: S608  # nosec B608
             )
         else:
             columns.append(f"b.{name}")

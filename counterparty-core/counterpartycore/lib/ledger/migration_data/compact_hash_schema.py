@@ -8,17 +8,21 @@ oversized migration file.
 """
 
 from counterpartycore.lib.ledger.migration_data.compact_hash_tables import (
+    ADDRESS_NAME_COLUMNS,
     ASSET_NAME_COLUMNS,
     TABLE_REWRITES,
+    UTXO_SPLIT_COLUMNS,
 )
 
 __all__ = [
+    "ADDRESS_NAME_COLUMNS",
     "ASSET_NAME_COLUMNS",
     "CUSTOM_INSERT_SELECT",
     "INDEXES_AFTER_REWRITE",
     "NO_UPDATE_TRIGGERS",
     "TABLE_REWRITES",
     "TRIGGERS_AFTER_REWRITE",
+    "UTXO_SPLIT_COLUMNS",
     "VIEWS_AFTER_REWRITE",
 ]
 
@@ -52,6 +56,7 @@ NO_UPDATE_TRIGGERS = [
     "block_update_rps",
     "block_update_destructions",
     "block_update_assets",
+    "block_update_address_list",
     "block_update_addresses",
     "block_update_sweeps",
     "block_update_dispensers",
@@ -73,6 +78,10 @@ INDEXES_AFTER_REWRITE = [
     "CREATE INDEX IF NOT EXISTS assets_asset_name_idx ON assets (asset_name)",
     "CREATE INDEX IF NOT EXISTS assets_asset_id_idx ON assets (asset_id)",
     "CREATE UNIQUE INDEX IF NOT EXISTS assets_asset_longname_idx ON assets (asset_longname)",
+    # address_list (address_id is the INTEGER PRIMARY KEY, auto-indexed). The
+    # ``address`` UNIQUE constraint already creates an index; this mirrors the
+    # explicit assets_asset_name_idx for the string->id resolver lookups.
+    "CREATE INDEX IF NOT EXISTS address_list_address_idx ON address_list (address)",
     # debits
     "CREATE INDEX IF NOT EXISTS debits_address_idx ON debits (address)",
     "CREATE INDEX IF NOT EXISTS debits_asset_idx ON debits (asset)",
@@ -80,7 +89,7 @@ INDEXES_AFTER_REWRITE = [
     "CREATE INDEX IF NOT EXISTS debits_event_idx ON debits (event)",
     "CREATE INDEX IF NOT EXISTS debits_action_idx ON debits (action)",
     "CREATE INDEX IF NOT EXISTS debits_quantity_idx ON debits (quantity)",
-    "CREATE INDEX IF NOT EXISTS debits_utxo_idx ON debits (utxo)",
+    "CREATE INDEX IF NOT EXISTS debits_utxo_idx ON debits (utxo_tx_hash, utxo_vout)",
     "CREATE INDEX IF NOT EXISTS debits_utxo_address_idx ON debits (utxo_address)",
     # credits
     "CREATE INDEX IF NOT EXISTS credits_address_idx ON credits (address)",
@@ -89,7 +98,7 @@ INDEXES_AFTER_REWRITE = [
     "CREATE INDEX IF NOT EXISTS credits_event_idx ON credits (event)",
     "CREATE INDEX IF NOT EXISTS credits_calling_function_idx ON credits (calling_function)",
     "CREATE INDEX IF NOT EXISTS credits_quantity_idx ON credits (quantity)",
-    "CREATE INDEX IF NOT EXISTS credits_utxo_idx ON credits (utxo)",
+    "CREATE INDEX IF NOT EXISTS credits_utxo_idx ON credits (utxo_tx_hash, utxo_vout)",
     "CREATE INDEX IF NOT EXISTS credits_utxo_address_idx ON credits (utxo_address)",
     # balances
     "CREATE INDEX IF NOT EXISTS balances_address_asset_idx ON balances (address, asset)",
@@ -97,10 +106,10 @@ INDEXES_AFTER_REWRITE = [
     "CREATE INDEX IF NOT EXISTS balances_asset_idx ON balances (asset)",
     "CREATE INDEX IF NOT EXISTS balances_block_index_idx ON balances (block_index)",
     "CREATE INDEX IF NOT EXISTS balances_quantity_idx ON balances (quantity)",
-    "CREATE INDEX IF NOT EXISTS balances_utxo_idx ON balances (utxo)",
+    "CREATE INDEX IF NOT EXISTS balances_utxo_idx ON balances (utxo_tx_hash, utxo_vout)",
     "CREATE INDEX IF NOT EXISTS balances_utxo_address_idx ON balances (utxo_address)",
-    "CREATE INDEX IF NOT EXISTS balances_utxo_asset_idx ON balances (utxo, asset)",
-    "CREATE INDEX IF NOT EXISTS balances_address_utxo_asset_idx ON balances (address, utxo, asset)",
+    "CREATE INDEX IF NOT EXISTS balances_utxo_asset_idx ON balances (utxo_tx_hash, utxo_vout, asset)",
+    "CREATE INDEX IF NOT EXISTS balances_address_utxo_asset_idx ON balances (address, utxo_tx_hash, utxo_vout, asset)",
     # blocks
     "CREATE INDEX IF NOT EXISTS blocks_block_index_idx ON blocks (block_index)",
     "CREATE INDEX IF NOT EXISTS blocks_block_index_block_hash_idx ON blocks (block_index, block_hash)",
@@ -365,8 +374,8 @@ VIEWS_AFTER_REWRITE = [
         t.block_index,
         b.block_hash AS block_hash,
         t.block_time,
-        t.source,
-        t.destination,
+        (SELECT address FROM address_list WHERE address_id = t.source) AS source,
+        (SELECT address FROM address_list WHERE address_id = t.destination) AS destination,
         t.btc_amount,
         t.fee,
         t.data,
@@ -384,8 +393,8 @@ VIEWS_AFTER_REWRITE = [
         t.block_index,
         b.block_hash AS block_hash,
         t.block_time,
-        t.source,
-        t.destination,
+        (SELECT address FROM address_list WHERE address_id = t.source) AS source,
+        (SELECT address FROM address_list WHERE address_id = t.destination) AS destination,
         t.btc_amount,
         t.fee,
         t.data,
@@ -455,13 +464,14 @@ VIEWS_AFTER_REWRITE = [
         FROM rps_match_expirations e""",
     """CREATE VIEW IF NOT EXISTS all_holders AS
         SELECT (SELECT asset_name FROM assets WHERE asset_index = balances.asset) AS asset,
-            address, quantity, NULL AS escrow, MAX(rowid) AS rowid,
+            (SELECT address FROM address_list WHERE address_id = balances.address) AS address,
+            quantity, NULL AS escrow, MAX(rowid) AS rowid,
             CONCAT('balances_', CAST(rowid AS VARCHAR)) AS cursor_id, 'balances' AS holding_type, NULL AS status
         FROM balances
         GROUP BY asset, address
          UNION ALL
         SELECT * FROM (
-            SELECT (SELECT asset_name FROM assets WHERE asset_index = give_asset) AS asset, source AS address, give_remaining AS quantity, hex_lower(tx_hash) AS escrow,
+            SELECT (SELECT asset_name FROM assets WHERE asset_index = give_asset) AS asset, (SELECT address FROM address_list WHERE address_id = source) AS address, give_remaining AS quantity, hex_lower(tx_hash) AS escrow,
                 MAX(rowid) AS rowid, CONCAT('open_order_', CAST(rowid AS VARCHAR)) AS cursor_id,
                 'open_order' AS holding_type, status
             FROM orders
@@ -469,7 +479,7 @@ VIEWS_AFTER_REWRITE = [
         ) WHERE status = 'open'
          UNION ALL
         SELECT * FROM (
-            SELECT (SELECT asset_name FROM assets WHERE asset_index = forward_asset) AS asset, tx0_address AS address, forward_quantity AS quantity,
+            SELECT (SELECT asset_name FROM assets WHERE asset_index = forward_asset) AS asset, (SELECT address FROM address_list WHERE address_id = tx0_address) AS address, forward_quantity AS quantity,
                 hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, MAX(rowid) AS rowid, CONCAT('order_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
                 'pending_order_match' AS holding_type, status
             FROM order_matches
@@ -477,7 +487,7 @@ VIEWS_AFTER_REWRITE = [
         ) WHERE status = 'pending'
          UNION ALL
         SELECT * FROM (
-            SELECT (SELECT asset_name FROM assets WHERE asset_index = backward_asset) AS asset, tx1_address AS address, backward_quantity AS quantity,
+            SELECT (SELECT asset_name FROM assets WHERE asset_index = backward_asset) AS asset, (SELECT address FROM address_list WHERE address_id = tx1_address) AS address, backward_quantity AS quantity,
                 hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, MAX(rowid) AS rowid, CONCAT('order_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
                 'pending_order_match' AS holding_type, status
             FROM order_matches
@@ -485,7 +495,7 @@ VIEWS_AFTER_REWRITE = [
         ) WHERE status = 'pending'
          UNION ALL
         SELECT * FROM (
-            SELECT 'XCP' AS asset, source AS address, wager_remaining AS quantity,
+            SELECT 'XCP' AS asset, (SELECT address FROM address_list WHERE address_id = source) AS address, wager_remaining AS quantity,
             hex_lower(tx_hash) AS escrow, MAX(rowid) AS rowid, CONCAT('open_bet_', CAST(rowid AS VARCHAR)) AS cursor_id,
             'open_bet' AS holding_type, status
             FROM bets
@@ -493,7 +503,7 @@ VIEWS_AFTER_REWRITE = [
         ) WHERE status = 'open'
          UNION ALL
         SELECT * FROM (
-            SELECT 'XCP' AS asset, tx0_address AS address, forward_quantity AS quantity,
+            SELECT 'XCP' AS asset, (SELECT address FROM address_list WHERE address_id = tx0_address) AS address, forward_quantity AS quantity,
             hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, MAX(rowid) AS rowid, CONCAT('bet_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
             'pending_bet_match' AS holding_type, status
             FROM bet_matches
@@ -501,7 +511,7 @@ VIEWS_AFTER_REWRITE = [
         ) WHERE status = 'pending'
          UNION ALL
         SELECT * FROM (
-            SELECT 'XCP' AS asset, tx1_address AS address, backward_quantity AS quantity,
+            SELECT 'XCP' AS asset, (SELECT address FROM address_list WHERE address_id = tx1_address) AS address, backward_quantity AS quantity,
             hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, MAX(rowid) AS rowid, CONCAT('bet_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
             'pending_bet_match' AS holding_type, status
             FROM bet_matches
@@ -509,7 +519,7 @@ VIEWS_AFTER_REWRITE = [
         ) WHERE status = 'pending'
          UNION ALL
         SELECT * FROM (
-            SELECT 'XCP' AS asset, source AS address, wager AS quantity,
+            SELECT 'XCP' AS asset, (SELECT address FROM address_list WHERE address_id = source) AS address, wager AS quantity,
             hex_lower(tx_hash) AS escrow, MAX(rowid) AS rowid, CONCAT('open_rps_', CAST(rowid AS VARCHAR)) AS cursor_id,
             'open_rps' AS holding_type, status
             FROM rps
@@ -517,7 +527,7 @@ VIEWS_AFTER_REWRITE = [
         ) WHERE status = 'open'
          UNION ALL
         SELECT * FROM (
-            SELECT 'XCP' AS asset, tx0_address AS address, wager AS quantity,
+            SELECT 'XCP' AS asset, (SELECT address FROM address_list WHERE address_id = tx0_address) AS address, wager AS quantity,
             hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, MAX(rowid) AS rowid, CONCAT('rps_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
             'pending_rps_match' AS holding_type, status
             FROM rps_matches
@@ -525,7 +535,7 @@ VIEWS_AFTER_REWRITE = [
         ) WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
          UNION ALL
         SELECT * FROM (
-            SELECT 'XCP' AS asset, tx1_address AS address, wager AS quantity,
+            SELECT 'XCP' AS asset, (SELECT address FROM address_list WHERE address_id = tx1_address) AS address, wager AS quantity,
             hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, MAX(rowid) AS rowid, CONCAT('rps_match_', CAST(rowid AS VARCHAR)) AS cursor_id,
             'pending_rps_match' AS holding_type, status
             FROM rps_matches
@@ -533,7 +543,7 @@ VIEWS_AFTER_REWRITE = [
         ) WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
          UNION ALL
         SELECT * FROM (
-            SELECT (SELECT asset_name FROM assets WHERE asset_index = dispensers.asset) AS asset, source AS address, give_remaining AS quantity,
+            SELECT (SELECT asset_name FROM assets WHERE asset_index = dispensers.asset) AS asset, (SELECT address FROM address_list WHERE address_id = source) AS address, give_remaining AS quantity,
             hex_lower(tx_hash) AS escrow, MAX(rowid) AS rowid, CONCAT('open_dispenser_', CAST(rowid AS VARCHAR)) AS cursor_id,
             'open_dispenser' AS holding_type, status
             FROM dispensers
@@ -565,6 +575,61 @@ CUSTOM_INSERT_SELECT = {
         ORDER BY rowid
         """
     ),
+    # balances/credits/debits: resolve ``address``/``utxo_address`` to the
+    # compact ``address_id`` (via ``address_list``), ``asset`` to ``asset_index``
+    # (via ``assets``), and split the legacy ``utxo`` TEXT (``tx_hash:vout``)
+    # into ``utxo_tx_hash`` (``__hex_to_blob`` of the 64-char hex hash) and
+    # ``utxo_vout`` (``CAST(substr(utxo, 66) AS INTEGER)``). The tx_hash is
+    # stored RAW (BLOB) -- not a tx_index FK -- because an attach destination may
+    # be any bitcoin UTXO absent from ``transactions``. ``substr``/``__hex_to_blob``
+    # of a NULL utxo yields NULL (address balances). ``assets`` and
+    # ``address_list`` are fully populated before these run.
+    "balances": (
+        """
+        SELECT
+            (SELECT al.address_id FROM address_list al WHERE al.address = b.address) AS address,
+            (SELECT a.asset_index FROM assets a WHERE a.asset_name = b.asset) AS asset,
+            b.quantity,
+            b.block_index,
+            b.tx_index,
+            __hex_to_blob(substr(b.utxo, 1, 64)) AS utxo_tx_hash,
+            CAST(substr(b.utxo, 66) AS INTEGER) AS utxo_vout,
+            (SELECT al.address_id FROM address_list al WHERE al.address = b.utxo_address) AS utxo_address
+        FROM balances_old b
+        """
+    ),
+    "credits": (
+        """
+        SELECT
+            c.block_index,
+            (SELECT al.address_id FROM address_list al WHERE al.address = c.address) AS address,
+            (SELECT a.asset_index FROM assets a WHERE a.asset_name = c.asset) AS asset,
+            c.quantity,
+            c.calling_function,
+            c.event,
+            c.tx_index,
+            __hex_to_blob(substr(c.utxo, 1, 64)) AS utxo_tx_hash,
+            CAST(substr(c.utxo, 66) AS INTEGER) AS utxo_vout,
+            (SELECT al.address_id FROM address_list al WHERE al.address = c.utxo_address) AS utxo_address
+        FROM credits_old c
+        """
+    ),
+    "debits": (
+        """
+        SELECT
+            d.block_index,
+            (SELECT al.address_id FROM address_list al WHERE al.address = d.address) AS address,
+            (SELECT a.asset_index FROM assets a WHERE a.asset_name = d.asset) AS asset,
+            d.quantity,
+            d.action,
+            d.event,
+            d.tx_index,
+            __hex_to_blob(substr(d.utxo, 1, 64)) AS utxo_tx_hash,
+            CAST(substr(d.utxo, 66) AS INTEGER) AS utxo_vout,
+            (SELECT al.address_id FROM address_list al WHERE al.address = d.utxo_address) AS utxo_address
+        FROM debits_old d
+        """
+    ),
     # messages: drop tx_hash, add tx_index via JOIN; convert event_hash hex
     # to BLOB.
     "messages": (
@@ -593,8 +658,8 @@ CUSTOM_INSERT_SELECT = {
             __hex_to_blob(tx_hash) AS tx_hash,
             block_index,
             block_time,
-            source,
-            destination,
+            (SELECT address_id FROM address_list WHERE address = transactions_old.source) AS source,
+            (SELECT address_id FROM address_list WHERE address = transactions_old.destination) AS destination,
             btc_amount,
             fee,
             data,
@@ -611,7 +676,7 @@ CUSTOM_INSERT_SELECT = {
             c.tx_index,
             __hex_to_blob(c.tx_hash) AS tx_hash,
             c.block_index,
-            c.source,
+            (SELECT address_id FROM address_list WHERE address = c.source) AS source,
             t.tx_index AS offer_tx_index,
             c.status
         FROM cancels_old c
@@ -626,8 +691,8 @@ CUSTOM_INSERT_SELECT = {
             d.dispense_index,
             __hex_to_blob(d.tx_hash) AS tx_hash,
             d.block_index,
-            d.source,
-            d.destination,
+            (SELECT address_id FROM address_list WHERE address = d.source) AS source,
+            (SELECT address_id FROM address_list WHERE address = d.destination) AS destination,
             (SELECT a.asset_index FROM assets a WHERE a.asset_name = d.asset) AS asset,
             d.dispense_quantity,
             t.tx_index AS dispenser_tx_index,
@@ -643,8 +708,8 @@ CUSTOM_INSERT_SELECT = {
             r.tx_index,
             __hex_to_blob(r.tx_hash) AS tx_hash,
             r.block_index,
-            r.source,
-            r.destination,
+            (SELECT address_id FROM address_list WHERE address = r.source) AS source,
+            (SELECT address_id FROM address_list WHERE address = r.destination) AS destination,
             (SELECT a.asset_index FROM assets a WHERE a.asset_name = r.asset) AS asset,
             r.dispense_quantity,
             t.tx_index AS dispenser_tx_index
@@ -659,7 +724,7 @@ CUSTOM_INSERT_SELECT = {
             __hex_to_blob(f.tx_hash) AS tx_hash,
             f.tx_index,
             f.block_index,
-            f.source,
+            (SELECT address_id FROM address_list WHERE address = f.source) AS source,
             t.tx_index AS fairminter_tx_index,
             (SELECT a.asset_index FROM assets a WHERE a.asset_name = f.asset) AS asset,
             f.earn_quantity,
@@ -677,7 +742,7 @@ CUSTOM_INSERT_SELECT = {
             p.tx_index,
             __hex_to_blob(p.tx_hash) AS tx_hash,
             p.block_index,
-            p.source,
+            (SELECT address_id FROM address_list WHERE address = p.source) AS source,
             (SELECT a.asset_index FROM assets a WHERE a.asset_name = p.asset_a) AS asset_a,
             (SELECT a.asset_index FROM assets a WHERE a.asset_name = p.asset_b) AS asset_b,
             (SELECT a.asset_index FROM assets a WHERE a.asset_name = p.forward_asset) AS forward_asset,
@@ -699,7 +764,7 @@ CUSTOM_INSERT_SELECT = {
             tx_index,
             block_index,
             out_index,
-            destination,
+            (SELECT address_id FROM address_list WHERE address = transaction_outputs_old.destination) AS destination,
             btc_amount
         FROM transaction_outputs_old
         """
@@ -718,8 +783,8 @@ CUSTOM_INSERT_SELECT = {
             b.tx_index,
             __hex_to_blob(b.tx_hash) AS tx_hash,
             b.block_index,
-            b.source,
-            b.destination,
+            (SELECT address_id FROM address_list WHERE address = b.source) AS source,
+            (SELECT address_id FROM address_list WHERE address = b.destination) AS destination,
             b.btc_amount,
             t0.tx_index AS order_match_tx0_index,
             t1.tx_index AS order_match_tx1_index,
@@ -736,7 +801,7 @@ CUSTOM_INSERT_SELECT = {
             r.tx_index,
             __hex_to_blob(r.tx_hash) AS tx_hash,
             r.block_index,
-            r.source,
+            (SELECT address_id FROM address_list WHERE address = r.source) AS source,
             r.move,
             r.random,
             t0.tx_index AS rps_match_tx0_index,
@@ -753,8 +818,8 @@ CUSTOM_INSERT_SELECT = {
         SELECT
             t0.tx_index AS order_match_tx0_index,
             t1.tx_index AS order_match_tx1_index,
-            e.tx0_address,
-            e.tx1_address,
+            (SELECT address_id FROM address_list WHERE address = e.tx0_address) AS tx0_address,
+            (SELECT address_id FROM address_list WHERE address = e.tx1_address) AS tx1_address,
             e.block_index
         FROM order_match_expirations_old e
         LEFT JOIN transactions_old t0 ON t0.tx_hash = substr(e.order_match_id, 1, 64)
@@ -767,8 +832,8 @@ CUSTOM_INSERT_SELECT = {
         SELECT
             t0.tx_index AS bet_match_tx0_index,
             t1.tx_index AS bet_match_tx1_index,
-            e.tx0_address,
-            e.tx1_address,
+            (SELECT address_id FROM address_list WHERE address = e.tx0_address) AS tx0_address,
+            (SELECT address_id FROM address_list WHERE address = e.tx1_address) AS tx1_address,
             e.block_index
         FROM bet_match_expirations_old e
         LEFT JOIN transactions_old t0 ON t0.tx_hash = substr(e.bet_match_id, 1, 64)
@@ -781,8 +846,8 @@ CUSTOM_INSERT_SELECT = {
         SELECT
             t0.tx_index AS rps_match_tx0_index,
             t1.tx_index AS rps_match_tx1_index,
-            e.tx0_address,
-            e.tx1_address,
+            (SELECT address_id FROM address_list WHERE address = e.tx0_address) AS tx0_address,
+            (SELECT address_id FROM address_list WHERE address = e.tx1_address) AS tx1_address,
             e.block_index
         FROM rps_match_expirations_old e
         LEFT JOIN transactions_old t0 ON t0.tx_hash = substr(e.rps_match_id, 1, 64)
@@ -797,7 +862,7 @@ CUSTOM_INSERT_SELECT = {
             t1.tx_index AS bet_match_tx1_index,
             r.bet_match_type_id,
             r.block_index,
-            r.winner,
+            (SELECT address_id FROM address_list WHERE address = r.winner) AS winner,
             r.settled,
             r.bull_credit,
             r.bear_credit,

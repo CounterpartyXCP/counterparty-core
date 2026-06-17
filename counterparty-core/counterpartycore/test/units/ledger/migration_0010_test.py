@@ -6,7 +6,10 @@ import sqlite3
 from unittest.mock import MagicMock, patch
 
 import pytest
-from counterpartycore.lib.ledger.migration_data.compact_hash_tables import ASSET_NAME_COLUMNS
+from counterpartycore.lib.ledger.migration_data.compact_hash_tables import (
+    ADDRESS_NAME_COLUMNS,
+    ASSET_NAME_COLUMNS,
+)
 from counterpartycore.lib.utils import database
 
 # The migration filename starts with a digit, so we can't use a normal import.
@@ -35,6 +38,26 @@ def test_asset_index_column_names_in_sync():
     expected = {col for cols in ASSET_NAME_COLUMNS.values() for col in cols}
     expected.discard("lp_asset")
     assert database.ASSET_INDEX_COLUMN_NAMES == expected
+
+
+# The flat address-column set duplicated in ``utils.database`` (rowtracer hot
+# path) MUST stay in sync with the union of ``ADDRESS_NAME_COLUMNS`` values.
+def test_address_index_column_names_in_sync():
+    expected = {col for cols in ADDRESS_NAME_COLUMNS.values() for col in cols}
+    assert database.ADDRESS_INDEX_COLUMN_NAMES == expected
+
+
+def test_split_utxo_roundtrip():
+    # ``utxo`` (tx_hash:vout) <-> compact (BLOB tx_hash, int vout) pair.
+    utxo = "ab" * 32 + ":5"
+    tx_hash, vout = database.split_utxo(utxo)
+    assert isinstance(tx_hash, bytes)
+    assert len(tx_hash) == 32
+    assert vout == 5
+    assert database.utxo_from_split(tx_hash, vout) == utxo
+    # an address balance has no utxo
+    assert database.split_utxo(None) == (None, None)
+    assert database.utxo_from_split(None, None) is None
 
 
 # ---------------------------------------------------------------------------

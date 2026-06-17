@@ -228,6 +228,19 @@ def check_record(ledger_db, record):
                     conditions.append(
                         f"{field} = (SELECT asset_index FROM assets WHERE asset_name = ?)"  # nosec B608  # noqa: S608
                     )
+                elif field in database.ADDRESS_INDEX_COLUMN_NAMES and isinstance(value, str):
+                    # Address columns are stored as the compact address_id;
+                    # resolve the expected address to its id for the match.
+                    conditions.append(
+                        f"{field} = (SELECT address_id FROM address_list WHERE address = ?)"  # nosec B608  # noqa: S608
+                    )
+                elif field == "utxo" and isinstance(value, str):
+                    # ``utxo`` (``tx_hash:vout``) is stored as the compact
+                    # ``(utxo_tx_hash BLOB, utxo_vout)`` pair; split it.
+                    tx_hash_hex, _, vout = value.partition(":")
+                    conditions.append("utxo_tx_hash = ? AND utxo_vout = ?")
+                    bindings.append(hashcodec.hash_to_db(tx_hash_hex))
+                    value = int(vout)
                 else:
                     conditions.append(f"{field} = ?")
                     if field in hashcodec.HASH_COLUMN_NAMES and isinstance(value, str):
@@ -237,8 +250,11 @@ def check_record(ledger_db, record):
         count = cursor.execute(sql, tuple(bindings)).fetchone()["count"]
         ok = (record.get("not", False) and count == 0) or count == 1
         if not ok:
+            # ``SELECT *`` (not the record's fields) so the rowtracer can
+            # reconstruct virtual columns like ``utxo`` (stored as the
+            # ``(utxo_tx_index, utxo_vout)`` pair) and decode address/asset ids.
             last_record = cursor.execute(
-                f"SELECT {', '.join(fields)} FROM {record['table']} ORDER BY rowid DESC LIMIT 1"  # noqa: S608 # nosec B608
+                f"SELECT * FROM {record['table']} ORDER BY rowid DESC LIMIT 1"  # noqa: S608 # nosec B608
             ).fetchone()
             print("test output", helpers.to_json(last_record, sort_keys=True))
             print("expected output", helpers.to_json(record["values"], sort_keys=True))

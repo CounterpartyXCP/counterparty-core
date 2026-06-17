@@ -58,11 +58,17 @@ def holders(db, asset, exclude_empty_holders=False):
         exclude_empty_holders=exclude_empty_holders,
     )
 
+    # ``utxo`` is stored as the compact ``(utxo_tx_hash, utxo_vout)`` pair; the
+    # rowtracer reconstructs the ``utxo`` string. ``holders()`` order is
+    # consensus-relevant (dividends credit holders in this order), so reproduce
+    # the original ``ORDER BY utxo`` by ordering on the reconstructed
+    # ``tx_hash:vout`` string (``hex_lower`` yields the lowercase hex the utxo
+    # string used).
     query = """
         SELECT *, rowid
         FROM balances
-        WHERE asset = ? AND utxo IS NOT NULL
-        ORDER BY utxo
+        WHERE asset = ? AND utxo_tx_hash IS NOT NULL
+        ORDER BY hex_lower(utxo_tx_hash) || ':' || utxo_vout
     """
 
     bindings = (asset_idx,)
@@ -384,11 +390,14 @@ def supplies(db):
 
 def held(db):
     queries = [
+        # ``address``/``asset`` are now small integers; concatenating them
+        # without a separator would collide (e.g. 5||37 == 53||7), so use ':'.
+        # ``utxo`` is the compact ``(utxo_tx_hash, utxo_vout)`` pair.
         """
         SELECT asset, SUM(quantity) AS total FROM (
-            SELECT address, asset, quantity, (address || asset) AS aa, MAX(rowid)
+            SELECT address, asset, quantity, (address || ':' || asset) AS aa, MAX(rowid)
             FROM balances
-            WHERE address IS NOT NULL AND utxo IS NULL
+            WHERE address IS NOT NULL AND utxo_tx_hash IS NULL
             GROUP BY aa
         ) GROUP BY asset
         """,
@@ -396,14 +405,14 @@ def held(db):
         SELECT asset, SUM(quantity) AS total FROM (
             SELECT NULL, asset, quantity
             FROM balances
-            WHERE address IS NULL AND utxo IS NULL
+            WHERE address IS NULL AND utxo_tx_hash IS NULL
         ) GROUP BY asset
         """,
         """
         SELECT asset, SUM(quantity) AS total FROM (
-            SELECT utxo, asset, quantity, (utxo || asset) AS aa, MAX(rowid)
+            SELECT asset, quantity, (hex_lower(utxo_tx_hash) || ':' || utxo_vout || ':' || asset) AS aa, MAX(rowid)
             FROM balances
-            WHERE address IS NULL AND utxo IS NOT NULL
+            WHERE address IS NULL AND utxo_tx_hash IS NOT NULL
             GROUP BY aa
         ) GROUP BY asset
         """,

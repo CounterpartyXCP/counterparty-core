@@ -680,6 +680,20 @@ def select_rows(
     def _is_asset_index_col(field):
         return _assets_index_table is not None and field in database.ASSET_INDEX_COLUMN_NAMES
 
+    # Address columns are stored as the compact integer ``address_id`` on Ledger
+    # DB tables, while the State DB consolidated tables keep the string. Detect a
+    # Ledger DB connection by probing for a *local* ``main.address_list`` (mirror
+    # the asset probe above). Only Ledger DB address filters need the
+    # string->id subquery rewrite.
+    try:
+        db.cursor().execute("SELECT 1 FROM main.address_list LIMIT 0")
+        _address_index_table = "main.address_list"
+    except apsw.SQLError:
+        _address_index_table = None
+
+    def _is_address_index_col(field):
+        return _address_index_table is not None and field in database.ADDRESS_INDEX_COLUMN_NAMES
+
     or_where = []
     for where_dict in where:
         where_field = []
@@ -694,6 +708,10 @@ def select_rows(
                     where_field.append(
                         f"{_qualify(field)} IN (SELECT asset_index FROM {_assets_index_table} WHERE asset_name LIKE ?)"  # noqa: S608  # nosec B608
                     )
+                elif _is_address_index_col(field):
+                    where_field.append(
+                        f"{_qualify(field)} IN (SELECT address_id FROM {_address_index_table} WHERE address LIKE ?)"  # noqa: S608  # nosec B608
+                    )
                 else:
                     where_field.append(f"{_qualify(field)} LIKE ?")
                 bindings.append(value)
@@ -702,6 +720,10 @@ def select_rows(
                 if _is_asset_index_col(field):
                     where_field.append(
                         f"{_qualify(field)} NOT IN (SELECT asset_index FROM {_assets_index_table} WHERE asset_name LIKE ?)"  # noqa: S608  # nosec B608
+                    )
+                elif _is_address_index_col(field):
+                    where_field.append(
+                        f"{_qualify(field)} NOT IN (SELECT address_id FROM {_address_index_table} WHERE address LIKE ?)"  # noqa: S608  # nosec B608
                     )
                 else:
                     where_field.append(f"{_qualify(field)} NOT LIKE ?")
@@ -729,6 +751,12 @@ def select_rows(
                     where_field.append(
                         f"{_qualify(field)} IN (SELECT asset_index FROM {_assets_index_table} "  # noqa: S608  # nosec B608
                         f"WHERE asset_name IN ({','.join(['?'] * len(value))}))"
+                    )
+                    bindings += list(value)
+                elif _is_address_index_col(field):
+                    where_field.append(
+                        f"{_qualify(field)} IN (SELECT address_id FROM {_address_index_table} "  # noqa: S608  # nosec B608
+                        f"WHERE address IN ({','.join(['?'] * len(value))}))"
                     )
                     bindings += list(value)
                 else:
@@ -771,6 +799,33 @@ def select_rows(
                     # ``dispenser_tx_hash``); record the *resolved* FK column
                     # name so the override gate sees the actual schema column.
                     field = new_field
+                elif _is_address_index_col(key):
+                    # Ledger DB: address columns store the compact ``address_id``;
+                    # rewrite the (possibly comma-separated) address value(s) to
+                    # an ``address_list`` subquery. On a State DB connection
+                    # ``_is_address_index_col`` is False and the TEXT branches
+                    # below handle it.
+                    values = value.split(",") if isinstance(value, str) else [value]
+                    if len(values) > 1:
+                        where_field.append(
+                            f"{_qualify(key)} IN (SELECT address_id FROM {_address_index_table} "  # noqa: S608  # nosec B608
+                            f"WHERE address IN ({','.join(['?'] * len(values))}))"
+                        )
+                        bindings += values
+                    else:
+                        where_field.append(
+                            f"{_qualify(key)} = (SELECT address_id FROM {_address_index_table} WHERE address = ?)"  # noqa: S608  # nosec B608
+                        )
+                        bindings.append(value)
+                    field = key
+                elif key == "utxo" and _address_index_table is not None and isinstance(value, str) and ":" in value:
+                    # Ledger DB: ``utxo`` is stored as the compact
+                    # ``(utxo_tx_hash BLOB, utxo_vout)`` pair; split the filter.
+                    tx_hash_hex, _, vout = value.partition(":")
+                    where_field.append("utxo_tx_hash = ? AND utxo_vout = ?")
+                    bindings.append(hashcodec.hash_to_db(tx_hash_hex))
+                    bindings.append(int(vout))
+                    field = key
                 elif key in ADDRESS_FIELDS and len(value.split(",")) > 1:
                     where_field.append(f"{key} IN ({','.join(['?'] * len(value.split(',')))})")
                     bindings += value.split(",")

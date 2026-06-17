@@ -3,6 +3,7 @@ import os
 import threading
 import time
 import weakref
+from collections import OrderedDict
 from contextlib import contextmanager
 
 import apsw
@@ -49,6 +50,47 @@ ASSET_INDEX_COLUMN_NAMES = frozenset(
         "asset_b",
     }
 )
+
+# Columns that store the compact integer ``address_id`` foreign key (see the
+# address-normalization rewrite in ``0010``). On read the rowtracer transparently
+# decodes the id back to the address *string* so the rest of the codebase
+# (consensus handlers, API, tests) keeps seeing addresses exactly as before the
+# normalization. This frozenset MUST stay in sync with the union of
+# ``migration_data.compact_hash_tables.ADDRESS_NAME_COLUMNS`` values; it is
+# duplicated here (rather than imported) because ``database`` is a low-level
+# module and importing ``lib.ledger.*`` at load time would create a cycle. A
+# unit test asserts the two stay identical.
+#
+# CAUTION: this is matched by column NAME globally in the rowtracer -- any int
+# value in a column with one of these names is decoded as an address. No table
+# may have a same-named column holding a non-address integer. ``mempool``'s
+# ``addresses`` (a comma-separated list) and ``mempool_transactions``'s
+# ``source``/``destination`` (transient, kept TEXT) are not in this set.
+ADDRESS_INDEX_COLUMN_NAMES = frozenset(
+    {
+        "address",
+        "utxo_address",
+        "source",
+        "destination",
+        "source_address",
+        "destination_address",
+        "issuer",
+        "feed_address",
+        "tx0_address",
+        "tx1_address",
+        "winner",
+        "oracle_address",
+        "origin",
+        "last_status_tx_source",
+    }
+)
+
+# Per-connection cache size cap for the high-cardinality address/tx_hash
+# resolvers. Assets are a few thousand (unbounded dict is fine), but addresses
+# and transactions number in the millions, so an unbounded dict would grow the
+# parser's RSS without bound. An LRU cap keeps the working set hot while
+# bounding memory.
+ADDRESS_CACHE_MAXSIZE = 100_000
 
 # Per-connection asset_index<->name caches. Asset rows are append-only (never
 # renamed or deleted), and ``asset_index`` is monotonic, so:
@@ -154,6 +196,155 @@ def reset_asset_caches(db):
     _ASSET_INDEX_BY_NAME.pop(db, None)
 
 
+# Hot-path local reference (avoids the per-cell attribute lookup in rowtracer).
+_ADDRESS_INDEX_COLUMN_NAMES = ADDRESS_INDEX_COLUMN_NAMES
+
+# Per-connection address_id<->string caches. Unlike assets these are BOUNDED
+# (LRU) because addresses number in the millions. Each maps db -> OrderedDict.
+#   * index->string: a stored id always references an existing address, so both
+#     hits and misses (stored as None) are permanently valid during a committed
+#     forward parse and may be cached; LRU-evicted past the cap.
+#   * string->index: a miss can become a hit once the address is first seen
+#     (``ensure_address``), so only hits are cached; LRU-evicted past the cap.
+_ADDRESS_STRING_BY_INDEX = weakref.WeakKeyDictionary()
+_ADDRESS_INDEX_BY_STRING = weakref.WeakKeyDictionary()
+# Per-connection name of the ``address_list`` table (``address_list`` on a
+# Ledger DB connection, ``ledger_db.address_list`` on a read-only State DB
+# connection, or ``None`` if not reachable).
+_ADDRESS_LIST_TABLE_NAME = weakref.WeakKeyDictionary()
+
+def _lru_get(cache_dict, db, key):
+    """Return (found, value) from the per-connection ``OrderedDict`` for ``db``,
+    moving the key to the most-recently-used end on a hit."""
+    cache = cache_dict.get(db)
+    if cache is None:
+        return False, None
+    value = cache.get(key, _CACHE_MISS)
+    if value is _CACHE_MISS:
+        return False, None
+    cache.move_to_end(key)
+    return True, value
+
+
+def _lru_put(cache_dict, db, key, value, maxsize):
+    """Insert ``key -> value`` into the per-connection ``OrderedDict`` for
+    ``db``, evicting the least-recently-used entry past ``maxsize``."""
+    cache = cache_dict.get(db)
+    if cache is None:
+        cache = OrderedDict()
+        cache_dict[db] = cache
+    cache[key] = value
+    cache.move_to_end(key)
+    while len(cache) > maxsize:
+        cache.popitem(last=False)
+
+
+def _resolve_address_list_table(db):
+    cached = _ADDRESS_LIST_TABLE_NAME.get(db, _CACHE_MISS)
+    if cached is not _CACHE_MISS:
+        return cached
+    name = None
+    for candidate in ("address_list", "ledger_db.address_list"):
+        try:
+            db.cursor().execute(f"SELECT 1 FROM {candidate} LIMIT 0")  # nosec B608  # noqa: S608
+        except apsw.SQLError:
+            continue
+        name = candidate
+        break
+    _ADDRESS_LIST_TABLE_NAME[db] = name
+    return name
+
+
+def address_string_from_index(db, index):
+    """Resolve a stored ``address_id`` to its address string. Returns the raw
+    index unchanged if it cannot be resolved (e.g. ``address_list`` is not
+    reachable from this connection)."""
+    found, value = _lru_get(_ADDRESS_STRING_BY_INDEX, db, index)
+    if found:
+        return value if value is not None else index
+    table = _resolve_address_list_table(db)
+    if table is None:
+        return index
+    row = (
+        db.cursor()
+        .execute(
+            f"SELECT address FROM {table} WHERE address_id = ?",  # nosec B608  # noqa: S608
+            (index,),
+        )
+        .fetchone()
+    )
+    value = row["address"] if row else None
+    _lru_put(_ADDRESS_STRING_BY_INDEX, db, index, value, ADDRESS_CACHE_MAXSIZE)
+    return value if value is not None else index
+
+
+def address_index_from_name(db, address):
+    """Resolve an address string to its compact ``address_id``. Returns ``None``
+    when the address is not registered in ``address_list`` (callers that write
+    addresses pre-register them via ``events.ensure_address``)."""
+    if address is None:
+        return None
+    found, value = _lru_get(_ADDRESS_INDEX_BY_STRING, db, address)
+    if found:
+        return value
+    table = _resolve_address_list_table(db)
+    if table is None:
+        return None
+    row = (
+        db.cursor()
+        .execute(
+            f"SELECT address_id FROM {table} WHERE address = ?",  # nosec B608  # noqa: S608
+            (address,),
+        )
+        .fetchone()
+    )
+    index = row["address_id"] if row else None
+    if index is not None:
+        # Only cache hits: a miss can become a hit once the address is seen.
+        _lru_put(_ADDRESS_INDEX_BY_STRING, db, address, index, ADDRESS_CACHE_MAXSIZE)
+    return index
+
+
+def reset_address_caches(db):
+    """Drop the per-connection ``address_id``<->string caches for ``db``.
+
+    Like the asset caches, these assume ``address_id`` is immutable -- which is
+    violated when a transaction that created ``address_list`` rows is ROLLED
+    BACK on the same connection (mempool parse, reorg/reparse): the freed id is
+    reused by a different address on the next parse. Call this right after such
+    a rollback. See ``reset_asset_caches``."""
+    _ADDRESS_STRING_BY_INDEX.pop(db, None)
+    _ADDRESS_INDEX_BY_STRING.pop(db, None)
+
+
+def split_utxo(utxo):
+    """Split a ``tx_hash:vout`` UTXO string into the stored
+    ``(utxo_tx_hash, utxo_vout)`` pair: the 64-char hex tx_hash is converted to
+    its compact ``BLOB(32)`` form and the vout to an int. Returns
+    ``(None, None)`` for a ``None`` utxo (an address balance).
+
+    The tx_hash is stored RAW (as a BLOB) rather than resolved to a ``tx_index``
+    FK because an attach destination may be ANY valid bitcoin UTXO whose tx is
+    not a Counterparty transaction (and so is absent from ``transactions``);
+    a tx_index FK would lose such balances. The single choke point shared by the
+    write path (``events``) and the read/WHERE path (``balances``/``caches``)."""
+    if utxo is None:
+        return None, None
+    tx_hash_hex, _, vout = utxo.partition(":")
+    return hashcodec.hash_to_db(tx_hash_hex), int(vout)
+
+
+def utxo_from_split(utxo_tx_hash, utxo_vout):
+    """Reconstruct the ``tx_hash:vout`` UTXO string from the stored
+    ``(utxo_tx_hash, utxo_vout)`` pair. Returns ``None`` when there is no utxo
+    (an address balance)."""
+    if utxo_tx_hash is None:
+        return None
+    if utxo_tx_hash.__class__ is bytes:
+        utxo_tx_hash = utxo_tx_hash.hex()
+    return f"{utxo_tx_hash}:{utxo_vout}"
+
+
 def _convert_value(name, field_type, value):
     # Fast path: most columns are non-NULL primitives (int, str, ...) and
     # not BOOL/BLOB hashes. Putting the cheapest checks first avoids the
@@ -181,9 +372,12 @@ def _convert_value(name, field_type, value):
 
 def rowtracer(cursor, sql):
     """Converts fetched SQL data into dict-style. Auto-converts BLOB hash
-    columns back to lowercase hex strings, and the compact integer
-    ``asset_index`` foreign keys back to asset names, preserving the legacy
-    contract that ``row['tx_hash']`` is hex and ``row['asset']`` is a name.
+    columns back to lowercase hex strings, the compact integer ``asset_index``
+    foreign keys back to asset names, the compact ``address_id`` foreign keys
+    back to address strings, and the split ``(utxo_tx_hash, utxo_vout)`` pair
+    back to the ``utxo`` string (``tx_hash:vout``). This preserves the legacy
+    contract that ``row['tx_hash']`` is hex, ``row['asset']`` is a name,
+    ``row['source']`` is an address and ``row['utxo']`` is ``tx_hash:vout``.
     """
     db = None
     out = {}
@@ -196,8 +390,23 @@ def rowtracer(cursor, sql):
             if db is None:
                 db = cursor.getconnection()
             out[name] = asset_name_from_index(db, value)
+        # Address-id columns hold a small integer at rest; decode to the address
+        # string. A string already materialized as TEXT (a view that
+        # pre-resolves the address, or a State DB table that keeps TEXT
+        # addresses) is left untouched, as is a NULL.
+        elif value.__class__ is int and name in _ADDRESS_INDEX_COLUMN_NAMES:
+            if db is None:
+                db = cursor.getconnection()
+            out[name] = address_string_from_index(db, value)
         else:
             out[name] = _convert_value(name, field_type, value)
+    # Reconstruct the ``utxo`` string from the split ``(utxo_tx_hash,
+    # utxo_vout)`` pair (balances/credits/debits on the Ledger DB). Only fires
+    # when both columns are present; the synthesized ``utxo`` replaces the two
+    # raw columns so the row shape is identical to the pre-split schema. A NULL
+    # ``utxo_tx_hash`` (an address-balance row) yields ``utxo = None``.
+    if "utxo_tx_hash" in out and "utxo_vout" in out:
+        out["utxo"] = utxo_from_split(out.pop("utxo_tx_hash"), out.pop("utxo_vout"))
     return out
 
 

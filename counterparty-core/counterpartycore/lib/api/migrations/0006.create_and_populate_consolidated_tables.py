@@ -5,7 +5,10 @@ import logging
 import time
 
 from counterpartycore.lib import config
-from counterpartycore.lib.utils.database import ASSET_INDEX_COLUMN_NAMES
+from counterpartycore.lib.utils.database import (
+    ADDRESS_INDEX_COLUMN_NAMES,
+    ASSET_INDEX_COLUMN_NAMES,
+)
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -14,7 +17,9 @@ __depends__ = {"0005.create_and_populate_events_count"}
 
 CONSOLIDATED_TABLES = {
     "fairminters": "tx_hash",
-    "balances": "address, utxo, asset",
+    # ``utxo`` is the compact ``(utxo_tx_hash, utxo_vout)`` ledger pair; group
+    # by both halves (the State DB stores the reconstructed ``utxo`` string).
+    "balances": "address, utxo_tx_hash, utxo_vout, asset",
     "addresses": "address",
     "dispensers": "source, asset, tx_hash",
     # match tables: the composite TEXT ``id`` was dropped; the match is keyed
@@ -101,6 +106,13 @@ def build_consolidated_table(state_db, table_name):
             sqls.append(sql["sql"])
 
     for sql in sqls:
+        if table_name == "balances":
+            # The State DB keeps the ``utxo`` string (reconstructed below) rather
+            # than the compact ledger ``(utxo_tx_hash, utxo_vout)`` pair, so it
+            # can read its own rows without ``ledger_db`` attached.
+            sql = sql.replace("utxo_tx_hash BLOB,", "utxo TEXT,").replace(
+                "utxo_vout INTEGER,", ""
+            )
         state_db.execute(sql)
 
     state_db.execute(f"""
@@ -124,6 +136,18 @@ def build_consolidated_table(state_db, table_name):
         if col in ASSET_INDEX_COLUMN_NAMES:
             columns.append(
                 f"(SELECT asset_name FROM ledger_db.assets WHERE asset_index = b.{col}) AS {col}"  # noqa: S608  # nosec B608
+            )
+        elif col in ADDRESS_INDEX_COLUMN_NAMES:
+            # decode the compact ``address_id`` back to the address string
+            columns.append(
+                f"(SELECT address FROM ledger_db.address_list WHERE address_id = b.{col}) AS {col}"  # noqa: S608  # nosec B608
+            )
+        elif col == "utxo" and table_name == "balances":
+            # reconstruct the ``tx_hash:vout`` string from the compact ledger
+            # ``(utxo_tx_hash, utxo_vout)`` pair (``lower(hex(...))`` yields the
+            # lowercase hex the utxo string used; a NULL tx_hash -> NULL utxo).
+            columns.append(
+                "lower(hex(b.utxo_tx_hash)) || ':' || b.utxo_vout AS utxo"  # noqa: S608  # nosec B608
             )
         else:
             columns.append(f"b.{col}")
@@ -149,6 +173,11 @@ def build_consolidated_table(state_db, table_name):
             state_db.execute(post_query)
 
     for sql_index in indexes:
+        if table_name == "balances":
+            # the State DB balances keeps a single ``utxo`` TEXT column, so the
+            # ledger's composite ``(utxo_tx_hash, utxo_vout)`` indexes map onto
+            # ``utxo``.
+            sql_index = sql_index.replace("utxo_tx_hash, utxo_vout", "utxo")
         state_db.execute(sql_index)
     logger.debug(
         "Copied consolidated table `%s` in %.2f seconds", table_name, time.time() - start_time

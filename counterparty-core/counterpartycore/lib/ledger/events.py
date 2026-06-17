@@ -8,7 +8,11 @@ from counterpartycore.lib.cli import log
 from counterpartycore.lib.ledger.balances import get_balance
 from counterpartycore.lib.ledger.caches import AssetCache, UTXOBalancesCache
 from counterpartycore.lib.ledger.currentstate import ConsensusHashBuilder, CurrentState
-from counterpartycore.lib.ledger.migration_data.compact_hash_tables import ASSET_NAME_COLUMNS
+from counterpartycore.lib.ledger.migration_data.compact_hash_tables import (
+    ADDRESS_NAME_COLUMNS,
+    ASSET_NAME_COLUMNS,
+    UTXO_SPLIT_COLUMNS,
+)
 from counterpartycore.lib.parser import protocol, utxosinfo
 from counterpartycore.lib.utils import database, hashcodec, helpers
 
@@ -143,6 +147,23 @@ def _resolve_match_indexes(db, match_id):
     return _resolve_tx_index(db, parts[0]), _resolve_tx_index(db, parts[1])
 
 
+def _address_id(db, address):
+    """Resolve an address string to its compact ``address_id``, creating the
+    ``address_list`` row first if needed. ``None`` (and any non-str) passes
+    through unchanged (e.g. the ``address`` column on a UTXO balance is NULL)."""
+    if address is None or not isinstance(address, str):
+        return address
+    ensure_address(db, address)
+    return database.address_index_from_name(db, address)
+
+
+def _split_utxo(utxo):
+    """Split a ``tx_hash:vout`` UTXO string into ``(utxo_tx_hash, utxo_vout)``
+    (BLOB tx_hash + int vout). Delegates to ``database.split_utxo`` (the single
+    shared choke point)."""
+    return database.split_utxo(utxo)
+
+
 def _prepare_record_for_insert(db, table_name, record):
     """Return a copy of ``record`` with hash columns normalized to BLOB and
     any legacy hash columns resolved to their new ``*_tx_index`` FK form."""
@@ -191,6 +212,26 @@ def _prepare_record_for_insert(db, table_name, record):
             if col in out and isinstance(out[col], str):
                 out[col] = database.asset_index_from_name(db, out[col])
 
+    # Convert address columns to the compact integer ``address_id`` FK. The
+    # address row is created first if needed (``ensure_address``); the journal
+    # keeps the original ``record`` (strings) so consensus is unchanged. A
+    # ``None`` address (e.g. the ``address`` column on a UTXO balance) stays
+    # NULL.
+    address_cols = ADDRESS_NAME_COLUMNS.get(table_name)
+    if address_cols:
+        for col in address_cols:
+            if col in out and isinstance(out[col], str):
+                out[col] = _address_id(db, out[col])
+
+    # Split the legacy ``utxo`` TEXT (``tx_hash:vout``) into the compact
+    # ``(utxo_tx_hash, utxo_vout)`` pair. The journal keeps the original
+    # ``utxo`` string, so consensus is unchanged.
+    utxo_split = UTXO_SPLIT_COLUMNS.get(table_name)
+    if utxo_split:
+        legacy_col, tx_hash_col, vout_col = utxo_split
+        if legacy_col in out:
+            out[tx_hash_col], out[vout_col] = _split_utxo(out.pop(legacy_col))
+
     return out
 
 
@@ -215,6 +256,22 @@ def ensure_asset(db, asset_id, asset_name, block_index, asset_longname):
             "INSERT OR IGNORE INTO assets (asset_id, asset_name, block_index, asset_longname) "
             "VALUES (?, ?, ?, ?)",
             (str(asset_id), asset_name, block_index, asset_longname),
+        )
+
+
+def ensure_address(db, address):
+    """Create the ``address_list`` row (DB only, no journal) for ``address`` if
+    it does not exist yet, so the compact ``address_id`` always resolves at
+    write time. Addresses have no creation event -- they are first-seen-on-use
+    -- so this is called from the write path (``_address_id``) for every address
+    column just before INSERT. ``INSERT OR IGNORE`` keeps it idempotent and
+    monotonic (the ``address_id`` is assigned once, on first sighting)."""
+    if address is None:
+        return
+    with get_cursor(db) as cursor:
+        cursor.execute(
+            "INSERT OR IGNORE INTO address_list (address) VALUES (?)",
+            (address,),
         )
 
 
@@ -283,6 +340,12 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     else:
         if id_name in hashcodec.HASH_COLUMN_NAMES:
             id_bind = hashcodec.hash_to_db(id_value)
+        elif id_name in database.ADDRESS_INDEX_COLUMN_NAMES:
+            # The matched column is now an ``address_id`` INTEGER FK (e.g. the
+            # ``addresses`` options table keyed on ``address``); resolve the
+            # string id to its compact index so the WHERE matches the at-rest
+            # representation.
+            id_bind = database.address_index_from_name(db, id_value)
         else:
             id_bind = id_value
         select_query = f"""
@@ -461,11 +524,17 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
             UTXOBalancesCache(db).remove_balance(utxo)
 
     if not no_balance:  # don't create balance if quantity is 0 and there is no balance
+        # ``balances`` is written with raw SQL (it bypasses
+        # ``_prepare_record_for_insert``), so resolve the address/utxo_address
+        # to ``address_id`` and split the ``utxo`` string into the BLOB
+        # tx_hash + vout pair here, mirroring the asset_index resolution.
+        utxo_tx_hash, utxo_vout = _split_utxo(utxo)
         bindings = {
             "quantity": balance,
-            "address": balance_address,
-            "utxo": utxo,
-            "utxo_address": utxo_address,
+            "address": _address_id(db, balance_address),
+            "utxo_tx_hash": utxo_tx_hash,
+            "utxo_vout": utxo_vout,
+            "utxo_address": _address_id(db, utxo_address),
             # balances stores the compact ``asset_index``; the name always
             # resolves here (a balance only exists for an issued asset).
             "asset": database.asset_index_from_name(db, asset),
@@ -473,8 +542,8 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
             "tx_index": tx_index,
         }
         query = """
-            INSERT INTO balances (address, asset, quantity, block_index, tx_index, utxo, utxo_address)
-            VALUES (:address, :asset, :quantity, :block_index, :tx_index, :utxo, :utxo_address)
+            INSERT INTO balances (address, asset, quantity, block_index, tx_index, utxo_tx_hash, utxo_vout, utxo_address)
+            VALUES (:address, :asset, :quantity, :block_index, :tx_index, :utxo_tx_hash, :utxo_vout, :utxo_address)
         """
         balance_cursor.execute(query, bindings)
 
@@ -545,19 +614,24 @@ def add_to_balance(db, address, asset, quantity, tx_index, utxo_address=None):
         if not CurrentState().parsing_mempool() and balance > 0:
             UTXOBalancesCache(db).add_balance(utxo)
 
+    # ``balances`` is written with raw SQL (it bypasses
+    # ``_prepare_record_for_insert``), so resolve the address/utxo_address to
+    # ``address_id`` and split the ``utxo`` string into the BLOB tx_hash + vout.
+    utxo_tx_hash, utxo_vout = _split_utxo(utxo)
     bindings = {
         "quantity": balance,
-        "address": balance_address,
-        "utxo": utxo,
-        "utxo_address": utxo_address,
+        "address": _address_id(db, balance_address),
+        "utxo_tx_hash": utxo_tx_hash,
+        "utxo_vout": utxo_vout,
+        "utxo_address": _address_id(db, utxo_address),
         # balances stores the compact ``asset_index`` (resolved from the name).
         "asset": database.asset_index_from_name(db, asset),
         "block_index": CurrentState().current_block_index(),
         "tx_index": tx_index,
     }
     query = """
-        INSERT INTO balances (address, asset, quantity, block_index, tx_index, utxo, utxo_address)
-        VALUES (:address, :asset, :quantity, :block_index, :tx_index, :utxo, :utxo_address)
+        INSERT INTO balances (address, asset, quantity, block_index, tx_index, utxo_tx_hash, utxo_vout, utxo_address)
+        VALUES (:address, :asset, :quantity, :block_index, :tx_index, :utxo_tx_hash, :utxo_vout, :utxo_address)
     """
     balance_cursor.execute(query, bindings)
 

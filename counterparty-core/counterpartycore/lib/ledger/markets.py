@@ -246,7 +246,8 @@ def get_pending_btc_order_matches(db, address):
         ORDER BY rowid
     """  # noqa: S608 # nosec B608
     btc_idx = database.asset_index_from_name(db, config.BTC)
-    bindings = (address, btc_idx, address, btc_idx, "pending")
+    address_id = database.address_index_from_name(db, address)
+    bindings = (address_id, btc_idx, address_id, btc_idx, "pending")
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -339,7 +340,11 @@ def get_open_btc_orders(db, address):
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     """
-    bindings = (address, database.asset_index_from_name(db, config.BTC), "open")
+    bindings = (
+        database.address_index_from_name(db, address),
+        database.asset_index_from_name(db, config.BTC),
+        "open",
+    )
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -355,7 +360,7 @@ def get_open_orders_by_source(db, address):
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     """
-    bindings = (address, "open")
+    bindings = (database.address_index_from_name(db, address), "open")
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -411,7 +416,7 @@ def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
     where_source = ""
     if source is not None:
         where_source = " AND source = :source"
-        select_bindings["source"] = source
+        select_bindings["source"] = database.address_index_from_name(db, source)
 
     # no sql injection here
     select_query = f"""
@@ -562,7 +567,11 @@ def get_dispensers_count(db, source, status, origin):
         ) WHERE status = ?
         ORDER BY tx_index
     """
-    bindings = (source, origin, status)
+    bindings = (
+        database.address_index_from_name(db, source),
+        database.address_index_from_name(db, origin),
+        status,
+    )
     cursor.execute(query, bindings)
     return cursor.fetchall()[0]["cnt"]
 
@@ -584,16 +593,16 @@ def get_dispensers(
     first_where = []
     if address is not None:
         first_where.append("source = ?")
-        bindings.append(address)
+        bindings.append(database.address_index_from_name(db, address))
     if source_in is not None:
         first_where.append(f"source IN ({','.join(['?' for e in range(0, len(source_in))])})")
-        bindings += source_in
+        bindings += [database.address_index_from_name(db, s) for s in source_in]
     if asset is not None:
         first_where.append("asset = ?")
         bindings.append(database.asset_index_from_name(db, asset))
     if origin is not None:
         first_where.append("origin = ?")
-        bindings.append(origin)
+        bindings.append(database.address_index_from_name(db, origin))
     # where for mutable fields
     second_where = []
     if status is not None:

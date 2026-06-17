@@ -133,8 +133,14 @@ class UTXOBalancesCache(metaclass=helpers.SingletonMeta):
 
         cursor = db.cursor()
 
-        # Load UTXOs with balance from the balances table
-        sql = "SELECT utxo, asset, quantity, MAX(rowid) FROM balances WHERE utxo IS NOT NULL GROUP BY utxo, asset"
+        # Load UTXOs with balance from the balances table. ``utxo`` is stored as
+        # the compact ``(utxo_tx_hash, utxo_vout)`` pair; selecting both lets
+        # the rowtracer reconstruct the ``utxo`` string so the cache key is
+        # unchanged.
+        sql = (
+            "SELECT utxo_tx_hash, utxo_vout, asset, quantity, MAX(rowid) FROM balances "
+            "WHERE utxo_tx_hash IS NOT NULL GROUP BY utxo_tx_hash, utxo_vout, asset"
+        )
         cursor.execute(sql)
         utxo_balances = cursor.fetchall()
         for utxo_balance in utxo_balances:
@@ -216,11 +222,13 @@ class UTXOBalancesCache(metaclass=helpers.SingletonMeta):
         if utxo in self.utxos_with_balance:
             return self.utxos_with_balance[utxo]
 
-        # Cache miss - query database
+        # Cache miss - query database. ``utxo`` is stored as the compact
+        # ``(utxo_tx_hash, utxo_vout)`` pair; split the string to filter.
         cursor = self.db.cursor()
+        utxo_tx_hash, utxo_vout = database.split_utxo(utxo)
         cursor.execute(
-            "SELECT 1 FROM balances WHERE utxo = ? AND quantity > 0 LIMIT 1",
-            (utxo,),
+            "SELECT 1 FROM balances WHERE utxo_tx_hash = ? AND utxo_vout = ? AND quantity > 0 LIMIT 1",
+            (utxo_tx_hash, utxo_vout),
         )
         result = cursor.fetchone() is not None
 

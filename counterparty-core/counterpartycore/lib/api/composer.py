@@ -32,7 +32,7 @@ from counterpartycore.lib import (
     messages,
 )
 from counterpartycore.lib.parser import deserialize, messagetype, utxosinfo
-from counterpartycore.lib.utils import helpers, multisig, script
+from counterpartycore.lib.utils import database, helpers, multisig, script
 
 MAX_INPUTS_SET = 100
 MAX_BTC_OUTPUT_VALUE = 21_000_000 * config.UNIT
@@ -319,9 +319,13 @@ def is_ordinal_envelope_script(envelope_script):
 
 
 def utxo_to_address(db, utxo):
-    # first try with the database
-    sql = "SELECT utxo_address FROM balances WHERE utxo = ? LIMIT 1"
-    balance = db.execute(sql, (utxo,)).fetchone()
+    # first try with the database (the ledger DB). ``utxo`` is stored as the
+    # compact ``(utxo_tx_hash BLOB, utxo_vout)`` pair; split the string to
+    # filter. ``utxo_address`` is the ``address_id`` FK, decoded back to the
+    # address string by the rowtracer.
+    utxo_tx_hash, utxo_vout = database.split_utxo(utxo)
+    sql = "SELECT utxo_address FROM balances WHERE utxo_tx_hash = ? AND utxo_vout = ? LIMIT 1"
+    balance = db.execute(sql, (utxo_tx_hash, utxo_vout)).fetchone()
     if balance:
         return balance["utxo_address"]
     # then try with Bitcoin Core

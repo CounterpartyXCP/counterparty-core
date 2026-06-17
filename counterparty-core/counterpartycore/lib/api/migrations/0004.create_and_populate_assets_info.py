@@ -79,12 +79,14 @@ def apply(db):
         a.asset_id,
         a.asset_longname,
         (
-            SELECT i.issuer FROM ledger_db.issuances i
+            SELECT (SELECT al.address FROM ledger_db.address_list al WHERE al.address_id = i.issuer)
+            FROM ledger_db.issuances i
             WHERE i.asset = a.asset_index AND i.status = 'valid'
             ORDER BY i.rowid ASC LIMIT 1
         ) AS issuer,
         (
-            SELECT i.issuer FROM ledger_db.issuances i
+            SELECT (SELECT al.address FROM ledger_db.address_list al WHERE al.address_id = i.issuer)
+            FROM ledger_db.issuances i
             WHERE i.asset = a.asset_index AND i.status = 'valid'
             ORDER BY i.rowid DESC LIMIT 1
         ) AS owner,

@@ -189,6 +189,10 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
         # skipping its XCP fee. Drop them so block parsing re-resolves against
         # the committed table.
         database.reset_asset_caches(db)
+        # Same hazard for the address_id cache: the rolled-back mempool parse may
+        # have created/reused address_list rows; drop them so block parsing
+        # re-resolves against the committed table.
+        database.reset_address_caches(db)
 
     logger.trace("Mempool transaction parsed successfully.")
     return not_supported_txs

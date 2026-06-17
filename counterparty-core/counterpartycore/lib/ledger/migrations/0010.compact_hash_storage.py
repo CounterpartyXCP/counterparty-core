@@ -45,6 +45,7 @@ import sqlite3
 import apsw
 from counterpartycore.lib import config
 from counterpartycore.lib.ledger.migration_data.compact_hash_schema import (
+    ADDRESS_NAME_COLUMNS,
     ASSET_NAME_COLUMNS,
     CUSTOM_INSERT_SELECT,
     INDEXES_AFTER_REWRITE,
@@ -87,6 +88,36 @@ def _table_has_column(cursor, table, column):
     else:
         names = {r[1] for r in rows}
     return column in names
+
+
+def _populate_address_list(cursor, renamed_tables):
+    """Populate the brand-new ``address_list`` id table from the DISTINCT set of
+    every address value across all renamed ``*_old`` tables.
+
+    Run AFTER phase 1 (the ``*_old`` tables exist) and BEFORE phase 2 (so the
+    per-table copy can resolve addresses to ids). ``address_id`` auto-assigns in
+    ``ORDER BY address`` order, which makes the assignment deterministic (it is
+    an internal FK only -- consensus and API see the decoded string). Only the
+    ``ADDRESS_NAME_COLUMNS`` sources are unioned, each guarded by
+    ``_table_has_column`` so a column absent at migration time is skipped;
+    ``mempool``/``mempool_transactions`` are excluded (transient / list)."""
+    selects = []
+    for table, columns in ADDRESS_NAME_COLUMNS.items():
+        if table not in renamed_tables:
+            continue
+        old_table = f"{table}_old"
+        for col in columns:
+            if _table_has_column(cursor, old_table, col):
+                selects.append(
+                    f"SELECT {col} AS addr FROM {old_table} WHERE {col} IS NOT NULL"  # nosec B608  # noqa: S608
+                )
+    if not selects:
+        return
+    union_sql = " UNION ALL ".join(selects)
+    cursor.execute(
+        "INSERT INTO address_list (address) "  # nosec B608  # noqa: S608
+        f"SELECT DISTINCT addr FROM ({union_sql}) ORDER BY addr"
+    )
 
 
 def _column_affinity(cursor, table, column):
@@ -208,6 +239,12 @@ def apply(conn):
         cursor.execute(new_create_sql)
         renamed_tables.append(table)
 
+    # Phase 1b: populate the brand-new ``address_list`` id table from the
+    # DISTINCT set of every address value across the ``*_old`` tables, so the
+    # per-table copy below can resolve each address to its compact
+    # ``address_id``. Must run after all renames and before any copy.
+    _populate_address_list(cursor, renamed_tables)
+
     # Phase 2: copy data from each ``_old`` into the new tables. JOINs against
     # ``transactions_old`` work because all old tables are still present.
     for entry in TABLE_REWRITES:
@@ -233,6 +270,7 @@ def apply(conn):
             # yet exist at migration time (e.g. ``fairminters.lp_asset``, added
             # by 0011) is naturally skipped.
             asset_cols = ASSET_NAME_COLUMNS.get(table, ())
+            addr_cols = ADDRESS_NAME_COLUMNS.get(table, ())
             select_cols = []
             for col in columns:
                 if col in hex_columns:
@@ -241,6 +279,11 @@ def apply(conn):
                     select_cols.append(
                         f"(SELECT a.asset_index FROM assets a "  # nosec B608  # noqa: S608
                         f"WHERE a.asset_name = {table}_old.{col}) AS {col}"
+                    )
+                elif col in addr_cols:
+                    select_cols.append(
+                        f"(SELECT al.address_id FROM address_list al "  # nosec B608  # noqa: S608
+                        f"WHERE al.address = {table}_old.{col}) AS {col}"
                     )
                 else:
                     select_cols.append(col)

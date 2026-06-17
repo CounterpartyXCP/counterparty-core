@@ -288,7 +288,7 @@ def get_issuances_count(db, address):
         FROM issuances
         WHERE issuer = ?
     """
-    bindings = (address,)
+    bindings = (database.address_index_from_name(db, address),)
     cursor.execute(query, bindings)
     return cursor.fetchall()[0]["cnt"]
 
@@ -300,7 +300,7 @@ def get_asset_issued(db, address):
         FROM issuances
         WHERE issuer = ?
     """
-    bindings = (address,)
+    bindings = (database.address_index_from_name(db, address),)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -544,7 +544,11 @@ def get_fairmint_by_address(db, fairminter_tx_hash, source):
             SELECT tx_index FROM transactions WHERE tx_hash = ?
         ) AND status = ? AND source = ?
     """
-    bindings = (hashcodec.hash_to_db(fairminter_tx_hash), "valid", source)
+    bindings = (
+        hashcodec.hash_to_db(fairminter_tx_hash),
+        "valid",
+        database.address_index_from_name(db, source),
+    )
     cursor.execute(query, bindings)
     sums = cursor.fetchone()
     return sums["quantity"] or 0

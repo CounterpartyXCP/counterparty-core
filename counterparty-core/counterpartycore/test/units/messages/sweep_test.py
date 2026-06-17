@@ -368,10 +368,10 @@ def test_parse_skips_zero_quantity_balances(ledger_db, blockchain_mock, defaults
         SELECT COUNT(*) AS count
         FROM (
             SELECT quantity FROM credits
-            WHERE address = ? AND asset = (SELECT asset_index FROM assets WHERE asset_name = ?) AND calling_function = ? AND event = ?
+            WHERE address = (SELECT address_id FROM address_list WHERE address = ?) AND asset = (SELECT asset_index FROM assets WHERE asset_name = ?) AND calling_function = ? AND event = ?
             UNION ALL
             SELECT quantity FROM debits
-            WHERE address = ? AND asset = (SELECT asset_index FROM assets WHERE asset_name = ?) AND action = ? AND event = ?
+            WHERE address = (SELECT address_id FROM address_list WHERE address = ?) AND asset = (SELECT asset_index FROM assets WHERE asset_name = ?) AND action = ? AND event = ?
         )
         """,
         (
@@ -404,10 +404,10 @@ def test_parse_zero_quantity_balances_legacy_path(ledger_db, blockchain_mock, de
         SELECT COUNT(*) AS count
         FROM (
             SELECT quantity FROM credits
-            WHERE address = ? AND asset = (SELECT asset_index FROM assets WHERE asset_name = ?) AND calling_function = ? AND event = ?
+            WHERE address = (SELECT address_id FROM address_list WHERE address = ?) AND asset = (SELECT asset_index FROM assets WHERE asset_name = ?) AND calling_function = ? AND event = ?
             UNION ALL
             SELECT quantity FROM debits
-            WHERE address = ? AND asset = (SELECT asset_index FROM assets WHERE asset_name = ?) AND action = ? AND event = ?
+            WHERE address = (SELECT address_id FROM address_list WHERE address = ?) AND asset = (SELECT asset_index FROM assets WHERE asset_name = ?) AND action = ? AND event = ?
         )
         """,
         (
@@ -463,7 +463,7 @@ def test_parse_empty_ownership_sweep_charges_no_fee(ledger_db, blockchain_mock, 
     sweep.parse(ledger_db, tx, message)
 
     fee_debits = ledger_db.execute(
-        "SELECT quantity FROM debits WHERE address = ? "
+        "SELECT quantity FROM debits WHERE address = (SELECT address_id FROM address_list WHERE address = ?) "
         "AND asset = (SELECT asset_index FROM assets WHERE asset_name = 'XCP') "
         "AND action = 'sweep fee' AND event = ?",
         (source, tx["tx_hash"]),
@@ -490,7 +490,7 @@ def test_parse_empty_ownership_sweep_legacy_path_charges_fee(ledger_db, blockcha
         sweep.parse(ledger_db, tx, message)
 
     fee_debits = ledger_db.execute(
-        "SELECT quantity FROM debits WHERE address = ? "
+        "SELECT quantity FROM debits WHERE address = (SELECT address_id FROM address_list WHERE address = ?) "
         "AND asset = (SELECT asset_index FROM assets WHERE asset_name = 'XCP') "
         "AND action = 'sweep fee' AND event = ?",
         (source, tx["tx_hash"]),

@@ -204,6 +204,10 @@ def _insert_quantitative_sort_fixtures(ledger_db):
             "INSERT OR IGNORE INTO assets (asset_id, asset_name) VALUES (?, ?)",
             (str(900000 + idx), asset_name),
         )
+    # Address columns store the compact address_id; register the synthetic
+    # addresses so address filters (e.g. broadcasts.source) resolve.
+    for addr in ("source", "dest", "issuer", "sort-source"):
+        ledger_db.execute("INSERT OR IGNORE INTO address_list (address) VALUES (?)", (addr,))
     ledger_db.executemany(
         """
         INSERT INTO transactions (
@@ -254,7 +258,7 @@ def _insert_quantitative_sort_fixtures(ledger_db):
         INSERT INTO broadcasts (
             tx_index, tx_hash, block_index, source, timestamp, value,
             fee_fraction_int, text, locked, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, (SELECT address_id FROM address_list WHERE address = ?), ?, ?, ?, ?, ?, ?)
         """,
         [
             (900005, "e" * 64, 101, "sort-source", 1, 1.0, 1, "low", 0, "valid"),
@@ -449,8 +453,15 @@ def test_get_address_options(ledger_db, defaults):
     }
 
     address_with_options = defaults["addresses"][6]
+    # ``addresses.address`` is now the compact ``address_id`` FK; register the
+    # address in ``address_list`` and store its id (the API resolves the filter
+    # to the id too).
     ledger_db.execute(
-        "INSERT INTO addresses (address, options, block_index) VALUES (?, ?, ?)",
+        "INSERT OR IGNORE INTO address_list (address) VALUES (?)", (address_with_options,)
+    )
+    ledger_db.execute(
+        "INSERT INTO addresses (address, options, block_index) "
+        "VALUES ((SELECT address_id FROM address_list WHERE address = ?), ?, ?)",
         (address_with_options, config.ADDRESS_OPTION_REQUIRE_MEMO, 123),
     )
 

@@ -40,21 +40,50 @@ TABLE_REWRITES = [
                           asset_longname TEXT)""",
         (),
     ),
+    # address_list: a brand-new identity table giving every distinct address a
+    # compact sequential ``address_id INTEGER PRIMARY KEY`` -- the FK target for
+    # every address column across the schema (see ADDRESS_NAME_COLUMNS). It has
+    # no legacy ``_old`` counterpart, so the migration creates it in phase 1 and
+    # populates it explicitly (``_populate_address_list``) from the DISTINCT set
+    # of all address values BEFORE the per-table copy resolves names to ids.
+    # Kept distinct from the existing ``addresses`` options-history table
+    # (identity vs. history, like ``assets`` vs. ``issuances``).
+    (
+        "address_list",
+        ("address",),
+        """CREATE TABLE address_list(
+                          address_id INTEGER PRIMARY KEY,
+                          address TEXT UNIQUE)""",
+        (),
+    ),
     # balances/credits/debits: high-volume tables whose ``asset`` name TEXT is
-    # replaced by the compact ``asset_index`` INTEGER. They have no hash
-    # columns, so the original hex->BLOB pass skipped them; they are added here
-    # purely for the asset normalization (see ASSET_NAME_COLUMNS).
+    # replaced by the compact ``asset_index`` INTEGER. The ``address`` and
+    # ``utxo_address`` TEXT columns are normalized to the ``address_id`` FK
+    # (see ADDRESS_NAME_COLUMNS) and the ``utxo`` TEXT (``tx_hash:vout``) is
+    # split into a compact ``(utxo_tx_hash, utxo_vout)`` pair (see
+    # UTXO_SPLIT_COLUMNS). They have no hash columns; they use a
+    # CUSTOM_INSERT_SELECT for the utxo split.
     (
         "balances",
-        ("address", "asset", "quantity", "block_index", "tx_index", "utxo", "utxo_address"),
+        (
+            "address",
+            "asset",
+            "quantity",
+            "block_index",
+            "tx_index",
+            "utxo_tx_hash",
+            "utxo_vout",
+            "utxo_address",
+        ),
         """CREATE TABLE balances(
-                          address TEXT,
+                          address INTEGER,
                           asset INTEGER,
                           quantity INTEGER,
                           block_index INTEGER,
                           tx_index INTEGER,
-                          utxo TEXT,
-                          utxo_address TEXT)""",
+                          utxo_tx_hash BLOB,
+                          utxo_vout INTEGER,
+                          utxo_address INTEGER)""",
         (),
     ),
     (
@@ -67,19 +96,21 @@ TABLE_REWRITES = [
             "calling_function",
             "event",
             "tx_index",
-            "utxo",
+            "utxo_tx_hash",
+            "utxo_vout",
             "utxo_address",
         ),
         """CREATE TABLE credits(
                           block_index INTEGER,
-                          address TEXT,
+                          address INTEGER,
                           asset INTEGER,
                           quantity INTEGER,
                           calling_function TEXT,
                           event TEXT,
                           tx_index INTEGER,
-                          utxo TEXT,
-                          utxo_address TEXT)""",
+                          utxo_tx_hash BLOB,
+                          utxo_vout INTEGER,
+                          utxo_address INTEGER)""",
         (),
     ),
     (
@@ -92,19 +123,21 @@ TABLE_REWRITES = [
             "action",
             "event",
             "tx_index",
-            "utxo",
+            "utxo_tx_hash",
+            "utxo_vout",
             "utxo_address",
         ),
         """CREATE TABLE debits(
                           block_index INTEGER,
-                          address TEXT,
+                          address INTEGER,
                           asset INTEGER,
                           quantity INTEGER,
                           action TEXT,
                           event TEXT,
                           tx_index INTEGER,
-                          utxo TEXT,
-                          utxo_address TEXT)""",
+                          utxo_tx_hash BLOB,
+                          utxo_vout INTEGER,
+                          utxo_address INTEGER)""",
         (),
     ),
     # blocks: 5 hash columns
@@ -158,8 +191,8 @@ TABLE_REWRITES = [
                           tx_hash BLOB UNIQUE,
                           block_index INTEGER,
                           block_time INTEGER,
-                          source TEXT,
-                          destination TEXT,
+                          source INTEGER,
+                          destination INTEGER,
                           btc_amount INTEGER,
                           fee INTEGER,
                           data BLOB,
@@ -276,7 +309,7 @@ TABLE_REWRITES = [
                             tx_index INTEGER,
                             tx_hash BLOB,
                             block_index INTEGER,
-                            source TEXT,
+                            source INTEGER,
                             give_asset INTEGER,
                             give_quantity INTEGER,
                             give_remaining INTEGER,
@@ -321,10 +354,10 @@ TABLE_REWRITES = [
         """CREATE TABLE order_matches(
                                     tx0_index INTEGER,
                                     tx0_hash BLOB,
-                                    tx0_address TEXT,
+                                    tx0_address INTEGER,
                                     tx1_index INTEGER,
                                     tx1_hash BLOB,
-                                    tx1_address TEXT,
+                                    tx1_address INTEGER,
                                     forward_asset INTEGER,
                                     forward_quantity INTEGER,
                                     backward_asset INTEGER,
@@ -344,7 +377,7 @@ TABLE_REWRITES = [
         ("order_hash", "source", "block_index"),
         """CREATE TABLE order_expirations(
                                         order_hash BLOB PRIMARY KEY,
-                                        source TEXT,
+                                        source INTEGER,
                                         block_index INTEGER,
                                         FOREIGN KEY (block_index) REFERENCES blocks(block_index))""",
         ("order_hash",),
@@ -366,8 +399,8 @@ TABLE_REWRITES = [
                           tx_index INTEGER PRIMARY KEY,
                           tx_hash BLOB UNIQUE,
                           block_index INTEGER,
-                          source TEXT,
-                          destination TEXT,
+                          source INTEGER,
+                          destination INTEGER,
                           btc_amount INTEGER,
                           order_match_tx0_index INTEGER,
                           order_match_tx1_index INTEGER,
@@ -410,8 +443,8 @@ TABLE_REWRITES = [
                 asset INTEGER,
                 quantity INTEGER,
                 divisible BOOL,
-                source TEXT,
-                issuer TEXT,
+                source INTEGER,
+                issuer INTEGER,
                 transfer BOOL,
                 callable BOOL,
                 call_date INTEGER,
@@ -450,7 +483,7 @@ TABLE_REWRITES = [
                           tx_index INTEGER PRIMARY KEY,
                           tx_hash BLOB UNIQUE,
                           block_index INTEGER,
-                          source TEXT,
+                          source INTEGER,
                           timestamp INTEGER,
                           value REAL,
                           fee_fraction_int INTEGER,
@@ -486,8 +519,8 @@ TABLE_REWRITES = [
                             tx_index INTEGER,
                             tx_hash BLOB,
                             block_index INTEGER,
-                            source TEXT,
-                            feed_address TEXT,
+                            source INTEGER,
+                            feed_address INTEGER,
                             bet_type INTEGER,
                             deadline INTEGER,
                             wager_quantity INTEGER,
@@ -532,13 +565,13 @@ TABLE_REWRITES = [
         """CREATE TABLE bet_matches(
                                 tx0_index INTEGER,
                                 tx0_hash BLOB,
-                                tx0_address TEXT,
+                                tx0_address INTEGER,
                                 tx1_index INTEGER,
                                 tx1_hash BLOB,
-                                tx1_address TEXT,
+                                tx1_address INTEGER,
                                 tx0_bet_type INTEGER,
                                 tx1_bet_type INTEGER,
-                                feed_address TEXT,
+                                feed_address INTEGER,
                                 initial_value INTEGER,
                                 deadline INTEGER,
                                 target_value REAL,
@@ -561,7 +594,7 @@ TABLE_REWRITES = [
         """CREATE TABLE bet_expirations(
                                     bet_index INTEGER PRIMARY KEY,
                                     bet_hash BLOB UNIQUE,
-                                    source TEXT,
+                                    source INTEGER,
                                     block_index INTEGER,
                                     FOREIGN KEY (block_index) REFERENCES blocks(block_index))""",
         ("bet_hash",),
@@ -583,7 +616,7 @@ TABLE_REWRITES = [
                           tx_index INTEGER PRIMARY KEY,
                           tx_hash BLOB UNIQUE,
                           block_index INTEGER,
-                          source TEXT,
+                          source INTEGER,
                           asset INTEGER,
                           dividend_asset INTEGER,
                           quantity_per_unit INTEGER,
@@ -599,7 +632,7 @@ TABLE_REWRITES = [
                           tx_index INTEGER PRIMARY KEY,
                           tx_hash BLOB UNIQUE,
                           block_index INTEGER,
-                          source TEXT,
+                          source INTEGER,
                           burned INTEGER,
                           earned INTEGER,
                           status TEXT,
@@ -622,7 +655,7 @@ TABLE_REWRITES = [
                           tx_index INTEGER PRIMARY KEY,
                           tx_hash BLOB UNIQUE,
                           block_index INTEGER,
-                          source TEXT,
+                          source INTEGER,
                           offer_tx_index INTEGER,
                           status TEXT,
                           FOREIGN KEY (tx_index) REFERENCES transactions(tx_index))""",
@@ -646,7 +679,7 @@ TABLE_REWRITES = [
                             tx_index INTEGER,
                             tx_hash BLOB,
                             block_index INTEGER,
-                            source TEXT,
+                            source INTEGER,
                             possible_moves INTEGER,
                             wager INTEGER,
                             move_random_hash BLOB,
@@ -679,10 +712,10 @@ TABLE_REWRITES = [
         """CREATE TABLE rps_matches(
                                 tx0_index INTEGER,
                                 tx0_hash BLOB,
-                                tx0_address TEXT,
+                                tx0_address INTEGER,
                                 tx1_index INTEGER,
                                 tx1_hash BLOB,
-                                tx1_address TEXT,
+                                tx1_address INTEGER,
                                 tx0_move_random_hash BLOB,
                                 tx1_move_random_hash BLOB,
                                 wager INTEGER,
@@ -702,7 +735,7 @@ TABLE_REWRITES = [
         """CREATE TABLE rps_expirations(
                                     rps_index INTEGER PRIMARY KEY,
                                     rps_hash BLOB UNIQUE,
-                                    source TEXT,
+                                    source INTEGER,
                                     block_index INTEGER,
                                     FOREIGN KEY (block_index) REFERENCES blocks(block_index))""",
         ("rps_hash",),
@@ -724,7 +757,7 @@ TABLE_REWRITES = [
                           tx_index INTEGER PRIMARY KEY,
                           tx_hash BLOB UNIQUE,
                           block_index INTEGER,
-                          source TEXT,
+                          source INTEGER,
                           move INTEGER,
                           random TEXT,
                           rps_match_tx0_index INTEGER,
@@ -750,8 +783,8 @@ TABLE_REWRITES = [
                           tx_index INTEGER PRIMARY KEY,
                           tx_hash BLOB UNIQUE,
                           block_index INTEGER,
-                          source TEXT,
-                          destination TEXT,
+                          source INTEGER,
+                          destination INTEGER,
                           flags INTEGER,
                           status TEXT,
                           memo BLOB,
@@ -783,18 +816,18 @@ TABLE_REWRITES = [
                                 tx_index INTEGER,
                                 tx_hash BLOB,
                                 block_index INTEGER,
-                                source TEXT,
+                                source INTEGER,
                                 asset INTEGER,
                                 give_quantity INTEGER,
                                 escrow_quantity INTEGER,
                                 satoshirate INTEGER,
                                 status INTEGER,
                                 give_remaining INTEGER,
-                                oracle_address TEXT,
+                                oracle_address INTEGER,
                                 last_status_tx_hash BLOB,
-                                origin TEXT,
+                                origin INTEGER,
                                 dispense_count INTEGER DEFAULT 0,
-                                last_status_tx_source TEXT,
+                                last_status_tx_source INTEGER,
                                 close_block_index INTEGER)""",
         ("tx_hash", "last_status_tx_hash"),
     ),
@@ -817,8 +850,8 @@ TABLE_REWRITES = [
                                 dispense_index INTEGER,
                                 tx_hash BLOB,
                                 block_index INTEGER,
-                                source TEXT,
-                                destination TEXT,
+                                source INTEGER,
+                                destination INTEGER,
                                 asset INTEGER,
                                 dispense_quantity INTEGER,
                                 dispenser_tx_index INTEGER,
@@ -843,8 +876,8 @@ TABLE_REWRITES = [
                                         tx_index INTEGER,
                                         tx_hash BLOB,
                                         block_index INTEGER,
-                                        source TEXT,
-                                        destination TEXT,
+                                        source INTEGER,
+                                        destination INTEGER,
                                         asset INTEGER,
                                         dispense_quantity INTEGER,
                                         dispenser_tx_index INTEGER,
@@ -887,7 +920,7 @@ TABLE_REWRITES = [
             tx_hash BLOB,
             tx_index INTEGER,
             block_index INTEGER,
-            source TEXT,
+            source INTEGER,
             asset INTEGER,
             asset_parent INTEGER,
             asset_longname TEXT,
@@ -931,7 +964,7 @@ TABLE_REWRITES = [
             tx_hash BLOB PRIMARY KEY,
             tx_index INTEGER,
             block_index INTEGER,
-            source TEXT,
+            source INTEGER,
             fairminter_tx_index INTEGER,
             asset INTEGER,
             earn_quantity INTEGER,
@@ -963,8 +996,8 @@ TABLE_REWRITES = [
                               tx_index INTEGER,
                               tx_hash BLOB,
                               block_index INTEGER,
-                              source TEXT,
-                              destination TEXT,
+                              source INTEGER,
+                              destination INTEGER,
                               asset INTEGER,
                               quantity INTEGER,
                               status TEXT,
@@ -972,8 +1005,8 @@ TABLE_REWRITES = [
                               memo BLOB,
                               fee_paid INTEGER DEFAULT 0,
                               send_type TEXT,
-                              source_address TEXT,
-                              destination_address TEXT,
+                              source_address INTEGER,
+                              destination_address INTEGER,
                               PRIMARY KEY (tx_index, msg_index),
                               FOREIGN KEY (tx_index) REFERENCES transactions(tx_index),
                               UNIQUE (tx_hash, msg_index) ON CONFLICT FAIL)""",
@@ -995,7 +1028,7 @@ TABLE_REWRITES = [
             tx_index INTEGER,
             tx_hash BLOB,
             block_index INTEGER,
-            source TEXT,
+            source INTEGER,
             asset INTEGER,
             quantity INTEGER,
             tag TEXT,
@@ -1010,10 +1043,23 @@ TABLE_REWRITES = [
                         tx_index INTEGER,
                         block_index INTEGER,
                         out_index INTEGER,
-                        destination TEXT,
+                        destination INTEGER,
                         btc_amount INTEGER,
                         PRIMARY KEY (tx_index, out_index),
                         FOREIGN KEY (tx_index) REFERENCES transactions(tx_index))""",
+        (),
+    ),
+    # addresses: the broadcast/options history table (multiple rows per
+    # address). Its ``address`` TEXT column is normalized to the ``address_id``
+    # FK on ``address_list`` like every other address column. The id table
+    # itself is ``address_list`` (created above), not this history table.
+    (
+        "addresses",
+        ("address", "options", "block_index"),
+        """CREATE TABLE addresses(
+                        address INTEGER,
+                        options INTEGER,
+                        block_index INTEGER)""",
         (),
     ),
     (
@@ -1033,7 +1079,7 @@ TABLE_REWRITES = [
     tx_index INTEGER,
     tx_hash BLOB,
     block_index INTEGER,
-    source TEXT,
+    source INTEGER,
     asset_a INTEGER,
     asset_b INTEGER,
     reserve_a INTEGER,
@@ -1060,7 +1106,7 @@ TABLE_REWRITES = [
     tx_index INTEGER,
     tx_hash BLOB,
     block_index INTEGER,
-    source TEXT,
+    source INTEGER,
     asset_a INTEGER,
     asset_b INTEGER,
     quantity_a INTEGER,
@@ -1088,7 +1134,7 @@ TABLE_REWRITES = [
     tx_index INTEGER,
     tx_hash BLOB,
     block_index INTEGER,
-    source TEXT,
+    source INTEGER,
     asset_a INTEGER,
     asset_b INTEGER,
     quantity_destroyed INTEGER,
@@ -1120,7 +1166,7 @@ TABLE_REWRITES = [
     tx_index INTEGER,
     tx_hash BLOB,
     block_index INTEGER,
-    source TEXT,
+    source INTEGER,
     asset_a INTEGER,
     asset_b INTEGER,
     forward_asset INTEGER,
@@ -1154,8 +1200,8 @@ TABLE_REWRITES = [
         """CREATE TABLE order_match_expirations(
                                           order_match_tx0_index INTEGER,
                                           order_match_tx1_index INTEGER,
-                                          tx0_address TEXT,
-                                          tx1_address TEXT,
+                                          tx0_address INTEGER,
+                                          tx1_address INTEGER,
                                           block_index INTEGER,
                                           PRIMARY KEY (order_match_tx0_index, order_match_tx1_index),
                                           FOREIGN KEY (block_index) REFERENCES blocks(block_index))""",
@@ -1173,8 +1219,8 @@ TABLE_REWRITES = [
         """CREATE TABLE bet_match_expirations(
                                           bet_match_tx0_index INTEGER,
                                           bet_match_tx1_index INTEGER,
-                                          tx0_address TEXT,
-                                          tx1_address TEXT,
+                                          tx0_address INTEGER,
+                                          tx1_address INTEGER,
                                           block_index INTEGER,
                                           PRIMARY KEY (bet_match_tx0_index, bet_match_tx1_index),
                                           FOREIGN KEY (block_index) REFERENCES blocks(block_index))""",
@@ -1192,8 +1238,8 @@ TABLE_REWRITES = [
         """CREATE TABLE rps_match_expirations(
                                           rps_match_tx0_index INTEGER,
                                           rps_match_tx1_index INTEGER,
-                                          tx0_address TEXT,
-                                          tx1_address TEXT,
+                                          tx0_address INTEGER,
+                                          tx1_address INTEGER,
                                           block_index INTEGER,
                                           PRIMARY KEY (rps_match_tx0_index, rps_match_tx1_index),
                                           FOREIGN KEY (block_index) REFERENCES blocks(block_index))""",
@@ -1218,7 +1264,7 @@ TABLE_REWRITES = [
                                           bet_match_tx1_index INTEGER,
                                           bet_match_type_id INTEGER,
                                           block_index INTEGER,
-                                          winner TEXT,
+                                          winner INTEGER,
                                           settled BOOL,
                                           bull_credit INTEGER,
                                           bear_credit INTEGER,
@@ -1271,4 +1317,85 @@ ASSET_NAME_COLUMNS = {
     "pool_deposits": ("asset_a", "asset_b"),
     "pool_withdrawals": ("asset_a", "asset_b"),
     "pool_matches": ("asset_a", "asset_b", "forward_asset", "backward_asset"),
+}
+
+
+# ---------------------------------------------------------------------------
+# Address normalization: columns that store a bitcoin/counterparty address
+# (TEXT) and are rewritten to the compact integer ``address_id`` foreign key on
+# the ``address_list`` identity table.
+#
+# Single source of truth shared by:
+#   * the migration (``0010``): the auto INSERT/SELECT path resolves each of
+#     these columns to its ``address_id`` via a subquery on ``address_list``
+#     (only for columns present in the table's column list); custom
+#     INSERT/SELECT clauses do the same explicitly.
+#   * the write path (``ledger.events._prepare_record_for_insert`` and the
+#     raw-SQL ``add_to_balance``/``remove_from_balance``): converts the
+#     in-memory address string to its ``address_id`` just before INSERT,
+#     creating the ``address_list`` row first if needed (``ensure_address``).
+#   * the read path (``utils.database.rowtracer``): decodes ``address_id`` back
+#     to the address string so consensus/API/tests keep seeing strings.
+#
+# NB: ``mempool.addresses`` is a comma-separated LIST of addresses, not a single
+# address, so it is intentionally absent (stays TEXT). ``mempool_transactions``
+# is transient (rolled back) and also stays TEXT.
+# ---------------------------------------------------------------------------
+ADDRESS_NAME_COLUMNS = {
+    "balances": ("address", "utxo_address"),
+    "credits": ("address", "utxo_address"),
+    "debits": ("address", "utxo_address"),
+    "transactions": ("source", "destination"),
+    "sends": ("source", "destination", "source_address", "destination_address"),
+    "btcpays": ("source", "destination"),
+    "sweeps": ("source", "destination"),
+    "dispenses": ("source", "destination"),
+    "dispenser_refills": ("source", "destination"),
+    "issuances": ("source", "issuer"),
+    "bets": ("source", "feed_address"),
+    "bet_matches": ("tx0_address", "tx1_address", "feed_address"),
+    "order_matches": ("tx0_address", "tx1_address"),
+    "order_match_expirations": ("tx0_address", "tx1_address"),
+    "rps_matches": ("tx0_address", "tx1_address"),
+    "rps_match_expirations": ("tx0_address", "tx1_address"),
+    "bet_match_expirations": ("tx0_address", "tx1_address"),
+    "bet_match_resolutions": ("winner",),
+    "dispensers": ("source", "oracle_address", "origin", "last_status_tx_source"),
+    "transaction_outputs": ("destination",),
+    "addresses": ("address",),
+    "orders": ("source",),
+    "destructions": ("source",),
+    "broadcasts": ("source",),
+    "dividends": ("source",),
+    "burns": ("source",),
+    "cancels": ("source",),
+    "rps": ("source",),
+    "rps_expirations": ("source",),
+    "rpsresolves": ("source",),
+    "bet_expirations": ("source",),
+    "order_expirations": ("source",),
+    "fairminters": ("source",),
+    "fairmints": ("source",),
+    "pools": ("source",),
+    "pool_deposits": ("source",),
+    "pool_withdrawals": ("source",),
+    "pool_matches": ("source",),
+}
+
+
+# ---------------------------------------------------------------------------
+# UTXO compaction: the ``utxo`` TEXT column (``tx_hash:vout``) on
+# balances/credits/debits is replaced by a compact ``(utxo_tx_hash,
+# utxo_vout)`` integer pair. Every utxo's ``tx_hash`` is a Counterparty-indexed
+# transaction (the parser adds any tx spending an asset-bearing UTXO to
+# ``transactions``), so the hash always resolves to a ``tx_index``. The
+# original ``utxo`` string is reconstructed transparently on read by the
+# rowtracer, so consensus/API/tests are unchanged.
+#
+# Mapping: table -> (legacy_utxo_column, tx_index_column, vout_column)
+# ---------------------------------------------------------------------------
+UTXO_SPLIT_COLUMNS = {
+    "balances": ("utxo", "utxo_tx_hash", "utxo_vout"),
+    "credits": ("utxo", "utxo_tx_hash", "utxo_vout"),
+    "debits": ("utxo", "utxo_tx_hash", "utxo_vout"),
 }

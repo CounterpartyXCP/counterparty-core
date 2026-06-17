@@ -119,12 +119,14 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
     ):
         # we take an existing tx to avoid foreign key constraint errors
         cursor = ledger_db.cursor()
+        # ``transactions.source`` is the compact ``address_id`` FK after the
+        # address-normalization migration; resolve the address string to its id.
         if transaction_type is not None:
-            sql = "SELECT * FROM transactions WHERE source = ? AND transaction_type = ? ORDER BY rowid DESC LIMIT 1"
+            sql = "SELECT * FROM transactions WHERE source = (SELECT address_id FROM address_list WHERE address = ?) AND transaction_type = ? ORDER BY rowid DESC LIMIT 1"
             tx = cursor.execute(sql, (source, transaction_type)).fetchone()
         else:
             tx = cursor.execute(
-                f"SELECT * FROM transactions WHERE source = ? ORDER BY rowid {'ASC' if use_first_tx else 'DESC'} LIMIT 1",  # noqa S608
+                f"SELECT * FROM transactions WHERE source = (SELECT address_id FROM address_list WHERE address = ?) ORDER BY rowid {'ASC' if use_first_tx else 'DESC'} LIMIT 1",  # noqa S608
                 (source,),
             ).fetchone()
 

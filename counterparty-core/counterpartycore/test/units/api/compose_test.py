@@ -572,8 +572,8 @@ def test_compose_multiple_detach_includes_all_utxos(ledger_db, defaults):
     the balance-bearing UTXO is selected as the validation source."""
     script_pub_key = "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"
     utxo_with_balance = ledger_db.execute("""
-        SELECT utxo FROM balances
-        WHERE quantity > 0 AND utxo IS NOT NULL
+        SELECT utxo_tx_hash, utxo_vout FROM balances
+        WHERE quantity > 0 AND utxo_tx_hash IS NOT NULL
         ORDER BY rowid DESC LIMIT 1
     """).fetchone()["utxo"]
     # A UTXO without any balance, listed first to ensure the source-selection
