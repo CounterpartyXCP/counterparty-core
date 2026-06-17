@@ -42,12 +42,16 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ~/.cache/counterparty-integration-cache/${{ inputs.integration_cache_network }}
-          # Cache key version: increment to invalidate corrupted caches
+          # Cache key version: increment to invalidate incompatible caches
+          # v4: asset names normalized to a compact `asset_index` FK, folded
+          # into migration 0010. yoyo never re-applies an already-applied 0010,
+          # so v3 cached DBs stay on the pre-`asset_index` schema and the state
+          # migration 0004 then fails with `no such column: a.asset_index`.
           # v3: compact-hash match tables re-keyed on (tx0_index, tx1_index);
           # the v2 cached DBs carry the old TEXT `id` schema and are incompatible.
-          key: integration-v3-${{ inputs.integration_cache_network }}-${{ github.run_id }}
+          key: integration-v4-${{ inputs.integration_cache_network }}-${{ github.run_id }}
           restore-keys: |
-            integration-v3-${{ inputs.integration_cache_network }}-
+            integration-v4-${{ inputs.integration_cache_network }}-
 
       - name: Set up Python
         uses: actions/setup-python@v3
@@ -106,8 +110,9 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: ~/.cache/counterparty-integration-cache/${{ inputs.integration_cache_network }}
-          # Cache key version: increment to invalidate corrupted caches
-          key: integration-v3-${{ inputs.integration_cache_network }}-${{ github.run_id }}
+          # Cache key version: increment to invalidate incompatible caches
+          # (must match the restore key above).
+          key: integration-v4-${{ inputs.integration_cache_network }}-${{ github.run_id }}
 
       - name: Upload coverage
         uses: codecov/codecov-action@v5
