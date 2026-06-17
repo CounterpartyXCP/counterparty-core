@@ -6,7 +6,7 @@ from counterpartycore.lib import backend, config, exceptions, ledger
 from counterpartycore.lib.api.apiwatcher import EVENTS_ADDRESS_FIELDS
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import blocks, deserialize
-from counterpartycore.lib.utils import hashcodec
+from counterpartycore.lib.utils import database, hashcodec
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -178,6 +178,17 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
         # singleton stuck in mempool mode (which would silently disable UTXO
         # cache eviction in subsequent block parsing).
         CurrentState().set_parsing_mempool(False)
+        # The mempool parse above always rolls back its DB mutations (the
+        # `with db:` block exits via MempoolError, or a real error). That
+        # rollback discards any ``assets`` rows it created, but NOT the
+        # per-connection asset_index<->name caches populated while resolving
+        # them. Since ``db`` is the SAME connection used for block parsing,
+        # those stale mappings would otherwise make the next block's
+        # ``asset_index_from_name`` resolve a freshly-issued asset to a reused
+        # index -- e.g. mis-detecting a first issuance as a reissuance and
+        # skipping its XCP fee. Drop them so block parsing re-resolves against
+        # the committed table.
+        database.reset_asset_caches(db)
 
     logger.trace("Mempool transaction parsed successfully.")
     return not_supported_txs

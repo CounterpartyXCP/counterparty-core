@@ -218,28 +218,7 @@ class PropertyTestNode:
                 print(f"Valid balance found for {address_or_utxo} {asset}")
                 return
         if quantity > 0:
-            # --- DIAGNOSTIC: embed in the exception message so it shows up in
-            # the pytest traceback (print() goes to stdout and gets buried
-            # above the huge server-log dump). ---
-            matching = [b for b in balances if b.get(field_name) == address_or_utxo]
-            try:
-                direct = self.node.api_call(f"addresses/{address_or_utxo}/balances/{asset}")[
-                    "result"
-                ]
-            except Exception as exc:  # pylint: disable=broad-except
-                direct = f"<lookup failed: {exc}>"
-            model_rows = [mb for mb in self.balances if mb[0] == address_or_utxo]
-            diag = (
-                f"Valid balance not found for {address_or_utxo} {asset}\n"
-                f"  EXPECTED (model): {field_name}={address_or_utxo} asset={asset} "
-                f"quantity={quantity} utxo_address={utxo_address}\n"
-                f"  AGGREGATE assets/{asset}/balances rows for this {field_name} "
-                f"({len(matching)}): {matching}\n"
-                f"  AGGREGATE total rows for asset {asset}: {len(balances)}\n"
-                f"  DIRECT addresses/{address_or_utxo}/balances/{asset}: {direct}\n"
-                f"  MODEL rows for this address/utxo: {model_rows}"
-            )
-            raise Exception(diag)
+            raise Exception(f"Valid balance not found for {address_or_utxo} {asset}")
 
     def test_with_given_data(self, function, *strategies):
         # Each test must update the balances with the function `self.upsert_balance()`.

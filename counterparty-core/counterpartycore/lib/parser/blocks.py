@@ -593,6 +593,11 @@ def clean_messages_tables(db, block_index=0):
         for table in TABLES:
             clean_table_from(cursor, table, block_index)
         cursor.execute("""PRAGMA foreign_keys=ON""")
+        # ``assets`` is in TABLES, so rows with block_index >= the rollback
+        # point were just deleted and their freed ``asset_index`` values can be
+        # reused by a different asset on reparse. Drop the stale name<->index
+        # cache on this connection.
+        database.reset_asset_caches(db)
 
 
 def clean_transactions_tables(cursor, block_index=0):
@@ -624,6 +629,10 @@ def rebuild_database(db, include_transactions=True):
     for file in migration_files:
         with open(file, "r", encoding="utf-8") as sql_file:
             db.execute(sql_file.read())
+
+    # The ``assets`` table was just dropped/recreated, so any cached
+    # name<->asset_index mapping on this connection is now stale.
+    database.reset_asset_caches(db)
 
 
 def rollback(db, block_index=0, force=False):

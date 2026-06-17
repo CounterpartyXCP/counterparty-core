@@ -137,6 +137,23 @@ def asset_index_from_name(db, asset_name):
     return index
 
 
+def reset_asset_caches(db):
+    """Drop the per-connection ``asset_index``<->name caches for ``db``.
+
+    The caches assume asset rows are append-only and ``asset_index`` is
+    immutable, which holds during a committed forward parse. It is VIOLATED
+    whenever a transaction that created ``assets`` rows is ROLLED BACK on the
+    same connection: the freed ``asset_index`` is reused by a different asset
+    on the next parse, so a cached name->index (or index->name) mapping then
+    resolves to the wrong asset. The mempool parser creates this exact
+    situation -- it parses a fake block (creating/caching asset rows) and then
+    rolls back the DB to discard the mempool state -- and so do reorg/reparse.
+    Call this right after such a rollback so subsequent parsing re-resolves
+    against the actual committed ``assets`` table."""
+    _ASSET_NAME_BY_INDEX.pop(db, None)
+    _ASSET_INDEX_BY_NAME.pop(db, None)
+
+
 def _convert_value(name, field_type, value):
     # Fast path: most columns are non-NULL primitives (int, str, ...) and
     # not BOOL/BLOB hashes. Putting the cheapest checks first avoids the
