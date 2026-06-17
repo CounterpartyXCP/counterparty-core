@@ -636,8 +636,13 @@ def generate_regtest_fixtures(db):
     # get utxo with balance. ``balances.asset`` now stores the compact
     # ``asset_index`` (decoded back to a name by the rowtracer on read), so
     # filter via the name->index subquery rather than the literal asset name.
+    # The ``utxo`` TEXT column was split into ``(utxo_tx_hash BLOB, utxo_vout)``
+    # in the compact-storage migration; SELECT both so the rowtracer
+    # reconstructs ``row['utxo']`` (``tx_hash:vout``), and filter on
+    # ``utxo_tx_hash IS NOT NULL`` (the old ``utxo IS NOT NULL``).
     cursor.execute(
-        "SELECT utxo FROM balances WHERE utxo IS NOT NULL AND quantity > 0 "
+        "SELECT utxo_tx_hash, utxo_vout FROM balances "
+        "WHERE utxo_tx_hash IS NOT NULL AND quantity > 0 "
         "AND asset=(SELECT asset_index FROM assets WHERE asset_name='UTXOASSET') "
         "ORDER BY rowid DESC LIMIT 1"
     )
