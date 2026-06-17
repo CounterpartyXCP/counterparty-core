@@ -818,7 +818,12 @@ def select_rows(
                         )
                         bindings.append(value)
                     field = key
-                elif key == "utxo" and _address_index_table is not None and isinstance(value, str) and ":" in value:
+                elif (
+                    key == "utxo"
+                    and _address_index_table is not None
+                    and isinstance(value, str)
+                    and ":" in value
+                ):
                     # Ledger DB: ``utxo`` is stored as the compact
                     # ``(utxo_tx_hash BLOB, utxo_vout)`` pair; split the filter.
                     tx_hash_hex, _, vout = value.partition(":")

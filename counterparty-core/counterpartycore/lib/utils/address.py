@@ -128,7 +128,12 @@ def unpack_legacy(short_address_bytes):
         # we have a segwit address here
         witver = short_address_bytes[0] - 0x80
         witprog = short_address_bytes[1:]
-        return str(bitcoin.bech32.CBech32Data.from_bytes(witver, witprog))
+        try:
+            return str(bitcoin.bech32.CBech32Data.from_bytes(witver, witprog))
+        except (TypeError, ValueError) as e:
+            # bech32 encoding fails for an invalid witness program length
+            # (CBech32Data.__str__ returns None); treat as unpackable
+            raise exceptions.UnpackError from e
 
     check = bitcoin.core.Hash(short_address_bytes)[0:4]
     return bitcoin.base58.encode(short_address_bytes + check)

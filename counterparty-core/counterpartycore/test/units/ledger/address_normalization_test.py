@@ -11,7 +11,9 @@ def test_address_resolve_roundtrip(ledger_db):
     assert database.address_index_from_name(ledger_db, addr) == addr_id
     assert database.address_string_from_index(ledger_db, addr_id) == addr
     # an unregistered address resolves to None (stored as NULL)
-    assert database.address_index_from_name(ledger_db, "1NeverSeenAddrZZZZZZZZZZZZZZZZZZZZZ") is None
+    assert (
+        database.address_index_from_name(ledger_db, "1NeverSeenAddrZZZZZZZZZZZZZZZZZZZZZ") is None
+    )
 
 
 def test_address_cache_lru_bounded(ledger_db, monkeypatch):

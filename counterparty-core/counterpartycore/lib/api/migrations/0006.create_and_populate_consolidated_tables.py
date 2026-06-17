@@ -106,14 +106,15 @@ def build_consolidated_table(state_db, table_name):
             sqls.append(sql["sql"])
 
     for sql in sqls:
+        create_sql = sql
         if table_name == "balances":
             # The State DB keeps the ``utxo`` string (reconstructed below) rather
             # than the compact ledger ``(utxo_tx_hash, utxo_vout)`` pair, so it
             # can read its own rows without ``ledger_db`` attached.
-            sql = sql.replace("utxo_tx_hash BLOB,", "utxo TEXT,").replace(
+            create_sql = create_sql.replace("utxo_tx_hash BLOB,", "utxo TEXT,").replace(
                 "utxo_vout INTEGER,", ""
             )
-        state_db.execute(sql)
+        state_db.execute(create_sql)
 
     state_db.execute(f"""
         CREATE TEMP TABLE latest_ids AS
@@ -173,12 +174,13 @@ def build_consolidated_table(state_db, table_name):
             state_db.execute(post_query)
 
     for sql_index in indexes:
+        index_sql = sql_index
         if table_name == "balances":
             # the State DB balances keeps a single ``utxo`` TEXT column, so the
             # ledger's composite ``(utxo_tx_hash, utxo_vout)`` indexes map onto
             # ``utxo``.
-            sql_index = sql_index.replace("utxo_tx_hash, utxo_vout", "utxo")
-        state_db.execute(sql_index)
+            index_sql = index_sql.replace("utxo_tx_hash, utxo_vout", "utxo")
+        state_db.execute(index_sql)
     logger.debug(
         "Copied consolidated table `%s` in %.2f seconds", table_name, time.time() - start_time
     )

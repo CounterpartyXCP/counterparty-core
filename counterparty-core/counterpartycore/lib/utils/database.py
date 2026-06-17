@@ -213,6 +213,7 @@ _ADDRESS_INDEX_BY_STRING = weakref.WeakKeyDictionary()
 # connection, or ``None`` if not reachable).
 _ADDRESS_LIST_TABLE_NAME = weakref.WeakKeyDictionary()
 
+
 def _lru_get(cache_dict, db, key):
     """Return (found, value) from the per-connection ``OrderedDict`` for ``db``,
     moving the key to the most-recently-used end on a hit."""
