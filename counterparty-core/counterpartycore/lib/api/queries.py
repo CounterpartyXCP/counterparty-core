@@ -98,6 +98,38 @@ _MATCH_ID_HASH_WHERE = {
 # connection is garbage-collected.
 _TX_TABLE_NAME_CACHE: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
 
+# Same per-connection caching for the "is this a Ledger DB?" probes used by
+# ``select_rows`` to decide whether asset/address filters need the
+# name->index / string->id rewrite. Without these, every API read issued two
+# extra SQL probes (``main.assets`` / ``main.address_list``); the result is
+# fixed for the life of a connection.
+_ASSETS_INDEX_TABLE_CACHE: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
+_ADDRESS_INDEX_TABLE_CACHE: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
+
+
+def _resolve_local_index_table(db, qualified_name, cache):
+    """Return ``qualified_name`` if it is a *local* (``main.``) table on this
+    connection -- i.e. a Ledger DB -- else ``None``. On a State DB connection the
+    table is only reachable as the ATTACHed ``ledger_db.<name>``, so the
+    ``main.``-qualified probe fails and we return ``None``. Cached per connection
+    (empty-string sentinel for the negative result), mirroring
+    ``_resolve_transactions_table_name``.
+
+    ``qualified_name`` is always a hard-coded ``main.``-prefixed constant from
+    the caller, so the f-string is safe.
+    """
+    cached = cache.get(db)
+    if cached is not None:
+        return cached if cached != "" else None
+    try:
+        db.cursor().execute(f"SELECT 1 FROM {qualified_name} LIMIT 0")  # nosec B608  # noqa: S608
+        resolved = qualified_name
+    except apsw.SQLError:
+        resolved = None
+    cache[db] = resolved if resolved is not None else ""
+    return resolved
+
+
 _ALLOWED_TX_TABLE_NAMES = frozenset({"transactions", "ledger_db.transactions"})
 
 
@@ -670,12 +702,8 @@ def select_rows(
     # table: on a State DB connection ``assets`` is only reachable as the
     # ATTACHed ``ledger_db.assets`` (so unqualified ``assets`` resolves there
     # too -- ``main.`` makes the probe connection-specific). Only Ledger DB
-    # asset filters need the name->index subquery rewrite.
-    try:
-        db.cursor().execute("SELECT 1 FROM main.assets LIMIT 0")
-        _assets_index_table = "main.assets"
-    except apsw.SQLError:
-        _assets_index_table = None
+    # asset filters need the name->index subquery rewrite. Cached per connection.
+    _assets_index_table = _resolve_local_index_table(db, "main.assets", _ASSETS_INDEX_TABLE_CACHE)
 
     def _is_asset_index_col(field):
         return _assets_index_table is not None and field in database.ASSET_INDEX_COLUMN_NAMES
@@ -684,12 +712,10 @@ def select_rows(
     # DB tables, while the State DB consolidated tables keep the string. Detect a
     # Ledger DB connection by probing for a *local* ``main.address_list`` (mirror
     # the asset probe above). Only Ledger DB address filters need the
-    # string->id subquery rewrite.
-    try:
-        db.cursor().execute("SELECT 1 FROM main.address_list LIMIT 0")
-        _address_index_table = "main.address_list"
-    except apsw.SQLError:
-        _address_index_table = None
+    # string->id subquery rewrite. Cached per connection.
+    _address_index_table = _resolve_local_index_table(
+        db, "main.address_list", _ADDRESS_INDEX_TABLE_CACHE
+    )
 
     def _is_address_index_col(field):
         return _address_index_table is not None and field in database.ADDRESS_INDEX_COLUMN_NAMES

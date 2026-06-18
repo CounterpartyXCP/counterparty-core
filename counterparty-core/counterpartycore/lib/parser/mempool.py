@@ -22,9 +22,13 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
     not_supported_txs = []
     try:
         with db:
-            # insert fake block (block_hash stored as BLOB after the size
-            # optimization migration; convert from the hex MEMPOOL_BLOCK_HASH
-            # constant inline since this path bypasses ``insert_record``).
+            # insert fake block. block_hash is the "mempool" sentinel, NOT a
+            # real hash: store it as the TEXT value as-is. Do NOT call
+            # hash_to_db -- it would UTF-8-encode the sentinel into a 7-byte
+            # BLOB which the rowtracer would then decode back as the hex
+            # "6d656d706f6f6c". A TEXT value in the BLOB-affinity block_hash
+            # column is left untouched by the rowtracer (it only decodes bytes),
+            # mirroring the mempool_transactions.block_hash write below.
             cursor.execute(
                 """INSERT INTO blocks(
                                 block_index,
@@ -32,7 +36,7 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
                                 block_time) VALUES(?,?,?)""",
                 (
                     config.MEMPOOL_BLOCK_INDEX,
-                    hashcodec.hash_to_db(config.MEMPOOL_BLOCK_HASH),
+                    config.MEMPOOL_BLOCK_HASH,
                     now,
                 ),
             )

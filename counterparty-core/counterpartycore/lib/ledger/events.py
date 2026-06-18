@@ -153,6 +153,15 @@ def _address_id(db, address):
     through unchanged (e.g. the ``address`` column on a UTXO balance is NULL)."""
     if address is None or not isinstance(address, str):
         return address
+    # Fast path: an already-registered address resolves straight from the
+    # per-connection LRU (or a single SELECT), so skip the ``INSERT OR IGNORE``
+    # write entirely. Only register (and re-query) on a genuine first sighting.
+    # On a full reparse the same hot addresses recur on nearly every
+    # credit/debit/balance row, so this turns the common case from a write into
+    # a cache hit.
+    index = database.address_index_from_name(db, address)
+    if index is not None:
+        return index
     ensure_address(db, address)
     return database.address_index_from_name(db, address)
 
