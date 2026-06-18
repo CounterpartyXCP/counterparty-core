@@ -314,6 +314,43 @@ def test_select_rows_sort_additional_quantitative_tables(ledger_db):
         assert [row[sort_field] for row in result.result] == expected
 
 
+def test_select_rows_sort_on_joined_table_qualifies_ambiguous_column(ledger_db):
+    """Sorting a ``_HASH_FK_PROJECTIONS`` table (dispenses, pool_matches) by a
+    column that also exists on ``transactions`` must not raise.
+
+    Regression guard: these tables are queried as
+    ``<table> AS __m LEFT JOIN transactions AS __txjoin``, so a bare
+    ``ORDER BY btc_amount`` / ``ORDER BY block_index`` is an ambiguous column
+    reference and SQLite raised ``ambiguous column name`` (HTTP 500). The sort
+    field must be qualified with ``__m.`` exactly like the WHERE/cursor clauses.
+    The dispenses fixture sets btc_amount to {1, 2} while the joined transactions
+    rows have btc_amount 0, so the asserted order also proves it sorts on the
+    dispenses column, not the transactions one.
+    """
+    _insert_quantitative_sort_fixtures(ledger_db)
+
+    for order, expected in (("asc", [1, 2]), ("desc", [2, 1])):
+        result = queries.select_rows(
+            ledger_db,
+            "dispenses",
+            where={"asset": "SORTDISP"},
+            sort=f"btc_amount:{order}",
+            limit=10,
+        )
+        assert [row["btc_amount"] for row in result.result] == expected
+
+    # block_index is also ambiguous (present on both dispenses and transactions);
+    # sorting by it must succeed rather than raise.
+    result = queries.select_rows(
+        ledger_db,
+        "dispenses",
+        where={"asset": "SORTDISP"},
+        sort="block_index:asc",
+        limit=10,
+    )
+    assert len(result.result) == 2
+
+
 def test_select_rows_sort_by_asset_orders_by_name_on_ledger_db(ledger_db):
     """Sorting a Ledger DB table by ``asset`` must order by the asset *name*,
     not by the compact ``asset_index`` the column is stored as.

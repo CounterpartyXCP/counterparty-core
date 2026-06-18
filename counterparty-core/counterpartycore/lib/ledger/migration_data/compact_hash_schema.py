@@ -82,6 +82,11 @@ INDEXES_AFTER_REWRITE = [
     # ``address`` UNIQUE constraint already creates an index; this mirrors the
     # explicit assets_asset_name_idx for the string->id resolver lookups.
     "CREATE INDEX IF NOT EXISTS address_list_address_idx ON address_list (address)",
+    # addresses (options/REQUIRE_MEMO history). ``address`` is now the INTEGER FK,
+    # but ``get_addresses`` still filters ``WHERE address = ? GROUP BY address`` on a
+    # consensus path (memo-gated sends, options broadcasts), so the original
+    # addresses_address_idx must be recreated or those lookups become full scans.
+    "CREATE INDEX IF NOT EXISTS addresses_address_idx ON addresses (address)",
     # debits
     "CREATE INDEX IF NOT EXISTS debits_address_idx ON debits (address)",
     "CREATE INDEX IF NOT EXISTS debits_asset_idx ON debits (asset)",

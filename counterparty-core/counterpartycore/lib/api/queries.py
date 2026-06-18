@@ -1116,7 +1116,12 @@ def select_rows(
                         f"WHERE address_id = {sort_name}) {sort_order.upper()}"
                     )
                 else:
-                    order_by.append(f"{sort_name} {sort_order.upper()}")
+                    # Qualify like the WHERE/cursor clauses: on _HASH_FK_PROJECTIONS
+                    # tables the FROM is ``<table> AS __m LEFT JOIN transactions``, so a
+                    # bare sort column that also exists on transactions (block_index,
+                    # btc_amount) is an ambiguous reference. ``_qualify`` prefixes those
+                    # with ``__m.`` and leaves every other field untouched.
+                    order_by.append(f"{_qualify(sort_name)} {sort_order.upper()}")
     elif table == "all_transactions_with_status":
         order_by.append("confirmed ASC")
         order_by.append(f"{cursor_field} {order}")
