@@ -1,5 +1,9 @@
 from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.utils import hashcodec
+from counterpartycore.lib.utils.database import (
+    ADDRESS_INDEX_COLUMN_NAMES,
+    ASSET_INDEX_COLUMN_NAMES,
+)
 
 # =============================================================================
 # Tests for migration rollback functions
@@ -444,3 +448,62 @@ def test_migration_0004_locked_columns_are_booleans(state_db):
         assert r["description_locked"] in (0, 1, None), (
             f"asset {r['asset']} has description_locked={r['description_locked']}"
         )
+
+
+# Consolidated tables built by migrations 0006/0014 that carry asset/address
+# columns. The State DB stores the *decoded* name/address string in them.
+_CONSOLIDATED_INDEX_COLUMN_TABLES = (
+    "orders",
+    "dispensers",
+    "balances",
+    "order_matches",
+    "bet_matches",
+    "rps_matches",
+    "pools",
+)
+
+
+def test_consolidated_index_columns_are_text(state_db):
+    """Regression for the ~55s ``/addresses/<a>/orders`` (and slow dispenser)
+    load-test outliers: the asset/address columns are stored as the compact
+    INTEGER index on the Ledger DB, and the consolidated-table migrations copy
+    that DDL verbatim while inserting the *decoded* TEXT name/address. Left at
+    INTEGER affinity the column mismatches ``assets_info.asset`` (TEXT) in the
+    ``orders_info`` join / dispenser price subquery, which silently defeats the
+    index and degrades into a full scan of ``assets_info`` per row. They must
+    keep TEXT affinity.
+    """
+    index_cols = ASSET_INDEX_COLUMN_NAMES | ADDRESS_INDEX_COLUMN_NAMES
+    for table in _CONSOLIDATED_INDEX_COLUMN_TABLES:
+        if not table_exists(state_db, table):
+            continue
+        offenders = [
+            (col["name"], col["type"])
+            for col in state_db.execute(f"PRAGMA table_info({table})").fetchall()
+            if col["name"] in index_cols and col["type"] != "TEXT"
+        ]
+        assert not offenders, (
+            f"{table} has non-TEXT asset/address columns {offenders}; INTEGER "
+            "affinity defeats the assets_info join index (full scan per row)"
+        )
+
+
+def test_orders_info_join_uses_assets_info_index(state_db):
+    """The ``orders_info`` view LEFT JOINs ``assets_info`` twice to resolve
+    divisibility. With TEXT-affinity asset columns those joins must resolve via
+    the ``assets_info`` index (a SEARCH), not a full SCAN -- the SCAN form is
+    what made the orders endpoints multi-second on mainnet.
+    """
+    plan = state_db.execute(
+        "EXPLAIN QUERY PLAN "
+        "SELECT * FROM orders_info WHERE source = 'x' ORDER BY tx_index DESC LIMIT 10"
+    ).fetchall()
+    details = [(row["detail"] if isinstance(row, dict) else row[-1]) for row in plan]
+    # The view aliases ``assets_info`` as ``get_assets`` / ``give_assets``; a
+    # full scan shows as e.g. "SCAN get_assets LEFT-JOIN" (the table name is
+    # absent), so match the aliases. With TEXT affinity these resolve via an
+    # index SEARCH instead.
+    scans = [
+        d for d in details if d.startswith("SCAN") and ("get_assets" in d or "give_assets" in d)
+    ]
+    assert not scans, f"orders_info full-scans assets_info instead of an index seek: {details}"

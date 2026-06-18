@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import threading
 import time
 import weakref
@@ -84,6 +85,38 @@ ADDRESS_INDEX_COLUMN_NAMES = frozenset(
         "last_status_tx_source",
     }
 )
+
+# Union of every column that holds the compact integer asset_index / address_id
+# on the Ledger DB. Used to retype the State DB consolidated-table DDL below.
+INDEX_NAME_COLUMNS = ASSET_INDEX_COLUMN_NAMES | ADDRESS_INDEX_COLUMN_NAMES
+
+
+def text_affinitize_index_columns(create_sql):
+    """Rewrite ``<col> INTEGER`` -> ``<col> TEXT`` for every asset/address index
+    column in a copied ``CREATE TABLE`` statement.
+
+    The Ledger DB stores these columns as the compact ``INTEGER`` index, but the
+    State DB consolidated tables (api/migrations ``0006`` and ``0014``) copy that
+    DDL verbatim while populating the columns with the *decoded* TEXT
+    name/address. Left at INTEGER affinity the column mismatches
+    ``assets_info.asset`` (TEXT) in the ``orders_info`` view join and the
+    dispenser ``price`` subquery, which silently defeats the index on
+    ``assets_info`` and turns those reads into a full scan per row (observed: a
+    single ``/addresses/<a>/orders`` request took ~55s on mainnet). Restoring
+    TEXT affinity lets the joins use the index again.
+
+    The match is anchored on a non-word boundary so ``asset`` does not rewrite
+    ``give_asset``/``asset_parent`` and ``address`` does not rewrite
+    ``utxo_address``/``source_address``.
+    """
+    for col in INDEX_NAME_COLUMNS:
+        create_sql = re.sub(
+            rf"(?<!\w){re.escape(col)}\s+INTEGER\b",
+            f"{col} TEXT",
+            create_sql,
+        )
+    return create_sql
+
 
 # Per-connection cache size cap for the high-cardinality address/tx_hash
 # resolvers. Assets are a few thousand (unbounded dict is fine), but addresses

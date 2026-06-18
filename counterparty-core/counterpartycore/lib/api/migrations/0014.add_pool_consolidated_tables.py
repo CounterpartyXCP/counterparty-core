@@ -8,6 +8,7 @@ from counterpartycore.lib import config
 from counterpartycore.lib.utils.database import (
     ADDRESS_INDEX_COLUMN_NAMES,
     ASSET_INDEX_COLUMN_NAMES,
+    text_affinitize_index_columns,
 )
 from yoyo import step
 
@@ -50,7 +51,12 @@ def build_table(state_db, table_name, group_by):
             sqls.append(row["sql"])
 
     for sql in sqls:
-        state_db.execute(sql)
+        # The State DB stores the decoded asset name / address string in the
+        # asset/address columns, so retype them from the ledger's compact
+        # ``INTEGER`` to ``TEXT`` (matching ``assets_info.asset``) -- otherwise
+        # the affinity mismatch defeats the index on joins/subqueries against
+        # ``assets_info`` and degrades into full scans.
+        state_db.execute(text_affinitize_index_columns(sql))
 
     # Get latest row per group
     # table_name and group_by come from the hardcoded POOL_TABLES dict, not user input

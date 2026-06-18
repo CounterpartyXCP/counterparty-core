@@ -8,6 +8,7 @@ from counterpartycore.lib import config
 from counterpartycore.lib.utils.database import (
     ADDRESS_INDEX_COLUMN_NAMES,
     ASSET_INDEX_COLUMN_NAMES,
+    text_affinitize_index_columns,
 )
 from yoyo import step
 
@@ -114,6 +115,12 @@ def build_consolidated_table(state_db, table_name):
             create_sql = create_sql.replace("utxo_tx_hash BLOB,", "utxo TEXT,").replace(
                 "utxo_vout INTEGER,", ""
             )
+        # The State DB stores the *decoded* asset name / address string in these
+        # columns (see the INSERT below), so retype them from the ledger's
+        # compact ``INTEGER`` to ``TEXT``. Without this the INTEGER affinity
+        # mismatches ``assets_info.asset`` (TEXT) in the ``orders_info`` join and
+        # dispenser price subquery and defeats the index -> full scans.
+        create_sql = text_affinitize_index_columns(create_sql)
         state_db.execute(create_sql)
 
     state_db.execute(f"""
