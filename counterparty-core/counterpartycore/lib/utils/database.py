@@ -99,6 +99,28 @@ ADDRESS_CACHE_MAXSIZE = 100_000
 #   * name->index misses may later become hits (the asset gets registered), so
 #     only hits are cached there.
 _CACHE_MISS = object()
+
+# Serializes the *container-level* mutations of the per-connection cache maps
+# below (creating/dropping a connection's entry, the weakref-cleanup path).
+# Each connection is used by a single thread at a time, so the inner per-
+# connection caches are touched lock-free by their one owning thread; only the
+# shared outer ``WeakKeyDictionary`` containers need guarding. The lock is NEVER
+# held across a DB query, so API threads never serialise on it during reads.
+_CACHE_CONTAINER_LOCK = threading.RLock()
+
+
+def _conn_cache(cache_dict, db, factory):
+    """Return the per-connection cache for ``db`` from ``cache_dict``, creating
+    it with ``factory()`` on first use. Guards only the shared-container access;
+    the returned object is then used lock-free by the single owning thread."""
+    with _CACHE_CONTAINER_LOCK:
+        cache = cache_dict.get(db)
+        if cache is None:
+            cache = factory()
+            cache_dict[db] = cache
+        return cache
+
+
 _ASSET_NAME_BY_INDEX = weakref.WeakKeyDictionary()
 _ASSET_INDEX_BY_NAME = weakref.WeakKeyDictionary()
 # Per-connection name of the ``assets`` table. On a Ledger DB connection it is
@@ -108,7 +130,8 @@ _ASSETS_TABLE_NAME = weakref.WeakKeyDictionary()
 
 
 def _resolve_assets_table(db):
-    cached = _ASSETS_TABLE_NAME.get(db, _CACHE_MISS)
+    with _CACHE_CONTAINER_LOCK:
+        cached = _ASSETS_TABLE_NAME.get(db, _CACHE_MISS)
     if cached is not _CACHE_MISS:
         return cached
     name = None
@@ -119,7 +142,8 @@ def _resolve_assets_table(db):
             continue
         name = candidate
         break
-    _ASSETS_TABLE_NAME[db] = name
+    with _CACHE_CONTAINER_LOCK:
+        _ASSETS_TABLE_NAME[db] = name
     return name
 
 
@@ -127,10 +151,7 @@ def asset_name_from_index(db, index):
     """Resolve a stored ``asset_index`` to its asset name. Returns the raw
     index unchanged if it cannot be resolved (e.g. the ``assets`` table is not
     reachable from this connection)."""
-    cache = _ASSET_NAME_BY_INDEX.get(db)
-    if cache is None:
-        cache = {}
-        _ASSET_NAME_BY_INDEX[db] = cache
+    cache = _conn_cache(_ASSET_NAME_BY_INDEX, db, dict)
     name = cache.get(index, _CACHE_MISS)
     if name is _CACHE_MISS:
         table = _resolve_assets_table(db)
@@ -155,10 +176,7 @@ def asset_index_from_name(db, asset_name):
     never-issued asset), which stores as NULL."""
     if asset_name is None:
         return None
-    cache = _ASSET_INDEX_BY_NAME.get(db)
-    if cache is None:
-        cache = {}
-        _ASSET_INDEX_BY_NAME[db] = cache
+    cache = _conn_cache(_ASSET_INDEX_BY_NAME, db, dict)
     index = cache.get(asset_name, _CACHE_MISS)
     if index is _CACHE_MISS:
         table = _resolve_assets_table(db)
@@ -192,8 +210,9 @@ def reset_asset_caches(db):
     rolls back the DB to discard the mempool state -- and so do reorg/reparse.
     Call this right after such a rollback so subsequent parsing re-resolves
     against the actual committed ``assets`` table."""
-    _ASSET_NAME_BY_INDEX.pop(db, None)
-    _ASSET_INDEX_BY_NAME.pop(db, None)
+    with _CACHE_CONTAINER_LOCK:
+        _ASSET_NAME_BY_INDEX.pop(db, None)
+        _ASSET_INDEX_BY_NAME.pop(db, None)
 
 
 # Hot-path local reference (avoids the per-cell attribute lookup in rowtracer).
@@ -217,7 +236,8 @@ _ADDRESS_LIST_TABLE_NAME = weakref.WeakKeyDictionary()
 def _lru_get(cache_dict, db, key):
     """Return (found, value) from the per-connection ``OrderedDict`` for ``db``,
     moving the key to the most-recently-used end on a hit."""
-    cache = cache_dict.get(db)
+    with _CACHE_CONTAINER_LOCK:
+        cache = cache_dict.get(db)
     if cache is None:
         return False, None
     value = cache.get(key, _CACHE_MISS)
@@ -230,10 +250,7 @@ def _lru_get(cache_dict, db, key):
 def _lru_put(cache_dict, db, key, value, maxsize):
     """Insert ``key -> value`` into the per-connection ``OrderedDict`` for
     ``db``, evicting the least-recently-used entry past ``maxsize``."""
-    cache = cache_dict.get(db)
-    if cache is None:
-        cache = OrderedDict()
-        cache_dict[db] = cache
+    cache = _conn_cache(cache_dict, db, OrderedDict)
     cache[key] = value
     cache.move_to_end(key)
     while len(cache) > maxsize:
@@ -241,7 +258,8 @@ def _lru_put(cache_dict, db, key, value, maxsize):
 
 
 def _resolve_address_list_table(db):
-    cached = _ADDRESS_LIST_TABLE_NAME.get(db, _CACHE_MISS)
+    with _CACHE_CONTAINER_LOCK:
+        cached = _ADDRESS_LIST_TABLE_NAME.get(db, _CACHE_MISS)
     if cached is not _CACHE_MISS:
         return cached
     name = None
@@ -252,7 +270,8 @@ def _resolve_address_list_table(db):
             continue
         name = candidate
         break
-    _ADDRESS_LIST_TABLE_NAME[db] = name
+    with _CACHE_CONTAINER_LOCK:
+        _ADDRESS_LIST_TABLE_NAME[db] = name
     return name
 
 
@@ -314,8 +333,9 @@ def reset_address_caches(db):
     BACK on the same connection (mempool parse, reorg/reparse): the freed id is
     reused by a different address on the next parse. Call this right after such
     a rollback. See ``reset_asset_caches``."""
-    _ADDRESS_STRING_BY_INDEX.pop(db, None)
-    _ADDRESS_INDEX_BY_STRING.pop(db, None)
+    with _CACHE_CONTAINER_LOCK:
+        _ADDRESS_STRING_BY_INDEX.pop(db, None)
+        _ADDRESS_INDEX_BY_STRING.pop(db, None)
 
 
 def split_utxo(utxo):

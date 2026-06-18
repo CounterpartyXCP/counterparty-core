@@ -1098,7 +1098,25 @@ def select_rows(
             if table == "balances" and sort_name == "asset":
                 order_by.append(f"COALESCE(asset_longname, asset) {sort_order.upper()}")
             elif sort_name in SUPPORTED_SORT_FIELDS.get(table, []):
-                order_by.append(f"{sort_name} {sort_order.upper()}")
+                # On a Ledger DB table the asset/address columns store the
+                # compact integer index, so a bare ``ORDER BY asset`` would sort
+                # by issuance order / id instead of the name/string the legacy
+                # API ordered by. Resolve the index back to the name/string in
+                # the ORDER BY to preserve the pre-normalization sort order
+                # (the probes are None on the State DB, where these columns keep
+                # their TEXT name/string and the bare clause is correct).
+                if _is_asset_index_col(sort_name):
+                    order_by.append(
+                        f"(SELECT asset_name FROM {_assets_index_table} "  # noqa: S608 # nosec B608
+                        f"WHERE asset_index = {sort_name}) {sort_order.upper()}"
+                    )
+                elif _is_address_index_col(sort_name):
+                    order_by.append(
+                        f"(SELECT address FROM {_address_index_table} "  # noqa: S608 # nosec B608
+                        f"WHERE address_id = {sort_name}) {sort_order.upper()}"
+                    )
+                else:
+                    order_by.append(f"{sort_name} {sort_order.upper()}")
     elif table == "all_transactions_with_status":
         order_by.append("confirmed ASC")
         order_by.append(f"{cursor_field} {order}")

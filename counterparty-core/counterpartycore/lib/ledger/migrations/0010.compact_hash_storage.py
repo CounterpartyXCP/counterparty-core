@@ -207,12 +207,26 @@ def apply(conn):
         # stdlib sqlite3 path
         db.create_function("__hex_to_blob", 1, _hex_to_blob_udf)
 
+    # Also register ``hex_lower``/``unhex`` on the migration connection: the
+    # views recreated at the end of this migration reference ``hex_lower``, and
+    # registering it now keeps the recreate robust even if a future SQLite/yoyo
+    # backend validates a view body at CREATE time (it does not today).
+    _register_udfs(db)
+
     # Make sure we can recreate tables freely. ``legacy_alter_table = ON``
     # prevents SQLite from auto-rewriting FK references in *other* tables
     # when we RENAME a parent table -- without it, ``ALTER TABLE blocks
     # RENAME TO blocks_old`` will silently retarget every dependent FK
     # (credits, debits, ...) to ``blocks_old`` and then crash when the
     # legacy table is dropped at the end of the migration.
+    #
+    # NB: ``PRAGMA foreign_keys`` is a no-op inside a transaction, and yoyo runs
+    # this step transactionally -- so the actual guarantee that dropping the
+    # ``*_old`` tables won't trip FK enforcement comes from yoyo's sqlite
+    # backend leaving ``foreign_keys`` OFF by default, reinforced by
+    # ``defer_foreign_keys``/``legacy_alter_table`` below. The OFF here is kept
+    # for the non-transactional fallback and as intent; if a future backend
+    # enables FKs the drop phase must be revisited.
     cursor.execute("PRAGMA foreign_keys = OFF")
     cursor.execute("PRAGMA defer_foreign_keys = ON")
     cursor.execute("PRAGMA legacy_alter_table = ON")

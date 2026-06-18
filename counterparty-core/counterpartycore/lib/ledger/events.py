@@ -410,6 +410,26 @@ def last_message(db):
     return message
 
 
+def _previous_message_for_journal(db):
+    """Return only the ``message_index`` and ``event_hash`` of the latest
+    message. ``add_to_journal`` runs once per event (the hottest write path);
+    it needs nothing else, so this avoids the correlated ``tx_hash`` subquery
+    in ``last_message`` (whose result no caller actually consumes). Raises
+    ``exceptions.DatabaseError`` when the table is empty, matching
+    ``last_message`` so the caller's first-message handling is unchanged."""
+    cursor = db.cursor()
+    row = cursor.execute(
+        """
+        SELECT message_index, event_hash FROM messages
+        WHERE message_index = (SELECT MAX(message_index) FROM messages)
+        """
+    ).fetchone()
+    cursor.close()
+    if row is None:
+        raise exceptions.DatabaseError("No messages found.")
+    return row
+
+
 # we are using a function here for testing purposes
 def curr_time():
     return int(time.time())
@@ -418,7 +438,7 @@ def curr_time():
 def add_to_journal(db, block_index, command, category, event, bindings):
     # Get last message index.
     try:
-        previous_message = last_message(db)
+        previous_message = _previous_message_for_journal(db)
         message_index = previous_message["message_index"] + 1
         # The rowtracer already converts BLOB event_hash back to hex, but be
         # defensive in case the row trace is bypassed somewhere.
@@ -456,14 +476,18 @@ def add_to_journal(db, block_index, command, category, event, bindings):
         ]
     )
     event_hash = binascii.hexlify(helpers.dhash(event_hash_content)).decode("ascii")
-    # ``messages.tx_hash`` has been replaced by ``messages.tx_index``
-    # (INTEGER FK into ``transactions``). Resolve from the in-flight tx_hash
-    # via CurrentState. For block-level events (BLOCK_PARSED, EXPIRE_*) the
-    # tx context is None, so tx_index stays NULL.
+    # ``messages.tx_hash`` has been replaced by ``messages.tx_index``. The
+    # in-flight tx_index is carried on CurrentState alongside the tx_hash, so we
+    # avoid a per-event ``SELECT`` on ``transactions``. For block-level events
+    # (BLOCK_PARSED, EXPIRE_*) the tx context is None, so tx_index stays NULL.
+    # The ``_resolve_tx_index`` fallback only triggers if a caller set the
+    # tx_hash without the matching index, preserving the previous behaviour.
     current_tx_hash_hex = CurrentState().current_tx_hash()
     tx_index = None
     if current_tx_hash_hex is not None:
-        tx_index = _resolve_tx_index(db, current_tx_hash_hex)
+        tx_index = CurrentState().current_tx_index()
+        if tx_index is None:
+            tx_index = _resolve_tx_index(db, current_tx_hash_hex)
     event_hash_blob = hashcodec.hash_to_db(event_hash)
     message_bindings = {
         "message_index": message_index,

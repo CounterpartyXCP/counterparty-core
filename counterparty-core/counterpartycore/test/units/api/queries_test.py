@@ -314,6 +314,86 @@ def test_select_rows_sort_additional_quantitative_tables(ledger_db):
         assert [row[sort_field] for row in result.result] == expected
 
 
+def test_select_rows_sort_by_asset_orders_by_name_on_ledger_db(ledger_db):
+    """Sorting a Ledger DB table by ``asset`` must order by the asset *name*,
+    not by the compact ``asset_index`` the column is stored as.
+
+    Regression guard: a bare ``ORDER BY asset`` would sort by issuance order /
+    id. We register two assets whose insertion (index) order is the REVERSE of
+    their alphabetical order, so an index sort and a name sort disagree.
+    """
+    for asset_id, asset_name in ((990001, "ZZZREGSORT"), (990002, "AAAREGSORT")):
+        ledger_db.execute(
+            "INSERT OR IGNORE INTO assets (asset_id, asset_name) VALUES (?, ?)",
+            (str(asset_id), asset_name),
+        )
+    for addr in ("reg-sort-src", "reg-dest"):
+        ledger_db.execute("INSERT OR IGNORE INTO address_list (address) VALUES (?)", (addr,))
+    ledger_db.executemany(
+        """
+        INSERT INTO transactions (
+            tx_index, tx_hash, block_index, block_time, source, destination,
+            btc_amount, fee, data, supported, utxos_info, transaction_type
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (990001, "7" * 64, 101, 1, "reg-sort-src", "reg-dest", 0, 0, b"", 1, "", "send"),
+            (990002, "8" * 64, 101, 2, "reg-sort-src", "reg-dest", 0, 0, b"", 1, "", "send"),
+        ],
+    )
+    # ``source``/``destination`` are address_id FKs and ``asset`` an asset_index
+    # FK, so resolve them on insert exactly like the write path does.
+    ledger_db.executemany(
+        """
+        INSERT INTO sends (
+            tx_index, tx_hash, block_index, source, destination, asset,
+            quantity, status, msg_index, fee_paid, send_type
+        ) VALUES (?, ?, ?,
+            (SELECT address_id FROM address_list WHERE address = ?),
+            (SELECT address_id FROM address_list WHERE address = ?),
+            (SELECT asset_index FROM assets WHERE asset_name = ?), ?, ?, ?, ?, ?)
+        """,
+        [
+            (
+                990001,
+                "7" * 64,
+                101,
+                "reg-sort-src",
+                "reg-dest",
+                "ZZZREGSORT",
+                1,
+                "valid",
+                0,
+                1,
+                "send",
+            ),
+            (
+                990002,
+                "8" * 64,
+                101,
+                "reg-sort-src",
+                "reg-dest",
+                "AAAREGSORT",
+                1,
+                "valid",
+                0,
+                2,
+                "send",
+            ),
+        ],
+    )
+
+    asc = queries.select_rows(
+        ledger_db, "sends", where={"source": "reg-sort-src"}, sort="asset:asc", limit=10
+    )
+    assert [row["asset"] for row in asc.result] == ["AAAREGSORT", "ZZZREGSORT"]
+
+    desc = queries.select_rows(
+        ledger_db, "sends", where={"source": "reg-sort-src"}, sort="asset:desc", limit=10
+    )
+    assert [row["asset"] for row in desc.result] == ["ZZZREGSORT", "AAAREGSORT"]
+
+
 def test_quantitative_getters_pass_sort_through(ledger_db):
     """The list getters for quantitative tables must forward `sort` to select_rows.
 

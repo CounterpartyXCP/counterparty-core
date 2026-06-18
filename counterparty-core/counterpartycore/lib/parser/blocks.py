@@ -127,7 +127,7 @@ def update_transaction(db, tx, supported):
 
 def parse_tx(db, tx):
     """Parse the transaction, return True for success."""
-    CurrentState().set_current_tx_hash(tx["tx_hash"])
+    CurrentState().set_current_tx_hash(tx["tx_hash"], tx["tx_index"])
     cursor = db.cursor()
 
     supported = True
@@ -284,7 +284,7 @@ def replay_transactions_events(db, transactions):
         return block_hash_cache[block_index]
 
     for tx in transactions:
-        CurrentState().set_current_tx_hash(tx["tx_hash"])
+        CurrentState().set_current_tx_hash(tx["tx_hash"], tx["tx_index"])
         block_hash = _block_hash_for(tx["block_index"])
         transaction_bindings = {
             "tx_index": tx["tx_index"],
@@ -491,7 +491,7 @@ def parse_block(
 
 def list_tx(db, block_hash, block_index, block_time, tx_hash, tx_index, decoded_tx):
     assert isinstance(tx_hash, str), "tx_hash is not a string"
-    CurrentState().set_current_tx_hash(tx_hash)
+    CurrentState().set_current_tx_hash(tx_hash, tx_index)
     cursor = db.cursor()
 
     source, destination, btc_amount, fee, data, dispensers_outs, utxos_info = get_tx_info(
