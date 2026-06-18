@@ -20,7 +20,7 @@ def generate_mainnet_fixtures(db_file):
             "SELECT tx_hash, tx_index, block_index FROM transactions ORDER BY rowid DESC LIMIT 1"
         ).fetchone()
         utxo_with_balance = db.execute(
-            "SELECT * FROM balances WHERE utxo IS NOT null AND quantity > 0 ORDER BY rowid DESC LIMIT 1"
+            "SELECT * FROM balances WHERE utxo_tx_hash IS NOT null AND quantity > 0 ORDER BY rowid DESC LIMIT 1"
         ).fetchone()
         last_dispenser = db.execute(
             "SELECT * FROM dispensers ORDER BY rowid DESC LIMIT 1"
