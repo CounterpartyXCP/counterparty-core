@@ -444,6 +444,14 @@ CONFIG_ARGS = [
         },
     ],
     [
+        ("--api-cache-size",),
+        {
+            "type": int,
+            "default": 1000,
+            "help": "Max entries in the API response cache (BLOCK_CACHE). Lower bounds memory; 0 effectively disables caching.",
+        },
+    ],
+    [
         ("--memory-profile",),
         {
             "action": "store_true",

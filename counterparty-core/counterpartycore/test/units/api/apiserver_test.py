@@ -1112,6 +1112,28 @@ def test_limit_param_capped_to_api_limit_rows(apiv2_client, monkeypatch):
     assert len(response.json["result"]) <= 5
 
 
+def test_api_cache_size_bounds_block_cache(apiv2_client, monkeypatch):
+    """The API response cache fills, stays bounded to config.API_CACHE_SIZE
+    entries, and evicts oldest-first (FIFO)."""
+    # the shared test app disables the cache; enable it so the eviction path runs
+    monkeypatch.setattr(config, "DISABLE_API_CACHE", False)
+    monkeypatch.setattr(config, "API_CACHE_SIZE", 2)
+    apiserver.BLOCK_CACHE.clear()
+
+    # hit several distinct cachable URLs (each a distinct cache key)
+    for limit in (1, 2, 3, 4, 5):
+        assert apiv2_client.get(f"/v2/blocks?limit={limit}").status_code == 200
+
+    # cached AND bounded: exactly the cap (proves it filled and then evicted,
+    # not that it stayed empty)
+    assert len(apiserver.BLOCK_CACHE) == 2
+    # FIFO: the two most-recent survive, the oldest are evicted
+    keys = list(apiserver.BLOCK_CACHE.keys())
+    assert any("limit=5" in k for k in keys)
+    assert any("limit=4" in k for k in keys)
+    assert not any("limit=1" in k for k in keys)
+
+
 def test_limit_param_zero_rejected(apiv2_client):
     """A limit of 0 must be rejected with a clear error."""
     response = apiv2_client.get("/v2/transactions?limit=0")
