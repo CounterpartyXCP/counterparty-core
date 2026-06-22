@@ -79,6 +79,7 @@ The activation block height is not yet set (placeholder `9999999`):
 - Fix intermittent BIP143 signature mismatches in regtest by broadcasting tx1 before signing tx2, so the wallet sees tx1's UTXOs in its mempool view
 - Add a `bootstrap-once` catch-up mode (downloads the bootstrap only when no database exists)
 - Re-enable the profiler on Python 3.12, skip the count query for single-row selects, and normalize null transaction `btc_amount` to `0`
+- Serve the `result_count` of `/v2/events` and `/v2/events/<event>` from the pre-aggregated `events_count` table instead of a full `messages` table scan (turning a ~222ms count on every cache-miss request into a sub-millisecond aggregate); the public query parameters are unchanged
 - Update Python dependencies: Flask 3.0.0→3.1.3, pytest 7.4.4→9.0.3, requests 2.32.4→2.33.0, Werkzeug 3.1.4→3.1.6, itsdangerous 2.1.2→2.2.0
 - Update Rust dependencies: openssl 0.10.79→0.10.81, openssl-sys 0.9.115→0.9.117, pyo3 0.24.2→0.25.1 (migrate `IntoPy`/`into_py` to the `IntoPyObject` API, since the old trait was removed in pyo3 0.25)
 
