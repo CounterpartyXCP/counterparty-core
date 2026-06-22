@@ -563,15 +563,44 @@ def test_transaction_queries_return_zero_btc_amount_for_null(ledger_db, current_
 # =============================================================================
 
 
-def test_get_all_events_with_event_name(ledger_db):
+def _messages_count(ledger_db, event_names=None):
+    cursor = ledger_db.cursor()
+    if event_names is None:
+        return cursor.execute("SELECT COUNT(*) AS count FROM messages").fetchone()["count"]
+    placeholders = ",".join(["?"] * len(event_names))
+    return cursor.execute(
+        f"SELECT COUNT(*) AS count FROM messages WHERE event IN ({placeholders})",  # noqa: S608
+        event_names,
+    ).fetchone()["count"]
+
+
+def test_get_all_events_with_event_name(ledger_db, state_db):
     """Test get_all_events with event_name filter (line 658)."""
     result = queries.get_all_events(
         ledger_db,
+        state_db,
         event_name="CREDIT,DEBIT",
     )
     assert result is not None
     for row in result.result:
         assert row["event"] in ["CREDIT", "DEBIT"]
+    # result_count is read from the pre-aggregated `events_count` table and must
+    # match a direct COUNT(*) over `messages` for the same filter.
+    assert result.result_count == _messages_count(ledger_db, ["CREDIT", "DEBIT"])
+
+
+def test_get_all_events_count_matches_messages(ledger_db, state_db):
+    """The unfiltered total comes from `events_count` and must equal COUNT(*) of messages."""
+    result = queries.get_all_events(ledger_db, state_db)
+    assert result.result_count == _messages_count(ledger_db)
+
+
+def test_get_events_by_name_count_matches_messages(ledger_db, state_db):
+    """get_events_by_name reads its count from `events_count`; it must stay exact."""
+    result = queries.get_events_by_name(ledger_db, state_db, event="CREDIT")
+    for row in result.result:
+        assert row["event"] == "CREDIT"
+    assert result.result_count == _messages_count(ledger_db, ["CREDIT"])
 
 
 def test_get_events_by_block_with_event_name(ledger_db, current_block_index):

@@ -825,8 +825,39 @@ def get_transaction_by_tx_index(ledger_db, tx_index: int):
     )
 
 
+def get_total_events_count(state_db, event_names=None):
+    """
+    Returns the total number of events, optionally restricted to `event_names`.
+
+    Reads the pre-aggregated `events_count` table (one row per event type) instead
+    of running `COUNT(*)` over the whole `messages` table, which is a full scan.
+    `events_count` is maintained incrementally as events are written and fully
+    recomputed on every State DB rollback, so the total stays exact.
+    """
+    cursor = state_db.cursor()
+    if event_names is None:
+        row = cursor.execute("SELECT SUM(count) AS count FROM events_count").fetchone()
+    else:
+        names = [name for name in event_names if name]
+        if not names:
+            return 0
+        placeholders = ",".join(["?"] * len(names))
+        row = cursor.execute(
+            f"SELECT SUM(count) AS count FROM events_count WHERE event IN ({placeholders})",  # noqa: S608 # nosec B608
+            names,
+        ).fetchone()
+    if row is None or row["count"] is None:
+        return 0
+    return row["count"]
+
+
 def get_all_events(
-    ledger_db, event_name: str = None, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    state_db,
+    event_name: str = None,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns all events
@@ -836,9 +867,11 @@ def get_all_events(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     where = None
+    event_names = None
     if event_name:
-        where = [{"event": event} for event in event_name.split(",")]
-    return select_rows(
+        event_names = event_name.split(",")
+        where = [{"event": event} for event in event_names]
+    query_result = select_rows(
         ledger_db,
         "messages",
         where=where,
@@ -847,7 +880,10 @@ def get_all_events(
         limit=limit,
         offset=offset,
         select="message_index AS event_index, event, bindings AS params, tx_hash, block_index",
+        with_count=False,
     )
+    query_result.result_count = get_total_events_count(state_db, event_names)
+    return query_result
 
 
 def get_events_by_block(
@@ -1032,7 +1068,7 @@ def get_event_by_index(ledger_db, event_index: int):
 
 
 def get_events_by_name(
-    ledger_db, event: str, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db, state_db, event: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the events filtered by event name
@@ -1041,7 +1077,7 @@ def get_events_by_name(
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    return select_rows(
+    query_result = select_rows(
         ledger_db,
         "messages",
         where={"event": event},
@@ -1050,7 +1086,10 @@ def get_events_by_name(
         limit=limit,
         offset=offset,
         select="message_index AS event_index, event, bindings AS params, tx_hash, block_index",
+        with_count=False,
     )
+    query_result.result_count = get_total_events_count(state_db, [event])
+    return query_result
 
 
 def get_events_by_addresses(
