@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 from counterpartycore.lib import config, ledger
-from counterpartycore.lib.api import apiserver, apiwatcher, composer
+from counterpartycore.lib.api import apiserver, apiwatcher, blockcache, composer
 from counterpartycore.lib.api.routes import ALL_ROUTES, ROUTES
 from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.lib.parser import blocks
@@ -1226,3 +1226,45 @@ def test_cache_hit_returns_identical_body(apiv2_client, monkeypatch):
         hit = apiv2_client.get(url)  # served from cache, no re-enrichment
         assert hit.status_code == 200
         assert hit.data == miss.data, f"cache hit body differs from miss for {url}"
+
+
+def test_estimate_rows():
+    assert blockcache.estimate_rows([1, 2, 3]) == 3
+    assert blockcache.estimate_rows([]) == 1  # empty -> 1
+    assert blockcache.estimate_rows(apiserver.CachedResponse([1, 2], "c", 9)) == 2
+    assert blockcache.estimate_rows(123) == 1  # no len() -> 1
+    assert blockcache.estimate_rows(None) == 1
+    # single-object (dict) results count as one row, not their key count
+    assert blockcache.estimate_rows({"a": 1, "b": 2}) == 1
+    assert blockcache.estimate_rows(apiserver.CachedResponse({"a": 1, "b": 2}, None, None)) == 1
+
+
+def test_cache_insert_row_budget_evicts_fifo():
+    """With a large entry cap but a small row budget, the row budget binds and
+    evicts oldest-first; the running total stays consistent."""
+    blockcache.reset_block_cache()
+    blockcache.cache_insert("a", [0, 1], max_entries=100, max_rows=5)  # rows=2
+    blockcache.cache_insert("b", [0, 1], max_entries=100, max_rows=5)  # rows=4
+    blockcache.cache_insert("c", [0, 1], max_entries=100, max_rows=5)  # rows=6 -> evict 'a'
+    assert set(blockcache.BLOCK_CACHE) == {"b", "c"}  # 'a' (oldest) evicted
+    assert blockcache.BLOCK_CACHE_ROWS == 4
+    assert blockcache.BLOCK_CACHE_ROWS == sum(blockcache.BLOCK_CACHE_SIZES.values())
+
+
+def test_cache_insert_entry_cap_backstop():
+    """With the row budget disabled (0), the entry-count cap still bounds."""
+    blockcache.reset_block_cache()
+    for i in range(5):
+        blockcache.cache_insert(str(i), [0], max_entries=2, max_rows=0)
+    assert set(blockcache.BLOCK_CACHE) == {"3", "4"}
+    assert blockcache.BLOCK_CACHE_ROWS == sum(blockcache.BLOCK_CACHE_SIZES.values())
+
+
+def test_cache_insert_overwrite_no_double_count():
+    """Overwriting a key updates the running total instead of double-counting."""
+    blockcache.reset_block_cache()
+    blockcache.cache_insert("a", [0, 1, 2], max_entries=100, max_rows=0)
+    blockcache.cache_insert("a", [0], max_entries=100, max_rows=0)
+    assert len(blockcache.BLOCK_CACHE) == 1
+    assert blockcache.BLOCK_CACHE_ROWS == 1
+    assert blockcache.BLOCK_CACHE_ROWS == sum(blockcache.BLOCK_CACHE_SIZES.values())
