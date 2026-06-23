@@ -11,11 +11,6 @@ BLOCK_CACHE = OrderedDict()
 BLOCK_CACHE_SIZES = {}
 BLOCK_CACHE_ROWS = 0
 
-# Entry-count backstop. The row budget (config.API_CACHE_MAX_ROWS) is the primary
-# memory bound; this caps entry count so the cache can't grow without limit when
-# entries are tiny (and bounds memory if the row proxy ever undercounts).
-MAX_BLOCK_CACHE_SIZE = 1000
-
 
 def estimate_rows(value):
     """O(1) row-count proxy for a cached value: the number of rows in its result

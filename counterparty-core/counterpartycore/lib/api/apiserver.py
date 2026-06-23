@@ -20,7 +20,7 @@ from sentry_sdk import start_span as start_sentry_span
 
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import apiwatcher, dbbuilder, healthz, queries, verbose, wsgi
-from counterpartycore.lib.api.blockcache import BLOCK_CACHE, MAX_BLOCK_CACHE_SIZE, cache_insert
+from counterpartycore.lib.api.blockcache import BLOCK_CACHE, cache_insert
 from counterpartycore.lib.api.routes import ROUTES, function_needs_db
 from counterpartycore.lib.cli.initialise import initialise_log_and_config
 from counterpartycore.lib.cli.log import init_api_access_log
@@ -337,9 +337,12 @@ def enrich_result(result):
 
 def cache_response(uncached, response):
     """Store an enriched CachedResponse for a cache miss, if it is cachable.
-    Bounded by both the entry-count backstop and the row budget."""
+    Bounded by both the entry-count cap (config.API_CACHE_SIZE) and the row
+    budget (config.API_CACHE_MAX_ROWS)."""
     if uncached.cachable:
-        cache_insert(uncached.cache_key, response, MAX_BLOCK_CACHE_SIZE, config.API_CACHE_MAX_ROWS)
+        cache_insert(
+            uncached.cache_key, response, config.API_CACHE_SIZE, config.API_CACHE_MAX_ROWS
+        )
 
 
 def execute_api_function(rule, route, function_args):

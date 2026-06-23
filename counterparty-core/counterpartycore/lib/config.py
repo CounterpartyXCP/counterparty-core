@@ -314,6 +314,7 @@ PROFILE_INTERVAL_MINUTES = 15
 CURRENT_COMMIT = "Unknown"
 ENABLE_ALL_PROTOCOL_CHANGES = False
 DISABLE_API_CACHE = False
+API_CACHE_SIZE = 1000  # max entries in the API response cache (BLOCK_CACHE)
 # Total-rows budget for the API response cache (BLOCK_CACHE); 0 disables the row
 # bound (entry count still applies). Bounds cache memory while letting many small
 # entries stay cached. Worst single entry is API_LIMIT_ROWS rows.

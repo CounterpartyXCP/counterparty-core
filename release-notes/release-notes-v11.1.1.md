@@ -60,6 +60,7 @@ The activation block height is not yet set (placeholder `9999999`):
 - Fix MPMA sends: correct per-asset balance accumulation, byte-accurate text-memo length encoding, require a destination per asset, and reject duplicate asset/destination pairs
 - Fix holder/supply consolidation that skipped deduplication (`id` used instead of the record key)
 - Default a missing bet `target_value` to zero and clarify BTC dividend "below dust" errors
+- Stop reporting shutdown interrupts as errors: when the server is stopping, `RawMempoolParser.stop()` calls `db.interrupt()` on the connection shared with the blockchain watcher, aborting any in-flight parse as `ParseTransactionError("interrupted")`; the watcher now treats this as expected teardown noise (logged at debug) instead of logging an error, paging Sentry, and forcing a "fail loud" restart
 
 - Expose a unique `credit_index` / `debit_index` field on `credits` / `debits` rows. Identical rows can be written within a single transaction (e.g. an MPMA send or a dividend crediting the same address+asset more than once), making them byte-identical and indistinguishable to API consumers; the new field carries the row's stable unique id so they can be told apart (#3320)
 
@@ -72,6 +73,7 @@ The activation block height is not yet set (placeholder `9999999`):
 - Enum parameters accept comma-separated values, and dispenser `status` accepts numeric values
 - `/v2/transactions/info` recovers source/destination/amount for BTC-only transactions even without prevouts
 - Add `Cache-Control` headers and a `--disable-api-cache` flag, add API error context to Sentry reports, format IPv6 Gunicorn bind addresses, and report invalid transaction status and empty sweeps clearly
+- Add `--api-cache-size N` (config `API_CACHE_SIZE`, default `1000` — unchanged behavior) to bound the API response cache (`BLOCK_CACHE`) by entry count instead of the old hardcoded 1000-entry cap; lowering it caps the API process's resident memory (trading a small tail-latency increase for a bounded working set), `0` effectively disables caching (#3396)
 - Documentation: API response codes, Counterparty transaction data format, the `messages` table, and sortable route fields
 
 ## Codebase
@@ -80,6 +82,7 @@ The activation block height is not yet set (placeholder `9999999`):
 - Add a `bootstrap-once` catch-up mode (downloads the bootstrap only when no database exists)
 - Re-enable the profiler on Python 3.12, skip the count query for single-row selects, and normalize null transaction `btc_amount` to `0`
 - Serve the `result_count` of `/v2/events` and `/v2/events/<event>` from the pre-aggregated `events_count` table instead of a full `messages` table scan (turning a ~222ms count on every cache-miss request into a sub-millisecond aggregate); the public query parameters are unchanged
+- Cache the enriched, ready-to-serve API response in `BLOCK_CACHE` instead of the raw `QueryResult`, so a cache *hit* now skips the per-row verbose enrichment (`inject_details`) and its DB lookups that previously re-ran on **every** request — collapsing the repeated-request cost that dominated the heavy-endpoint latency tail (production p95/p99). API output and status codes are byte-identical (enrichment still runs once per cache miss, outside the function-call `try`, so error semantics are unchanged); cache entries are now larger (enriched payloads), so `--api-cache-size`/`API_CACHE_SIZE` should be sized accordingly (#3444)
 - Update Python dependencies: Flask 3.0.0→3.1.3, pytest 7.4.4→9.0.3, requests 2.32.4→2.33.0, Werkzeug 3.1.4→3.1.6, itsdangerous 2.1.2→2.2.0
 - Update Rust dependencies: openssl 0.10.79→0.10.81, openssl-sys 0.9.115→0.9.117, pyo3 0.24.2→0.25.1 (migrate `IntoPy`/`into_py` to the `IntoPyObject` API, since the old trait was removed in pyo3 0.25)
 
