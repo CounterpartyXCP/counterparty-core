@@ -140,6 +140,7 @@ def test_argparser():
         "catch_up": "normal",
         "api_only": False,
         "profile": False,
+        "api_cache_size": 1000,
         "memory_profile": False,
         "memory_profile_tracemalloc": False,
         "enable_all_protocol_changes": False,

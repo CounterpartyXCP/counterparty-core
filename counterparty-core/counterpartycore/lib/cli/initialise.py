@@ -140,6 +140,7 @@ def initialise_config(
     electrs_url=None,
     api_only=False,
     profile=False,
+    api_cache_size=1000,
     memory_profile=False,
     memory_profile_tracemalloc=False,
     enable_all_protocol_changes=False,
@@ -566,6 +567,8 @@ def initialise_config(
 
     config.API_ONLY = api_only
     config.PROFILE = profile
+    # clamp negatives to 0 ("0 effectively disables caching"); never below
+    config.API_CACHE_SIZE = max(0, api_cache_size)
     # tracemalloc tracking is an extension of the memory profiler
     config.MEMORY_PROFILE = memory_profile or memory_profile_tracemalloc
     config.MEMORY_PROFILE_TRACEMALLOC = memory_profile_tracemalloc
@@ -622,6 +625,7 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "electrs_url": args.electrs_url,
         "api_only": args.api_only,
         "profile": args.profile,
+        "api_cache_size": getattr(args, "api_cache_size", 1000),
         "memory_profile": args.memory_profile,
         "memory_profile_tracemalloc": getattr(args, "memory_profile_tracemalloc", False),
         "enable_all_protocol_changes": args.enable_all_protocol_changes,
