@@ -340,9 +340,7 @@ def cache_response(uncached, response):
     Bounded by both the entry-count cap (config.API_CACHE_SIZE) and the row
     budget (config.API_CACHE_MAX_ROWS)."""
     if uncached.cachable:
-        cache_insert(
-            uncached.cache_key, response, config.API_CACHE_SIZE, config.API_CACHE_MAX_ROWS
-        )
+        cache_insert(uncached.cache_key, response, config.API_CACHE_SIZE, config.API_CACHE_MAX_ROWS)
 
 
 def execute_api_function(rule, route, function_args):
