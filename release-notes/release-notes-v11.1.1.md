@@ -73,6 +73,7 @@ The activation block height is not yet set (placeholder `9999999`):
 - Enum parameters accept comma-separated values, and dispenser `status` accepts numeric values
 - `/v2/transactions/info` recovers source/destination/amount for BTC-only transactions even without prevouts
 - Add `Cache-Control` headers and a `--disable-api-cache` flag, add API error context to Sentry reports, format IPv6 Gunicorn bind addresses, and report invalid transaction status and empty sweeps clearly
+- Add `--api-cache-size N` (config `API_CACHE_SIZE`, default `1000` — unchanged behavior) to bound the API response cache (`BLOCK_CACHE`) by entry count instead of the old hardcoded 1000-entry cap; lowering it caps the API process's resident memory (trading a small tail-latency increase for a bounded working set), `0` effectively disables caching (#3396)
 - Documentation: API response codes, Counterparty transaction data format, the `messages` table, and sortable route fields
 
 ## Codebase

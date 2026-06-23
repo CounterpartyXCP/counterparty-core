@@ -20,7 +20,7 @@ from sentry_sdk import start_span as start_sentry_span
 
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import apiwatcher, dbbuilder, healthz, queries, verbose, wsgi
-from counterpartycore.lib.api.blockcache import BLOCK_CACHE, MAX_BLOCK_CACHE_SIZE
+from counterpartycore.lib.api.blockcache import BLOCK_CACHE
 from counterpartycore.lib.api.routes import ROUTES, function_needs_db
 from counterpartycore.lib.cli.initialise import initialise_log_and_config
 from counterpartycore.lib.cli.log import init_api_access_log
@@ -339,7 +339,10 @@ def cache_response(uncached, response):
     """Store an enriched CachedResponse for a cache miss, if it is cachable."""
     if uncached.cachable:
         BLOCK_CACHE[uncached.cache_key] = response
-        if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
+        # `and BLOCK_CACHE` guards popitem against an empty cache, which can
+        # happen at API_CACHE_SIZE <= 0 (incl. a race between concurrent
+        # waitress workers draining the cache).
+        while len(BLOCK_CACHE) > config.API_CACHE_SIZE and BLOCK_CACHE:
             BLOCK_CACHE.popitem(last=False)
 
 
