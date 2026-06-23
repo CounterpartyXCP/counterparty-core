@@ -263,6 +263,14 @@ CONFIG_ARGS = [
         {"action": "store_true", "default": False, "help": "disable the API response cache"},
     ],
     [
+        ("--api-cache-max-rows",),
+        {
+            "type": int,
+            "default": 50000,
+            "help": "Max total rows held in the API response cache (BLOCK_CACHE); bounds its memory while keeping many small entries cached. 0 disables the row bound.",
+        },
+    ],
+    [
         ("--log-file",),
         {"nargs": "?", "const": None, "default": False, "help": "log to the specified file"},
     ],
@@ -441,6 +449,14 @@ CONFIG_ARGS = [
             "action": "store_true",
             "default": False,
             "help": "Enable cProfile profiling for catchup; dumps output to a file in the cache dir",
+        },
+    ],
+    [
+        ("--api-cache-size",),
+        {
+            "type": int,
+            "default": 1000,
+            "help": "Max entries in the API response cache (BLOCK_CACHE). Lower bounds memory; 0 effectively disables caching.",
         },
     ],
     [

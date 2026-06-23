@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 from counterpartycore.lib import config, ledger
-from counterpartycore.lib.api import apiserver, apiwatcher, composer
+from counterpartycore.lib.api import apiserver, apiwatcher, blockcache, composer
 from counterpartycore.lib.api.routes import ALL_ROUTES, ROUTES
 from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.lib.parser import blocks
@@ -1121,6 +1121,28 @@ def test_limit_param_capped_to_api_limit_rows(apiv2_client, monkeypatch):
     assert len(response.json["result"]) <= 5
 
 
+def test_api_cache_size_bounds_block_cache(apiv2_client, monkeypatch):
+    """The API response cache fills, stays bounded to config.API_CACHE_SIZE
+    entries, and evicts oldest-first (FIFO)."""
+    # the shared test app disables the cache; enable it so the eviction path runs
+    monkeypatch.setattr(config, "DISABLE_API_CACHE", False)
+    monkeypatch.setattr(config, "API_CACHE_SIZE", 2)
+    apiserver.BLOCK_CACHE.clear()
+
+    # hit several distinct cachable URLs (each a distinct cache key)
+    for limit in (1, 2, 3, 4, 5):
+        assert apiv2_client.get(f"/v2/blocks?limit={limit}").status_code == 200
+
+    # cached AND bounded: exactly the cap (proves it filled and then evicted,
+    # not that it stayed empty)
+    assert len(apiserver.BLOCK_CACHE) == 2
+    # FIFO: the two most-recent survive, the oldest are evicted
+    keys = list(apiserver.BLOCK_CACHE.keys())
+    assert any("limit=5" in k for k in keys)
+    assert any("limit=4" in k for k in keys)
+    assert not any("limit=1" in k for k in keys)
+
+
 def test_limit_param_zero_rejected(apiv2_client):
     """A limit of 0 must be rejected with a clear error."""
     response = apiv2_client.get("/v2/transactions?limit=0")
@@ -1192,3 +1214,66 @@ def test_limit_param_unlimited_when_zero(apiv2_client, monkeypatch):
 
     response = apiv2_client.get("/v2/transactions?limit=10")
     assert response.status_code == 200
+
+
+def test_cache_hit_returns_identical_body(apiv2_client, monkeypatch):
+    """Enrichment + serialization now run once (on miss) and the enriched payload
+    is cached, so a cache HIT must return a byte-identical body to the initial
+    MISS -- for both the verbose and non-verbose forms (which use distinct cache
+    keys via the verbose flag in request.url)."""
+    monkeypatch.setattr(config, "DISABLE_API_CACHE", False)
+    for url in (
+        "/v2/transactions?limit=10",
+        "/v2/transactions?limit=10&verbose=true",
+        "/v2/blocks?limit=5",
+        "/v2/blocks?limit=5&verbose=true",
+    ):
+        apiserver.BLOCK_CACHE.clear()
+        miss = apiv2_client.get(url)  # populates the cache with the enriched payload
+        assert miss.status_code == 200
+        assert len(apiserver.BLOCK_CACHE) >= 1  # the enriched payload was cached
+        hit = apiv2_client.get(url)  # served from cache, no re-enrichment
+        assert hit.status_code == 200
+        assert hit.data == miss.data, f"cache hit body differs from miss for {url}"
+
+
+def test_estimate_rows():
+    assert blockcache.estimate_rows([1, 2, 3]) == 3
+    assert blockcache.estimate_rows([]) == 1  # empty -> 1
+    assert blockcache.estimate_rows(apiserver.CachedResponse([1, 2], "c", 9)) == 2
+    assert blockcache.estimate_rows(123) == 1  # no len() -> 1
+    assert blockcache.estimate_rows(None) == 1
+    # single-object (dict) results count as one row, not their key count
+    assert blockcache.estimate_rows({"a": 1, "b": 2}) == 1
+    assert blockcache.estimate_rows(apiserver.CachedResponse({"a": 1, "b": 2}, None, None)) == 1
+
+
+def test_cache_insert_row_budget_evicts_fifo():
+    """With a large entry cap but a small row budget, the row budget binds and
+    evicts oldest-first; the running total stays consistent."""
+    blockcache.reset_block_cache()
+    blockcache.cache_insert("a", [0, 1], max_entries=100, max_rows=5)  # rows=2
+    blockcache.cache_insert("b", [0, 1], max_entries=100, max_rows=5)  # rows=4
+    blockcache.cache_insert("c", [0, 1], max_entries=100, max_rows=5)  # rows=6 -> evict 'a'
+    assert set(blockcache.BLOCK_CACHE) == {"b", "c"}  # 'a' (oldest) evicted
+    assert blockcache.BLOCK_CACHE_ROWS == 4
+    assert blockcache.BLOCK_CACHE_ROWS == sum(blockcache.BLOCK_CACHE_SIZES.values())
+
+
+def test_cache_insert_entry_cap_backstop():
+    """With the row budget disabled (0), the entry-count cap still bounds."""
+    blockcache.reset_block_cache()
+    for i in range(5):
+        blockcache.cache_insert(str(i), [0], max_entries=2, max_rows=0)
+    assert set(blockcache.BLOCK_CACHE) == {"3", "4"}
+    assert blockcache.BLOCK_CACHE_ROWS == sum(blockcache.BLOCK_CACHE_SIZES.values())
+
+
+def test_cache_insert_overwrite_no_double_count():
+    """Overwriting a key updates the running total instead of double-counting."""
+    blockcache.reset_block_cache()
+    blockcache.cache_insert("a", [0, 1, 2], max_entries=100, max_rows=0)
+    blockcache.cache_insert("a", [0], max_entries=100, max_rows=0)
+    assert len(blockcache.BLOCK_CACHE) == 1
+    assert blockcache.BLOCK_CACHE_ROWS == 1
+    assert blockcache.BLOCK_CACHE_ROWS == sum(blockcache.BLOCK_CACHE_SIZES.values())

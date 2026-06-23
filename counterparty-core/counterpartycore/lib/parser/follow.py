@@ -330,6 +330,16 @@ class BlockchainWatcher:
         try:
             self.receive_message(topic, body, seq)
         except Exception as e:  # pylint: disable=broad-except
+            # A shutdown interrupt (stop() -> RawMempoolParser.stop() ->
+            # db.interrupt() on the connection shared with this watcher)
+            # aborts whatever query parse_tx is running, surfacing here as
+            # apsw.InterruptError -> ParseTransactionError("interrupted").
+            # That's expected teardown noise, not a processing failure: log
+            # it quietly and exit without paging Sentry or re-raising to
+            # force a "fail loud" restart of an already-stopping process.
+            if self.stop_event.is_set():
+                logger.debug("Watcher interrupted during shutdown: %s", e)
+                return
             # Re-raise after logging + Sentry so the outer handle() loop
             # can stop() the watcher: any failure while *processing* a
             # message (vs. receiving it) is not safely retriable here -- it

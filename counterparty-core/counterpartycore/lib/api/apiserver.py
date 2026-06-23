@@ -6,6 +6,7 @@ import signal
 import sys
 import threading
 import time
+from collections import namedtuple
 from multiprocessing import Process, Value
 
 import flask
@@ -19,7 +20,7 @@ from sentry_sdk import start_span as start_sentry_span
 
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import apiwatcher, dbbuilder, healthz, queries, verbose, wsgi
-from counterpartycore.lib.api.blockcache import BLOCK_CACHE, MAX_BLOCK_CACHE_SIZE
+from counterpartycore.lib.api.blockcache import BLOCK_CACHE, cache_insert
 from counterpartycore.lib.api.routes import ROUTES, function_needs_db
 from counterpartycore.lib.cli.initialise import initialise_log_and_config
 from counterpartycore.lib.cli.log import init_api_access_log
@@ -295,6 +296,53 @@ def prepare_args(route, **kwargs):
     return function_args
 
 
+# Cached, fully-prepared response body: the verbose-enriched/cleaned result plus
+# its pagination metadata. BLOCK_CACHE stores this (not the raw QueryResult) so a
+# cache hit skips the per-row enrichment + its DB lookups, which previously re-ran
+# on every request (the dominant cost of the repeated heavy-endpoint tail).
+CachedResponse = namedtuple("CachedResponse", ["result", "next_cursor", "result_count"])
+
+# Returned by execute_api_function on a cache MISS: the raw result plus the cache
+# key and cachability, so handle_route can enrich it (OUTSIDE the function-call
+# try, preserving the prior 500-on-enrichment-error semantics) and then store the
+# enriched CachedResponse.
+UncachedResult = namedtuple("UncachedResult", ["result", "cache_key", "cachable"])
+
+
+def enrich_result(result):
+    """Unwrap a QueryResult and run verbose injection / cleanup, returning a
+    CachedResponse. Previously inlined in handle_route and run on every request
+    (incl. cache hits); now run once per cache miss so hits skip it."""
+    next_cursor = None
+    result_count = None
+    table = None
+    if isinstance(result, queries.QueryResult):
+        next_cursor = result.next_cursor
+        result_count = result.result_count
+        table = result.table
+        result = result.result
+
+    # `verbose` is part of request.url and therefore of the cache key, so the
+    # verbose and non-verbose forms never collide in the cache.
+    is_verbose = request.args.get("verbose", "False")
+    if is_verbose.lower() in ["true", "1"]:
+        with LedgerDBConnectionPool().connection() as ledger_db:
+            with StateDBConnectionPool().connection() as state_db:
+                result = verbose.inject_details(ledger_db, state_db, result, table)
+    else:
+        result = verbose.clean_api_result(result)
+
+    return CachedResponse(result, next_cursor, result_count)
+
+
+def cache_response(uncached, response):
+    """Store an enriched CachedResponse for a cache miss, if it is cachable.
+    Bounded by both the entry-count cap (config.API_CACHE_SIZE) and the row
+    budget (config.API_CACHE_MAX_ROWS)."""
+    if uncached.cachable:
+        cache_insert(uncached.cache_key, response, config.API_CACHE_SIZE, config.API_CACHE_MAX_ROWS)
+
+
 def execute_api_function(rule, route, function_args):
     # cache everything for one block
     with StateDBConnectionPool().connection() as state_db:
@@ -307,33 +355,32 @@ def execute_api_function(rule, route, function_args):
     with start_sentry_span(op="cache.get") as sentry_get_span:
         sentry_get_span.set_data("cache.key", cache_key)
         if cache_key in BLOCK_CACHE:
-            result = BLOCK_CACHE[cache_key]
             sentry_get_span.set_data("cache.hit", True)
-            return result
+            return BLOCK_CACHE[cache_key]  # already-enriched CachedResponse
         sentry_get_span.set_data("cache.hit", False)
 
-    with start_sentry_span(op="cache.put") as sentry_put_span:
-        needed_db = function_needs_db(route["function"])
-        if needed_db == "ledger_db":
-            with LedgerDBConnectionPool().connection() as ledger_db:
-                result = route["function"](ledger_db, **function_args)
-        elif needed_db == "state_db":
+    needed_db = function_needs_db(route["function"])
+    if needed_db == "ledger_db":
+        with LedgerDBConnectionPool().connection() as ledger_db:
+            result = route["function"](ledger_db, **function_args)
+    elif needed_db == "state_db":
+        with StateDBConnectionPool().connection() as state_db:
+            result = route["function"](state_db, **function_args)
+    elif needed_db == "ledger_db state_db":
+        with LedgerDBConnectionPool().connection() as ledger_db:
             with StateDBConnectionPool().connection() as state_db:
-                result = route["function"](state_db, **function_args)
-        elif needed_db == "ledger_db state_db":
-            with LedgerDBConnectionPool().connection() as ledger_db:
-                with StateDBConnectionPool().connection() as state_db:
-                    result = route["function"](ledger_db, state_db, **function_args)
-        else:
-            result = route["function"](**function_args)
-        # don't cache API v1 and mempool queries
-        if is_cachable(rule, route, result):
-            sentry_put_span.set_data("cache.key", cache_key)
-            BLOCK_CACHE[cache_key] = result
-            if len(BLOCK_CACHE) > MAX_BLOCK_CACHE_SIZE:
-                BLOCK_CACHE.popitem(last=False)
+                result = route["function"](ledger_db, state_db, **function_args)
+    else:
+        result = route["function"](**function_args)
 
+    # API v1 proxy responses and not-found pass straight through to handle_route;
+    # they are neither enriched nor cached.
+    if isinstance(result, requests.Response) or result is None:
         return result
+
+    # Enrichment + caching happen in handle_route (outside the function-call try)
+    # so an enrichment error still surfaces as 500, exactly as before.
+    return UncachedResult(result, cache_key, is_cachable(rule, route, result))
 
 
 def get_transaction_name(rule):
@@ -447,29 +494,20 @@ def handle_route(**kwargs):
                 404, error="Not found", start_time=start_time, query_args=query_args
             )
 
-        next_cursor = None
-        result_count = None
-        table = None
-        if isinstance(result, queries.QueryResult):
-            next_cursor = result.next_cursor
-            result_count = result.result_count
-            table = result.table
-            result = result.result
-
-        # inject details
-        is_verbose = request.args.get("verbose", "False")
-        if is_verbose.lower() in ["true", "1"]:
-            with LedgerDBConnectionPool().connection() as ledger_db:
-                with StateDBConnectionPool().connection() as state_db:
-                    result = verbose.inject_details(ledger_db, state_db, result, table)
+        # On a cache hit `result` is the already-enriched CachedResponse. On a miss
+        # it is an UncachedResult: enrich it HERE (outside the function-call try, so
+        # an enrichment error still becomes a 500 as before), then cache it.
+        if isinstance(result, UncachedResult):
+            response = enrich_result(result.result)
+            cache_response(result, response)
         else:
-            result = verbose.clean_api_result(result)
+            response = result
 
         return return_result(
             200,
-            result=result,
-            next_cursor=next_cursor,
-            result_count=result_count,
+            result=response.result,
+            next_cursor=response.next_cursor,
+            result_count=response.result_count,
             start_time=start_time,
             query_args=query_args,
         )

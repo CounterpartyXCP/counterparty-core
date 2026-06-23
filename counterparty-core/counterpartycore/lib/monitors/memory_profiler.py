@@ -17,6 +17,7 @@ import threading
 import tracemalloc
 
 from counterpartycore.lib import config
+from counterpartycore.lib.api import blockcache
 from counterpartycore.lib.api.blockcache import BLOCK_CACHE
 from counterpartycore.lib.backend import bitcoind
 from counterpartycore.lib.ledger.caches import AssetCache, OrdersCache, UTXOBalancesCache
@@ -172,6 +173,7 @@ def get_cache_sizes():
         sizes["NotSupportedTxCache_MB"] = estimate_set_memory(not_supported) / (1024 * 1024)
 
     sizes["BLOCK_CACHE"] = len(BLOCK_CACHE)
+    sizes["BLOCK_CACHE_rows"] = blockcache.BLOCK_CACHE_ROWS
     total_size = 0
     try:
         items = list(BLOCK_CACHE.items())
