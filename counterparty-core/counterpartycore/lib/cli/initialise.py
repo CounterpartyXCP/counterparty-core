@@ -97,6 +97,7 @@ def initialise_config(
     signet=False,
     api_limit_rows=1000,
     disable_api_cache=False,
+    api_cache_max_rows=50000,
     backend_connect=None,
     backend_port=None,
     backend_user=None,
@@ -571,6 +572,7 @@ def initialise_config(
     config.MEMORY_PROFILE_TRACEMALLOC = memory_profile_tracemalloc
     config.ENABLE_ALL_PROTOCOL_CHANGES = enable_all_protocol_changes
     config.DISABLE_API_CACHE = disable_api_cache
+    config.API_CACHE_MAX_ROWS = max(0, api_cache_max_rows)
 
 
 def initialise_log_and_config(args, api=False, log_stream=None):
@@ -583,6 +585,7 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "signet": args.signet,
         "api_limit_rows": args.api_limit_rows,
         "disable_api_cache": getattr(args, "disable_api_cache", False),
+        "api_cache_max_rows": getattr(args, "api_cache_max_rows", 50000),
         "backend_connect": args.backend_connect,
         "backend_port": args.backend_port,
         "backend_user": args.backend_user,

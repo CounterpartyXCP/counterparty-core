@@ -111,6 +111,7 @@ def test_argparser():
         "data_dir": "datadir",
         "cache_dir": None,
         "disable_api_cache": False,
+        "api_cache_max_rows": 50000,
         "log_file": False,
         "api_log_file": False,
         "no_log_files": False,
