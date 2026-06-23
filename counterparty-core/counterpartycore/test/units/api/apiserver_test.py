@@ -1205,3 +1205,24 @@ def test_limit_param_unlimited_when_zero(apiv2_client, monkeypatch):
 
     response = apiv2_client.get("/v2/transactions?limit=10")
     assert response.status_code == 200
+
+
+def test_cache_hit_returns_identical_body(apiv2_client, monkeypatch):
+    """Enrichment + serialization now run once (on miss) and the enriched payload
+    is cached, so a cache HIT must return a byte-identical body to the initial
+    MISS -- for both the verbose and non-verbose forms (which use distinct cache
+    keys via the verbose flag in request.url)."""
+    monkeypatch.setattr(config, "DISABLE_API_CACHE", False)
+    for url in (
+        "/v2/transactions?limit=10",
+        "/v2/transactions?limit=10&verbose=true",
+        "/v2/blocks?limit=5",
+        "/v2/blocks?limit=5&verbose=true",
+    ):
+        apiserver.BLOCK_CACHE.clear()
+        miss = apiv2_client.get(url)  # populates the cache with the enriched payload
+        assert miss.status_code == 200
+        assert len(apiserver.BLOCK_CACHE) >= 1  # the enriched payload was cached
+        hit = apiv2_client.get(url)  # served from cache, no re-enrichment
+        assert hit.status_code == 200
+        assert hit.data == miss.data, f"cache hit body differs from miss for {url}"
