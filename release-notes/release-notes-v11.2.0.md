@@ -41,13 +41,15 @@ The Ledger DB is automatically compacted on first start of v11.2.0 (migration `0
 
 ## Protocol Changes
 
-The activation block height is not yet set (placeholder `9999999`):
+The activation block height is not yet set (placeholder `9999999`); the one exception is `fairmint_pool`, which is currently also active on signet from genesis (`signet_block_index: 0`) for testing:
 
 - `sweep_skip_zero_balances`: sweeps no longer include zero-quantity balances, the anti-spam fee is computed only over the balances/ownerships selected by the sweep `flags`, and an empty sweep is no longer charged the legacy flat fee.
 - `issuance_callable_lock_fix`: removes the obsolete "cannot change callability / advance call date / reduce call price" reissuance restrictions (the `issuance_callability_parameters_removal` guard is preserved).
 - `multisig_utxo_addresses`: bare multisig (P2MS) UTXOs now resolve to an address instead of failing with "vout does not have an address".
 - `fix_fairminter_commission_minimum`: rejects a `minted_asset_commission` between 0 and 0.0000001 (which would round to zero).
 - Add **fairmint pool seeding** behind a new `fairmint_pool` gate: `compose_fairminter` accepts two new optional fields — `pool_quantity` (tokens to reserve for the AMM pool) and `lp_asset` (numeric asset to use as LP token, auto-generated if omitted) — which, when the fairminter closes at soft cap, automatically creates a constant-product AMM pool seeded with `pool_quantity` of the minted asset and the corresponding XCP proceeds; `hard_cap` must equal `existing_supply + premint_quantity + pool_quantity + soft_cap` (all mintable supply is reserved for buyers or the pool), `burn_payment` is disallowed, and the issuer must hold sufficient XCP to cover the pool-deposit gas fee at compose time; pool creation is deferred to the `after_block` hook so it is gated on the same block as fairminter close; the LP token is earmarked against the active fairminter to prevent griefing.
+- `fix_pool_deposit_product_overflow`: removes a redundant `quantity_a * quantity_b > MAX_INT` overflow check in `pooldeposit.validate()` that rejected otherwise-valid large AMM deposits — it capped each side of a balanced divisible pair at `floor(sqrt(MAX_INT))` raw units (~30.37 divisible units) even when both quantities, the minted LP amount, balances, and stored reserves were each individually valid (#3324).
+- `fix_pool_best_price_routing`: fixes AMM best-price routing under integer pool math. `compute_pool_input_for_target_price()` solved a continuous-price quadratic while execution floors the pool output to an integer (`compute_pool_output`), so a pool fill that was actually cheaper than the next book order could floor to zero output and send the taker to the worse book order (and misroute in the other direction); routing is now consistent with the integer execution (#3325).
 
 ## Performance
 
@@ -63,6 +65,7 @@ The activation block height is not yet set (placeholder `9999999`):
 - Close non-pool fairminter when hard cap is hit before the soft-cap deadline (was leaving the fairminter open after escrow distribution)
 - Fix stale-row lookup in `get_fairminters_by_soft_cap_deadline` (was returning superseded rows)
 - Fix `connection_count` leak in `APSWConnectionPool` causing `MAINPROCESS_POOL` to exhaust over time (per-request threads in APIv1 left cached connections counted forever)
+- Fix `NotSupportedTransactionsCache` unbounded growth: the in-memory cache of not-supported transactions grew without limit (reaching hundreds of MB) and was rewritten to disk and reloaded across restarts; it is now size-bounded and no longer persisted on every update (#3397)
 - Don't charge an oracle fee when closing a dispenser
 - Preserve subasset longname case in balance lookups and sort balances by `asset` using the subasset longname
 - Resolve subasset longnames when composing fairmints
@@ -82,7 +85,7 @@ The activation block height is not yet set (placeholder `9999999`):
 - Enum parameters accept comma-separated values, and dispenser `status` accepts numeric values
 - `/v2/transactions/info` recovers source/destination/amount for BTC-only transactions even without prevouts
 - Add `Cache-Control` headers and a `--disable-api-cache` flag, add API error context to Sentry reports, format IPv6 Gunicorn bind addresses, and report invalid transaction status and empty sweeps clearly
-- Add `--api-cache-size N` (config `API_CACHE_SIZE`, default `1000` — unchanged behavior) to bound the API response cache (`BLOCK_CACHE`) by entry count instead of the old hardcoded 1000-entry cap; lowering it caps the API process's resident memory (trading a small tail-latency increase for a bounded working set), `0` effectively disables caching (#3396)
+- Add `--api-cache-size N` (config `API_CACHE_SIZE`, default `1000` — unchanged behavior) to bound the API response cache (`BLOCK_CACHE`) by entry count instead of the old hardcoded 1000-entry cap; lowering it caps the API process's resident memory (trading a small tail-latency increase for a bounded working set), `0` effectively disables caching (#3443)
 - Documentation: API response codes, Counterparty transaction data format, the `messages` table, and sortable route fields
 
 ## Codebase
@@ -93,6 +96,8 @@ The activation block height is not yet set (placeholder `9999999`):
 - Serve the `result_count` of `/v2/events` and `/v2/events/<event>` from the pre-aggregated `events_count` table instead of a full `messages` table scan (turning a ~222ms count on every cache-miss request into a sub-millisecond aggregate); the public query parameters are unchanged
 - Cache the enriched, ready-to-serve API response in `BLOCK_CACHE` instead of the raw `QueryResult`, so a cache *hit* now skips the per-row verbose enrichment (`inject_details`) and its DB lookups that previously re-ran on **every** request — collapsing the repeated-request cost that dominated the heavy-endpoint latency tail (production p95/p99). API output and status codes are byte-identical (enrichment still runs once per cache miss, outside the function-call `try`, so error semantics are unchanged); cache entries are now larger (enriched payloads), so `--api-cache-size`/`API_CACHE_SIZE` should be sized accordingly (#3444)
 - Add `--api-cache-max-rows N` (config `API_CACHE_MAX_ROWS`, default `50000`; `0` disables the row bound) to bound the API response cache (`BLOCK_CACHE`) by **total rows** in addition to the entry count (`--api-cache-size`). An entry-count cap alone forces a memory↔hit-rate tradeoff (a small cap lowers the hit rate, roughly doubling p95/p99 on real traffic); since most cached responses are tiny, a row budget caps memory (driven by the few large result sets) while letting thousands of small entries stay cached — bounded memory without sacrificing hit rate. Row sizing is an O(1) proxy (result-list length, not byte sizing, to keep the cache-miss path cheap) and the entry-count cap remains a backstop; the running total is updated lock-free across the API worker threads, so the budget is approximate but self-healing (over-counts evict slightly early, under-counts are bounded by the entry cap). The worst single cached entry is `API_LIMIT_ROWS` rows. (#3445)
+- Migrate the API documentation from Apiary (being retired by Oracle) to OpenAPI 3.1 rendered with Scalar on GitHub Pages: `genapidoc.py` now emits `openapi.json` from the same regtest-driven workflow, and contract testing moves from `dredd` to `schemathesis` (#3401)
+- Add a `--memory-profile-tracemalloc` flag and track `backend.bitcoind` caches in the memory profiler (#3397)
 - Update Python dependencies: Flask 3.0.0→3.1.3, pytest 7.4.4→9.0.3, requests 2.32.4→2.33.0, Werkzeug 3.1.4→3.1.6, itsdangerous 2.1.2→2.2.0
 - Update Rust dependencies: openssl 0.10.79→0.10.81, openssl-sys 0.9.115→0.9.117, pyo3 0.24.2→0.25.1 (migrate `IntoPy`/`into_py` to the `IntoPyObject` API, since the old trait was removed in pyo3 0.25)
 
