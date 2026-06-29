@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v11.1.1 (2026-06-??)
+# Release Notes - Counterparty Core v11.2.0 (2026-06-??)
 
 
 # Upgrading
@@ -28,7 +28,7 @@ pip install -e .
 counterparty-server start
 ```
 
-The Ledger DB is automatically compacted on first start of v11.1.1 (migration `0010.compact_hash_storage`); this migration rewrites hash columns and runs `VACUUM`, so the first startup may take noticeably longer on large databases.
+The Ledger DB is automatically compacted on first start of v11.2.0 (migration `0010.compact_hash_storage`); this migration rewrites hash columns and runs `VACUUM`, so the first startup may take noticeably longer on large databases.
 
 # ChangeLog
 
