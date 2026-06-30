@@ -626,23 +626,66 @@ def test_get_transactions_by_block_with_valid_filter(ledger_db, current_block_in
 
 def test_get_transactions_by_address_with_valid_filter(ledger_db, defaults):
     """Test get_transactions_by_address with valid filter (line 521)."""
+    address = defaults["addresses"][0]
     result = queries.get_transactions_by_address(
         ledger_db,
-        address=defaults["addresses"][0],
+        address=address,
         valid=True,
     )
     assert result is not None
+    # Every returned transaction must actually be sourced from the queried
+    # address: the address-string -> ``address_id`` WHERE rewrite must not fire
+    # against the ``transactions_with_status`` view (which already exposes
+    # ``source`` as a decoded string), otherwise the rows come back empty.
+    assert all(row["source"] == address for row in result.result)
 
 
 def test_get_transactions_by_addresses_with_valid_filter(ledger_db, defaults):
     """Test get_transactions_by_addresses with valid filter (line 556)."""
-    addresses = f"{defaults['addresses'][0]},{defaults['addresses'][1]}"
+    addr1, addr2 = defaults["addresses"][0], defaults["addresses"][1]
     result = queries.get_transactions_by_addresses(
         ledger_db,
-        addresses=addresses,
+        addresses=f"{addr1},{addr2}",
         valid=True,
     )
     assert result is not None
+    assert all(row["source"] in (addr1, addr2) for row in result.result)
+
+
+def test_get_transactions_by_address_returns_matching_rows_and_consistent_count(ledger_db):
+    """Regression (compact-hash normalization): on a migrated Ledger DB the
+    ``transactions_with_status`` view exposes ``source``/``destination`` as the
+    decoded address *string*, so ``select_rows`` must NOT apply its
+    address-string -> ``address_id`` WHERE rewrite to it. When it did, the row
+    query compared a string column against an integer id and returned ZERO rows,
+    while ``result_count`` -- counted off the base ``transactions`` table via
+    ``_COUNT_FROM_OVERRIDE`` where ``source`` is the integer id -- stayed
+    non-zero: empty results paired with an inconsistent count. Endpoints
+    affected: ``/v2/addresses/<address>/transactions`` (+ the multi-address
+    variant) and ``/v2/addresses/<address>/transactions/counts``.
+    """
+    # Derive the busiest source address from the fixture itself so the test is
+    # independent of the default-address layout and is never trivially empty.
+    busiest = ledger_db.execute(
+        "SELECT source, COUNT(*) AS c FROM transactions_with_status "
+        "WHERE source IS NOT NULL GROUP BY source ORDER BY c DESC, source LIMIT 1"
+    ).fetchone()
+    address, expected_count = busiest["source"], busiest["c"]
+    assert expected_count > 0  # sanity: the fixture has source-attributed txs
+
+    result = queries.get_transactions_by_address(
+        ledger_db, address=address, limit=expected_count + 10
+    )
+    # Rows are returned (the bug returned []), every row matches the address, and
+    # the total count agrees with the rows (the bug left count != len(rows)).
+    assert len(result.result) == expected_count
+    assert all(row["source"] == address for row in result.result)
+    assert result.result_count == expected_count
+
+    # The per-type counts endpoint sums back to the same total (it returned no
+    # groups at all under the bug).
+    type_counts = queries.get_transaction_types_count_by_address(ledger_db, address=address)
+    assert sum(row["count"] for row in type_counts.result) == expected_count
 
 
 def test_transaction_queries_return_zero_btc_amount_for_null(ledger_db, current_block_index):
