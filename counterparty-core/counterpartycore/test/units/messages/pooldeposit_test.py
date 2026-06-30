@@ -758,7 +758,7 @@ def test_validate_rejects_depleted_pool_reserve(ledger_db, defaults, blockchain_
     assert any("pool has no liquidity" in p for p in problems)
 
 
-def test_parse_rejects_depleted_pool_reserve(ledger_db, defaults, blockchain_mock):
+def test_parse_rejects_depleted_pool_reserve(ledger_db, defaults, blockchain_mock, test_helpers):
     quantity = defaults["quantity"] // 4
     source = defaults["addresses"][0]
     tx = blockchain_mock.dummy_tx(ledger_db, source)
@@ -778,12 +778,18 @@ def test_parse_rejects_depleted_pool_reserve(ledger_db, defaults, blockchain_moc
     )
     pooldeposit.parse(ledger_db, tx2, data2[1:])
 
-    cursor = ledger_db.cursor()
-    row = cursor.execute(
-        "SELECT status FROM pool_deposits WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
-        (tx2["tx_hash"],),
-    ).fetchone()
-    assert row["status"] == "invalid: pool has no liquidity"
+    test_helpers.check_records(
+        ledger_db,
+        [
+            {
+                "table": "pool_deposits",
+                "values": {
+                    "tx_hash": tx2["tx_hash"],
+                    "status": "invalid: pool has no liquidity",
+                },
+            },
+        ],
+    )
 
 
 def test_validate_first_deposit_requires_lp_asset(ledger_db, defaults):

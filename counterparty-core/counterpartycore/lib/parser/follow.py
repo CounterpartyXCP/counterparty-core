@@ -19,7 +19,7 @@ from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.monitors import sentry
 from counterpartycore.lib.monitors.telemetry.oneshot import TelemetryOneShot
 from counterpartycore.lib.parser import blocks, check, deserialize, mempool
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import hashcodec, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -497,7 +497,8 @@ def get_raw_mempool(db):
         if NotSupportedTransactionsCache().is_not_supported(txid):
             continue
         existing_tx_in_mempool = cursor.execute(
-            "SELECT * FROM mempool WHERE tx_hash = ? LIMIT 1", (txid,)
+            "SELECT * FROM mempool WHERE tx_hash = ? LIMIT 1",
+            (hashcodec.hash_to_db(txid),),
         ).fetchone()
         if existing_tx_in_mempool:
             continue

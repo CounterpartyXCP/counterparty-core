@@ -38,8 +38,12 @@ class CurrentState(metaclass=helpers.SingletonMeta):
             else:
                 self.state["CURRENT_BLOCK_TIME"] = 0
 
-    def set_current_tx_hash(self, tx_hash):
+    def set_current_tx_hash(self, tx_hash, tx_index=None):
         self.state["CURRENT_TX_HASH"] = tx_hash
+        # Keep the matching tx_index in lockstep so ``add_to_journal`` can stamp
+        # ``messages.tx_index`` without re-querying ``transactions`` for every
+        # event. ``None`` (block-level events) clears it.
+        self.state["CURRENT_TX_INDEX"] = tx_index
 
     def set_parsing_mempool(self, parsing_mempool):
         self.state["PARSING_MEMPOOL"] = parsing_mempool
@@ -70,6 +74,9 @@ class CurrentState(metaclass=helpers.SingletonMeta):
 
     def current_tx_hash(self):
         return self.state.get("CURRENT_TX_HASH")
+
+    def current_tx_index(self):
+        return self.state.get("CURRENT_TX_INDEX")
 
     def parsing_mempool(self):
         return self.state.get("PARSING_MEMPOOL")

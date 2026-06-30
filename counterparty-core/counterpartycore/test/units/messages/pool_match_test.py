@@ -1,5 +1,12 @@
 from counterpartycore.lib import ledger
 from counterpartycore.lib.messages import order, pooldeposit
+from counterpartycore.lib.utils import hashcodec
+
+_POOL_MATCHES_BY_ORDER = """
+    SELECT * FROM pool_matches WHERE order_tx_index = (
+        SELECT tx_index FROM transactions WHERE tx_hash = ?
+    )
+"""
 
 
 def create_pool(ledger_db, blockchain_mock, source, asset_a, asset_b, quantity_a, quantity_b):
@@ -70,7 +77,7 @@ def test_order_fills_against_pool(ledger_db, defaults, blockchain_mock, test_hel
     # Pool should have been matched — check pool_matches table
     cursor = ledger_db.cursor()
     matches = cursor.execute(
-        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (tx["tx_hash"],)
+        _POOL_MATCHES_BY_ORDER, (hashcodec.hash_to_db(tx["tx_hash"]),)
     ).fetchall()
 
     assert len(matches) > 0, "Order should have matched against pool"
@@ -109,7 +116,7 @@ def test_pool_rounding_routes_to_better_pool_before_book(ledger_db, defaults, bl
 
     cursor = ledger_db.cursor()
     pool_matches = cursor.execute(
-        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (trader_tx["tx_hash"],)
+        _POOL_MATCHES_BY_ORDER, (hashcodec.hash_to_db(trader_tx["tx_hash"]),)
     ).fetchall()
     assert len(pool_matches) == 1
     assert pool_matches[0]["backward_quantity"] == 2  # XCP in
@@ -117,7 +124,7 @@ def test_pool_rounding_routes_to_better_pool_before_book(ledger_db, defaults, bl
 
     maker_order = cursor.execute(
         "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
-        (maker_tx["tx_hash"],),
+        (hashcodec.hash_to_db(maker_tx["tx_hash"]),),
     ).fetchone()
     assert maker_order["status"] == "open"  # worse book order untouched
 
@@ -143,7 +150,7 @@ def test_pool_rounding_does_not_overfill_past_book(ledger_db, defaults, blockcha
 
     cursor = ledger_db.cursor()
     pool_matches = cursor.execute(
-        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (trader_tx["tx_hash"],)
+        _POOL_MATCHES_BY_ORDER, (hashcodec.hash_to_db(trader_tx["tx_hash"]),)
     ).fetchall()
     assert len(pool_matches) == 1
     assert pool_matches[0]["backward_quantity"] == 1  # XCP in
@@ -180,7 +187,7 @@ def test_pool_declines_when_book_cheaper_than_cheapest_pool_unit(
 
     cursor = ledger_db.cursor()
     pool_matches = cursor.execute(
-        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (trader_tx["tx_hash"],)
+        _POOL_MATCHES_BY_ORDER, (hashcodec.hash_to_db(trader_tx["tx_hash"]),)
     ).fetchall()
     assert len(pool_matches) == 0  # pool declined; the gate kept it off the overpay
 
@@ -209,7 +216,7 @@ def test_pool_tail_partial_fill_at_taker_limit(ledger_db, defaults, blockchain_m
 
     cursor = ledger_db.cursor()
     matches = cursor.execute(
-        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (tx["tx_hash"],)
+        _POOL_MATCHES_BY_ORDER, (hashcodec.hash_to_db(tx["tx_hash"]),)
     ).fetchall()
     assert len(matches) > 0
 
@@ -217,7 +224,8 @@ def test_pool_tail_partial_fill_at_taker_limit(ledger_db, defaults, blockchain_m
     assert trader_div_after > trader_div_before
 
     orders = cursor.execute(
-        "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1", (tx["tx_hash"],)
+        "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchall()
     assert 0 < orders[0]["give_remaining"] < give_quantity
 
@@ -250,13 +258,12 @@ def test_order_respects_price_limit(ledger_db, defaults, blockchain_mock, test_h
 
     # Should NOT match against pool (price too demanding)
     cursor = ledger_db.cursor()
-    cursor.execute(
-        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (tx["tx_hash"],)
-    ).fetchall()
+    cursor.execute(_POOL_MATCHES_BY_ORDER, (hashcodec.hash_to_db(tx["tx_hash"]),)).fetchall()
 
     # Order should remain open, not filled by pool at bad price
     orders = cursor.execute(
-        "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1", (tx["tx_hash"],)
+        "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchall()
     assert orders[0]["status"] == "open"
     assert orders[0]["give_remaining"] == give_quantity
@@ -316,7 +323,7 @@ def test_pool_match_fee_recorded(ledger_db, defaults, blockchain_mock, test_help
 
     cursor = ledger_db.cursor()
     matches = cursor.execute(
-        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (tx["tx_hash"],)
+        _POOL_MATCHES_BY_ORDER, (hashcodec.hash_to_db(tx["tx_hash"]),)
     ).fetchall()
 
     assert len(matches) > 0
@@ -345,7 +352,7 @@ def test_no_pool_match_for_btc_pair(ledger_db, defaults, blockchain_mock):
 
     cursor = ledger_db.cursor()
     matches = cursor.execute(
-        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (tx["tx_hash"],)
+        _POOL_MATCHES_BY_ORDER, (hashcodec.hash_to_db(tx["tx_hash"]),)
     ).fetchall()
 
     assert len(matches) == 0
@@ -372,11 +379,12 @@ def test_pool_fee_affects_matching(ledger_db, defaults, blockchain_mock, test_he
 
     cursor = ledger_db.cursor()
     ord = cursor.execute(
-        "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1", (tx["tx_hash"],)
+        "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchone()
 
     matches = cursor.execute(
-        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (tx["tx_hash"],)
+        _POOL_MATCHES_BY_ORDER, (hashcodec.hash_to_db(tx["tx_hash"]),)
     ).fetchall()
 
     # Pool can't fill at 99.6% because 0.5% fee means max output is ~99.5%
@@ -407,7 +415,7 @@ def test_pool_fills_generous_order(ledger_db, defaults, blockchain_mock, test_he
 
     cursor = ledger_db.cursor()
     matches = cursor.execute(
-        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (tx["tx_hash"],)
+        _POOL_MATCHES_BY_ORDER, (hashcodec.hash_to_db(tx["tx_hash"]),)
     ).fetchall()
 
     # Pool should fill this — any output >= 1 is acceptable
@@ -449,7 +457,8 @@ def test_generous_limit_partial_pool_fill_marks_filled(
 
     cursor = ledger_db.cursor()
     ord = cursor.execute(
-        "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1", (tx["tx_hash"],)
+        "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchone()
 
     assert ord["status"] == "filled", (
@@ -647,7 +656,8 @@ def test_tail_pool_fill_recredits_unused_give(ledger_db, defaults, blockchain_mo
 
     cursor = ledger_db.cursor()
     order_row = cursor.execute(
-        "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1", (tx["tx_hash"],)
+        "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchone()
 
     assert order_row["status"] == "filled"
@@ -658,7 +668,7 @@ def test_tail_pool_fill_recredits_unused_give(ledger_db, defaults, blockchain_mo
     # back.
     xcp_after = ledger.balances.get_balance(ledger_db, trader, "XCP")
     matches = cursor.execute(
-        "SELECT * FROM pool_matches WHERE order_tx_hash = ?", (tx["tx_hash"],)
+        _POOL_MATCHES_BY_ORDER, (hashcodec.hash_to_db(tx["tx_hash"]),)
     ).fetchall()
     assert len(matches) == 1
     actual_consumed = matches[0]["backward_quantity"]

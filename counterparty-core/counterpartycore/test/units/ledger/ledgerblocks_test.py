@@ -58,6 +58,45 @@ def test_blocks_functions(ledger_db, current_block_index):
     assert blocks.get_transaction(ledger_db, "foobar") is None
 
 
+def test_get_last_block(ledger_db, current_block_index):
+    block = blocks.get_last_block(ledger_db)
+    assert block is not None
+    assert block["block_index"] == current_block_index
+
+
+def test_get_blocks_time(ledger_db, current_block_index):
+    result = blocks.get_blocks_time(ledger_db, [current_block_index])
+    assert current_block_index in result
+    assert isinstance(result[current_block_index], int)
+
+
+def test_get_blocks_time_empty(ledger_db):
+    result = blocks.get_blocks_time(ledger_db, [999999999])
+    assert result == {}
+
+
+def test_tx_index_of_none(ledger_db):
+    assert blocks.tx_index_of(ledger_db, None) is None
+
+
+def test_tx_index_of_found(ledger_db):
+    all_txs = blocks.get_transactions(ledger_db)
+    tx_hash = all_txs[0]["tx_hash"]
+    idx = blocks.tx_index_of(ledger_db, tx_hash)
+    assert idx == all_txs[0]["tx_index"]
+
+
+def test_tx_index_of_not_found(ledger_db):
+    assert blocks.tx_index_of(ledger_db, "a" * 64) is None
+
+
+def test_set_transaction_status(ledger_db):
+    all_txs = blocks.get_transactions(ledger_db)
+    tx_index = all_txs[0]["tx_index"]
+    blocks.set_transaction_status(ledger_db, tx_index, True)
+    blocks.set_transaction_status(ledger_db, tx_index, False)
+
+
 def test_no_blocks_table(empty_ledger_db):
     dummy_db = apsw.Connection(":memory:")
     assert blocks.last_db_index(dummy_db) == 0

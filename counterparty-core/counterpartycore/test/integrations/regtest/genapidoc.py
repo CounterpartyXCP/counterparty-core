@@ -9,7 +9,7 @@ from counterparty_rs import utils as rs_utils
 from counterpartycore.lib import config
 from counterpartycore.lib.api import routes
 from counterpartycore.lib.api.composer import DEPRECATED_CONSTRUCT_PARAMS
-from counterpartycore.lib.utils import database
+from counterpartycore.lib.utils import database, hashcodec, helpers
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 OPENAPI_FILE = os.path.join(CURR_DIR, "../../../../../openapi.json")
@@ -418,9 +418,17 @@ def gen_events_doc():
 
 
 def get_event_tx_hash(db, event_name):
+    # ``messages.tx_hash`` was replaced by a ``tx_index`` FK in the compact-
+    # hash storage migration; re-hydrate the legacy column via JOIN on
+    # ``transactions``. ``rowtracer`` converts BLOB(32) -> 64-char hex.
     cursor = db.cursor()
     cursor.execute(
-        "SELECT tx_hash FROM messages WHERE event=? ORDER BY rowid DESC LIMIT 1",
+        """SELECT t.tx_hash AS tx_hash
+           FROM messages m
+           LEFT JOIN transactions t ON t.tx_index = m.tx_index
+           WHERE m.event = ?
+           ORDER BY m.rowid DESC
+           LIMIT 1""",
         (event_name,),
     )
     row = cursor.fetchone()
@@ -580,9 +588,13 @@ def generate_regtest_fixtures(db):
     regtest_fixtures["$LAST_ORDER_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_ORDER_TX_HASH"] = row["tx_hash"]
 
-    # block and tx with UTXOASSET orders
+    # block and tx with UTXOASSET orders. ``orders.give_asset`` now stores the
+    # compact ``asset_index`` (the rowtracer decodes it back to a name on read),
+    # so filter via the name->index subquery rather than the literal asset name.
     cursor.execute(
-        "SELECT block_index, tx_hash FROM orders WHERE give_asset='UTXOASSET' ORDER BY rowid DESC LIMIT 1"
+        "SELECT block_index, tx_hash FROM orders "
+        "WHERE give_asset=(SELECT asset_index FROM assets WHERE asset_name='UTXOASSET') "
+        "ORDER BY rowid DESC LIMIT 1"
     )
     row = cursor.fetchone()
     regtest_fixtures["$LAST_UTXOASSET_ORDER_BLOCK"] = row["block_index"]
@@ -621,9 +633,18 @@ def generate_regtest_fixtures(db):
 
     regtest_fixtures["$UTXO_1_ADDRESS_1"] = utxo
 
-    # get utxo with balance
+    # get utxo with balance. ``balances.asset`` now stores the compact
+    # ``asset_index`` (decoded back to a name by the rowtracer on read), so
+    # filter via the name->index subquery rather than the literal asset name.
+    # The ``utxo`` TEXT column was split into ``(utxo_tx_hash BLOB, utxo_vout)``
+    # in the compact-storage migration; SELECT both so the rowtracer
+    # reconstructs ``row['utxo']`` (``tx_hash:vout``), and filter on
+    # ``utxo_tx_hash IS NOT NULL`` (the old ``utxo IS NOT NULL``).
     cursor.execute(
-        "SELECT utxo FROM balances WHERE utxo IS NOT NULL AND quantity > 0 AND asset='UTXOASSET' ORDER BY rowid DESC LIMIT 1"
+        "SELECT utxo_tx_hash, utxo_vout FROM balances "
+        "WHERE utxo_tx_hash IS NOT NULL AND quantity > 0 "
+        "AND asset=(SELECT asset_index FROM assets WHERE asset_name='UTXOASSET') "
+        "ORDER BY rowid DESC LIMIT 1"
     )
     row = cursor.fetchone()
     regtest_fixtures["$UTXO_WITH_BALANCE"] = row["utxo"]
@@ -639,14 +660,22 @@ def generate_regtest_fixtures(db):
     regtest_fixtures["$LAST_SWEEP_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_SWEEP_TX_HASH"] = row["tx_hash"]
 
-    # block and tx with btcpay
+    # block and tx with btcpay. ``btcpays.order_match_id`` was replaced by the
+    # ``(order_match_tx0_index, order_match_tx1_index)`` FK pair in the compact
+    # match-id migration; re-hydrate tx0's hash via JOIN on ``transactions``.
+    # ``$ORDER_WITH_BTCPAY_HASH`` is just tx0's hash (the first half of the old
+    # composite id). ``hex_lower`` returns a hex string the rowtracer leaves as-is.
     cursor.execute(
-        "SELECT block_index, tx_hash, order_match_id FROM btcpays ORDER BY rowid DESC LIMIT 1"
+        """SELECT b.block_index AS block_index, b.tx_hash AS tx_hash,
+                  hex_lower(t0.tx_hash) AS order_match_tx0_hash
+           FROM btcpays b
+           LEFT JOIN transactions t0 ON t0.tx_index = b.order_match_tx0_index
+           ORDER BY b.rowid DESC LIMIT 1"""
     )
     row = cursor.fetchone()
     regtest_fixtures["$LAST_BTCPAY_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_BTCPAY_TX_HASH"] = row["tx_hash"]
-    regtest_fixtures["$ORDER_WITH_BTCPAY_HASH"] = row["order_match_id"].split("_")[0]
+    regtest_fixtures["$ORDER_WITH_BTCPAY_HASH"] = row["order_match_tx0_hash"]
 
     # block and tx with broadcasts
     cursor.execute("SELECT block_index, tx_hash FROM broadcasts ORDER BY rowid DESC LIMIT 1")
@@ -654,12 +683,18 @@ def generate_regtest_fixtures(db):
     regtest_fixtures["$LAST_BROADCAST_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_BROADCAST_TX_HASH"] = row["tx_hash"]
 
-    # block and tx with order_matches
-    cursor.execute("SELECT block_index, id FROM order_matches ORDER BY rowid DESC LIMIT 1")
+    # block and tx with order_matches. The composite TEXT ``id`` was dropped in
+    # the compact match-id migration; reconstruct it from the BLOB
+    # ``tx0_hash``/``tx1_hash`` pair (mirrors ``helpers.MATCH_ID_SQL``).
+    # ``$ORDER_WITH_MATCH_HASH`` is just tx0's hash (the rowtracer hexifies it).
+    cursor.execute(
+        f"SELECT block_index, tx0_hash, {helpers.MATCH_ID_SQL} AS id "  # noqa: S608
+        "FROM order_matches ORDER BY rowid DESC LIMIT 1"
+    )
     row = cursor.fetchone()
     regtest_fixtures["$LAST_ORDER_MATCH_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_ORDER_MATCH_ID"] = row["id"]
-    regtest_fixtures["$ORDER_WITH_MATCH_HASH"] = row["id"].split("_")[0]
+    regtest_fixtures["$ORDER_WITH_MATCH_HASH"] = row["tx0_hash"]
 
     # block with cancels
     cursor.execute("SELECT block_index FROM cancels ORDER BY rowid DESC LIMIT 1")
@@ -676,14 +711,25 @@ def generate_regtest_fixtures(db):
     row = cursor.fetchone()
     regtest_fixtures["$LAST_DEBIT_BLOCK"] = row["block_index"]
 
-    # transactions with events
+    # transactions with events. ``messages.tx_hash`` was dropped in the
+    # compact-hash storage migration; re-hydrate via JOIN on ``transactions``.
     cursor.execute(
-        "SELECT tx_hash, block_index FROM messages WHERE event='CREDIT' ORDER BY rowid DESC LIMIT 1"
+        """SELECT t.tx_hash AS tx_hash, m.block_index AS block_index
+           FROM messages m
+           LEFT JOIN transactions t ON t.tx_index = m.tx_index
+           WHERE m.event = 'CREDIT'
+           ORDER BY m.rowid DESC
+           LIMIT 1"""
     )
     row = cursor.fetchone()
     regtest_fixtures["$LAST_EVENT_TX_HASH"] = row["tx_hash"]
     regtest_fixtures["$LAST_EVENT_BLOCK"] = row["block_index"]
-    cursor.execute("SELECT tx_index FROM transactions WHERE tx_hash=?", (row["tx_hash"],))
+    # ``transactions.tx_hash`` is BLOB(32) at rest; convert the hex string
+    # back to BLOB for the WHERE binding.
+    cursor.execute(
+        "SELECT tx_index FROM transactions WHERE tx_hash=?",
+        (hashcodec.hash_to_db(row["tx_hash"]),),
+    )
     row = cursor.fetchone()
     regtest_fixtures["$LAST_EVENT_TX_INDEX"] = row["tx_index"]
 

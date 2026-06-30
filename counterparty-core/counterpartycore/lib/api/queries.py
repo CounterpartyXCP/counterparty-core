@@ -3,10 +3,13 @@
 import ast
 import inspect
 import json
+import re
 import textwrap
 import typing
+import weakref
 from typing import Literal
 
+import apsw
 from sentry_sdk import start_span as start_sentry_span
 
 from counterpartycore.lib.ledger.markets import (
@@ -17,7 +20,332 @@ from counterpartycore.lib.ledger.markets import (
     pool_has_liquidity,
     sort_pair,
 )
-from counterpartycore.lib.utils.helpers import divide
+from counterpartycore.lib.utils import database, hashcodec
+from counterpartycore.lib.utils.helpers import MATCH_ID_SQL, divide
+
+
+def _convert_hash_value(field, value):
+    """If the WHERE clause targets a hash column and the caller passes a hex
+    string, convert it to BLOB so it can match the at-rest representation."""
+    if value is None:
+        return value
+    if isinstance(value, bytes):
+        return value
+    if field in hashcodec.HASH_COLUMN_NAMES and isinstance(value, str):
+        try:
+            return hashcodec.hash_to_db(value)
+        except ValueError:
+            return value
+    return value
+
+
+# Legacy hash filter keys in callers that have been replaced by
+# ``*_tx_index`` foreign keys. ``select_rows`` rewrites the WHERE clause so the
+# existing API surface (which still accepts hex tx_hash query params) can
+# resolve via a transactions subquery.
+_HASH_FK_WHERE_REWRITE = {
+    "dispenser_tx_hash": "dispenser_tx_index",
+    "fairminter_tx_hash": "fairminter_tx_index",
+    "order_tx_hash": "order_tx_index",
+    "offer_hash": "offer_tx_index",
+}
+
+# For tables where a legacy hash column was dropped and replaced by a
+# ``*_tx_index`` FK, ``select_rows`` rewrites ``SELECT *`` to re-expose the
+# legacy hash via a JOIN against ``transactions`` so the API response shape is
+# preserved. The mapping uses ``ledger_db.transactions`` so it also works when
+# the query targets a State DB connection (which ATTACHes the Ledger DB as
+# ``ledger_db`` at read-only open time).
+_HASH_FK_PROJECTIONS = {
+    "dispenses": ("dispenser_tx_index", "dispenser_tx_hash"),
+    "dispenser_refills": ("dispenser_tx_index", "dispenser_tx_hash"),
+    "fairmints": ("fairminter_tx_index", "fairminter_tx_hash"),
+    "pool_matches": ("order_tx_index", "order_tx_hash"),
+    "cancels": ("offer_tx_index", "offer_hash"),
+}
+
+# Match tables that dropped the composite TEXT ``id`` column. ``select_rows``
+# re-exposes ``id`` from the local ``tx0_hash``/``tx1_hash`` BLOB columns the
+# tables still carry (no JOIN needed) via the ``hex_lower`` UDF.
+_MATCH_ID_LOCAL_TABLES = frozenset({"order_matches", "bet_matches", "rps_matches"})
+
+# Tables (read from the Ledger DB) whose single TEXT ``*_match_id`` column was
+# replaced by a ``(*_tx0_index, *_tx1_index)`` integer pair. ``select_rows``
+# hides the two FK columns and re-exposes the legacy id via two correlated
+# subqueries against ``transactions`` so the API row shape is preserved.
+# Mapping: table -> (tx0_index_col, tx1_index_col, legacy_id_col)
+_MATCH_ID_FK_PROJECTIONS = {
+    "btcpays": ("order_match_tx0_index", "order_match_tx1_index", "order_match_id"),
+    "bet_match_resolutions": ("bet_match_tx0_index", "bet_match_tx1_index", "bet_match_id"),
+    "rpsresolves": ("rps_match_tx0_index", "rps_match_tx1_index", "rps_match_id"),
+}
+
+# Pseudo WHERE keys used by match-id callers: the value is a single tx_hash that
+# must match either leg of the composite match id. ``select_rows`` resolves the
+# hash to a tx_index and ORs it against both ``*_tx0_index``/``*_tx1_index``
+# columns (the old ``*_match_id LIKE '%hash%'`` matched either half).
+# Mapping: key -> (tx0_index_col, tx1_index_col)
+_MATCH_ID_HASH_WHERE = {
+    "order_match_hash": ("order_match_tx0_index", "order_match_tx1_index"),
+    "bet_match_hash": ("bet_match_tx0_index", "bet_match_tx1_index"),
+    "rps_match_hash": ("rps_match_tx0_index", "rps_match_tx1_index"),
+}
+
+
+# Per-connection cache so we run the schema probe at most once per pooled
+# connection instead of on every ``select_rows`` call. Using a
+# ``WeakKeyDictionary`` lets the entry disappear automatically when the
+# connection is garbage-collected.
+_TX_TABLE_NAME_CACHE: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
+
+# Same per-connection caching for the "is this a Ledger DB?" probes used by
+# ``select_rows`` to decide whether asset/address filters need the
+# name->index / string->id rewrite. Without these, every API read issued two
+# extra SQL probes (``main.assets`` / ``main.address_list``); the result is
+# fixed for the life of a connection.
+_ASSETS_INDEX_TABLE_CACHE: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
+_ADDRESS_INDEX_TABLE_CACHE: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
+
+
+def _resolve_local_index_table(db, qualified_name, cache):
+    """Return ``qualified_name`` if it is a *local* (``main.``) table on this
+    connection -- i.e. a Ledger DB -- else ``None``. On a State DB connection the
+    table is only reachable as the ATTACHed ``ledger_db.<name>``, so the
+    ``main.``-qualified probe fails and we return ``None``. Cached per connection
+    (empty-string sentinel for the negative result), mirroring
+    ``_resolve_transactions_table_name``.
+
+    ``qualified_name`` is always a hard-coded ``main.``-prefixed constant from
+    the caller, so the f-string is safe.
+    """
+    cached = cache.get(db)
+    if cached is not None:
+        return cached if cached != "" else None
+    try:
+        db.cursor().execute(f"SELECT 1 FROM {qualified_name} LIMIT 0")  # nosec B608  # noqa: S608
+        resolved = qualified_name
+    except apsw.SQLError:
+        resolved = None
+    cache[db] = resolved if resolved is not None else ""
+    return resolved
+
+
+_ALLOWED_TX_TABLE_NAMES = frozenset({"transactions", "ledger_db.transactions"})
+
+
+def _safe_tx_table(table_name):
+    if table_name not in _ALLOWED_TX_TABLE_NAMES:
+        raise ValueError(f"Unexpected transactions table name: {table_name!r}")
+    return table_name
+
+
+def _probe_transactions_table(cursor, qualified_name):
+    """Return ``qualified_name`` if the cursor can SELECT from it, else None.
+
+    The absence of the table is the expected negative path here (e.g. early
+    bootstrap before the Ledger DB exists, or when ``ledger_db`` is not
+    ATTACHed). Returning ``None`` lets the caller try the next candidate.
+
+    ``qualified_name`` is always a hard-coded constant from this module
+    (``transactions`` or ``ledger_db.transactions``); the f-string is safe.
+    """
+    try:
+        cursor.execute(f"SELECT 1 FROM {qualified_name} LIMIT 0")  # nosec B608  # noqa: S608
+    except apsw.SQLError:
+        return None
+    return qualified_name
+
+
+def _resolve_transactions_table_name(db):
+    """Return ``transactions`` if the connection sees that table directly,
+    ``ledger_db.transactions`` if ``ledger_db`` is attached and contains it,
+    or ``None`` otherwise (in which case hash-FK projections are skipped).
+
+    The result is cached per connection: API hot paths read from ``messages``
+    and the ``_HASH_FK_PROJECTIONS`` tables on every call; without the cache
+    each call would issue 1-2 extra SQL probes against the connection.
+    """
+    cached = _TX_TABLE_NAME_CACHE.get(db)
+    if cached is not None:
+        return cached if cached != "" else None
+
+    cursor = db.cursor()
+    resolved = _probe_transactions_table(cursor, "transactions")
+    if resolved is None:
+        resolved = _probe_transactions_table(cursor, "ledger_db.transactions")
+
+    # Cache an empty sentinel for the negative result so we don't keep
+    # re-probing connections that won't see ``transactions`` (e.g. early
+    # bootstrap before the Ledger DB exists). The None case is short-lived
+    # in practice and the cache entry will be replaced on the next attach.
+    _TX_TABLE_NAME_CACHE[db] = resolved if resolved is not None else ""
+    return resolved
+
+
+# Cache of table -> list of public columns (everything except the internal
+# ``*_tx_index`` FK that replaced the legacy hash). Populated lazily on first
+# projection.
+_HASH_FK_PUBLIC_COLUMNS: dict[str, tuple[str, ...]] = {}
+
+
+# Columns shared between a main table and the joined ``transactions`` table
+# that need explicit ``__m.`` qualification when ``select_rows`` adds the
+# JOIN for ``messages`` / ``_HASH_FK_PROJECTIONS`` tables. Lifted out of the
+# function body so the tuple isn't reallocated on every API call.
+_AMBIGUOUS_COLS = frozenset(
+    {
+        "block_index",
+        "tx_index",
+        "rowid",
+        "tx_hash",
+        "source",
+        "destination",
+        "block_time",
+        "btc_amount",
+        "fee",
+        "data",
+        "supported",
+        "utxos_info",
+        "transaction_type",
+    }
+)
+_MESSAGES_QUALIFY_M_FIELDS = frozenset({"block_index", "tx_index", "rowid", "message_index"})
+
+# Views whose ``COUNT(*)`` can be safely answered by counting rows from a
+# single underlying table (the LEFT JOINs in the view's definition do not
+# multiply rows because they all join on a unique key on the right side).
+# Mapping: view_name -> (main_table, columns_only_on_main_table). When the
+# caller's WHERE filter is restricted to those columns we can replace the
+# view's FROM with ``main_table`` and skip its internal JOINs entirely.
+# ``all_transactions_with_status`` is omitted on purpose: it counts over
+# ``mempool_transactions UNION ALL transactions`` and there is no single
+# underlying table to substitute.
+_COUNT_FROM_OVERRIDE = {
+    "transactions_with_status": (
+        "transactions",
+        frozenset(
+            {
+                "tx_index",
+                "tx_hash",
+                "block_index",
+                "block_time",
+                "source",
+                "destination",
+                "btc_amount",
+                "fee",
+                "data",
+                "supported",
+                "utxos_info",
+                "transaction_type",
+            }
+        ),
+    ),
+}
+
+
+def _hash_fk_public_columns(db, table):
+    """Return the list of column names to expose to the API for a table
+    where the legacy hash was replaced by a ``*_tx_index`` FK, i.e. every
+    column of the underlying table *except* that internal FK.
+
+    The legacy hash column is re-hydrated separately by the caller via a
+    ``LEFT JOIN`` against ``transactions``.
+    """
+    cached = _HASH_FK_PUBLIC_COLUMNS.get(table)
+    if cached is not None:
+        return cached
+    index_col, _hash_col = _HASH_FK_PROJECTIONS[table]
+    cursor = db.cursor()
+    rows = cursor.execute(f"PRAGMA table_info({table})").fetchall()  # nosec B608  # noqa: S608
+    cols = []
+    for row in rows:
+        if isinstance(row, dict):
+            name = row["name"]
+        else:
+            name = row[1]
+        if name == index_col:
+            continue
+        cols.append(name)
+    cols_tuple = tuple(cols)
+    _HASH_FK_PUBLIC_COLUMNS[table] = cols_tuple
+    return cols_tuple
+
+
+# Cache of table -> public columns for ``_MATCH_ID_FK_PROJECTIONS`` tables
+# (everything except the two ``*_tx_index`` FK columns that replaced the
+# legacy ``*_match_id``).
+_MATCH_ID_PUBLIC_COLUMNS: dict[str, tuple[str, ...]] = {}
+
+
+def _match_id_public_columns(db, table):
+    """Return the columns to expose for a ``_MATCH_ID_FK_PROJECTIONS`` table:
+    every column except the two internal ``*_tx_index`` FK columns that
+    replaced the legacy ``*_match_id`` (which the caller re-hydrates via two
+    correlated subqueries against ``transactions``)."""
+    cached = _MATCH_ID_PUBLIC_COLUMNS.get(table)
+    if cached is not None:
+        return cached
+    tx0_col, tx1_col, _id_col = _MATCH_ID_FK_PROJECTIONS[table]
+    cursor = db.cursor()
+    rows = cursor.execute(f"PRAGMA table_info({table})").fetchall()  # nosec B608  # noqa: S608
+    cols = []
+    for row in rows:
+        name = row["name"] if isinstance(row, dict) else row[1]
+        if name in (tx0_col, tx1_col):
+            continue
+        cols.append(name)
+    cols_tuple = tuple(cols)
+    _MATCH_ID_PUBLIC_COLUMNS[table] = cols_tuple
+    return cols_tuple
+
+
+def _project_messages_tx_hash(select_clause):
+    """Rewrite identifiers in a ``SELECT`` clause targeting the joined
+    ``messages``/``transactions`` view (``messages.tx_hash`` was dropped in
+    favour of an FK on ``transactions``):
+
+    - ``tx_hash`` -> ``__txh.tx_hash AS tx_hash`` (the column alias keeps
+      ``tx_hash``, which is in ``hashcodec.HASH_COLUMN_NAMES`` so the
+      connection rowtracer converts BLOB -> hex without a per-row UDF).
+    - bare ``block_index`` -> ``__m.block_index AS block_index``
+      (both ``messages`` and ``transactions`` have ``block_index``; without
+      a qualifier the join is ambiguous).
+    - bare ``rowid`` -> ``__m.rowid AS rowid``
+      (both tables have an implicit ``rowid``; the join needs an explicit
+      qualifier).
+
+    Uses word-boundary safe rewrites so ``last_status_tx_hash`` etc. are not
+    touched.
+    """
+    rewritten = re.sub(
+        r"(?<![A-Za-z0-9_\.])tx_hash(?![A-Za-z0-9_])",
+        "__txh.tx_hash AS tx_hash",
+        select_clause,
+    )
+    rewritten = re.sub(
+        r"(?<![A-Za-z0-9_\.])block_index(?![A-Za-z0-9_])",
+        "__m.block_index AS block_index",
+        rewritten,
+    )
+    # Collapse ``rowid AS rowid`` to ``__m.rowid AS rowid``. We need a
+    # dedicated pass first so the bare-``rowid`` rewrite below does not
+    # mangle the alias position.
+    rewritten = re.sub(
+        r"(?<![A-Za-z0-9_\.])rowid\s+AS\s+rowid(?![A-Za-z0-9_])",
+        "__m.rowid AS rowid",
+        rewritten,
+        flags=re.IGNORECASE,
+    )
+    # Qualify a bare ``rowid`` column reference (used by callers that select
+    # rowid without an explicit alias). Skip when already qualified
+    # (``__m.rowid``) or when it appears as an alias (``AS rowid``).
+    rewritten = re.sub(
+        r"(?<![A-Za-z0-9_\.])(?<!AS\s)rowid(?![A-Za-z0-9_])",
+        "__m.rowid AS rowid",
+        rewritten,
+    )
+    return rewritten
+
 
 OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
 OrderMatchesStatus = Literal["all", "pending", "completed", "expired"]
@@ -332,36 +660,222 @@ def select_rows(
 
     bindings = []
 
+    # ``messages.tx_hash`` has been dropped from storage. Reads from
+    # ``messages`` are rewritten to come from a JOIN against ``transactions``
+    # so legacy callers that still filter or project on ``tx_hash`` keep
+    # working.
+    rewrite_messages_tx_hash = table == "messages"
+
+    table_has_hash_fk = table in _HASH_FK_PROJECTIONS
+
+    def _qualify(field):
+        """Disambiguate columns when the SELECT joins ``messages`` or one of
+        the ``_HASH_FK_PROJECTIONS`` tables against ``transactions``."""
+        if rewrite_messages_tx_hash:
+            if field in _MESSAGES_QUALIFY_M_FIELDS:
+                return f"__m.{field}"
+            if field == "tx_hash":
+                return "__txh.tx_hash"
+        elif table_has_hash_fk:
+            if field in _AMBIGUOUS_COLS:
+                return f"__m.{field}"
+        return field
+
+    # ``where_needs_join`` tracks whether the rewritten WHERE clause
+    # references a column that only exists on the joined ``__txh`` /
+    # ``__txjoin`` (i.e. ``messages.tx_hash`` is filtered). When False, the
+    # COUNT(*) query is rebuilt against the main table alone to skip a
+    # full-table LEFT JOIN that contributes nothing to the row count.
+    where_needs_join = False
+    # Set of base field names referenced anywhere in the WHERE clause; used
+    # to decide whether the ``_COUNT_FROM_OVERRIDE`` shortcut is safe.
+    where_fields_used: set[str] = set()
+
+    # Resolve the transactions table once so _HASH_FK_WHERE_REWRITE subqueries
+    # use the same table name as the FROM clause JOIN (or emit a false condition
+    # when no transactions table is reachable from this connection).
+    _where_tx_table = _resolve_transactions_table_name(db)
+
+    # Asset-name columns are stored as the compact integer ``asset_index`` on
+    # Ledger DB tables, while the State DB consolidated tables keep the name.
+    # Detect a Ledger DB connection by probing for a *local* ``main.assets``
+    # table: on a State DB connection ``assets`` is only reachable as the
+    # ATTACHed ``ledger_db.assets`` (so unqualified ``assets`` resolves there
+    # too -- ``main.`` makes the probe connection-specific). Only Ledger DB
+    # asset filters need the name->index subquery rewrite. Cached per connection.
+    _assets_index_table = _resolve_local_index_table(db, "main.assets", _ASSETS_INDEX_TABLE_CACHE)
+
+    def _is_asset_index_col(field):
+        return _assets_index_table is not None and field in database.ASSET_INDEX_COLUMN_NAMES
+
+    # Address columns are stored as the compact integer ``address_id`` on Ledger
+    # DB tables, while the State DB consolidated tables keep the string. Detect a
+    # Ledger DB connection by probing for a *local* ``main.address_list`` (mirror
+    # the asset probe above). Only Ledger DB address filters need the
+    # string->id subquery rewrite. Cached per connection.
+    _address_index_table = _resolve_local_index_table(
+        db, "main.address_list", _ADDRESS_INDEX_TABLE_CACHE
+    )
+
+    def _is_address_index_col(field):
+        return _address_index_table is not None and field in database.ADDRESS_INDEX_COLUMN_NAMES
+
     or_where = []
     for where_dict in where:
         where_field = []
         for key, value in where_dict.items():
             if key.endswith("__gt"):
-                where_field.append(f"{key[:-4]} > ?")
-                bindings.append(value)
+                field = key[:-4]
+                where_field.append(f"{_qualify(field)} > ?")
+                bindings.append(_convert_hash_value(field, value))
             elif key.endswith("__like"):
-                where_field.append(f"{key[:-6]} LIKE ?")
+                field = key[:-6]
+                if _is_asset_index_col(field):
+                    where_field.append(
+                        f"{_qualify(field)} IN (SELECT asset_index FROM {_assets_index_table} WHERE asset_name LIKE ?)"  # noqa: S608  # nosec B608
+                    )
+                elif _is_address_index_col(field):
+                    where_field.append(
+                        f"{_qualify(field)} IN (SELECT address_id FROM {_address_index_table} WHERE address LIKE ?)"  # noqa: S608  # nosec B608
+                    )
+                else:
+                    where_field.append(f"{_qualify(field)} LIKE ?")
                 bindings.append(value)
             elif key.endswith("__notlike"):
-                where_field.append(f"{key[:-9]} NOT LIKE ?")
+                field = key[:-9]
+                if _is_asset_index_col(field):
+                    where_field.append(
+                        f"{_qualify(field)} NOT IN (SELECT asset_index FROM {_assets_index_table} WHERE asset_name LIKE ?)"  # noqa: S608  # nosec B608
+                    )
+                elif _is_address_index_col(field):
+                    where_field.append(
+                        f"{_qualify(field)} NOT IN (SELECT address_id FROM {_address_index_table} WHERE address LIKE ?)"  # noqa: S608  # nosec B608
+                    )
+                else:
+                    where_field.append(f"{_qualify(field)} NOT LIKE ?")
                 bindings.append(value)
             elif key.endswith("__in"):
-                where_field.append(f"{key[:-4]} IN ({','.join(['?'] * len(value))})")
-                bindings += value
+                field = key[:-4]
+                if field in _HASH_FK_WHERE_REWRITE:
+                    new_field = _HASH_FK_WHERE_REWRITE[field]
+                    if _where_tx_table is None:
+                        where_field.append("(0 = 1)")
+                    else:
+                        placeholders = ",".join(
+                            [
+                                f"(SELECT tx_index FROM {_safe_tx_table(_where_tx_table)} WHERE tx_hash = ?)"  # noqa: S608  # nosec B608
+                            ]
+                            * len(value)
+                        )
+                        where_field.append(f"{new_field} IN ({placeholders})")
+                        bindings += [hashcodec.hash_to_db(v) for v in value]
+                    # ``field`` becomes the resolved FK column so the
+                    # ``_COUNT_FROM_OVERRIDE`` gate sees the actual schema
+                    # column rather than the legacy hex hash alias.
+                    field = new_field
+                elif _is_asset_index_col(field):
+                    where_field.append(
+                        f"{_qualify(field)} IN (SELECT asset_index FROM {_assets_index_table} "  # noqa: S608  # nosec B608
+                        f"WHERE asset_name IN ({','.join(['?'] * len(value))}))"
+                    )
+                    bindings += list(value)
+                elif _is_address_index_col(field):
+                    where_field.append(
+                        f"{_qualify(field)} IN (SELECT address_id FROM {_address_index_table} "  # noqa: S608  # nosec B608
+                        f"WHERE address IN ({','.join(['?'] * len(value))}))"
+                    )
+                    bindings += list(value)
+                else:
+                    where_field.append(f"{_qualify(field)} IN ({','.join(['?'] * len(value))})")
+                    bindings += [_convert_hash_value(field, v) for v in value]
             elif key.endswith("__notnull"):
-                where_field.append(f"{key[:-9]} IS NOT NULL")
+                field = key[:-9]
+                where_field.append(f"{_qualify(field)} IS NOT NULL")
             elif key.endswith("__null"):
-                where_field.append(f"{key[:-6]} IS NULL")
+                field = key[:-6]
+                where_field.append(f"{_qualify(field)} IS NULL")
             elif key.endswith("__nocase"):
-                where_field.append(f"{key[:-8]} = ? COLLATE NOCASE")
-                bindings.append(value)
+                field = key[:-8]
+                where_field.append(f"{_qualify(field)} = ? COLLATE NOCASE")
+                bindings.append(_convert_hash_value(field, value))
             else:
-                if key in ADDRESS_FIELDS and len(value.split(",")) > 1:
+                if key in _MATCH_ID_HASH_WHERE:
+                    # ``*_match_hash``: resolve the hex tx_hash to a tx_index and
+                    # OR it against both legs of the composite match id (the old
+                    # ``*_match_id LIKE '%hash%'`` matched either half).
+                    tx0_col, tx1_col = _MATCH_ID_HASH_WHERE[key]
+                    if _where_tx_table is None:
+                        where_field.append("(0 = 1)")
+                    else:
+                        subq = f"(SELECT tx_index FROM {_safe_tx_table(_where_tx_table)} WHERE tx_hash = ?)"  # noqa: S608  # nosec B608
+                        where_field.append(f"({tx0_col} = {subq} OR {tx1_col} = {subq})")
+                        bindings.append(hashcodec.hash_to_db(value))
+                        bindings.append(hashcodec.hash_to_db(value))
+                    field = key
+                elif key in _HASH_FK_WHERE_REWRITE:
+                    new_field = _HASH_FK_WHERE_REWRITE[key]
+                    if _where_tx_table is None:
+                        where_field.append("(0 = 1)")
+                    else:
+                        where_field.append(
+                            f"{new_field} = (SELECT tx_index FROM {_safe_tx_table(_where_tx_table)} WHERE tx_hash = ?)"  # noqa: S608  # nosec B608
+                        )
+                        bindings.append(hashcodec.hash_to_db(value))
+                    # ``key`` is the legacy hex hash column (e.g.
+                    # ``dispenser_tx_hash``); record the *resolved* FK column
+                    # name so the override gate sees the actual schema column.
+                    field = new_field
+                elif _is_address_index_col(key):
+                    # Ledger DB: address columns store the compact ``address_id``;
+                    # rewrite the (possibly comma-separated) address value(s) to
+                    # an ``address_list`` subquery. On a State DB connection
+                    # ``_is_address_index_col`` is False and the TEXT branches
+                    # below handle it.
+                    values = value.split(",") if isinstance(value, str) else [value]
+                    if len(values) > 1:
+                        where_field.append(
+                            f"{_qualify(key)} IN (SELECT address_id FROM {_address_index_table} "  # noqa: S608  # nosec B608
+                            f"WHERE address IN ({','.join(['?'] * len(values))}))"
+                        )
+                        bindings += values
+                    else:
+                        where_field.append(
+                            f"{_qualify(key)} = (SELECT address_id FROM {_address_index_table} WHERE address = ?)"  # noqa: S608  # nosec B608
+                        )
+                        bindings.append(value)
+                    field = key
+                elif (
+                    key == "utxo"
+                    and _address_index_table is not None
+                    and isinstance(value, str)
+                    and ":" in value
+                ):
+                    # Ledger DB: ``utxo`` is stored as the compact
+                    # ``(utxo_tx_hash BLOB, utxo_vout)`` pair; split the filter.
+                    tx_hash_hex, _, vout = value.partition(":")
+                    where_field.append("utxo_tx_hash = ? AND utxo_vout = ?")
+                    bindings.append(hashcodec.hash_to_db(tx_hash_hex))
+                    bindings.append(int(vout))
+                    field = key
+                elif key in ADDRESS_FIELDS and len(value.split(",")) > 1:
                     where_field.append(f"{key} IN ({','.join(['?'] * len(value.split(',')))})")
                     bindings += value.split(",")
-                else:
-                    where_field.append(f"{key} = ?")
+                    field = key
+                elif _is_asset_index_col(key):
+                    where_field.append(
+                        f"{_qualify(key)} = (SELECT asset_index FROM {_assets_index_table} WHERE asset_name = ?)"  # noqa: S608  # nosec B608
+                    )
                     bindings.append(value)
+                    field = key
+                else:
+                    where_field.append(f"{_qualify(key)} = ?")
+                    bindings.append(_convert_hash_value(key, value))
+                    field = key
+            # Track the base field name and whether the WHERE references a
+            # column that only exists on a joined table.
+            where_fields_used.add(field)
+            if rewrite_messages_tx_hash and field == "tx_hash":
+                where_needs_join = True
 
         and_where_clause = ""
         if where_field:
@@ -379,13 +893,14 @@ def select_rows(
         where_clause_count = ""
     bindings_count = list(bindings)
 
+    cursor_field_qualified = _qualify(cursor_field)
     if offset is None and last_cursor is not None:
         if where_clause != "":
             where_clause = f"({where_clause}) AND "
         if order == "ASC":
-            where_clause += f" {cursor_field} >= ?"
+            where_clause += f" {cursor_field_qualified} >= ?"
         else:
-            where_clause += f" {cursor_field} <= ?"
+            where_clause += f" {cursor_field_qualified} <= ?"
         bindings.append(last_cursor)
 
     if where_clause:
@@ -398,9 +913,9 @@ def select_rows(
         group_by_clause = f"GROUP BY {group_by}"
 
     if select == "*":
-        select = f"*, {cursor_field} AS {cursor_field}"
+        select = f"*, {cursor_field_qualified} AS {cursor_field}"
     elif cursor_field not in select:
-        select = f"{select}, {cursor_field} AS {cursor_field}"
+        select = f"{select}, {cursor_field_qualified} AS {cursor_field}"
     if (
         table
         in [
@@ -413,7 +928,11 @@ def select_rows(
         ]
         and "COUNT(*)" not in select
     ):
-        select += ", NULLIF(destination, '') AS destination"
+        # When ``dispenses`` rows are read through the hash-FK JOIN, the
+        # outer ``transactions`` row also contains a ``destination`` column;
+        # qualify the reference so SQLite knows we mean the dispense row.
+        dest_ref = "__m.destination" if table_has_hash_fk else "destination"
+        select += f", NULLIF({dest_ref}, '') AS destination"
     # `credits` and `debits` rows carry no natural unique key: several identical
     # rows can be written within a single transaction (e.g. an MPMA send or a
     # dividend crediting the same address+asset more than once). The rows are
@@ -424,23 +943,171 @@ def select_rows(
     if table in ["credits", "debits"] and "COUNT(*)" not in select:
         select += f", rowid AS {table[:-1]}_index"
 
-    query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
-    query_count = f"SELECT {select} FROM {table} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
+    # Rewrite ``SELECT ... tx_hash ... FROM messages`` to project
+    # ``transactions.tx_hash`` through the join we set up above.
+    if rewrite_messages_tx_hash:
+        txtable = _resolve_transactions_table_name(db)
+        if txtable is None:
+            from_clause = "messages AS __m"
+            # Word-boundary safe substitution so embedded substrings such as
+            # ``last_status_tx_hash`` (not a column on ``messages`` today, but
+            # this branch is shared with future schema additions) are not
+            # corrupted by a naive ``str.replace``.
+            select_rewritten = re.sub(
+                r"(?<![A-Za-z0-9_\.])tx_hash(?![A-Za-z0-9_])",
+                "NULL AS tx_hash",
+                select,
+            )
+        else:
+            from_clause = f"messages AS __m LEFT JOIN {_safe_tx_table(txtable)} AS __txh ON __txh.tx_index = __m.tx_index"
+            # Project tx_hash from the joined transactions; leave other columns
+            # untouched. We do a token-level rewrite so embedded substrings such
+            # as ``last_status_tx_hash`` are not touched.
+            select_rewritten = _project_messages_tx_hash(select)
+    elif table_has_hash_fk:
+        # Add the legacy hash column back via a JOIN against ``transactions``
+        # so the API row shape remains unchanged after the column drop.
+        # Explicitly enumerate public columns so the internal ``*_tx_index``
+        # FK that replaced the legacy hash does NOT leak into the response.
+        index_col, hash_col = _HASH_FK_PROJECTIONS[table]
+        public_cols = _hash_fk_public_columns(db, table)
+        explicit_cols = ", ".join(f"__m.{c}" for c in public_cols)
+        txtable = _resolve_transactions_table_name(db)
+        if txtable is None:
+            # No transactions table available (e.g. State DB without the
+            # Ledger DB attached). Skip the JOIN and surface a NULL legacy
+            # hash; callers that need the real hash can fetch it separately.
+            from_clause = f"{table} AS __m"
+            if "*" in select:
+                select_rewritten = select.replace("*", f"{explicit_cols}, NULL AS {hash_col}", 1)
+            else:
+                select_rewritten = f"{select}, NULL AS {hash_col}"
+        else:
+            from_clause = (
+                f"{table} AS __m LEFT JOIN {_safe_tx_table(txtable)} AS __txjoin "
+                f"ON __txjoin.tx_index = __m.{index_col}"
+            )
+            # ``hash_col`` (dispenser_tx_hash / fairminter_tx_hash / order_tx_hash
+            # / offer_hash) is in ``hashcodec.HASH_COLUMN_NAMES`` so the rowtracer
+            # converts the BLOB to 64-char hex; no per-row Python UDF needed.
+            if "*" in select:
+                # Expand the bare ``*`` to the explicit public column list
+                # and re-add the legacy hash via the JOIN.
+                select_rewritten = select.replace(
+                    "*",
+                    f"{explicit_cols}, __txjoin.tx_hash AS {hash_col}",
+                    1,
+                )
+            else:
+                select_rewritten = f"{select}, __txjoin.tx_hash AS {hash_col}"
+    elif table in _MATCH_ID_FK_PROJECTIONS:
+        # Re-expose the legacy ``*_match_id`` (``tx0hash_tx1hash``) via two
+        # correlated subqueries against ``transactions`` and hide the internal
+        # ``*_tx_index`` FK columns so the API row shape is preserved.
+        tx0_col, tx1_col, id_col = _MATCH_ID_FK_PROJECTIONS[table]
+        public_cols = _match_id_public_columns(db, table)
+        explicit_cols = ", ".join(public_cols)
+        from_clause = table
+        txtable = _resolve_transactions_table_name(db)
+        if txtable is None:
+            id_expr = f"NULL AS {id_col}"
+        else:
+            t = _safe_tx_table(txtable)
+            # ``t`` is validated by ``_safe_tx_table``; the column names come
+            # from the constant ``_MATCH_ID_FK_PROJECTIONS`` map -- no user input.
+            id_expr = (
+                f"(SELECT hex_lower(tx_hash) FROM {t} WHERE tx_index = {tx0_col})"  # noqa: S608  # nosec B608
+                f" || '_' || "
+                f"(SELECT hex_lower(tx_hash) FROM {t} WHERE tx_index = {tx1_col}) AS {id_col}"
+            )
+        if "*" in select:
+            select_rewritten = select.replace("*", f"{explicit_cols}, {id_expr}", 1)
+        else:
+            select_rewritten = f"{select}, {id_expr}"
+    else:
+        from_clause = table
+        select_rewritten = select
+
+    # Match tables keep ``tx0_hash``/``tx1_hash`` BLOB; re-expose the dropped
+    # composite TEXT ``id`` locally via the ``hex_lower`` UDF (no JOIN).
+    if table in _MATCH_ID_LOCAL_TABLES:
+        select_rewritten = f"{select_rewritten}, {MATCH_ID_SQL} AS id"
+
+    query = f"SELECT {select_rewritten} FROM {from_clause} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
+
+    # COUNT(*) query fast-path: when there is no ``group_by`` and no
+    # ``wrap_where``, the LEFT JOINs we added for ``messages`` and the
+    # ``_HASH_FK_PROJECTIONS`` tables do not affect the row count (they all
+    # join on a unique key on the right). Building the COUNT against the
+    # main table alone, with a tightly scoped ``WHERE``, lets SQLite use
+    # the appropriate index and skip materializing JOIN rows. For a
+    # 100K-row ledger this turns a 20ms wrap-COUNT into a sub-ms direct
+    # COUNT. Falls back to the legacy wrap pattern when ``group_by`` is
+    # present (where the wrap is required for correct semantics) or when
+    # ``wrap_where`` filters on JOIN'd columns.
+    count_fast_from = None
+    if not group_by_clause and wrap_where is None:
+        if rewrite_messages_tx_hash:
+            # ``messages`` reads need the JOIN only if the caller filters on
+            # ``tx_hash`` (the joined ``__txh`` column). All other filters
+            # are on plain ``messages`` columns, so we count from
+            # ``messages`` directly.
+            if where_needs_join:
+                count_fast_from = from_clause
+            else:
+                count_fast_from = "messages AS __m"
+        elif table_has_hash_fk:
+            # The hash-FK rewrite resolves ``*_tx_hash`` filters via a
+            # correlated subquery on ``transactions`` (see
+            # ``_HASH_FK_WHERE_REWRITE``), so the LEFT JOIN is only there
+            # to expose the legacy hash column to the SELECT. Skip it
+            # entirely for COUNT.
+            count_fast_from = f"{table} AS __m"
+        elif table in _MATCH_ID_FK_PROJECTIONS or table in _MATCH_ID_LOCAL_TABLES:
+            # The match-id projection only adds SELECT-clause subqueries (and,
+            # for ``_MATCH_ID_FK_PROJECTIONS``, a WHERE rewritten to the FK
+            # columns of the same table); the row count is unaffected, so we
+            # COUNT against the table directly and skip the projection work.
+            count_fast_from = table
+        elif table in _COUNT_FROM_OVERRIDE:
+            # Views like ``transactions_with_status`` wrap a LEFT JOIN
+            # against ``blocks`` / ``transactions_status``; counting from
+            # the underlying ``transactions`` table is equivalent (the
+            # LEFT JOINs are on a unique key on the right) -- but only if
+            # the caller's filter is restricted to columns that exist on
+            # the underlying table.
+            main_table, safe_columns = _COUNT_FROM_OVERRIDE[table]
+            if where_fields_used <= safe_columns:
+                count_fast_from = main_table
+
+    if count_fast_from is not None:
+        query_count = f"SELECT COUNT(*) AS count FROM {count_fast_from} {where_clause_count}"  # nosec B608  # noqa: S608 # nosec B608
+    else:
+        # Legacy wrap-COUNT path: required when ``group_by`` is set or the
+        # caller passes ``wrap_where`` whose filter may reference JOIN'd
+        # columns.
+        query_count = (
+            f"SELECT {select_rewritten} FROM {from_clause} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
+        )
 
     if wrap_where is not None:
         wrap_where_field = []
         for key, value in wrap_where.items():
             if key.endswith("__gt"):
-                wrap_where_field.append(f"{key[:-4]} > ?")
+                field = key[:-4]
+                wrap_where_field.append(f"{field} > ?")
             else:
-                wrap_where_field.append(f"{key} = ?")
-            bindings.append(value)
-            bindings_count.append(value)
+                field = key
+                wrap_where_field.append(f"{field} = ?")
+            converted = _convert_hash_value(field, value)
+            bindings.append(converted)
+            bindings_count.append(converted)
         wrap_where_clause = " AND ".join(wrap_where_field)
         wrap_where_clause = f"WHERE {wrap_where_clause}"
         query = f"SELECT * FROM ({query}) {wrap_where_clause}"  # nosec B608  # noqa: S608 # nosec B608
         query_count = f"SELECT COUNT(*) AS count FROM ({query_count}) {wrap_where_clause}"  # nosec B608  # noqa: S608 # nosec B608
-    else:
+    elif count_fast_from is None:
+        # ``group_by`` path: COUNT(*) over the grouped sub-select.
         query_count = f"SELECT COUNT(*) AS count FROM ({query_count})"  # nosec B608  # noqa: S608 # nosec B608
 
     order_by = []
@@ -457,7 +1124,30 @@ def select_rows(
             if table == "balances" and sort_name == "asset":
                 order_by.append(f"COALESCE(asset_longname, asset) {sort_order.upper()}")
             elif sort_name in SUPPORTED_SORT_FIELDS.get(table, []):
-                order_by.append(f"{sort_name} {sort_order.upper()}")
+                # On a Ledger DB table the asset/address columns store the
+                # compact integer index, so a bare ``ORDER BY asset`` would sort
+                # by issuance order / id instead of the name/string the legacy
+                # API ordered by. Resolve the index back to the name/string in
+                # the ORDER BY to preserve the pre-normalization sort order
+                # (the probes are None on the State DB, where these columns keep
+                # their TEXT name/string and the bare clause is correct).
+                if _is_asset_index_col(sort_name):
+                    order_by.append(
+                        f"(SELECT asset_name FROM {_assets_index_table} "  # noqa: S608 # nosec B608
+                        f"WHERE asset_index = {sort_name}) {sort_order.upper()}"
+                    )
+                elif _is_address_index_col(sort_name):
+                    order_by.append(
+                        f"(SELECT address FROM {_address_index_table} "  # noqa: S608 # nosec B608
+                        f"WHERE address_id = {sort_name}) {sort_order.upper()}"
+                    )
+                else:
+                    # Qualify like the WHERE/cursor clauses: on _HASH_FK_PROJECTIONS
+                    # tables the FROM is ``<table> AS __m LEFT JOIN transactions``, so a
+                    # bare sort column that also exists on transactions (block_index,
+                    # btc_amount) is an ambiguous reference. ``_qualify`` prefixes those
+                    # with ``__m.`` and leaves every other field untouched.
+                    order_by.append(f"{_qualify(sort_name)} {sort_order.upper()}")
     elif table == "all_transactions_with_status":
         order_by.append("confirmed ASC")
         order_by.append(f"{cursor_field} {order}")
@@ -3640,7 +4330,7 @@ def get_btcpays_by_order(
     return select_rows(
         ledger_db,
         "btcpays",
-        where={"order_match_id__like": f"%{order_hash}%"},
+        where={"order_match_hash": order_hash},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -3701,7 +4391,7 @@ def get_resolutions_by_bet(
     return select_rows(
         ledger_db,
         "bet_match_resolutions",
-        where={"bet_match_id__like": f"%{bet_hash}%"},
+        where={"bet_match_hash": bet_hash},
         last_cursor=cursor,
         limit=limit,
         offset=offset,

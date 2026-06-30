@@ -7,6 +7,8 @@ from counterpartycore.lib.ledger.caches import OrdersCache
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.ledger.events import credit, insert_record, insert_update
 from counterpartycore.lib.parser import protocol
+from counterpartycore.lib.utils import database, hashcodec, helpers
+from counterpartycore.lib.utils.helpers import MATCH_ID_SQL
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -213,59 +215,72 @@ def compute_pool_fill(reserve_in, reserve_out, max_give, fee_bps, block_index=No
 
 def get_pending_order_matches(db, tx0_hash, tx1_hash):
     cursor = db.cursor()
-    query = """
+    query = f"""
         SELECT * FROM (
-            SELECT *, MAX(rowid) as rowid FROM order_matches
+            SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid) as rowid FROM order_matches
             WHERE (
                 tx0_hash in (:tx0_hash, :tx1_hash) OR
                 tx1_hash in (:tx0_hash, :tx1_hash)
             )
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = :status
         ORDER BY rowid
-    """
-    bindings = {"status": "pending", "tx0_hash": tx0_hash, "tx1_hash": tx1_hash}
+    """  # noqa: S608 # nosec B608
+    bindings = {
+        "status": "pending",
+        "tx0_hash": hashcodec.hash_to_db(tx0_hash),
+        "tx1_hash": hashcodec.hash_to_db(tx1_hash),
+    }
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
 
 def get_pending_btc_order_matches(db, address):
     cursor = db.cursor()
-    query = """
+    query = f"""
         SELECT * FROM (
-            SELECT *, MAX(rowid) AS rowid
+            SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid) AS rowid
             FROM order_matches
             WHERE (tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?)
         ) WHERE status = ?
         ORDER BY rowid
-    """
-    bindings = (address, config.BTC, address, config.BTC, "pending")
+    """  # noqa: S608 # nosec B608
+    btc_idx = database.asset_index_from_name(db, config.BTC)
+    address_id = database.address_index_from_name(db, address)
+    bindings = (address_id, btc_idx, address_id, btc_idx, "pending")
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
 
 def get_order_match(db, match_id):
     cursor = db.cursor()
-    query = """
-        SELECT *, rowid
+    # ``match_id`` is the composite ``tx0hash_tx1hash`` text; split it and match
+    # on the underlying hash pair (the TEXT ``id`` column no longer exists).
+    # A malformed/None id matches nothing, mirroring the old ``WHERE id = ?``.
+    parts = match_id.split(helpers.ID_SEPARATOR) if isinstance(match_id, str) else []
+    if len(parts) != 2:
+        return []
+    tx0_hash, tx1_hash = parts
+    query = f"""
+        SELECT *, {MATCH_ID_SQL} AS id, rowid
         FROM order_matches
-        WHERE id = ?
-        ORDER BY rowid DESC LIMIT 1"""
-    bindings = (match_id,)
+        WHERE tx0_hash = ? AND tx1_hash = ?
+        ORDER BY rowid DESC LIMIT 1"""  # noqa: S608 # nosec B608
+    bindings = (hashcodec.hash_to_db(tx0_hash), hashcodec.hash_to_db(tx1_hash))
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
 
 def get_order_matches_to_expire(db, block_index):
     cursor = db.cursor()
-    query = """SELECT * FROM (
-        SELECT *, MAX(rowid) AS rowid
+    query = f"""SELECT * FROM (
+        SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid) AS rowid
         FROM order_matches
         WHERE match_expire_index = ? - 1
-        GROUP BY id
+        GROUP BY tx0_index, tx1_index
     ) WHERE status = ?
     ORDER BY rowid
-    """
+    """  # noqa: S608 # nosec B608
     bindings = (block_index, "pending")
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -282,7 +297,7 @@ def get_order(db, order_hash: str):
         WHERE tx_hash = ?
         ORDER BY rowid DESC LIMIT 1
     """
-    bindings = (order_hash,)
+    bindings = (hashcodec.hash_to_db(order_hash),)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -293,7 +308,7 @@ def get_order_first_block_index(cursor, tx_hash):
         WHERE tx_hash = ?
         ORDER BY rowid ASC LIMIT 1
     """
-    bindings = (tx_hash,)
+    bindings = (hashcodec.hash_to_db(tx_hash),)
     cursor.execute(query, bindings)
     return cursor.fetchone()["block_index"]
 
@@ -325,7 +340,11 @@ def get_open_btc_orders(db, address):
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     """
-    bindings = (address, config.BTC, "open")
+    bindings = (
+        database.address_index_from_name(db, address),
+        database.asset_index_from_name(db, config.BTC),
+        "open",
+    )
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -341,7 +360,7 @@ def get_open_orders_by_source(db, address):
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     """
-    bindings = (address, "open")
+    bindings = (database.address_index_from_name(db, address), "open")
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -357,7 +376,12 @@ def get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset):
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     """
-    bindings = (tx_hash, get_asset, give_asset, "open")
+    bindings = (
+        hashcodec.hash_to_db(tx_hash),
+        database.asset_index_from_name(db, get_asset),
+        database.asset_index_from_name(db, give_asset),
+        "open",
+    )
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -384,12 +408,15 @@ def update_order(db, tx_hash, update_data):
 
 
 def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
-    select_bindings = {"tx0_hash": tx0_hash, "tx1_hash": tx1_hash}
+    select_bindings = {
+        "tx0_hash": hashcodec.hash_to_db(tx0_hash),
+        "tx1_hash": hashcodec.hash_to_db(tx1_hash),
+    }
 
     where_source = ""
     if source is not None:
         where_source = " AND source = :source"
-        select_bindings["source"] = source
+        select_bindings["source"] = database.address_index_from_name(db, source)
 
     # no sql injection here
     select_query = f"""
@@ -447,7 +474,7 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
     bindings = []
     if tx_hash is not None:
         where.append("tx_hash = ?")
-        bindings.append(tx_hash)
+        bindings.append(hashcodec.hash_to_db(tx_hash))
     if tx_index is not None:
         where.append("tx_index = ?")
         bindings.append(tx_index)
@@ -476,11 +503,13 @@ def get_dispensers_info(db, tx_hash_list):
         WHERE tx_hash IN ({",".join(["?" for e in range(0, len(tx_hash_list))])})
         GROUP BY tx_hash
     """  # nosec B608  # noqa: S608 # nosec B608
-    cursor.execute(query, tx_hash_list)
+    cursor.execute(query, [hashcodec.hash_to_db(h) for h in tx_hash_list])
     dispensers = cursor.fetchall()
     result = {}
     for dispenser in dispensers:
         del dispenser["rowid"]
+        # rowtracer converts BLOB -> hex; key the result on the hex form so
+        # callers passing hex keys can index it back.
         tx_hash = dispenser["tx_hash"]
         del dispenser["tx_hash"]
         del dispenser["asset"]
@@ -489,13 +518,18 @@ def get_dispensers_info(db, tx_hash_list):
 
 
 def get_refilling_count(db, dispenser_tx_hash):
+    # ``dispenser_refills.dispenser_tx_hash`` was replaced by an integer
+    # ``dispenser_tx_index`` FK; translate the hex hash via the
+    # ``transactions`` table.
     cursor = db.cursor()
     query = """
         SELECT count(*) cnt
         FROM dispenser_refills
-        WHERE dispenser_tx_hash = ?
+        WHERE dispenser_tx_index = (
+            SELECT tx_index FROM transactions WHERE tx_hash = ?
+        )
     """
-    bindings = (dispenser_tx_hash,)
+    bindings = (hashcodec.hash_to_db(dispenser_tx_hash),)
     cursor.execute(query, bindings)
     return cursor.fetchall()[0]["cnt"]
 
@@ -533,7 +567,11 @@ def get_dispensers_count(db, source, status, origin):
         ) WHERE status = ?
         ORDER BY tx_index
     """
-    bindings = (source, origin, status)
+    bindings = (
+        database.address_index_from_name(db, source),
+        database.address_index_from_name(db, origin),
+        status,
+    )
     cursor.execute(query, bindings)
     return cursor.fetchall()[0]["cnt"]
 
@@ -555,16 +593,16 @@ def get_dispensers(
     first_where = []
     if address is not None:
         first_where.append("source = ?")
-        bindings.append(address)
+        bindings.append(database.address_index_from_name(db, address))
     if source_in is not None:
         first_where.append(f"source IN ({','.join(['?' for e in range(0, len(source_in))])})")
-        bindings += source_in
+        bindings += [database.address_index_from_name(db, s) for s in source_in]
     if asset is not None:
         first_where.append("asset = ?")
-        bindings.append(asset)
+        bindings.append(database.asset_index_from_name(db, asset))
     if origin is not None:
         first_where.append("origin = ?")
-        bindings.append(origin)
+        bindings.append(database.address_index_from_name(db, origin))
     # where for mutable fields
     second_where = []
     if status is not None:
@@ -580,7 +618,16 @@ def get_dispensers(
     second_where_str = " AND ".join(second_where)
     if second_where_str != "":
         second_where_str = f"WHERE ({second_where_str})"
-    order_clause = f"ORDER BY {order_by}" if order_by is not None else "ORDER BY tx_index"
+    if order_by == "asset":
+        # ``asset`` is stored as the compact asset_index; ordering by it would
+        # change the (consensus-relevant) dispenser processing order in
+        # ``dispense.parse``. Order by the resolved asset *name* to reproduce
+        # the exact pre-normalization ordering.
+        order_clause = "ORDER BY (SELECT asset_name FROM assets WHERE asset_index = asset)"
+    elif order_by is not None:
+        order_clause = f"ORDER BY {order_by}"
+    else:
+        order_clause = "ORDER BY tx_index"
     group_clause = f"GROUP BY {group_by}" if group_by is not None else "GROUP BY asset, source"
     # no sql injection here
     query = f"""
@@ -626,7 +673,10 @@ def get_pool(db, asset_a, asset_b):
         WHERE asset_a = ? AND asset_b = ?
         ORDER BY rowid DESC LIMIT 1
     """
-    bindings = (asset_a, asset_b)
+    bindings = (
+        database.asset_index_from_name(db, asset_a),
+        database.asset_index_from_name(db, asset_b),
+    )
     cursor.execute(query, bindings)
     pools = cursor.fetchall()
     cursor.close()
@@ -672,7 +722,13 @@ def get_pool_deposits(db, asset_a, asset_b):
         WHERE asset_a = ? AND asset_b = ? AND status = 'valid'
         ORDER BY block_index, tx_index
     """
-    cursor.execute(query, (asset_a, asset_b))
+    cursor.execute(
+        query,
+        (
+            database.asset_index_from_name(db, asset_a),
+            database.asset_index_from_name(db, asset_b),
+        ),
+    )
     return cursor.fetchall()
 
 
@@ -683,7 +739,13 @@ def get_pool_withdrawals(db, asset_a, asset_b):
         WHERE asset_a = ? AND asset_b = ? AND status = 'valid'
         ORDER BY block_index, tx_index
     """
-    cursor.execute(query, (asset_a, asset_b))
+    cursor.execute(
+        query,
+        (
+            database.asset_index_from_name(db, asset_a),
+            database.asset_index_from_name(db, asset_b),
+        ),
+    )
     return cursor.fetchall()
 
 
@@ -698,18 +760,30 @@ def get_open_orders_for_pair(db, give_asset, get_asset):
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     """
-    cursor.execute(query, (give_asset, get_asset, "open"))
+    cursor.execute(
+        query,
+        (
+            database.asset_index_from_name(db, give_asset),
+            database.asset_index_from_name(db, get_asset),
+            "open",
+        ),
+    )
     return cursor.fetchall()
 
 
 def get_pool_matches_by_order(db, order_tx_hash):
+    # ``pool_matches.order_tx_hash`` was replaced by an integer
+    # ``order_tx_index`` FK; translate the hex hash via the
+    # ``transactions`` table.
     cursor = db.cursor()
     query = """
         SELECT * FROM pool_matches
-        WHERE order_tx_hash = ?
+        WHERE order_tx_index = (
+            SELECT tx_index FROM transactions WHERE tx_hash = ?
+        )
         ORDER BY block_index, tx_index
     """
-    cursor.execute(query, (order_tx_hash,))
+    cursor.execute(query, (hashcodec.hash_to_db(order_tx_hash),))
     return cursor.fetchall()
 
 
@@ -724,7 +798,10 @@ def update_pool(db, asset_a, asset_b, new_reserve_a, new_reserve_b):
     cursor = db.cursor()
     cursor.execute(
         "SELECT rowid FROM pools WHERE asset_a = ? AND asset_b = ? ORDER BY rowid DESC LIMIT 1",
-        (asset_a, asset_b),
+        (
+            database.asset_index_from_name(db, asset_a),
+            database.asset_index_from_name(db, asset_b),
+        ),
     )
     row = cursor.fetchone()
     cursor.close()

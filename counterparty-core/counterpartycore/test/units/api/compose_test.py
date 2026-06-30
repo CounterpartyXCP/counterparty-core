@@ -44,9 +44,12 @@ def test_compose_broadcast(apiv2_client, defaults):
 
 def test_compose_btcpay(apiv2_client, defaults, ledger_db):
     """Test compose_btcpay function via API."""
-    # Get an existing order match from the database
+    # Get an existing order match from the database. The composite TEXT ``id``
+    # was dropped from match tables; reconstruct it from the kept
+    # ``tx0_hash``/``tx1_hash`` BLOB columns.
     order_match = ledger_db.execute(
-        "SELECT id FROM order_matches WHERE status = 'pending' LIMIT 1"
+        "SELECT hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS id "
+        "FROM order_matches WHERE status = 'pending' LIMIT 1"
     ).fetchone()
     if order_match:
         address = defaults["addresses"][0]
@@ -569,8 +572,8 @@ def test_compose_multiple_detach_includes_all_utxos(ledger_db, defaults):
     the balance-bearing UTXO is selected as the validation source."""
     script_pub_key = "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac"
     utxo_with_balance = ledger_db.execute("""
-        SELECT utxo FROM balances
-        WHERE quantity > 0 AND utxo IS NOT NULL
+        SELECT utxo_tx_hash, utxo_vout FROM balances
+        WHERE quantity > 0 AND utxo_tx_hash IS NOT NULL
         ORDER BY rowid DESC LIMIT 1
     """).fetchone()["utxo"]
     # A UTXO without any balance, listed first to ensure the source-selection

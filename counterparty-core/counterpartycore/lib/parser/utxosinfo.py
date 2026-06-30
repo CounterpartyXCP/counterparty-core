@@ -1,7 +1,9 @@
+from counterpartycore.lib.parser import protocol
+
 MAX_VOUT = 0xFFFFFFFF
 
 
-def is_utxo_format(value):
+def is_utxo_format(value, block_index=None):
     if not isinstance(value, str):
         return False
     values = value.split(":")
@@ -12,7 +14,11 @@ def is_utxo_format(value):
     vout = int(values[1])
     if str(vout) != values[1]:
         return False
-    if vout > MAX_VOUT:
+    if vout > MAX_VOUT and protocol.enabled("enforce_utxo_vout_max", block_index):
+        # Rejecting out-of-range vouts changes the UTXO/address classification of a
+        # transaction (attach vs detach, debit/credit routing), so it is a consensus
+        # change and must be gated. Before activation the legacy behaviour is kept
+        # (any non-negative integer vout that round-trips through str(int())).
         return False
     try:
         int(values[0], 16)

@@ -173,6 +173,14 @@ class CounterpartyServer(threading.Thread):
         # Initialise database
         database.apply_outstanding_migration(config.DATABASE, config.LEDGER_DB_MIGRATIONS_DIR)
         self.db = database.initialise_db()
+        # Ensure the ``messages`` table has its read indexes even when
+        # ``--api-only`` skips the parser's ``catch_up()`` path. Migration
+        # 0010 rebuilt the table without these indexes for legacy DBs
+        # carrying the ``EVENTS_INDEXES_CREATED`` flag, so without this
+        # call the API would full-scan ``messages`` on every read.
+        # ``CREATE INDEX IF NOT EXISTS`` is idempotent, so this is a no-op
+        # for fully-indexed databases.
+        blocks.create_events_indexes(self.db)
         CurrentState().set_current_block_index(ledger.blocks.last_db_index(self.db))
         blocks.check_database_version(self.db)
         database.optimize(self.db)
@@ -401,9 +409,12 @@ def rollback(block_index=None):
 
 
 def vacuum():
-    db = database.initialise_db()
-    with log.Spinner("Vacuuming database..."):
-        database.vacuum(db)
+    ledger_db = database.initialise_db()
+    state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
+    with log.Spinner("Vacuuming Ledger DB..."):
+        database.vacuum(ledger_db)
+    with log.Spinner("Vacuuming State DB..."):
+        database.vacuum(state_db)
 
 
 def check_database():

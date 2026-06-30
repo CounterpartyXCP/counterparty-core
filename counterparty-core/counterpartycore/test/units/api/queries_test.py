@@ -8,6 +8,7 @@ import inspect
 import pytest
 from counterpartycore.lib import config
 from counterpartycore.lib.api import queries, routes, verbose
+from counterpartycore.lib.utils import hashcodec
 
 # =============================================================================
 # Tests for select_rows function - where clause handling
@@ -196,28 +197,36 @@ def test_select_rows_with_unsupported_sort_field(state_db):
 
 def _insert_quantitative_sort_fixtures(ledger_db):
     """Insert two rows per quantitative table (quantities 10 then 20) used by the sort tests."""
-    block_hash = ledger_db.execute(
-        "SELECT block_hash FROM blocks WHERE block_index = 101"
-    ).fetchone()["block_hash"]
+    # Asset columns store the compact asset_index, so register the synthetic
+    # assets and reference them by index in the INSERTs below.
+    for idx, asset_name in enumerate(("SORTSEND", "SORTISSUE", "SORTDISP", "SORTDIV"), start=1):
+        ledger_db.execute(
+            "INSERT OR IGNORE INTO assets (asset_id, asset_name) VALUES (?, ?)",
+            (str(900000 + idx), asset_name),
+        )
+    # Address columns store the compact address_id; register the synthetic
+    # addresses so address filters (e.g. broadcasts.source) resolve.
+    for addr in ("source", "dest", "issuer", "sort-source"):
+        ledger_db.execute("INSERT OR IGNORE INTO address_list (address) VALUES (?)", (addr,))
     ledger_db.executemany(
         """
         INSERT INTO transactions (
-            tx_index, tx_hash, block_index, block_hash, block_time, source,
+            tx_index, tx_hash, block_index, block_time, source,
             destination, btc_amount, fee, data, supported, utxos_info,
             transaction_type
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         [
-            (900001, "a" * 64, 101, block_hash, 1, "source", "dest", 0, 0, b"", 1, "", "send"),
-            (900002, "b" * 64, 101, block_hash, 2, "source", "dest", 0, 0, b"", 1, "", "send"),
-            (900003, "c" * 64, 101, block_hash, 3, "source", "dest", 0, 0, b"", 1, "", "issuance"),
-            (900004, "d" * 64, 101, block_hash, 4, "source", "dest", 0, 0, b"", 1, "", "issuance"),
-            (900005, "e" * 64, 101, block_hash, 5, "source", "dest", 0, 0, b"", 1, "", "broadcast"),
-            (900006, "f" * 64, 101, block_hash, 6, "source", "dest", 0, 0, b"", 1, "", "broadcast"),
-            (900007, "1" * 64, 101, block_hash, 7, "source", "dest", 0, 0, b"", 1, "", "dispense"),
-            (900008, "3" * 64, 101, block_hash, 8, "source", "dest", 0, 0, b"", 1, "", "dispense"),
-            (900009, "5" * 64, 101, block_hash, 9, "source", "dest", 0, 0, b"", 1, "", "dividend"),
-            (900010, "6" * 64, 101, block_hash, 10, "source", "dest", 0, 0, b"", 1, "", "dividend"),
+            (900001, "a" * 64, 101, 1, "source", "dest", 0, 0, b"", 1, "", "send"),
+            (900002, "b" * 64, 101, 2, "source", "dest", 0, 0, b"", 1, "", "send"),
+            (900003, "c" * 64, 101, 3, "source", "dest", 0, 0, b"", 1, "", "issuance"),
+            (900004, "d" * 64, 101, 4, "source", "dest", 0, 0, b"", 1, "", "issuance"),
+            (900005, "e" * 64, 101, 5, "source", "dest", 0, 0, b"", 1, "", "broadcast"),
+            (900006, "f" * 64, 101, 6, "source", "dest", 0, 0, b"", 1, "", "broadcast"),
+            (900007, "1" * 64, 101, 7, "source", "dest", 0, 0, b"", 1, "", "dispense"),
+            (900008, "3" * 64, 101, 8, "source", "dest", 0, 0, b"", 1, "", "dispense"),
+            (900009, "5" * 64, 101, 9, "source", "dest", 0, 0, b"", 1, "", "dividend"),
+            (900010, "6" * 64, 101, 10, "source", "dest", 0, 0, b"", 1, "", "dividend"),
         ],
     )
     ledger_db.executemany(
@@ -225,7 +234,7 @@ def _insert_quantitative_sort_fixtures(ledger_db):
         INSERT INTO sends (
             tx_index, tx_hash, block_index, source, destination, asset,
             quantity, status, msg_index, fee_paid, send_type
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, (SELECT asset_index FROM assets WHERE asset_name = ?), ?, ?, ?, ?, ?)
         """,
         [
             (900001, "a" * 64, 101, "source", "dest", "SORTSEND", 10, "valid", 0, 1, "send"),
@@ -237,7 +246,7 @@ def _insert_quantitative_sort_fixtures(ledger_db):
         INSERT INTO issuances (
             tx_index, tx_hash, msg_index, block_index, asset, quantity,
             source, issuer, fee_paid, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, (SELECT asset_index FROM assets WHERE asset_name = ?), ?, ?, ?, ?, ?)
         """,
         [
             (900003, "c" * 64, 0, 101, "SORTISSUE", 10, "source", "issuer", 1, "valid"),
@@ -249,7 +258,7 @@ def _insert_quantitative_sort_fixtures(ledger_db):
         INSERT INTO broadcasts (
             tx_index, tx_hash, block_index, source, timestamp, value,
             fee_fraction_int, text, locked, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, (SELECT address_id FROM address_list WHERE address = ?), ?, ?, ?, ?, ?, ?)
         """,
         [
             (900005, "e" * 64, 101, "sort-source", 1, 1.0, 1, "low", 0, "valid"),
@@ -260,12 +269,12 @@ def _insert_quantitative_sort_fixtures(ledger_db):
         """
         INSERT INTO dispenses (
             tx_index, dispense_index, tx_hash, block_index, source,
-            destination, asset, dispense_quantity, dispenser_tx_hash, btc_amount
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            destination, asset, dispense_quantity, dispenser_tx_index, btc_amount
+        ) VALUES (?, ?, ?, ?, ?, ?, (SELECT asset_index FROM assets WHERE asset_name = ?), ?, ?, ?)
         """,
         [
-            (900007, 0, "1" * 64, 101, "source", "dest", "SORTDISP", 10, "2" * 64, 1),
-            (900008, 0, "3" * 64, 101, "source", "dest", "SORTDISP", 20, "4" * 64, 2),
+            (900007, 0, "1" * 64, 101, "source", "dest", "SORTDISP", 10, 900001, 1),
+            (900008, 0, "3" * 64, 101, "source", "dest", "SORTDISP", 20, 900002, 2),
         ],
     )
     ledger_db.executemany(
@@ -273,7 +282,8 @@ def _insert_quantitative_sort_fixtures(ledger_db):
         INSERT INTO dividends (
             tx_index, tx_hash, block_index, source, asset, dividend_asset,
             quantity_per_unit, fee_paid, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, (SELECT asset_index FROM assets WHERE asset_name = ?),
+            (SELECT asset_index FROM assets WHERE asset_name = ?), ?, ?, ?)
         """,
         [
             (900009, "5" * 64, 101, "source", "SORTDIV", "XCP", 10, 1, "valid"),
@@ -302,6 +312,123 @@ def test_select_rows_sort_additional_quantitative_tables(ledger_db):
             limit=2,
         )
         assert [row[sort_field] for row in result.result] == expected
+
+
+def test_select_rows_sort_on_joined_table_qualifies_ambiguous_column(ledger_db):
+    """Sorting a ``_HASH_FK_PROJECTIONS`` table (dispenses, pool_matches) by a
+    column that also exists on ``transactions`` must not raise.
+
+    Regression guard: these tables are queried as
+    ``<table> AS __m LEFT JOIN transactions AS __txjoin``, so a bare
+    ``ORDER BY btc_amount`` / ``ORDER BY block_index`` is an ambiguous column
+    reference and SQLite raised ``ambiguous column name`` (HTTP 500). The sort
+    field must be qualified with ``__m.`` exactly like the WHERE/cursor clauses.
+    The dispenses fixture sets btc_amount to {1, 2} while the joined transactions
+    rows have btc_amount 0, so the asserted order also proves it sorts on the
+    dispenses column, not the transactions one.
+    """
+    _insert_quantitative_sort_fixtures(ledger_db)
+
+    for order, expected in (("asc", [1, 2]), ("desc", [2, 1])):
+        result = queries.select_rows(
+            ledger_db,
+            "dispenses",
+            where={"asset": "SORTDISP"},
+            sort=f"btc_amount:{order}",
+            limit=10,
+        )
+        assert [row["btc_amount"] for row in result.result] == expected
+
+    # block_index is also ambiguous (present on both dispenses and transactions);
+    # sorting by it must succeed rather than raise.
+    result = queries.select_rows(
+        ledger_db,
+        "dispenses",
+        where={"asset": "SORTDISP"},
+        sort="block_index:asc",
+        limit=10,
+    )
+    assert len(result.result) == 2
+
+
+def test_select_rows_sort_by_asset_orders_by_name_on_ledger_db(ledger_db):
+    """Sorting a Ledger DB table by ``asset`` must order by the asset *name*,
+    not by the compact ``asset_index`` the column is stored as.
+
+    Regression guard: a bare ``ORDER BY asset`` would sort by issuance order /
+    id. We register two assets whose insertion (index) order is the REVERSE of
+    their alphabetical order, so an index sort and a name sort disagree.
+    """
+    for asset_id, asset_name in ((990001, "ZZZREGSORT"), (990002, "AAAREGSORT")):
+        ledger_db.execute(
+            "INSERT OR IGNORE INTO assets (asset_id, asset_name) VALUES (?, ?)",
+            (str(asset_id), asset_name),
+        )
+    for addr in ("reg-sort-src", "reg-dest"):
+        ledger_db.execute("INSERT OR IGNORE INTO address_list (address) VALUES (?)", (addr,))
+    ledger_db.executemany(
+        """
+        INSERT INTO transactions (
+            tx_index, tx_hash, block_index, block_time, source, destination,
+            btc_amount, fee, data, supported, utxos_info, transaction_type
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (990001, "7" * 64, 101, 1, "reg-sort-src", "reg-dest", 0, 0, b"", 1, "", "send"),
+            (990002, "8" * 64, 101, 2, "reg-sort-src", "reg-dest", 0, 0, b"", 1, "", "send"),
+        ],
+    )
+    # ``source``/``destination`` are address_id FKs and ``asset`` an asset_index
+    # FK, so resolve them on insert exactly like the write path does.
+    ledger_db.executemany(
+        """
+        INSERT INTO sends (
+            tx_index, tx_hash, block_index, source, destination, asset,
+            quantity, status, msg_index, fee_paid, send_type
+        ) VALUES (?, ?, ?,
+            (SELECT address_id FROM address_list WHERE address = ?),
+            (SELECT address_id FROM address_list WHERE address = ?),
+            (SELECT asset_index FROM assets WHERE asset_name = ?), ?, ?, ?, ?, ?)
+        """,
+        [
+            (
+                990001,
+                "7" * 64,
+                101,
+                "reg-sort-src",
+                "reg-dest",
+                "ZZZREGSORT",
+                1,
+                "valid",
+                0,
+                1,
+                "send",
+            ),
+            (
+                990002,
+                "8" * 64,
+                101,
+                "reg-sort-src",
+                "reg-dest",
+                "AAAREGSORT",
+                1,
+                "valid",
+                0,
+                2,
+                "send",
+            ),
+        ],
+    )
+
+    asc = queries.select_rows(
+        ledger_db, "sends", where={"source": "reg-sort-src"}, sort="asset:asc", limit=10
+    )
+    assert [row["asset"] for row in asc.result] == ["AAAREGSORT", "ZZZREGSORT"]
+
+    desc = queries.select_rows(
+        ledger_db, "sends", where={"source": "reg-sort-src"}, sort="asset:desc", limit=10
+    )
+    assert [row["asset"] for row in desc.result] == ["ZZZREGSORT", "AAAREGSORT"]
 
 
 def test_quantitative_getters_pass_sort_through(ledger_db):
@@ -443,8 +570,15 @@ def test_get_address_options(ledger_db, defaults):
     }
 
     address_with_options = defaults["addresses"][6]
+    # ``addresses.address`` is now the compact ``address_id`` FK; register the
+    # address in ``address_list`` and store its id (the API resolves the filter
+    # to the id too).
     ledger_db.execute(
-        "INSERT INTO addresses (address, options, block_index) VALUES (?, ?, ?)",
+        "INSERT OR IGNORE INTO address_list (address) VALUES (?)", (address_with_options,)
+    )
+    ledger_db.execute(
+        "INSERT INTO addresses (address, options, block_index) "
+        "VALUES ((SELECT address_id FROM address_list WHERE address = ?), ?, ?)",
         (address_with_options, config.ADDRESS_OPTION_REQUIRE_MEMO, 123),
     )
 
@@ -514,7 +648,7 @@ def test_get_transactions_by_addresses_with_valid_filter(ledger_db, defaults):
 def test_transaction_queries_return_zero_btc_amount_for_null(ledger_db, current_block_index):
     """Test transaction endpoints do not expose null btc_amount values."""
     block = ledger_db.execute(
-        "SELECT block_hash, block_time FROM blocks WHERE block_index = ?",
+        "SELECT block_time FROM blocks WHERE block_index = ?",
         (current_block_index,),
     ).fetchone()
     tx_index = (
@@ -526,14 +660,13 @@ def test_transaction_queries_return_zero_btc_amount_for_null(ledger_db, current_
     tx_hash = "ab" * 32
     ledger_db.execute(
         """INSERT INTO transactions(
-            tx_index, tx_hash, block_index, block_hash, block_time, source, destination,
+            tx_index, tx_hash, block_index, block_time, source, destination,
             btc_amount, fee, data, supported, utxos_info, transaction_type
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             tx_index,
-            tx_hash,
+            hashcodec.hash_to_db(tx_hash),
             current_block_index,
-            block["block_hash"],
             block["block_time"],
             "",
             "",
@@ -1686,3 +1819,176 @@ def test_get_pool_quote_withdraw_case_insensitive(state_db):
     lower = queries.get_pool_quote_withdraw(state_db, "poolasseta", "poolassetb", 1_000_000)
     assert upper == lower
     assert lower["pool_exists"] is True
+
+
+# =============================================================================
+# Tests for the COUNT(*) fast-path optimization
+# These verify that ``result_count`` stays accurate when ``select_rows``
+# bypasses the legacy wrap-COUNT and counts from the underlying table.
+# =============================================================================
+
+
+def test_get_pool_deposits_by_block(ledger_db, current_block_index):
+    result = queries.get_pool_deposits_by_block(ledger_db, current_block_index)
+    assert result is not None
+
+
+def test_get_pool_withdrawals_by_block(ledger_db, current_block_index):
+    result = queries.get_pool_withdrawals_by_block(ledger_db, current_block_index)
+    assert result is not None
+
+
+def test_get_pool_matches_by_block(ledger_db, current_block_index):
+    result = queries.get_pool_matches_by_block(ledger_db, current_block_index)
+    assert result is not None
+
+
+def test_get_pool_matches_by_order(state_db):
+    result = queries.get_pool_matches_by_order(state_db, "nonexistent_hash")
+    assert result is not None
+
+
+def test_get_pool_deposits_by_address_with_cursor(state_db, defaults):
+    result = queries.get_pool_deposits_by_address(state_db, defaults["addresses"][0], cursor=999)
+    assert result is not None
+
+
+def test_get_pool_withdrawals_by_address_with_cursor(state_db, defaults):
+    result = queries.get_pool_withdrawals_by_address(state_db, defaults["addresses"][0], cursor=999)
+    assert result is not None
+
+
+def test_get_pool_quote_no_pool_with_orders(state_db):
+    """Book-only path: no pool but orders might exist."""
+    result = queries.get_pool_quote(state_db, "XCP", "DIVISIBLE", 1_000_000)
+    assert "pool_exists" in result
+    assert result["pool_exists"] is False
+
+
+def test_get_pools_with_sort(state_db):
+    result = queries.get_pools(state_db, sort="reserve_a:desc")
+    assert result is not None
+
+
+def test_get_all_pool_matches_with_sort(state_db):
+    result = queries.get_all_pool_matches(state_db, sort="forward_quantity:asc")
+    assert result is not None
+
+
+def test_count_fast_path_messages_no_tx_hash_filter(ledger_db):
+    """Counting ``messages`` without a tx_hash filter uses the no-JOIN
+    fast-path; the count must still match a row-by-row tally."""
+    page = queries.select_rows(
+        ledger_db,
+        "messages",
+        limit=10,
+        select="message_index AS event_index, event, tx_hash, block_index",
+    )
+    cursor = ledger_db.cursor()
+    actual = cursor.execute("SELECT COUNT(*) AS c FROM messages").fetchone()["c"]
+    assert page.result_count == actual
+
+
+def test_count_fast_path_messages_with_event_filter(ledger_db):
+    """Event filter on ``messages`` exercises the no-JOIN fast-path with
+    a non-trivial WHERE clause."""
+    page = queries.select_rows(
+        ledger_db,
+        "messages",
+        where={"event": "CREDIT"},
+        limit=10,
+        select="message_index AS event_index, event, tx_hash, block_index",
+    )
+    cursor = ledger_db.cursor()
+    actual = cursor.execute(
+        "SELECT COUNT(*) AS c FROM messages WHERE event = ?", ("CREDIT",)
+    ).fetchone()["c"]
+    assert page.result_count == actual
+
+
+def test_count_fast_path_messages_with_tx_hash_filter(ledger_db, defaults):
+    """Filtering by ``tx_hash`` forces the JOIN path; ensure the wrap-COUNT
+    fallback still returns the correct count."""
+    sample_tx = ledger_db.cursor().execute("SELECT tx_hash FROM transactions LIMIT 1").fetchone()
+    if not sample_tx:
+        return
+    tx_hash = sample_tx["tx_hash"]
+    page = queries.select_rows(
+        ledger_db,
+        "messages",
+        where={"tx_hash": tx_hash},
+        limit=10,
+        select="message_index AS event_index, event, tx_hash, block_index",
+    )
+    # No assertion on the exact value other than "matches reality".
+    cursor = ledger_db.cursor()
+    blob = bytes.fromhex(tx_hash)
+    actual = cursor.execute(
+        "SELECT COUNT(*) AS c FROM messages WHERE tx_index = (SELECT tx_index FROM transactions WHERE tx_hash = ?)",
+        (blob,),
+    ).fetchone()["c"]
+    assert page.result_count == actual
+
+
+def test_count_fast_path_hash_fk_table(ledger_db):
+    """Counting a ``_HASH_FK_PROJECTIONS`` table skips the legacy hash JOIN."""
+    page = queries.select_rows(ledger_db, "dispenses", limit=10)
+    cursor = ledger_db.cursor()
+    actual = cursor.execute("SELECT COUNT(*) AS c FROM dispenses").fetchone()["c"]
+    assert page.result_count == actual
+
+
+def test_count_fast_path_transactions_with_status_override(ledger_db):
+    """``transactions_with_status`` filter on a column that exists on
+    ``transactions`` itself uses the underlying-table COUNT override."""
+    page = queries.select_rows(
+        ledger_db,
+        "transactions_with_status",
+        where={"transaction_type": "send"},
+        limit=10,
+    )
+    cursor = ledger_db.cursor()
+    actual = cursor.execute(
+        "SELECT COUNT(*) AS c FROM transactions WHERE transaction_type = ?", ("send",)
+    ).fetchone()["c"]
+    assert page.result_count == actual
+
+
+def test_count_fast_path_transactions_with_status_with_valid(ledger_db):
+    """When the filter references the ``valid`` column (only on
+    ``transactions_status``), the override is rejected and we fall back to
+    the wrap-COUNT path."""
+    page = queries.select_rows(
+        ledger_db,
+        "transactions_with_status",
+        where={"valid": True},
+        limit=10,
+    )
+    cursor = ledger_db.cursor()
+    actual = cursor.execute(
+        "SELECT COUNT(*) AS c FROM transactions t "
+        "LEFT JOIN transactions_status ts ON t.tx_index = ts.tx_index "
+        "WHERE ts.valid = ?",
+        (True,),
+    ).fetchone()["c"]
+    assert page.result_count == actual
+
+
+def test_count_fast_path_group_by_falls_back(ledger_db):
+    """``group_by`` callers must keep the wrap-COUNT semantics so the
+    returned count reflects the number of *groups*, not the number of
+    pre-group rows."""
+    page = queries.select_rows(
+        ledger_db,
+        "messages",
+        where={"block_index": 310000},
+        select="event, COUNT(*) AS event_count",
+        group_by="event",
+        cursor_field="event",
+    )
+    cursor = ledger_db.cursor()
+    actual = cursor.execute(
+        "SELECT COUNT(*) AS c FROM (SELECT event FROM messages WHERE block_index = ? GROUP BY event)",
+        (310000,),
+    ).fetchone()["c"]
+    assert page.result_count == actual

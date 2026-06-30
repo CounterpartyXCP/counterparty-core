@@ -4,7 +4,7 @@ import time
 from counterpartycore.lib import config
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser.known_sources import KNOWN_SOURCES
-from counterpartycore.lib.utils import database, helpers
+from counterpartycore.lib.utils import database, hashcodec, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -81,7 +81,16 @@ class AssetCache(metaclass=helpers.SingletonMeta):
             ORDER BY tx_index DESC
             LIMIT 1
         """  # nosec B608  # noqa: S608
-        cursor.execute(sql, (asset_name,))
+        # ``asset_longname`` stays TEXT; the ``asset`` column is now the compact
+        # ``asset_index`` FK, so resolve the name to its index before binding
+        # (mirrors ``issuances.get_asset``). An unregistered asset resolves to
+        # NULL and matches nothing, correctly returning no issuance.
+        bind_asset = (
+            asset_name
+            if name_field == "asset_longname"
+            else database.asset_index_from_name(self.db, asset_name)
+        )
+        cursor.execute(sql, (bind_asset,))
         result = cursor.fetchone()
 
         if result:
@@ -124,8 +133,14 @@ class UTXOBalancesCache(metaclass=helpers.SingletonMeta):
 
         cursor = db.cursor()
 
-        # Load UTXOs with balance from the balances table
-        sql = "SELECT utxo, asset, quantity, MAX(rowid) FROM balances WHERE utxo IS NOT NULL GROUP BY utxo, asset"
+        # Load UTXOs with balance from the balances table. ``utxo`` is stored as
+        # the compact ``(utxo_tx_hash, utxo_vout)`` pair; selecting both lets
+        # the rowtracer reconstruct the ``utxo`` string so the cache key is
+        # unchanged.
+        sql = (
+            "SELECT utxo_tx_hash, utxo_vout, asset, quantity, MAX(rowid) FROM balances "
+            "WHERE utxo_tx_hash IS NOT NULL GROUP BY utxo_tx_hash, utxo_vout, asset"
+        )
         cursor.execute(sql)
         utxo_balances = cursor.fetchall()
         for utxo_balance in utxo_balances:
@@ -161,7 +176,7 @@ class UTXOBalancesCache(metaclass=helpers.SingletonMeta):
             if source != "":
                 tx = cursor.execute(
                     "SELECT utxos_info, transaction_type FROM transactions WHERE tx_hash = ?",
-                    (tx_hash,),
+                    (hashcodec.hash_to_db(tx_hash),),
                 ).fetchone()
                 if tx:
                     utxos_info = tx["utxos_info"].split(" ")
@@ -207,11 +222,13 @@ class UTXOBalancesCache(metaclass=helpers.SingletonMeta):
         if utxo in self.utxos_with_balance:
             return self.utxos_with_balance[utxo]
 
-        # Cache miss - query database
+        # Cache miss - query database. ``utxo`` is stored as the compact
+        # ``(utxo_tx_hash, utxo_vout)`` pair; split the string to filter.
         cursor = self.db.cursor()
+        utxo_tx_hash, utxo_vout = database.split_utxo(utxo)
         cursor.execute(
-            "SELECT 1 FROM balances WHERE utxo = ? AND quantity > 0 LIMIT 1",
-            (utxo,),
+            "SELECT 1 FROM balances WHERE utxo_tx_hash = ? AND utxo_vout = ? AND quantity > 0 LIMIT 1",
+            (utxo_tx_hash, utxo_vout),
         )
         result = cursor.fetchone() is not None
 
@@ -254,6 +271,23 @@ class UTXOBalancesCache(metaclass=helpers.SingletonMeta):
 
 
 class OrdersCache(metaclass=helpers.SingletonMeta):
+    """In-memory shadow of the ``orders`` table for fast matching.
+
+    NOTE on hash encoding: the cache table keeps ``tx_hash`` as ``TEXT``
+    (64-char lowercase hex), unlike the persisted ledger schema which stores
+    it as ``BLOB(32)`` after the compact-hash storage migration. This is
+    intentional because the cache is populated and consumed exclusively
+    via the rowtracer / Python layer where hashes are already normalised
+    to hex strings (see ``utils/database.rowtracer``).
+
+    Callers MUST pass hex strings to ``insert_order``, ``update_order``,
+    ``get_matching_orders``, etc. Passing raw ``bytes`` would silently
+    fail to match (SQLite would compare a BLOB against a TEXT column).
+    If a caller ever needs to bind a value coming from a raw SQL fetch
+    that bypassed the rowtracer, normalise it first via
+    ``hashcodec.hash_from_db``.
+    """
+
     def __init__(self, db) -> None:
         logger.debug("Initialising orders cache...")
         self.last_cleaning_block_index = 0

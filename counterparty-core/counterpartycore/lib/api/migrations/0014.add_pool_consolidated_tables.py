@@ -5,6 +5,11 @@ import logging
 import time
 
 from counterpartycore.lib import config
+from counterpartycore.lib.utils.database import (
+    ADDRESS_INDEX_COLUMN_NAMES,
+    ASSET_INDEX_COLUMN_NAMES,
+    text_affinitize_index_columns,
+)
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -46,7 +51,12 @@ def build_table(state_db, table_name, group_by):
             sqls.append(row["sql"])
 
     for sql in sqls:
-        state_db.execute(sql)
+        # The State DB stores the decoded asset name / address string in the
+        # asset/address columns, so retype them from the ledger's compact
+        # ``INTEGER`` to ``TEXT`` (matching ``assets_info.asset``) -- otherwise
+        # the affinity mismatch defeats the index on joins/subqueries against
+        # ``assets_info`` and degrades into full scans.
+        state_db.execute(text_affinitize_index_columns(sql))
 
     # Get latest row per group
     # table_name and group_by come from the hardcoded POOL_TABLES dict, not user input
@@ -58,7 +68,23 @@ def build_table(state_db, table_name, group_by):
     """)  # noqa: S608  # nosec B608
     state_db.execute("CREATE INDEX temp.latest_ids_idx ON latest_ids(max_id)")
 
-    columns = [f"b.{col['name']}" for col in state_db.execute(f"PRAGMA table_info({table_name})")]
+    # The State DB stores asset *names*; decode the compact ``asset_index`` back
+    # to names while ``ledger_db`` is attached (the INSERT ... SELECT bypasses
+    # the rowtracer). ``lp_asset`` is not normalized, so it is copied verbatim.
+    columns = []
+    for col in state_db.execute(f"PRAGMA table_info({table_name})"):
+        name = col["name"]
+        if name in ASSET_INDEX_COLUMN_NAMES:
+            columns.append(
+                f"(SELECT asset_name FROM ledger_db.assets WHERE asset_index = b.{name}) AS {name}"  # noqa: S608  # nosec B608
+            )
+        elif name in ADDRESS_INDEX_COLUMN_NAMES:
+            # decode the compact ``address_id`` back to the address string
+            columns.append(
+                f"(SELECT address FROM ledger_db.address_list WHERE address_id = b.{name}) AS {name}"  # noqa: S608  # nosec B608
+            )
+        else:
+            columns.append(f"b.{name}")
     select_fields = ", ".join(columns)
 
     # table_name comes from POOL_TABLES dict; select_fields is built from PRAGMA table_info results
@@ -118,43 +144,46 @@ def apply(db):
         db.execute("DROP VIEW IF EXISTS xcp_holders")
         db.execute("DROP VIEW IF EXISTS asset_holders")
         unspendable = config.UNSPENDABLE
+        # ``tx_hash`` is stored as BLOB(32) after the compact-hash storage
+        # migration; convert to lowercase hex via the ``hex_lower`` UDF when
+        # projecting the legacy ``escrow`` column.
         asset_holders_sql = """
             CREATE VIEW IF NOT EXISTS asset_holders AS
                 SELECT asset, address, quantity, NULL AS escrow,
                     ('balances_' || CAST(rowid AS VARCHAR)) AS cursor_id, 'balances' AS holding_type, NULL AS status
                 FROM balances
              UNION ALL
-                SELECT give_asset AS asset, source AS address, give_remaining AS quantity, tx_hash AS escrow,
+                SELECT give_asset AS asset, source AS address, give_remaining AS quantity, hex_lower(tx_hash) AS escrow,
                     ('open_order_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                     'open_order' AS holding_type, status
                 FROM orders WHERE status = 'open'
              UNION ALL
                 SELECT forward_asset AS asset, tx0_address AS address, forward_quantity AS quantity,
-                    id AS escrow, ('order_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+                    hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, ('order_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                     'pending_order_match' AS holding_type, status
                 FROM order_matches WHERE status = 'pending'
              UNION ALL
                 SELECT backward_asset AS asset, tx1_address AS address, backward_quantity AS quantity,
-                    id AS escrow, ('order_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+                    hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, ('order_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                     'pending_order_match' AS holding_type, status
                 FROM order_matches WHERE status = 'pending'
              UNION ALL
                 SELECT asset, source AS address, give_remaining AS quantity,
-                tx_hash AS escrow, ('open_dispenser_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+                hex_lower(tx_hash) AS escrow, ('open_dispenser_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                 'open_dispenser' AS holding_type, status
                 FROM dispensers WHERE status = 0
              UNION ALL
                 SELECT asset_a AS asset, '"""
         asset_holders_sql += unspendable
         asset_holders_sql += """' AS address, reserve_a AS quantity,
-                tx_hash AS escrow, ('pool_reserve_a_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+                hex_lower(tx_hash) AS escrow, ('pool_reserve_a_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                 'pool_reserve' AS holding_type, NULL AS status
                 FROM pools WHERE reserve_a > 0
              UNION ALL
                 SELECT asset_b AS asset, '"""
         asset_holders_sql += unspendable
         asset_holders_sql += """' AS address, reserve_b AS quantity,
-                tx_hash AS escrow, ('pool_reserve_b_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+                hex_lower(tx_hash) AS escrow, ('pool_reserve_b_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                 'pool_reserve' AS holding_type, NULL AS status
                 FROM pools WHERE reserve_b > 0;
         """
@@ -164,32 +193,32 @@ def apply(db):
                 SELECT * FROM asset_holders
              UNION ALL
                 SELECT 'XCP' AS asset, source AS address, wager_remaining AS quantity,
-                tx_hash AS escrow, ('open_bet_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+                hex_lower(tx_hash) AS escrow, ('open_bet_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                 'open_bet' AS holding_type, status
                 FROM bets WHERE status = 'open'
              UNION ALL
                 SELECT 'XCP' AS asset, tx0_address AS address, forward_quantity AS quantity,
-                id AS escrow, ('bet_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+                hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, ('bet_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                 'pending_bet_match' AS holding_type, status
                 FROM bet_matches WHERE status = 'pending'
              UNION ALL
                 SELECT 'XCP' AS asset, tx1_address AS address, backward_quantity AS quantity,
-                id AS escrow, ('bet_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+                hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, ('bet_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                 'pending_bet_match' AS holding_type, status
                 FROM bet_matches WHERE status = 'pending'
              UNION ALL
                 SELECT 'XCP' AS asset, source AS address, wager AS quantity,
-                tx_hash AS escrow, ('open_rps_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+                hex_lower(tx_hash) AS escrow, ('open_rps_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                 'open_rps' AS holding_type, status
                 FROM rps WHERE status = 'open'
              UNION ALL
                 SELECT 'XCP' AS asset, tx0_address AS address, wager AS quantity,
-                id AS escrow, ('rps_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+                hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, ('rps_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                 'pending_rps_match' AS holding_type, status
                 FROM rps_matches WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
              UNION ALL
                 SELECT 'XCP' AS asset, tx1_address AS address, wager AS quantity,
-                id AS escrow, ('rps_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
+                hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS escrow, ('rps_match_' || CAST(rowid AS VARCHAR)) AS cursor_id,
                 'pending_rps_match' AS holding_type, status
                 FROM rps_matches WHERE status IN ('pending', 'pending and resolved', 'resolved and pending');
         """)

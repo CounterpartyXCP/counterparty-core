@@ -3,6 +3,7 @@ from counterpartycore.lib import exceptions
 from counterpartycore.lib import ledger as ledger_mod
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import order
+from counterpartycore.lib.utils import hashcodec
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
@@ -870,10 +871,10 @@ def test_parse_order_invalid_data(ledger_db, blockchain_mock, defaults, test_hel
                     "fee_provided_remaining": 10000,
                     "fee_required": 0,
                     "fee_required_remaining": 0,
-                    "get_asset": "0",
+                    "get_asset": 0,
                     "get_quantity": 0,
                     "get_remaining": 0,
-                    "give_asset": "0",
+                    "give_asset": 0,
                     "give_quantity": 0,
                     "give_remaining": 0,
                     "source": defaults["addresses"][1],
@@ -1202,7 +1203,7 @@ def test_parse_indefinite_order_expire_index(ledger_db, blockchain_mock, default
 
     record = ledger_db.execute(
         "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
-        (tx["tx_hash"],),
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchone()
     assert record["expire_index"] is None
     assert record["expiration"] == 0
@@ -1217,7 +1218,7 @@ def test_parse_expiration_n_means_n_blocks(ledger_db, blockchain_mock, defaults)
 
     record = ledger_db.execute(
         "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
-        (tx["tx_hash"],),
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchone()
     assert record["expire_index"] == tx["block_index"] + 99
 
@@ -1255,7 +1256,7 @@ def test_parse_expire_index_pre_activation(ledger_db, blockchain_mock, defaults)
 
     record = ledger_db.execute(
         "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
-        (tx["tx_hash"],),
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchone()
     assert record["expire_index"] == tx["block_index"] + 100
 

@@ -721,7 +721,7 @@ def test_ensure_utxo_is_first(defaults, monkeypatch):
 
 def test_filter_utxos_with_balances(ledger_db, defaults):
     utxo_with_balance = ledger_db.execute("""
-        SELECT utxo FROM balances WHERE quantity > 0 AND utxo IS NOT NULL ORDER BY rowid DESC LIMIT 1
+        SELECT utxo_tx_hash, utxo_vout FROM balances WHERE quantity > 0 AND utxo_tx_hash IS NOT NULL ORDER BY rowid DESC LIMIT 1
     """).fetchone()["utxo"]
     txid, vout = utxo_with_balance.split(":")
 
@@ -2106,7 +2106,7 @@ def test_compose_enhanced_send(ledger_db, defaults, monkeypatch):
 
 def test_compose_move(ledger_db, defaults):
     utxo_with_balance = ledger_db.execute("""
-        SELECT utxo FROM balances WHERE quantity > 0 AND utxo IS NOT NULL ORDER BY rowid DESC LIMIT 1
+        SELECT utxo_tx_hash, utxo_vout FROM balances WHERE quantity > 0 AND utxo_tx_hash IS NOT NULL ORDER BY rowid DESC LIMIT 1
     """).fetchone()["utxo"]
     # Test basic move
     params = {
@@ -2440,7 +2440,7 @@ def test_utxolocks_custom_input(ledger_db):
 
 def test_compose_detach(ledger_db, defaults):
     utxo_with_balance = ledger_db.execute("""
-        SELECT utxo FROM balances WHERE quantity > 0 AND utxo IS NOT NULL ORDER BY rowid DESC LIMIT 1
+        SELECT utxo_tx_hash, utxo_vout FROM balances WHERE quantity > 0 AND utxo_tx_hash IS NOT NULL ORDER BY rowid DESC LIMIT 1
     """).fetchone()["utxo"]
     # Test basic move
     params = {

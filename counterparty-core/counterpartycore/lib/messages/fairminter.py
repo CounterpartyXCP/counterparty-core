@@ -809,6 +809,18 @@ def parse(db, tx, message):
         "pool_quantity": pool_quantity,
         "lp_asset": lp_asset or None,
     }
+    if not existing_asset:
+        # Pre-create the asset row (DB only, no event) so the fairminters record
+        # below can resolve its compact asset_index. The ASSET_CREATION event is
+        # still emitted in its original position via the idempotent insert
+        # below, preserving the consensus event order.
+        ledger.events.ensure_asset(
+            db,
+            ledger.issuances.generate_asset_id(asset_name),
+            asset_name,
+            tx["block_index"],
+            asset_longname if asset_longname != "" else None,
+        )
     ledger.events.insert_record(db, "fairminters", bindings, "NEW_FAIRMINTER")
     logger.info("Fair minter opened for %s by %s.", asset_name, tx["source"])
 

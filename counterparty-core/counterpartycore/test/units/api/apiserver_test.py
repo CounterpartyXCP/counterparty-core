@@ -7,7 +7,7 @@ from counterpartycore.lib.api import apiserver, apiwatcher, blockcache, composer
 from counterpartycore.lib.api.routes import ALL_ROUTES, ROUTES
 from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.lib.parser import blocks
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import hashcodec, helpers
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
@@ -163,7 +163,7 @@ def prepare_url(db, current_block_index, defaults, rawtransaction, route):
         "SELECT tx_hash, tx_index, block_index FROM transactions ORDER BY rowid DESC LIMIT 1"
     ).fetchone()
     utxo_with_balance = db.execute(
-        "SELECT * FROM balances WHERE utxo IS NOT null AND quantity > 0 ORDER BY rowid DESC LIMIT 1"
+        "SELECT * FROM balances WHERE utxo_tx_hash IS NOT null AND quantity > 0 ORDER BY rowid DESC LIMIT 1"
     ).fetchone()
     last_dispenser = db.execute("SELECT * FROM dispensers ORDER BY rowid DESC LIMIT 1").fetchone()
     last_order = db.execute("SELECT * FROM orders ORDER BY rowid DESC LIMIT 1").fetchone()
@@ -417,7 +417,17 @@ def test_get_dispense(ledger_db, apiv2_client, blockchain_mock, defaults, curren
     with ProtocolChangesDisabled(["multiple_dispenses"]):
         dispense.parse(ledger_db, tx)
 
-    dispenses = ledger_db.execute("SELECT * FROM dispenses ORDER BY rowid DESC LIMIT 1").fetchone()
+    # ``dispenses.dispenser_tx_hash`` has been dropped from storage and
+    # replaced by a ``dispenser_tx_index`` FK. Re-expose the legacy hash via a
+    # ``LEFT JOIN`` against ``transactions`` so the test continues to read
+    # both ``tx_hash`` (the dispense tx) and ``dispenser_tx_hash`` (the
+    # dispenser tx) like before.
+    dispenses = ledger_db.execute(
+        """SELECT d.*, t.tx_hash AS dispenser_tx_hash
+           FROM dispenses d
+           LEFT JOIN transactions t ON t.tx_index = d.dispenser_tx_index
+           ORDER BY d.rowid DESC LIMIT 1"""
+    ).fetchone()
     url = f"/v2/dispenses/{dispenses['tx_hash']}"
     result = apiv2_client.get(url).json
 
@@ -814,23 +824,22 @@ def test_get_transactions_valid(apiv2_client, monkeypatch):
 
 def test_transaction_valid_flag_without_verbose(apiv2_client, ledger_db):
     last_tx = ledger_db.execute(
-        "SELECT tx_index, block_index, block_hash, block_time FROM transactions ORDER BY tx_index DESC LIMIT 1"
+        "SELECT tx_index, block_index, block_time FROM transactions ORDER BY tx_index DESC LIMIT 1"
     ).fetchone()
     tx_index = last_tx["tx_index"] + 1
     tx_hash = "f" * 64
     ledger_db.execute(
         """
         INSERT INTO transactions(
-            tx_index, tx_hash, block_index, block_hash, block_time, source, destination,
+            tx_index, tx_hash, block_index, block_time, source, destination,
             btc_amount, fee, data, supported, utxos_info, transaction_type
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             tx_index,
-            tx_hash,
+            hashcodec.hash_to_db(tx_hash),
             last_tx["block_index"],
-            last_tx["block_hash"],
             last_tx["block_time"],
             "source",
             "",

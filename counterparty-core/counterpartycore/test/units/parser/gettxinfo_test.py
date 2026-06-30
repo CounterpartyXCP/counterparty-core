@@ -1354,7 +1354,7 @@ def test_select_utxo_destination_2():
 
 def test_get_inputs_with_balance(ledger_db, defaults):
     utxo = ledger_db.execute(
-        "SELECT * FROM balances WHERE utxo_address = ? AND quantity > 0",
+        "SELECT * FROM balances WHERE utxo_address = (SELECT address_id FROM address_list WHERE address = ?) AND quantity > 0",
         (defaults["addresses"][0],),
     ).fetchone()["utxo"]
     txid, vout = utxo.split(":")
@@ -1441,7 +1441,7 @@ def test_get_op_return_vout():
 
 def test_get_utxos_info(ledger_db, defaults):
     utxo = ledger_db.execute(
-        "SELECT * FROM balances WHERE utxo_address = ? AND quantity > 0",
+        "SELECT * FROM balances WHERE utxo_address = (SELECT address_id FROM address_list WHERE address = ?) AND quantity > 0",
         (defaults["addresses"][0],),
     ).fetchone()["utxo"]
     txid, vout = utxo.split(":")
@@ -1505,7 +1505,7 @@ def test_get_utxos_info(ledger_db, defaults):
 
 def test_update_utxo_balances_cache(ledger_db, defaults, current_block_index):
     utxo = ledger_db.execute(
-        "SELECT * FROM balances WHERE utxo_address = ? AND quantity > 0",
+        "SELECT * FROM balances WHERE utxo_address = (SELECT address_id FROM address_list WHERE address = ?) AND quantity > 0",
         (defaults["addresses"][0],),
     ).fetchone()["utxo"]
 
@@ -1537,7 +1537,7 @@ def test_get_tx_info_5(ledger_db, defaults, monkeypatch, current_block_index):
     )
 
     utxo = ledger_db.execute(
-        "SELECT * FROM balances WHERE utxo_address = ? AND quantity > 0",
+        "SELECT * FROM balances WHERE utxo_address = (SELECT address_id FROM address_list WHERE address = ?) AND quantity > 0",
         (defaults["addresses"][0],),
     ).fetchone()["utxo"]
     txid, vout = utxo.split(":")

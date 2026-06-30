@@ -6,7 +6,7 @@ import time
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.parser import utxosinfo
-from counterpartycore.lib.utils import database
+from counterpartycore.lib.utils import database, hashcodec
 from counterpartycore.lib.utils.helpers import format_duration
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -14,13 +14,13 @@ logger = logging.getLogger(config.LOGGER_NAME)
 UPDATE_EVENTS_ID_FIELDS = {
     "BLOCK_PARSED": ["block_index"],
     "TRANSACTION_PARSED": ["tx_hash"],
-    "BET_MATCH_UPDATE": ["id"],
+    "BET_MATCH_UPDATE": ["tx0_index", "tx1_index"],
     "BET_UPDATE": ["tx_hash"],
     "DISPENSER_UPDATE": ["tx_hash"],
     "ORDER_FILLED": ["tx_hash"],
-    "ORDER_MATCH_UPDATE": ["id"],
+    "ORDER_MATCH_UPDATE": ["tx0_index", "tx1_index"],
     "ORDER_UPDATE": ["tx_hash"],
-    "RPS_MATCH_UPDATE": ["id"],
+    "RPS_MATCH_UPDATE": ["tx0_index", "tx1_index"],
     "RPS_UPDATE": ["tx_hash"],
     "ADDRESS_OPTIONS_UPDATE": ["address"],
     "FAIRMINTER_UPDATE": ["tx_hash"],
@@ -161,9 +161,111 @@ def get_event_bindings(event):
     return event_bindings
 
 
-def insert_event_to_sql(event):
+# Tables in ``STATE_DB_TABLES`` whose schema (mirrored from ``ledger_db``)
+# replaced a legacy hex hash column with a ``*_tx_index`` integer FK. The
+# event JSON still carries the legacy hash (consensus-stable), so the
+# apiwatcher must resolve hex_tx_hash -> tx_index against ``ledger_db.
+# transactions`` before binding into the state_db schema.
+#
+# This map mirrors ``ledger.events.HASH_TO_TX_INDEX_FK`` defensively: tables
+# not in ``STATE_DB_TABLES`` today (cancels, dispenses, dispenser_refills,
+# fairmints) are listed here so that adding them to ``STATE_DB_TABLES``
+# later does not silently break replication.
+_STATE_DB_HASH_FK_RESOLUTION = {
+    "cancels": {"offer_hash": "offer_tx_index"},
+    "dispenses": {"dispenser_tx_hash": "dispenser_tx_index"},
+    "dispenser_refills": {"dispenser_tx_hash": "dispenser_tx_index"},
+    "fairmints": {"fairminter_tx_hash": "fairminter_tx_index"},
+    "pool_matches": {"order_tx_hash": "order_tx_index"},
+}
+
+
+def _resolve_state_db_fk_columns(ledger_db, table, event_bindings):
+    """For tables in ``_STATE_DB_HASH_FK_RESOLUTION``, replace legacy
+    ``*_tx_hash`` keys with their resolved ``*_tx_index`` integer FK so the
+    INSERT/UPDATE targets the migrated state_db schema."""
+    fk_map = _STATE_DB_HASH_FK_RESOLUTION.get(table)
+    if not fk_map or ledger_db is None:
+        return
+    cursor = ledger_db.cursor()
+    for hash_key, index_key in fk_map.items():
+        if hash_key not in event_bindings:
+            continue
+        hex_value = event_bindings.pop(hash_key)
+        if hex_value is None:
+            event_bindings[index_key] = None
+            continue
+        blob = hashcodec.hash_to_db(hex_value)
+        row = cursor.execute(
+            "SELECT tx_index FROM transactions WHERE tx_hash = ?", (blob,)
+        ).fetchone()
+        event_bindings[index_key] = row["tx_index"] if row else None
+    cursor.close()
+
+
+# Match tables replicated into the State DB whose composite TEXT ``id`` was
+# dropped (the State DB mirrors the migrated ledger schema). The event JSON
+# still carries ``id`` (consensus-stable); the apiwatcher strips it and uses
+# the ``(tx0_index, tx1_index)`` pair instead. INSERT events (ORDER_MATCH ...)
+# already carry the pair; UPDATE events (ORDER_MATCH_UPDATE ...) carry only
+# ``{id, status}`` so the pair is derived by splitting/resolving the id.
+# (``btcpays`` / ``*_match_expirations`` / ``*_resolutions`` are NOT in
+# ``STATE_DB_TABLES`` -- they are not replicated -- so they need no handling.)
+_STATE_DB_MATCH_ID_TABLES = ("order_matches", "bet_matches", "rps_matches")
+
+
+def _resolve_match_id_to_indexes(ledger_db, match_id):
+    """Split a composite ``tx0hash_tx1hash`` match id and resolve each half to
+    its ``tx_index`` via ``ledger_db.transactions``. Returns ``(None, None)``
+    for a ``None``/malformed id."""
+    if ledger_db is None or not isinstance(match_id, str) or match_id.count("_") != 1:
+        return None, None
+    part0, part1 = match_id.split("_")
+    cursor = ledger_db.cursor()
+    try:
+        indexes = []
+        for part in (part0, part1):
+            blob = hashcodec.hash_to_db(part)
+            row = cursor.execute(
+                "SELECT tx_index FROM transactions WHERE tx_hash = ?", (blob,)
+            ).fetchone()
+            indexes.append(row["tx_index"] if row else None)
+    finally:
+        cursor.close()
+    return indexes[0], indexes[1]
+
+
+def _resolve_state_db_match_id_columns(ledger_db, table, event_bindings):
+    """For the replicated match tables, derive the ``(tx0_index, tx1_index)``
+    pair when only the composite ``id`` is present (UPDATE events) and drop the
+    dropped TEXT ``id``/``*_match_id`` keys so the INSERT/UPDATE targets the
+    migrated state_db schema."""
+    if table not in _STATE_DB_MATCH_ID_TABLES:
+        return
+    if "tx0_index" not in event_bindings and "id" in event_bindings:
+        tx0_index, tx1_index = _resolve_match_id_to_indexes(ledger_db, event_bindings["id"])
+        event_bindings["tx0_index"] = tx0_index
+        event_bindings["tx1_index"] = tx1_index
+    for dropped in ("id", "order_match_id", "bet_match_id", "rps_match_id"):
+        event_bindings.pop(dropped, None)
+
+
+def _normalize_event_bindings_for_state_db(event_bindings):
+    """Convert any hash-typed values from hex-string (JSON form) to BLOB(32)
+    so they can be bound against state_db columns that mirror the BLOB
+    schema of ledger_db after the size-optimization migration."""
+    for key in list(event_bindings.keys()):
+        if key in hashcodec.HASH_COLUMN_NAMES:
+            event_bindings[key] = hashcodec.hash_to_db(event_bindings[key])
+    return event_bindings
+
+
+def insert_event_to_sql(event, ledger_db=None):
     event_bindings = get_event_bindings(event)
     event_bindings["block_index"] = event["block_index"]
+    _resolve_state_db_fk_columns(ledger_db, event["category"], event_bindings)
+    _resolve_state_db_match_id_columns(ledger_db, event["category"], event_bindings)
+    _normalize_event_bindings_for_state_db(event_bindings)
     sql_bindings = []
     sql = f"INSERT INTO {event['category']} "
     names = []
@@ -174,12 +276,16 @@ def insert_event_to_sql(event):
     return sql, sql_bindings
 
 
-def update_event_to_sql(event):
+def update_event_to_sql(event, ledger_db=None):
     event_bindings = get_event_bindings(event)
     event_bindings["block_index"] = event["block_index"]
 
     if event_bindings["block_index"] == config.MEMPOOL_BLOCK_INDEX:
         return None, []
+
+    _resolve_state_db_fk_columns(ledger_db, event["category"], event_bindings)
+    _resolve_state_db_match_id_columns(ledger_db, event["category"], event_bindings)
+    _normalize_event_bindings_for_state_db(event_bindings)
 
     id_field_names = UPDATE_EVENTS_ID_FIELDS[event["event"]]
 
@@ -205,11 +311,11 @@ def update_event_to_sql(event):
     return sql, sql_bindings
 
 
-def event_to_sql(event):
+def event_to_sql(event, ledger_db=None):
     if event["command"] == "insert":
-        return insert_event_to_sql(event)
+        return insert_event_to_sql(event, ledger_db=ledger_db)
     if event["command"] in ["update", "parse"]:
-        return update_event_to_sql(event)
+        return update_event_to_sql(event, ledger_db=ledger_db)
     return None, []
 
 
@@ -498,15 +604,19 @@ def update_fairminters(state_db, event):
             earned_quantity = COALESCE(earned_quantity, 0) + :earn_quantity,
             commission = COALESCE(commission, 0) + :commission,
             paid_quantity = COALESCE(paid_quantity, 0) + :paid_quantity
-        WHERE tx_hash = :fairminter_tx_hash
+        WHERE tx_hash = :fairminter_tx_hash_blob
     """
-    cursor.execute(sql, event_bindings)
+    bindings = dict(event_bindings)
+    bindings["fairminter_tx_hash_blob"] = hashcodec.hash_to_db(
+        event_bindings.get("fairminter_tx_hash")
+    )
+    cursor.execute(sql, bindings)
 
 
-def update_consolidated_tables(state_db, event):
+def update_consolidated_tables(state_db, event, ledger_db=None):
     if event["category"] in STATE_DB_TABLES:
         cursor = state_db.cursor()
-        sql, sql_bindings = event_to_sql(event)
+        sql, sql_bindings = event_to_sql(event, ledger_db=ledger_db)
         if sql is not None:
             cursor.execute(sql, sql_bindings)
     # because no event for balance update
@@ -516,12 +626,12 @@ def update_consolidated_tables(state_db, event):
     update_fairminters(state_db, event)
 
 
-def update_state_db_tables(state_db, event):
+def update_state_db_tables(state_db, event, ledger_db=None):
     if event["event"] not in SKIP_EVENTS:
         update_address_events(state_db, event)
         update_all_expiration(state_db, event)
         update_assets_info(state_db, event)
-        update_consolidated_tables(state_db, event)
+        update_consolidated_tables(state_db, event, ledger_db=ledger_db)
 
 
 def update_last_parsed_events_cache(state_db, event=None):
@@ -586,10 +696,10 @@ def get_last_block_parsed(state_db, no_cache=False):
     return 0
 
 
-def parse_event(state_db, event):
+def parse_event(state_db, event, ledger_db=None):
     with state_db:
         logger.trace(f"Parsing event: {event}")
-        update_state_db_tables(state_db, event)
+        update_state_db_tables(state_db, event, ledger_db=ledger_db)
         update_last_parsed_events(state_db, event)
         update_events_count(state_db, event)
         update_transaction_types_count(state_db, event)
@@ -605,7 +715,7 @@ def catch_up(ledger_db, state_db, watcher=None):
         event_parsed = 0
         next_event = get_next_event_to_parse(ledger_db, state_db)
         while next_event and (watcher is None or not watcher.stop_event.is_set()):
-            parse_event(state_db, next_event)
+            parse_event(state_db, next_event, ledger_db=ledger_db)
             event_parsed += 1
             if event_parsed % 50000 == 0:
                 duration = time.time() - start_time
@@ -672,7 +782,7 @@ def parse_next_event(ledger_db, state_db):
     if next_event is None:
         raise exceptions.NoEventToParse("No event to parse")
 
-    parse_event(state_db, next_event)
+    parse_event(state_db, next_event, ledger_db=ledger_db)
 
 
 class APIWatcher(threading.Thread):

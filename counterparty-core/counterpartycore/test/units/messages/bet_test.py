@@ -625,7 +625,13 @@ def test_cancel_bet(ledger_db, test_helpers, current_block_index):
 
 
 def test_cancel_bet_match(ledger_db, test_helpers, current_block_index):
-    bet_match = ledger_db.execute("SELECT * FROM bet_matches ORDER BY rowid LIMIT 1").fetchone()
+    # ``cancel_bet_match`` reads ``bet_match["id"]`` (the composite match id);
+    # production callers get it from getters that reconstruct it, so the test
+    # query must reconstruct it too (the TEXT ``id`` column was dropped).
+    bet_match = ledger_db.execute(
+        "SELECT *, hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS id "
+        "FROM bet_matches ORDER BY rowid LIMIT 1"
+    ).fetchone()
     bet.cancel_bet_match(ledger_db, bet_match, "filled", bet_match["tx0_index"])
 
     test_helpers.check_records(

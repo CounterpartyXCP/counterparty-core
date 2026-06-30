@@ -43,6 +43,13 @@ def make_id(hash_1, hash_2):
     return hash_1 + ID_SEPARATOR + hash_2
 
 
+# SQL form of ``make_id``: reconstructs the composite TEXT match ``id``
+# (``tx0hash_tx1hash``) from the compact ``tx0_hash``/``tx1_hash`` BLOB columns
+# kept on the match tables. ``hex_lower`` is the UDF registered on the ledger
+# and state connections (see ``hashcodec.register_db_functions``).
+MATCH_ID_SQL = f"hex_lower(tx0_hash) || '{ID_SEPARATOR}' || hex_lower(tx1_hash)"
+
+
 # ORACLES
 def satoshirate_to_fiat(satoshirate):
     return round(satoshirate / 100.0, 2)

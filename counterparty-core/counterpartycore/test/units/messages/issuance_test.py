@@ -3,7 +3,7 @@ import time
 
 import cbor2
 import pytest
-from counterpartycore.lib import config, exceptions
+from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.api import apiwatcher
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import issuance
@@ -198,6 +198,13 @@ def test_validate(ledger_db, defaults, current_block_index):
         current_block_index,
     ) == (0, "abc", ["call_price must be a float"], 0, "", True, None, None)
 
+    # Register the asset so its compact asset_index can be stored/resolved
+    # (issuances.asset is the integer asset_index FK, not the name).
+    ledger_db.execute(
+        "INSERT OR IGNORE INTO assets (asset_id, asset_name, block_index) "
+        "VALUES (?, 'OLDCALLABLE', 310000)",
+        (str(ledger.issuances.generate_asset_id("OLDCALLABLE")),),
+    )
     ledger_db.execute(
         """
         INSERT INTO issuances (
@@ -206,7 +213,8 @@ def test_validate(ledger_db, defaults, current_block_index):
             call_price, description, fee_paid, locked, reset, status,
             asset_longname
         ) VALUES (
-            999999, 'test_hash_callable_lock', 0, 310000, 'OLDCALLABLE', 1000,
+            999999, 'test_hash_callable_lock', 0, 310000,
+            (SELECT asset_index FROM assets WHERE asset_name = 'OLDCALLABLE'), 1000,
             1, ?, ?, 0, 1, 1409401723,
             1.5, 'Old callable asset', 0, 0, 0, 'valid',
             NULL
