@@ -62,6 +62,128 @@ def test_select_rows_with_comma_separated_addresses(ledger_db, defaults):
         assert row["address"] in [addr1, addr2]
 
 
+def test_get_transactions_by_address_uses_indexed_base_filter(ledger_db, defaults):
+    """Address-filtered transaction queries must resolve the address to its
+    integer ``address_id`` and filter the indexed base ``transactions.source``
+    instead of scanning the decoding ``transactions_with_status`` view (whose
+    per-row ``(SELECT address FROM address_list ...)`` cannot use an index and
+    turned ``/addresses/<addr>/transactions`` into a ~16s full scan for a busy
+    address). Regression for the v11.2.0 Load API failure."""
+    address = defaults["addresses"][0]
+
+    executed = []
+    ledger_db.setexectrace(lambda cursor, sql, bindings: (executed.append(sql) or True))
+    try:
+        result = queries.get_transactions_by_address(ledger_db, address, limit=50)
+    finally:
+        ledger_db.setexectrace(None)
+
+    # Correctness: assert row CONTENT and row/``result_count`` consistency,
+    # never just ``result is not None`` (which stays true for an empty result).
+    assert result.result_count is not None
+    assert len(result.result) == min(result.result_count, 50)
+    for row in result.result:
+        assert row["source"] == address
+
+    # Performance: the row query rewrites the address filter into an indexed
+    # ``tx_index IN (SELECT tx_index FROM transactions WHERE source ...)`` lookup
+    # rather than comparing the view's decoded ``source`` string per row.
+    row_query = next(s for s in executed if "transactions_with_status" in s and "COUNT(*)" not in s)
+    normalized = " ".join(row_query.split())
+    assert "tx_index IN (SELECT tx_index FROM transactions WHERE source IN" in normalized
+    assert "address_list WHERE address IN" in normalized
+
+
+def test_get_transactions_by_address_matches_naive_view_filter(ledger_db, defaults):
+    """The indexed rewrite must return exactly the rows a naive filter on the
+    decoding view returns -- same correctness, without the full scan."""
+    address = defaults["addresses"][0]
+
+    fast = queries.get_transactions_by_address(ledger_db, address, limit=10000, offset=0)
+    fast_tx_indexes = sorted(row["tx_index"] for row in fast.result)
+
+    naive_rows = (
+        ledger_db.cursor()
+        .execute(
+            "SELECT tx_index FROM transactions_with_status WHERE source = ?",
+            (address,),
+        )
+        .fetchall()
+    )
+    naive_tx_indexes = sorted(row["tx_index"] for row in naive_rows)
+
+    assert fast_tx_indexes == naive_tx_indexes
+    assert fast.result_count == len(naive_tx_indexes)
+
+
+def test_get_transactions_by_address_show_unconfirmed_ignores_tx_index_collision(
+    ledger_db, defaults
+):
+    """``all_transactions_with_status`` (``show_unconfirmed``) is
+    ``mempool_transactions UNION ALL transactions`` -- the two share the
+    ``tx_index`` space: a mempool ``tx_index`` is ``max(last_mempool,
+    last_confirmed) + 1`` and a lingering mempool tx is never re-indexed, so a
+    *later* confirmed tx of a different address reuses it. The indexed rewrite
+    must gate each leg on the view's ``confirmed`` flag; a bare
+    ``tx_index IN (mempool_leg UNION ALL transactions_leg)`` would cross-match
+    and leak a foreign address's row. Regression for that collision."""
+    address_a = defaults["addresses"][0]
+    address_b = defaults["addresses"][1]
+
+    # A confirmed tx of A whose ``tx_index`` we deliberately reuse for a (fake)
+    # still-pending mempool tx belonging to B -- the collision the guard must
+    # neutralise.
+    confirmed_a = queries.get_transactions_by_address(ledger_db, address_a, limit=1)
+    assert confirmed_a.result, "fixture address must have confirmed transactions"
+    colliding_tx_index = confirmed_a.result[0]["tx_index"]
+    assert confirmed_a.result[0]["source"] == address_a
+
+    # ``mempool_transactions`` keeps a TEXT ``source`` (address string): the
+    # transient rows are re-inserted after the rowtracer decoded the id.
+    ledger_db.execute(
+        """INSERT INTO mempool_transactions (
+               tx_index, tx_hash, block_index, block_hash, block_time,
+               source, destination, btc_amount, fee, data, supported,
+               utxos_info, transaction_type
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            colliding_tx_index,
+            hashcodec.hash_to_db("ff" * 32),
+            config.MEMPOOL_BLOCK_INDEX,
+            config.MEMPOOL_BLOCK_HASH,
+            0,
+            address_b,
+            None,
+            0,
+            0,
+            None,
+            1,
+            "",
+            None,
+        ),
+    )
+
+    # Querying A must NOT leak B's pending tx that collides on ``tx_index``,
+    # while still returning the genuine confirmed tx at that index.
+    result_a = queries.get_transactions_by_address(
+        ledger_db, address_a, show_unconfirmed=True, limit=10000
+    )
+    assert all(row["source"] == address_a for row in result_a.result)
+    assert colliding_tx_index in {row["tx_index"] for row in result_a.result}
+
+    # Querying B must return B's pending tx (matched by the mempool leg) but NOT
+    # A's confirmed tx that shares the ``tx_index``.
+    result_b = queries.get_transactions_by_address(
+        ledger_db, address_b, show_unconfirmed=True, limit=10000
+    )
+    assert all(row["source"] == address_b for row in result_b.result)
+    b_collision_rows = [row for row in result_b.result if row["tx_index"] == colliding_tx_index]
+    assert len(b_collision_rows) == 1
+    assert b_collision_rows[0]["confirmed"] is False
+    # Row/count consistency holds through the guarded rewrite.
+    assert result_b.result_count == len(result_b.result)
+
+
 def test_select_rows_with_cursor_asc_order(ledger_db):
     """Test select_rows with cursor and ASC order (lines 247-250)."""
     # First get some results
