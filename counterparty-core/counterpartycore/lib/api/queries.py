@@ -220,6 +220,14 @@ _MESSAGES_QUALIFY_M_FIELDS = frozenset({"block_index", "tx_index", "rowid", "mes
 # ``all_transactions_with_status`` is omitted on purpose: it counts over
 # ``mempool_transactions UNION ALL transactions`` and there is no single
 # underlying table to substitute.
+#
+# ``source``/``destination`` are deliberately NOT listed as safe columns: the
+# view exposes them as the decoded address *string* while the underlying
+# ``transactions`` table stores the compact integer ``address_id``. A WHERE
+# filter on those columns (resolved against the view as a string -- see
+# ``_INDEX_RESOLVING_VIEWS``) would compare a string against an integer id on
+# the base table and count zero, making the count inconsistent with the rows.
+# Omitting them falls the COUNT back to the view itself (string == string).
 _COUNT_FROM_OVERRIDE = {
     "transactions_with_status": (
         "transactions",
@@ -229,8 +237,6 @@ _COUNT_FROM_OVERRIDE = {
                 "tx_hash",
                 "block_index",
                 "block_time",
-                "source",
-                "destination",
                 "btc_amount",
                 "fee",
                 "data",
@@ -241,6 +247,26 @@ _COUNT_FROM_OVERRIDE = {
         ),
     ),
 }
+
+# Views that already resolve the compact ``asset_index``/``address_id`` foreign
+# keys back to the asset *name* / address *string* in their own definition
+# (every index-typed column they expose is wrapped in a
+# ``(SELECT ... FROM assets/address_list WHERE ...)`` subquery). A WHERE/ORDER BY
+# filter on those columns must therefore stay a plain string comparison: the
+# name->index / string->id subquery rewrite that ``select_rows`` applies to
+# *base* Ledger DB tables would compare the view's decoded string against an
+# integer index and silently match nothing. ``_is_asset_index_col`` /
+# ``_is_address_index_col`` consult this set to suppress the rewrite. Keep it in
+# sync with the index-decoding ``CREATE VIEW`` statements in
+# ``ledger.migration_data.compact_hash_schema`` (``VIEWS_AFTER_REWRITE``).
+_INDEX_RESOLVING_VIEWS = frozenset(
+    {
+        "all_transactions",
+        "transactions_with_status",
+        "all_transactions_with_status",
+        "all_holders",
+    }
+)
 
 
 def _hash_fk_public_columns(db, table):
@@ -706,7 +732,11 @@ def select_rows(
     _assets_index_table = _resolve_local_index_table(db, "main.assets", _ASSETS_INDEX_TABLE_CACHE)
 
     def _is_asset_index_col(field):
-        return _assets_index_table is not None and field in database.ASSET_INDEX_COLUMN_NAMES
+        return (
+            _assets_index_table is not None
+            and table not in _INDEX_RESOLVING_VIEWS
+            and field in database.ASSET_INDEX_COLUMN_NAMES
+        )
 
     # Address columns are stored as the compact integer ``address_id`` on Ledger
     # DB tables, while the State DB consolidated tables keep the string. Detect a
@@ -718,7 +748,11 @@ def select_rows(
     )
 
     def _is_address_index_col(field):
-        return _address_index_table is not None and field in database.ADDRESS_INDEX_COLUMN_NAMES
+        return (
+            _address_index_table is not None
+            and table not in _INDEX_RESOLVING_VIEWS
+            and field in database.ADDRESS_INDEX_COLUMN_NAMES
+        )
 
     or_where = []
     for where_dict in where:
