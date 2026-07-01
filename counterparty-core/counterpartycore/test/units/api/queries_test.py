@@ -88,9 +88,7 @@ def test_get_transactions_by_address_uses_indexed_base_filter(ledger_db, default
     # Performance: the row query rewrites the address filter into an indexed
     # ``tx_index IN (SELECT tx_index FROM transactions WHERE source ...)`` lookup
     # rather than comparing the view's decoded ``source`` string per row.
-    row_query = next(
-        s for s in executed if "transactions_with_status" in s and "COUNT(*)" not in s
-    )
+    row_query = next(s for s in executed if "transactions_with_status" in s and "COUNT(*)" not in s)
     normalized = " ".join(row_query.split())
     assert "tx_index IN (SELECT tx_index FROM transactions WHERE source IN" in normalized
     assert "address_list WHERE address IN" in normalized
