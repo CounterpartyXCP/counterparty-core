@@ -268,6 +268,27 @@ _INDEX_RESOLVING_VIEWS = frozenset(
     }
 )
 
+# Resolving *transaction* views expose ``source``/``destination`` as the decoded
+# address *string* (a correlated ``(SELECT address FROM address_list ...)`` in the
+# view definition). A WHERE filter on that string cannot use an index, so it scans
+# the whole ``transactions`` table and decodes every row -- ~16s for a busy
+# address. Rewrite such a filter into ``tx_index IN (SELECT tx_index FROM <base>
+# WHERE source/destination = <resolved id>)`` so the base table's integer index
+# (``transactions_source_idx`` etc.) is used and only the matching page is
+# decoded. Mapping: view -> tuple of (base_table, keeps_text_address). The
+# transient ``mempool_transactions`` is excluded from address normalization (see
+# migration 0010) and keeps TEXT ``source``/``destination``, so its leg matches
+# the raw string; the normalized ``transactions`` leg resolves to ``address_id``.
+_TX_VIEW_ADDRESS_FILTER_BASES = {
+    "transactions_with_status": (("transactions", False),),
+    "all_transactions_with_status": (
+        ("transactions", False),
+        ("mempool_transactions", True),
+    ),
+}
+# The only address columns the transaction views (and their base tables) expose.
+_TX_VIEW_ADDRESS_COLUMNS = frozenset({"source", "destination"})
+
 
 def _hash_fk_public_columns(db, table):
     """Return the list of column names to expose to the API for a table
@@ -754,6 +775,38 @@ def select_rows(
             and field in database.ADDRESS_INDEX_COLUMN_NAMES
         )
 
+    def _is_tx_view_address_col(field):
+        # Only on a Ledger DB (``_address_index_table`` probe) do the transaction
+        # views decode the id; on a State DB their ``source``/``destination`` are
+        # plain indexed TEXT and the default equality clause is already fast.
+        return (
+            _address_index_table is not None
+            and table in _TX_VIEW_ADDRESS_FILTER_BASES
+            and field in _TX_VIEW_ADDRESS_COLUMNS
+        )
+
+    def _tx_view_address_clause(field, values):
+        """Rewrite an address equality/IN filter on a resolving transaction view
+        into an indexed ``tx_index IN (...)`` subquery against the base table(s).
+        ``field`` is ``source``/``destination`` (a constant column name, not user
+        input); ``values`` is the list of address strings. Returns
+        ``(sql_clause, extra_bindings)``."""
+        placeholders = ",".join(["?"] * len(values))
+        legs = []
+        extra = []
+        for base_table, keeps_text_address in _TX_VIEW_ADDRESS_FILTER_BASES[table]:
+            if keeps_text_address:
+                legs.append(
+                    f"SELECT tx_index FROM {base_table} WHERE {field} IN ({placeholders})"  # noqa: S608  # nosec B608
+                )
+            else:
+                legs.append(
+                    f"SELECT tx_index FROM {base_table} WHERE {field} IN "  # noqa: S608  # nosec B608
+                    f"(SELECT address_id FROM {_address_index_table} WHERE address IN ({placeholders}))"
+                )
+            extra += values
+        return f"tx_index IN ({' UNION ALL '.join(legs)})", extra
+
     or_where = []
     for where_dict in where:
         where_field = []
@@ -807,6 +860,14 @@ def select_rows(
                     # ``_COUNT_FROM_OVERRIDE`` gate sees the actual schema
                     # column rather than the legacy hex hash alias.
                     field = new_field
+                elif _is_tx_view_address_col(field):
+                    clause, extra = _tx_view_address_clause(field, list(value))
+                    where_field.append(clause)
+                    bindings += extra
+                    # The emitted clause filters on ``tx_index``; record that so
+                    # the ``_COUNT_FROM_OVERRIDE`` gate can count from the base
+                    # table (``tx_index`` is a safe column) instead of the view.
+                    field = "tx_index"
                 elif _is_asset_index_col(field):
                     where_field.append(
                         f"{_qualify(field)} IN (SELECT asset_index FROM {_assets_index_table} "  # noqa: S608  # nosec B608
@@ -859,6 +920,15 @@ def select_rows(
                     # ``dispenser_tx_hash``); record the *resolved* FK column
                     # name so the override gate sees the actual schema column.
                     field = new_field
+                elif _is_tx_view_address_col(key):
+                    values = value.split(",") if isinstance(value, str) else [value]
+                    clause, extra = _tx_view_address_clause(key, values)
+                    where_field.append(clause)
+                    bindings += extra
+                    # The emitted clause filters on ``tx_index``; record that so
+                    # the ``_COUNT_FROM_OVERRIDE`` gate can count from the base
+                    # table (``tx_index`` is a safe column) instead of the view.
+                    field = "tx_index"
                 elif _is_address_index_col(key):
                     # Ledger DB: address columns store the compact ``address_id``;
                     # rewrite the (possibly comma-separated) address value(s) to
