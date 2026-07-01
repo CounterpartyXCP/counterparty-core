@@ -275,15 +275,29 @@ _INDEX_RESOLVING_VIEWS = frozenset(
 # address. Rewrite such a filter into ``tx_index IN (SELECT tx_index FROM <base>
 # WHERE source/destination = <resolved id>)`` so the base table's integer index
 # (``transactions_source_idx`` etc.) is used and only the matching page is
-# decoded. Mapping: view -> tuple of (base_table, keeps_text_address). The
-# transient ``mempool_transactions`` is excluded from address normalization (see
-# migration 0010) and keeps TEXT ``source``/``destination``, so its leg matches
-# the raw string; the normalized ``transactions`` leg resolves to ``address_id``.
+# decoded. Mapping: view -> tuple of legs ``(base_table, keeps_text_address,
+# confirmed_guard)``. The transient ``mempool_transactions`` is excluded from
+# address normalization (see migration 0010) and keeps TEXT ``source``/
+# ``destination``, so its leg matches the raw string; the normalized
+# ``transactions`` leg resolves to ``address_id``.
+#
+# ``confirmed_guard`` disambiguates a leg on the view's ``confirmed`` flag and is
+# REQUIRED whenever a view unions two base tables that share the ``tx_index``
+# space. ``all_transactions_with_status`` is ``mempool_transactions UNION ALL
+# transactions``: a mempool tx_index is assigned as ``max(last_mempool,
+# last_confirmed) + 1`` and a lingering mempool tx is never re-indexed, so a
+# *later* confirmed tx of a different address reuses that ``tx_index``. A bare
+# ``tx_index IN (mempool_leg UNION ALL transactions_leg)`` would then cross-match
+# the other leg's row on such a collision (a foreign address's tx leaking into
+# the result). Gating each leg on ``confirmed`` keeps a leg's ``tx_index`` set
+# from matching the other leg's rows. The single-base ``transactions_with_status``
+# needs no guard (``tx_index`` is unique in ``transactions``) and has no
+# ``confirmed`` column, so its guard is ``None``.
 _TX_VIEW_ADDRESS_FILTER_BASES = {
-    "transactions_with_status": (("transactions", False),),
+    "transactions_with_status": (("transactions", False, None),),
     "all_transactions_with_status": (
-        ("transactions", False),
-        ("mempool_transactions", True),
+        ("transactions", False, "confirmed"),
+        ("mempool_transactions", True, "NOT confirmed"),
     ),
 }
 # The only address columns the transaction views (and their base tables) expose.
@@ -790,22 +804,28 @@ def select_rows(
         into an indexed ``tx_index IN (...)`` subquery against the base table(s).
         ``field`` is ``source``/``destination`` (a constant column name, not user
         input); ``values`` is the list of address strings. Returns
-        ``(sql_clause, extra_bindings)``."""
+        ``(sql_clause, extra_bindings)``. When a view unions two base tables that
+        share the ``tx_index`` space (``all_transactions_with_status``), each leg
+        is gated on the view's ``confirmed`` flag so a ``tx_index`` collision
+        between a lingering mempool tx and a confirmed tx of a different address
+        cannot cross-match (see ``_TX_VIEW_ADDRESS_FILTER_BASES``)."""
         placeholders = ",".join(["?"] * len(values))
-        legs = []
+        clauses = []
         extra = []
-        for base_table, keeps_text_address in _TX_VIEW_ADDRESS_FILTER_BASES[table]:
+        for base_table, keeps_text_address, confirmed_guard in _TX_VIEW_ADDRESS_FILTER_BASES[table]:
             if keeps_text_address:
-                legs.append(
-                    f"SELECT tx_index FROM {base_table} WHERE {field} IN ({placeholders})"  # noqa: S608  # nosec B608
-                )
+                subquery = f"SELECT tx_index FROM {base_table} WHERE {field} IN ({placeholders})"  # noqa: S608  # nosec B608
             else:
-                legs.append(
+                subquery = (
                     f"SELECT tx_index FROM {base_table} WHERE {field} IN "  # noqa: S608  # nosec B608
                     f"(SELECT address_id FROM {_address_index_table} WHERE address IN ({placeholders}))"
                 )
             extra += values
-        return f"tx_index IN ({' UNION ALL '.join(legs)})", extra
+            if confirmed_guard is None:
+                clauses.append(f"tx_index IN ({subquery})")
+            else:
+                clauses.append(f"({confirmed_guard} AND tx_index IN ({subquery}))")
+        return f"({' OR '.join(clauses)})", extra
 
     or_where = []
     for where_dict in where:
