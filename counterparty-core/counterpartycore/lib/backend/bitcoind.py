@@ -125,8 +125,13 @@ def rpc_call(payload, retry=0):
                 raise exceptions.BitcoindRPCError(
                     f"Authorization error connecting to {clean_url_for_log(url)}: {response.status_code} {response.reason}"
                 )
-            if response.status_code == 503:
-                raise ConnectionError("Received 503 error from backend")
+            if response.status_code in (502, 503, 504):
+                # Transient gateway errors (commonly emitted by a reverse proxy
+                # or SSH tunnel sitting in front of the backend when it is
+                # briefly unreachable/overloaded). Route them through the
+                # connection-retry path instead of raising, so catch-up waits
+                # and retries rather than mis-resolving a VIN.
+                raise ConnectionError(f"Received {response.status_code} error from backend")
             if response.status_code == 429:
                 # Rate limited - retry with exponential backoff
                 backoff_time = min(2**tries, 60)  # Max 60 seconds
@@ -655,12 +660,35 @@ def get_vin_info_legacy(vin, no_retry=False):
             script.is_segwit_output(vout["script_pub_key"]),
         )
     except exceptions.BitcoindRPCError as e:
-        logger.warning(
-            "Failed to lookup parent transaction %s for VIN resolution. "
-            "This transaction will be skipped. Is `txindex` enabled in Bitcoin Core?",
-            vin["hash"],
-        )
-        raise exceptions.DecodeError("vin not found") from e
+        # While parsing the mempool the parent transaction may legitimately be
+        # unavailable (e.g. not yet relayed). Skipping the *unconfirmed* tx is
+        # safe: it will be re-evaluated once it confirms.
+        if CurrentState().parsing_mempool():
+            logger.warning(
+                "Failed to lookup parent transaction %s for VIN resolution. "
+                "Skipping unconfirmed (mempool) transaction.",
+                vin["hash"],
+            )
+            raise exceptions.DecodeError("vin not found") from e
+        # During catch-up the parent of a *confirmed* transaction must exist.
+        # A failure here is an infrastructure error (unhealthy/overloaded
+        # backend, a transient gateway 5xx, missing `txindex`, ...), NOT
+        # evidence that the transaction is non-Counterparty. Silently treating
+        # it as BTC-only would drop a real Counterparty transaction and
+        # permanently fork the ledger from consensus (this is exactly what
+        # happened at block 510556). Halt instead: the surrounding block is
+        # rolled back atomically and retried on the next run, so a transient
+        # blip never corrupts the ledger.
+        if CurrentState().stopping():
+            # A clean shutdown interrupted the lookup; propagate the original
+            # (shutdown) error rather than the consensus-corruption warning.
+            raise
+        raise exceptions.BitcoindRPCError(
+            f"Failed to resolve parent transaction {vin['hash']} for VIN resolution "
+            "while parsing a confirmed block. Refusing to silently skip a confirmed "
+            "transaction, which would corrupt consensus. Is `txindex` enabled and the "
+            "backend healthy?"
+        ) from e
 
 
 def get_transaction(tx_hash: str, result_format: str = "json"):

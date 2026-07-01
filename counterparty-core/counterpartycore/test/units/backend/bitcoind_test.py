@@ -515,24 +515,37 @@ def test_get_vin_info_legacy(monkeypatch):
     )
 
 
-def test_get_vin_info_legacy_error(monkeypatch):
+def test_get_vin_info_legacy_error_halts_during_catchup(monkeypatch):
+    """During catch-up (a confirmed block) a failure to resolve the parent
+    transaction must HALT (raise), never be swallowed into a silent skip.
+    Silently skipping a confirmed Counterparty tx forks the ledger -- this is
+    the regression that caused the block 510556 divergence. The diagnostic must
+    point operators at the cause (parent txid + `txindex`)."""
+
+    def raise_error(*args, **kwargs):
+        raise exceptions.BitcoindRPCError("No such mempool or blockchain transaction")
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+    monkeypatch.setattr(bitcoind.CurrentState, "parsing_mempool", lambda self: False)
+    monkeypatch.setattr(bitcoind.CurrentState, "stopping", lambda self: False)
+
+    parent_txid = "fba2aa8d334a6c74eaa8b0998be6c29477ff4d927449e9a07efa0ec374fc73bf"
+    with pytest.raises(exceptions.BitcoindRPCError, match="Refusing to silently skip") as exc:
+        bitcoind.get_vin_info_legacy({"hash": parent_txid, "n": 1})
+    assert parent_txid in str(exc.value)
+    assert "txindex" in str(exc.value)
+
+
+def test_get_vin_info_legacy_error_skips_in_mempool(monkeypatch):
+    """While parsing the mempool an unresolvable parent is acceptable: the
+    *unconfirmed* tx is skipped (DecodeError) and a warning is logged. It is
+    re-evaluated once it confirms."""
+
     def raise_error(*args, **kwargs):
         raise exceptions.BitcoindRPCError
 
     monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
-
-    with pytest.raises(exceptions.DecodeError, match="vin not found"):
-        bitcoind.get_vin_info_legacy({"hash": "hash", "n": 0})
-
-
-def test_get_vin_info_legacy_error_logs_warning(monkeypatch):
-    """When a parent transaction cannot be found, a warning must be logged
-    so operators can diagnose why a Counterparty transaction was skipped."""
-
-    def raise_error(*args, **kwargs):
-        raise exceptions.BitcoindRPCError
-
-    monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+    monkeypatch.setattr(bitcoind.CurrentState, "parsing_mempool", lambda self: True)
 
     parent_txid = "fba2aa8d334a6c74eaa8b0998be6c29477ff4d927449e9a07efa0ec374fc73bf"
     with patch.object(bitcoind.logger, "warning") as mock_warning:
@@ -542,7 +555,6 @@ def test_get_vin_info_legacy_error_logs_warning(monkeypatch):
     mock_warning.assert_called_once()
     logged_message = mock_warning.call_args[0][0] % mock_warning.call_args[0][1:]
     assert parent_txid in logged_message
-    assert "txindex" in logged_message
 
 
 def test_get_vin_info_falls_back_to_legacy(monkeypatch):
@@ -570,26 +582,25 @@ def test_get_vin_info_falls_back_to_legacy(monkeypatch):
     assert is_segwit is False
 
 
-def test_get_vin_info_fallback_also_fails(monkeypatch):
-    """When Rust VIN info is None AND the legacy fallback also fails,
-    a warning is logged and DecodeError is raised. This is the scenario
-    that caused a transaction to be silently skipped on a user's server."""
+def test_get_vin_info_fallback_halts_during_catchup(monkeypatch):
+    """When Rust VIN info is None AND the legacy fallback also fails during
+    catch-up, the node must HALT rather than silently skip the confirmed
+    transaction. This is the scenario that silently forked a user's ledger at
+    block 510556."""
 
     def raise_error(*args, **kwargs):
         raise exceptions.BitcoindRPCError("No such mempool or blockchain transaction")
 
     monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+    monkeypatch.setattr(bitcoind.CurrentState, "parsing_mempool", lambda self: False)
+    monkeypatch.setattr(bitcoind.CurrentState, "stopping", lambda self: False)
 
     parent_txid = "01f38776b07990118cb3720b9143adbde3725af12e0394cdd02c36458c6b3a03"
     vin_without_info = {"hash": parent_txid, "n": 1, "info": None}
 
-    with patch.object(bitcoind.logger, "warning") as mock_warning:
-        with pytest.raises(exceptions.DecodeError, match="vin not found"):
-            original_get_vin_info(vin_without_info)
-
-    mock_warning.assert_called_once()
-    logged_message = mock_warning.call_args[0][0] % mock_warning.call_args[0][1:]
-    assert parent_txid in logged_message
+    with pytest.raises(exceptions.BitcoindRPCError, match="Refusing to silently skip") as exc:
+        original_get_vin_info(vin_without_info)
+    assert parent_txid in str(exc.value)
 
 
 def test_reset_caches_clears_dicts():
