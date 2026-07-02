@@ -16,7 +16,6 @@ import apsw
 import cache_manager
 import requests
 import sh
-
 from counterpartycore.lib import config
 
 # Working directory for the test (separate from cache)
