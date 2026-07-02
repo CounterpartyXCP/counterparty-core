@@ -120,6 +120,43 @@ def _populate_address_list(cursor, renamed_tables):
     )
 
 
+def _backfill_invalid_asset_names(cursor):
+    """Register asset names that appear ONLY in invalid issuances.
+
+    ``assets`` is populated from ``assets_old``, which holds only
+    validly-created assets. But legacy stored the raw asset name in
+    ``issuances.asset`` for *every* issuance regardless of status, so
+    ``COUNT(DISTINCT asset)`` -- ``get_issuances_count`` and hence the sweep
+    antispam fee -- also counts assets that were only ever issued invalidly
+    (e.g. "invalid: insufficient funds"). The normalized ``issuances.asset`` is
+    a compact FK into ``assets``; a name missing from ``assets`` resolves to
+    NULL, which ``COUNT(DISTINCT)`` skips -- undercounting the fee and forking
+    the ledger (observed at block 850500). Add a name<->index row for every
+    issued name still missing from ``assets`` so the FK always resolves.
+
+    ``asset_id`` is left NULL: deriving it needs the block-gated
+    ``generate_asset_id`` (unavailable here), and it is non-consensus for a
+    never-created asset. ``asset_longname`` is left NULL to match legacy
+    ``get_assets_by_longname`` (which never sees an invalid issuance). Must run
+    AFTER ``assets`` is populated and BEFORE any table resolving an asset FK
+    (``issuances`` ...) is copied."""
+    has_old = cursor.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='issuances_old'"
+    ).fetchone()
+    if not has_old:
+        return
+    cursor.execute(
+        """
+        INSERT OR IGNORE INTO assets (asset_id, asset_name, block_index, asset_longname)
+        SELECT NULL, asset, MIN(block_index), NULL
+        FROM issuances_old
+        WHERE asset IS NOT NULL
+          AND asset NOT IN (SELECT asset_name FROM assets)
+        GROUP BY asset
+        """
+    )
+
+
 def _column_affinity(cursor, table, column):
     rows = cursor.execute(f"PRAGMA table_info({table})").fetchall()
     for r in rows:
@@ -305,6 +342,14 @@ def apply(conn):
                 f"INSERT INTO {table} ({', '.join(columns)}) "  # nosec B608  # noqa: S608
                 f"SELECT {', '.join(select_cols)} FROM {table}_old"
             )
+
+        # ``assets`` is first in TABLE_REWRITES, so it is now fully populated
+        # from ``assets_old`` (validly-created assets only). Register the names
+        # that appear only in invalid issuances now -- before any later table
+        # (notably ``issuances``) resolves its asset FK -- otherwise those FKs
+        # resolve to NULL and the sweep antispam fee forks (block 850500).
+        if table == "assets":
+            _backfill_invalid_asset_names(cursor)
 
     # Phase 3: drop all the renamed legacy tables.
     for table in renamed_tables:
