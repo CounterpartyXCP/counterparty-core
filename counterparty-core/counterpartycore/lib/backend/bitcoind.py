@@ -362,10 +362,13 @@ def getrawmempool(verbose=False):
 def get_utxo_address_and_value(utxo, no_retry=False):
     tx_hash = utxo.split(":")[0]
     vout = int(utxo.split(":")[1])
-    try:
-        transaction = getrawtransaction(tx_hash, True, no_retry=no_retry)
-    except exceptions.BitcoindRPCError as e:
-        raise exceptions.InvalidUTXOError(f"Could not find UTXO {utxo}") from e
+    # A failure to *fetch* the transaction (RPC error, node behind/pruned) is a
+    # transient, node-local condition: it MUST propagate as ``BitcoindRPCError``
+    # so callers can retry/halt. Do NOT turn it into ``InvalidUTXOError`` — that
+    # would be indistinguishable from a *resolved* output that genuinely has no
+    # address, and a caller treating it as "unknown" would write a
+    # non-deterministic value into consensus state (see safe_get_utxo_address).
+    transaction = getrawtransaction(tx_hash, True, no_retry=no_retry)
     if vout >= len(transaction["vout"]):
         raise exceptions.InvalidUTXOError("vout index out of range")
     script_pub_key = transaction["vout"][vout]["scriptPubKey"]
@@ -392,8 +395,17 @@ def get_multisig_address_from_script_pub_key(script_pub_key):
 
 
 def safe_get_utxo_address(utxo):
+    # "unknown" is returned ONLY for the deterministic case where the output is
+    # resolvable but has no decodable address (non-standard script). That value
+    # is reproducible on every node and is part of consensus history (canonical
+    # mainnet balances carry it). A transient RPC failure instead raises
+    # ``BitcoindRPCError`` and is left to propagate so the parser retries (and
+    # ultimately halts) rather than writing a node-dependent "unknown" into the
+    # ledger — which would silently fork consensus. Retries are re-enabled here
+    # (no ``no_retry``): the address-less case never hits the RPC retry path, so
+    # retrying only guards against genuine transient RPC failures.
     try:
-        return get_utxo_address_and_value(utxo, no_retry=True)[0]
+        return get_utxo_address_and_value(utxo)[0]
     except exceptions.InvalidUTXOError:
         return "unknown"
 
@@ -401,10 +413,13 @@ def safe_get_utxo_address(utxo):
 def is_valid_utxo(utxo):
     if not utxosinfo.is_utxo_format(utxo):
         return False
+    # Compose-time validation only (non-consensus): any failure to resolve the
+    # UTXO — missing address or an RPC error (e.g. the tx does not exist) — means
+    # it can't be used as a UTXO, so report it invalid rather than propagating.
     try:
         get_utxo_address_and_value(utxo)
         return True
-    except exceptions.InvalidUTXOError:
+    except (exceptions.InvalidUTXOError, exceptions.BitcoindRPCError):
         return False
 
 
