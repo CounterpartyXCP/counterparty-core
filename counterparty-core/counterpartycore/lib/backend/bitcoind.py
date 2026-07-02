@@ -654,10 +654,21 @@ def get_vin_info_legacy(vin, no_retry=False):
     try:
         vin_ctx = get_decoded_transaction(vin["hash"], no_retry=no_retry)
         vout = vin_ctx["vout"][vin["n"]]
+        # `is_segwit` MUST match the Rust fetcher (indexer/bitcoin_client.rs). Before the
+        # `fix_is_segwit` protocol change (block 902000) it is whether the *parent
+        # transaction* carries any witness (equivalently `txid != wtxid`), NOT whether
+        # the prevout output is itself a witness program. Computing it with
+        # `is_segwit_output()` unconditionally applies the post-fix semantics to pre-fix
+        # blocks, which flips the source of P2SH-encoded transactions funded by a segwit
+        # parent from bech32 to base58 and forks the ledger (observed at block 832867).
+        if protocol.enabled("fix_is_segwit"):
+            is_segwit = script.is_segwit_output(vout["script_pub_key"])
+        else:
+            is_segwit = vin_ctx["segwit"]
         return (
             vout["value"],
             vout["script_pub_key"],
-            script.is_segwit_output(vout["script_pub_key"]),
+            is_segwit,
         )
     except exceptions.BitcoindRPCError as e:
         # While parsing the mempool the parent transaction may legitimately be
