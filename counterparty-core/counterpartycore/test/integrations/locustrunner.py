@@ -5,11 +5,10 @@ import urllib.parse
 
 import gevent
 import locust
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
-
 from counterpartycore.lib.api.routes import ALL_ROUTES
 from counterpartycore.lib.utils import database
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 
 def generate_mainnet_fixtures(db_file):
