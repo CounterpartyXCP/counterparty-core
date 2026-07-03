@@ -1223,6 +1223,19 @@ def parse(db, tx, message, message_type_id):
             for _k, _v in list(bindings.items()):
                 if isinstance(_v, int) and (_v > config.MAX_INT or _v < -config.MAX_INT):
                     bindings[_k] = None
+            # Intern the asset name so the compact ``issuances.asset`` FK resolves
+            # even for INVALID issuances. Valid creations register the asset via
+            # the ASSET_CREATION event above, and reissuances reuse the existing
+            # row, but an invalid issuance (e.g. "insufficient funds") created no
+            # ``assets`` row -- its FK would store NULL. Legacy kept the raw name,
+            # so ``COUNT(DISTINCT asset)`` (get_issuances_count -> the sweep
+            # antispam fee) must still count invalid-only assets; a NULL is
+            # skipped by COUNT(DISTINCT) and forks the ledger (block 850500).
+            # DB-only + idempotent (INSERT OR IGNORE): emits no journal/event, so
+            # the consensus message stream is unchanged; longname stays NULL so
+            # get_assets_by_longname keeps matching legacy.
+            if asset is not None and asset_id is not None:
+                ledger.events.ensure_asset(db, asset_id, asset, tx["block_index"], None)
             ledger.events.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
 
         logger.info(

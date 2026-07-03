@@ -661,6 +661,41 @@ def test_get_utxo_address_and_value_rejects_multisig_when_protocol_disabled(monk
         config.ADDRESSVERSION = old_address_version
 
 
+def test_safe_get_utxo_address_returns_unknown_only_for_address_less_output(monkeypatch):
+    """A *resolved* output with no decodable address is deterministic across
+    nodes: safe_get_utxo_address returns the consensus "unknown" sentinel."""
+
+    def raise_invalid(utxo, no_retry=False):
+        raise exceptions.InvalidUTXOError("vout does not have an address")
+
+    monkeypatch.setattr(bitcoind, "get_utxo_address_and_value", raise_invalid)
+    assert bitcoind.safe_get_utxo_address("addressless-txid:0") == "unknown"
+
+
+def test_safe_get_utxo_address_halts_on_rpc_failure(monkeypatch):
+    """A transient RPC failure is node-local and must NOT be silently turned into
+    the consensus "unknown" sentinel (that would fork the ledger). It propagates
+    as BitcoindRPCError so the parser halts and retries instead."""
+
+    def raise_rpc(utxo, no_retry=False):
+        raise exceptions.BitcoindRPCError("Could not connect to bitcoind")
+
+    monkeypatch.setattr(bitcoind, "get_utxo_address_and_value", raise_rpc)
+    with pytest.raises(exceptions.BitcoindRPCError):
+        bitcoind.safe_get_utxo_address("some-txid:0")
+
+
+def test_is_valid_utxo_false_on_rpc_failure(monkeypatch):
+    """Compose-time validation reports an unresolvable UTXO as invalid rather
+    than propagating the RPC error."""
+
+    def raise_rpc(utxo, no_retry=False):
+        raise exceptions.BitcoindRPCError("No such mempool or blockchain transaction")
+
+    monkeypatch.setattr(bitcoind, "get_utxo_address_and_value", raise_rpc)
+    assert bitcoind.is_valid_utxo("nonexistent-txid:0") is False
+
+
 def test_reset_caches_handles_missing_lru_cache_clear(monkeypatch):
     """Test fixtures monkey-patch lru_cache wrappers with plain functions
     that don't carry a `cache_clear` attribute. reset_caches() must guard

@@ -211,3 +211,87 @@ def test_index_definitions_dict_rows(ledger_db):
     for name, sql in result:
         assert isinstance(name, str)
         assert isinstance(sql, str)
+
+
+# ---------------------------------------------------------------------------
+# _backfill_invalid_asset_names
+#
+# Assets issued ONLY invalidly (e.g. "invalid: insufficient funds") never get an
+# ``assets`` row, so the normalized ``issuances.asset`` FK is NULL for them.
+# Legacy stored the raw name, so ``COUNT(DISTINCT asset)`` (get_issuances_count
+# -> the sweep antispam fee) counts them; ``COUNT(DISTINCT)`` skips NULL and
+# undercounts -> ledger fork (observed at block 850500). The backfill interns
+# every issued name so the FK resolves. Regression guard.
+# ---------------------------------------------------------------------------
+
+_ASSETS_DDL = (
+    "CREATE TABLE assets(asset_index INTEGER PRIMARY KEY, asset_id TEXT UNIQUE, "
+    "asset_name TEXT UNIQUE, block_index INTEGER, asset_longname TEXT)"
+)
+# Distinct asset_index that Alice's issuances resolve to == the value the
+# normalized ``COUNT(DISTINCT asset)`` yields after the FK rewrite.
+_RESOLVED = (
+    "SELECT COUNT(DISTINCT (SELECT a.asset_index FROM assets a "
+    "WHERE a.asset_name = i.asset)) FROM issuances_old i WHERE i.issuer = 'Alice'"
+)
+
+
+def test_backfill_invalid_asset_names():
+    cursor = _make_sqlite3_cursor(
+        [
+            _ASSETS_DDL,
+            "CREATE TABLE issuances_old(asset TEXT, issuer TEXT, block_index INTEGER, status TEXT)",
+            # ``assets`` seeded with validly-created assets only (as the migration
+            # does from ``assets_old``).
+            "INSERT INTO assets(asset_id, asset_name, block_index, asset_longname) "
+            "VALUES ('697326324582', 'VALIDASSET', 700000, NULL)",
+        ]
+    )
+    cursor.executemany(
+        "INSERT INTO issuances_old VALUES (?, ?, ?, ?)",
+        [
+            ("VALIDASSET", "Alice", 700000, "valid"),
+            # invalid-only asset, issued twice -> one distinct name
+            ("INVALIDONE", "Alice", 700001, "invalid: insufficient funds"),
+            ("INVALIDONE", "Alice", 700005, "invalid: insufficient funds"),
+            ("INVALIDTWO", "Alice", 700002, "invalid: insufficient funds"),
+            # NULL-asset invalid row -> never counted (COUNT(DISTINCT) skips NULL)
+            (None, "Alice", 700003, "invalid: total quantity overflow"),
+        ],
+    )
+
+    # Legacy consensus value: COUNT(DISTINCT asset) over issuances of any status.
+    legacy = cursor.execute(
+        "SELECT COUNT(DISTINCT asset) FROM issuances_old WHERE issuer = 'Alice'"
+    ).fetchone()[0]
+    assert legacy == 3  # VALIDASSET + INVALIDONE + INVALIDTWO
+
+    # Before the backfill only the validly-created asset resolves -> undercount
+    # (the block-850500 bug).
+    assert cursor.execute(_RESOLVED).fetchone()[0] == 1
+
+    m0010._backfill_invalid_asset_names(cursor)
+
+    # After: every non-NULL issued name resolves -> matches legacy exactly.
+    assert cursor.execute(_RESOLVED).fetchone()[0] == legacy == 3
+    # invalid-only names interned with NULL asset_id / longname ...
+    assert cursor.execute(
+        "SELECT asset_id, asset_longname FROM assets WHERE asset_name = 'INVALIDONE'"
+    ).fetchone() == (None, None)
+    # ... and the validly-created asset row is left untouched.
+    assert (
+        cursor.execute("SELECT asset_id FROM assets WHERE asset_name = 'VALIDASSET'").fetchone()[0]
+        == "697326324582"
+    )
+
+    # Idempotent: a second run adds nothing.
+    n = cursor.execute("SELECT COUNT(*) FROM assets").fetchone()[0]
+    m0010._backfill_invalid_asset_names(cursor)
+    assert cursor.execute("SELECT COUNT(*) FROM assets").fetchone()[0] == n
+
+
+def test_backfill_invalid_asset_names_no_issuances_old():
+    # Fresh DB (nothing migrated -> no ``issuances_old``): no-op, no error.
+    cursor = _make_sqlite3_cursor([_ASSETS_DDL])
+    m0010._backfill_invalid_asset_names(cursor)
+    assert cursor.execute("SELECT COUNT(*) FROM assets").fetchone()[0] == 0

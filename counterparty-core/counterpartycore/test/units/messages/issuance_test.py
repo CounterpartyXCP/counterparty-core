@@ -1172,6 +1172,27 @@ def test_invalid_compose(ledger_db, defaults):
         )
 
 
+def test_parse_invalid_issuance_interns_asset(ledger_db, blockchain_mock, defaults):
+    # An issuance that fails for "insufficient funds" must still intern its asset
+    # name so ``get_issuances_count`` (COUNT(DISTINCT asset) -> the sweep antispam
+    # fee) counts it, exactly as the pre-normalization schema did. Without the
+    # intern the compact ``issuances.asset`` FK stores NULL, COUNT(DISTINCT) skips
+    # it and the ledger forks (observed at block 850500).
+    source = defaults["addresses"][2]  # holds no XCP -> issuance fee unaffordable
+    before = ledger.issuances.get_issuances_count(ledger_db, source)
+
+    tx = blockchain_mock.dummy_tx(ledger_db, source, use_first_tx=True)
+    message = b"\x87\x1a\x00\xbaOs\x19\x03\xe8\xf5\xf4\xf4`@"  # BASSET, a never-created asset
+    issuance.parse(ledger_db, tx, message, issuance.ID)
+
+    # The issuance is invalid (insufficient funds), so BASSET is never created and
+    # the source is not credited ...
+    assert ledger.balances.get_balance(ledger_db, source, "BASSET") == 0
+    # ... yet its asset name is interned, so the invalid issuance is counted
+    # (a NULL asset_index would be skipped by COUNT(DISTINCT), the 850500 fork).
+    assert ledger.issuances.get_issuances_count(ledger_db, source) == before + 1
+
+
 def test_parse_basset(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], use_first_tx=True)
     message = b"\x87\x1a\x00\xbaOs\x19\x03\xe8\xf5\xf4\xf4`@"

@@ -16,6 +16,7 @@ import apsw
 import cache_manager
 import requests
 import sh
+from counterpartycore.lib import config
 
 # Working directory for the test (separate from cache)
 DATA_DIR = os.path.join(os.path.expanduser("~/.cache"), "counterparty-test-data")
@@ -101,10 +102,13 @@ def prepare(network, use_existing_data=False):
 def bootstrap(sh_counterparty_server, network="testnet4"):
     """Download and extract the bootstrap database."""
     print(f"Bootstrapping {network} database from GCS...")
+    # Use the versioned counterparty ledger snapshot URL published in config
+    # (first entry of the (zst, sig) tuples), matching the running version.
+    counterparty_zst_url = config.BOOTSTRAP_URLS[network][0][0]
     sh_counterparty_server(
         "bootstrap",
         "--bootstrap-url",
-        f"https://storage.googleapis.com/counterparty-bootstrap/counterparty.{network}.db.latest.zst",
+        counterparty_zst_url,
     )
 
 

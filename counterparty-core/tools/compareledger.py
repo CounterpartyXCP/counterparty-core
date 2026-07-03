@@ -189,6 +189,12 @@ def check_hashes(database_file_1, database_file_2, hash_name="ledger_hash"):
             f"SELECT block_index, {hash_name} FROM blocks WHERE block_index = ?",  # noqa: S608 # nosec B608
             (block1[0],),  # noqa: S608 # nosec B608
         ).fetchone()
+        if block2 is None:
+            print(
+                f"Block {block1[0]} is present in {database_file_1} "
+                f"but missing in {database_file_2}; stopping comparison."
+            )
+            break
         if normalize_hash(block1[1]) != normalize_hash(block2[1]):
             print(block1[0], block1[1], block2[1])
             if hash_name == "ledger_hash":
@@ -236,8 +242,8 @@ def get_last_block(database_file_1, database_file_2):
 database_file_1 = sys.argv[1]
 database_file_2 = sys.argv[2]
 
-LAST_BLOCK = 600000
+LAST_BLOCK = 277880
 # compare_ledger(database_file_1, database_file_2)
-check_hashes(database_file_1, database_file_2, "txlist_hash")
+check_hashes(database_file_1, database_file_2, "ledger_hash")
 # get_checkpoints(database_file_1)
 # get_last_block(database_file_1, database_file_2)

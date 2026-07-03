@@ -244,48 +244,36 @@ PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"
 # PROTOCOL_CHANGES_URL = "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/counterparty-core/counterpartycore/protocol_changes.json"
 
 
-BOOTSTRAP_URLS = {
-    "mainnet": [
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.db.latest.sig",
-        ),
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/state.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/state.db.latest.sig",
-        ),
-    ],
-    "testnet3": [
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet.db.latest.sig",
-        ),
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet.db.latest.sig",
-        ),
-    ],
-    "testnet4": [
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet4.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet4.db.latest.sig",
-        ),
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet4.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet4.db.latest.sig",
-        ),
-    ],
-    "signet": [
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.signet.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.signet.db.latest.sig",
-        ),
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/state.signet.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/state.signet.db.latest.sig",
-        ),
-    ],
+BOOTSTRAP_URL_BASE = "https://storage.googleapis.com/counterparty-bootstrap"
+# Version tag embedded in the bootstrap snapshot file names (e.g. "v11.2.0").
+# Versioned names let several releases coexist in the bucket and guarantee that a
+# node downloads the snapshot matching its own version.
+BOOTSTRAP_VERSION = f"v{VERSION_STRING}"
+
+# Ledger / state database base file names per network (as stored in the bucket).
+# testnet3 is intentionally absent: it is deprecated and no snapshots are produced
+# for it anymore (see `prepare-bootstrap`).
+_BOOTSTRAP_DB_NAMES = {
+    "mainnet": ("counterparty.db", "state.db"),
+    "testnet4": ("counterparty.testnet4.db", "state.testnet4.db"),
+    "signet": ("counterparty.signet.db", "state.signet.db"),
 }
+
+
+def _bootstrap_urls(bootstrap_version=BOOTSTRAP_VERSION):
+    urls = {}
+    for network, db_names in _BOOTSTRAP_DB_NAMES.items():
+        urls[network] = [
+            (
+                f"{BOOTSTRAP_URL_BASE}/{db_name}.{bootstrap_version}.zst",
+                f"{BOOTSTRAP_URL_BASE}/{db_name}.{bootstrap_version}.sig",
+            )
+            for db_name in db_names
+        ]
+    return urls
+
+
+BOOTSTRAP_URLS = _bootstrap_urls()
 
 API_MAX_LOG_SIZE = (
     10 * 1024 * 1024

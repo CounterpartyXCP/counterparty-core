@@ -593,6 +593,54 @@ def arg_parser(no_config_file=False, app_name=APP_NAME):
     )
     setup.add_config_arguments(parser_bootstrap, CONFIG_ARGS, configfile)
 
+    parser_prepare_bootstrap = subparsers.add_parser(
+        "prepare-bootstrap",
+        help="prepare, compress and sign bootstrap snapshots from the local databases",
+    )
+    parser_prepare_bootstrap.add_argument(
+        "--signing-key",
+        default=bootstrap.DEFAULT_SIGNING_KEY,
+        help="GnuPG local-user (key id or email) used to sign the snapshots "
+        f"(default: {bootstrap.DEFAULT_SIGNING_KEY})",
+    )
+    parser_prepare_bootstrap.add_argument(
+        "--bootstrap-version",
+        default=None,
+        help="version tag used in the snapshot file names (default: v<current version>)",
+    )
+    parser_prepare_bootstrap.add_argument(
+        "--compression-level",
+        type=int,
+        default=bootstrap.DEFAULT_COMPRESSION_LEVEL,
+        help=f"zstd compression level (default: {bootstrap.DEFAULT_COMPRESSION_LEVEL})",
+    )
+    setup.add_config_arguments(parser_prepare_bootstrap, CONFIG_ARGS, configfile)
+
+    parser_backup_key = subparsers.add_parser(
+        "backup-bootstrap-key",
+        help="export the bootstrap signing key into a password-protected backup file",
+    )
+    parser_backup_key.add_argument(
+        "--output",
+        default=None,
+        help=f"path of the backup file to create (default: ./{bootstrap.DEFAULT_KEY_BACKUP_FILENAME})",
+    )
+    parser_backup_key.add_argument(
+        "--signing-key",
+        default=bootstrap.DEFAULT_SIGNING_KEY,
+        help=f"GnuPG key id or email to back up (default: {bootstrap.DEFAULT_SIGNING_KEY})",
+    )
+    setup.add_config_arguments(parser_backup_key, CONFIG_ARGS, configfile)
+
+    parser_restore_key = subparsers.add_parser(
+        "restore-bootstrap-key",
+        help="restore the bootstrap signing key from a password-protected backup file",
+    )
+    parser_restore_key.add_argument(
+        "backup_file", help="path to the backup file created by backup-bootstrap-key"
+    )
+    setup.add_config_arguments(parser_restore_key, CONFIG_ARGS, configfile)
+
     parser_checkdb = subparsers.add_parser("check-db", help="do an integrity check on the database")
     setup.add_config_arguments(parser_checkdb, CONFIG_ARGS, configfile)
 
@@ -637,6 +685,19 @@ def main():
     # Bootstrapping
     if args.action == "bootstrap":
         bootstrap.bootstrap(no_confirm=args.no_confirm, snapshot_url=args.bootstrap_url)
+
+    elif args.action == "prepare-bootstrap":
+        bootstrap.prepare_bootstrap(
+            signing_key=args.signing_key,
+            version=args.bootstrap_version,
+            compression_level=args.compression_level,
+        )
+
+    elif args.action == "backup-bootstrap-key":
+        bootstrap.backup_bootstrap_key(output_path=args.output, key=args.signing_key)
+
+    elif args.action == "restore-bootstrap-key":
+        bootstrap.restore_bootstrap_key(args.backup_file)
 
     # PARSING
     elif args.action == "reparse":
