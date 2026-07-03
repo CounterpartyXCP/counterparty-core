@@ -260,13 +260,13 @@ _BOOTSTRAP_DB_NAMES = {
 }
 
 
-def _bootstrap_urls(version=BOOTSTRAP_VERSION):
+def _bootstrap_urls(bootstrap_version=BOOTSTRAP_VERSION):
     urls = {}
     for network, db_names in _BOOTSTRAP_DB_NAMES.items():
         urls[network] = [
             (
-                f"{BOOTSTRAP_URL_BASE}/{db_name}.{version}.zst",
-                f"{BOOTSTRAP_URL_BASE}/{db_name}.{version}.sig",
+                f"{BOOTSTRAP_URL_BASE}/{db_name}.{bootstrap_version}.zst",
+                f"{BOOTSTRAP_URL_BASE}/{db_name}.{bootstrap_version}.sig",
             )
             for db_name in db_names
         ]

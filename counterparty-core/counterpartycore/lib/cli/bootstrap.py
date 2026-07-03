@@ -253,7 +253,7 @@ def checkpoint_and_clean(db_path):
             os.remove(sidecar)
             print(f"Removed empty {os.path.basename(sidecar)}")
         else:
-            raise Exception(  # noqa: TRY002
+            raise RuntimeError(
                 f"{os.path.basename(sidecar)} is not empty ({size} bytes) after checkpoint; "
                 "refusing to snapshot a database with a non-empty WAL"
             )
@@ -309,7 +309,7 @@ def verify_prepared_signature(zst_path, sig_path):
         if verify_signature(key, sig_path, zst_path):
             print(f"Signature OK: {os.path.basename(sig_path)}")
             return
-    raise Exception(  # noqa: TRY002
+    raise RuntimeError(
         f"Signature verification FAILED for {os.path.basename(sig_path)}: "
         "not signed by any trusted key"
     )
