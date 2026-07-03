@@ -84,6 +84,46 @@ def test_hex_to_blob_udf_valid_hex():
 
 
 # ---------------------------------------------------------------------------
+# _asset_name_to_id — reconstruct the numeric asset_id from an asset name,
+# mirroring ledger.issuances.generate_asset_id.
+# ---------------------------------------------------------------------------
+
+
+def test_asset_name_to_id_xcp():
+    assert m0010._asset_name_to_id("XCP") == 1
+
+
+def test_asset_name_to_id_btc():
+    assert m0010._asset_name_to_id("BTC") == 0
+
+
+def test_asset_name_to_id_numeric():
+    # 'A'-prefixed names are numeric asset ids: the digits after 'A' verbatim.
+    assert m0010._asset_name_to_id("A95428956661682177") == 95428956661682177
+
+
+def test_asset_name_to_id_b26():
+    # Named (base-26) asset: A=0 .. Z=25, big-endian. generate_asset_id('FOOBAR').
+    expected = 0
+    for char in "FOOBAR":
+        expected = expected * 26 + m0010._B26_DIGITS.index(char)
+    assert m0010._asset_name_to_id("FOOBAR") == expected
+
+
+def test_asset_name_to_id_invalid_char_raises():
+    # A name with a character outside A-Z does not round-trip -> ValueError,
+    # which the backfill catches to fall back to a NULL asset_id.
+    with pytest.raises(ValueError):
+        m0010._asset_name_to_id("foobar")
+
+
+def test_asset_name_to_id_empty_raises():
+    # An empty name has no first character -> IndexError (also caught upstream).
+    with pytest.raises(IndexError):
+        m0010._asset_name_to_id("")
+
+
+# ---------------------------------------------------------------------------
 # rollback
 # ---------------------------------------------------------------------------
 
@@ -298,3 +338,25 @@ def test_backfill_invalid_asset_names_no_issuances_old():
     cursor = _make_sqlite3_cursor([_ASSETS_DDL])
     m0010._backfill_invalid_asset_names(cursor)
     assert cursor.execute("SELECT COUNT(*) FROM assets").fetchone()[0] == 0
+
+
+def test_backfill_invalid_asset_names_unresolvable_name_falls_back_to_null():
+    # A stored name that does not round-trip through generate_asset_id (here a
+    # lowercase char raises ValueError in _asset_name_to_id) is still interned so
+    # COUNT(DISTINCT) stays correct, but with a NULL asset_id rather than aborting.
+    cursor = _make_sqlite3_cursor(
+        [
+            _ASSETS_DDL,
+            "CREATE TABLE issuances_old(asset TEXT, issuer TEXT, block_index INTEGER, status TEXT)",
+        ]
+    )
+    cursor.execute(
+        "INSERT INTO issuances_old VALUES (?, ?, ?, ?)",
+        ("weirdname", "Alice", 700010, "invalid: insufficient funds"),
+    )
+
+    m0010._backfill_invalid_asset_names(cursor)
+
+    assert cursor.execute(
+        "SELECT asset_id, block_index FROM assets WHERE asset_name = 'weirdname'"
+    ).fetchone() == (None, 700010)
