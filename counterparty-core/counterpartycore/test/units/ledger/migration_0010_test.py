@@ -274,10 +274,13 @@ def test_backfill_invalid_asset_names():
 
     # After: every non-NULL issued name resolves -> matches legacy exactly.
     assert cursor.execute(_RESOLVED).fetchone()[0] == legacy == 3
-    # invalid-only names interned with NULL asset_id / longname ...
+    # invalid-only names interned with the asset_id the parse path derives
+    # (generate_asset_id('INVALIDONE') == 46319583698470), longname NULL --
+    # so get_asset_id() returns the same id as a from-scratch node instead of
+    # raising TypeError on int(None).
     assert cursor.execute(
         "SELECT asset_id, asset_longname FROM assets WHERE asset_name = 'INVALIDONE'"
-    ).fetchone() == (None, None)
+    ).fetchone() == ("46319583698470", None)
     # ... and the validly-created asset row is left untouched.
     assert (
         cursor.execute("SELECT asset_id FROM assets WHERE asset_name = 'VALIDASSET'").fetchone()[0]

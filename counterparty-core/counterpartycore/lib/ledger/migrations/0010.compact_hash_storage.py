@@ -120,6 +120,32 @@ def _populate_address_list(cursor, renamed_tables):
     )
 
 
+# Base-26 alphabet used by ``ledger.issuances.generate_asset_id`` (A=0 .. Z=25).
+_B26_DIGITS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+
+def _asset_name_to_id(asset_name):
+    """Reconstruct the numeric ``asset_id`` from an asset name exactly as the
+    parse path does (``ledger.issuances.generate_asset_id`` under the
+    long-active ``numeric_asset_names`` rules).
+
+    Kept dependency-free -- no ``protocol``/``CurrentState`` import into the
+    migration (which runs before the parser sets the current block, so
+    ``protocol.enabled`` is unreliable here). A b26 named asset never starts
+    with 'A' (``generate_asset_id`` rejects that at creation), so an
+    'A'-prefixed name is always a numeric asset id."""
+    if asset_name == config.XCP:
+        return 1
+    if asset_name == config.BTC:
+        return 0
+    if asset_name[0] == "A":
+        return int(asset_name[1:])
+    asset_id = 0
+    for char in asset_name:
+        asset_id = asset_id * 26 + _B26_DIGITS.index(char)
+    return asset_id
+
+
 def _backfill_invalid_asset_names(cursor):
     """Register asset names that appear ONLY in invalid issuances.
 
@@ -134,27 +160,47 @@ def _backfill_invalid_asset_names(cursor):
     the ledger (observed at block 850500). Add a name<->index row for every
     issued name still missing from ``assets`` so the FK always resolves.
 
-    ``asset_id`` is left NULL: deriving it needs the block-gated
-    ``generate_asset_id`` (unavailable here), and it is non-consensus for a
-    never-created asset. ``asset_longname`` is left NULL to match legacy
-    ``get_assets_by_longname`` (which never sees an invalid issuance). Must run
-    AFTER ``assets`` is populated and BEFORE any table resolving an asset FK
-    (``issuances`` ...) is copied."""
+    ``asset_id`` is reconstructed from the name (``_asset_name_to_id``) so the
+    row matches what a from-scratch parse writes: the runtime interns the same
+    invalid-issuance names via ``events.ensure_asset(db, asset_id, ...)`` with a
+    non-NULL ``asset_id`` (issuance.py). A NULL here would make ``get_asset_id``
+    -- which does ``int(asset_id)`` -- raise ``TypeError`` on a migrated node
+    while a freshly-synced node returns the id (a compose-path 500 and a
+    migrated-vs-synced divergence). ``asset_longname`` stays NULL to match both
+    legacy ``get_assets_by_longname`` (which never sees an invalid issuance) and
+    the runtime ``ensure_asset`` call. Must run AFTER ``assets`` is populated and
+    BEFORE any table resolving an asset FK (``issuances`` ...) is copied."""
     has_old = cursor.execute(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name='issuances_old'"
     ).fetchone()
     if not has_old:
         return
-    cursor.execute(
+    rows = cursor.execute(
         """
-        INSERT OR IGNORE INTO assets (asset_id, asset_name, block_index, asset_longname)
-        SELECT NULL, asset, MIN(block_index), NULL
+        SELECT asset, MIN(block_index) AS block_index
         FROM issuances_old
         WHERE asset IS NOT NULL
           AND asset NOT IN (SELECT asset_name FROM assets)
         GROUP BY asset
         """
-    )
+    ).fetchall()
+    for row in rows:
+        asset_name = row["asset"] if isinstance(row, dict) else row[0]
+        block_index = row["block_index"] if isinstance(row, dict) else row[1]
+        try:
+            asset_id = str(_asset_name_to_id(asset_name))
+        except (ValueError, IndexError):
+            # A name that does not round-trip through generate_asset_id cannot
+            # come from a real issuance (the stored name was produced by
+            # generate_asset_name); fall back to NULL rather than aborting the
+            # migration -- the name is still interned so COUNT(DISTINCT) stays
+            # correct.
+            asset_id = None
+        cursor.execute(
+            "INSERT OR IGNORE INTO assets (asset_id, asset_name, block_index, asset_longname) "
+            "VALUES (?, ?, ?, ?)",
+            (asset_id, asset_name, block_index, None),
+        )
 
 
 def _column_affinity(cursor, table, column):
