@@ -5,6 +5,9 @@ import urllib.parse
 
 import gevent
 import locust
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
 from counterpartycore.lib.api.routes import ALL_ROUTES
 from counterpartycore.lib.utils import database
 
@@ -283,6 +286,26 @@ class CounterpartyCoreUser(locust.HttpUser):
     network_timeout = 15.0
     connection_timeout = 15.0
     MainnetFixtures = None
+
+    def on_start(self):
+        # When a gunicorn worker recycles (``max_requests``), it closes its
+        # sockets, which resets any keep-alive connection locust is holding to
+        # it -> ConnectionResetError on the in-flight request. A real HTTP
+        # client retries an idempotent GET on such a transient reset; mirror
+        # that so a legitimate worker recycle does not fail the load test.
+        # ``status=0`` (empty status_forcelist) keeps genuine 5xx/timeout
+        # responses as failures, so this only masks connection-level resets.
+        retry = Retry(
+            total=3,
+            connect=3,
+            read=3,
+            status=0,
+            allowed_methods=frozenset(["GET"]),
+            backoff_factor=0.1,
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        self.client.mount("http://", adapter)
+        self.client.mount("https://", adapter)
 
     @locust.task
     def get_random_url(self):
