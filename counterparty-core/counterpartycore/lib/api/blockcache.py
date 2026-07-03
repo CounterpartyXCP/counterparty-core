@@ -45,9 +45,7 @@ def cache_insert(cache_key, value, max_entries, max_rows):
     rows = estimate_rows(value)
     BLOCK_CACHE_SIZES[cache_key] = rows
     BLOCK_CACHE_ROWS += rows
-    while BLOCK_CACHE and (
-        len(BLOCK_CACHE) > max_entries or (0 < max_rows < BLOCK_CACHE_ROWS)
-    ):
+    while BLOCK_CACHE and (len(BLOCK_CACHE) > max_entries or (0 < max_rows < BLOCK_CACHE_ROWS)):
         evicted_key, _ = BLOCK_CACHE.popitem(last=False)
         BLOCK_CACHE_ROWS -= BLOCK_CACHE_SIZES.pop(evicted_key, 0)
     BLOCK_CACHE_ROWS = max(BLOCK_CACHE_ROWS, 0)
