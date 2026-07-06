@@ -41,7 +41,7 @@ The Ledger DB is automatically compacted on first start of v11.2.0 (migration `0
 
 ## Protocol Changes
 
-The activation block heights are `960000` (mainnet), `5057500` (testnet3), `146200` (testnet4) and `315100` (signet) — targeting roughly 2026-07-27; the one exception is `fairmint_pool`, which is also active on signet from genesis (`signet_block_index: 0`) for testing:
+The activation block heights are `961100` (mainnet), `5064400` (testnet3), `147200` (testnet4) and `316200` (signet) — targeting roughly 2026-08-03; the one exception is `fairmint_pool`, which is also active on signet from genesis (`signet_block_index: 0`) for testing:
 
 - `sweep_skip_zero_balances`: sweeps no longer include zero-quantity balances, the anti-spam fee is computed only over the balances/ownerships selected by the sweep `flags`, and an empty sweep is no longer charged the legacy flat fee.
 - `issuance_callable_lock_fix`: removes the obsolete "cannot change callability / advance call date / reduce call price" reissuance restrictions (the `issuance_callability_parameters_removal` guard is preserved).
