@@ -1413,74 +1413,74 @@
     },
     "sweep_skip_zero_balances": {
         "minimum_version_major": 11,
-        "minimum_version_minor": 1,
-        "minimum_version_revision": 1,
-        "block_index": 9999999,
-        "testnet3_block_index": 9999999,
-        "testnet4_block_index": 9999999,
-        "signet_block_index": 9999999
+        "minimum_version_minor": 2,
+        "minimum_version_revision": 0,
+        "block_index": 961100,
+        "testnet3_block_index": 5064400,
+        "testnet4_block_index": 147200,
+        "signet_block_index": 316200
     },
     "fix_fairminter_commission_minimum": {
         "minimum_version_major": 11,
-        "minimum_version_minor": 1,
-        "minimum_version_revision": 1,
-        "block_index": 9999999,
-        "testnet3_block_index": 9999999,
-        "testnet4_block_index": 9999999,
-        "signet_block_index": 9999999
+        "minimum_version_minor": 2,
+        "minimum_version_revision": 0,
+        "block_index": 961100,
+        "testnet3_block_index": 5064400,
+        "testnet4_block_index": 147200,
+        "signet_block_index": 316200
     },
     "multisig_utxo_addresses": {
         "minimum_version_major": 11,
-        "minimum_version_minor": 1,
-        "minimum_version_revision": 1,
-        "block_index": 9999999,
-        "testnet3_block_index": 9999999,
-        "testnet4_block_index": 9999999,
-        "signet_block_index": 9999999
+        "minimum_version_minor": 2,
+        "minimum_version_revision": 0,
+        "block_index": 961100,
+        "testnet3_block_index": 5064400,
+        "testnet4_block_index": 147200,
+        "signet_block_index": 316200
     },
     "issuance_callable_lock_fix": {
         "minimum_version_major": 11,
-        "minimum_version_minor": 1,
-        "minimum_version_revision": 1,
-        "block_index": 9999999,
-        "testnet3_block_index": 9999999,
-        "testnet4_block_index": 9999999,
-        "signet_block_index": 9999999
+        "minimum_version_minor": 2,
+        "minimum_version_revision": 0,
+        "block_index": 961100,
+        "testnet3_block_index": 5064400,
+        "testnet4_block_index": 147200,
+        "signet_block_index": 316200
     },
     "fairmint_pool": {
         "minimum_version_major": 11,
-        "minimum_version_minor": 1,
+        "minimum_version_minor": 2,
         "minimum_version_revision": 0,
-        "block_index": 9999999,
-        "testnet3_block_index": 9999999,
-        "testnet4_block_index": 9999999,
+        "block_index": 961100,
+        "testnet3_block_index": 5064400,
+        "testnet4_block_index": 147200,
         "signet_block_index": 0
     },
     "fix_pool_best_price_routing": {
         "minimum_version_major": 11,
-        "minimum_version_minor": 1,
-        "minimum_version_revision": 1,
-        "block_index": 9999999,
-        "testnet3_block_index": 9999999,
-        "testnet4_block_index": 9999999,
-        "signet_block_index": 9999999
+        "minimum_version_minor": 2,
+        "minimum_version_revision": 0,
+        "block_index": 961100,
+        "testnet3_block_index": 5064400,
+        "testnet4_block_index": 147200,
+        "signet_block_index": 316200
     },
     "fix_pool_deposit_product_overflow": {
         "minimum_version_major": 11,
-        "minimum_version_minor": 1,
-        "minimum_version_revision": 1,
-        "block_index": 9999999,
-        "testnet3_block_index": 9999999,
-        "testnet4_block_index": 9999999,
-        "signet_block_index": 9999999
+        "minimum_version_minor": 2,
+        "minimum_version_revision": 0,
+        "block_index": 961100,
+        "testnet3_block_index": 5064400,
+        "testnet4_block_index": 147200,
+        "signet_block_index": 316200
     },
     "enforce_utxo_vout_max": {
         "minimum_version_major": 11,
-        "minimum_version_minor": 1,
-        "minimum_version_revision": 1,
-        "block_index": 9999999,
-        "testnet3_block_index": 9999999,
-        "testnet4_block_index": 9999999,
-        "signet_block_index": 9999999
+        "minimum_version_minor": 2,
+        "minimum_version_revision": 0,
+        "block_index": 961100,
+        "testnet3_block_index": 5064400,
+        "testnet4_block_index": 147200,
+        "signet_block_index": 316200
     }
 }
