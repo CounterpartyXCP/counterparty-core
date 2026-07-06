@@ -940,8 +940,8 @@ CHECKPOINTS_TESTNET4 = {
     },
     143159: {
         "ledger_hash": "bbe5848cf8d8fccf655d9e3e74873b3f0b1d85a7047f4d18441394770741e469",
-        "txlist_hash": "d61c88dd8147f567f15a3bd2dc8c652e7d48428ad50ed1714f7f700a123845fb"
-    }
+        "txlist_hash": "d61c88dd8147f567f15a3bd2dc8c652e7d48428ad50ed1714f7f700a123845fb",
+    },
 }
 
 CONSENSUS_HASH_VERSION_SIGNET = 1
