@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v11.2.0 (2026-07-07)
+# Release Notes - Counterparty Core v11.2.0 (2026-07-08)
 
 
 # Upgrading
