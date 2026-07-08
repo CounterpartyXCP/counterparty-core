@@ -7,7 +7,7 @@ UNIT = 100000000  # The same across assets.
 
 
 # Semantic Version
-__version__ = "11.1.0"  # for hatch
+__version__ = "11.2.0"  # for hatch
 VERSION_STRING = __version__
 version = VERSION_STRING.split("-", maxsplit=1)[0].split(".")
 VERSION_MAJOR = int(version[0])
@@ -39,6 +39,7 @@ UPGRADE_ACTIONS = {
         "11.0.3": [("reparse", 911955)],
         "11.0.4": [("rollback", 926807)],
         "11.1.0": [("rollback", 941000)],
+        "11.2.0": [("refresh_state_db", 0)],
     },
     "testnet3": {
         "10.3.0": [("reparse", 0)],
@@ -56,6 +57,7 @@ UPGRADE_ACTIONS = {
         "11.0.4-alpha.1": [("reparse", 4017708)],
         "11.0.4": [("reparse", 4017708)],
         "11.1.0": [("refresh_state_db", 0)],
+        "11.2.0": [("refresh_state_db", 0)],
     },
     "testnet4": {
         "10.10.0": [("rollback", 64492)],
@@ -64,11 +66,13 @@ UPGRADE_ACTIONS = {
         "11.0.2": [("refresh_state_db", 0)],
         "11.0.3": [("reparse", 99290)],
         "11.1.0": [("refresh_state_db", 0)],
+        "11.2.0": [("refresh_state_db", 0)],
     },
     "signet": {
         "11.0.2": [("refresh_state_db", 0)],
         "11.0.3": [("reparse", 266993)],
         "11.1.0": [("refresh_state_db", 0)],
+        "11.2.0": [("refresh_state_db", 0)],
     },
 }
 
@@ -240,48 +244,36 @@ PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"
 # PROTOCOL_CHANGES_URL = "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/counterparty-core/counterpartycore/protocol_changes.json"
 
 
-BOOTSTRAP_URLS = {
-    "mainnet": [
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.db.latest.sig",
-        ),
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/state.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/state.db.latest.sig",
-        ),
-    ],
-    "testnet3": [
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet.db.latest.sig",
-        ),
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet.db.latest.sig",
-        ),
-    ],
-    "testnet4": [
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet4.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet4.db.latest.sig",
-        ),
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet4.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet4.db.latest.sig",
-        ),
-    ],
-    "signet": [
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.signet.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.signet.db.latest.sig",
-        ),
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/state.signet.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/state.signet.db.latest.sig",
-        ),
-    ],
+BOOTSTRAP_URL_BASE = "https://storage.googleapis.com/counterparty-bootstrap"
+# Version tag embedded in the bootstrap snapshot file names (e.g. "v11.2.0").
+# Versioned names let several releases coexist in the bucket and guarantee that a
+# node downloads the snapshot matching its own version.
+BOOTSTRAP_VERSION = f"v{VERSION_STRING}"
+
+# Ledger / state database base file names per network (as stored in the bucket).
+# testnet3 is intentionally absent: it is deprecated and no snapshots are produced
+# for it anymore (see `prepare-bootstrap`).
+_BOOTSTRAP_DB_NAMES = {
+    "mainnet": ("counterparty.db", "state.db"),
+    "testnet4": ("counterparty.testnet4.db", "state.testnet4.db"),
+    "signet": ("counterparty.signet.db", "state.signet.db"),
 }
+
+
+def _bootstrap_urls(bootstrap_version=BOOTSTRAP_VERSION):
+    urls = {}
+    for network, db_names in _BOOTSTRAP_DB_NAMES.items():
+        urls[network] = [
+            (
+                f"{BOOTSTRAP_URL_BASE}/{db_name}.{bootstrap_version}.zst",
+                f"{BOOTSTRAP_URL_BASE}/{db_name}.{bootstrap_version}.sig",
+            )
+            for db_name in db_names
+        ]
+    return urls
+
+
+BOOTSTRAP_URLS = _bootstrap_urls()
 
 API_MAX_LOG_SIZE = (
     10 * 1024 * 1024
@@ -314,3 +306,8 @@ PROFILE_INTERVAL_MINUTES = 15
 CURRENT_COMMIT = "Unknown"
 ENABLE_ALL_PROTOCOL_CHANGES = False
 DISABLE_API_CACHE = False
+API_CACHE_SIZE = 1000  # max entries in the API response cache (BLOCK_CACHE)
+# Total-rows budget for the API response cache (BLOCK_CACHE); 0 disables the row
+# bound (entry count still applies). Bounds cache memory while letting many small
+# entries stay cached. Worst single entry is API_LIMIT_ROWS rows.
+API_CACHE_MAX_ROWS = 50000

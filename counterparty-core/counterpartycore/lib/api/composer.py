@@ -32,9 +32,11 @@ from counterpartycore.lib import (
     messages,
 )
 from counterpartycore.lib.parser import deserialize, messagetype, utxosinfo
-from counterpartycore.lib.utils import helpers, multisig, script
+from counterpartycore.lib.utils import database, helpers, multisig, script
 
 MAX_INPUTS_SET = 100
+MAX_BTC_OUTPUT_VALUE = 21_000_000 * config.UNIT
+MAX_CONFIRMATION_TARGET = 1008
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -123,19 +125,31 @@ def create_tx_output(value, address_or_script, unspent_list, construct_params):
 
 def regular_dust_size(construct_params):
     if construct_params.get("regular_dust_size") is not None:
+        if construct_params["regular_dust_size"] < 0:
+            raise exceptions.ComposeError("Invalid regular_dust_size: must be non-negative")
         return construct_params["regular_dust_size"]
     return config.DEFAULT_REGULAR_DUST_SIZE
 
 
 def multisig_dust_size(construct_params):
     if construct_params.get("multisig_dust_size") is not None:
+        if construct_params["multisig_dust_size"] < 0:
+            raise exceptions.ComposeError("Invalid multisig_dust_size: must be non-negative")
         return construct_params["multisig_dust_size"]
     return config.DEFAULT_MULTISIG_DUST_SIZE
+
+
+def segwit_dust_size(construct_params):
+    if construct_params.get("segwit_dust_size") is not None:
+        return construct_params["segwit_dust_size"]
+    return config.DEFAULT_SEGWIT_DUST_SIZE
 
 
 def dust_size(address, construct_params):
     if multisig.is_multisig(address):
         return multisig_dust_size(construct_params)
+    if is_segwit_address(address):
+        return segwit_dust_size(construct_params)
     return regular_dust_size(construct_params)
 
 
@@ -305,9 +319,13 @@ def is_ordinal_envelope_script(envelope_script):
 
 
 def utxo_to_address(db, utxo):
-    # first try with the database
-    sql = "SELECT utxo_address FROM balances WHERE utxo = ? LIMIT 1"
-    balance = db.execute(sql, (utxo,)).fetchone()
+    # first try with the database (the ledger DB). ``utxo`` is stored as the
+    # compact ``(utxo_tx_hash BLOB, utxo_vout)`` pair; split the string to
+    # filter. ``utxo_address`` is the ``address_id`` FK, decoded back to the
+    # address string by the rowtracer.
+    utxo_tx_hash, utxo_vout = database.split_utxo(utxo)
+    sql = "SELECT utxo_address FROM balances WHERE utxo_tx_hash = ? AND utxo_vout = ? LIMIT 1"
+    balance = db.execute(sql, (utxo_tx_hash, utxo_vout)).fetchone()
     if balance:
         return balance["utxo_address"]
     # then try with Bitcoin Core
@@ -439,7 +457,7 @@ def generate_envelope_script(data, construct_params):
     ] and construct_params.get("inscription", False):
         message_data = cbor2.loads(message)
         content = message_data.pop()
-        if content is not None and len(content) > 0:
+        if content is not None and isinstance(content, (bytes, str)) and len(content) > 0:
             envelope_script = generate_ordinal_envelope_script(
                 message_data, message_type_id, content, source_pubkey
             )
@@ -503,6 +521,8 @@ def prepare_more_outputs(more_outputs, unspent_list, construct_params):
             value = int(value)
         except ValueError as e:
             raise exceptions.ComposeError(f"Invalid value for output: {':'.join(output)}") from e
+        if value < 0 or value > MAX_BTC_OUTPUT_VALUE:
+            raise exceptions.ComposeError(f"Invalid value for output: {':'.join(output)}")
         # create output
         tx_output = create_tx_output(value, address_or_script, unspent_list, construct_params)
         outputs.append(tx_output)
@@ -619,6 +639,7 @@ def complete_unspent_list(unspent_list):
 def prepare_inputs_set(inputs_set):
     unspent_list = []
     utxos_list = inputs_set.split(",")
+    seen_utxos = set()
     if len(utxos_list) > MAX_INPUTS_SET:
         raise exceptions.ComposeError(
             f"too many UTXOs in inputs_set (max. {MAX_INPUTS_SET}): {len(utxos_list)}"
@@ -639,6 +660,10 @@ def prepare_inputs_set(inputs_set):
 
         if not utxosinfo.is_utxo_format(f"{txid}:{vout}"):
             raise exceptions.ComposeError(f"invalid UTXOs: {utxo} (invalid format)")
+        utxo_id = f"{txid}:{vout}"
+        if utxo_id in seen_utxos:
+            raise exceptions.ComposeError(f"invalid UTXOs: {utxo} (duplicate UTXO)")
+        seen_utxos.add(utxo_id)
 
         unspent = {
             "txid": txid,
@@ -650,6 +675,8 @@ def prepare_inputs_set(inputs_set):
                 unspent["value"] = int(value)
             except ValueError as e:
                 raise exceptions.ComposeError(f"invalid UTXOs: {utxo} (invalid value)") from e
+            if unspent["value"] < 0 or unspent["value"] > MAX_BTC_OUTPUT_VALUE:
+                raise exceptions.ComposeError(f"invalid UTXOs: {utxo} (invalid value)")
 
         if script_pub_key is not None:
             try:
@@ -924,10 +951,20 @@ def prepare_fee_parameters(construct_params):
     sat_per_vbyte = construct_params.get("sat_per_vbyte")
     confirmation_target = construct_params.get("confirmation_target")
     max_fee = construct_params.get("max_fee")
+    if exact_fee is not None and exact_fee < 0:
+        raise exceptions.ComposeError("Invalid exact_fee: must be non-negative")
+    if sat_per_vbyte is not None and sat_per_vbyte < 0:
+        raise exceptions.ComposeError("Invalid sat_per_vbyte: must be non-negative")
+    if max_fee is not None and max_fee < 0:
+        raise exceptions.ComposeError("Invalid max_fee: must be non-negative")
     if exact_fee is not None:
         sat_per_vbyte, confirmation_target, max_fee = None, None, None
     elif sat_per_vbyte is None:
         if confirmation_target is not None:
+            if confirmation_target < 1 or confirmation_target > MAX_CONFIRMATION_TARGET:
+                raise exceptions.ComposeError(
+                    f"Invalid confirmation_target: must be between 1 and {MAX_CONFIRMATION_TARGET}"
+                )
             sat_per_vbyte = backend.bitcoind.satoshis_per_vbyte(confirmation_target)
         else:
             sat_per_vbyte = backend.bitcoind.satoshis_per_vbyte()
@@ -1157,10 +1194,7 @@ def check_transaction_sanity(tx_info, composed_tx, unspent_list, construct_param
         if value is not None:
             if value != out["value"]:
                 value_is_ok = False
-        elif out["value"] not in [
-            regular_dust_size(construct_params),
-            multisig_dust_size(construct_params),
-        ]:
+        elif out["value"] != dust_size(address, construct_params):
             value_is_ok = False
 
         if not value_is_ok:
@@ -1211,6 +1245,7 @@ CONSTRUCT_PARAMS = {
         None,
         "A comma-separated list of UTXOs (`<txid>:<vout>`) to use as inputs for the transaction being created. To speed up the composition you can also use the following format for utxos: `<txid>:<vout>:<value>:<script_pub_key>`.",
     ),
+    "custom_inputs": (str, None, "Deprecated, use `inputs_set` instead"),
     "allow_unconfirmed_inputs": (
         bool,
         False,
@@ -1257,6 +1292,7 @@ CONSTRUCT_PARAMS = {
         "Include additional information in the result including data and psbt",
     ),
     "return_only_data": (bool, False, "Return only the data part of the transaction"),
+    "message_only": (bool, False, "Alias for `return_only_data`"),
     "segwit_dust_size": (int, None, "The dust size for segwit outputs (default is 330)"),
     "inscription": (bool, False, "Use Ordinals inscription script when possible"),
     # deprecated parameters
@@ -1284,6 +1320,7 @@ DEPRECATED_CONSTRUCT_PARAMS = [
     "p2sh_pretx_txid",
     "segwit",
     "unspent_tx_hash",
+    "custom_inputs",
 ]
 
 
@@ -1295,12 +1332,18 @@ def fee_per_kb_to_sat_per_vbyte(fee_per_kb):
 
 def prepare_construct_params(construct_params):
     cleaned_construct_params = construct_params.copy()
+    if "message_only" in construct_params:
+        if construct_params.get("message_only") and not construct_params.get("return_only_data"):
+            cleaned_construct_params["return_only_data"] = construct_params["message_only"]
+        cleaned_construct_params.pop("message_only")
+
     # copy deprecated parameters to new ones
     for deprecated_param, new_param, copyer in [
         ("fee_per_kb", "sat_per_vbyte", fee_per_kb_to_sat_per_vbyte),
         ("fee_provided", "max_fee", lambda x: x),
         ("dust_return_pubkey", "multisig_pubkey", lambda x: x),
         ("return_psbt", "verbose", lambda x: x),
+        ("custom_inputs", "inputs_set", lambda x: x),
     ]:
         if deprecated_param in construct_params:
             if (

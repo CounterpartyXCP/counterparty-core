@@ -1,13 +1,11 @@
 import binascii
 import decimal
 import hashlib
-import itertools
 import json
 import mimetypes
 import os
 import string
 import threading
-from operator import itemgetter
 from urllib.parse import urlparse
 
 import pygit2
@@ -27,9 +25,10 @@ def flat(z):
 
 
 def accumulate(l):  # noqa: E741
-    it = itertools.groupby(l, itemgetter(0))
-    for key, subiter in it:
-        yield key, sum(item[1] for item in subiter)
+    totals = {}
+    for key, value in l:
+        totals[key] = totals.get(key, 0) + value
+    yield from totals.items()
 
 
 def active_options(given_config, options):
@@ -42,6 +41,13 @@ ID_SEPARATOR = "_"
 
 def make_id(hash_1, hash_2):
     return hash_1 + ID_SEPARATOR + hash_2
+
+
+# SQL form of ``make_id``: reconstructs the composite TEXT match ``id``
+# (``tx0hash_tx1hash``) from the compact ``tx0_hash``/``tx1_hash`` BLOB columns
+# kept on the match tables. ``hex_lower`` is the UDF registered on the ledger
+# and state connections (see ``hashcodec.register_db_functions``).
+MATCH_ID_SQL = f"hex_lower(tx0_hash) || '{ID_SEPARATOR}' || hex_lower(tx1_hash)"
 
 
 # ORACLES

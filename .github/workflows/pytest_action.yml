@@ -42,10 +42,21 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ~/.cache/counterparty-integration-cache/${{ inputs.integration_cache_network }}
-          # Cache key version: increment to invalidate corrupted caches
-          key: integration-v2-${{ inputs.integration_cache_network }}-${{ github.run_id }}
+          # Cache key version: increment to invalidate incompatible caches
+          # v5: addresses normalized to a compact `address_id` FK (`address_list`)
+          # and `utxo` TEXT split into `(utxo_tx_hash BLOB, utxo_vout)`, folded
+          # into migration 0010. yoyo never re-applies an already-applied 0010,
+          # so v4 cached DBs lack `address_list`/the split utxo columns and the
+          # state migration 0004 then fails with `no such table: ledger_db.address_list`.
+          # v4: asset names normalized to a compact `asset_index` FK, folded
+          # into migration 0010. yoyo never re-applies an already-applied 0010,
+          # so v3 cached DBs stay on the pre-`asset_index` schema and the state
+          # migration 0004 then fails with `no such column: a.asset_index`.
+          # v3: compact-hash match tables re-keyed on (tx0_index, tx1_index);
+          # the v2 cached DBs carry the old TEXT `id` schema and are incompatible.
+          key: integration-v5-${{ inputs.integration_cache_network }}-${{ github.run_id }}
           restore-keys: |
-            integration-v2-${{ inputs.integration_cache_network }}-
+            integration-v5-${{ inputs.integration_cache_network }}-
 
       - name: Set up Python
         uses: actions/setup-python@v3
@@ -71,7 +82,6 @@ jobs:
           sudo cp bitcoin-28.0/bin/bitcoin-cli /usr/local/bin/bitcoin-cli
           sudo cp bitcoin-28.0/bin/bitcoind /usr/local/bin/bitcoind
           sudo cp bitcoin-28.0/bin/bitcoin-wallet /usr/local/bin/bitcoin-wallet
-          npm install dredd --global
           git clone https://github.com/mempool/electrs && cd electrs
           rustup toolchain install nightly
           cargo +nightly update
@@ -93,13 +103,21 @@ jobs:
             mv .coverage ../
           fi
 
+      - name: Upload generated OpenAPI spec
+        if: inputs.test-path == 'integrations/regtest/scenarios_test.py'
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-spec
+          path: openapi.json
+
       - name: Save integration cache
         if: always() && inputs.integration_cache_network != ''
         uses: actions/cache/save@v4
         with:
           path: ~/.cache/counterparty-integration-cache/${{ inputs.integration_cache_network }}
-          # Cache key version: increment to invalidate corrupted caches
-          key: integration-v2-${{ inputs.integration_cache_network }}-${{ github.run_id }}
+          # Cache key version: increment to invalidate incompatible caches
+          # (must match the restore key above).
+          key: integration-v5-${{ inputs.integration_cache_network }}-${{ github.run_id }}
 
       - name: Upload coverage
         uses: codecov/codecov-action@v5

@@ -1,5 +1,7 @@
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger.events import insert_update
+from counterpartycore.lib.utils import database, hashcodec
+from counterpartycore.lib.utils.helpers import MATCH_ID_SQL
 
 #####################
 #    BROADCASTS     #
@@ -13,7 +15,11 @@ def get_oracle_last_price(db, oracle_address, block_index):
         WHERE source = :source AND status = :status AND block_index < :block_index
         ORDER by tx_index DESC LIMIT 1
     """
-    bindings = {"source": oracle_address, "status": "valid", "block_index": block_index}
+    bindings = {
+        "source": database.address_index_from_name(db, oracle_address),
+        "status": "valid",
+        "block_index": block_index,
+    }
     cursor.execute(query, bindings)
     broadcasts = cursor.fetchall()
     cursor.close()
@@ -51,7 +57,7 @@ def get_broadcasts_by_source(db, address: str, status: str = "valid", order_by: 
         WHERE (status = ? AND source = ?)
         ORDER BY tx_index {order_by}
     """  # nosec B608  # noqa: S608 # nosec B608
-    bindings = (status, address)
+    bindings = (status, database.address_index_from_name(db, address))
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -75,7 +81,7 @@ def get_burns(db, address: str = None, status: str = "valid"):
         bindings.append(status)
     if address is not None:
         where.append("source = ?")
-        bindings.append(address)
+        bindings.append(database.address_index_from_name(db, address))
     # no sql injection here
     query = f"""SELECT * FROM burns WHERE ({" AND ".join(where)})"""  # nosec B608  # noqa: S608 # nosec B608
     cursor.execute(query, tuple(bindings))
@@ -93,7 +99,7 @@ def get_addresses(db, address=None):
     bindings = []
     if address is not None:
         where.append("address = ?")
-        bindings.append(address)
+        bindings.append(database.address_index_from_name(db, address))
     # no sql injection here
     query = f"""SELECT *, MAX(rowid) AS rowid FROM addresses WHERE ({" AND ".join(where)}) GROUP BY address"""  # nosec B608  # noqa: S608 # nosec B608
     cursor.execute(query, tuple(bindings))
@@ -106,7 +112,7 @@ def get_send_msg_index(db, tx_hash):
         """
         SELECT MAX(msg_index) as msg_index FROM sends WHERE tx_hash = ?
     """,
-        (tx_hash,),
+        (hashcodec.hash_to_db(tx_hash),),
     ).fetchone()
     if last_msg_index and last_msg_index["msg_index"] is not None:
         msg_index = last_msg_index["msg_index"] + 1
@@ -121,7 +127,7 @@ def get_issuance_msg_index(db, tx_hash):
         """
         SELECT MAX(msg_index) as msg_index FROM issuances WHERE tx_hash = ?
     """,
-        (tx_hash,),
+        (hashcodec.hash_to_db(tx_hash),),
     ).fetchone()
     if last_msg_index and last_msg_index["msg_index"] is not None:
         msg_index = last_msg_index["msg_index"] + 1
@@ -139,34 +145,34 @@ def get_issuance_msg_index(db, tx_hash):
 
 def get_pending_bet_matches(db, feed_address, order_by=None):
     cursor = db.cursor()
-    query = """
+    query = f"""
         SELECT * FROM (
-            SELECT *, MAX(rowid) as rowid
+            SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid) as rowid
             FROM bet_matches
             WHERE feed_address = ?
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = ?
-    """
+    """  # noqa: S608 # nosec B608
     if order_by is not None:
         query += f" ORDER BY {order_by}"
     else:
         query += " ORDER BY rowid"
-    bindings = (feed_address, "pending")
+    bindings = (database.address_index_from_name(db, feed_address), "pending")
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
 
 def get_bet_matches_to_expire(db, block_time):
     cursor = db.cursor()
-    query = """
+    query = f"""
         SELECT * FROM (
-            SELECT *, MAX(rowid) as rowid
+            SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid) as rowid
             FROM bet_matches
             WHERE deadline < ? AND deadline > ?
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = ?
         ORDER BY rowid
-    """
+    """  # noqa: S608 # nosec B608
     bindings = (
         block_time - config.TWO_WEEKS,
         block_time
@@ -188,7 +194,7 @@ def get_bet(db, bet_hash: str):
         WHERE tx_hash = ?
         ORDER BY rowid DESC LIMIT 1
     """
-    bindings = (bet_hash,)
+    bindings = (hashcodec.hash_to_db(bet_hash),)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -220,7 +226,7 @@ def get_matching_bets(db, feed_address, bet_type):
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     """
-    bindings = (feed_address, bet_type, "open")
+    bindings = (database.address_index_from_name(db, feed_address), bet_type, "open")
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -241,7 +247,7 @@ def get_bet_by_feed(db, address: str, status: str = "open"):
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     """
-    bindings = (address, status)
+    bindings = (database.address_index_from_name(db, address), status)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -257,7 +263,7 @@ def get_open_bets_by_source(db, address):
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     """
-    bindings = (address, "open")
+    bindings = (database.address_index_from_name(db, address), "open")
     cursor.execute(query, bindings)
     return cursor.fetchall()
 

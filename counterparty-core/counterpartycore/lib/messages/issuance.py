@@ -130,20 +130,21 @@ def validate(
             (not protocol.enabled("cip03", block_index)) or (not reset)
         ):
             problems.append("cannot change divisibility")
-        if (not protocol.enabled("issuance_callability_parameters_removal", block_index)) and bool(
-            last_issuance["callable"]
-        ) != bool(callable_):
-            problems.append("cannot change callability")
-        if last_issuance["call_date"] > call_date and (
-            call_date != 0
-            or (
-                not protocol.enabled("default_values_for_callable")
-                and not protocol.is_test_network()
-            )
-        ):
-            problems.append("cannot advance call date")
-        if last_issuance["call_price"] > call_price:
-            problems.append("cannot reduce call price")
+        if not protocol.enabled("issuance_callable_lock_fix", block_index):
+            if (
+                not protocol.enabled("issuance_callability_parameters_removal", block_index)
+            ) and bool(last_issuance["callable"]) != bool(callable_):
+                problems.append("cannot change callability")
+            if last_issuance["call_date"] > call_date and (
+                call_date != 0
+                or (
+                    not protocol.enabled("default_values_for_callable")
+                    and not protocol.is_test_network()
+                )
+            ):
+                problems.append("cannot advance call date")
+            if last_issuance["call_price"] > call_price:
+                problems.append("cannot reduce call price")
         if issuance_locked and quantity:
             problems.append("locked asset and non‐zero quantity")
         if issuance_locked and reset:
@@ -164,6 +165,10 @@ def validate(
         #    problems.append('cannot transfer a non‐existent asset')
         if reset:
             problems.append("cannot reset a non existent asset")
+        if protocol.enabled(
+            "fairmint_pool", block_index=block_index
+        ) and ledger.issuances.get_active_fairminter_by_lp_asset(db, asset):
+            problems.append(f"{asset} is earmarked by an active fairminter")
 
     # validate parent ownership for subasset
     if subasset_longname is not None and not reissuance:
@@ -1218,6 +1223,19 @@ def parse(db, tx, message, message_type_id):
             for _k, _v in list(bindings.items()):
                 if isinstance(_v, int) and (_v > config.MAX_INT or _v < -config.MAX_INT):
                     bindings[_k] = None
+            # Intern the asset name so the compact ``issuances.asset`` FK resolves
+            # even for INVALID issuances. Valid creations register the asset via
+            # the ASSET_CREATION event above, and reissuances reuse the existing
+            # row, but an invalid issuance (e.g. "insufficient funds") created no
+            # ``assets`` row -- its FK would store NULL. Legacy kept the raw name,
+            # so ``COUNT(DISTINCT asset)`` (get_issuances_count -> the sweep
+            # antispam fee) must still count invalid-only assets; a NULL is
+            # skipped by COUNT(DISTINCT) and forks the ledger (block 850500).
+            # DB-only + idempotent (INSERT OR IGNORE): emits no journal/event, so
+            # the consensus message stream is unchanged; longname stays NULL so
+            # get_assets_by_longname keeps matching legacy.
+            if asset is not None and asset_id is not None:
+                ledger.events.ensure_asset(db, asset_id, asset, tx["block_index"], None)
             ledger.events.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
 
         logger.info(

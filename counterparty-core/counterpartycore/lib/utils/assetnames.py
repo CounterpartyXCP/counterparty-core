@@ -236,8 +236,10 @@ def gen_random_asset_name(seed, add=0):
 
 def asset_exists(db, name):
     cursor = db.cursor()
+    # ``issuances.asset`` stores the compact asset_index; resolve the name.
     cursor.execute(
-        "SELECT * FROM issuances WHERE asset = ?",
+        "SELECT 1 FROM issuances "
+        "WHERE asset = (SELECT asset_index FROM assets WHERE asset_name = ?) LIMIT 1",
         (name,),
     )
     if cursor.fetchall():

@@ -105,14 +105,16 @@ class TestMempoolIntegration:
         assert mock_ledger_blocks.call_count == 2
         assert mock_backend_bitcoind.called
 
-        # Vérifier que clean_transaction_from_mempool a été appelé pour tx1 (validée) et tx2 (plus dans la mempool)
-        cursor.execute.assert_any_call("DELETE FROM mempool WHERE tx_hash = ?", ("tx1",))
+        # Vérifier que clean_transaction_from_mempool a été appelé pour tx1
+        # (validée) et tx2 (plus dans la mempool). ``tx_hash`` is stored as
+        # BLOB(32) at rest now.
+        cursor.execute.assert_any_call("DELETE FROM mempool WHERE tx_hash = ?", (b"tx1",))
         cursor.execute.assert_any_call(
-            "DELETE FROM mempool_transactions WHERE tx_hash = ?", ("tx1",)
+            "DELETE FROM mempool_transactions WHERE tx_hash = ?", (b"tx1",)
         )
-        cursor.execute.assert_any_call("DELETE FROM mempool WHERE tx_hash = ?", ("tx2",))
+        cursor.execute.assert_any_call("DELETE FROM mempool WHERE tx_hash = ?", (b"tx2",))
         cursor.execute.assert_any_call(
-            "DELETE FROM mempool_transactions WHERE tx_hash = ?", ("tx2",)
+            "DELETE FROM mempool_transactions WHERE tx_hash = ?", (b"tx2",)
         )
 
     def test_parse_mempool_transactions_existing_in_mempool(

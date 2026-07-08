@@ -76,6 +76,17 @@ def validate(
     # resolve subassets
     asset = issuances.resolve_subasset_longname(db, asset)
 
+    for param_name, param_value in {
+        "give_quantity": give_quantity,
+        "escrow_quantity": escrow_quantity,
+        "mainchainrate": mainchainrate,
+    }.items():
+        if not isinstance(param_value, int):
+            problems.append(f"{param_name} must be an integer")
+
+    if problems:
+        return None, problems
+
     if status in [STATUS_OPEN, STATUS_OPEN_EMPTY_ADDRESS]:
         if give_quantity <= 0:
             problems.append("give_quantity must be positive")
@@ -253,7 +264,12 @@ def compose(
     oracle_address: str = None,
     skip_validation: bool = False,
 ):
-    if oracle_address is not None and len(address.pack(oracle_address)) > 22:
+    is_oracle_fee_status = status in [STATUS_OPEN, STATUS_OPEN_EMPTY_ADDRESS]
+    if (
+        oracle_address is not None
+        and is_oracle_fee_status
+        and len(address.pack(oracle_address)) > 22
+    ):
         raise exceptions.ComposeError("Oracle address not supported by dispenser")
 
     asset_id, problems = validate(
@@ -283,7 +299,11 @@ def compose(
         and open_address != source
     ):
         data += address_pack(open_address)
-    if oracle_address is not None and protocol.enabled("oracle_dispensers"):
+    if (
+        oracle_address is not None
+        and is_oracle_fee_status
+        and protocol.enabled("oracle_dispensers")
+    ):
         oracle_fee = calculate_oracle_fee(
             db,
             escrow_quantity,

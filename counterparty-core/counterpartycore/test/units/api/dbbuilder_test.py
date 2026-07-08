@@ -1,4 +1,9 @@
 from counterpartycore.lib.api import dbbuilder
+from counterpartycore.lib.utils import hashcodec
+from counterpartycore.lib.utils.database import (
+    ADDRESS_INDEX_COLUMN_NAMES,
+    ASSET_INDEX_COLUMN_NAMES,
+)
 
 # =============================================================================
 # Tests for migration rollback functions
@@ -245,6 +250,19 @@ def test_migration_0013_rollback(state_db):
         assert index_exists(state_db, idx), f"Index {idx} should exist after re-apply"
 
 
+def test_migration_0015_rollback(state_db):
+    """Test rollback of 0015.add_dispenser_origin_index migration."""
+    assert index_exists(state_db, "dispensers_origin_idx")
+
+    dbbuilder.rollback_migration(state_db, "0015.add_dispenser_origin_index")
+
+    assert not index_exists(state_db, "dispensers_origin_idx")
+
+    dbbuilder.apply_migration(state_db, "0015.add_dispenser_origin_index")
+
+    assert index_exists(state_db, "dispensers_origin_idx")
+
+
 # =============================================================================
 # Tests for consolidated tables
 # =============================================================================
@@ -262,10 +280,19 @@ def test_consolidated_balances(state_db, ledger_db, apiv2_client):
     )
 
     ledger_balances = ledger_db.execute(
-        "SELECT *, MAX(rowid) FROM balances GROUP BY address, asset ORDER BY asset, address"
+        "SELECT *, MAX(rowid) FROM balances GROUP BY address, asset"
     ).fetchall()
-    api_balances = state_db.execute("SELECT * FROM balances ORDER BY asset, address").fetchall()
+    api_balances = state_db.execute("SELECT * FROM balances").fetchall()
     assert len(ledger_balances) == len(api_balances)
+
+    # The Ledger DB stores the compact ``asset_index`` (so SQL ``ORDER BY asset``
+    # sorts by index) while the State DB stores asset names; both decode to the
+    # same names on read, so align the two lists by (name, address, utxo).
+    def _balance_key(b):
+        return (b["asset"] or "", b["address"] or "", b["utxo"] or "")
+
+    ledger_balances = sorted(ledger_balances, key=_balance_key)
+    api_balances = sorted(api_balances, key=_balance_key)
     for ledger_balance, api_balance in zip(ledger_balances, api_balances, strict=True):
         assert ledger_balance["address"] == api_balance["address"]
         assert ledger_balance["asset"] == api_balance["asset"]
@@ -295,7 +322,8 @@ def test_consolidated_orders(state_db, ledger_db, apiv2_client):
     ).fetchall()
     for ledger_order in ledger_orders:
         api_order = state_db.execute(
-            "SELECT * FROM orders WHERE tx_hash = ?", (ledger_order["tx_hash"],)
+            "SELECT * FROM orders WHERE tx_hash = ?",
+            (hashcodec.hash_to_db(ledger_order["tx_hash"]),),
         ).fetchone()
         assert ledger_order["status"] == api_order["status"]
         assert ledger_order["give_asset"] == api_order["give_asset"]
@@ -313,8 +341,13 @@ def test_consolidated_orders(state_db, ledger_db, apiv2_client):
 
 
 def test_consolidated_order_matches(state_db, ledger_db, apiv2_client):
+    # The composite TEXT ``id`` was dropped from match tables; reconstruct it
+    # from the kept ``tx0_hash``/``tx1_hash`` BLOB columns and key by the
+    # ``(tx0_index, tx1_index)`` pair.
+    match_id_sql = "hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash)"
     sql_ledger = (
-        "SELECT count(*) AS count FROM (SELECT *, MAX(rowid) FROM order_matches GROUP BY id)"
+        "SELECT count(*) AS count FROM "
+        "(SELECT *, MAX(rowid) FROM order_matches GROUP BY tx0_index, tx1_index)"
     )
     sql_api = "SELECT count(*) AS count FROM order_matches"
     assert (
@@ -323,9 +356,12 @@ def test_consolidated_order_matches(state_db, ledger_db, apiv2_client):
     )
 
     ledger_order_matches = ledger_db.execute(
-        "SELECT *, MAX(rowid) FROM order_matches GROUP BY id ORDER BY id"
+        f"SELECT *, {match_id_sql} AS id, MAX(rowid) FROM order_matches "  # noqa: S608
+        "GROUP BY tx0_index, tx1_index ORDER BY id"
     ).fetchall()
-    api_order_matches = state_db.execute("SELECT * FROM order_matches ORDER BY id").fetchall()
+    api_order_matches = state_db.execute(
+        f"SELECT *, {match_id_sql} AS id FROM order_matches ORDER BY id"  # noqa: S608
+    ).fetchall()
     assert len(ledger_order_matches) == len(api_order_matches)
     for ledger_order_match, api_order_match in zip(
         ledger_order_matches, api_order_matches, strict=True
@@ -412,3 +448,62 @@ def test_migration_0004_locked_columns_are_booleans(state_db):
         assert r["description_locked"] in (0, 1, None), (
             f"asset {r['asset']} has description_locked={r['description_locked']}"
         )
+
+
+# Consolidated tables built by migrations 0006/0014 that carry asset/address
+# columns. The State DB stores the *decoded* name/address string in them.
+_CONSOLIDATED_INDEX_COLUMN_TABLES = (
+    "orders",
+    "dispensers",
+    "balances",
+    "order_matches",
+    "bet_matches",
+    "rps_matches",
+    "pools",
+)
+
+
+def test_consolidated_index_columns_are_text(state_db):
+    """Regression for the ~55s ``/addresses/<a>/orders`` (and slow dispenser)
+    load-test outliers: the asset/address columns are stored as the compact
+    INTEGER index on the Ledger DB, and the consolidated-table migrations copy
+    that DDL verbatim while inserting the *decoded* TEXT name/address. Left at
+    INTEGER affinity the column mismatches ``assets_info.asset`` (TEXT) in the
+    ``orders_info`` join / dispenser price subquery, which silently defeats the
+    index and degrades into a full scan of ``assets_info`` per row. They must
+    keep TEXT affinity.
+    """
+    index_cols = ASSET_INDEX_COLUMN_NAMES | ADDRESS_INDEX_COLUMN_NAMES
+    for table in _CONSOLIDATED_INDEX_COLUMN_TABLES:
+        if not table_exists(state_db, table):
+            continue
+        offenders = [
+            (col["name"], col["type"])
+            for col in state_db.execute(f"PRAGMA table_info({table})").fetchall()
+            if col["name"] in index_cols and col["type"] != "TEXT"
+        ]
+        assert not offenders, (
+            f"{table} has non-TEXT asset/address columns {offenders}; INTEGER "
+            "affinity defeats the assets_info join index (full scan per row)"
+        )
+
+
+def test_orders_info_join_uses_assets_info_index(state_db):
+    """The ``orders_info`` view LEFT JOINs ``assets_info`` twice to resolve
+    divisibility. With TEXT-affinity asset columns those joins must resolve via
+    the ``assets_info`` index (a SEARCH), not a full SCAN -- the SCAN form is
+    what made the orders endpoints multi-second on mainnet.
+    """
+    plan = state_db.execute(
+        "EXPLAIN QUERY PLAN "
+        "SELECT * FROM orders_info WHERE source = 'x' ORDER BY tx_index DESC LIMIT 10"
+    ).fetchall()
+    details = [(row["detail"] if isinstance(row, dict) else row[-1]) for row in plan]
+    # The view aliases ``assets_info`` as ``get_assets`` / ``give_assets``; a
+    # full scan shows as e.g. "SCAN get_assets LEFT-JOIN" (the table name is
+    # absent), so match the aliases. With TEXT affinity these resolve via an
+    # index SEARCH instead.
+    scans = [
+        d for d in details if d.startswith("SCAN") and ("get_assets" in d or "give_assets" in d)
+    ]
+    assert not scans, f"orders_info full-scans assets_info instead of an index seek: {details}"

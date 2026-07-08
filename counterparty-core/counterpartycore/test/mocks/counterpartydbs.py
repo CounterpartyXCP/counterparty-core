@@ -11,7 +11,7 @@ from counterpartycore.lib.cli.initialise import initialise_log_and_config
 from counterpartycore.lib.cli.main import arg_parser
 from counterpartycore.lib.ledger import caches
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.utils import database, helpers
+from counterpartycore.lib.utils import database, hashcodec, helpers
 
 from ..fixtures.defaults import DEFAULT_PARAMS
 from ..fixtures.ledgerdb import UNITTEST_FIXTURE
@@ -182,6 +182,19 @@ def empty_ledger_db(build_dbs):
     os.remove(config.DATABASE)
 
 
+# Tables where a legacy ``*_tx_hash`` (or ``offer_hash``) column has been
+# replaced by an integer ``*_tx_index`` foreign key. The mock test helper
+# below rewrites legacy hex-hash filters to the new FK form via a subquery
+# on ``transactions`` so existing test fixtures keep working unchanged.
+_LEGACY_HASH_TO_TX_INDEX_FK = {
+    "cancels": {"offer_hash": ("offer_tx_index", "transactions")},
+    "dispenses": {"dispenser_tx_hash": ("dispenser_tx_index", "transactions")},
+    "dispenser_refills": {"dispenser_tx_hash": ("dispenser_tx_index", "transactions")},
+    "fairmints": {"fairminter_tx_hash": ("fairminter_tx_index", "transactions")},
+    "pool_matches": {"order_tx_hash": ("order_tx_index", "transactions")},
+}
+
+
 def check_record(ledger_db, record):
     """Allow direct record access to the db."""
     cursor = ledger_db.cursor()
@@ -192,21 +205,56 @@ def check_record(ledger_db, record):
         value = cursor.execute(sql).fetchall()[0][field]
         assert value == record["value"]
     else:
-        sql = f"SELECT COUNT(*) AS count FROM {record['table']} WHERE "  # noqa: S608 # nosec B608
+        table = record["table"]
+        legacy_map = _LEGACY_HASH_TO_TX_INDEX_FK.get(table, {})
+        sql = f"SELECT COUNT(*) AS count FROM {table} WHERE "  # noqa: S608 # nosec B608
         bindings = []
         conditions = []
         fields = []
         for field in record["values"]:
             if record["values"][field] is not None:
                 fields.append(field)
-                conditions.append(f"{field} = ?")
-                bindings.append(record["values"][field])
+                value = record["values"][field]
+                if field in legacy_map:
+                    new_col, fk_table = legacy_map[field]
+                    conditions.append(
+                        f"{new_col} = (SELECT tx_index FROM {fk_table} WHERE tx_hash = ?)"  # nosec B608  # noqa: S608
+                    )
+                    if isinstance(value, str):
+                        value = hashcodec.hash_to_db(value)
+                elif field in database.ASSET_INDEX_COLUMN_NAMES and isinstance(value, str):
+                    # Asset-name columns are stored as the compact asset_index;
+                    # resolve the expected name to its index for the match.
+                    conditions.append(
+                        f"{field} = (SELECT asset_index FROM assets WHERE asset_name = ?)"  # nosec B608  # noqa: S608
+                    )
+                elif field in database.ADDRESS_INDEX_COLUMN_NAMES and isinstance(value, str):
+                    # Address columns are stored as the compact address_id;
+                    # resolve the expected address to its id for the match.
+                    conditions.append(
+                        f"{field} = (SELECT address_id FROM address_list WHERE address = ?)"  # nosec B608  # noqa: S608
+                    )
+                elif field == "utxo" and isinstance(value, str):
+                    # ``utxo`` (``tx_hash:vout``) is stored as the compact
+                    # ``(utxo_tx_hash BLOB, utxo_vout)`` pair; split it.
+                    tx_hash_hex, _, vout = value.partition(":")
+                    conditions.append("utxo_tx_hash = ? AND utxo_vout = ?")
+                    bindings.append(hashcodec.hash_to_db(tx_hash_hex))
+                    value = int(vout)
+                else:
+                    conditions.append(f"{field} = ?")
+                    if field in hashcodec.HASH_COLUMN_NAMES and isinstance(value, str):
+                        value = hashcodec.hash_to_db(value)
+                bindings.append(value)
         sql += " AND ".join(conditions)
         count = cursor.execute(sql, tuple(bindings)).fetchone()["count"]
         ok = (record.get("not", False) and count == 0) or count == 1
         if not ok:
+            # ``SELECT *`` (not the record's fields) so the rowtracer can
+            # reconstruct virtual columns like ``utxo`` (stored as the
+            # ``(utxo_tx_index, utxo_vout)`` pair) and decode address/asset ids.
             last_record = cursor.execute(
-                f"SELECT {', '.join(fields)} FROM {record['table']} ORDER BY rowid DESC LIMIT 1"  # noqa: S608 # nosec B608
+                f"SELECT * FROM {record['table']} ORDER BY rowid DESC LIMIT 1"  # noqa: S608 # nosec B608
             ).fetchone()
             print("test output", helpers.to_json(last_record, sort_keys=True))
             print("expected output", helpers.to_json(record["values"], sort_keys=True))

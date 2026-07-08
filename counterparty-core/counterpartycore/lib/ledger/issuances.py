@@ -11,7 +11,7 @@ from counterpartycore.lib.ledger.caches import AssetCache
 from counterpartycore.lib.ledger.events import insert_update
 from counterpartycore.lib.ledger.supplies import asset_supply
 from counterpartycore.lib.parser import protocol
-from counterpartycore.lib.utils import assetnames
+from counterpartycore.lib.utils import assetnames, database, hashcodec
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -165,7 +165,7 @@ def is_divisible(db, asset):
         WHERE (status = ? AND asset = ?)
         ORDER BY tx_index DESC
     """
-    bindings = ("valid", asset)
+    bindings = ("valid", database.asset_index_from_name(db, asset))
     cursor.execute(query, bindings)
     issuances = cursor.fetchall()
     if not issuances:
@@ -255,7 +255,7 @@ def get_asset_issuer(db, asset):
         WHERE (status = ? AND asset = ?)
         ORDER BY tx_index DESC
     """
-    bindings = ("valid", asset)
+    bindings = ("valid", database.asset_index_from_name(db, asset))
     cursor.execute(query, bindings)
     issuances = cursor.fetchall()
     if not issuances:
@@ -273,7 +273,7 @@ def get_asset_description(db, asset):
         WHERE (status = ? AND asset = ?)
         ORDER BY tx_index DESC
     """
-    bindings = ("valid", asset)
+    bindings = ("valid", database.asset_index_from_name(db, asset))
     cursor.execute(query, bindings)
     issuances = cursor.fetchall()
     if not issuances:
@@ -288,7 +288,7 @@ def get_issuances_count(db, address):
         FROM issuances
         WHERE issuer = ?
     """
-    bindings = (address,)
+    bindings = (database.address_index_from_name(db, address),)
     cursor.execute(query, bindings)
     return cursor.fetchall()[0]["cnt"]
 
@@ -300,7 +300,7 @@ def get_asset_issued(db, address):
         FROM issuances
         WHERE issuer = ?
     """
-    bindings = (address,)
+    bindings = (database.address_index_from_name(db, address),)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -375,7 +375,7 @@ def get_issuances(
         bindings.append(status)
     if asset is not None:
         where.append("asset = ?")
-        bindings.append(asset)
+        bindings.append(database.asset_index_from_name(db, asset))
     if locked is not None:
         where.append("locked = ?")
         bindings.append(locked)
@@ -425,7 +425,11 @@ def get_asset(db, asset):
         WHERE ({name_field} = ? AND status = ?)
         ORDER BY tx_index DESC
     """  # nosec B608  # noqa: S608 # nosec B608
-    bindings = (asset, "valid")
+    # ``asset_longname`` stays TEXT; only the ``asset`` column is the index FK.
+    bind_asset = (
+        asset if name_field == "asset_longname" else database.asset_index_from_name(db, asset)
+    )
+    bindings = (bind_asset, "valid")
     cursor.execute(query, bindings)
     issuances = cursor.fetchall()
     if not issuances:
@@ -488,7 +492,26 @@ def get_fairminter_by_asset(db, asset):
         WHERE asset = ?
         ORDER BY rowid DESC LIMIT 1
     """
-    bindings = (asset,)
+    bindings = (database.asset_index_from_name(db, asset),)
+    cursor.execute(query, bindings)
+    return cursor.fetchone()
+
+
+def get_active_fairminter_by_lp_asset(db, lp_asset):
+    # Pick the LATEST row per tx_hash (same pattern as get_fairminters_by_soft_cap_deadline)
+    # then filter by status; otherwise a closed fairminter whose intermediate 'open' row
+    # has the matching lp_asset would still be reported as active.
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM (
+            SELECT *, MAX(rowid) AS rowid
+            FROM fairminters
+            WHERE lp_asset = :lp_asset
+            GROUP BY tx_hash
+        ) WHERE status IN ('open', 'pending')
+        ORDER BY rowid DESC LIMIT 1
+    """
+    bindings = {"lp_asset": lp_asset}
     cursor.execute(query, bindings)
     return cursor.fetchone()
 
@@ -501,9 +524,11 @@ def get_fairmint_quantities(db, fairminter_tx_hash):
             SUM(paid_quantity) AS paid_quantity,
             SUM(commission) AS commission
         FROM fairmints
-        WHERE fairminter_tx_hash = ? AND status = ?
+        WHERE fairminter_tx_index = (
+            SELECT tx_index FROM transactions WHERE tx_hash = ?
+        ) AND status = ?
     """
-    bindings = (fairminter_tx_hash, "valid")
+    bindings = (hashcodec.hash_to_db(fairminter_tx_hash), "valid")
     cursor.execute(query, bindings)
     sums = cursor.fetchone()
     return (sums["quantity"] or 0) + (sums["commission"] or 0), (sums["paid_quantity"] or 0)
@@ -515,9 +540,15 @@ def get_fairmint_by_address(db, fairminter_tx_hash, source):
         SELECT
             SUM(earn_quantity) AS quantity
         FROM fairmints
-        WHERE fairminter_tx_hash = ? AND status = ? AND source = ?
+        WHERE fairminter_tx_index = (
+            SELECT tx_index FROM transactions WHERE tx_hash = ?
+        ) AND status = ? AND source = ?
     """
-    bindings = (fairminter_tx_hash, "valid", source)
+    bindings = (
+        hashcodec.hash_to_db(fairminter_tx_hash),
+        "valid",
+        database.address_index_from_name(db, source),
+    )
     cursor.execute(query, bindings)
     sums = cursor.fetchone()
     return sums["quantity"] or 0
@@ -529,9 +560,9 @@ def get_fairminters_by_soft_cap_deadline(db, block_index):
         SELECT * FROM (
             SELECT *, MAX(rowid) AS rowid
             FROM fairminters
-            WHERE soft_cap > 0 AND soft_cap_deadline_block = :block_index
+            WHERE soft_cap > 0
             GROUP BY tx_hash
-        ) WHERE status = :status
+        ) WHERE status = :status AND soft_cap_deadline_block = :block_index
         ORDER BY tx_index
     """
     bindings = {
@@ -546,9 +577,11 @@ def get_valid_fairmints(db, fairminter_tx_hash):
     cursor = db.cursor()
     query = """
         SELECT * FROM fairmints
-        WHERE fairminter_tx_hash = ? AND status = ?
+        WHERE fairminter_tx_index = (
+            SELECT tx_index FROM transactions WHERE tx_hash = ?
+        ) AND status = ?
     """
-    bindings = (fairminter_tx_hash, "valid")
+    bindings = (hashcodec.hash_to_db(fairminter_tx_hash), "valid")
     cursor.execute(query, bindings)
     return cursor.fetchall()
 

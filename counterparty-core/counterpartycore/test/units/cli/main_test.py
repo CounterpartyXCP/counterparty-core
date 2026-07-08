@@ -51,6 +51,13 @@ def test_argparser_no_electrs_url():
     assert vars(args)["electrs_url"] is None
 
 
+def test_argparser_accepts_bootstrap_once_catch_up():
+    parser = cli.main.arg_parser(no_config_file=True, app_name="counterparty-test")
+    args = parser.parse_args(["start", "--catch-up=bootstrap-once"])
+
+    assert args.catch_up == "bootstrap-once"
+
+
 def test_argparser():
     parser = cli.main.arg_parser(no_config_file=True, app_name="counterparty-test")
     args = parser.parse_args(
@@ -103,6 +110,8 @@ def test_argparser():
         "no_confirm": False,
         "data_dir": "datadir",
         "cache_dir": None,
+        "disable_api_cache": False,
+        "api_cache_max_rows": 50000,
         "log_file": False,
         "api_log_file": False,
         "no_log_files": False,
@@ -132,9 +141,18 @@ def test_argparser():
         "catch_up": "normal",
         "api_only": False,
         "profile": False,
+        "api_cache_size": 1000,
         "memory_profile": False,
+        "memory_profile_tracemalloc": False,
         "enable_all_protocol_changes": False,
     }
+
+
+def test_argparser_disable_api_cache():
+    parser = cli.main.arg_parser(no_config_file=True, app_name="counterparty-test")
+    args = parser.parse_args(["--regtest", "--disable-api-cache", "start"])
+
+    assert vars(args)["disable_api_cache"] is True
 
 
 WELCOME_MSG_CONFIG_STUBS = [
@@ -216,6 +234,18 @@ def test_initialise_config_electrs_string_coerced_to_list(tmp_path, preserve_con
 
     assert config.ELECTRS_URLS == ["http://my-server:3000"]
     assert config.ELECTRS_URLS_IS_DEFAULT is False
+
+
+def test_initialise_config_disable_api_cache(tmp_path, preserve_config):
+    initialise.initialise_config(
+        disable_api_cache=True,
+        electrs_url=None,
+        data_dir=str(tmp_path),
+        cache_dir=str(tmp_path),
+        **INITIALISE_DEFAULTS,
+    )
+
+    assert config.DISABLE_API_CACHE is True
 
 
 def test_initialise_config_electrs_regtest_none(tmp_path, preserve_config):

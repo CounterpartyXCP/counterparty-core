@@ -1,6 +1,19 @@
 from counterpartycore.lib.ledger import supplies
 
 
+def test_get_holders_keeps_highest_rowid_for_duplicate_id():
+    records = [
+        {"asset": "XCP", "address": "addr1", "quantity": 7, "rowid": 10},
+        {"asset": "XCP", "address": "addr1", "quantity": 2, "rowid": 1},
+    ]
+
+    assert supplies._get_holders(  # pylint: disable=protected-access
+        records,
+        ["asset", "address"],
+        {"address": "address", "address_quantity": "quantity"},
+    ) == [{"address": "addr1", "address_quantity": 7, "escrow": None}]
+
+
 def test_supplies_functions(ledger_db, defaults):
     assert supplies.xcp_created(ledger_db) == 604514652382
     assert supplies.xcp_destroyed(ledger_db) == 900000000
@@ -176,10 +189,15 @@ def test_supplies_functions(ledger_db, defaults):
         },
     ]
 
+    # Register the synthetic asset and store its compact asset_index
+    # (destructions.asset is the integer asset_index FK, not the name).
+    ledger_db.execute(
+        "INSERT OR IGNORE INTO assets (asset_id, asset_name) VALUES ('999999999', 'foobar')"
+    )
     ledger_db.execute(
         """
-        INSERT INTO destructions (asset, quantity, source, status) 
-        VALUES ('foobar', 1000, ?, 'valid')
+        INSERT INTO destructions (asset, quantity, source, status)
+        VALUES ((SELECT asset_index FROM assets WHERE asset_name = 'foobar'), 1000, ?, 'valid')
         """,
         (defaults["addresses"][0],),
     )

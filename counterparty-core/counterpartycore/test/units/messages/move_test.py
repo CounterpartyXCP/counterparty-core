@@ -1,13 +1,19 @@
 import pytest
-from counterpartycore.lib import exceptions
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.messages import move
+from counterpartycore.lib.utils import hashcodec
 
 DUMMY_UTXO = 64 * "0" + ":0"
 
 
 def get_utxo(ledger_db, address, asset="XCP"):
+    # balances stores the compact asset_index and address_id; resolve both for
+    # the filter. ``SELECT *`` lets the rowtracer reconstruct the ``utxo`` string
+    # from the stored ``(utxo_tx_index, utxo_vout)`` pair.
     return ledger_db.execute(
-        "SELECT * FROM balances WHERE utxo_address = ? and asset = ? AND quantity > 0",
+        "SELECT * FROM balances "
+        "WHERE utxo_address = (SELECT address_id FROM address_list WHERE address = ?) "
+        "AND asset = (SELECT asset_index FROM assets WHERE asset_name = ?) AND quantity > 0",
         (
             address,
             asset,
@@ -168,13 +174,19 @@ def test_move_assets_with_zero_balance(
     """Test move_assets skips balances with quantity == 0."""
     utxo = get_utxo(ledger_db, defaults["addresses"][0])
 
-    # Insert a balance with quantity 0 for the same utxo
+    # Insert a balance with quantity 0 for the same utxo. ``utxo`` is stored as
+    # the compact ``(utxo_tx_hash BLOB, utxo_vout)`` pair; ``utxo_address`` is
+    # the ``address_id`` FK.
     ledger_db.execute(
         """
-        INSERT INTO balances (address, asset, quantity, utxo, utxo_address)
-        VALUES (NULL, 'ZEROVAL', 0, ?, ?)
+        INSERT INTO balances (address, asset, quantity, utxo_tx_hash, utxo_vout, utxo_address)
+        VALUES (NULL, 'ZEROVAL', 0, ?, ?, (SELECT address_id FROM address_list WHERE address = ?))
         """,
-        (utxo, defaults["addresses"][0]),
+        (
+            hashcodec.hash_to_db(utxo.split(":")[0]),
+            int(utxo.split(":")[1]),
+            defaults["addresses"][0],
+        ),
     )
 
     tx = blockchain_mock.dummy_tx(
@@ -184,15 +196,17 @@ def test_move_assets_with_zero_balance(
 
     # The zero balance should not create a send record
     zero_sends = ledger_db.execute(
-        "SELECT * FROM sends WHERE tx_hash = ? AND asset = 'ZEROVAL'",
-        (tx["tx_hash"],),
+        "SELECT * FROM sends WHERE tx_hash = ? "
+        "AND asset = (SELECT asset_index FROM assets WHERE asset_name = 'ZEROVAL')",
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchall()
     assert len(zero_sends) == 0
 
     # But XCP should still be moved
     xcp_sends = ledger_db.execute(
-        "SELECT * FROM sends WHERE tx_hash = ? AND asset = 'XCP'",
-        (tx["tx_hash"],),
+        "SELECT * FROM sends WHERE tx_hash = ? "
+        "AND asset = (SELECT asset_index FROM assets WHERE asset_name = 'XCP')",
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchall()
     assert len(xcp_sends) == 1
 
@@ -223,3 +237,18 @@ def test_compose(ledger_db, defaults):
 
     with pytest.raises(exceptions.ComposeError, match="utxo_value must be an integer"):
         move.compose(ledger_db, utxo, defaults["addresses"][0], utxo_value="string")
+
+    with pytest.raises(
+        exceptions.ComposeError, match="utxo_value must be a valid bitcoin output amount"
+    ):
+        move.compose(ledger_db, utxo, defaults["addresses"][0], utxo_value=-1)
+
+    with pytest.raises(
+        exceptions.ComposeError, match="utxo_value must be a valid bitcoin output amount"
+    ):
+        move.compose(
+            ledger_db,
+            utxo,
+            defaults["addresses"][0],
+            utxo_value=21_000_000 * config.UNIT + 1,
+        )

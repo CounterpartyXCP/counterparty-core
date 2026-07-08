@@ -1,3 +1,4 @@
+import fractions
 import logging
 import math
 
@@ -5,6 +6,9 @@ from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger.caches import OrdersCache
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.ledger.events import credit, insert_record, insert_update
+from counterpartycore.lib.parser import protocol
+from counterpartycore.lib.utils import database, hashcodec, helpers
+from counterpartycore.lib.utils.helpers import MATCH_ID_SQL
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -47,7 +51,13 @@ def compute_pool_output(reserve_in, reserve_out, input_qty, fee_bps):
 
 
 def compute_pool_input_for_target_price(
-    reserve_in, reserve_out, target_price_num, target_price_den, fee_bps
+    reserve_in,
+    reserve_out,
+    target_price_num,
+    target_price_den,
+    fee_bps,
+    block_index=None,
+    max_input=None,
 ):
     """Max input before pool marginal price reaches target. Returns 0 if already past."""
     if reserve_in <= 0 or reserve_out <= 0:
@@ -61,6 +71,11 @@ def compute_pool_input_for_target_price(
     current_price_rhs = reserve_out * fee_factor * target_price_num
     if current_price_lhs >= current_price_rhs:
         return 0
+
+    if protocol.enabled("fix_pool_best_price_routing", block_index):
+        return _compute_pool_input_for_target_price_integer(
+            reserve_in, reserve_out, target_price_num, target_price_den, fee_bps, max_input
+        )
 
     a = fee_factor
     b_coeff = reserve_in * (10000 + fee_factor)
@@ -80,6 +95,117 @@ def compute_pool_input_for_target_price(
     return max(dx, 0)
 
 
+def _book_input_for_output(output, target_price_num, target_price_den):
+    """Input the book would charge for `output` units of the taker's get asset.
+
+    Mirrors the backward-quantity rounding in order.match():
+    ``round(forward_quantity * price(get_quantity, give_quantity))`` on the
+    ``price_as_fraction`` path (always active once the AMM is live) — banker's
+    rounding on an exact fraction, no floating point.
+    """
+    return round(fractions.Fraction(output * target_price_num, target_price_den))
+
+
+def _min_pool_input_for_output(reserve_in, reserve_out, output, fee_bps, high):
+    """Smallest input whose floored pool output is at least `output`.
+
+    `high` must already produce at least `output`; since the pool output is
+    non-decreasing in the input, this is the cheapest input for those units.
+    """
+    low = 1
+    while low < high:
+        mid = (low + high) // 2
+        if compute_pool_output(reserve_in, reserve_out, mid, fee_bps) >= output:
+            high = mid
+        else:
+            low = mid + 1
+    return low
+
+
+def _compute_pool_input_for_target_price_integer(
+    reserve_in, reserve_out, target_price_num, target_price_den, fee_bps, max_input
+):
+    """Integer-exact replacement for the continuous quadratic above.
+
+    Execution floors the pool output to an integer, so the continuous solution
+    can both under- and over-estimate the right input: it may pick an input
+    whose floored output is 0 (skipping a pool fill cheaper than the book), or
+    push the input so far that the *realized* average price — output floored —
+    exceeds the book price (overpaying the pool versus the book).
+
+    Keeping the documented routing rule (fill from the pool while its marginal
+    price beats the book), this computes the answer directly against the same
+    integer output function execution uses, with a one-directional guarantee:
+    the taker never pays the pool more than the book would charge for the same
+    units (it may instead leave a dust unit to the book). Three steps:
+
+      1. Binary search the largest input whose post-fill *marginal* price still
+         beats the book — the routing bound. Capped by `max_input` (the taker
+         can never give more than it holds); the cap must be applied before the
+         gate below, since flooring a capped fill can turn it into an overpay.
+      2. Gate on the book's integer cost: step the output down one unit at a
+         time until the cheapest input producing it costs no more than the book
+         would for those units. Flooring can inflate the realized average past
+         the book even when the continuous marginal bound does not.
+      3. Trim to that cheapest input, so the taker never overpays for the
+         rounded-down units.
+
+    Verified exhaustively for small reserves (every taker cap) and over random
+    large-boundary samples: zero overpays, matching an independent integer
+    book-cost oracle.
+    """
+    fee_factor = 10000 - fee_bps
+
+    # Step 1: largest input whose post-fill marginal price still beats the book,
+    # then the taker's hard cap. Marginal price can never beat the target once
+    # the input alone exceeds reserve_out * fee_factor * num / (10000 * den).
+    high = (reserve_out * fee_factor * target_price_num) // (10000 * target_price_den) - reserve_in
+    high = min(max(high, 0), config.MAX_INT)
+    if max_input is not None:
+        high = min(high, max_input)
+    low = 0
+    while low < high:
+        mid = (low + high + 1) // 2
+        output = compute_pool_output(reserve_in, reserve_out, mid, fee_bps)
+        if (reserve_in + mid) * 10000 * target_price_den <= (
+            reserve_out - output
+        ) * fee_factor * target_price_num:
+            low = mid
+        else:
+            high = mid - 1
+
+    # Steps 2 & 3: gate on the book's integer cost and trim to the cheapest input.
+    dx = low
+    output = compute_pool_output(reserve_in, reserve_out, dx, fee_bps)
+    while output > 0:
+        min_input = _min_pool_input_for_output(reserve_in, reserve_out, output, fee_bps, dx)
+        if min_input <= _book_input_for_output(output, target_price_num, target_price_den):
+            return min_input
+        # These units overpay the book; try one fewer.
+        dx = min_input - 1
+        output = compute_pool_output(reserve_in, reserve_out, dx, fee_bps)
+
+    return 0
+
+
+def compute_pool_fill(reserve_in, reserve_out, max_give, fee_bps, block_index=None):
+    """Input the pool actually consumes (and its output) when filling up to
+    `max_give` with no price limit — e.g. an order's remainder once the book is
+    exhausted, or a swap quote. Mirrors execution's integer gate in
+    ``try_pool_fill``: once ``fix_pool_best_price_routing`` is live the input is
+    trimmed to the cheapest that still yields the floored output, so the
+    over-paid dust is refunded to the taker instead of handed to the pool.
+    Returns ``(fill, output)``."""
+    output = compute_pool_output(reserve_in, reserve_out, max_give, fee_bps)
+    if output <= 0:
+        return 0, 0
+    if protocol.enabled("fix_pool_best_price_routing", block_index):
+        fill = _min_pool_input_for_output(reserve_in, reserve_out, output, fee_bps, max_give)
+    else:
+        fill = max_give
+    return fill, output
+
+
 #####################
 #       ORDERS      #
 #####################
@@ -89,59 +215,72 @@ def compute_pool_input_for_target_price(
 
 def get_pending_order_matches(db, tx0_hash, tx1_hash):
     cursor = db.cursor()
-    query = """
+    query = f"""
         SELECT * FROM (
-            SELECT *, MAX(rowid) as rowid FROM order_matches
+            SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid) as rowid FROM order_matches
             WHERE (
                 tx0_hash in (:tx0_hash, :tx1_hash) OR
                 tx1_hash in (:tx0_hash, :tx1_hash)
             )
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = :status
         ORDER BY rowid
-    """
-    bindings = {"status": "pending", "tx0_hash": tx0_hash, "tx1_hash": tx1_hash}
+    """  # noqa: S608 # nosec B608
+    bindings = {
+        "status": "pending",
+        "tx0_hash": hashcodec.hash_to_db(tx0_hash),
+        "tx1_hash": hashcodec.hash_to_db(tx1_hash),
+    }
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
 
 def get_pending_btc_order_matches(db, address):
     cursor = db.cursor()
-    query = """
+    query = f"""
         SELECT * FROM (
-            SELECT *, MAX(rowid) AS rowid
+            SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid) AS rowid
             FROM order_matches
             WHERE (tx0_address = ? AND forward_asset = ?) OR (tx1_address = ? AND backward_asset = ?)
         ) WHERE status = ?
         ORDER BY rowid
-    """
-    bindings = (address, config.BTC, address, config.BTC, "pending")
+    """  # noqa: S608 # nosec B608
+    btc_idx = database.asset_index_from_name(db, config.BTC)
+    address_id = database.address_index_from_name(db, address)
+    bindings = (address_id, btc_idx, address_id, btc_idx, "pending")
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
 
 def get_order_match(db, match_id):
     cursor = db.cursor()
-    query = """
-        SELECT *, rowid
+    # ``match_id`` is the composite ``tx0hash_tx1hash`` text; split it and match
+    # on the underlying hash pair (the TEXT ``id`` column no longer exists).
+    # A malformed/None id matches nothing, mirroring the old ``WHERE id = ?``.
+    parts = match_id.split(helpers.ID_SEPARATOR) if isinstance(match_id, str) else []
+    if len(parts) != 2:
+        return []
+    tx0_hash, tx1_hash = parts
+    query = f"""
+        SELECT *, {MATCH_ID_SQL} AS id, rowid
         FROM order_matches
-        WHERE id = ?
-        ORDER BY rowid DESC LIMIT 1"""
-    bindings = (match_id,)
+        WHERE tx0_hash = ? AND tx1_hash = ?
+        ORDER BY rowid DESC LIMIT 1"""  # noqa: S608 # nosec B608
+    bindings = (hashcodec.hash_to_db(tx0_hash), hashcodec.hash_to_db(tx1_hash))
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
 
 def get_order_matches_to_expire(db, block_index):
     cursor = db.cursor()
-    query = """SELECT * FROM (
-        SELECT *, MAX(rowid) AS rowid
+    query = f"""SELECT * FROM (
+        SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid) AS rowid
         FROM order_matches
         WHERE match_expire_index = ? - 1
-        GROUP BY id
+        GROUP BY tx0_index, tx1_index
     ) WHERE status = ?
     ORDER BY rowid
-    """
+    """  # noqa: S608 # nosec B608
     bindings = (block_index, "pending")
     cursor.execute(query, bindings)
     return cursor.fetchall()
@@ -158,7 +297,7 @@ def get_order(db, order_hash: str):
         WHERE tx_hash = ?
         ORDER BY rowid DESC LIMIT 1
     """
-    bindings = (order_hash,)
+    bindings = (hashcodec.hash_to_db(order_hash),)
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -169,7 +308,7 @@ def get_order_first_block_index(cursor, tx_hash):
         WHERE tx_hash = ?
         ORDER BY rowid ASC LIMIT 1
     """
-    bindings = (tx_hash,)
+    bindings = (hashcodec.hash_to_db(tx_hash),)
     cursor.execute(query, bindings)
     return cursor.fetchone()["block_index"]
 
@@ -201,7 +340,11 @@ def get_open_btc_orders(db, address):
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     """
-    bindings = (address, config.BTC, "open")
+    bindings = (
+        database.address_index_from_name(db, address),
+        database.asset_index_from_name(db, config.BTC),
+        "open",
+    )
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -217,7 +360,7 @@ def get_open_orders_by_source(db, address):
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     """
-    bindings = (address, "open")
+    bindings = (database.address_index_from_name(db, address), "open")
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -233,7 +376,12 @@ def get_matching_orders_no_cache(db, tx_hash, give_asset, get_asset):
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     """
-    bindings = (tx_hash, get_asset, give_asset, "open")
+    bindings = (
+        hashcodec.hash_to_db(tx_hash),
+        database.asset_index_from_name(db, get_asset),
+        database.asset_index_from_name(db, give_asset),
+        "open",
+    )
     cursor.execute(query, bindings)
     return cursor.fetchall()
 
@@ -260,12 +408,15 @@ def update_order(db, tx_hash, update_data):
 
 
 def mark_order_as_filled(db, tx0_hash, tx1_hash, source=None):
-    select_bindings = {"tx0_hash": tx0_hash, "tx1_hash": tx1_hash}
+    select_bindings = {
+        "tx0_hash": hashcodec.hash_to_db(tx0_hash),
+        "tx1_hash": hashcodec.hash_to_db(tx1_hash),
+    }
 
     where_source = ""
     if source is not None:
         where_source = " AND source = :source"
-        select_bindings["source"] = source
+        select_bindings["source"] = database.address_index_from_name(db, source)
 
     # no sql injection here
     select_query = f"""
@@ -323,7 +474,7 @@ def get_dispenser_info(db, tx_hash=None, tx_index=None):
     bindings = []
     if tx_hash is not None:
         where.append("tx_hash = ?")
-        bindings.append(tx_hash)
+        bindings.append(hashcodec.hash_to_db(tx_hash))
     if tx_index is not None:
         where.append("tx_index = ?")
         bindings.append(tx_index)
@@ -352,11 +503,13 @@ def get_dispensers_info(db, tx_hash_list):
         WHERE tx_hash IN ({",".join(["?" for e in range(0, len(tx_hash_list))])})
         GROUP BY tx_hash
     """  # nosec B608  # noqa: S608 # nosec B608
-    cursor.execute(query, tx_hash_list)
+    cursor.execute(query, [hashcodec.hash_to_db(h) for h in tx_hash_list])
     dispensers = cursor.fetchall()
     result = {}
     for dispenser in dispensers:
         del dispenser["rowid"]
+        # rowtracer converts BLOB -> hex; key the result on the hex form so
+        # callers passing hex keys can index it back.
         tx_hash = dispenser["tx_hash"]
         del dispenser["tx_hash"]
         del dispenser["asset"]
@@ -365,13 +518,18 @@ def get_dispensers_info(db, tx_hash_list):
 
 
 def get_refilling_count(db, dispenser_tx_hash):
+    # ``dispenser_refills.dispenser_tx_hash`` was replaced by an integer
+    # ``dispenser_tx_index`` FK; translate the hex hash via the
+    # ``transactions`` table.
     cursor = db.cursor()
     query = """
         SELECT count(*) cnt
         FROM dispenser_refills
-        WHERE dispenser_tx_hash = ?
+        WHERE dispenser_tx_index = (
+            SELECT tx_index FROM transactions WHERE tx_hash = ?
+        )
     """
-    bindings = (dispenser_tx_hash,)
+    bindings = (hashcodec.hash_to_db(dispenser_tx_hash),)
     cursor.execute(query, bindings)
     return cursor.fetchall()[0]["cnt"]
 
@@ -409,7 +567,11 @@ def get_dispensers_count(db, source, status, origin):
         ) WHERE status = ?
         ORDER BY tx_index
     """
-    bindings = (source, origin, status)
+    bindings = (
+        database.address_index_from_name(db, source),
+        database.address_index_from_name(db, origin),
+        status,
+    )
     cursor.execute(query, bindings)
     return cursor.fetchall()[0]["cnt"]
 
@@ -431,16 +593,16 @@ def get_dispensers(
     first_where = []
     if address is not None:
         first_where.append("source = ?")
-        bindings.append(address)
+        bindings.append(database.address_index_from_name(db, address))
     if source_in is not None:
         first_where.append(f"source IN ({','.join(['?' for e in range(0, len(source_in))])})")
-        bindings += source_in
+        bindings += [database.address_index_from_name(db, s) for s in source_in]
     if asset is not None:
         first_where.append("asset = ?")
-        bindings.append(asset)
+        bindings.append(database.asset_index_from_name(db, asset))
     if origin is not None:
         first_where.append("origin = ?")
-        bindings.append(origin)
+        bindings.append(database.address_index_from_name(db, origin))
     # where for mutable fields
     second_where = []
     if status is not None:
@@ -456,7 +618,16 @@ def get_dispensers(
     second_where_str = " AND ".join(second_where)
     if second_where_str != "":
         second_where_str = f"WHERE ({second_where_str})"
-    order_clause = f"ORDER BY {order_by}" if order_by is not None else "ORDER BY tx_index"
+    if order_by == "asset":
+        # ``asset`` is stored as the compact asset_index; ordering by it would
+        # change the (consensus-relevant) dispenser processing order in
+        # ``dispense.parse``. Order by the resolved asset *name* to reproduce
+        # the exact pre-normalization ordering.
+        order_clause = "ORDER BY (SELECT asset_name FROM assets WHERE asset_index = asset)"
+    elif order_by is not None:
+        order_clause = f"ORDER BY {order_by}"
+    else:
+        order_clause = "ORDER BY tx_index"
     group_clause = f"GROUP BY {group_by}" if group_by is not None else "GROUP BY asset, source"
     # no sql injection here
     query = f"""
@@ -502,7 +673,10 @@ def get_pool(db, asset_a, asset_b):
         WHERE asset_a = ? AND asset_b = ?
         ORDER BY rowid DESC LIMIT 1
     """
-    bindings = (asset_a, asset_b)
+    bindings = (
+        database.asset_index_from_name(db, asset_a),
+        database.asset_index_from_name(db, asset_b),
+    )
     cursor.execute(query, bindings)
     pools = cursor.fetchall()
     cursor.close()
@@ -548,7 +722,13 @@ def get_pool_deposits(db, asset_a, asset_b):
         WHERE asset_a = ? AND asset_b = ? AND status = 'valid'
         ORDER BY block_index, tx_index
     """
-    cursor.execute(query, (asset_a, asset_b))
+    cursor.execute(
+        query,
+        (
+            database.asset_index_from_name(db, asset_a),
+            database.asset_index_from_name(db, asset_b),
+        ),
+    )
     return cursor.fetchall()
 
 
@@ -559,7 +739,13 @@ def get_pool_withdrawals(db, asset_a, asset_b):
         WHERE asset_a = ? AND asset_b = ? AND status = 'valid'
         ORDER BY block_index, tx_index
     """
-    cursor.execute(query, (asset_a, asset_b))
+    cursor.execute(
+        query,
+        (
+            database.asset_index_from_name(db, asset_a),
+            database.asset_index_from_name(db, asset_b),
+        ),
+    )
     return cursor.fetchall()
 
 
@@ -574,18 +760,30 @@ def get_open_orders_for_pair(db, give_asset, get_asset):
         ) WHERE status = ?
         ORDER BY tx_index, tx_hash
     """
-    cursor.execute(query, (give_asset, get_asset, "open"))
+    cursor.execute(
+        query,
+        (
+            database.asset_index_from_name(db, give_asset),
+            database.asset_index_from_name(db, get_asset),
+            "open",
+        ),
+    )
     return cursor.fetchall()
 
 
 def get_pool_matches_by_order(db, order_tx_hash):
+    # ``pool_matches.order_tx_hash`` was replaced by an integer
+    # ``order_tx_index`` FK; translate the hex hash via the
+    # ``transactions`` table.
     cursor = db.cursor()
     query = """
         SELECT * FROM pool_matches
-        WHERE order_tx_hash = ?
+        WHERE order_tx_index = (
+            SELECT tx_index FROM transactions WHERE tx_hash = ?
+        )
         ORDER BY block_index, tx_index
     """
-    cursor.execute(query, (order_tx_hash,))
+    cursor.execute(query, (hashcodec.hash_to_db(order_tx_hash),))
     return cursor.fetchall()
 
 
@@ -600,7 +798,10 @@ def update_pool(db, asset_a, asset_b, new_reserve_a, new_reserve_b):
     cursor = db.cursor()
     cursor.execute(
         "SELECT rowid FROM pools WHERE asset_a = ? AND asset_b = ? ORDER BY rowid DESC LIMIT 1",
-        (asset_a, asset_b),
+        (
+            database.asset_index_from_name(db, asset_a),
+            database.asset_index_from_name(db, asset_b),
+        ),
     )
     row = cursor.fetchone()
     cursor.close()
@@ -623,7 +824,9 @@ def update_pool(db, asset_a, asset_b, new_reserve_a, new_reserve_b):
 ### POOL SWAP EXECUTION ###
 
 
-def try_pool_fill(tx1, pool, max_give, target_price_num=None, target_price_den=None):
+def try_pool_fill(
+    tx1, pool, max_give, target_price_num=None, target_price_den=None, block_index=None
+):
     """Try to fill an order against the pool. Returns (fill_quantity, output) or (0, 0)."""
     if not pool or not pool_has_liquidity(pool):
         return 0, 0
@@ -637,7 +840,13 @@ def try_pool_fill(tx1, pool, max_give, target_price_num=None, target_price_den=N
 
     if target_price_num is not None:
         fill_quantity = compute_pool_input_for_target_price(
-            reserve_in, reserve_out, target_price_num, target_price_den, fee_bps
+            reserve_in,
+            reserve_out,
+            target_price_num,
+            target_price_den,
+            fee_bps,
+            block_index,
+            max_give,
         )
         fill_quantity = min(fill_quantity, max_give)
     else:

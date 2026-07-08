@@ -1,8 +1,8 @@
 from unittest.mock import patch
 
 from counterpartycore.lib import config
-from counterpartycore.lib.ledger import caches
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.ledger import caches, issuances
+from counterpartycore.lib.utils import hashcodec, helpers
 
 
 def test_asset_cache(ledger_db, defaults):
@@ -154,6 +154,16 @@ def test_get_asset_cache_miss_regular_asset_found(ledger_db, defaults):
     """Test cache miss with regular asset name that is found in DB."""
     caches.reset_caches()
 
+    # ``issuances.asset`` is the compact ``asset_index`` FK, so the asset must
+    # be registered first; the cache-miss query resolves the name to that index.
+    ledger_db.execute(
+        "INSERT INTO assets (asset_id, asset_name, block_index, asset_longname) VALUES (?, ?, ?, ?)",
+        (str(issuances.generate_asset_id("NEWASSET")), "NEWASSET", 310000, None),
+    )
+    new_asset_index = ledger_db.execute(
+        "SELECT asset_index FROM assets WHERE asset_name = ?", ("NEWASSET",)
+    ).fetchone()["asset_index"]
+
     # Insert a valid issuance into the DB
     ledger_db.execute(
         """
@@ -163,13 +173,13 @@ def test_get_asset_cache_miss_regular_asset_found(ledger_db, defaults):
             call_price, description, fee_paid, locked, reset, status,
             asset_longname
         ) VALUES (
-            999, 'test_hash_regular', 0, 310000, 'NEWASSET', 1000,
+            999, 'test_hash_regular', 0, 310000, ?, 1000,
             1, ?, ?, 0, 0, 0,
             0.0, 'Test asset', 0, 0, 0, 'valid',
             NULL
         )
         """,
-        (defaults["addresses"][0], defaults["addresses"][0]),
+        (new_asset_index, defaults["addresses"][0], defaults["addresses"][0]),
     )
 
     asset_cache = caches.AssetCache(ledger_db)
@@ -240,22 +250,28 @@ def _get_existing_block(ledger_db):
     return result
 
 
+def _to_blob_hash(label):
+    """Convert any synthetic test tx_hash to BLOB form. Uses ``hashcodec``'s
+    permissive logic so the same encoding is used by production code paths
+    that query ``WHERE tx_hash = ?`` with the same label."""
+    return hashcodec.hash_to_db(label)
+
+
 def _insert_test_transaction(ledger_db, tx_index, tx_hash, source, utxos_info, transaction_type):
     """Helper to insert a test transaction using existing block data."""
     block = _get_existing_block(ledger_db)
     ledger_db.execute(
         """
         INSERT INTO transactions (
-            tx_index, tx_hash, block_index, block_hash, block_time,
+            tx_index, tx_hash, block_index, block_time,
             source, destination, btc_amount, fee, data, supported,
             utxos_info, transaction_type
-        ) VALUES (?, ?, ?, ?, ?, ?, NULL, 0, 10000, NULL, 1, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, NULL, 0, 10000, NULL, 1, ?, ?)
         """,
         (
             tx_index,
-            tx_hash,
+            _to_blob_hash(tx_hash),
             block["block_index"],
-            block["block_hash"],
             block["block_time"],
             source,
             utxos_info,
@@ -498,16 +514,15 @@ def _insert_invalid_attach_transaction(ledger_db, tx_index, tx_hash, source, utx
     ledger_db.execute(
         """
         INSERT INTO transactions (
-            tx_index, tx_hash, block_index, block_hash, block_time,
+            tx_index, tx_hash, block_index, block_time,
             source, destination, btc_amount, fee, data, supported,
             utxos_info, transaction_type
-        ) VALUES (?, ?, ?, ?, ?, ?, NULL, 0, 10000, NULL, 1, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, NULL, 0, 10000, NULL, 1, ?, ?)
         """,
         (
             tx_index,
-            tx_hash,
+            _to_blob_hash(tx_hash),
             block["block_index"],
-            block["block_hash"],
             block["block_time"],
             source,
             utxos_info,
@@ -597,21 +612,19 @@ def test_invalid_attach_transaction_short_utxos_info(ledger_db, defaults):
     """Test that invalid attach transactions with short utxos_info are handled."""
     caches.reset_caches()
 
-    # Insert an invalid attach transaction with short utxos_info (< 2 parts)
     block = _get_existing_block(ledger_db)
     ledger_db.execute(
         """
         INSERT INTO transactions (
-            tx_index, tx_hash, block_index, block_hash, block_time,
+            tx_index, tx_hash, block_index, block_time,
             source, destination, btc_amount, fee, data, supported,
             utxos_info, transaction_type
-        ) VALUES (?, ?, ?, ?, ?, ?, NULL, 0, 10000, NULL, 1, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, NULL, 0, 10000, NULL, 1, ?, ?)
         """,
         (
             90015,
-            "invalid_attach_short_utxos",
+            _to_blob_hash("invalid_attach_short_utxos"),
             block["block_index"],
-            block["block_hash"],
             block["block_time"],
             defaults["addresses"][0],
             "only_source",  # Short utxos_info
@@ -632,21 +645,19 @@ def test_invalid_attach_transaction_empty_destination(ledger_db, defaults):
     """Test that invalid attach transactions with empty destination are handled."""
     caches.reset_caches()
 
-    # Insert an invalid attach transaction with empty destination
     block = _get_existing_block(ledger_db)
     ledger_db.execute(
         """
         INSERT INTO transactions (
-            tx_index, tx_hash, block_index, block_hash, block_time,
+            tx_index, tx_hash, block_index, block_time,
             source, destination, btc_amount, fee, data, supported,
             utxos_info, transaction_type
-        ) VALUES (?, ?, ?, ?, ?, ?, NULL, 0, 10000, NULL, 1, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, NULL, 0, 10000, NULL, 1, ?, ?)
         """,
         (
             90016,
-            "invalid_attach_empty_dest",
+            _to_blob_hash("invalid_attach_empty_dest"),
             block["block_index"],
-            block["block_hash"],
             block["block_time"],
             defaults["addresses"][0],
             "source:0  2",  # Empty destination (space as second element)

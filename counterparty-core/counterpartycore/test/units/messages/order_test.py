@@ -3,6 +3,7 @@ from counterpartycore.lib import exceptions
 from counterpartycore.lib import ledger as ledger_mod
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import order
+from counterpartycore.lib.utils import hashcodec
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
@@ -138,6 +139,60 @@ def test_validate(ledger_db, defaults, current_block_index):
         0,
         current_block_index,
     ) == ["integer overflow"]
+
+
+@pytest.mark.parametrize(
+    ("param_name", "param_value", "expected_problem"),
+    [
+        ("give_quantity", "1000", "give_quantity must be in satoshis"),
+        ("get_quantity", "1000", "get_quantity must be in satoshis"),
+        ("fee_required", "0", "fee_required must be in satoshis"),
+        (
+            "expiration",
+            "10",
+            "expiration must be expressed as an integer block delta",
+        ),
+    ],
+)
+def test_validate_rejects_non_integer_parameters(
+    ledger_db, defaults, current_block_index, param_name, param_value, expected_problem
+):
+    params = {
+        "give_asset": "DIVISIBLE",
+        "give_quantity": defaults["quantity"],
+        "get_asset": "XCP",
+        "get_quantity": defaults["quantity"],
+        "expiration": 2000,
+        "fee_required": 0,
+    }
+    params[param_name] = param_value
+
+    assert order.validate(
+        ledger_db,
+        params["give_asset"],
+        params["give_quantity"],
+        params["get_asset"],
+        params["get_quantity"],
+        params["expiration"],
+        params["fee_required"],
+        current_block_index,
+    ) == [expected_problem]
+
+
+def test_validate_problem_ordering_is_consensus_stable(ledger_db, defaults, current_block_index):
+    # The overflow problem must be appended before the BTC-for-BTC problem:
+    # `parse` joins this list into the stored `status` string, so reordering
+    # would change consensus state for historical transactions. Lock the order.
+    assert order.validate(
+        ledger_db,
+        "BTC",
+        2**63 + 10,
+        "BTC",
+        defaults["quantity"],
+        2000,
+        0,
+        current_block_index,
+    ) == ["integer overflow", "cannot trade BTC for itself"]
 
 
 def test_compose(ledger_db, defaults, current_block_index):
@@ -816,10 +871,10 @@ def test_parse_order_invalid_data(ledger_db, blockchain_mock, defaults, test_hel
                     "fee_provided_remaining": 10000,
                     "fee_required": 0,
                     "fee_required_remaining": 0,
-                    "get_asset": "0",
+                    "get_asset": 0,
                     "get_quantity": 0,
                     "get_remaining": 0,
-                    "give_asset": "0",
+                    "give_asset": 0,
                     "give_quantity": 0,
                     "give_remaining": 0,
                     "source": defaults["addresses"][1],
@@ -1148,7 +1203,7 @@ def test_parse_indefinite_order_expire_index(ledger_db, blockchain_mock, default
 
     record = ledger_db.execute(
         "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
-        (tx["tx_hash"],),
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchone()
     assert record["expire_index"] is None
     assert record["expiration"] == 0
@@ -1163,7 +1218,7 @@ def test_parse_expiration_n_means_n_blocks(ledger_db, blockchain_mock, defaults)
 
     record = ledger_db.execute(
         "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
-        (tx["tx_hash"],),
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchone()
     assert record["expire_index"] == tx["block_index"] + 99
 
@@ -1201,7 +1256,7 @@ def test_parse_expire_index_pre_activation(ledger_db, blockchain_mock, defaults)
 
     record = ledger_db.execute(
         "SELECT * FROM orders WHERE tx_hash = ? ORDER BY rowid DESC LIMIT 1",
-        (tx["tx_hash"],),
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchone()
     assert record["expire_index"] == tx["block_index"] + 100
 

@@ -11,7 +11,7 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.api import compose
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import hashcodec, helpers
 
 D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -401,13 +401,27 @@ def inject_normalized_quantities(result_list):
 
         if "get_quantity" in item and "give_quantity" in item and "market_dir" in item:
             if item["market_dir"] == "SELL":
-                item["market_price"] = helpers.divide(
+                market_price = helpers.divide(
                     item["get_quantity_normalized"], item["give_quantity_normalized"]
                 )
             else:
-                item["market_price"] = helpers.divide(
+                market_price = helpers.divide(
                     item["give_quantity_normalized"], item["get_quantity_normalized"]
                 )
+            item["market_price"] = market_price
+            item["market_price_normalized"] = market_price
+
+        if "forward_quantity" in item and "backward_quantity" in item and "market_dir" in item:
+            if item["market_dir"] == "SELL":
+                market_price = helpers.divide(
+                    item["backward_quantity_normalized"], item["forward_quantity_normalized"]
+                )
+            else:
+                market_price = helpers.divide(
+                    item["forward_quantity_normalized"], item["backward_quantity_normalized"]
+                )
+            item["market_price"] = market_price
+            item["market_price_normalized"] = market_price
 
         enriched_result_list.append(item)
 
@@ -516,13 +530,21 @@ def inject_transactions_events(ledger_db, state_db, result_list):
         "INCREMENT_TRANSACTION_COUNT",
         "NEW_TRANSACTION_OUTPUT",
     ]
+    # ``messages.tx_hash`` was dropped in favour of a ``tx_index`` FK;
+    # resolve via ``transactions``. The result column is aliased ``tx_hash``,
+    # which is in ``hashcodec.HASH_COLUMN_NAMES`` so the connection rowtracer
+    # converts the BLOB to 64-char lowercase hex without a per-row Python
+    # UDF callback.
     sql = f"""
-        SELECT message_index AS event_index, event, bindings AS params, tx_hash, block_index
-        FROM messages
-        WHERE tx_hash IN ({",".join("?" * len(transaction_hashes))})
-        AND event NOT IN ({",".join("?" * len(exclude_events))})
+        SELECT m.message_index AS event_index, m.event, m.bindings AS params,
+               t.tx_hash AS tx_hash, m.block_index
+        FROM messages m
+        LEFT JOIN transactions t ON t.tx_index = m.tx_index
+        WHERE t.tx_hash IN ({",".join("?" * len(transaction_hashes))})
+        AND m.event NOT IN ({",".join("?" * len(exclude_events))})
     """  # noqa S608 # nosec B608
-    events = cursor.execute(sql, transaction_hashes + exclude_events).fetchall()
+    bindings = [hashcodec.hash_to_db(h) for h in transaction_hashes] + exclude_events
+    events = cursor.execute(sql, bindings).fetchall()
     for event in events:
         event["params"] = json.loads(event["params"])
 
@@ -582,7 +604,10 @@ def clean_dictionary(data):
         # Recursively clean nested structures
         cleaned_value = clean_api_result(value)
 
-        if key in {"divisible", "locked", "reset", "callable"}:
+        if (
+            key in {"divisible", "locked", "reset", "callable", "valid"}
+            and cleaned_value is not None
+        ):
             cleaned_value = bool(cleaned_value)
 
         cleaned[key] = cleaned_value

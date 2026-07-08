@@ -61,7 +61,13 @@ def test_balances_after_send(ledger_db, state_db, defaults, blockchain_mock):
 
 
 def test_get_address_assets(ledger_db, defaults):
-    assert balances.get_address_assets(ledger_db, defaults["addresses"][0]) == [
+    # ``get_address_assets`` groups by the stored ``asset_index`` (no ORDER BY),
+    # so row order now follows index order rather than name order; compare as a
+    # name-sorted list.
+    assert sorted(
+        balances.get_address_assets(ledger_db, defaults["addresses"][0]),
+        key=lambda r: r["asset"],
+    ) == [
         {"asset": "A95428956773044873"},
         {"asset": "A95428959342453541"},
         {"asset": "CALLABLE"},

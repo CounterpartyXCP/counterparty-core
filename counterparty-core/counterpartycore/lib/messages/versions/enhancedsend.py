@@ -145,6 +145,9 @@ def compose(
 ):
     send1.validate_compose_quantity(quantity)
 
+    if memo_is_hex and not isinstance(memo_is_hex, bool):
+        raise exceptions.ComposeError("`memo_is_hex` must be a boolean")
+
     cursor = db.cursor()
 
     # Just send BTC?
@@ -160,11 +163,17 @@ def compose(
     if balance < quantity and not skip_validation:
         raise exceptions.ComposeError("insufficient funds")
 
+    if memo is not None and not isinstance(memo, str):
+        raise exceptions.ComposeError("memo must be a string")
+
     # convert memo to memo_bytes based on memo_is_hex setting
     if memo is None:
         memo_bytes = b""
     elif memo_is_hex:
-        memo_bytes = bytes.fromhex(memo)
+        try:
+            memo_bytes = bytes.fromhex(memo)
+        except (TypeError, ValueError) as e:
+            raise exceptions.ComposeError("memo must be valid hexadecimal") from e
     else:
         memo_bytes = memo.encode("utf-8")
         memo_bytes = struct.pack(f">{len(memo_bytes)}s", memo_bytes)

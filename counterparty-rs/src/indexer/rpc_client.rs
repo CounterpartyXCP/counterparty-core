@@ -175,7 +175,21 @@ impl BatchRpcClient {
 
         let responses: Vec<RpcResponse> = response.json()?;
 
-        for (txid, response) in uncached_txids.iter().zip(responses.into_iter()) {
+        // JSON-RPC 2.0 does not guarantee that batch responses are returned in
+        // request order, so match each response to its request by `id` (the
+        // index into `uncached_txids`) rather than by position. Zipping by
+        // position silently mis-resolves prevouts -- assigning one input's
+        // parent transaction to another input -- whenever the backend reorders
+        // the batch, which corrupts VIN resolution for multi-input transactions.
+        let mut responses_by_id: HashMap<u64, RpcResponse> =
+            responses.into_iter().map(|r| (r.id, r)).collect();
+
+        for (i, txid) in uncached_txids.iter().enumerate() {
+            let response = responses_by_id.remove(&(i as u64)).ok_or_else(|| {
+                BatchRpcError::InvalidResponse(format!(
+                    "Missing batch response for id {i} (txid {txid})"
+                ))
+            })?;
             let tx = match response {
                 RpcResponse {
                     result: Some(value),

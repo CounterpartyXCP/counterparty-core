@@ -3,6 +3,7 @@ from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger import blocks, caches
 from counterpartycore.lib.messages import attach
 from counterpartycore.lib.parser import gettxinfo
+from counterpartycore.lib.utils import hashcodec
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 DUMMY_UTXO = 64 * "0" + ":1"
@@ -48,6 +49,16 @@ def test_compose(ledger_db, defaults):
         [(address_0, 546)],
         b"eXCP|100|",
     )
+
+    with pytest.raises(
+        exceptions.ComposeError, match="utxo_value must be a valid bitcoin output amount"
+    ):
+        attach.compose(ledger_db, address_0, "XCP", 100, -1)
+
+    with pytest.raises(
+        exceptions.ComposeError, match="utxo_value must be a valid bitcoin output amount"
+    ):
+        attach.compose(ledger_db, address_0, "XCP", 100, 21_000_000 * config.UNIT + 1)
 
     with pytest.raises(exceptions.ComposeError, match="invalid source address"):
         attach.compose(ledger_db, DUMMY_UTXO, "XCP", 100)
@@ -350,7 +361,8 @@ def test_attach_to_op_return_at_vout_0_with_gate_OFF_legacy_locks_asset(
         attach.parse(ledger_db, tx, message)
     # Legacy: status=valid, asset attached to OP_RETURN at vout 0 (locked)
     row = ledger_db.execute(
-        "SELECT status, destination FROM sends WHERE tx_hash = ?", (tx["tx_hash"],)
+        "SELECT status, destination FROM sends WHERE tx_hash = ?",
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchone()
     assert row is not None
     assert row["status"] == "valid", (
@@ -372,7 +384,8 @@ def test_attach_to_op_return_at_vout_0_with_gate_ON_rejects(ledger_db, blockchai
     # Gate is ON by default in tests (signet activation = 0)
     attach.parse(ledger_db, tx, message)
     row = ledger_db.execute(
-        "SELECT status FROM sends WHERE tx_hash = ?", (tx["tx_hash"],)
+        "SELECT status FROM sends WHERE tx_hash = ?",
+        (hashcodec.hash_to_db(tx["tx_hash"]),),
     ).fetchone()
     assert row is not None
     assert "OP_RETURN" in row["status"], (

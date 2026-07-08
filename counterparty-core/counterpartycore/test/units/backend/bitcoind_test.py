@@ -4,11 +4,34 @@ import time
 from unittest.mock import patch
 
 import pytest
-from counterpartycore.lib import exceptions
+from bitcoinutils.transactions import Script
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.backend import bitcoind
 from counterpartycore.lib.utils import helpers
 from counterpartycore.test.fixtures import decodedtxs
 from counterpartycore.test.mocks.bitcoind import original_get_vin_info
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
+
+ORIGINAL_GET_UTXO_ADDRESS_AND_VALUE = bitcoind.get_utxo_address_and_value
+MULTISIG_PUBKEYS = [
+    "0427db4059d24bab05df3f6bcc768fb01bd976b973f93e72cce2dfbfbed5a32056c9040a2c2ea4c10c812a54fed7ff2e6a917dbc843362d398f6ace4000fafa5c6",
+    "043e12a6cb1c7c156f789110abf8397b714047414b5a32c742f17ccf93ff23bdf3128f946207086bcef012558240cd16182c741123e93ed18327c4cd6ebac668a9",
+    "04e4168c172283c7dfaa85d2004f763a28bf6d0f1602fc1452ccec62a7c8a66e422af1410fbf24a47355ddc43dfe3491cb1b806574ccd1c434680466dcff926f01",
+]
+MULTISIG_ADDRESS = "2_16KsHvVQj6aGvVQpAUgRcfpVug3regjiUs_17yjtboB7RjK2BoQ78k51NtJ4cDQGYZQyb_1NNXBUF3rqXtFbWhK5nujSpvt9yApsRUT7_3"
+
+
+def multisig_script_pub_key():
+    return {
+        "asm": f"2 {' '.join(MULTISIG_PUBKEYS)} 3 OP_CHECKMULTISIG",
+        "hex": Script([2, *MULTISIG_PUBKEYS, 3, "OP_CHECKMULTISIG"]).to_hex(),
+        "type": "multisig",
+    }
+
+
+def clear_get_utxo_address_and_value_cache():
+    if hasattr(ORIGINAL_GET_UTXO_ADDRESS_AND_VALUE, "cache_clear"):
+        ORIGINAL_GET_UTXO_ADDRESS_AND_VALUE.cache_clear()
 
 
 class MockResponse:
@@ -492,24 +515,37 @@ def test_get_vin_info_legacy(monkeypatch):
     )
 
 
-def test_get_vin_info_legacy_error(monkeypatch):
+def test_get_vin_info_legacy_error_halts_during_catchup(monkeypatch):
+    """During catch-up (a confirmed block) a failure to resolve the parent
+    transaction must HALT (raise), never be swallowed into a silent skip.
+    Silently skipping a confirmed Counterparty tx forks the ledger -- this is
+    the regression that caused the block 510556 divergence. The diagnostic must
+    point operators at the cause (parent txid + `txindex`)."""
+
+    def raise_error(*args, **kwargs):
+        raise exceptions.BitcoindRPCError("No such mempool or blockchain transaction")
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+    monkeypatch.setattr(bitcoind.CurrentState, "parsing_mempool", lambda self: False)
+    monkeypatch.setattr(bitcoind.CurrentState, "stopping", lambda self: False)
+
+    parent_txid = "fba2aa8d334a6c74eaa8b0998be6c29477ff4d927449e9a07efa0ec374fc73bf"
+    with pytest.raises(exceptions.BitcoindRPCError, match="Refusing to silently skip") as exc:
+        bitcoind.get_vin_info_legacy({"hash": parent_txid, "n": 1})
+    assert parent_txid in str(exc.value)
+    assert "txindex" in str(exc.value)
+
+
+def test_get_vin_info_legacy_error_skips_in_mempool(monkeypatch):
+    """While parsing the mempool an unresolvable parent is acceptable: the
+    *unconfirmed* tx is skipped (DecodeError) and a warning is logged. It is
+    re-evaluated once it confirms."""
+
     def raise_error(*args, **kwargs):
         raise exceptions.BitcoindRPCError
 
     monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
-
-    with pytest.raises(exceptions.DecodeError, match="vin not found"):
-        bitcoind.get_vin_info_legacy({"hash": "hash", "n": 0})
-
-
-def test_get_vin_info_legacy_error_logs_warning(monkeypatch):
-    """When a parent transaction cannot be found, a warning must be logged
-    so operators can diagnose why a Counterparty transaction was skipped."""
-
-    def raise_error(*args, **kwargs):
-        raise exceptions.BitcoindRPCError
-
-    monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+    monkeypatch.setattr(bitcoind.CurrentState, "parsing_mempool", lambda self: True)
 
     parent_txid = "fba2aa8d334a6c74eaa8b0998be6c29477ff4d927449e9a07efa0ec374fc73bf"
     with patch.object(bitcoind.logger, "warning") as mock_warning:
@@ -519,7 +555,6 @@ def test_get_vin_info_legacy_error_logs_warning(monkeypatch):
     mock_warning.assert_called_once()
     logged_message = mock_warning.call_args[0][0] % mock_warning.call_args[0][1:]
     assert parent_txid in logged_message
-    assert "txindex" in logged_message
 
 
 def test_get_vin_info_falls_back_to_legacy(monkeypatch):
@@ -547,26 +582,25 @@ def test_get_vin_info_falls_back_to_legacy(monkeypatch):
     assert is_segwit is False
 
 
-def test_get_vin_info_fallback_also_fails(monkeypatch):
-    """When Rust VIN info is None AND the legacy fallback also fails,
-    a warning is logged and DecodeError is raised. This is the scenario
-    that caused a transaction to be silently skipped on a user's server."""
+def test_get_vin_info_fallback_halts_during_catchup(monkeypatch):
+    """When Rust VIN info is None AND the legacy fallback also fails during
+    catch-up, the node must HALT rather than silently skip the confirmed
+    transaction. This is the scenario that silently forked a user's ledger at
+    block 510556."""
 
     def raise_error(*args, **kwargs):
         raise exceptions.BitcoindRPCError("No such mempool or blockchain transaction")
 
     monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+    monkeypatch.setattr(bitcoind.CurrentState, "parsing_mempool", lambda self: False)
+    monkeypatch.setattr(bitcoind.CurrentState, "stopping", lambda self: False)
 
     parent_txid = "01f38776b07990118cb3720b9143adbde3725af12e0394cdd02c36458c6b3a03"
     vin_without_info = {"hash": parent_txid, "n": 1, "info": None}
 
-    with patch.object(bitcoind.logger, "warning") as mock_warning:
-        with pytest.raises(exceptions.DecodeError, match="vin not found"):
-            original_get_vin_info(vin_without_info)
-
-    mock_warning.assert_called_once()
-    logged_message = mock_warning.call_args[0][0] % mock_warning.call_args[0][1:]
-    assert parent_txid in logged_message
+    with pytest.raises(exceptions.BitcoindRPCError, match="Refusing to silently skip") as exc:
+        original_get_vin_info(vin_without_info)
+    assert parent_txid in str(exc.value)
 
 
 def test_reset_caches_clears_dicts():
@@ -579,6 +613,87 @@ def test_reset_caches_clears_dicts():
 
     assert "sentinel_tx" not in bitcoind.TRANSACTIONS_CACHE
     assert 123 not in bitcoind.BLOCKS_CACHE
+
+
+def test_get_multisig_address_from_script_pub_key():
+    old_address_version = config.ADDRESSVERSION
+    config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+    try:
+        address = bitcoind.get_multisig_address_from_script_pub_key(multisig_script_pub_key())
+    finally:
+        config.ADDRESSVERSION = old_address_version
+
+    assert address == MULTISIG_ADDRESS
+
+
+def test_get_utxo_address_and_value_supports_multisig_when_protocol_enabled(monkeypatch):
+    def mock_getrawtransaction(*args, **kwargs):
+        return {"vout": [{"scriptPubKey": multisig_script_pub_key(), "value": 0.001}]}
+
+    old_address_version = config.ADDRESSVERSION
+    config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+    clear_get_utxo_address_and_value_cache()
+    monkeypatch.setattr(bitcoind, "getrawtransaction", mock_getrawtransaction)
+    try:
+        assert ORIGINAL_GET_UTXO_ADDRESS_AND_VALUE("multisig-txid:0") == (
+            MULTISIG_ADDRESS,
+            0.001,
+        )
+    finally:
+        clear_get_utxo_address_and_value_cache()
+        config.ADDRESSVERSION = old_address_version
+
+
+def test_get_utxo_address_and_value_rejects_multisig_when_protocol_disabled(monkeypatch):
+    def mock_getrawtransaction(*args, **kwargs):
+        return {"vout": [{"scriptPubKey": multisig_script_pub_key(), "value": 0.001}]}
+
+    old_address_version = config.ADDRESSVERSION
+    config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+    clear_get_utxo_address_and_value_cache()
+    monkeypatch.setattr(bitcoind, "getrawtransaction", mock_getrawtransaction)
+    try:
+        with ProtocolChangesDisabled(["multisig_utxo_addresses"]):
+            with pytest.raises(exceptions.InvalidUTXOError, match="vout does not have an address"):
+                ORIGINAL_GET_UTXO_ADDRESS_AND_VALUE("legacy-multisig-txid:0")
+    finally:
+        clear_get_utxo_address_and_value_cache()
+        config.ADDRESSVERSION = old_address_version
+
+
+def test_safe_get_utxo_address_returns_unknown_only_for_address_less_output(monkeypatch):
+    """A *resolved* output with no decodable address is deterministic across
+    nodes: safe_get_utxo_address returns the consensus "unknown" sentinel."""
+
+    def raise_invalid(utxo, no_retry=False):
+        raise exceptions.InvalidUTXOError("vout does not have an address")
+
+    monkeypatch.setattr(bitcoind, "get_utxo_address_and_value", raise_invalid)
+    assert bitcoind.safe_get_utxo_address("addressless-txid:0") == "unknown"
+
+
+def test_safe_get_utxo_address_halts_on_rpc_failure(monkeypatch):
+    """A transient RPC failure is node-local and must NOT be silently turned into
+    the consensus "unknown" sentinel (that would fork the ledger). It propagates
+    as BitcoindRPCError so the parser halts and retries instead."""
+
+    def raise_rpc(utxo, no_retry=False):
+        raise exceptions.BitcoindRPCError("Could not connect to bitcoind")
+
+    monkeypatch.setattr(bitcoind, "get_utxo_address_and_value", raise_rpc)
+    with pytest.raises(exceptions.BitcoindRPCError):
+        bitcoind.safe_get_utxo_address("some-txid:0")
+
+
+def test_is_valid_utxo_false_on_rpc_failure(monkeypatch):
+    """Compose-time validation reports an unresolvable UTXO as invalid rather
+    than propagating the RPC error."""
+
+    def raise_rpc(utxo, no_retry=False):
+        raise exceptions.BitcoindRPCError("No such mempool or blockchain transaction")
+
+    monkeypatch.setattr(bitcoind, "get_utxo_address_and_value", raise_rpc)
+    assert bitcoind.is_valid_utxo("nonexistent-txid:0") is False
 
 
 def test_reset_caches_handles_missing_lru_cache_clear(monkeypatch):

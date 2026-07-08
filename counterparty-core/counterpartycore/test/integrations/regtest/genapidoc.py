@@ -1,4 +1,3 @@
-import datetime
 import json
 import os
 import re
@@ -6,15 +5,14 @@ import sys
 
 import requests
 import sh
-import yaml
 from counterparty_rs import utils as rs_utils
+from counterpartycore.lib import config
 from counterpartycore.lib.api import routes
 from counterpartycore.lib.api.composer import DEPRECATED_CONSTRUCT_PARAMS
-from counterpartycore.lib.utils import database
+from counterpartycore.lib.utils import database, hashcodec, helpers
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-API_BLUEPRINT_FILE = os.path.join(CURR_DIR, "../../../../../apiary.apib")
-DREDD_FILE = os.path.join(CURR_DIR, "../../../../../dredd.yml")
+OPENAPI_FILE = os.path.join(CURR_DIR, "../../../../../openapi.json")
 CACHE_FILE = os.path.join(CURR_DIR, "apidoc", "apicache.json")
 API_ROOT = "http://localhost:24000"
 
@@ -125,18 +123,7 @@ EVENT_LIST = [
 ]
 
 
-DREDD_CONFIG = {
-    "loglevel": "error",
-    "language": "python",
-    "hookfiles": "./counterparty-core/counterpartycore/test/integrations/regtest/dreddhooks.py",
-    "path": [],
-    "blueprint": "apiary.apib",
-    "endpoint": "http://127.0.0.1:24000",
-    "only": [],
-}
-
-
-def get_example_output(path, args):
+def get_example_output(path, args, add_verbose=True):
     print(f"args: {args}")
     url_keys = []
     for key, value in args.items():
@@ -149,10 +136,17 @@ def get_example_output(path, args):
         args.pop(key)
     url = f"{API_ROOT}{path}"
     print(f"GET {url}")
-    if "v2/" in path:
+    # Only request verbose output when the route actually documents a `verbose`
+    # parameter; otherwise the captured (verbose) example carries `asset_info`
+    # and `*_normalized` fields that the route can't return by default
+    # (e.g. the `bitcoin` category endpoints, which expose no `verbose` arg).
+    if add_verbose and "v2/" in path:
         args["verbose"] = "true"
 
-    if "/compose" in path:
+    # The `estimatexcpfees` compose sub-routes don't accept the composer's
+    # construct params, so injecting them returns an "Unrecognized parameter(s)"
+    # error at capture time rather than a usable example.
+    if "/compose" in path and "estimatexcpfees" not in path:
         source = None
         if "/addresses/" in path:
             source = path.split("/addresses/")[1].split("/")[0]
@@ -167,30 +161,7 @@ def get_example_output(path, args):
             args["validate"] = False
 
     response = requests.get(url, params=args)  # noqa S113
-    return response.json()
-
-
-def include_in_dredd(group, path):
-    if "/bet" in path:
-        return False
-    if "_old" in path:
-        return False
-    if "/v2/bitcoin/addresses/" in path:
-        return False
-    return True
-
-
-def gen_groups_toc():
-    groups = []
-    for path, _route in routes.ROUTES.items():
-        route_group = get_groupe_name(path)
-        if route_group not in groups:
-            groups.append(route_group)
-
-    toc = ""
-    for group in groups:
-        toc += f"- [`{group}`](#/reference/{group})\n"
-    return toc
+    return response.json(), response.status_code
 
 
 def get_groupe_name(path):
@@ -203,127 +174,225 @@ def get_groupe_name(path):
     return "v1"
 
 
-def gen_blueprint(db):
-    md = ""
-    dredd = DREDD_CONFIG.copy()
-    current_group = None
+TYPE_MAP = {
+    "int": "integer",
+    "float": "number",
+    "bool": "boolean",
+    "str": "string",
+    "list": "array",
+    "dict": "object",
+}
+
+
+def openapi_path(path):
+    return re.sub(r"<(?:int:|path:)?([^>]+)>", r"{\1}", path)
+
+
+def make_title(function_name):
+    title = " ".join([part.capitalize() for part in str(function_name).split("_")])
+    title = title.replace("Pubkeyhash", "PubKeyHash")
+    title = title.replace("Mpma", "MPMA")
+    title = title.replace("Btcpay", "BTCPay")
+    return title.strip()
+
+
+def typed_value(value, arg_type):
+    if arg_type == "int":
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return value
+    if arg_type == "bool":
+        if isinstance(value, bool):
+            return value
+        return str(value).lower() == "true"
+    return value
+
+
+def build_parameter(arg, oas_path, description, example_args):
+    in_path = f"{{{arg['name']}}}" in oas_path
+    base_type = "str" if arg["type"].startswith("enum") else arg["type"]
+    schema = {"type": TYPE_MAP.get(base_type, "string")}
+    if "members" in arg:
+        schema["enum"] = arg["members"]
+    if not arg["required"] and arg.get("default") is not None:
+        schema["default"] = typed_value(arg["default"], base_type)
+    parameter = {
+        "name": arg["name"],
+        "in": "path" if in_path else "query",
+        "required": True if in_path else arg["required"],
+        "description": description.split("(e.g. ")[0].replace("\n", " ").strip(),
+        "schema": schema,
+    }
+    if arg["name"] in example_args:
+        parameter["example"] = typed_value(example_args[arg["name"]], base_type)
+    elif arg["name"] == "verbose":
+        parameter["example"] = True
+    return parameter
+
+
+def gen_tags(db):
+    tags = []
+    seen = set()
+    for path in routes.ROUTES:
+        group = get_groupe_name(path)
+        if group in seen:
+            continue
+        seen.add(group)
+        description = ""
+        group_doc_path = os.path.join(CURR_DIR, "apidoc", f"group-{group.lower()}.md")
+        if os.path.exists(group_doc_path):
+            with open(group_doc_path, "r") as f:
+                description = f.read()
+        if group == "transactions":
+            description += gen_unpack_doc(db)
+        tag = {"name": group.capitalize()}
+        if description:
+            tag["description"] = description
+        tags.append(tag)
+    return tags
+
+
+def gen_paths(db):
+    paths = {}
+    operation_ids = set()
+    regtest_fixtures = generate_regtest_fixtures(db)
     for path, route in routes.ROUTES.items():
-        route_group = get_groupe_name(path)
-        if route_group != current_group:
-            current_group = route_group
-            md += f"\n## Group {current_group.capitalize()}\n"
-
-            group_doc_path = os.path.join(CURR_DIR, "apidoc", f"group-{current_group.lower()}.md")
-            if os.path.exists(group_doc_path):
-                with open(group_doc_path, "r") as f:
-                    md += f.read()
-            if current_group == "transactions":
-                md += gen_unpack_doc(db)
-
-        blueprint_path = (
-            path.replace("<", "{").replace(">", "}").replace("int:", "").replace("path:", "")
-        )
-        title = " ".join([part.capitalize() for part in str(route["function"].__name__).split("_")])
-        title = title.replace("Pubkeyhash", "PubKeyHash")
-        title = title.replace("Mpma", "MPMA")
-        title = title.replace("Btcpay", "BTCPay")
-        title = title.strip()
-
-        if include_in_dredd(current_group, blueprint_path):
-            dredd_name = f"{current_group.capitalize()} > {title} > {title}"
-            dredd["only"].append(dredd_name)
-
-        md += f"\n### {title} "
-
-        query_params = []
-        for arg in route["args"]:
-            if f"{{{arg['name']}}}" in blueprint_path:
-                continue
-            if arg["name"] in DEPRECATED_CONSTRUCT_PARAMS:
-                continue
-            query_params.append(arg["name"])
-        blueprint_path += f"{{?{','.join(query_params)}}}" if query_params else ""
-        md += f"[GET {blueprint_path}]\n\n"
-
-        md += route["description"].strip()
+        group = get_groupe_name(path)
+        oas_path = openapi_path(path)
 
         example_args = {}
-        regtest_fixtures = generate_regtest_fixtures(db)
+        parameters = []
+        seen_args = set()
+        for arg in route["args"]:
+            if arg["name"] in DEPRECATED_CONSTRUCT_PARAMS:
+                continue
+            if arg["name"] in seen_args:
+                continue
+            seen_args.add(arg["name"])
+            description = arg.get("description", "") or ""
+            if group.lower() == "compose" and arg["name"] == "exact_fee":
+                description += " (e.g. 0)"
+            if "(e.g. " in description:
+                # The example value ends at the first closing paren; any trailing
+                # text (e.g. the "Sortable fields: ..." suffix appended to `sort`
+                # descriptions) belongs to the description, not the example.
+                example = description.split("(e.g. ")[1].split(")")[0]
+                for key, value in regtest_fixtures.items():
+                    example = example.replace(key, str(value))
+                example_args[arg["name"]] = example
+            parameters.append(build_parameter(arg, oas_path, description, example_args))
 
-        if len(route["args"]) > 0:
-            md += "\n\n+ Parameters\n"
-            for arg in route["args"]:
-                if arg["name"] in DEPRECATED_CONSTRUCT_PARAMS:
-                    continue
-                required = "required" if arg["required"] else "optional"
-                description = arg.get("description", "")
-                if current_group.lower() == "compose" and arg["name"] == "exact_fee":
-                    description += " (e.g. 0)"
-                example_arg = ""
-                if "(e.g. " in description:
-                    desc_arr = description.split("(e.g. ")
-                    description = desc_arr[0].replace("\n", " ").strip()
-                    example_args[arg["name"]] = desc_arr[1].replace(")", "")
+        # path parameters missing from the handler signature must still be declared
+        declared = {parameter["name"] for parameter in parameters if parameter["in"] == "path"}
+        for match in re.finditer(r"<(int:|path:)?([^>]+)>", path):
+            name = match.group(2)
+            if name not in declared:
+                parameters.append(
+                    {
+                        "name": name,
+                        "in": "path",
+                        "required": True,
+                        "schema": {"type": "integer" if match.group(1) == "int:" else "string"},
+                    }
+                )
 
-                    for key, value in regtest_fixtures.items():
-                        example_args[arg["name"]] = example_args[arg["name"]].replace(
-                            key, str(value)
-                        )
+        # the same handler can serve several routes; operation ids must be unique
+        operation_id = route["function"].__name__
+        suffix = 1
+        while operation_id in operation_ids:
+            suffix += 1
+            operation_id = f"{route['function'].__name__}_{suffix}"
+        operation_ids.add(operation_id)
 
-                    example_arg = f": `{example_args[arg['name']]}`"
-                elif arg["name"] == "verbose":
-                    example_arg = ": `true`"
-                md += f"    + {arg['name']}{example_arg} ({arg['type']}, {required}) - {description.replace('_', '-')}\n"
-                if not arg["required"]:
-                    md += f"        + Default: `{arg.get('default', '') or 'null'}`\n"
-                if "members" in arg:
-                    md += "        + Members\n"
-                    for member in arg["members"]:
-                        md += f"            + `{member}`\n"
+        operation = {
+            "operationId": operation_id,
+            "summary": make_title(route["function"].__name__),
+            "description": route["description"].strip(),
+            "tags": [group.capitalize()],
+            "parameters": parameters,
+            "responses": {"200": {"description": "Successful response"}},
+        }
 
         if (
             example_args != {}
-            or len(route["args"]) == 1
+            # parameterless route (only the `verbose` flag): safe to GET as-is.
+            # Routes in the bitcoin/compose/healthz/routes/v1 categories no longer
+            # carry a `verbose` arg, so a bare `len == 1` here would wrongly match
+            # routes whose single parameter is a *required* payload (e.g.
+            # `sendrawtransaction`/`signedhex`), GET them without it, and crash on
+            # the non-JSON error body.
+            or (len(route["args"]) == 1 and route["args"][0]["name"] == "verbose")
             or "healthz" in path
             or "getmempoolinfo" in path
-        ):  # min 1 for verbose arg
+        ):
+            has_verbose = any(arg["name"] == "verbose" for arg in route["args"])
             if not USE_API_CACHE or path not in API_CACHE:
-                example_output = get_example_output(path, example_args)
+                example_output, _status_code = get_example_output(
+                    path, dict(example_args), add_verbose=has_verbose
+                )
                 API_CACHE[path] = example_output
-            else:
-                example_output = API_CACHE[path]
-            example_output_json = json.dumps(example_output, indent=4)
-            md += "\n+ Response 200 (application/json)\n\n"
-            md += "    ```\n"
-            for line in example_output_json.split("\n"):
-                md += f"        {line}\n"
-            md += "    ```\n"
-    return md, dredd
+            operation["responses"]["200"]["content"] = {
+                "application/json": {"example": API_CACHE[path]}
+            }
+
+        paths[oas_path] = {"get": operation}
+    return paths
 
 
-def update_blueprint(db):
-    md = ""
-    with open(os.path.join(CURR_DIR, "apidoc", "blueprint-template.md"), "r") as f:
-        md += f.read()
+def gen_root_path():
+    return {
+        "get": {
+            "operationId": "api_root",
+            "summary": "Get Server Info",
+            "description": "Returns server information and the list of documented routes in JSON format.",
+            "tags": ["Root"],
+            "parameters": [],
+            "responses": {
+                "200": {
+                    "description": "Successful response",
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "result": {
+                                    "server_ready": True,
+                                    "network": "mainnet",
+                                    "version": config.VERSION_STRING,
+                                    "backend_height": 850214,
+                                    "counterparty_height": 850214,
+                                    "ledger_state": "Following",
+                                    "documentation": "https://apidocs.counterparty.io/",
+                                    "routes": "http://localhost:4000/v2/routes",
+                                    "openapi": "http://localhost:4000/v2/openapi.json",
+                                }
+                            }
+                        }
+                    },
+                }
+            },
+        }
+    }
 
-    blueprint, dredd = gen_blueprint(db)
 
-    md = md.replace("<GROUP_TOC>", gen_groups_toc())
-    md = md.replace("<EVENTS_DOC>", gen_events_doc())
-    md = md.replace("<API_BLUEPRINT>", blueprint)
+def update_openapi_spec(db):
+    with open(os.path.join(CURR_DIR, "apidoc", "intro.md"), "r") as f:
+        intro = f.read().replace("<EVENTS_DOC>", gen_events_doc())
 
-    md = (
-        f"[//]: # (Generated by genapidoc.py on {datetime.datetime.now()}. Do not edit manually.)\n"
-        + md
-    )
+    spec = {
+        "openapi": "3.1.0",
+        "info": {
+            "title": "Counterparty Core API",
+            "version": config.VERSION_STRING,
+            "description": intro,
+        },
+        "servers": [{"url": "https://api.counterparty.io:4000"}],
+        "tags": [{"name": "Root"}] + gen_tags(db),
+        "paths": {"/v2/": gen_root_path()} | gen_paths(db),
+    }
 
-    with open(API_BLUEPRINT_FILE, "w") as f:
-        f.write(md)
-        print(f"API documentation written to {API_BLUEPRINT_FILE}")
-
-    with open(DREDD_FILE, "w") as f:
-        yaml.dump(dredd, f)
-        print(f"Dredd file written to {DREDD_FILE}")
+    with open(OPENAPI_FILE, "w") as f:
+        json.dump(spec, f, indent=4)
+        print(f"API documentation written to {OPENAPI_FILE}")
 
 
 def gen_events_doc():
@@ -334,7 +403,9 @@ def gen_events_doc():
             md += f"\n#### `{event}`\n\n"
             path = f"/v2/events/{event}"
             if not USE_API_CACHE or path not in API_CACHE:
-                example_output = get_example_output(path, {"limit": "1", "verbose": "true"})
+                example_output, _status_code = get_example_output(
+                    path, {"limit": "1", "verbose": "true"}
+                )
                 API_CACHE[path] = example_output
             else:
                 example_output = API_CACHE[path]
@@ -347,9 +418,17 @@ def gen_events_doc():
 
 
 def get_event_tx_hash(db, event_name):
+    # ``messages.tx_hash`` was replaced by a ``tx_index`` FK in the compact-
+    # hash storage migration; re-hydrate the legacy column via JOIN on
+    # ``transactions``. ``rowtracer`` converts BLOB(32) -> 64-char hex.
     cursor = db.cursor()
     cursor.execute(
-        "SELECT tx_hash FROM messages WHERE event=? ORDER BY rowid DESC LIMIT 1",
+        """SELECT t.tx_hash AS tx_hash
+           FROM messages m
+           LEFT JOIN transactions t ON t.tx_index = m.tx_index
+           WHERE m.event = ?
+           ORDER BY m.rowid DESC
+           LIMIT 1""",
         (event_name,),
     )
     row = cursor.fetchone()
@@ -413,7 +492,7 @@ def gen_unpack_doc(db):
 
 
 def update_doc(db):
-    update_blueprint(db)
+    update_openapi_spec(db)
 
     with open(CACHE_FILE, "w") as f:
         json.dump(API_CACHE, f, indent=4)
@@ -509,9 +588,13 @@ def generate_regtest_fixtures(db):
     regtest_fixtures["$LAST_ORDER_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_ORDER_TX_HASH"] = row["tx_hash"]
 
-    # block and tx with UTXOASSET orders
+    # block and tx with UTXOASSET orders. ``orders.give_asset`` now stores the
+    # compact ``asset_index`` (the rowtracer decodes it back to a name on read),
+    # so filter via the name->index subquery rather than the literal asset name.
     cursor.execute(
-        "SELECT block_index, tx_hash FROM orders WHERE give_asset='UTXOASSET' ORDER BY rowid DESC LIMIT 1"
+        "SELECT block_index, tx_hash FROM orders "
+        "WHERE give_asset=(SELECT asset_index FROM assets WHERE asset_name='UTXOASSET') "
+        "ORDER BY rowid DESC LIMIT 1"
     )
     row = cursor.fetchone()
     regtest_fixtures["$LAST_UTXOASSET_ORDER_BLOCK"] = row["block_index"]
@@ -550,9 +633,18 @@ def generate_regtest_fixtures(db):
 
     regtest_fixtures["$UTXO_1_ADDRESS_1"] = utxo
 
-    # get utxo with balance
+    # get utxo with balance. ``balances.asset`` now stores the compact
+    # ``asset_index`` (decoded back to a name by the rowtracer on read), so
+    # filter via the name->index subquery rather than the literal asset name.
+    # The ``utxo`` TEXT column was split into ``(utxo_tx_hash BLOB, utxo_vout)``
+    # in the compact-storage migration; SELECT both so the rowtracer
+    # reconstructs ``row['utxo']`` (``tx_hash:vout``), and filter on
+    # ``utxo_tx_hash IS NOT NULL`` (the old ``utxo IS NOT NULL``).
     cursor.execute(
-        "SELECT utxo FROM balances WHERE utxo IS NOT NULL AND quantity > 0 AND asset='UTXOASSET' ORDER BY rowid DESC LIMIT 1"
+        "SELECT utxo_tx_hash, utxo_vout FROM balances "
+        "WHERE utxo_tx_hash IS NOT NULL AND quantity > 0 "
+        "AND asset=(SELECT asset_index FROM assets WHERE asset_name='UTXOASSET') "
+        "ORDER BY rowid DESC LIMIT 1"
     )
     row = cursor.fetchone()
     regtest_fixtures["$UTXO_WITH_BALANCE"] = row["utxo"]
@@ -568,14 +660,22 @@ def generate_regtest_fixtures(db):
     regtest_fixtures["$LAST_SWEEP_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_SWEEP_TX_HASH"] = row["tx_hash"]
 
-    # block and tx with btcpay
+    # block and tx with btcpay. ``btcpays.order_match_id`` was replaced by the
+    # ``(order_match_tx0_index, order_match_tx1_index)`` FK pair in the compact
+    # match-id migration; re-hydrate tx0's hash via JOIN on ``transactions``.
+    # ``$ORDER_WITH_BTCPAY_HASH`` is just tx0's hash (the first half of the old
+    # composite id). ``hex_lower`` returns a hex string the rowtracer leaves as-is.
     cursor.execute(
-        "SELECT block_index, tx_hash, order_match_id FROM btcpays ORDER BY rowid DESC LIMIT 1"
+        """SELECT b.block_index AS block_index, b.tx_hash AS tx_hash,
+                  hex_lower(t0.tx_hash) AS order_match_tx0_hash
+           FROM btcpays b
+           LEFT JOIN transactions t0 ON t0.tx_index = b.order_match_tx0_index
+           ORDER BY b.rowid DESC LIMIT 1"""
     )
     row = cursor.fetchone()
     regtest_fixtures["$LAST_BTCPAY_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_BTCPAY_TX_HASH"] = row["tx_hash"]
-    regtest_fixtures["$ORDER_WITH_BTCPAY_HASH"] = row["order_match_id"].split("_")[0]
+    regtest_fixtures["$ORDER_WITH_BTCPAY_HASH"] = row["order_match_tx0_hash"]
 
     # block and tx with broadcasts
     cursor.execute("SELECT block_index, tx_hash FROM broadcasts ORDER BY rowid DESC LIMIT 1")
@@ -583,12 +683,18 @@ def generate_regtest_fixtures(db):
     regtest_fixtures["$LAST_BROADCAST_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_BROADCAST_TX_HASH"] = row["tx_hash"]
 
-    # block and tx with order_matches
-    cursor.execute("SELECT block_index, id FROM order_matches ORDER BY rowid DESC LIMIT 1")
+    # block and tx with order_matches. The composite TEXT ``id`` was dropped in
+    # the compact match-id migration; reconstruct it from the BLOB
+    # ``tx0_hash``/``tx1_hash`` pair (mirrors ``helpers.MATCH_ID_SQL``).
+    # ``$ORDER_WITH_MATCH_HASH`` is just tx0's hash (the rowtracer hexifies it).
+    cursor.execute(
+        f"SELECT block_index, tx0_hash, {helpers.MATCH_ID_SQL} AS id "  # noqa: S608
+        "FROM order_matches ORDER BY rowid DESC LIMIT 1"
+    )
     row = cursor.fetchone()
     regtest_fixtures["$LAST_ORDER_MATCH_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_ORDER_MATCH_ID"] = row["id"]
-    regtest_fixtures["$ORDER_WITH_MATCH_HASH"] = row["id"].split("_")[0]
+    regtest_fixtures["$ORDER_WITH_MATCH_HASH"] = row["tx0_hash"]
 
     # block with cancels
     cursor.execute("SELECT block_index FROM cancels ORDER BY rowid DESC LIMIT 1")
@@ -605,14 +711,25 @@ def generate_regtest_fixtures(db):
     row = cursor.fetchone()
     regtest_fixtures["$LAST_DEBIT_BLOCK"] = row["block_index"]
 
-    # transactions with events
+    # transactions with events. ``messages.tx_hash`` was dropped in the
+    # compact-hash storage migration; re-hydrate via JOIN on ``transactions``.
     cursor.execute(
-        "SELECT tx_hash, block_index FROM messages WHERE event='CREDIT' ORDER BY rowid DESC LIMIT 1"
+        """SELECT t.tx_hash AS tx_hash, m.block_index AS block_index
+           FROM messages m
+           LEFT JOIN transactions t ON t.tx_index = m.tx_index
+           WHERE m.event = 'CREDIT'
+           ORDER BY m.rowid DESC
+           LIMIT 1"""
     )
     row = cursor.fetchone()
     regtest_fixtures["$LAST_EVENT_TX_HASH"] = row["tx_hash"]
     regtest_fixtures["$LAST_EVENT_BLOCK"] = row["block_index"]
-    cursor.execute("SELECT tx_index FROM transactions WHERE tx_hash=?", (row["tx_hash"],))
+    # ``transactions.tx_hash`` is BLOB(32) at rest; convert the hex string
+    # back to BLOB for the WHERE binding.
+    cursor.execute(
+        "SELECT tx_index FROM transactions WHERE tx_hash=?",
+        (hashcodec.hash_to_db(row["tx_hash"]),),
+    )
     row = cursor.fetchone()
     regtest_fixtures["$LAST_EVENT_TX_INDEX"] = row["tx_index"]
 
@@ -670,10 +787,10 @@ def convert_hashes_to_placeholder(content: str) -> tuple[str, int]:
     return content, len(hash_mapping)
 
 
-def convert_apiary_to_mainnet(filepath: str = None):
-    """Replace all regtest addresses and hashes with mainnet equivalents in apiary.apib."""
+def convert_doc_to_mainnet(filepath: str = None):
+    """Replace all regtest addresses and hashes with mainnet equivalents in openapi.json."""
     if filepath is None:
-        filepath = API_BLUEPRINT_FILE
+        filepath = OPENAPI_FILE
 
     print(f"Converting regtest data to mainnet format in {filepath}...")
 
@@ -712,6 +829,17 @@ def convert_apiary_to_mainnet(filepath: str = None):
         f.write(content)
 
     print(f"Conversion complete: {address_count} addresses, {hash_count} hashes.")
+
+    # Safety net: regtest_to_mainnet_address() returns the address unchanged when
+    # pack/unpack fails, which would silently leave regtest data in the published
+    # doc (and hang `test_apiserver_openapi_spec`). Fail loudly so a bad refresh is
+    # caught here instead of being committed.
+    remaining = content.count("bcrt1")
+    if remaining:
+        raise AssertionError(
+            f"{remaining} regtest (bcrt1) address(es) still present in {filepath} "
+            "after conversion to mainnet"
+        )
 
 
 if __name__ == "__main__":

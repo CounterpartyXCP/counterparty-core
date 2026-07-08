@@ -868,6 +868,63 @@ class TestNotSupportedTransactionsCache:
         assert "tx1" in cache.not_suppported_txs
         assert "tx2" in cache.not_suppported_txs
 
+    def test_max_size_eviction(self, reset_not_supported_cache, temp_cache_dir, monkeypatch):
+        """Test oldest entries are evicted when MAX_SIZE is exceeded"""
+        monkeypatch.setattr(follow.NotSupportedTransactionsCache, "MAX_SIZE", 3)
+        cache = follow.NotSupportedTransactionsCache()
+
+        cache.add(["tx1", "tx2", "tx3"])
+        cache.add(["tx4", "tx5"])
+
+        assert cache._ordered_txs == ["tx3", "tx4", "tx5"]
+        assert cache.not_suppported_txs == {"tx3", "tx4", "tx5"}
+        assert cache.is_not_supported("tx1") is False
+
+        # The compacted file matches the in-memory state
+        cache_path = os.path.join(temp_cache_dir, "not_supported_tx_cache.regtest.txt")
+        with open(cache_path, "r", encoding="utf-8") as f:
+            assert [line.strip() for line in f] == ["tx3", "tx4", "tx5"]
+
+    def test_restore_trims_to_max_size(
+        self, reset_not_supported_cache, temp_cache_dir, monkeypatch
+    ):
+        """Test restore keeps only the most recent MAX_SIZE entries"""
+        monkeypatch.setattr(follow.NotSupportedTransactionsCache, "MAX_SIZE", 2)
+        cache_path = os.path.join(temp_cache_dir, "not_supported_tx_cache.regtest.txt")
+        with open(cache_path, "w", encoding="utf-8") as f:
+            f.write("tx1\ntx2\ntx3\n")
+
+        cache = follow.NotSupportedTransactionsCache()
+
+        assert cache._ordered_txs == ["tx2", "tx3"]
+        # The oversized file is compacted on restore
+        with open(cache_path, "r", encoding="utf-8") as f:
+            assert [line.strip() for line in f] == ["tx2", "tx3"]
+
+    def test_add_appends_to_legacy_file(self, reset_not_supported_cache, temp_cache_dir):
+        """Test appending after restoring a legacy file without trailing newline"""
+        cache_path = os.path.join(temp_cache_dir, "not_supported_tx_cache.regtest.txt")
+        with open(cache_path, "w", encoding="utf-8") as f:
+            f.write("tx1\ntx2")  # legacy format: no trailing newline
+
+        cache = follow.NotSupportedTransactionsCache()
+        cache.add(["tx3"])
+
+        with open(cache_path, "r", encoding="utf-8") as f:
+            assert [line.strip() for line in f] == ["tx1", "tx2", "tx3"]
+
+    def test_persistence_across_restart(self, reset_not_supported_cache, temp_cache_dir):
+        """Test appended entries survive a singleton reset (process restart)"""
+        cache = follow.NotSupportedTransactionsCache()
+        cache.add(["tx1", "tx2"])
+        cache.add(["tx3"])
+
+        del helpers.SingletonMeta._instances[follow.NotSupportedTransactionsCache]
+        restored = follow.NotSupportedTransactionsCache()
+
+        assert restored._ordered_txs == ["tx1", "tx2", "tx3"]
+        assert restored.not_suppported_txs == {"tx1", "tx2", "tx3"}
+
 
 # ============================================================================
 # Tests for receive_multipart (using asyncio.run)
@@ -1084,6 +1141,66 @@ def test_receive_multipart_message_processing_error():
                                                 await watcher.receive_multipart(
                                                     mock_socket, "rawblock"
                                                 )
+            finally:
+                config.BACKEND_CONNECT = original_backend_connect
+                config.NO_MEMPOOL = original_no_mempool
+
+    asyncio.run(run_test())
+
+
+def test_receive_multipart_swallows_interrupt_during_shutdown():
+    """When stop() has interrupted the shared DB connection mid-parse, the
+    resulting ParseTransactionError("interrupted") must be treated as expected
+    teardown noise: logged at debug, NOT sent to Sentry, and NOT re-raised
+    (which would force a spurious "fail loud" restart of an already-stopping
+    process). Pins the stop_event guard in receive_multipart."""
+
+    async def run_test():
+        with mock.patch("counterpartycore.lib.backend.bitcoind") as mock_bitcoind:
+            mock_bitcoind.get_zmq_notifications.return_value = [
+                {"type": "pubrawtx", "address": "tcp://127.0.0.1:28332"},
+                {"type": "pubhashtx", "address": "tcp://127.0.0.1:28332"},
+                {"type": "pubsequence", "address": "tcp://127.0.0.1:28332"},
+                {"type": "pubrawblock", "address": "tcp://127.0.0.1:28333"},
+            ]
+
+            original_backend_connect = config.BACKEND_CONNECT
+            original_no_mempool = config.NO_MEMPOOL
+            config.BACKEND_CONNECT = "127.0.0.1"
+            config.NO_MEMPOOL = True
+
+            try:
+                with mock.patch("counterpartycore.lib.monitors.sentry.init"):
+                    with mock.patch("zmq.asyncio.Context"):
+                        with mock.patch("asyncio.new_event_loop"):
+                            with mock.patch("asyncio.set_event_loop"):
+                                with mock.patch("counterpartycore.lib.parser.follow.CurrentState"):
+                                    with mock.patch(
+                                        "counterpartycore.lib.parser.follow.capture_exception"
+                                    ) as mock_capture:
+                                        db = mock.MagicMock()
+                                        watcher = follow.BlockchainWatcher(db)
+                                        # Simulate shutdown already in progress.
+                                        watcher.stop_event.set()
+
+                                        mock_socket = mock.AsyncMock()
+                                        mock_socket.recv_multipart.return_value = (
+                                            b"rawblock",
+                                            b"body",
+                                            b"\x01\x00\x00\x00",
+                                        )
+
+                                        with mock.patch.object(
+                                            watcher,
+                                            "receive_message",
+                                            side_effect=exceptions.ParseTransactionError(
+                                                "interrupted"
+                                            ),
+                                        ):
+                                            # MUST NOT raise during shutdown...
+                                            await watcher.receive_multipart(mock_socket, "rawblock")
+                                            # ...and MUST NOT page Sentry.
+                                            mock_capture.assert_not_called()
             finally:
                 config.BACKEND_CONNECT = original_backend_connect
                 config.NO_MEMPOOL = original_no_mempool

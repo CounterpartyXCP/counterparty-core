@@ -85,6 +85,22 @@ def test_ensure_backend_is_up_force_skips(monkeypatch):
     mock_getblockcount.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    ("catch_up_mode", "database_exists", "expected"),
+    [
+        ("normal", False, False),
+        ("bootstrap", False, True),
+        ("bootstrap", True, False),
+        ("bootstrap-once", False, True),
+        ("bootstrap-once", True, False),
+        ("bootstrap-always", False, True),
+        ("bootstrap-always", True, True),
+    ],
+)
+def test_should_bootstrap_database(catch_up_mode, database_exists, expected):
+    assert server.should_bootstrap_database(catch_up_mode, database_exists) is expected
+
+
 def test_generate_move_random_hash(monkeypatch):
     monkeypatch.setattr(server.os, "urandom", lambda n: b"\x01" * n)
 
@@ -215,6 +231,7 @@ def test_check_database(monkeypatch):
 
 def test_vacuum(monkeypatch):
     ledger_db = MagicMock()
+    state_db = MagicMock()
 
     class DummySpinner:
         def __init__(self, _message):
@@ -227,12 +244,15 @@ def test_vacuum(monkeypatch):
             return False
 
     monkeypatch.setattr(server.database, "initialise_db", MagicMock(return_value=ledger_db))
+    monkeypatch.setattr(server.database, "get_db_connection", MagicMock(return_value=state_db))
     monkeypatch.setattr(server.database, "vacuum", MagicMock())
     monkeypatch.setattr(server.log, "Spinner", DummySpinner)
 
     server.vacuum()
 
-    server.database.vacuum.assert_called_once_with(ledger_db)
+    assert server.database.vacuum.call_count == 2
+    server.database.vacuum.assert_any_call(ledger_db)
+    server.database.vacuum.assert_any_call(state_db)
 
 
 def test_show_params(monkeypatch, capsys):

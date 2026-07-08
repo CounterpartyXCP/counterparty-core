@@ -1,3 +1,4 @@
+import inspect
 import os
 import random
 import urllib.parse
@@ -6,6 +7,8 @@ import gevent
 import locust
 from counterpartycore.lib.api.routes import ALL_ROUTES
 from counterpartycore.lib.utils import database
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 
 def generate_mainnet_fixtures(db_file):
@@ -19,7 +22,7 @@ def generate_mainnet_fixtures(db_file):
             "SELECT tx_hash, tx_index, block_index FROM transactions ORDER BY rowid DESC LIMIT 1"
         ).fetchone()
         utxo_with_balance = db.execute(
-            "SELECT * FROM balances WHERE utxo IS NOT null AND quantity > 0 ORDER BY rowid DESC LIMIT 1"
+            "SELECT * FROM balances WHERE utxo_tx_hash IS NOT null AND quantity > 0 ORDER BY rowid DESC LIMIT 1"
         ).fetchone()
         last_dispenser = db.execute(
             "SELECT * FROM dispensers ORDER BY rowid DESC LIMIT 1"
@@ -167,14 +170,18 @@ def random_verbose():
     return random.choice(["true", "false"])  # noqa S311
 
 
-def random_params():
-    return "&".join(
-        [
-            urllib.parse.urlencode({"offset": random_offset()}),
-            urllib.parse.urlencode({"limit": random_limit()}),
-            urllib.parse.urlencode({"verbose": random_verbose()}),
-        ]
-    )
+def random_params(route):
+    # Since "Reject unknown v2 API parameters", sending a param a route's handler
+    # doesn't declare raises a 400. Only add `offset`/`limit` to paginated routes;
+    # `verbose` is read globally and tolerated on every route.
+    function_params = inspect.signature(ALL_ROUTES[route][0]).parameters
+    params = []
+    if "offset" in function_params:
+        params.append(urllib.parse.urlencode({"offset": random_offset()}))
+    if "limit" in function_params:
+        params.append(urllib.parse.urlencode({"limit": random_limit()}))
+    params.append(urllib.parse.urlencode({"verbose": random_verbose()}))
+    return "&".join(params)
 
 
 def prepare_url(route, MainnetFixtures):
@@ -260,7 +267,7 @@ def prepare_url(route, MainnetFixtures):
             return None
 
     chr = "&" if "?" in url else "?"
-    url = url + chr + random_params()
+    url = url + chr + random_params(route)
 
     return url
 
@@ -278,6 +285,26 @@ class CounterpartyCoreUser(locust.HttpUser):
     network_timeout = 15.0
     connection_timeout = 15.0
     MainnetFixtures = None
+
+    def on_start(self):
+        # When a gunicorn worker recycles (``max_requests``), it closes its
+        # sockets, which resets any keep-alive connection locust is holding to
+        # it -> ConnectionResetError on the in-flight request. A real HTTP
+        # client retries an idempotent GET on such a transient reset; mirror
+        # that so a legitimate worker recycle does not fail the load test.
+        # ``status=0`` (empty status_forcelist) keeps genuine 5xx/timeout
+        # responses as failures, so this only masks connection-level resets.
+        retry = Retry(
+            total=3,
+            connect=3,
+            read=3,
+            status=0,
+            allowed_methods=frozenset(["GET"]),
+            backoff_factor=0.1,
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        self.client.mount("http://", adapter)
+        self.client.mount("https://", adapter)
 
     @locust.task
     def get_random_url(self):

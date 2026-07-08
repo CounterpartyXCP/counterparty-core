@@ -201,7 +201,6 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             {
                 "destination": destination,
                 "exact_fee": 0,
-                "inputs_source": utxo_address,
                 "utxo_value": 10000,
             },
         )
@@ -415,7 +414,6 @@ class UTXOSupportPropertyTest(PropertyTestNode):
             {
                 "exact_fee": 0,
                 "destination": destination,
-                "inputs_source": utxo_address,
                 "exclude_utxos_with_balances": True,
             },
         )

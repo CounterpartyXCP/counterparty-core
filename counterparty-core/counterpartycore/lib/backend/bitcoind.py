@@ -21,8 +21,8 @@ from requests.exceptions import (  # pylint: disable=redefined-builtin
 
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.parser import deserialize, utxosinfo
-from counterpartycore.lib.utils import script
+from counterpartycore.lib.parser import deserialize, p2sh, protocol, utxosinfo
+from counterpartycore.lib.utils import multisig, script
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -125,8 +125,13 @@ def rpc_call(payload, retry=0):
                 raise exceptions.BitcoindRPCError(
                     f"Authorization error connecting to {clean_url_for_log(url)}: {response.status_code} {response.reason}"
                 )
-            if response.status_code == 503:
-                raise ConnectionError("Received 503 error from backend")
+            if response.status_code in (502, 503, 504):
+                # Transient gateway errors (commonly emitted by a reverse proxy
+                # or SSH tunnel sitting in front of the backend when it is
+                # briefly unreachable/overloaded). Route them through the
+                # connection-retry path instead of raising, so catch-up waits
+                # and retries rather than mis-resolving a VIN.
+                raise ConnectionError(f"Received {response.status_code} error from backend")
             if response.status_code == 429:
                 # Rate limited - retry with exponential backoff
                 backoff_time = min(2**tries, 60)  # Max 60 seconds
@@ -357,20 +362,50 @@ def getrawmempool(verbose=False):
 def get_utxo_address_and_value(utxo, no_retry=False):
     tx_hash = utxo.split(":")[0]
     vout = int(utxo.split(":")[1])
-    try:
-        transaction = getrawtransaction(tx_hash, True, no_retry=no_retry)
-    except exceptions.BitcoindRPCError as e:
-        raise exceptions.InvalidUTXOError(f"Could not find UTXO {utxo}") from e
+    # A failure to *fetch* the transaction (RPC error, node behind/pruned) is a
+    # transient, node-local condition: it MUST propagate as ``BitcoindRPCError``
+    # so callers can retry/halt. Do NOT turn it into ``InvalidUTXOError`` — that
+    # would be indistinguishable from a *resolved* output that genuinely has no
+    # address, and a caller treating it as "unknown" would write a
+    # non-deterministic value into consensus state (see safe_get_utxo_address).
+    transaction = getrawtransaction(tx_hash, True, no_retry=no_retry)
     if vout >= len(transaction["vout"]):
         raise exceptions.InvalidUTXOError("vout index out of range")
-    if "address" not in transaction["vout"][vout]["scriptPubKey"]:
+    script_pub_key = transaction["vout"][vout]["scriptPubKey"]
+    address = script_pub_key.get("address")
+    if address is None and protocol.enabled("multisig_utxo_addresses"):
+        address = get_multisig_address_from_script_pub_key(script_pub_key)
+    if address is None:
         raise exceptions.InvalidUTXOError("vout does not have an address")
-    return transaction["vout"][vout]["scriptPubKey"]["address"], transaction["vout"][vout]["value"]
+    return address, transaction["vout"][vout]["value"]
+
+
+def get_multisig_address_from_script_pub_key(script_pub_key):
+    if "hex" not in script_pub_key:
+        return None
+    try:
+        if script.get_output_type(script_pub_key["hex"]) != "P2MS":
+            return None
+        asm = script.script_to_asm(script_pub_key["hex"])
+        pubkeys = asm[1:-2]
+        pubkeyhashes = [p2sh.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
+        return multisig.construct_array(asm[0], pubkeyhashes, asm[-2])
+    except (exceptions.DecodeError, exceptions.MultiSigAddressError):
+        return None
 
 
 def safe_get_utxo_address(utxo):
+    # "unknown" is returned ONLY for the deterministic case where the output is
+    # resolvable but has no decodable address (non-standard script). That value
+    # is reproducible on every node and is part of consensus history (canonical
+    # mainnet balances carry it). A transient RPC failure instead raises
+    # ``BitcoindRPCError`` and is left to propagate so the parser retries (and
+    # ultimately halts) rather than writing a node-dependent "unknown" into the
+    # ledger — which would silently fork consensus. Retries are re-enabled here
+    # (no ``no_retry``): the address-less case never hits the RPC retry path, so
+    # retrying only guards against genuine transient RPC failures.
     try:
-        return get_utxo_address_and_value(utxo, no_retry=True)[0]
+        return get_utxo_address_and_value(utxo)[0]
     except exceptions.InvalidUTXOError:
         return "unknown"
 
@@ -378,10 +413,13 @@ def safe_get_utxo_address(utxo):
 def is_valid_utxo(utxo):
     if not utxosinfo.is_utxo_format(utxo):
         return False
+    # Compose-time validation only (non-consensus): any failure to resolve the
+    # UTXO — missing address or an RPC error (e.g. the tx does not exist) — means
+    # it can't be used as a UTXO, so report it invalid rather than propagating.
     try:
         get_utxo_address_and_value(utxo)
         return True
-    except exceptions.InvalidUTXOError:
+    except (exceptions.InvalidUTXOError, exceptions.BitcoindRPCError):
         return False
 
 
@@ -631,18 +669,52 @@ def get_vin_info_legacy(vin, no_retry=False):
     try:
         vin_ctx = get_decoded_transaction(vin["hash"], no_retry=no_retry)
         vout = vin_ctx["vout"][vin["n"]]
+        # `is_segwit` MUST match the Rust fetcher (indexer/bitcoin_client.rs). Before the
+        # `fix_is_segwit` protocol change (block 902000) it is whether the *parent
+        # transaction* carries any witness (equivalently `txid != wtxid`), NOT whether
+        # the prevout output is itself a witness program. Computing it with
+        # `is_segwit_output()` unconditionally applies the post-fix semantics to pre-fix
+        # blocks, which flips the source of P2SH-encoded transactions funded by a segwit
+        # parent from bech32 to base58 and forks the ledger (observed at block 832867).
+        if protocol.enabled("fix_is_segwit"):
+            is_segwit = script.is_segwit_output(vout["script_pub_key"])
+        else:
+            is_segwit = vin_ctx["segwit"]
         return (
             vout["value"],
             vout["script_pub_key"],
-            script.is_segwit_output(vout["script_pub_key"]),
+            is_segwit,
         )
     except exceptions.BitcoindRPCError as e:
-        logger.warning(
-            "Failed to lookup parent transaction %s for VIN resolution. "
-            "This transaction will be skipped. Is `txindex` enabled in Bitcoin Core?",
-            vin["hash"],
-        )
-        raise exceptions.DecodeError("vin not found") from e
+        # While parsing the mempool the parent transaction may legitimately be
+        # unavailable (e.g. not yet relayed). Skipping the *unconfirmed* tx is
+        # safe: it will be re-evaluated once it confirms.
+        if CurrentState().parsing_mempool():
+            logger.warning(
+                "Failed to lookup parent transaction %s for VIN resolution. "
+                "Skipping unconfirmed (mempool) transaction.",
+                vin["hash"],
+            )
+            raise exceptions.DecodeError("vin not found") from e
+        # During catch-up the parent of a *confirmed* transaction must exist.
+        # A failure here is an infrastructure error (unhealthy/overloaded
+        # backend, a transient gateway 5xx, missing `txindex`, ...), NOT
+        # evidence that the transaction is non-Counterparty. Silently treating
+        # it as BTC-only would drop a real Counterparty transaction and
+        # permanently fork the ledger from consensus (this is exactly what
+        # happened at block 510556). Halt instead: the surrounding block is
+        # rolled back atomically and retried on the next run, so a transient
+        # blip never corrupts the ledger.
+        if CurrentState().stopping():
+            # A clean shutdown interrupted the lookup; propagate the original
+            # (shutdown) error rather than the consensus-corruption warning.
+            raise
+        raise exceptions.BitcoindRPCError(
+            f"Failed to resolve parent transaction {vin['hash']} for VIN resolution "
+            "while parsing a confirmed block. Refusing to silently skip a confirmed "
+            "transaction, which would corrupt consensus. Is `txindex` enabled and the "
+            "backend healthy?"
+        ) from e
 
 
 def get_transaction(tx_hash: str, result_format: str = "json"):
