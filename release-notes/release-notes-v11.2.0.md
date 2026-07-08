@@ -1,5 +1,6 @@
 # Release Notes - Counterparty Core v11.2.0 (2026-07-08)
 
+Counterparty Core v11.2.0 focuses on smaller databases, faster API paths, clearer API validation and a set of gated protocol fixes. The upgrade path is the same as usual; the main operational difference is a one-time Ledger DB compaction on first start, so operators should schedule the restart for a window where a longer startup is acceptable.
 
 # Upgrading
 
@@ -28,7 +29,7 @@ pip install -e .
 counterparty-server start
 ```
 
-The Ledger DB is automatically compacted on first start of v11.2.0 (migration `0010.compact_hash_storage`); this migration rewrites hash columns and runs `VACUUM`, so the first startup may take noticeably longer on large databases.
+The Ledger DB is automatically compacted on first start of v11.2.0 (migration `0010.compact_hash_storage`). No manual reparse is required. On large databases this can take a while and temporarily needs extra free disk space while SQLite rewrites and vacuums the DB; keeping a normal pre-upgrade backup or snapshot is recommended.
 
 # ChangeLog
 
@@ -54,7 +55,7 @@ The activation block heights are `961100` (mainnet), `5064400` (testnet3), `1472
 
 ## Performance
 
-- Compact hash storage in the Ledger DB: transaction hashes, block hashes and other fixed-size hex strings are now stored as raw 32-byte BLOBs instead of 64-char hex strings, cutting hash-column storage roughly in half. A new migration (`0010.compact_hash_storage`) rewrites all affected tables and runs `VACUUM` afterwards; a new `hashcodec` module handles encoding/decoding transparently so the rest of the codebase is unaffected.
+- Compact hash storage in the Ledger DB: transaction hashes, block hashes and other fixed-size hex strings are now stored as raw 32-byte BLOBs instead of 64-char hex strings, cutting hash-column storage roughly in half. A new migration (`0010.compact_hash_storage`) rewrites all affected tables and runs `VACUUM` afterwards; a new `hashcodec` module handles encoding/decoding transparently so the rest of the codebase is unaffected. The migration runs automatically during upgrade and may need additional temporary disk space while it completes.
 - Composite match-ID normalization (folded into `0010.compact_hash_storage`): the 129-char `tx0hash_tx1hash` TEXT match id is replaced by an integer `(tx0_index, tx1_index)` foreign-key pair on `order_matches`, `bet_matches`, `rps_matches`, the three `*_match_expirations` tables, `bet_match_resolutions`, `btcpays` and `rpsresolves`. The textual `id` / `*_match_id` is reconstructed on read at the API and consensus boundaries, so the public API surface and the consensus hashes are unchanged.
 - Asset normalization (folded into `0010.compact_hash_storage`): the `assets` table gains a compact, sequentially-assigned `asset_index INTEGER PRIMARY KEY` surrogate, and every asset-name TEXT column (`asset`, `give_asset`, `get_asset`, `forward_asset`, `backward_asset`, `dividend_asset`, `asset_parent`, `asset_a`, `asset_b` on `balances`, `credits`, `debits`, `sends`, `orders`, `order_matches`, `issuances`, `dividends`, `dispensers`, `dispenses`, `dispenser_refills`, `fairminters`, `fairmints`, `destructions`, `pools`, `pool_deposits`, `pool_withdrawals`, `pool_matches`) is replaced by the compact integer `asset_index` foreign key — 1–3 bytes per reference instead of the full asset name. The protocol `assets.asset_id` and `lp_asset` columns stay TEXT. The asset name is transparently restored on read (the `rowtracer` decodes `asset_index` → name) and re-encoded on write, so consensus hashes and the public API (which still returns/filters by asset name) are unchanged. The State DB keeps asset names (the consolidation decodes index → name while the Ledger DB is attached). Note: invalid records referencing a never-registered asset store `NULL`.
 - Address normalization (folded into `0010.compact_hash_storage`): a new `address_list(address_id INTEGER PRIMARY KEY, address TEXT UNIQUE)` table assigns every distinct address a compact id, and every address TEXT column (`source`, `destination`, `address`, `source_address`, `destination_address`, `issuer`, `feed_address`, `tx0_address`, `tx1_address`, `winner`, `oracle_address`, `origin`, `last_status_tx_source`, `utxo_address` across the ledger tables) is replaced by the compact integer `address_id` foreign key. The address string is transparently restored on read (the `rowtracer` decodes `address_id` → address) and re-encoded on write, so consensus hashes and the public API (which still returns/filters by address) are unchanged. The State DB keeps addresses as strings (the consolidation decodes id → address while the Ledger DB is attached). The existing `addresses` options-history table is preserved; its `address` column is FK'd onto `address_list`. `mempool.addresses` (a comma-separated list) and `mempool_transactions` are left as TEXT.
