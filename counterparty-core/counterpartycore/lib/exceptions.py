@@ -98,6 +98,14 @@ class BitcoindRPCError(Exception):
     pass
 
 
+class ApiRPCBudgetExceededError(Exception):
+    """Raised when a single API request exceeds the per-request Bitcoin backend
+    RPC fan-out budget (config.API_MAX_BACKEND_RPC_CALLS). Surfaced to the client
+    as a 400 so one request cannot generate unbounded backend work (issue #3461)."""
+
+    pass
+
+
 class UnknownPubKeyError(Exception):
     pass
 

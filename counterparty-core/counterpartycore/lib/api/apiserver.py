@@ -22,6 +22,7 @@ from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import apiwatcher, dbbuilder, healthz, queries, verbose, wsgi
 from counterpartycore.lib.api.blockcache import BLOCK_CACHE, cache_insert
 from counterpartycore.lib.api.routes import ROUTES, function_needs_db
+from counterpartycore.lib.backend import bitcoind
 from counterpartycore.lib.cli.initialise import initialise_log_and_config
 from counterpartycore.lib.cli.log import init_api_access_log
 from counterpartycore.lib.ledger.currentstate import CurrentState
@@ -400,6 +401,10 @@ def query_params():
 
 @auth.login_required
 def handle_route(**kwargs):
+    # Bound the backend RPC fan-out this request may trigger (issue #3461). Armed
+    # on this worker thread for the whole request and disarmed in the finally below,
+    # so one request cannot generate unbounded Bitcoin RPC work.
+    bitcoind.begin_api_rpc_accounting(config.API_MAX_BACKEND_RPC_CALLS)
     try:
         if request.method == "OPTIONS":
             return handle_options()
@@ -468,6 +473,7 @@ def handle_route(**kwargs):
             exceptions.AssetNameError,
             exceptions.ComposeError,
             exceptions.UnpackError,
+            exceptions.ApiRPCBudgetExceededError,
             CBitcoinAddressError,
             exceptions.AddressError,
             exceptions.ElectrsError,
@@ -518,6 +524,11 @@ def handle_route(**kwargs):
             start_time=start_time,
             query_args=query_args,
         )
+    except exceptions.ApiRPCBudgetExceededError as e:
+        # The request tripped the per-request backend RPC budget while enriching the
+        # result (outside the inner try). It is an expected guard, not a server
+        # fault, so return a clear 400 without Sentry noise.
+        return return_result(400, error=str(e))
     except Exception as e:  # pylint: disable=broad-except
         # import traceback
         # print(traceback.format_exc())
@@ -526,6 +537,12 @@ def handle_route(**kwargs):
         capture_exception(e)
         logger.error("Error in API: %s", e)
         return return_result(500, error=error)
+    finally:
+        # Always disarm the RPC budget on this worker thread (Waitress reuses
+        # threads across requests) and log the fan-out for tuning API_MAX_BACKEND_RPC_CALLS.
+        rpc_calls = bitcoind.end_api_rpc_accounting()
+        if rpc_calls:
+            logger.trace(f"API Request - Backend RPC calls: {rpc_calls}")
 
 
 def handle_not_found(_error):

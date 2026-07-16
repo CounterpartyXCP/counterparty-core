@@ -96,6 +96,7 @@ def initialise_config(
     regtest=False,
     signet=False,
     api_limit_rows=1000,
+    api_max_backend_rpc_calls=1000,
     disable_api_cache=False,
     api_cache_max_rows=50000,
     backend_connect=None,
@@ -235,6 +236,7 @@ def initialise_config(
             os.rename(old_testnet3_state_db, config.STATE_DATABASE)
 
     config.API_LIMIT_ROWS = api_limit_rows
+    config.API_MAX_BACKEND_RPC_CALLS = api_max_backend_rpc_calls
 
     ##############
     # THINGS WE CONNECT TO
@@ -589,6 +591,7 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "regtest": args.regtest,
         "signet": args.signet,
         "api_limit_rows": args.api_limit_rows,
+        "api_max_backend_rpc_calls": getattr(args, "api_max_backend_rpc_calls", 1000),
         "disable_api_cache": getattr(args, "disable_api_cache", False),
         "api_cache_max_rows": getattr(args, "api_cache_max_rows", 50000),
         "backend_connect": args.backend_connect,

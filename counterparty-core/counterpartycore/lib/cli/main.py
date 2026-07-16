@@ -98,6 +98,15 @@ CONFIG_ARGS = [
             "help": "limit api calls to the set results (defaults to 1000). Setting to 0 removes the limit.",
         },
     ],
+    [
+        ("--api-max-backend-rpc-calls",),
+        {
+            "type": int,
+            "default": 1000,
+            "help": "max Bitcoin backend RPC calls a single API request may trigger before "
+            "it is rejected with a 400 (defaults to 1000). Setting to 0 removes the limit.",
+        },
+    ],
     [("--backend-name",), {"default": "addrindex", "help": "the backend name to connect to"}],
     [
         ("--backend-connect",),
