@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import pytest
 from counterpartycore.lib import config, ledger
 from counterpartycore.lib.api import apiserver, apiwatcher, blockcache, composer
-from counterpartycore.lib.api.routes import ALL_ROUTES, ROUTES
+from counterpartycore.lib.api.routes import ALL_ROUTES, ROUTES, get_routes
 from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.lib.parser import blocks
 from counterpartycore.lib.utils import hashcodec, helpers
@@ -139,6 +139,33 @@ def test_routes_only_document_available_show_unconfirmed_args():
 
     assert not get_route_args("/v2/transactions/counts", "show_unconfirmed")
     assert not get_route_args("/v2/routes", "show_unconfirmed")
+
+
+def test_api_v1_routes_gated_by_enable_api_v1(
+    ledger_db, state_db, monkeypatch, current_block_index
+):
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.getblockcount", lambda: current_block_index
+    )
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_blocks_behind", lambda: 0)
+
+    v1_paths = {"/", "/v1/", "/api/", "/rpc/"}
+    original = config.ENABLE_API_V1
+    try:
+        # Disabled by default: the legacy v1 proxy routes are neither listed by
+        # `/v2/routes` nor registered on the Flask app (they hit the 404 handler).
+        config.ENABLE_API_V1 = False
+        assert not (v1_paths & set(get_routes().keys()))
+        registered = {rule.rule for rule in apiserver.init_flask_app().url_map.iter_rules()}
+        assert not (v1_paths & registered)
+
+        # Explicit opt-in via `--enable-api-v1`: the v1 routes come back.
+        config.ENABLE_API_V1 = True
+        assert v1_paths <= set(get_routes().keys())
+        registered = {rule.rule for rule in apiserver.init_flask_app().url_map.iter_rules()}
+        assert v1_paths <= registered
+    finally:
+        config.ENABLE_API_V1 = original
 
 
 def prepare_url(db, current_block_index, defaults, rawtransaction, route):

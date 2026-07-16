@@ -208,6 +208,14 @@ CONFIG_ARGS = [
         },
     ],
     [
+        ("--enable-api-v1",),
+        {
+            "action": "store_true",
+            "default": False,
+            "help": "enable the deprecated legacy v1 JSON-RPC API (disabled by default; exposes a denial-of-service surface, not recommended on public deployments)",
+        },
+    ],
+    [
         ("--api-host",),
         {
             "default": "127.0.0.1",

@@ -100,6 +100,7 @@ def test_argparser():
         "rpc_password": "rpc",
         "rpc_no_allow_cors": False,
         "rpc_batch_size": 20,
+        "enable_api_v1": False,
         "api_host": "127.0.0.1",
         "api_port": None,
         "api_user": None,
