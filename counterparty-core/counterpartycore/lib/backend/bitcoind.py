@@ -35,6 +35,10 @@ TRANSACTIONS_CACHE_MAX_SIZE = 10000
 
 URL_USERNAMEPASS_REGEX = re.compile(".+://(.+)@")
 
+# os-backed RNG for retry-backoff jitter; avoids flagging the module-level
+# pseudo-random generator (Bandit B311) even though this is not security-sensitive.
+_JITTER_RNG = random.SystemRandom()
+
 
 def clean_url_for_log(url):
     m = URL_USERNAMEPASS_REGEX.match(url)
@@ -97,7 +101,7 @@ def retry_backoff(tries):
     cap = getattr(config, "BACKEND_RETRY_MAX_SLEEP", 30)
     ceiling = min(cap, base * (2 ** min(tries, 10)))
     # full jitter: sleep uniformly in [base, ceiling]
-    return random.uniform(min(base, ceiling), ceiling)  # noqa: S311
+    return _JITTER_RNG.uniform(min(base, ceiling), ceiling)
 
 
 def interruptible_sleep(duration, check_interval=0.5):
