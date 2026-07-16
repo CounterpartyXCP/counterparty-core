@@ -403,6 +403,30 @@ CONFIG_ARGS = [
             "help": "number of threads per worker for the Gunicorn WSGI server (if enabled)",
         },
     ],
+    [
+        ("--no-healthz-server",),
+        {
+            "action": "store_true",
+            "default": False,
+            "help": "disable the dedicated health-check listener isolated from the API worker pool",
+        },
+    ],
+    [
+        ("--healthz-port",),
+        {
+            "type": int,
+            "help": "port for the dedicated health-check listener (default: API port + 2)",
+        },
+    ],
+    [
+        ("--healthz-saturation-grace",),
+        {
+            "type": int,
+            "default": config.DEFAULT_HEALTHZ_SATURATION_GRACE_SECONDS,
+            "help": "seconds the API worker pool must stay saturated before readiness reports "
+            "degraded (503); 0 disables the saturation axis of readiness",
+        },
+    ],
     [("--bootstrap-url",), {"type": str, "help": "the URL of the bootstrap snapshot to use"}],
     [
         ("--electrs-url",),
