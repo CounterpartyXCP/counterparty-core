@@ -22,6 +22,7 @@ Endpoints (all GET, JSON):
 * ``/healthz/metrics`` — worker-pool + saturation + handler-latency gauges for alerting.
 """
 
+import contextlib
 import json
 import logging
 import threading
@@ -72,12 +73,11 @@ def _instrument_dispatcher(dispatcher):
     original_add_task = dispatcher.add_task
 
     def add_task(task, _original=original_add_task):
-        try:
+        # Best-effort stamp on a per-request hot path: if the task object ever rejects the
+        # attribute, skip the timestamp (its queue-wait reads as unavailable) rather than
+        # break request enqueueing. suppress() keeps this guard without a bare try/except/pass.
+        with contextlib.suppress(Exception):
             task.healthz_enqueued_at = time.monotonic()
-        except Exception:  # noqa: S110  # pylint: disable=broad-except
-            # Per-request hot path: never log or raise here, just skip the timestamp so the
-            # queue-wait metric is unavailable for this task.
-            pass
         return _original(task)
 
     try:
