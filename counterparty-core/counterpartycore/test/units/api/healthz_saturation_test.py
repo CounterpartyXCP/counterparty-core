@@ -18,7 +18,6 @@ import time
 from collections import deque
 
 import waitress.server
-
 from counterpartycore.lib.api import healthz_server
 from counterpartycore.lib.api.healthz_server import (
     HealthRequestHandler,

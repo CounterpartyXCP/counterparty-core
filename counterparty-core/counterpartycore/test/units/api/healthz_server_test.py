@@ -13,7 +13,6 @@ import time
 from collections import deque
 
 import pytest
-
 from counterpartycore.lib import config
 from counterpartycore.lib.api import healthz_server
 from counterpartycore.lib.api.healthz_server import (
