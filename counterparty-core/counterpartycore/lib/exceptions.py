@@ -103,8 +103,6 @@ class ApiRPCBudgetExceededError(Exception):
     RPC fan-out budget (config.API_MAX_BACKEND_RPC_CALLS). Surfaced to the client
     as a 400 so one request cannot generate unbounded backend work (issue #3461)."""
 
-    pass
-
 
 class UnknownPubKeyError(Exception):
     pass
