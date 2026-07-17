@@ -262,7 +262,7 @@ class HealthSampler(threading.Thread):
                 queue_depth=queue_depth,
                 queue_head_wait=queue_head_wait,
             )
-            saturated = total > 0 and busy >= total and queue_depth > 0
+            saturated = 0 < total <= busy and queue_depth > 0
             return workers, saturated
         except Exception as e:  # pylint: disable=broad-except
             logger.debug("healthz: could not sample worker pool: %s", e)
@@ -386,7 +386,8 @@ class HealthRequestHandler(BaseHTTPRequestHandler):
     # trivial and robust. Health probes are infrequent, so keep-alive buys nothing here.
     server_version = "counterparty-healthz"
 
-    def do_GET(self):  # noqa: N802 (http.server API)
+    # camelCase name is mandated by the http.server dispatch API (BaseHTTPRequestHandler.do_<VERB>).
+    def do_GET(self):  # noqa: N802  # pylint: disable=invalid-name
         start = time.monotonic()
         path = self.path.split("?", 1)[0].rstrip("/")
         bucket = None
@@ -477,7 +478,9 @@ class HealthRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
 
-    def log_message(self, format, *args):  # noqa: A002 (http.server API)
+    # ``format`` shadows the builtin but must match BaseHTTPRequestHandler's signature exactly,
+    # otherwise pylint flags arguments-differ on this override.
+    def log_message(self, format, *args):  # noqa: A002  # pylint: disable=redefined-builtin
         # Silence the default stderr access log; route to trace for debugging only.
         if hasattr(logger, "trace"):
             logger.trace("healthz %s - %s", self.address_string(), format % args)
