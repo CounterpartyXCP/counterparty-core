@@ -36,7 +36,7 @@ hypothesis==6.116.0
 bitcoin-utils==0.7.1
 pyzstd==0.16.2
 schemathesis==4.21.4
-sh==2.0.6
+sh==2.2.4
 PyYAML==6.0.2
 multiprocessing-logging==0.3.4
 locust==2.32.8
