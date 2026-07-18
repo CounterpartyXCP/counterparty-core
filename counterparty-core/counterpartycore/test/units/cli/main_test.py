@@ -106,6 +106,7 @@ def test_argparser():
         "api_password": None,
         "api_no_allow_cors": False,
         "requests_timeout": 20,
+        "backend_connect_timeout": 5,
         "force": False,
         "no_confirm": False,
         "data_dir": "datadir",

@@ -241,7 +241,16 @@ CONFIG_ARGS = [
         {
             "type": int,
             "default": config.DEFAULT_REQUESTS_TIMEOUT,
-            "help": "timeout value (in seconds) used for all HTTP requests (default: 5)",
+            "help": "read timeout (in seconds) used for all HTTP requests (default: 20)",
+        },
+    ],
+    [
+        ("--backend-connect-timeout",),
+        {
+            "type": int,
+            "default": config.DEFAULT_BACKEND_CONNECT_TIMEOUT,
+            "help": "TCP connect timeout (in seconds) for backend RPC requests, so an "
+            "unreachable backend fails fast instead of pinning an API worker (default: 5)",
         },
     ],
     [

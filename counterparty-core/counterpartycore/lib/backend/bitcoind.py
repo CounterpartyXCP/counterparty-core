@@ -2,6 +2,7 @@ import binascii
 import functools
 import json
 import logging
+import random
 import re
 import time
 from collections import OrderedDict
@@ -34,6 +35,10 @@ TRANSACTIONS_CACHE_MAX_SIZE = 10000
 
 URL_USERNAMEPASS_REGEX = re.compile(".+://(.+)@")
 
+# os-backed RNG for retry-backoff jitter; avoids flagging the module-level
+# pseudo-random generator (Bandit B311) even though this is not security-sensitive.
+_JITTER_RNG = random.SystemRandom()
+
 
 def clean_url_for_log(url):
     m = URL_USERNAMEPASS_REGEX.match(url)
@@ -61,6 +66,42 @@ def should_retry():
     if CurrentState().stopping():
         return False
     return True
+
+
+def request_timeout():
+    """Timeout passed to ``requests``. When a distinct connect timeout is
+    configured, return a ``(connect, read)`` tuple so a stalled/unreachable
+    backend fails the TCP connect quickly instead of hanging for the full
+    read timeout. Falls back to the single read timeout otherwise."""
+    connect_timeout = getattr(config, "BACKEND_CONNECT_TIMEOUT", None)
+    if connect_timeout:
+        return (connect_timeout, config.REQUESTS_TIMEOUT)
+    return config.REQUESTS_TIMEOUT
+
+
+def skip_rpc_retry(no_retry=False):
+    """Whether an RPC call must fail fast instead of entering the unbounded
+    connection-retry loop.
+
+    True for synchronous public API requests (which must never pin a Waitress/
+    Gunicorn worker while a degraded backend retries) and whenever the caller
+    explicitly opts out of retries. False for the parser/indexing path, which
+    must keep retrying to preserve consensus correctness (a skipped VIN would
+    fork the ledger)."""
+    return no_retry or is_api_request()
+
+
+def retry_backoff(tries):
+    """Jittered backoff (seconds) for the parser connection-retry loop.
+
+    Exponential growth capped at ``BACKEND_RETRY_MAX_SLEEP`` with full jitter,
+    so many independent nodes recovering from the same backend outage do not
+    reconnect in lockstep (a synchronized retry storm)."""
+    base = getattr(config, "BACKEND_RETRY_BASE_SLEEP", 1)
+    cap = getattr(config, "BACKEND_RETRY_MAX_SLEEP", 30)
+    ceiling = min(cap, base * (2 ** min(tries, 10)))
+    # full jitter: sleep uniformly in [base, ceiling]
+    return _JITTER_RNG.uniform(min(base, ceiling), ceiling)
 
 
 def interruptible_sleep(duration, check_interval=0.5):
@@ -113,7 +154,7 @@ def rpc_call(payload, retry=0):
                 data=json.dumps(payload),
                 headers=_rpc_headers(),
                 verify=(not config.BACKEND_SSL_NO_VERIFY),
-                timeout=config.REQUESTS_TIMEOUT,
+                timeout=request_timeout(),
                 auth=("__cookie__", config.BACKEND_COOKIE) if config.BACKEND_COOKIE else None,
             )
 
@@ -152,13 +193,23 @@ def rpc_call(payload, retry=0):
                 raise exceptions.BitcoindRPCError(str(response.status_code) + " " + response.reason)
             break
         except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError) as e:
+            # A synchronous public API request must never enter this unbounded
+            # loop and pin a worker; fail fast so the caller returns a bounded,
+            # retryable error. The parser path keeps retrying (consensus
+            # correctness) with jittered backoff to avoid a retry storm.
+            if is_api_request():
+                raise exceptions.BitcoindRPCError(
+                    f"Could not connect to backend at `{clean_url_for_log(url)}`: {e}"
+                ) from e
+            backoff = retry_backoff(tries)
             logger.warning(
-                "Could not connect to backend at `%s`. (Attempt: %s)",
+                "Could not connect to backend at `%s`. Retrying in %.1fs. (Attempt: %s)",
                 clean_url_for_log(url),
+                backoff,
                 tries,
                 stack_info=config.VERBOSE > 0,
             )
-            if not interruptible_sleep(5):
+            if not interruptible_sleep(backoff):
                 raise exceptions.BitcoindRPCError(
                     "Shutdown requested during connection retry"
                 ) from e
@@ -223,7 +274,7 @@ def is_api_request():
 
 
 def rpc(method, params, no_retry=False):
-    if is_api_request() or no_retry:
+    if skip_rpc_retry(no_retry):
         return safe_rpc(method, params)
 
     payload = {
@@ -244,7 +295,7 @@ def safe_rpc_payload(payload):
             data=json.dumps(payload),
             headers=_rpc_headers(),
             verify=(not config.BACKEND_SSL_NO_VERIFY),
-            timeout=config.REQUESTS_TIMEOUT,
+            timeout=request_timeout(),
             auth=("__cookie__", config.BACKEND_COOKIE) if config.BACKEND_COOKIE else None,
         )
         if response is None:
@@ -329,7 +380,11 @@ def getrawtransaction_batch(tx_hashes, verbose=False, return_dict=False, no_retr
             for j, tx_hash in enumerate(batch)
         ]
 
-        if no_retry:
+        # Mirror the single-call dispatcher in rpc(): API requests (and explicit
+        # no_retry callers) must fail fast via safe_rpc_payload rather than enter
+        # rpc_call's unbounded retry loop, which would otherwise pin an API worker
+        # while a degraded backend retries forever.
+        if skip_rpc_retry(no_retry):
             batch_results = safe_rpc_payload(payload)
         else:
             batch_results = rpc_call(payload)

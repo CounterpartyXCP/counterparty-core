@@ -119,6 +119,7 @@ def initialise_config(
     api_no_allow_cors=False,
     force=False,
     requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
+    backend_connect_timeout=config.DEFAULT_BACKEND_CONNECT_TIMEOUT,
     rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
     skip_asset_conservation_check=False,
     backend_ssl_verify=None,
@@ -560,6 +561,7 @@ def initialise_config(
     # Misc
     config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
     config.REQUESTS_TIMEOUT = requests_timeout
+    config.BACKEND_CONNECT_TIMEOUT = backend_connect_timeout
     config.CHECK_ASSET_CONSERVATION = not skip_asset_conservation_check
     config.UTXO_LOCKS_MAX_ADDRESSES = utxo_locks_max_addresses
     config.UTXO_LOCKS_MAX_AGE = utxo_locks_max_age
@@ -642,6 +644,9 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "api_password": args.api_password,
         "api_no_allow_cors": args.api_no_allow_cors,
         "requests_timeout": args.requests_timeout,
+        "backend_connect_timeout": getattr(
+            args, "backend_connect_timeout", config.DEFAULT_BACKEND_CONNECT_TIMEOUT
+        ),
         "rpc_batch_size": args.rpc_batch_size,
         "skip_asset_conservation_check": args.skip_asset_conservation_check,
         "force": args.force,

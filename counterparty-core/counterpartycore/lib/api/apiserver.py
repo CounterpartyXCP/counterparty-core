@@ -459,6 +459,14 @@ def handle_route(**kwargs):
         # call the function
         try:
             result = execute_api_function(rule, route, function_args)
+        except exceptions.BitcoindRPCError as e:
+            # The Bitcoin backend is unavailable or degraded. This is transient
+            # and not the client's fault, so return a retryable 503 rather than a
+            # 400 (which clients treat as a permanent error).
+            error = str(e)
+            set_sentry_api_response_context(503, error)
+            logger.warning("Backend unavailable while serving API request: %s", error)
+            return return_result(503, error=error, start_time=start_time, query_args=query_args)
         except (
             exceptions.JSONRPCInvalidRequest,
             flask.wrappers.BadRequest,
@@ -466,7 +474,6 @@ def handle_route(**kwargs):
             exceptions.BalanceError,
             exceptions.UnknownPubKeyError,
             exceptions.AssetNameError,
-            exceptions.BitcoindRPCError,
             exceptions.ComposeError,
             exceptions.UnpackError,
             CBitcoinAddressError,

@@ -47,11 +47,20 @@ The new health server listens on its own port (default: API port + 2 → `4002` 
 
   **Operational follow-up:** Kubernetes manifests must repoint liveness/readiness to the new endpoints and port (deployment repo: UnspendableLabs/Infrastructure#252). Readiness shedding under saturation could in principle remove both pods at once — mitigated by the ledger-lag axis being primary plus a conservative grace/hysteresis, and the saturation axis can be disabled with `--healthz-saturation-grace 0`.
 
+## API Changes
+
+- A slow or unreachable Bitcoin backend now surfaces to API clients as a retryable **HTTP 503** (`BitcoindRPCError`, previously `400`) (#3459).
+
+## Security / Hardening
+
+- **Bound Bitcoin backend RPC retries** (#3459). `getrawtransaction_batch()` bypassed the no-retry guard used for API requests and fell through to an unbounded `while True` retry loop, so a degraded backend made compose and v1 requests retry forever, pinning worker threads until the pool was exhausted (the `(Attempt: N)` log lines from the incident). The retry decision is now centralized in `skip_rpc_retry()` and applied to both the single-call and batch paths, so API requests never enter the unbounded loop; `rpc_call` also bails out defensively in an API context. A configurable connect timeout fails an unreachable backend's TCP connect quickly instead of hanging for the full read timeout, and the parser's flat retry sleep is replaced with jittered exponential backoff so many nodes recovering from the same outage don't reconnect in lockstep. **The parser/indexing path is unchanged** — it still retries an unavailable backend indefinitely, because skipping a VIN would fork the ledger.
+
 ## Configuration
 
 - `--healthz-port` (default: API port + 2) — port for the dedicated health-check listener (#3460).
 - `--no-healthz-server` — disable the dedicated health-check listener (#3460).
 - `--healthz-saturation-grace` (default `5` seconds; `0` disables the saturation axis of readiness) (#3460).
+- `--backend-connect-timeout` / `BACKEND_CONNECT_TIMEOUT` (default `5` seconds) — TCP connect timeout for backend RPC (#3459).
 
 # Credits
 

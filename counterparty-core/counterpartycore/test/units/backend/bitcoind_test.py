@@ -4,6 +4,7 @@ import time
 from unittest.mock import patch
 
 import pytest
+import requests
 from bitcoinutils.transactions import Script
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.backend import bitcoind
@@ -710,3 +711,155 @@ def test_reset_caches_handles_missing_lru_cache_clear(monkeypatch):
     assert not hasattr(fake_func, "cache_clear")
 
     bitcoind.reset_caches()
+
+
+# ---------------------------------------------------------------------------
+# Bounded backend RPC retries / overload protection (issue #3459)
+# ---------------------------------------------------------------------------
+
+
+def make_failing_post(fail_times, call_log, exc=requests.exceptions.ConnectionError):
+    """Return a ``requests.post`` replacement that raises ``exc`` for the first
+    ``fail_times`` calls, then returns a valid response. Records every call in
+    ``call_log`` so tests can assert the number of attempts."""
+
+    def _post(*args, **kwargs):
+        call_log.append(1)
+        if len(call_log) <= fail_times:
+            raise exc("backend unavailable")
+        payload = json.loads(kwargs["data"])
+        if isinstance(payload, list):
+            return MockResponse(
+                200, [{"id": item["id"], "result": {"txid": "ok"}} for item in payload]
+            )
+        return MockResponse(200, {"result": "ok"})
+
+    return _post
+
+
+@pytest.mark.parametrize(
+    "exc",
+    [requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout],
+    ids=["connection_refused", "slow_response"],
+)
+def test_rpc_api_request_fails_fast(monkeypatch, exc):
+    """A synchronous API request must fail fast (single attempt) instead of
+    entering the unbounded connection-retry loop that would pin a worker."""
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: True)
+    calls = []
+    monkeypatch.setattr("requests.post", make_failing_post(1_000, calls, exc=exc))
+
+    with pytest.raises(exceptions.BitcoindRPCError):
+        bitcoind.rpc("getblockcount", [])
+
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    "exc",
+    [requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout],
+    ids=["connection_refused", "slow_response"],
+)
+def test_getrawtransaction_batch_api_request_fails_fast(monkeypatch, exc):
+    """Regression for issue #3459: the batch RPC path used to ignore
+    is_api_request() and always call rpc_call(), retrying forever and pinning
+    the API worker. It must now fail fast for API requests, exactly like the
+    single-call dispatcher."""
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: True)
+    calls = []
+    monkeypatch.setattr("requests.post", make_failing_post(1_000, calls, exc=exc))
+
+    with pytest.raises(exceptions.BitcoindRPCError):
+        bitcoind.getrawtransaction_batch(["deadbeef"], verbose=True)
+
+    assert len(calls) == 1
+
+
+def test_getrawtransaction_batch_no_retry_flag_fails_fast(monkeypatch):
+    """Explicit no_retry=True (e.g. mempool parsing) must also fail fast even
+    outside an API context."""
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    calls = []
+    monkeypatch.setattr("requests.post", make_failing_post(1_000, calls))
+
+    with pytest.raises(exceptions.BitcoindRPCError):
+        bitcoind.getrawtransaction_batch(["deadbeef"], verbose=True, no_retry=True)
+
+    assert len(calls) == 1
+
+
+def test_rpc_call_parser_retries_then_recovers(monkeypatch):
+    """The parser/indexing path keeps retrying a transiently-failing backend
+    (consensus correctness) and succeeds once the backend recovers."""
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    # don't actually sleep between retries
+    monkeypatch.setattr(bitcoind, "interruptible_sleep", lambda *a, **k: True)
+    calls = []
+    monkeypatch.setattr("requests.post", make_failing_post(3, calls))
+
+    result = bitcoind.rpc("getblockcount", [])
+
+    assert result == "ok"
+    assert len(calls) == 4  # 3 transient failures + 1 success
+
+
+def test_batch_parser_retries_then_recovers(monkeypatch):
+    """Same intermittent-recovery guarantee for the batch path on the parser
+    side."""
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    monkeypatch.setattr(bitcoind, "interruptible_sleep", lambda *a, **k: True)
+    calls = []
+    monkeypatch.setattr("requests.post", make_failing_post(2, calls))
+
+    result = bitcoind.getrawtransaction_batch(["deadbeef"], verbose=True, return_dict=True)
+
+    assert result == {"deadbeef": {"txid": "ok"}}
+    assert len(calls) == 3  # 2 transient failures + 1 success
+
+
+def test_request_timeout_uses_connect_tuple(monkeypatch):
+    """request_timeout() returns a (connect, read) tuple when a connect timeout
+    is configured, so an unreachable backend fails the connect quickly."""
+    monkeypatch.setattr(config, "BACKEND_CONNECT_TIMEOUT", 5)
+    monkeypatch.setattr(config, "REQUESTS_TIMEOUT", 20)
+    assert bitcoind.request_timeout() == (5, 20)
+
+    monkeypatch.setattr(config, "BACKEND_CONNECT_TIMEOUT", None)
+    assert bitcoind.request_timeout() == 20
+
+
+def test_rpc_passes_connect_timeout_to_requests(monkeypatch):
+    """The connect timeout must actually reach requests.post."""
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    monkeypatch.setattr(config, "BACKEND_CONNECT_TIMEOUT", 3)
+    captured = {}
+
+    def _post(*args, **kwargs):
+        captured["timeout"] = kwargs["timeout"]
+        return MockResponse(200, {"result": "ok"})
+
+    monkeypatch.setattr("requests.post", _post)
+    bitcoind.rpc("getblockcount", [])
+    assert captured["timeout"] == (3, config.REQUESTS_TIMEOUT)
+
+
+def test_retry_backoff_is_bounded_and_jittered(monkeypatch):
+    """Backoff grows with the attempt count but stays within [base, cap], and
+    is randomized so recovering nodes do not reconnect in lockstep."""
+    monkeypatch.setattr(config, "BACKEND_RETRY_BASE_SLEEP", 1)
+    monkeypatch.setattr(config, "BACKEND_RETRY_MAX_SLEEP", 30)
+    values = set()
+    for tries in range(1, 60):
+        backoff = bitcoind.retry_backoff(tries)
+        assert 1 <= backoff <= 30
+        values.add(backoff)
+    # jitter should produce a spread of distinct values, not a constant
+    assert len(values) > 1
+
+
+def test_skip_rpc_retry(monkeypatch):
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    assert bitcoind.skip_rpc_retry(no_retry=False) is False
+    assert bitcoind.skip_rpc_retry(no_retry=True) is True
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: True)
+    assert bitcoind.skip_rpc_retry(no_retry=False) is True
