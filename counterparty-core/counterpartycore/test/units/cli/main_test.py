@@ -82,6 +82,7 @@ def test_argparser():
         "regtest": True,
         "signet": False,
         "api_limit_rows": 1000,
+        "api_max_backend_rpc_calls": 1000,
         "backend_name": "addrindex",
         "backend_connect": "localhost",
         "backend_port": None,

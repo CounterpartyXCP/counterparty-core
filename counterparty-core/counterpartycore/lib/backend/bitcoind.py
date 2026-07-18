@@ -8,7 +8,7 @@ import time
 from collections import OrderedDict
 from decimal import Decimal as D
 from multiprocessing import current_process
-from threading import current_thread
+from threading import current_thread, local
 
 import requests
 from bitcoinutils.keys import PublicKey
@@ -38,6 +38,55 @@ URL_USERNAMEPASS_REGEX = re.compile(".+://(.+)@")
 # os-backed RNG for retry-backoff jitter; avoids flagging the module-level
 # pseudo-random generator (Bandit B311) even though this is not security-sensitive.
 _JITTER_RNG = random.SystemRandom()
+
+# Per-API-request backend RPC fan-out budget (issue #3461). A single public API
+# request must not be able to trigger unbounded ``getrawtransaction`` fan-out — a
+# transaction with thousands of inputs, or a compose over an address with thousands
+# of UTXOs, would otherwise issue thousands of backend RPC calls and starve the
+# worker pool. ``handle_route`` arms a thread-local budget per request; every actual
+# backend call (counted at the HTTP chokepoints below, so ``lru_cache`` hits are
+# free) decrements it, and the request is rejected with a clear 400 once the budget
+# is exhausted. The budget is a thread-local (NOT ``flask.g``): this module is shared
+# with the parser, which has no Flask app context. It is armed ONLY for API requests,
+# so the parser is never bounded — bounding it would corrupt consensus.
+_api_rpc_accounting = local()
+
+
+def begin_api_rpc_accounting(limit):
+    """Arm the per-request backend RPC budget on the current thread. ``limit <= 0``
+    (or falsy) disables the bound while still counting calls (``float("inf")``),
+    matching the ``API_LIMIT_ROWS`` "0 = unlimited" convention. A ``remaining`` of
+    ``None`` means *unarmed* (parser / non-request threads) — never bounded."""
+    _api_rpc_accounting.count = 0
+    _api_rpc_accounting.remaining = float("inf") if not limit or limit <= 0 else limit
+
+
+def end_api_rpc_accounting():
+    """Disarm the budget on the current thread and return the number of backend RPC
+    calls made during the request. Exception-free: runs in ``handle_route``'s
+    ``finally`` and must always disarm, even after an error."""
+    count = getattr(_api_rpc_accounting, "count", 0)
+    _api_rpc_accounting.remaining = None
+    return count
+
+
+def _account_rpc_calls(n):
+    """Count ``n`` backend RPC calls against the current request's budget. A no-op
+    when unarmed (``remaining is None``) — always the case on parser threads and on
+    any thread that never called ``begin_api_rpc_accounting`` — so the parser is
+    provably never bounded. Raises once the budget is exhausted."""
+    remaining = getattr(_api_rpc_accounting, "remaining", None)
+    if remaining is None:
+        return
+    count = getattr(_api_rpc_accounting, "count", 0) + n
+    _api_rpc_accounting.count = count
+    if count > remaining:
+        raise exceptions.ApiRPCBudgetExceededError(
+            f"This request exceeds the maximum number of Bitcoin backend RPC calls "
+            f"allowed per API request ({int(remaining)}). Narrow the query (e.g. a "
+            f"smaller transaction), paginate, or for large composes pass the UTXOs "
+            f"directly via the `inputs_set` parameter to avoid backend lookups."
+        )
 
 
 def clean_url_for_log(url):
@@ -140,6 +189,14 @@ def get_json_response(response, retry=0):
 
 def rpc_call(payload, retry=0):
     """Calls to bitcoin core and returns the response"""
+    # Count this call against the per-request API budget (issue #3461). Only on the
+    # first entry: rpc_call retries backend-warming errors by recursing with the same
+    # payload, which must not be double-counted. For API requests this path is
+    # normally bypassed (skip_rpc_retry routes them to safe_rpc_payload); counting
+    # here still guards the edge case where an armed request reaches rpc_call.
+    if retry == 0:
+        _account_rpc_calls(len(payload) if isinstance(payload, list) else 1)
+
     url = config.BACKEND_URL
     response = None
     start_time = time.time()
@@ -287,6 +344,12 @@ def rpc(method, params, no_retry=False):
 
 
 def safe_rpc_payload(payload):
+    # The guaranteed chokepoint for API requests (single lookups via safe_rpc and,
+    # since #3459, the getrawtransaction_batch fan-out both route here). Count every
+    # backend call against the per-request budget (issue #3461); a batch payload is a
+    # list, so it counts as one call per transaction fetched.
+    _account_rpc_calls(len(payload) if isinstance(payload, list) else 1)
+
     start_time = time.time()
     method = payload["method"] if isinstance(payload, dict) else payload[0]["method"]
     try:

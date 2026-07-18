@@ -50,10 +50,13 @@ The new health server listens on its own port (default: API port + 2 → `4002` 
 ## API Changes
 
 - A slow or unreachable Bitcoin backend now surfaces to API clients as a retryable **HTTP 503** (`BitcoindRPCError`, previously `400`) (#3459).
+- A single request that exceeds the new per-request backend RPC fan-out budget is rejected with a clear **HTTP 400** naming the limit and the `inputs_set` escape hatch (#3461).
 
 ## Security / Hardening
 
 - **Bound Bitcoin backend RPC retries** (#3459). `getrawtransaction_batch()` bypassed the no-retry guard used for API requests and fell through to an unbounded `while True` retry loop, so a degraded backend made compose and v1 requests retry forever, pinning worker threads until the pool was exhausted (the `(Attempt: N)` log lines from the incident). The retry decision is now centralized in `skip_rpc_retry()` and applied to both the single-call and batch paths, so API requests never enter the unbounded loop; `rpc_call` also bails out defensively in an API context. A configurable connect timeout fails an unreachable backend's TCP connect quickly instead of hanging for the full read timeout, and the parser's flat retry sleep is replaced with jittered exponential backoff so many nodes recovering from the same outage don't reconnect in lockstep. **The parser/indexing path is unchanged** — it still retries an unavailable backend indefinitely, because skipping a VIN would fork the ledger.
+
+- **Bound per-request backend RPC fan-out** (#3461). `/v2/transactions/info`, `/v2/transactions/<tx_hash>/info` (one `getrawtransaction` per input) and `/v2/addresses/<address>/compose/*` (one lookup per UTXO) could each generate unbounded backend fan-out — ~25–30k `getrawtransaction` calls per replica in five minutes during the incident. A per-request budget (`API_MAX_BACKEND_RPC_CALLS`, default `1000`) counts every actual backend call at the HTTP chokepoints and rejects over-budget requests. Cached lookups (via `getrawtransaction`'s `lru_cache`) are free, and legitimate pagination is untouched. The budget is armed **only** for API requests, so parser threads never see it — bounding the parser would corrupt consensus.
 
 ## Configuration
 
@@ -61,6 +64,7 @@ The new health server listens on its own port (default: API port + 2 → `4002` 
 - `--no-healthz-server` — disable the dedicated health-check listener (#3460).
 - `--healthz-saturation-grace` (default `5` seconds; `0` disables the saturation axis of readiness) (#3460).
 - `--backend-connect-timeout` / `BACKEND_CONNECT_TIMEOUT` (default `5` seconds) — TCP connect timeout for backend RPC (#3459).
+- `--api-max-backend-rpc-calls` / `API_MAX_BACKEND_RPC_CALLS` (default `1000`, `0` = unlimited) — per-request backend RPC fan-out budget (#3461).
 
 # Credits
 

@@ -265,6 +265,12 @@ OLD_STYLE_API = True
 
 API_LIMIT_ROWS = 1000
 
+# Max number of Bitcoin backend RPC calls a single API request may trigger before
+# it is rejected with a 400 (issue #3461). Bounds the getrawtransaction fan-out of
+# transaction-info and compose endpoints so one request cannot generate unbounded
+# backend work. 0 = unlimited (matches the API_LIMIT_ROWS convention).
+API_MAX_BACKEND_RPC_CALLS = 1000
+
 MPMA_LIMIT = 1000
 
 PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"

@@ -863,3 +863,104 @@ def test_skip_rpc_retry(monkeypatch):
     assert bitcoind.skip_rpc_retry(no_retry=True) is True
     monkeypatch.setattr(bitcoind, "is_api_request", lambda: True)
     assert bitcoind.skip_rpc_retry(no_retry=False) is True
+
+
+# ---------------------------------------------------------------------------
+# Per-request backend RPC fan-out budget (issue #3461)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def rpc_budget_reset():
+    # The budget lives on the (pytest) thread; always disarm after the test so
+    # armed state never leaks into unrelated tests running on the same thread.
+    yield
+    bitcoind.end_api_rpc_accounting()
+
+
+def _always_ok_post():
+    """requests.post replacement that always returns a valid response, handling
+    both single (dict) and batch (list) payloads."""
+    return make_failing_post(0, [])
+
+
+def test_rpc_accounting_counts_actual_calls(monkeypatch, rpc_budget_reset):
+    monkeypatch.setattr("requests.post", _always_ok_post())
+    bitcoind.begin_api_rpc_accounting(10)
+    for _ in range(4):
+        bitcoind.rpc("getblockcount", [])
+    assert bitcoind.end_api_rpc_accounting() == 4
+
+
+def test_rpc_accounting_rejects_over_budget(monkeypatch, rpc_budget_reset):
+    monkeypatch.setattr("requests.post", _always_ok_post())
+    bitcoind.begin_api_rpc_accounting(2)
+    bitcoind.rpc("getblockcount", [])
+    bitcoind.rpc("getblockcount", [])
+    with pytest.raises(exceptions.ApiRPCBudgetExceededError) as exc_info:
+        bitcoind.rpc("getblockcount", [])
+    # message names the limit so the client error is actionable
+    assert "2" in str(exc_info.value)
+
+
+def test_rpc_accounting_batch_counts_per_transaction(monkeypatch, rpc_budget_reset):
+    monkeypatch.setattr("requests.post", _always_ok_post())
+    # a batch of 4 hashes under a budget of 5 consumes 4 (one call per tx, not per POST)
+    bitcoind.begin_api_rpc_accounting(5)
+    bitcoind.getrawtransaction_batch(["a", "b", "c", "d"], verbose=True, no_retry=True)
+    assert bitcoind.end_api_rpc_accounting() == 4
+
+
+def test_rpc_accounting_batch_over_budget_rejected(monkeypatch, rpc_budget_reset):
+    monkeypatch.setattr("requests.post", _always_ok_post())
+    bitcoind.begin_api_rpc_accounting(3)
+    with pytest.raises(exceptions.ApiRPCBudgetExceededError):
+        bitcoind.getrawtransaction_batch(["a", "b", "c", "d"], verbose=True, no_retry=True)
+
+
+def test_rpc_accounting_cache_hits_are_free(monkeypatch, rpc_budget_reset):
+    bitcoind.getrawtransaction.cache_clear()
+    monkeypatch.setattr("requests.post", _always_ok_post())
+    bitcoind.begin_api_rpc_accounting(1)
+    tx_hash = "aa" * 32
+    bitcoind.getrawtransaction(tx_hash)  # first: real backend call, consumes 1
+    bitcoind.getrawtransaction(tx_hash)  # second: lru_cache hit, free (else budget of 1 trips)
+    assert bitcoind.end_api_rpc_accounting() == 1
+    bitcoind.getrawtransaction.cache_clear()
+
+
+def test_rpc_accounting_unarmed_is_noop(monkeypatch):
+    """Parser threads (and any thread that never armed the budget) are never
+    bounded: many backend calls neither raise nor are capped."""
+    monkeypatch.setattr("requests.post", _always_ok_post())
+    bitcoind.end_api_rpc_accounting()  # ensure disarmed (remaining is None)
+    for _ in range(50):
+        bitcoind.rpc("getblockcount", [])  # no ApiRPCBudgetExceededError
+
+
+def test_rpc_accounting_zero_is_unlimited_but_counts(monkeypatch, rpc_budget_reset):
+    monkeypatch.setattr("requests.post", _always_ok_post())
+    bitcoind.begin_api_rpc_accounting(0)  # 0 = unlimited
+    for _ in range(50):
+        bitcoind.rpc("getblockcount", [])  # never raises
+    assert bitcoind.end_api_rpc_accounting() == 50  # still counted for telemetry
+
+
+def test_rpc_accounting_retry_recursion_counts_once(monkeypatch, rpc_budget_reset):
+    """rpc_call retries backend-warming errors (-28) by recursing with the same
+    payload; the budget must count that payload once, not once per retry."""
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    monkeypatch.setattr(bitcoind, "interruptible_sleep", lambda *a, **k: True)
+    # -28 twice, then success (mock_requests_post handles return_code_28 / return_200)
+    calls = []
+
+    def _post(*args, **kwargs):
+        calls.append(1)
+        if len(calls) <= 2:
+            return MockResponse(200, {"error": {"message": "Error 28", "code": -28}})
+        return MockResponse(200, {"result": "ok"})
+
+    monkeypatch.setattr("requests.post", _post)
+    bitcoind.begin_api_rpc_accounting(1)  # budget of 1: a double-count would trip it
+    assert bitcoind.rpc("getblockcount", []) == "ok"
+    assert bitcoind.end_api_rpc_accounting() == 1
