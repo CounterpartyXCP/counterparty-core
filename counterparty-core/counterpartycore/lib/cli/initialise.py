@@ -139,6 +139,9 @@ def initialise_config(
     waitress_threads=None,
     gunicorn_workers=None,
     gunicorn_threads_per_worker=None,
+    no_healthz_server=False,
+    healthz_port=None,
+    healthz_saturation_grace=config.DEFAULT_HEALTHZ_SATURATION_GRACE_SECONDS,
     database_file=None,  # for tests
     electrs_url=None,
     api_only=False,
@@ -460,6 +463,36 @@ def initialise_config(
             "Please specific a valid port number rpc-port configuration parameter"
         ) from e
 
+    # Dedicated health-check listener (isolated from the API worker pool, issue #3460)
+    config.NO_HEALTHZ_SERVER = no_healthz_server
+    config.HEALTHZ_SATURATION_GRACE = healthz_saturation_grace
+    if healthz_port:
+        config.HEALTHZ_PORT = healthz_port
+    else:
+        if config.TESTNET3:
+            config.HEALTHZ_PORT = config.DEFAULT_HEALTHZ_PORT_TESTNET3
+        elif config.TESTNET4:
+            config.HEALTHZ_PORT = config.DEFAULT_HEALTHZ_PORT_TESTNET4
+        elif config.REGTEST:
+            config.HEALTHZ_PORT = config.DEFAULT_HEALTHZ_PORT_REGTEST
+        elif config.SIGNET:
+            config.HEALTHZ_PORT = config.DEFAULT_HEALTHZ_PORT_SIGNET
+        else:
+            config.HEALTHZ_PORT = config.DEFAULT_HEALTHZ_PORT
+    try:
+        config.HEALTHZ_PORT = int(config.HEALTHZ_PORT)
+        if not (config.HEALTHZ_PORT > 1 and config.HEALTHZ_PORT < 65535):
+            raise exceptions.ConfigurationError("invalid health-check port number")
+    except Exception as e:  # noqa: E722 # pylint: disable=broad-exception-caught
+        raise exceptions.ConfigurationError(
+            "Please specify a valid port number for the healthz-port configuration parameter"
+        ) from e
+    if config.HEALTHZ_PORT in (config.API_PORT, config.RPC_PORT, config.ZMQ_PUBLISHER_PORT):
+        raise exceptions.ConfigurationError(
+            f"health-check port ({config.HEALTHZ_PORT}) must differ from the API, RPC "
+            "and ZeroMQ publisher ports"
+        )
+
     # Server API user
     if api_user:
         config.API_USER = api_user
@@ -633,6 +666,11 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "waitress_threads": args.waitress_threads,
         "gunicorn_workers": args.gunicorn_workers,
         "gunicorn_threads_per_worker": args.gunicorn_threads_per_worker,
+        "no_healthz_server": getattr(args, "no_healthz_server", False),
+        "healthz_port": getattr(args, "healthz_port", None),
+        "healthz_saturation_grace": getattr(
+            args, "healthz_saturation_grace", config.DEFAULT_HEALTHZ_SATURATION_GRACE_SECONDS
+        ),
         "electrs_url": args.electrs_url,
         "api_only": args.api_only,
         "profile": args.profile,
