@@ -2,7 +2,7 @@ import json
 from unittest.mock import Mock
 
 import pytest
-from counterpartycore.lib import config, ledger
+from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.api import apiserver, apiwatcher, blockcache, composer
 from counterpartycore.lib.api.routes import ALL_ROUTES, ROUTES
 from counterpartycore.lib.messages import dispense, dividend, sweep
@@ -646,6 +646,21 @@ def test_sentry_context_includes_http_error_returned_to_user(apiv2_client, monke
     assert response.json["error"] == "Unknown error"
     assert len(captured) == 1
     assert isinstance(captured[0], RuntimeError)
+
+
+def test_bitcoind_rpc_error_returns_retryable_503(apiv2_client, monkeypatch):
+    """A degraded Bitcoin backend surfaced as a BitcoindRPCError must return a
+    retryable 503, not a 400 that clients treat as permanent (issue #3459)."""
+
+    def execute_api_function_mock(_rule, _route, _function_args):
+        raise exceptions.BitcoindRPCError("Could not connect to backend")
+
+    monkeypatch.setattr(apiserver, "execute_api_function", execute_api_function_mock)
+
+    response = apiv2_client.get("/v2/transactions?limit=1")
+
+    assert response.status_code == 503
+    assert "Could not connect to backend" in response.json["error"]
 
 
 def test_sentry_context_includes_outer_http_error_returned_to_user(apiv2_client, monkeypatch):

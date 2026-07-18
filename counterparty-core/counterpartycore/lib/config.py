@@ -220,6 +220,13 @@ DEFAULT_FEE_FRACTION_PROVIDED = 0.01  # 1.00%
 
 
 DEFAULT_REQUESTS_TIMEOUT = 20  # 20 seconds
+# Separate (shorter) TCP connect timeout so an unreachable/stalled backend
+# fails the connect quickly instead of hanging for the full read timeout.
+DEFAULT_BACKEND_CONNECT_TIMEOUT = 5  # 5 seconds
+# Jittered exponential backoff for the parser connection-retry loop, so many
+# nodes recovering from the same backend outage do not reconnect in lockstep.
+BACKEND_RETRY_BASE_SLEEP = 1  # 1 second
+BACKEND_RETRY_MAX_SLEEP = 30  # cap between retries
 DEFAULT_RPC_BATCH_SIZE = 20  # A 1 MB block can hold about 4200 transactions.
 MAX_RPC_BATCH_SIZE = 100  # Maximum number of transactions to send in a single RPC call.
 
