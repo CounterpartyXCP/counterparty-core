@@ -142,6 +142,26 @@ DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET4 = 44001
 DEFAULT_ZMQ_PUBLISHER_PORT_SIGNET = 34001
 DEFAULT_ZMQ_PUBLISHER_PORT = 4001
 
+# Dedicated health-check listener, isolated from the public API worker pool
+# (see issue #3460). API_PORT + 1 is taken by the ZMQ publisher, so use + 2.
+DEFAULT_HEALTHZ_PORT_REGTEST = 24002
+DEFAULT_HEALTHZ_PORT_TESTNET3 = 14002
+DEFAULT_HEALTHZ_PORT_TESTNET4 = 44002
+DEFAULT_HEALTHZ_PORT_SIGNET = 34002
+DEFAULT_HEALTHZ_PORT = 4002
+
+# Readiness is considered "caught up" when the last parsed block is within this
+# many blocks of the backend tip, or when it advanced within the recent window.
+DEFAULT_HEALTHZ_READY_LAG_BLOCKS = 1
+DEFAULT_HEALTHZ_READY_RECENT_PARSE_SECONDS = 120
+# Readiness reports "degraded" (503) only when the public worker pool has been
+# saturated (all threads busy AND a non-empty queue) for at least this long.
+# Set to 0 to disable the saturation axis of readiness entirely.
+DEFAULT_HEALTHZ_SATURATION_GRACE_SECONDS = 5
+# Liveness fails only if the health sampler heartbeat is staler than this (a
+# genuine deadlock of the health process), never on ledger lag or saturation.
+DEFAULT_HEALTHZ_LIVENESS_HEARTBEAT_TIMEOUT_SECONDS = 30
+
 UNSPENDABLE_REGTEST = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"
 UNSPENDABLE_TESTNET3 = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"
 UNSPENDABLE_TESTNET4 = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"

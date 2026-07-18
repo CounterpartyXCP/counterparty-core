@@ -19,7 +19,15 @@ from sentry_sdk import configure_scope as configure_sentry_scope
 from sentry_sdk import start_span as start_sentry_span
 
 from counterpartycore.lib import config, exceptions
-from counterpartycore.lib.api import apiwatcher, dbbuilder, healthz, queries, verbose, wsgi
+from counterpartycore.lib.api import (
+    apiwatcher,
+    dbbuilder,
+    healthz,
+    healthz_server,
+    queries,
+    verbose,
+    wsgi,
+)
 from counterpartycore.lib.api.blockcache import BLOCK_CACHE, cache_insert
 from counterpartycore.lib.api.routes import ROUTES, function_needs_db
 from counterpartycore.lib.cli.initialise import initialise_log_and_config
@@ -653,6 +661,7 @@ def run_apiserver(
     watcher = None
     mem_profiler = None
     pool_monitor = None
+    health_server = None
 
     try:
         # Set signal handlers for graceful shutdown
@@ -708,6 +717,24 @@ def run_apiserver(
             logger.error("Error starting WSGI Server: %s", e)
             sys.exit(1)
 
+        # Dedicated health-check listener on its own socket + thread pool, isolated from the
+        # public API worker pool so probes cannot be head-of-line blocked by slow requests
+        # (issue #3460). Started here, once the WSGI server (and its task dispatcher) exist,
+        # but before the blocking wsgi_server.run() below. Non-fatal on failure.
+        if not getattr(config, "NO_HEALTHZ_SERVER", False):
+            health_server = healthz_server.HealthCheckServer(
+                host=config.API_HOST,
+                port=config.HEALTHZ_PORT,
+                dispatcher=wsgi_server.get_task_dispatcher(),
+                saturation_grace=getattr(
+                    config,
+                    "HEALTHZ_SATURATION_GRACE",
+                    config.DEFAULT_HEALTHZ_SATURATION_GRACE_SECONDS,
+                ),
+                stop_event=stop_event,
+            )
+            health_server.start()
+
         logger.info("Starting Parent Process Checker thread...")
         parent_checker = ParentProcessChecker(wsgi_server, stop_event, parent_pid)
         parent_checker.start()
@@ -719,6 +746,10 @@ def run_apiserver(
 
     finally:
         logger.info("Stopping API Server...")
+
+        if health_server is not None:
+            logger.trace("Stopping Health Check Server...")
+            health_server.stop()
 
         if wsgi_server is not None:
             logger.trace("Stopping WSGI Server thread...")
