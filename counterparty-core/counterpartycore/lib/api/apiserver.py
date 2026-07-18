@@ -19,9 +19,18 @@ from sentry_sdk import configure_scope as configure_sentry_scope
 from sentry_sdk import start_span as start_sentry_span
 
 from counterpartycore.lib import config, exceptions
-from counterpartycore.lib.api import apiwatcher, dbbuilder, healthz, queries, verbose, wsgi
+from counterpartycore.lib.api import (
+    apiwatcher,
+    dbbuilder,
+    healthz,
+    healthz_server,
+    queries,
+    verbose,
+    wsgi,
+)
 from counterpartycore.lib.api.blockcache import BLOCK_CACHE, cache_insert
 from counterpartycore.lib.api.routes import ROUTES, function_needs_db
+from counterpartycore.lib.backend import bitcoind
 from counterpartycore.lib.cli.initialise import initialise_log_and_config
 from counterpartycore.lib.cli.log import init_api_access_log
 from counterpartycore.lib.ledger.currentstate import CurrentState
@@ -400,6 +409,10 @@ def query_params():
 
 @auth.login_required
 def handle_route(**kwargs):
+    # Bound the backend RPC fan-out this request may trigger (issue #3461). Armed
+    # on this worker thread for the whole request and disarmed in the finally below,
+    # so one request cannot generate unbounded Bitcoin RPC work.
+    bitcoind.begin_api_rpc_accounting(config.API_MAX_BACKEND_RPC_CALLS)
     try:
         if request.method == "OPTIONS":
             return handle_options()
@@ -451,6 +464,14 @@ def handle_route(**kwargs):
         # call the function
         try:
             result = execute_api_function(rule, route, function_args)
+        except exceptions.BitcoindRPCError as e:
+            # The Bitcoin backend is unavailable or degraded. This is transient
+            # and not the client's fault, so return a retryable 503 rather than a
+            # 400 (which clients treat as a permanent error).
+            error = str(e)
+            set_sentry_api_response_context(503, error)
+            logger.warning("Backend unavailable while serving API request: %s", error)
+            return return_result(503, error=error, start_time=start_time, query_args=query_args)
         except (
             exceptions.JSONRPCInvalidRequest,
             flask.wrappers.BadRequest,
@@ -458,9 +479,9 @@ def handle_route(**kwargs):
             exceptions.BalanceError,
             exceptions.UnknownPubKeyError,
             exceptions.AssetNameError,
-            exceptions.BitcoindRPCError,
             exceptions.ComposeError,
             exceptions.UnpackError,
+            exceptions.ApiRPCBudgetExceededError,
             CBitcoinAddressError,
             exceptions.AddressError,
             exceptions.ElectrsError,
@@ -511,6 +532,11 @@ def handle_route(**kwargs):
             start_time=start_time,
             query_args=query_args,
         )
+    except exceptions.ApiRPCBudgetExceededError as e:
+        # The request tripped the per-request backend RPC budget while enriching the
+        # result (outside the inner try). It is an expected guard, not a server
+        # fault, so return a clear 400 without Sentry noise.
+        return return_result(400, error=str(e))
     except Exception as e:  # pylint: disable=broad-except
         # import traceback
         # print(traceback.format_exc())
@@ -519,6 +545,12 @@ def handle_route(**kwargs):
         capture_exception(e)
         logger.error("Error in API: %s", e)
         return return_result(500, error=error)
+    finally:
+        # Always disarm the RPC budget on this worker thread (Waitress reuses
+        # threads across requests) and log the fan-out for tuning API_MAX_BACKEND_RPC_CALLS.
+        rpc_calls = bitcoind.end_api_rpc_accounting()
+        if rpc_calls:
+            logger.trace(f"API Request - Backend RPC calls: {rpc_calls}")
 
 
 def handle_not_found(_error):
@@ -654,6 +686,7 @@ def run_apiserver(
     watcher = None
     mem_profiler = None
     pool_monitor = None
+    health_server = None
 
     try:
         # Set signal handlers for graceful shutdown
@@ -709,6 +742,24 @@ def run_apiserver(
             logger.error("Error starting WSGI Server: %s", e)
             sys.exit(1)
 
+        # Dedicated health-check listener on its own socket + thread pool, isolated from the
+        # public API worker pool so probes cannot be head-of-line blocked by slow requests
+        # (issue #3460). Started here, once the WSGI server (and its task dispatcher) exist,
+        # but before the blocking wsgi_server.run() below. Non-fatal on failure.
+        if not getattr(config, "NO_HEALTHZ_SERVER", False):
+            health_server = healthz_server.HealthCheckServer(
+                host=config.API_HOST,
+                port=config.HEALTHZ_PORT,
+                dispatcher=wsgi_server.get_task_dispatcher(),
+                saturation_grace=getattr(
+                    config,
+                    "HEALTHZ_SATURATION_GRACE",
+                    config.DEFAULT_HEALTHZ_SATURATION_GRACE_SECONDS,
+                ),
+                stop_event=stop_event,
+            )
+            health_server.start()
+
         logger.info("Starting Parent Process Checker thread...")
         parent_checker = ParentProcessChecker(wsgi_server, stop_event, parent_pid)
         parent_checker.start()
@@ -720,6 +771,10 @@ def run_apiserver(
 
     finally:
         logger.info("Stopping API Server...")
+
+        if health_server is not None:
+            logger.trace("Stopping Health Check Server...")
+            health_server.stop()
 
         if wsgi_server is not None:
             logger.trace("Stopping WSGI Server thread...")

@@ -98,6 +98,15 @@ CONFIG_ARGS = [
             "help": "limit api calls to the set results (defaults to 1000). Setting to 0 removes the limit.",
         },
     ],
+    [
+        ("--api-max-backend-rpc-calls",),
+        {
+            "type": int,
+            "default": 1000,
+            "help": "max Bitcoin backend RPC calls a single API request may trigger before "
+            "it is rejected with a 400 (defaults to 1000). Setting to 0 removes the limit.",
+        },
+    ],
     [("--backend-name",), {"default": "addrindex", "help": "the backend name to connect to"}],
     [
         ("--backend-connect",),
@@ -249,7 +258,16 @@ CONFIG_ARGS = [
         {
             "type": int,
             "default": config.DEFAULT_REQUESTS_TIMEOUT,
-            "help": "timeout value (in seconds) used for all HTTP requests (default: 5)",
+            "help": "read timeout (in seconds) used for all HTTP requests (default: 20)",
+        },
+    ],
+    [
+        ("--backend-connect-timeout",),
+        {
+            "type": int,
+            "default": config.DEFAULT_BACKEND_CONNECT_TIMEOUT,
+            "help": "TCP connect timeout (in seconds) for backend RPC requests, so an "
+            "unreachable backend fails fast instead of pinning an API worker (default: 5)",
         },
     ],
     [
@@ -409,6 +427,30 @@ CONFIG_ARGS = [
             "type": int,
             "default": 2,
             "help": "number of threads per worker for the Gunicorn WSGI server (if enabled)",
+        },
+    ],
+    [
+        ("--no-healthz-server",),
+        {
+            "action": "store_true",
+            "default": False,
+            "help": "disable the dedicated health-check listener isolated from the API worker pool",
+        },
+    ],
+    [
+        ("--healthz-port",),
+        {
+            "type": int,
+            "help": "port for the dedicated health-check listener (default: API port + 2)",
+        },
+    ],
+    [
+        ("--healthz-saturation-grace",),
+        {
+            "type": int,
+            "default": config.DEFAULT_HEALTHZ_SATURATION_GRACE_SECONDS,
+            "help": "seconds the API worker pool must stay saturated before readiness reports "
+            "degraded (503); 0 disables the saturation axis of readiness",
         },
     ],
     [("--bootstrap-url",), {"type": str, "help": "the URL of the bootstrap snapshot to use"}],
