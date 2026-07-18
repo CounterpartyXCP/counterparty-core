@@ -118,6 +118,7 @@ def initialise_config(
     api_user=None,
     api_password=None,
     api_no_allow_cors=False,
+    enable_api_v1=False,
     force=False,
     requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
     backend_connect_timeout=config.DEFAULT_BACKEND_CONNECT_TIMEOUT,
@@ -506,6 +507,13 @@ def initialise_config(
     else:
         config.API_NO_ALLOW_CORS = False
 
+    # Legacy v1 JSON-RPC API. Disabled by default: it is deprecated and exposes
+    # an outsized denial-of-service surface (cheap POSTs triggering expensive DB
+    # work and large Bitcoin RPC fan-out). Opt back in with `--enable-api-v1`.
+    # The prominent startup warning is emitted once, where v1 is actually
+    # started (see `cli/server.py`), to avoid duplicating it in every process.
+    config.ENABLE_API_V1 = enable_api_v1
+
     ##############
     # OTHER SETTINGS
 
@@ -646,6 +654,7 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "api_user": args.api_user,
         "api_password": args.api_password,
         "api_no_allow_cors": args.api_no_allow_cors,
+        "enable_api_v1": getattr(args, "enable_api_v1", False),
         "requests_timeout": args.requests_timeout,
         "backend_connect_timeout": getattr(
             args, "backend_connect_timeout", config.DEFAULT_BACKEND_CONNECT_TIMEOUT

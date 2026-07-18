@@ -339,6 +339,11 @@ PROFILE_INTERVAL_MINUTES = 15
 CURRENT_COMMIT = "Unknown"
 ENABLE_ALL_PROTOCOL_CHANGES = False
 DISABLE_API_CACHE = False
+# The legacy v1 JSON-RPC API (`/`, `/api/`, `/rpc/`, `/v1/`) is disabled by
+# default: cheap POST requests can trigger expensive database work and large
+# Bitcoin RPC fan-out, an outsized denial-of-service surface. Self-hosters who
+# still need it can opt back in with `--enable-api-v1` (see the startup warning).
+ENABLE_API_V1 = False
 API_CACHE_SIZE = 1000  # max entries in the API response cache (BLOCK_CACHE)
 # Total-rows budget for the API response cache (BLOCK_CACHE); 0 disables the row
 # bound (entry count still applies). Bounds cache memory while letting many small

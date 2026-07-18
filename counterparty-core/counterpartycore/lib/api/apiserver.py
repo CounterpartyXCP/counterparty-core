@@ -601,6 +601,14 @@ def init_flask_app():
             provide_automatic_options=False,
         )
         for path in ROUTES:
+            # The legacy v1 API is a denial-of-service surface and is disabled by
+            # default; skip registering its proxy routes (`/`, `/api/`, `/rpc/`,
+            # `/v1/`) unless the operator opted in with `--enable-api-v1`. Not
+            # registering them means requests hit the cheap 404 handler instead
+            # of the expensive v1 dispatch (which also proxies to a v1 server
+            # that is not even running when v1 is disabled).
+            if ROUTES[path]["category"] == "v1" and not config.ENABLE_API_V1:
+                continue
             methods = ["OPTIONS", "GET"]
             if path == "/v2/bitcoin/transactions":
                 methods = ["OPTIONS", "POST"]

@@ -2,6 +2,8 @@
 
 Counterparty Core v11.2.1 is an operational hardening release addressing the root causes of the 2026-07-15 production incident, in which a small number of expensive public API requests against a degraded Bitcoin backend exhausted the API worker pools and took `/v2/healthz` down with them. There are **no protocol changes** and no database migration; the upgrade is a plain restart.
 
+The most visible behavioral change is that the **legacy v1 JSON-RPC API is now disabled by default** — operators who still rely on it must opt back in with `--enable-api-v1`.
+
 A dedicated health-check listener now runs on its own port (default: API port + 2 → `4002` on mainnet). Kubernetes/orchestrator probes should be repointed to `/healthz/live` and `/healthz/ready` on that port.
 
 # Upgrading
@@ -31,6 +33,8 @@ pip install -e .
 counterparty-server start
 ```
 
+If you serve clients through the v1 `/api/` JSON-RPC endpoint, add `--enable-api-v1` (available on `server.conf` too) before upgrading, or those requests will now return `404`.
+
 The new health server listens on its own port (default: API port + 2 → `4002` on mainnet); `docker-compose.yml` already exposes it. Repoint orchestrator liveness/readiness probes to `/healthz/live` and `/healthz/ready` on that port. The legacy in-API `/healthz` and `/v2/healthz` keep working.
 
 # ChangeLog
@@ -49,6 +53,7 @@ The new health server listens on its own port (default: API port + 2 → `4002` 
 
 ## API Changes
 
+- **Legacy v1 API disabled by default** (#3462). The v1 JSON-RPC endpoint (`/`, `/api/`, `/rpc/`, `/v1/`) exposes an outsized DoS surface — cheap POST requests can trigger expensive database work and large Bitcoin RPC fan-out, and because the operation is encoded in the JSON body, path-based rate limiting can't tell cheap methods from expensive ones. It is now off by default for both new and upgraded deployments (`config.ENABLE_API_V1 = False`). Operators who need compatibility re-enable it with the explicit `--enable-api-v1` flag, which emits a prominent startup warning describing the risk. The standalone v1 server and the v2 proxy routes are both gated; when disabled, v1 requests hit the cheap `404` handler and are dropped from the `/v2/routes` listing. **v2 is unaffected.**
 - A slow or unreachable Bitcoin backend now surfaces to API clients as a retryable **HTTP 503** (`BitcoindRPCError`, previously `400`) (#3459).
 - A single request that exceeds the new per-request backend RPC fan-out budget is rejected with a clear **HTTP 400** naming the limit and the `inputs_set` escape hatch (#3461).
 
@@ -60,6 +65,7 @@ The new health server listens on its own port (default: API port + 2 → `4002` 
 
 ## Configuration
 
+- `--enable-api-v1` (off by default) — re-enable the legacy v1 JSON-RPC API (#3462).
 - `--healthz-port` (default: API port + 2) — port for the dedicated health-check listener (#3460).
 - `--no-healthz-server` — disable the dedicated health-check listener (#3460).
 - `--healthz-saturation-grace` (default `5` seconds; `0` disables the saturation axis of readiness) (#3460).

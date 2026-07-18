@@ -96,6 +96,9 @@ class RegtestNode:
             "--gunicorn-workers=2",
             "--no-telemetry",
             "--electrs-url=http://localhost:3002",
+            # v1 is disabled by default; enable it so the regression suite keeps
+            # exercising the legacy JSON-RPC API (see `check_api_v1`).
+            "--enable-api-v1",
             "-vv",
         )
         self.burn_in_one_block = burn_in_one_block

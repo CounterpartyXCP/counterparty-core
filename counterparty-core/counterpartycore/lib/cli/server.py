@@ -222,15 +222,27 @@ class CounterpartyServer(threading.Thread):
         # Backend
         ensure_backend_is_up()
 
-        # API Status Poller
-        self.api_status_poller = apiv1.APIStatusPoller()
-        self.api_status_poller.daemon = True
-        self.api_status_poller.start()
+        # API Server v1 (deprecated, disabled by default).
+        # The legacy v1 JSON-RPC API exposes an outsized denial-of-service
+        # surface, so it is only started when the operator explicitly opts in
+        # with `--enable-api-v1`. When disabled, both the standalone v1 server
+        # and its v2 proxy routes (`/`, `/api/`, `/rpc/`, `/v1/`) stay down.
+        if config.ENABLE_API_V1:
+            logger.warning(
+                "The legacy v1 JSON-RPC API is ENABLED (`--enable-api-v1`). It is deprecated and "
+                "exposes a denial-of-service surface: cheap unauthenticated POST requests can "
+                "initiate expensive database work and large Bitcoin RPC fan-out, exhausting the "
+                "worker pool. Do NOT enable it on public deployments; migrate integrations to the v2 API."
+            )
+            # API Status Poller
+            self.api_status_poller = apiv1.APIStatusPoller()
+            self.api_status_poller.daemon = True
+            self.api_status_poller.start()
 
-        # API Server v1
-        self.apiserver_v1 = apiv1.APIServer()
-        self.apiserver_v1.daemon = True
-        self.apiserver_v1.start()
+            # API Server v1
+            self.apiserver_v1 = apiv1.APIServer()
+            self.apiserver_v1.daemon = True
+            self.apiserver_v1.start()
 
         # delete blocks with no ledger hashes
         # in case of reparse interrupted
