@@ -3,6 +3,7 @@ import typing
 
 from docstring_parser import parse as parse_docstring
 
+from counterpartycore.lib import config
 from counterpartycore.lib.api import apiv1, compose, composer, healthz, queries
 from counterpartycore.lib.backend import bitcoind, electrs
 
@@ -21,6 +22,11 @@ CSV_ENUM_ANNOTATIONS = (
 
 def get_routes():
     """Return the API routes."""
+    # The legacy v1 routes are only served when the operator opts in with
+    # `--enable-api-v1`; keep the `/v2/routes` listing consistent with what is
+    # actually registered (see `apiserver.init_flask_app`).
+    if not config.ENABLE_API_V1:
+        return {path: route for path, route in ROUTES.items() if route["category"] != "v1"}
     return ROUTES
 
 

@@ -83,9 +83,16 @@ jobs:
           sudo cp bitcoin-28.0/bin/bitcoind /usr/local/bin/bitcoind
           sudo cp bitcoin-28.0/bin/bitcoin-wallet /usr/local/bin/bitcoin-wallet
           git clone https://github.com/mempool/electrs && cd electrs
+          # Pin electrs to a known commit: mempool/electrs publishes no releases, so
+          # cloning the default branch tracked a moving target that could change under us.
+          git checkout bf622e58bf0b1c01cb2f8ebb23cf35a98b41e67b
           rustup toolchain install nightly
           cargo +nightly update
-          cargo +nightly install --path=.
+          # Cap future-incompatibility lints to warnings. A recent nightly promoted
+          # `semicolon_in_expressions_from_macros` to a hard error, which breaks the old
+          # error-chain `bail!()` calls in electrs and fails the build. electrs is a
+          # third-party binary we only run in tests, so downgrading the lint is safe.
+          RUSTFLAGS='--cap-lints=warn' cargo +nightly install --path=.
 
       - name: Run tests
         # `BACKEND_API_KEY` (when defined as a repo/org secret) lifts the
