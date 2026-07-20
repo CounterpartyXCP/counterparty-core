@@ -73,13 +73,12 @@ impl Indexer {
         )?)
     }
 
-    pub fn get_block(&self, py: Python<'_>) -> PyResult<PyObject> {
-        let block =
-            py.allow_threads(|| get_block::new(self.stopper.clone(), self.chan.1.clone()))?;
+    pub fn get_block(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let block = py.detach(|| get_block::new(self.stopper.clone(), self.chan.1.clone()))?;
         block.into_py_any(py)
     }
 
-    pub fn get_block_non_blocking(&self, py: Python<'_>) -> PyResult<PyObject> {
+    pub fn get_block_non_blocking(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let block = get_block::new_non_blocking(self.stopper.clone(), self.chan.1.clone())?;
         block.map(|b| *b).into_py_any(py)
     }
@@ -107,7 +106,7 @@ impl Deserializer {
         height: u32,
         parse_vouts: bool,
         py: Python<'_>,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Py<PyAny>> {
         let decoded_tx = hex::decode(tx_hex).map_err(|_| {
             PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to decode hex transaction")
         })?;
@@ -130,7 +129,7 @@ impl Deserializer {
         height: u32,
         parse_vouts: bool,
         py: Python<'_>,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Py<PyAny>> {
         let decoded_block = hex::decode(block_hex).map_err(|_| {
             PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to decode hex block")
         })?;
