@@ -103,6 +103,7 @@ pub struct Heights {
     pub taproot_support: u32,
     pub fix_is_segwit: u32,
     pub ordinals_metadata_support: u32,
+    pub correct_transaction_fee: u32,
 }
 
 impl Heights {
@@ -117,6 +118,7 @@ impl Heights {
                 taproot_support: 902000,
                 fix_is_segwit: 902000,
                 ordinals_metadata_support: 999999999,
+                correct_transaction_fee: 999999999,
             },
             Network::Testnet3 => Heights {
                 segwit: 1440200,
@@ -127,6 +129,7 @@ impl Heights {
                 taproot_support: 4410000,
                 fix_is_segwit: 4410000,
                 ordinals_metadata_support: 999999999,
+                correct_transaction_fee: 999999999,
             },
             Network::Testnet4 => Heights {
                 segwit: 0,
@@ -137,6 +140,7 @@ impl Heights {
                 taproot_support: 85000,
                 fix_is_segwit: 85000,
                 ordinals_metadata_support: 999999999,
+                correct_transaction_fee: 999999999,
             },
             Network::Regtest => Heights {
                 segwit: 0,
@@ -147,6 +151,7 @@ impl Heights {
                 taproot_support: 0,
                 fix_is_segwit: 0,
                 ordinals_metadata_support: 0,
+                correct_transaction_fee: 0,
             },
             Network::Signet => Heights {
                 segwit: 0,
@@ -157,6 +162,7 @@ impl Heights {
                 taproot_support: 0,
                 fix_is_segwit: 0,
                 ordinals_metadata_support: 0,
+                correct_transaction_fee: 0,
             },
         }
     }
@@ -218,6 +224,10 @@ impl Config {
 
     pub fn ordinals_metadata_support_enabled(&self, height: u32) -> bool {
         height >= self.heights.ordinals_metadata_support || self.enable_all_protocol_changes
+    }
+
+    pub fn correct_transaction_fee_enabled(&self, height: u32) -> bool {
+        height >= self.heights.correct_transaction_fee || self.enable_all_protocol_changes
     }
 
     pub fn unspendable(&self) -> String {
