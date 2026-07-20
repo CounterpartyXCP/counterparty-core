@@ -142,6 +142,26 @@ DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET4 = 44001
 DEFAULT_ZMQ_PUBLISHER_PORT_SIGNET = 34001
 DEFAULT_ZMQ_PUBLISHER_PORT = 4001
 
+# Dedicated health-check listener, isolated from the public API worker pool
+# (see issue #3460). API_PORT + 1 is taken by the ZMQ publisher, so use + 2.
+DEFAULT_HEALTHZ_PORT_REGTEST = 24002
+DEFAULT_HEALTHZ_PORT_TESTNET3 = 14002
+DEFAULT_HEALTHZ_PORT_TESTNET4 = 44002
+DEFAULT_HEALTHZ_PORT_SIGNET = 34002
+DEFAULT_HEALTHZ_PORT = 4002
+
+# Readiness is considered "caught up" when the last parsed block is within this
+# many blocks of the backend tip, or when it advanced within the recent window.
+DEFAULT_HEALTHZ_READY_LAG_BLOCKS = 1
+DEFAULT_HEALTHZ_READY_RECENT_PARSE_SECONDS = 120
+# Readiness reports "degraded" (503) only when the public worker pool has been
+# saturated (all threads busy AND a non-empty queue) for at least this long.
+# Set to 0 to disable the saturation axis of readiness entirely.
+DEFAULT_HEALTHZ_SATURATION_GRACE_SECONDS = 5
+# Liveness fails only if the health sampler heartbeat is staler than this (a
+# genuine deadlock of the health process), never on ledger lag or saturation.
+DEFAULT_HEALTHZ_LIVENESS_HEARTBEAT_TIMEOUT_SECONDS = 30
+
 UNSPENDABLE_REGTEST = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"
 UNSPENDABLE_TESTNET3 = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"
 UNSPENDABLE_TESTNET4 = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"
@@ -220,6 +240,13 @@ DEFAULT_FEE_FRACTION_PROVIDED = 0.01  # 1.00%
 
 
 DEFAULT_REQUESTS_TIMEOUT = 20  # 20 seconds
+# Separate (shorter) TCP connect timeout so an unreachable/stalled backend
+# fails the connect quickly instead of hanging for the full read timeout.
+DEFAULT_BACKEND_CONNECT_TIMEOUT = 5  # 5 seconds
+# Jittered exponential backoff for the parser connection-retry loop, so many
+# nodes recovering from the same backend outage do not reconnect in lockstep.
+BACKEND_RETRY_BASE_SLEEP = 1  # 1 second
+BACKEND_RETRY_MAX_SLEEP = 30  # cap between retries
 DEFAULT_RPC_BATCH_SIZE = 20  # A 1 MB block can hold about 4200 transactions.
 MAX_RPC_BATCH_SIZE = 100  # Maximum number of transactions to send in a single RPC call.
 
@@ -237,6 +264,12 @@ ADDRESS_OPTION_MAX_VALUE = ADDRESS_OPTION_REQUIRE_MEMO  # Or list of all the add
 OLD_STYLE_API = True
 
 API_LIMIT_ROWS = 1000
+
+# Max number of Bitcoin backend RPC calls a single API request may trigger before
+# it is rejected with a 400 (issue #3461). Bounds the getrawtransaction fan-out of
+# transaction-info and compose endpoints so one request cannot generate unbounded
+# backend work. 0 = unlimited (matches the API_LIMIT_ROWS convention).
+API_MAX_BACKEND_RPC_CALLS = 1000
 
 MPMA_LIMIT = 1000
 
@@ -306,6 +339,11 @@ PROFILE_INTERVAL_MINUTES = 15
 CURRENT_COMMIT = "Unknown"
 ENABLE_ALL_PROTOCOL_CHANGES = False
 DISABLE_API_CACHE = False
+# The legacy v1 JSON-RPC API (`/`, `/api/`, `/rpc/`, `/v1/`) is disabled by
+# default: cheap POST requests can trigger expensive database work and large
+# Bitcoin RPC fan-out, an outsized denial-of-service surface. Self-hosters who
+# still need it can opt back in with `--enable-api-v1` (see the startup warning).
+ENABLE_API_V1 = False
 API_CACHE_SIZE = 1000  # max entries in the API response cache (BLOCK_CACHE)
 # Total-rows budget for the API response cache (BLOCK_CACHE); 0 disables the row
 # bound (entry count still applies). Bounds cache memory while letting many small

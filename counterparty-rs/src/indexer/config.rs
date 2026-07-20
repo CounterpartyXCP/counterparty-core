@@ -3,7 +3,7 @@ use std::fmt::Display;
 use pyo3::{
     exceptions::PyValueError,
     types::{PyAnyMethods, PyDict, PyDictMethods},
-    Bound, FromPyObject, PyAny, PyErr, PyResult,
+    Borrowed, FromPyObject, PyAny, PyErr, PyResult,
 };
 use tracing::level_filters::LevelFilter;
 
@@ -13,8 +13,9 @@ pub enum Mode {
     Fetcher,
 }
 
-impl<'source> FromPyObject<'source> for Mode {
-    fn extract_bound(obj: &Bound<'source, PyAny>) -> PyResult<Self> {
+impl<'a, 'py> FromPyObject<'a, 'py> for Mode {
+    type Error = PyErr;
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
         let mode_str: String = obj.extract()?;
         match mode_str.trim().to_lowercase().as_str() {
             "indexer" => Ok(Mode::Indexer),
@@ -35,8 +36,9 @@ impl From<LogLevel> for LevelFilter {
     }
 }
 
-impl<'source> FromPyObject<'source> for LogLevel {
-    fn extract_bound(obj: &Bound<'source, PyAny>) -> PyResult<Self> {
+impl<'a, 'py> FromPyObject<'a, 'py> for LogLevel {
+    type Error = PyErr;
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
         let level_str: String = obj.extract()?;
         match level_str.trim().to_lowercase().as_str() {
             "trace" => Ok(LogLevel(LevelFilter::TRACE)),
@@ -61,8 +63,9 @@ pub enum Network {
     Signet,
 }
 
-impl<'source> FromPyObject<'source> for Network {
-    fn extract_bound(obj: &Bound<'source, PyAny>) -> PyResult<Self> {
+impl<'a, 'py> FromPyObject<'a, 'py> for Network {
+    type Error = PyErr;
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
         let network_str: String = obj.extract()?;
         match network_str.trim().to_lowercase().as_str() {
             "mainnet" => Ok(Network::Mainnet),
@@ -239,9 +242,10 @@ impl Config {
     }
 }
 
-impl<'source> FromPyObject<'source> for Config {
-    fn extract_bound(obj: &Bound<'source, PyAny>) -> PyResult<Self> {
-        let dict = obj.downcast::<PyDict>()?;
+impl<'a, 'py> FromPyObject<'a, 'py> for Config {
+    type Error = PyErr;
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
+        let dict = obj.cast::<PyDict>()?;
         let rpc_address: String = dict
             .get_item("rpc_address")?
             .ok_or(PyErr::new::<PyValueError, _>("'rpc_address' is required"))?

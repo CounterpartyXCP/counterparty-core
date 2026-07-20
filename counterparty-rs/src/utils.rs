@@ -116,12 +116,12 @@ pub fn script_to_address(script_pubkey: Vec<u8>, network: &str) -> PyResult<Stri
 }
 
 #[pyfunction]
-fn script_to_asm(script_bytes: Vec<u8>, py: Python) -> PyResult<Vec<PyObject>> {
+fn script_to_asm(script_bytes: Vec<u8>, py: Python) -> PyResult<Vec<Py<PyAny>>> {
     // Wrap the code block that may panic inside `catch_unwind()`
     let result = panic::catch_unwind(|| {
         let script = ScriptBuf::from(script_bytes);
 
-        let mut asm: Vec<PyObject> = Vec::new();
+        let mut asm: Vec<Py<PyAny>> = Vec::new();
 
         for instruction in script.instructions() {
             match instruction {
