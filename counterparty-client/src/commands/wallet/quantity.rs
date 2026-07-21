@@ -145,7 +145,7 @@ async fn fetch_asset_divisible(config: &AppConfig, asset: &str) -> Result<Option
     }
 
     let url = format!("{}/v2/assets/{}", config.get_api_url(), asset);
-    let response = reqwest::Client::new()
+    let response = api::http_client()
         .get(&url)
         .send()
         .await
@@ -173,7 +173,12 @@ pub fn convert_quantity(value: &str, divisible: bool) -> Result<String> {
     }
 
     let satoshis = if divisible {
-        let scaled = amount * Decimal::from(UNIT);
+        // `checked_mul` (not `*`) because `rust_decimal`'s `Mul` panics on
+        // overflow, and the product can exceed `Decimal::MAX` for very large
+        // user-supplied amounts.
+        let scaled = amount
+            .checked_mul(Decimal::from(UNIT))
+            .ok_or_else(|| anyhow!("quantity '{value}' is too large"))?;
         if scaled.fract() != Decimal::ZERO {
             return Err(anyhow!(
                 "'{value}' has too many decimal places (max 8 for a divisible asset)"
@@ -293,6 +298,18 @@ mod tests {
         assert_eq!(
             convert_quantity("100000000000000000000", true).unwrap(),
             "10000000000000000000000000000"
+        );
+    }
+
+    #[test]
+    fn divisible_overflow_is_a_clean_error_not_a_panic() {
+        // 1e21 parses as a Decimal (< Decimal::MAX ~7.9e28) but 1e21 * 1e8 = 1e29
+        // overflows. This must return an error, never panic (`rust_decimal`'s `*`
+        // aborts on overflow; the code uses `checked_mul`).
+        let err = convert_quantity("1000000000000000000000", true).unwrap_err();
+        assert!(
+            err.to_string().contains("too large"),
+            "expected a 'too large' error, got: {err}"
         );
     }
 

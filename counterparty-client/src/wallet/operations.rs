@@ -64,7 +64,10 @@ impl BitcoinWallet {
     ///
     /// # Returns
     ///
-    /// * `Result<String>` - The Bitcoin address created or error
+    /// * `Result<(String, Option<String>)>` - The Bitcoin address created, plus
+    ///   the freshly generated BIP39 mnemonic when the key was randomly generated
+    ///   (so the caller can show it to the user for backup); `None` for imported
+    ///   keys.
     pub fn add_address(
         &mut self,
         private_key: Option<&str>,
@@ -72,7 +75,7 @@ impl BitcoinWallet {
         path: Option<&str>,
         label: Option<&str>,
         address_type: Option<&str>,
-    ) -> Result<String> {
+    ) -> Result<(String, Option<String>)> {
         let secp = Secp256k1::new();
 
         // Determine address type (bech32/p2wpkh by default)
@@ -116,7 +119,7 @@ impl BitcoinWallet {
         self.addresses.insert(address_str.clone(), address_info);
         self.storage.save(&self.addresses)?;
 
-        Ok(address_str)
+        Ok((address_str, key_data.mnemonic))
     }
 
     /// Show details of a specific address
@@ -124,7 +127,7 @@ impl BitcoinWallet {
     /// # Arguments
     ///
     /// * `address` - The Bitcoin address to show
-    /// * `show_private_key` - Whether to include private key and mnemonic in output
+    /// * `show_private_key` - Whether to include the private key (WIF) in output
     ///
     /// # Returns
     ///
@@ -174,7 +177,8 @@ impl BitcoinWallet {
     /// Sign a raw Bitcoin transaction
     ///
     /// This method signs an unsigned transaction with private keys from the wallet.
-    /// It supports P2PKH and P2WPKH (bech32) inputs.
+    /// It supports P2PKH, P2WPKH (bech32), P2SH, P2SH-P2WPKH, P2WSH and P2TR
+    /// (key- and script-path) inputs.
     ///
     /// # Arguments
     ///

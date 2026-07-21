@@ -7,13 +7,18 @@ edition = "2021"
 anyhow = "1.0"
 clap = { version = "4.5.36", features = ["derive", "cargo"] }
 config = "0.13"
-reqwest = { version = "0.11", features = ["json"] }
+# rustls (not native-tls/OpenSSL): no system OpenSSL dependency across
+# macOS/Linux/Windows, and drops the OpenSSL RUSTSEC advisory.
+reqwest = { version = "0.11", default-features = false, features = [
+    "json",
+    "rustls-tls",
+] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.0", features = ["full"] }
 hex = "0.4.3"
 bitcoin = "0.32.5"
-bip39 = "2.0.0"
+bip39 = { version = "2.0.0", features = ["zeroize"] }
 cocoon = "0.4.0"
 thiserror = "1.0"
 lazy_static = "1.4.0"

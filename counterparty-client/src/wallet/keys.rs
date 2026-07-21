@@ -12,6 +12,7 @@ use bitcoin::secp256k1::{All, Secp256k1};
 use bitcoin::{Address, Network, PrivateKey, PublicKey};
 use rand::{thread_rng, Rng};
 use std::str::FromStr;
+use zeroize::Zeroizing;
 
 use super::types::{Result, WalletError};
 
@@ -20,6 +21,10 @@ use super::types::{Result, WalletError};
 pub struct KeyData {
     pub private_key: PrivateKey,
     pub public_key: PublicKey,
+    /// The BIP39 mnemonic, when the key was freshly generated (so the caller can
+    /// show it to the user for backup). `None` for imported keys, where the
+    /// user already holds the seed/WIF.
+    pub mnemonic: Option<String>,
 }
 
 /// Generate key data from an existing private key
@@ -43,6 +48,7 @@ pub fn generate_keys_from_private_key(
     Ok(KeyData {
         private_key: pk,
         public_key,
+        mnemonic: None,
     })
 }
 
@@ -57,16 +63,18 @@ pub fn generate_keys_from_mnemonic(
     let mnemonic = Mnemonic::parse_normalized(mnemonic_str)
         .map_err(|e| WalletError::Bip39Error(format!("Invalid mnemonic: {}", e)))?;
 
-    let seed = mnemonic.to_seed("");
+    let seed = Zeroizing::new(mnemonic.to_seed(""));
 
     // Determine derivation path based on address type
     let derivation_path = get_derivation_path(path_str, addr_type, network);
 
-    let (private_key, public_key) = derive_key_pair(&seed, derivation_path, network, secp)?;
+    let (private_key, public_key) = derive_key_pair(&seed[..], derivation_path, network, secp)?;
 
     Ok(KeyData {
         private_key,
         public_key,
+        // The user already holds this mnemonic; no need to echo it back.
+        mnemonic: None,
     })
 }
 
@@ -76,58 +84,47 @@ pub fn generate_new_keys(
     network: Network,
     secp: &Secp256k1<All>,
 ) -> Result<KeyData> {
-    let mut entropy = [0u8; 16];
-    thread_rng().fill(&mut entropy);
+    let mut entropy = Zeroizing::new([0u8; 16]);
+    thread_rng().fill(entropy.as_mut_slice());
 
-    let mnemonic = Mnemonic::from_entropy(&entropy)
+    let mnemonic = Mnemonic::from_entropy(entropy.as_slice())
         .map_err(|e| WalletError::Bip39Error(format!("Failed to generate mnemonic: {}", e)))?;
 
-    let seed = mnemonic.to_seed("");
+    let seed = Zeroizing::new(mnemonic.to_seed(""));
 
     // Determine derivation path based on address type
     let derivation_path = get_derivation_path(None, addr_type, network);
 
-    let (private_key, public_key) = derive_key_pair(&seed, derivation_path, network, secp)?;
+    let (private_key, public_key) = derive_key_pair(&seed[..], derivation_path, network, secp)?;
 
     Ok(KeyData {
         private_key,
         public_key,
+        // Surface the seed phrase once so the user can back it up; it is not
+        // persisted anywhere (the wallet stores only the derived WIF).
+        mnemonic: Some(mnemonic.to_string()),
     })
 }
 
 /// Get the appropriate derivation path based on address type
 fn get_derivation_path<'a>(path: Option<&'a str>, addr_type: &'a str, network: Network) -> &'a str {
+    // Coin type `0'` is mainnet; every test network (testnet, signet, regtest)
+    // uses `1'` per SLIP-0044, matching Bitcoin Core / Electrum / Sparrow so the
+    // same mnemonic recovers the same addresses across wallets.
+    let is_mainnet = network == Network::Bitcoin;
     match path {
         Some(p) => p,
-        None => {
-            if addr_type == "taproot" {
-                // BIP86 for taproot
-                if network == Network::Testnet {
-                    // Testnet BIP86 path
-                    "m/86'/1'/0'/0/0"
-                } else {
-                    // Mainnet BIP86 path
-                    "m/86'/0'/0'/0/0"
-                }
-            } else if addr_type == "bech32" {
-                // BIP84 for native Bech32/SegWit
-                if network == Network::Testnet {
-                    // Testnet BIP84 path
-                    "m/84'/1'/0'/0/0"
-                } else {
-                    // Mainnet BIP84 path
-                    "m/84'/0'/0'/0/0"
-                }
-            } else {
-                if network == Network::Testnet {
-                    // Testnet BIP44 path
-                    "m/44'/1'/0'/0/0"
-                } else {
-                    // Mainnet BIP44 path
-                    "m/44'/0'/0'/0/0"
-                }
-            }
-        }
+        None => match addr_type {
+            // BIP86 for taproot
+            "taproot" if is_mainnet => "m/86'/0'/0'/0/0",
+            "taproot" => "m/86'/1'/0'/0/0",
+            // BIP84 for native Bech32/SegWit
+            "bech32" if is_mainnet => "m/84'/0'/0'/0/0",
+            "bech32" => "m/84'/1'/0'/0/0",
+            // BIP44 for legacy P2PKH
+            _ if is_mainnet => "m/44'/0'/0'/0/0",
+            _ => "m/44'/1'/0'/0/0",
+        },
     }
 }
 
@@ -336,5 +333,34 @@ mod tests {
         let k = generate_new_keys("bech32", Network::Regtest, &secp).unwrap();
         let addr = create_bitcoin_address(&k.public_key, "bech32", Network::Regtest).unwrap();
         assert!(addr.to_string().starts_with("bcrt1q"));
+        // A freshly generated key must surface its mnemonic for backup.
+        assert!(k.mnemonic.is_some(), "new keys must return a mnemonic");
+    }
+
+    // Signet and regtest must derive at test-network coin type 1' (like testnet),
+    // not mainnet 0', so the same mnemonic recovers the same key across wallets.
+    #[test]
+    fn test_networks_use_coin_type_one() {
+        assert_eq!(
+            get_derivation_path(None, "bech32", Network::Testnet),
+            "m/84'/1'/0'/0/0"
+        );
+        assert_eq!(
+            get_derivation_path(None, "bech32", Network::Signet),
+            "m/84'/1'/0'/0/0"
+        );
+        assert_eq!(
+            get_derivation_path(None, "taproot", Network::Regtest),
+            "m/86'/1'/0'/0/0"
+        );
+        assert_eq!(
+            get_derivation_path(None, "p2pkh", Network::Regtest),
+            "m/44'/1'/0'/0/0"
+        );
+        // Mainnet stays on coin type 0'.
+        assert_eq!(
+            get_derivation_path(None, "bech32", Network::Bitcoin),
+            "m/84'/0'/0'/0/0"
+        );
     }
 }

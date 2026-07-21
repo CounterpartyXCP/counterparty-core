@@ -15,22 +15,62 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          profile: minimal
-          default: true
           components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
 
       - name: Run tests
         run: |
           cd counterparty-rs
           cargo test
 
-      - name: Build and test counterparty-client
+      - name: Lint and test counterparty-client
         run: |
           cd counterparty-client
           cargo fmt --check
           cargo clippy --all-targets -- -D warnings
           cargo build
           cargo test
+
+  # The wallet depends on the OS-specific `keyring` backend, so build and test
+  # the client on macOS and Windows too (Linux is covered by the Cargo job).
+  Client:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: counterparty-client
+
+      - name: Build and test counterparty-client
+        run: |
+          cd counterparty-client
+          cargo build
+          cargo test
+
+  # Surface known-vulnerable dependencies in the wallet's dependency tree.
+  # Informational for now (several advisories come from deep transitive deps
+  # such as syntect/indicatif/tokio and need triaging or upstream bumps); it is
+  # `continue-on-error` so it reports without blocking merges. Tighten to a hard
+  # gate — or add an ignore list for triaged advisories — once the tree is clean.
+  Audit:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      - name: Audit counterparty-client dependencies
+        run: |
+          cd counterparty-client
+          cargo audit

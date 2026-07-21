@@ -3,22 +3,38 @@ use clap::ArgMatches;
 use reqwest::{Client, StatusCode};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::time::Duration;
 
 use crate::api::commands::{build_api_path, build_request_parameters, find_matching_endpoint};
-use crate::api::endpoints::load_or_fetch_endpoints;
 use crate::config::AppConfig;
 use crate::helpers;
+
+/// Overall request timeout, so a hung server can't make the CLI wait forever.
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
+/// Connection-establishment timeout.
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// A `reqwest::Client` with sane timeouts. Falling back to the default client is
+/// only reached if the TLS backend fails to initialise.
+pub fn http_client() -> Client {
+    Client::builder()
+        .timeout(REQUEST_TIMEOUT)
+        .connect_timeout(CONNECT_TIMEOUT)
+        .build()
+        .unwrap_or_else(|_| Client::new())
+}
 
 // ---- Command Execution ----
 
 // Executes the API command
-pub async fn execute_command(config: &AppConfig, matches: &ArgMatches) -> Result<()> {
-    // Load endpoints from cache or API
-    let endpoints = load_or_fetch_endpoints(config).await?;
-
+pub async fn execute_command(
+    config: &AppConfig,
+    endpoints: &HashMap<String, crate::api::models::ApiEndpoint>,
+    matches: &ArgMatches,
+) -> Result<()> {
     // Get the subcommand and its matches
     if let Some((cmd_name, cmd_matches)) = matches.subcommand() {
-        execute_api_command(config, &endpoints, cmd_name, cmd_matches).await?;
+        execute_api_command(config, endpoints, cmd_name, cmd_matches).await?;
     } else {
         helpers::print_error(
             "Please specify an API command. Use 'api --help' to see available commands.",
@@ -39,17 +55,21 @@ async fn execute_api_command(
     // Find matching endpoint
     let (path, endpoint) = find_matching_endpoint(endpoints, command)?;
 
-    // Build parameters for the API request
-    let params = build_request_parameters(endpoint, matches);
-
-    // Construct API path with parameters
-    let api_path = build_api_path(path, endpoint, &params);
+    // Build parameters for the API request. `build_api_path` consumes any path
+    // parameters from `params`, leaving only genuine query parameters.
+    let mut params = build_request_parameters(endpoint, matches);
+    let api_path = build_api_path(path, endpoint, &mut params);
 
     // Execute API request
     let result = perform_api_request(config, &api_path, &params).await?;
 
     // Output result
     helpers::print_colored_json(&result)?;
+
+    // Reflect an API-level error in the process exit code so scripts can detect it.
+    if result.get("error").is_some() {
+        return Err(anyhow!("API returned an error"));
+    }
 
     Ok(())
 }
@@ -67,7 +87,7 @@ pub async fn perform_api_request(
     let spinner = helpers::print_loading(format!("Loading {}", &full_url).as_str());
 
     // Make the API request
-    let client = Client::new();
+    let client = http_client();
     let response = send_api_request(&client, &full_url, params).await;
 
     spinner.stop();

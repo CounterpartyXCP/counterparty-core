@@ -347,32 +347,6 @@ fn add_common_cli_args(command: Command) -> Command {
         )
 }
 
-// Pre-process arguments for file references
-fn pre_process_args() -> Result<()> {
-    // Get command line arguments
-    let args: Vec<String> = std::env::args().collect();
-
-    // Identify arguments that might be file references and their values
-    for i in 1..args.len() {
-        if i < args.len() - 1
-            && args[i].starts_with("--")
-            && (args[i].contains("text")
-                || args[i].contains("description")
-                || args[i].contains("private-key")
-                || args[i].contains("mnemonic"))
-        {
-            let arg_value = &args[i + 1];
-
-            if arg_value.starts_with('@') {
-                // Process the file reference
-                let _ = process_file_reference(arg_value);
-            }
-        }
-    }
-
-    Ok(())
-}
-
 // Function to determine if an argument should have file reference support
 fn should_support_file_reference(arg_id: &str) -> bool {
     // Check if the argument ID contains any of these keywords
@@ -415,64 +389,58 @@ fn add_file_ref_support_recursive(cmd: Command) -> Command {
     process_command_args(cmd)
 }
 
-// Function to add label resolution support to address and destination parameters
+// Function to add label resolution support to address/source/destination
+// parameters. The wallet's label→address map is read once and shared across the
+// whole command tree.
 fn add_label_resolution_recursive(cmd: Command, wallet: &wallet::BitcoinWallet) -> Command {
-    // Function to process a command's arguments
-    fn process_command_args(mut cmd: Command, wallet: &wallet::BitcoinWallet) -> Command {
-        // Collect all arguments to avoid consumption
+    let labels: std::collections::HashMap<String, String> = wallet
+        .list_addresses()
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|addr_value| {
+            match (
+                addr_value.get("address").and_then(|a| a.as_str()),
+                addr_value.get("label").and_then(|l| l.as_str()),
+            ) {
+                (Some(addr), Some(label)) => Some((label.to_string(), addr.to_string())),
+                _ => None,
+            }
+        })
+        .collect();
+    let labels = std::sync::Arc::new(labels);
+
+    fn process_command_args(
+        mut cmd: Command,
+        labels: &std::sync::Arc<std::collections::HashMap<String, String>>,
+    ) -> Command {
         let args: Vec<_> = cmd.get_arguments().cloned().collect();
 
-        // Apply custom parser to address/destination arguments
         for arg in args {
             let arg_id = arg.get_id().to_string();
 
-            // Check if this argument is for address or destination
-            if arg_id.ends_with("address") || arg_id.ends_with("destination") {
-                // Create a custom value parser that checks for label resolution
-                // We need to do the lookup now and create a new parser that doesn't capture wallet
-                let addresses = wallet
-                    .list_addresses()
-                    .unwrap_or_default()
-                    .into_iter()
-                    .filter_map(|addr_value| {
-                        if let (Some(addr), Some(label)) = (
-                            addr_value.get("address").and_then(|a| a.as_str()),
-                            addr_value.get("label").and_then(|l| l.as_str()),
-                        ) {
-                            Some((label.to_string(), addr.to_string()))
-                        } else {
-                            None
-                        }
-                    })
-                    .collect::<std::collections::HashMap<String, String>>();
-
-                // Create a Send + Sync parser that doesn't capture wallet
+            // Resolve labels for address / source / destination parameters.
+            if arg_id.ends_with("address")
+                || arg_id.ends_with("source")
+                || arg_id.ends_with("destination")
+            {
+                let labels = std::sync::Arc::clone(labels);
                 let parser = move |s: &str| -> std::result::Result<String, String> {
-                    if let Some(address) = addresses.get(s) {
-                        Ok(address.clone())
-                    } else {
-                        Ok(s.to_string())
-                    }
+                    Ok(labels.get(s).cloned().unwrap_or_else(|| s.to_string()))
                 };
-
                 cmd = cmd.mut_arg(&arg_id, |a| a.value_parser(parser));
             }
         }
 
-        // Collect subcommand names to avoid consumption
         let subcmds: Vec<_> = cmd.get_subcommands().cloned().collect();
-
-        // Process each subcommand recursively
         for subcmd in subcmds {
             let subcmd_name = subcmd.get_name().to_string();
-            cmd = cmd.mut_subcommand(&subcmd_name, |s| process_command_args(s.to_owned(), wallet));
+            cmd = cmd.mut_subcommand(&subcmd_name, |s| process_command_args(s.to_owned(), labels));
         }
 
         cmd
     }
 
-    // Apply recursive process to the command
-    process_command_args(cmd, wallet)
+    process_command_args(cmd, &labels)
 }
 
 // Display header information message before executing commands
@@ -491,14 +459,17 @@ fn header_message(config: &AppConfig, command_name: &str, config_path: &Path) {
         Network::Regtest => "Regtest",
     };
 
-    // Get wallet path based on current network
-    let wallet_path = config.get_data_dir().join(network_name.to_lowercase());
+    // Wallet path for the current network (already network-specific).
+    let wallet_path = config.get_data_dir();
 
-    // Create a line of dashes with command name
-    let line_length = 50;
+    // Create a line of dashes framing the command name. `saturating_sub` guards
+    // against a command name longer than the line (server-provided names can be
+    // long), which would otherwise underflow and panic/OOM.
+    let line_length: usize = 50;
     let cmd_len = command_name.len();
-    let dashes_prefix = "-".repeat((line_length - cmd_len) / 2);
-    let dashes_suffix = "-".repeat(line_length - cmd_len - dashes_prefix.len());
+    let total_dashes = line_length.saturating_sub(cmd_len);
+    let dashes_prefix = "-".repeat(total_dashes / 2);
+    let dashes_suffix = "-".repeat(total_dashes - total_dashes / 2);
     let separator = format!("{}{}{}", dashes_prefix, command_name, dashes_suffix);
 
     // Print the header with just two colors
@@ -554,20 +525,52 @@ fn header_message(config: &AppConfig, command_name: &str, config_path: &Path) {
 /// Used to decide whether the wallet must be initialised (and its password
 /// requested) before parsing — only `wallet` commands need it.
 fn detect_subcommand() -> Option<String> {
+    positional_args().into_iter().next()
+}
+
+/// Detect the wallet action (the token after `wallet`, e.g. `disconnect`).
+fn detect_wallet_action() -> Option<String> {
+    let positional = positional_args();
+    if positional.first().map(String::as_str) == Some("wallet") {
+        positional.into_iter().nth(1)
+    } else {
+        None
+    }
+}
+
+/// The network selected by a `--mainnet`/`--signet`/`--testnet4`/`--regtest`
+/// flag, if any (clap enforces they are mutually exclusive).
+fn network_from_args(args: &[String]) -> Option<Network> {
+    if args.iter().any(|a| a == "--mainnet") {
+        Some(Network::Mainnet)
+    } else if args.iter().any(|a| a == "--signet") {
+        Some(Network::Signet)
+    } else if args.iter().any(|a| a == "--testnet4") {
+        Some(Network::Testnet4)
+    } else if args.iter().any(|a| a == "--regtest") {
+        Some(Network::Regtest)
+    } else {
+        None
+    }
+}
+
+/// The positional (non-flag) arguments, skipping the `--config-file <path>`
+/// value token. The `--config-file=path` form is a single token starting with
+/// `-` and is skipped as a flag.
+fn positional_args() -> Vec<String> {
+    let mut positional = Vec::new();
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         if arg == "--config-file" {
-            // Skip the separate value token (the `--config-file=path` form is a
-            // single token and is handled by the flag branch below).
             args.next();
             continue;
         }
         if arg.starts_with('-') {
             continue;
         }
-        return Some(arg);
+        positional.push(arg);
     }
-    None
+    positional
 }
 
 #[tokio::main]
@@ -578,9 +581,6 @@ async fn main() -> Result<()> {
         println!("{} {}", get_binary_name(), env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
-
-    // Pre-process arguments for file references
-    pre_process_args()?;
 
     // Step 1: Build the full CLI app first
     let binary_name = get_binary_name();
@@ -608,39 +608,33 @@ async fn main() -> Result<()> {
     // This parser only looks for these specific args and ignores everything else
     let temp_args = std::env::args().collect::<Vec<_>>();
 
-    let config_file_path = if let Some(pos) = temp_args.iter().position(|a| a == "--config-file") {
-        if pos + 1 < temp_args.len() {
-            PathBuf::from(&temp_args[pos + 1])
-        } else {
-            default_config_path.clone()
-        }
-    } else {
-        default_config_path
-    };
+    // Accept both `--config-file <path>` and `--config-file=<path>`.
+    let config_file_path = temp_args
+        .iter()
+        .enumerate()
+        .find_map(|(i, a)| {
+            if let Some(eq) = a.strip_prefix("--config-file=") {
+                Some(PathBuf::from(eq))
+            } else if a == "--config-file" {
+                temp_args.get(i + 1).map(PathBuf::from)
+            } else {
+                None
+            }
+        })
+        .unwrap_or(default_config_path);
 
-    // Apply network settings from command line
-    if temp_args.contains(&"--mainnet".to_string()) {
-        config.set_network(Network::Mainnet);
-    } else if temp_args.contains(&"--signet".to_string()) {
-        config.set_network(Network::Signet);
-    } else if temp_args.contains(&"--testnet4".to_string()) {
-        config.set_network(Network::Testnet4);
-    } else if temp_args.contains(&"--regtest".to_string()) {
-        config.set_network(Network::Regtest);
+    // Apply the network from the command line (before loading the file so the
+    // right network section is selected)...
+    if let Some(network) = network_from_args(&temp_args) {
+        config.set_network(network);
     }
 
     // Step 5: Load configuration from file and merge with defaults
     config.load_from_file(&config_file_path)?;
 
-    // Apply network settings again (command line takes precedence)
-    if temp_args.contains(&"--mainnet".to_string()) {
-        config.set_network(Network::Mainnet);
-    } else if temp_args.contains(&"--signet".to_string()) {
-        config.set_network(Network::Signet);
-    } else if temp_args.contains(&"--testnet4".to_string()) {
-        config.set_network(Network::Testnet4);
-    } else if temp_args.contains(&"--regtest".to_string()) {
-        config.set_network(Network::Regtest);
+    // ...and again after loading, so the command line always takes precedence.
+    if let Some(network) = network_from_args(&temp_args) {
+        config.set_network(network);
     }
 
     // Step 6: Load endpoints
@@ -648,8 +642,12 @@ async fn main() -> Result<()> {
 
     // Step 7: Initialize the wallet only for commands that need it. `api`,
     // `completion`, bare `--help` and `--update-cache` must never prompt for a
-    // wallet password or create a wallet as a side effect.
-    let needs_wallet = matches!(detect_subcommand().as_deref(), Some("wallet"));
+    // wallet password or create a wallet as a side effect. `wallet disconnect`
+    // is also excluded: it only clears the stored password and must work even
+    // when the wallet can't be decrypted, so it never triggers a full init.
+    let is_disconnect = matches!(detect_subcommand().as_deref(), Some("wallet"))
+        && detect_wallet_action().as_deref() == Some("disconnect");
+    let needs_wallet = matches!(detect_subcommand().as_deref(), Some("wallet")) && !is_disconnect;
     let mut wallet: Option<crate::wallet::BitcoinWallet> = if needs_wallet {
         Some(wallet_commands::utils::init_wallet(&config)?)
     } else {
@@ -693,24 +691,30 @@ async fn main() -> Result<()> {
         Some(("api", sub_matches)) => {
             let cmd_name = sub_matches.subcommand_name().unwrap_or("api");
             header_message(&config, &format!(" API {} ", cmd_name), &config_file_path);
-            api::execute_command(&config, sub_matches).await?;
+            api::execute_command(&config, &endpoints, sub_matches).await?;
         }
         Some(("wallet", sub_matches)) => {
-            // Safety net: if arg detection missed this (it should not), the wallet
-            // has not been initialised yet — do it now.
-            if wallet.is_none() {
-                wallet = Some(wallet_commands::utils::init_wallet(&config)?);
-            }
-            let wallet = wallet
-                .as_mut()
-                .expect("wallet initialised for wallet command");
             let cmd_name = sub_matches.subcommand_name().unwrap_or("wallet");
             header_message(
                 &config,
                 &format!(" Wallet {} ", cmd_name),
                 &config_file_path,
             );
-            wallet_commands::execute_command(&config, sub_matches, &endpoints, wallet).await?;
+            // `disconnect` never loads the wallet: just clear the stored password.
+            if sub_matches.subcommand_name() == Some("disconnect") {
+                wallet_commands::utils::disconnect_wallet(&config)?;
+                helpers::print_success("Wallet disconnected successfully", None);
+            } else {
+                // Safety net: if arg detection missed this (it should not), the
+                // wallet has not been initialised yet — do it now.
+                if wallet.is_none() {
+                    wallet = Some(wallet_commands::utils::init_wallet(&config)?);
+                }
+                let wallet = wallet
+                    .as_mut()
+                    .expect("wallet initialised for wallet command");
+                wallet_commands::execute_command(&config, sub_matches, &endpoints, wallet).await?;
+            }
         }
         Some(("completion", sub_matches)) => {
             // Handle completion command - no header message needed

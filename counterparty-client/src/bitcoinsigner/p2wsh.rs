@@ -29,7 +29,14 @@ fn is_pubkey_in_witness_script(witness_script: &ScriptBuf, public_key: &PublicKe
     Ok(false)
 }
 
-/// Adds a signature to a P2WSH input
+/// Adds a signature to a P2WSH input.
+///
+/// The witness is built as `<sig> <pubkey> <witnessScript>`, which suits witness
+/// scripts that consume a signature and a public key. It is not correct for
+/// scripts that consume only a signature (e.g. a bare `<pubkey> OP_CHECKSIG`) or
+/// for multisig (which needs the `OP_CHECKMULTISIG` dummy element and N
+/// signatures). The wallet never generates P2WSH addresses itself, so this path
+/// is only reachable via `sign --utxos` with a caller-supplied witness script.
 fn add_signature(
     input: &mut PsbtInput,
     signature: Vec<u8>,

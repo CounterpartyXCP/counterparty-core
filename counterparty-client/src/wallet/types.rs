@@ -17,6 +17,9 @@ pub enum WalletError {
     #[error("Encryption error: {0}")]
     CocoonError(String),
 
+    #[error("Keyring error: {0}")]
+    KeyringError(String),
+
     #[error("Bitcoin error: {0}")]
     BitcoinError(String),
 

@@ -19,11 +19,22 @@ pub fn handle_new_address(wallet: &mut BitcoinWallet, sub_matches: &ArgMatches) 
         .map(|s| s.as_str());
 
     // Call the wallet function with no private key or mnemonic (for random generation)
-    let address = wallet
+    let (address, mnemonic) = wallet
         .add_address(None, None, None, label, address_type)
         .map_err(|e| anyhow!("Failed to generate new address: {}", e))?;
 
     helpers::print_success("New address generated successfully:", Some(&address));
+
+    // Surface the seed phrase ONCE so the user can back it up. The wallet stores
+    // only the derived key (exportable via `export_address`); this mnemonic is
+    // not persisted anywhere and cannot be shown again.
+    if let Some(phrase) = mnemonic {
+        helpers::print_warning(
+            "Write down this recovery phrase now — it is shown only once and is NOT stored:",
+            None,
+        );
+        println!("{phrase}");
+    }
     Ok(())
 }
 
@@ -49,8 +60,8 @@ pub fn handle_import_address(wallet: &mut BitcoinWallet, sub_matches: &ArgMatche
         ));
     }
 
-    // Call the wallet function
-    let address = wallet
+    // Call the wallet function (imported keys never return a mnemonic).
+    let (address, _) = wallet
         .add_address(private_key, mnemonic, path, label, address_type)
         .map_err(|e| anyhow!("Failed to import address: {}", e))?;
 

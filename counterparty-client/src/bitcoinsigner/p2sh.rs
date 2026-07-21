@@ -8,7 +8,15 @@ use super::common::{create_and_verify_ecdsa_signature, get_compressed_pubkey, to
 use super::types::{InputSigner, Result, UTXOType, UTXO};
 use crate::wallet::WalletError;
 
-/// Adds a signature to a regular P2SH input
+/// Adds a signature to a regular (non-SegWit) P2SH input.
+///
+/// The scriptSig is built as `<sig> <pubkey> <redeemScript>`, which is correct
+/// for P2SH-P2PKH-style redeem scripts (those that consume both a signature and
+/// a public key from the stack, e.g. `OP_DUP OP_HASH160 <h> OP_EQUALVERIFY
+/// OP_CHECKSIG`). It is NOT correct for redeem scripts that consume only a
+/// signature (e.g. a bare `<pubkey> OP_CHECKSIG`). The wallet never generates
+/// legacy-P2SH addresses itself, so this path is only reachable via
+/// `sign --utxos` with a caller-supplied redeem script.
 fn add_legacy_signature(
     input: &mut PsbtInput,
     signature: Vec<u8>,

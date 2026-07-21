@@ -26,8 +26,6 @@ pub async fn execute_command(
     endpoints: &HashMap<String, ApiEndpoint>,
     wallet: &mut BitcoinWallet,
 ) -> Result<()> {
-    //let mut wallet = utils::init_wallet(config)?;
-
     match matches.subcommand() {
         Some(("new_address", sub_matches)) => handlers::handle_new_address(wallet, sub_matches),
         Some(("import_address", sub_matches)) => {

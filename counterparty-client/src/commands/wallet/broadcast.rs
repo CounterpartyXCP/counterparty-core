@@ -152,7 +152,7 @@ pub fn add_broadcast_commands(cmd: Command, endpoints: &HashMap<String, ApiEndpo
             tx_cmd = tx_cmd.arg(
                 Arg::new(static_internal_id)
                     .long("address")
-                    .help("Destination address for the transaction")
+                    .help("Source address that funds and signs the transaction")
                     .required(true)
                     .value_name("VALUE"),
             );

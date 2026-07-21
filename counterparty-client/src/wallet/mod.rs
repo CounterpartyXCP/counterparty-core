@@ -6,25 +6,9 @@
 //! - Wallet storage with encryption
 //! - Transaction signing
 //!
-//! # Examples
-//!
-//! ```
-//! use wallet::BitcoinWallet;
-//! use config::Network;
-//!
-//! // Initialize a wallet with a data directory and network
-//! let mut wallet = BitcoinWallet::init("./data", Network::Mainnet).unwrap();
-//!
-//! // Add a new address
-//! let address = wallet.add_address(None, None, None, Some("My Address"), Some("bech32")).unwrap();
-//! println!("New address: {}", address);
-//!
-//! // List addresses
-//! let addresses = wallet.list_addresses().unwrap();
-//! for addr_info in addresses {
-//!     println!("{}: {}", addr_info["label"], addr_info["address"]);
-//! }
-//! ```
+//! Initialize a wallet with [`BitcoinWallet::init`], then add addresses with
+//! `add_address` (which returns the address plus, for freshly generated keys,
+//! the BIP39 mnemonic to back up) and list them with `list_addresses`.
 
 // Private module structure - not exposed to users
 mod key_service;
@@ -38,4 +22,5 @@ mod utils;
 // Re-export the main public API
 pub use key_service::KeyService;
 pub use operations::BitcoinWallet;
+pub use storage::WalletStorage;
 pub use types::{AddressInfo, WalletError};

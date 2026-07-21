@@ -9,7 +9,8 @@ The crate builds two identical binaries: **`xcp`** (short) and
 **`counterparty-client`**.
 
 > ⚠️ **Beta.** This client is new. Test on `signet`/`testnet4`/`regtest` before
-> using it with real funds on `mainnet`, and keep a backup of your mnemonics.
+> using it with real funds on `mainnet`, and **back up your keys** (see
+> [Backups](#backups)).
 
 ## Install (from source)
 
@@ -60,13 +61,18 @@ These defaults, and per-network paths, are written to a config file on first run
 `~/Library/Application Support` and `~/Library/Caches`; on Linux
 `~/.local/share` and `~/.cache`. Override the config path with `--config-file`.
 
-The wallet DB is encrypted at rest (`cocoon`); the password is stored in your
-OS keyring. `wallet disconnect` clears the cached password.
+The wallet DB is a single encrypted file (`cocoon`, written atomically) with
+owner-only permissions on Unix. The password is stored in your OS keyring after
+it is verified, so it is only cached once it actually unlocks the wallet.
+`wallet disconnect` clears the stored password (and always works, even if the
+wallet can't be unlocked). On a headless Linux server you need a running Secret
+Service provider (e.g. `gnome-keyring`) for the keyring to work.
 
 ## Wallet
 
 ```sh
-# Create a new address (types: bech32 [default], p2pkh, taproot)
+# Create a new address (types: bech32 [default], p2pkh, taproot).
+# This prints a BIP39 recovery phrase ONCE — write it down (see Backups).
 xcp wallet new_address --label savings --address-type bech32
 
 # Import an existing key or BIP39 mnemonic (use @file to read from a file)
@@ -75,12 +81,28 @@ xcp wallet import_address --mnemonic "@/path/to/seed.txt" --address-type taproot
 xcp wallet list_addresses
 xcp wallet address_balances --address <address>
 
-# Reveal an address's private key (prompts for the wallet password)
+# Reveal an address's private key (prompts for confirmation; -y/--yes skips it)
 xcp wallet export_address --address <address>
 
 xcp wallet change_password
 xcp wallet disconnect
 ```
+
+> 🔒 Passing a secret directly (`--private-key <key>`, `--mnemonic <phrase>`)
+> leaks it into your shell history and process list. Prefer the `@file` form,
+> which reads the secret from a file.
+
+### Backups
+
+Each address is an **independent key**; there is no single wallet-wide seed.
+
+- `new_address` derives a fresh key and shows its BIP39 mnemonic **once, at
+  creation** — write it down. It is never stored and cannot be shown again.
+- At any time you can reveal an address's private key (WIF) with
+  `export_address`; that WIF is a complete backup of that one address.
+- The wallet database (`wallet.db`) is encrypted, but treat it as sensitive and
+  back it up too. It is written atomically, but a lost/corrupted file can only
+  be recovered from the per-address mnemonics/WIFs above.
 
 ## Sending Counterparty transactions
 
@@ -138,7 +160,8 @@ cargo test                                   # unit + integration tests
 cargo clippy --all-targets -- -D warnings
 cargo fmt --check
 
-# The full compose→sign→broadcast integration test needs a running regtest
-# counterparty-server reachable at http://localhost:24000:
+# An HTTP integration test (divisibility lookup + compose reachability against a
+# live regtest counterparty-server at http://localhost:24000). It does not sign
+# or broadcast — the sign path is covered hermetically in bitcoinsigner::tests.
 cargo test -- --ignored
 ```

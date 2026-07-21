@@ -152,13 +152,18 @@ fn add_command_argument(
     cmd.arg(cmd_arg)
 }
 
-// Finds a matching endpoint for the given command
+// Finds a matching endpoint for the given command.
+//
+// A function can be served under several routes (e.g. `/addresses/<address>`
+// and `/addresses/<address>/options`). `HashMap` iteration order is randomized,
+// so we sort deterministically and prefer the most "base" route: fewest path
+// segments first, then shortest, then lexicographic. This keeps behavior stable
+// across runs instead of silently returning a different route each time.
 pub fn find_matching_endpoint<'a>(
     endpoints: &'a HashMap<String, ApiEndpoint>,
     command: &str,
 ) -> Result<(&'a String, &'a ApiEndpoint)> {
-    // Find all endpoints that match this command (could be multiple paths with same function)
-    let matching_endpoints: Vec<(&String, &ApiEndpoint)> = endpoints
+    let mut matching_endpoints: Vec<(&String, &ApiEndpoint)> = endpoints
         .iter()
         .filter(|(_, e)| e.function == command)
         .collect();
@@ -167,7 +172,14 @@ pub fn find_matching_endpoint<'a>(
         anyhow::bail!("Unknown command: {}", command);
     }
 
-    // Use the first matching endpoint for simplicity
+    matching_endpoints.sort_by(|(a, _), (b, _)| {
+        let segments = |p: &str| p.split('/').filter(|s| !s.is_empty()).count();
+        segments(a)
+            .cmp(&segments(b))
+            .then(a.len().cmp(&b.len()))
+            .then(a.as_str().cmp(b.as_str()))
+    });
+
     Ok(matching_endpoints[0])
 }
 
@@ -197,39 +209,101 @@ pub fn build_request_parameters(
     params
 }
 
-// Builds the API path with path parameters replaced
+// Builds the API path with path parameters substituted, removing those
+// parameters from `params` so they are not *also* sent as duplicate query
+// parameters.
 pub fn build_api_path(
     path: &str,
     endpoint: &ApiEndpoint,
-    params: &HashMap<String, String>,
+    params: &mut HashMap<String, String>,
 ) -> String {
     let mut api_path = path.to_string();
-    let mut updated_params = params.clone(); // Clone params for tracking replacements
 
     for arg in &endpoint.args {
-        if let Some(value) = params.get(&arg.name) {
-            replace_placeholder_in_path(&mut api_path, &arg.name, value, &mut updated_params);
+        if let Some(value) = params.get(&arg.name).cloned() {
+            let int_placeholder = format!("<int:{}>", arg.name);
+            let simple_placeholder = format!("<{}>", arg.name);
+
+            if api_path.contains(&int_placeholder) {
+                api_path = api_path.replace(&int_placeholder, &value);
+                params.remove(&arg.name);
+            } else if api_path.contains(&simple_placeholder) {
+                api_path = api_path.replace(&simple_placeholder, &value);
+                params.remove(&arg.name);
+            }
         }
     }
 
     api_path
 }
 
-// Replaces a placeholder in the API path
-fn replace_placeholder_in_path(
-    api_path: &mut String,
-    arg_name: &str,
-    value: &str,
-    updated_params: &mut HashMap<String, String>, // For tracking replacements
-) {
-    let int_placeholder = format!("<int:{}>", arg_name);
-    let simple_placeholder = format!("<{}>", arg_name);
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    if api_path.contains(&int_placeholder) {
-        *api_path = api_path.replace(&int_placeholder, value);
-        updated_params.remove(arg_name); // Remove from params since used in path
-    } else if api_path.contains(&simple_placeholder) {
-        *api_path = api_path.replace(&simple_placeholder, value);
-        updated_params.remove(arg_name); // Remove from params since used in path
+    fn arg(name: &str) -> ApiEndpointArg {
+        ApiEndpointArg {
+            name: name.to_string(),
+            required: false,
+            arg_type: "string".to_string(),
+            description: None,
+            default: None,
+            members: None,
+        }
+    }
+
+    fn endpoint(function: &str, args: &[&str]) -> ApiEndpoint {
+        ApiEndpoint {
+            function: function.to_string(),
+            description: String::new(),
+            args: args.iter().map(|a| arg(a)).collect(),
+        }
+    }
+
+    #[test]
+    fn build_api_path_substitutes_and_strips_path_params() {
+        let ep = endpoint("get_block", &["block_index", "verbose"]);
+        let mut params = HashMap::from([
+            ("block_index".to_string(), "100000".to_string()),
+            ("verbose".to_string(), "true".to_string()),
+        ]);
+        let path = build_api_path("/v2/blocks/<int:block_index>", &ep, &mut params);
+        assert_eq!(path, "/v2/blocks/100000");
+        // The path param must be removed so it isn't duplicated in the query.
+        assert!(!params.contains_key("block_index"));
+        assert_eq!(params.get("verbose").map(String::as_str), Some("true"));
+    }
+
+    #[test]
+    fn build_api_path_handles_plain_placeholder() {
+        let ep = endpoint("get_asset_info", &["asset"]);
+        let mut params = HashMap::from([("asset".to_string(), "XCP".to_string())]);
+        let path = build_api_path("/v2/assets/<asset>", &ep, &mut params);
+        assert_eq!(path, "/v2/assets/XCP");
+        assert!(params.is_empty());
+    }
+
+    #[test]
+    fn find_matching_endpoint_is_deterministic_and_prefers_base_route() {
+        let mut endpoints = HashMap::new();
+        endpoints.insert(
+            "/v2/addresses/<address>/options".to_string(),
+            endpoint("get_address", &["address"]),
+        );
+        endpoints.insert(
+            "/v2/addresses/<address>".to_string(),
+            endpoint("get_address", &["address"]),
+        );
+        // Whatever the HashMap order, we always get the base route.
+        for _ in 0..10 {
+            let (path, _) = find_matching_endpoint(&endpoints, "get_address").unwrap();
+            assert_eq!(path, "/v2/addresses/<address>");
+        }
+    }
+
+    #[test]
+    fn find_matching_endpoint_errors_on_unknown() {
+        let endpoints: HashMap<String, ApiEndpoint> = HashMap::new();
+        assert!(find_matching_endpoint(&endpoints, "nope").is_err());
     }
 }

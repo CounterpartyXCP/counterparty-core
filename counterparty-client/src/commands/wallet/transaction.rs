@@ -51,7 +51,7 @@ fn find_compose_endpoint<'a>(
             name: "address".to_string(),
             required: true,
             arg_type: "string".to_string(),
-            description: Some("Destination address for the transaction".to_string()),
+            description: Some("Source address that funds and signs the transaction".to_string()),
             default: None,
             members: None,
         };
@@ -106,10 +106,7 @@ fn extract_parameter_for_arg(
 
     // For debugging
     if arg.required {
-        helpers::print_warning(
-            "Warning: Required argument '{}' not found in matches",
-            Some(&arg.name),
-        );
+        helpers::print_warning("Required argument not found in matches:", Some(&arg.name));
     }
 }
 
@@ -303,19 +300,22 @@ fn extract_op_return_data(script: &bitcoin::ScriptBuf) -> String {
         return "<not an OP_RETURN>".to_string();
     }
 
-    // A simpler approach: get the raw script and skip the first two bytes
-    // First byte is OP_RETURN (0x6a), second byte is the push operation
-    let raw_bytes = script.as_bytes();
-    if raw_bytes.len() <= 2 {
+    // Walk the script: OP_RETURN (0x6a) then a push whose header depends on the
+    // data length. For <= 75 bytes the opcode IS the length; OP_PUSHDATA1 (0x4c)
+    // is followed by a 1-byte length. Anything larger doesn't occur in
+    // Counterparty OP_RETURNs.
+    let raw = script.as_bytes();
+    if raw.len() < 2 {
         return "<no data>".to_string();
     }
-
-    // Skip OP_RETURN and push opcode, take the remaining bytes
-    // This assumes a simple OP_RETURN structure which is common
-    let data_bytes = &raw_bytes[2..];
+    let data = match raw[1] {
+        0x4c if raw.len() >= 3 => &raw[3..], // OP_PUSHDATA1 <len> <data>
+        op if op <= 75 => &raw[2..],         // direct push <data>
+        _ => &raw[2..],
+    };
 
     // For display, use the raw bytes directly
-    String::from_utf8_lossy(data_bytes).to_string()
+    String::from_utf8_lossy(data).to_string()
 }
 
 /// Convert a script to a Bitcoin address based on the network
@@ -364,14 +364,12 @@ fn confirm_broadcast() -> Result<bool> {
 
 /// Broadcast a signed transaction to the network
 async fn broadcast_transaction(config: &AppConfig, signed_tx: &str) -> Result<String> {
-    let client = reqwest::Client::new();
+    let client = api::http_client();
     let api_url = config.get_api_url();
 
-    // Prepare the URL for transaction broadcast
-    let broadcast_url = format!(
-        "{}/v2/bitcoin/transactions?signedhex={}",
-        api_url, signed_tx
-    );
+    // Broadcast endpoint. The signed hex goes in the POST body only (not the
+    // query string) so a large multi-input transaction can't overflow the URL.
+    let broadcast_url = format!("{}/v2/bitcoin/transactions", api_url);
 
     // Create URL-encoded form data
     let params = [("signedhex", signed_tx)];
@@ -433,9 +431,10 @@ async fn call_compose_api(
     config: &AppConfig,
     path: &str,
     endpoint: &ApiEndpoint,
-    params: &HashMap<String, String>,
+    params: &mut HashMap<String, String>,
 ) -> Result<serde_json::Value> {
-    // Call API and get the result
+    // Call API and get the result. `build_api_path` strips any path parameters
+    // from `params` so they are not also sent as duplicate query parameters.
     let api_path = api::build_api_path(path, endpoint, params);
     let result = api::perform_api_request(config, &api_path, params).await?;
 
@@ -651,7 +650,7 @@ pub async fn handle_transaction_command(
     params.insert("multisig_pubkey".to_string(), public_key.to_string());
 
     // Call API and get the composed transaction
-    let api_result = call_compose_api(config, path, &endpoint, &params).await?;
+    let api_result = call_compose_api(config, path, &endpoint, &mut params).await?;
 
     // Extract transaction details from the result
     let (raw_tx_hex, utxos, tx_name, tx_params) = extract_transaction_details(&api_result)?;
@@ -955,12 +954,24 @@ pub async fn handle_broadcast_command(config: &AppConfig, sub_matches: &ArgMatch
         .get_one::<String>("rawtransaction")
         .ok_or_else(|| anyhow!("Missing raw transaction"))?;
 
-    let utxo_list = get_utxos_from_api(config, signed_tx_hex).await?;
-
-    // Verify that the transaction is valid and properly signed
-    let tx_result = display_transaction_summary(signed_tx_hex, &utxo_list, config.network);
-    if let Err(e) = tx_result {
-        return Err(anyhow!("Invalid transaction: {}", e));
+    // The summary is best-effort: fetching prevouts needs the API/indexer to
+    // resolve every input, which can fail for otherwise-broadcastable txs (e.g.
+    // an unconfirmed parent). Never block a valid broadcast on it.
+    match get_utxos_from_api(config, signed_tx_hex).await {
+        Ok(utxo_list) => {
+            if let Err(e) = display_transaction_summary(signed_tx_hex, &utxo_list, config.network) {
+                helpers::print_warning(
+                    "Could not render transaction summary:",
+                    Some(&e.to_string()),
+                );
+            }
+        }
+        Err(e) => {
+            helpers::print_warning(
+                "Could not fetch inputs to preview the transaction (broadcasting anyway):",
+                Some(&e.to_string()),
+            );
+        }
     }
 
     // Ask for confirmation before broadcasting
