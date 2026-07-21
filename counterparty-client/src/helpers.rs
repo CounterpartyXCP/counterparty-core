@@ -128,9 +128,9 @@ pub fn print_colored_json(json_value: &Value) -> Result<()> {
 /// ];
 /// print_colored_json_list(&json_vec).unwrap();
 /// ```
-pub fn print_colored_json_list(json_values: &Vec<Value>) -> Result<()> {
+pub fn print_colored_json_list(json_values: &[Value]) -> Result<()> {
     // Create a single Value::Array containing all the elements
-    let array_value = Value::Array(json_values.clone());
+    let array_value = Value::Array(json_values.to_vec());
 
     // Call print_colored_json once with that value
     print_colored_json(&array_value)
@@ -167,7 +167,6 @@ fn print_colored(text: &str, color: Color, more_text: Option<&str>) {
 }
 
 /// Prints a success message in green, with optional additional text in default color
-
 pub fn print_success(text: &str, more_text: Option<&str>) {
     print_colored(text, Color::Green, more_text)
 }

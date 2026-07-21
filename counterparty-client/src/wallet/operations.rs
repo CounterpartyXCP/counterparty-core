@@ -189,7 +189,7 @@ impl BitcoinWallet {
         raw_tx_hex: &str,
         utxos: &bitcoinsigner::UTXOList,
     ) -> Result<String> {
-        bitcoinsigner::sign_transaction(&self.addresses, raw_tx_hex, &utxos, self.network)
+        bitcoinsigner::sign_transaction(&self.addresses, raw_tx_hex, utxos, self.network)
     }
 
     /// Change the wallet encryption password

@@ -4,9 +4,9 @@ use std::collections::HashMap;
 use std::io::{self, Write};
 use std::str::FromStr;
 
-use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
-use rust_decimal::Decimal;
 use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
+use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 use crate::bitcoinsigner;
 use crate::commands::api;
@@ -41,7 +41,7 @@ fn find_compose_endpoint<'a>(
 
     if has_address {
         // If it already has an address parameter, just return it
-        return Ok((path, endpoint.clone()));
+        Ok((path, endpoint.clone()))
     } else {
         // Otherwise, create a modified endpoint with an address parameter
         let mut modified_endpoint = endpoint.clone();
@@ -60,7 +60,7 @@ fn find_compose_endpoint<'a>(
         modified_endpoint.args.push(address_arg);
 
         // Return the modified endpoint
-        return Ok((path, modified_endpoint));
+        Ok((path, modified_endpoint))
     }
 }
 
@@ -145,7 +145,11 @@ fn get_script_type(script: &bitcoin::ScriptBuf) -> &'static str {
 
 /// Parse a signed transaction and display inputs, outputs, and fees
 /// Shows addresses instead of raw scripts and decodes OP_RETURN data
-fn display_transaction_summary(signed_tx: &str, utxo_list: &bitcoinsigner::UTXOList, network: crate::config::Network) -> Result<()> {
+fn display_transaction_summary(
+    signed_tx: &str,
+    utxo_list: &bitcoinsigner::UTXOList,
+    network: crate::config::Network,
+) -> Result<()> {
     // Decode the transaction from hex
     let tx_bytes =
         hex::decode(signed_tx).map_err(|e| anyhow!("Failed to decode transaction hex: {}", e))?;
@@ -153,7 +157,7 @@ fn display_transaction_summary(signed_tx: &str, utxo_list: &bitcoinsigner::UTXOL
     // Parse the transaction
     let tx: bitcoin::Transaction = bitcoin::consensus::deserialize(&tx_bytes)
         .map_err(|e| anyhow!("Failed to parse transaction: {}", e))?;
-    
+
     // Get the transaction ID (hash)
     let txid = tx.compute_txid().to_string();
 
@@ -197,12 +201,12 @@ fn display_transaction_summary(signed_tx: &str, utxo_list: &bitcoinsigner::UTXOL
         let _ = stdout.set_color(&text_color);
         let txid = input.previous_output.txid.to_string();
         let vout = input.previous_output.vout;
-        
+
         // Get the UTXO if available at this index
         if let Some(utxo) = utxo_list.get(idx) {
             // Get amount in BTC
             let amount_btc = utxo.amount as f64 / 100_000_000.0;
-            
+
             // Try to get address from the UTXO
             let address = if let Some(source_addr) = &utxo.source_address {
                 // Use source_address if available
@@ -212,7 +216,7 @@ fn display_transaction_summary(signed_tx: &str, utxo_list: &bitcoinsigner::UTXOL
                 script_to_address(&utxo.script_pubkey, network)
                     .unwrap_or_else(|| "[Unable to derive address]".to_string())
             };
-            
+
             let _ = writeln!(
                 stdout,
                 "{:.8} BTC, {} ({}:{})",
@@ -242,16 +246,12 @@ fn display_transaction_summary(signed_tx: &str, utxo_list: &bitcoinsigner::UTXOL
         if output.script_pubkey.is_op_return() {
             // For OP_RETURN, display the decoded data directly
             let decoded_data = extract_op_return_data(&output.script_pubkey);
-            let _ = writeln!(
-                stdout,
-                "{:.8} BTC, OP_RETURN {}",
-                value_btc, decoded_data
-            );
+            let _ = writeln!(stdout, "{:.8} BTC, OP_RETURN {}", value_btc, decoded_data);
         } else {
             // For other scripts, try to convert to address
             let address = script_to_address(&output.script_pubkey, network)
                 .unwrap_or_else(|| output.script_pubkey.to_string());
-            
+
             let _ = writeln!(
                 stdout,
                 "{:.8} BTC, {} ({})",
@@ -270,7 +270,7 @@ fn display_transaction_summary(signed_tx: &str, utxo_list: &bitcoinsigner::UTXOL
         let _ = stdout.reset();
     }
 
-    let _ = writeln!(stdout, "");
+    let _ = writeln!(stdout);
 
     // Reset color at the end
     let _ = stdout.reset();
@@ -279,13 +279,16 @@ fn display_transaction_summary(signed_tx: &str, utxo_list: &bitcoinsigner::UTXOL
 }
 
 /// Calculate the transaction fee by comparing input and output amounts
-fn calculate_transaction_fee(tx: &bitcoin::Transaction, utxo_list: &bitcoinsigner::UTXOList) -> Option<u64> {
+fn calculate_transaction_fee(
+    tx: &bitcoin::Transaction,
+    utxo_list: &bitcoinsigner::UTXOList,
+) -> Option<u64> {
     // Calculate total input value
     let total_input: u64 = utxo_list.as_ref().iter().map(|utxo| utxo.amount).sum();
-    
+
     // Get total output value
     let total_output: u64 = tx.output.iter().map(|output| output.value.to_sat()).sum();
-    
+
     // Calculate fee (inputs - outputs)
     if total_input >= total_output {
         Some(total_input - total_output)
@@ -299,24 +302,27 @@ fn extract_op_return_data(script: &bitcoin::ScriptBuf) -> String {
     if !script.is_op_return() {
         return "<not an OP_RETURN>".to_string();
     }
-    
+
     // A simpler approach: get the raw script and skip the first two bytes
     // First byte is OP_RETURN (0x6a), second byte is the push operation
     let raw_bytes = script.as_bytes();
     if raw_bytes.len() <= 2 {
         return "<no data>".to_string();
     }
-    
+
     // Skip OP_RETURN and push opcode, take the remaining bytes
     // This assumes a simple OP_RETURN structure which is common
     let data_bytes = &raw_bytes[2..];
-    
+
     // For display, use the raw bytes directly
     String::from_utf8_lossy(data_bytes).to_string()
 }
 
 /// Convert a script to a Bitcoin address based on the network
-fn script_to_address(script: &bitcoin::ScriptBuf, network: crate::config::Network) -> Option<String> {
+fn script_to_address(
+    script: &bitcoin::ScriptBuf,
+    network: crate::config::Network,
+) -> Option<String> {
     // Convert network to Bitcoin network
     let bitcoin_network = match network {
         crate::config::Network::Mainnet => bitcoin::Network::Bitcoin,
@@ -324,7 +330,7 @@ fn script_to_address(script: &bitcoin::ScriptBuf, network: crate::config::Networ
         crate::config::Network::Testnet4 => bitcoin::Network::Testnet,
         crate::config::Network::Regtest => bitcoin::Network::Regtest,
     };
-    
+
     // Try to create address from script
     bitcoin::Address::from_script(script, bitcoin_network)
         .map(|addr| addr.to_string())
@@ -425,7 +431,7 @@ fn get_address_and_public_key(
 /// Call the compose API and return the result
 async fn call_compose_api(
     config: &AppConfig,
-    path: &String,
+    path: &str,
     endpoint: &ApiEndpoint,
     params: &HashMap<String, String>,
 ) -> Result<serde_json::Value> {
@@ -445,7 +451,7 @@ async fn call_compose_api(
     }
 }
 
-//// Extract transaction details from API result
+/// Extract transaction details from API result
 fn extract_transaction_details(
     api_result: &serde_json::Value,
 ) -> Result<(
@@ -518,7 +524,7 @@ fn extract_transaction_details(
 /// Extract reveal transaction information if present
 fn extract_reveal_transaction_info(
     api_result: &serde_json::Value,
-) -> Option<RevealTransactionInfo> {
+) -> Option<RevealTransactionInfo<'_>> {
     let signed_reveal_tx = api_result.get("signed_reveal_rawtransaction")?.as_str()?;
 
     Some(RevealTransactionInfo {
@@ -564,7 +570,7 @@ async fn broadcast_transactions(
 
     // Create and display explorer URL for the main transaction
     let explorer_url = get_explorer_url(config.network, &tx_id);
-    if let Some(_) = signed_reveal_tx {
+    if signed_reveal_tx.is_some() {
         helpers::print_success("Commit transaction broadcasted:", Some(&explorer_url));
     } else {
         helpers::print_success("Transaction broadcasted:", Some(&explorer_url));
@@ -603,22 +609,22 @@ fn build_reveal_utxo_list(commit_tx_hex: &str) -> Result<bitcoinsigner::UTXOList
 
     // Get the first output - this is what the reveal transaction will spend
     let first_output = &commit_tx.output[0];
-    
+
     // Extract the amount in satoshis
     let amount = first_output.value.to_sat();
-    
+
     // Extract the script_pubkey
     let script_pubkey = first_output.script_pubkey.clone();
-    
+
     // Create a new UTXOList
     let mut utxo_list = bitcoinsigner::UTXOList::new();
-    
+
     // Create a UTXO for the first output
     let utxo = bitcoinsigner::UTXO::new(amount, script_pubkey);
-    
+
     // Add the UTXO to the list
     utxo_list.add(utxo);
-    
+
     Ok(utxo_list)
 }
 
@@ -631,7 +637,7 @@ pub async fn handle_transaction_command(
     wallet: &BitcoinWallet,
 ) -> Result<()> {
     // Find the corresponding compose endpoint
-    let (path, endpoint) = find_compose_endpoint(&endpoints, transaction_name)?;
+    let (path, endpoint) = find_compose_endpoint(endpoints, transaction_name)?;
 
     // Extract parameters from command line arguments
     let mut params = extract_parameters_from_matches(&endpoint, transaction_name, sub_matches);
@@ -700,7 +706,11 @@ pub async fn handle_transaction_command(
 
         // Display transaction summary
         let reveal_utxo_list = build_reveal_utxo_list(&signed_tx)?;
-        display_transaction_summary(signed_reveal_tx.as_ref().unwrap(), &reveal_utxo_list, config.network)?;
+        display_transaction_summary(
+            signed_reveal_tx.as_ref().unwrap(),
+            &reveal_utxo_list,
+            config.network,
+        )?;
     } else {
         helpers::print_success("Transaction signed:", None);
         println!("{}\n", &signed_tx);
@@ -719,7 +729,11 @@ pub async fn handle_transaction_command(
 }
 
 /// Handle sign command by parsing UTXOs and signing the transaction
-pub async fn handle_sign_command(config: &AppConfig, sub_matches: &ArgMatches, wallet: &BitcoinWallet) -> Result<()> {
+pub async fn handle_sign_command(
+    config: &AppConfig,
+    sub_matches: &ArgMatches,
+    wallet: &BitcoinWallet,
+) -> Result<()> {
     // Get raw transaction hex from arguments
     let raw_tx_hex = sub_matches
         .get_one::<String>("rawtransaction")
@@ -835,12 +849,12 @@ fn parse_utxos_from_json(utxos_json: &str) -> Result<bitcoinsigner::UTXOList> {
 
 /// Fetch UTXOs information from the API for a given transaction
 async fn get_utxos_from_api(
-    config: &AppConfig, 
-    raw_tx_hex: &str
+    config: &AppConfig,
+    raw_tx_hex: &str,
 ) -> Result<bitcoinsigner::UTXOList> {
     // Decode the transaction from hex
-    let tx_bytes = hex::decode(raw_tx_hex)
-        .map_err(|e| anyhow!("Failed to decode transaction hex: {}", e))?;
+    let tx_bytes =
+        hex::decode(raw_tx_hex).map_err(|e| anyhow!("Failed to decode transaction hex: {}", e))?;
 
     // Parse the transaction
     let tx: bitcoin::Transaction = bitcoin::consensus::deserialize(&tx_bytes)
@@ -848,67 +862,86 @@ async fn get_utxos_from_api(
 
     // Get the inputs from the transaction
     let inputs = &tx.input;
-    
+
     // Create a new UTXO list
     let mut utxo_list = bitcoinsigner::UTXOList::new();
-    
+
     // For each input, fetch the transaction info from the API
     for input in inputs {
         let txid = input.previous_output.txid.to_string();
         let vout = input.previous_output.vout;
-        
+
         // Fetch transaction info from API
         let api_path = format!("/v2/bitcoin/transactions/{}", txid);
         let result = api::perform_api_request(config, &api_path, &HashMap::new()).await?;
-        
+
         // Extract the UTXO information
         if let Some(tx_result) = result.get("result") {
             if let Some(vouts) = tx_result.get("vout").and_then(|v| v.as_array()) {
                 // Find the specific vout we need
-                let output = vouts.iter()
-                    .find(|output| {
-                        output.get("n").and_then(|n| n.as_u64()).map_or(false, |n| n == vout as u64)
-                    })
+                let output = vouts
+                    .iter()
+                    .find(|output| output.get("n").and_then(|n| n.as_u64()) == Some(vout as u64))
                     .ok_or_else(|| anyhow!("Vout {} not found in transaction {}", vout, txid))?;
-                
+
                 // Extract amount (in BTC, need to convert to satoshis)
-                let amount_btc = output.get("value")
+                let amount_btc = output
+                    .get("value")
                     .and_then(|v| v.as_f64())
-                    .ok_or_else(|| anyhow!("Missing or invalid amount for input {}:{}", txid, vout))?;
-                
+                    .ok_or_else(|| {
+                        anyhow!("Missing or invalid amount for input {}:{}", txid, vout)
+                    })?;
+
                 // Convert to satoshis (multiply by 10^8)
                 let amount = Decimal::from_str(&amount_btc.to_string())?
                     .checked_mul(Decimal::from(100_000_000))
                     .and_then(|d| d.to_u64())
                     .ok_or_else(|| anyhow::anyhow!("Conversion error"))?;
-                
+
                 // Extract scriptPubKey
-                let script_pubkey_obj = output.get("scriptPubKey")
+                let script_pubkey_obj = output
+                    .get("scriptPubKey")
                     .and_then(|s| s.as_object())
                     .ok_or_else(|| anyhow!("Missing scriptPubKey for input {}:{}", txid, vout))?;
-                
-                let script_pubkey_hex = script_pubkey_obj.get("hex")
+
+                let script_pubkey_hex = script_pubkey_obj
+                    .get("hex")
                     .and_then(|h| h.as_str())
-                    .ok_or_else(|| anyhow!("Missing scriptPubKey hex for input {}:{}", txid, vout))?;
-                
+                    .ok_or_else(|| {
+                        anyhow!("Missing scriptPubKey hex for input {}:{}", txid, vout)
+                    })?;
+
                 // Decode script_pubkey
-                let script_pubkey_bytes = hex::decode(script_pubkey_hex)
-                    .map_err(|e| anyhow!("Invalid scriptPubKey hex for input {}:{}: {}", txid, vout, e))?;
-                
+                let script_pubkey_bytes = hex::decode(script_pubkey_hex).map_err(|e| {
+                    anyhow!(
+                        "Invalid scriptPubKey hex for input {}:{}: {}",
+                        txid,
+                        vout,
+                        e
+                    )
+                })?;
+
                 let script_pubkey = bitcoin::ScriptBuf::from_bytes(script_pubkey_bytes);
-                
+
                 // Create UTXO
                 let utxo = bitcoinsigner::UTXO::new(amount, script_pubkey);
-                
+
                 // Add to the list
                 utxo_list.add(utxo);
             } else {
                 return Err(anyhow!("Missing vout data for transaction {}", txid));
             }
         } else if let Some(error) = result.get("error") {
-            return Err(anyhow!("API error fetching transaction {}: {}", txid, error));
+            return Err(anyhow!(
+                "API error fetching transaction {}: {}",
+                txid,
+                error
+            ));
         } else {
-            return Err(anyhow!("Unexpected API response format for transaction {}", txid));
+            return Err(anyhow!(
+                "Unexpected API response format for transaction {}",
+                txid
+            ));
         }
     }
 
@@ -916,10 +949,7 @@ async fn get_utxos_from_api(
 }
 
 /// Handle broadcast command to send a signed transaction to the network
-pub async fn handle_broadcast_command(
-    config: &AppConfig,
-    sub_matches: &ArgMatches,
-) -> Result<()> {
+pub async fn handle_broadcast_command(config: &AppConfig, sub_matches: &ArgMatches) -> Result<()> {
     // Get raw transaction hex from arguments
     let signed_tx_hex = sub_matches
         .get_one::<String>("rawtransaction")

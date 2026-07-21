@@ -20,6 +20,7 @@ jobs:
           toolchain: stable
           profile: minimal
           default: true
+          components: rustfmt, clippy
 
       - name: Run tests
         run: |
@@ -29,5 +30,7 @@ jobs:
       - name: Build and test counterparty-client
         run: |
           cd counterparty-client
+          cargo fmt --check
+          cargo clippy --all-targets -- -D warnings
           cargo build
           cargo test

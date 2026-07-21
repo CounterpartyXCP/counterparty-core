@@ -1,3 +1,10 @@
+// These lints fire on intentional, domain-driven code: `UTXO`/`UTXOList` are the
+// established Bitcoin acronyms, and a few signer/compose helpers carry many
+// arguments or a rich return tuple by design.
+#![allow(clippy::upper_case_acronyms)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::type_complexity)]
+
 use anyhow::{anyhow, Context, Result};
 use clap::{Arg, ArgAction, Command};
 use std::fs;
@@ -26,7 +33,7 @@ use crate::config::{AppConfig, Network};
 // Get the binary name used to execute the program
 fn get_binary_name() -> String {
     std::env::args()
-        .nth(0)
+        .next()
         .map(|path| {
             Path::new(&path)
                 .file_name()
@@ -47,8 +54,8 @@ fn get_default_config_path() -> PathBuf {
 
 // Function to process file references
 fn process_file_reference(value: &str) -> Result<String> {
-    if value.starts_with('@') {
-        let path = &value[1..]; // Remove @ prefix
+    if let Some(path) = value.strip_prefix('@') {
+        // Remove @ prefix
 
         if !Path::new(path).exists() {
             return Err(anyhow::anyhow!("File not found: {}", path));
@@ -161,14 +168,11 @@ fn get_shell_config_instruction(shell: Shell, path: &Path) -> String {
                 path.display()
             )
         }
-        Shell::Zsh => {
-            format!(
-                "Make sure that the following is present in your ~/.zshrc:\n  \
+        Shell::Zsh => "Make sure that the following is present in your ~/.zshrc:\n  \
              fpath=(~/.zsh/completions $fpath)\n  \
              autoload -U compinit\n  \
              compinit"
-            )
-        }
+            .to_string(),
         Shell::Fish => {
             "Fish will automatically load completions from ~/.config/fish/completions/".to_string()
         }

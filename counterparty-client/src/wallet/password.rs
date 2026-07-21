@@ -124,7 +124,7 @@ impl PasswordManager {
 
     fn get_from_keyring(&self) -> std::result::Result<SecretString, KeyringError> {
         let entry = self.get_entry();
-        entry.get_password().map(|p| SecretString::new(p))
+        entry.get_password().map(SecretString::new)
     }
 
     fn set_to_keyring(&self, password: &SecretString) -> Result<()> {
@@ -154,8 +154,8 @@ impl PasswordManager {
         io::stdout().flush()?;
 
         // Read password without echoing
-        let password = rpassword::read_password()
-            .map_err(|e| WalletError::IoError(io::Error::new(io::ErrorKind::Other, e)))?;
+        let password =
+            rpassword::read_password().map_err(|e| WalletError::IoError(io::Error::other(e)))?;
 
         if password.is_empty() {
             return Err(WalletError::BitcoinError(

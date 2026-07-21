@@ -59,7 +59,7 @@ fn deduplicate_endpoint_functions(
 ) -> HashMap<String, ApiEndpoint> {
     let mut functions = HashMap::new();
 
-    for (_path, endpoint) in endpoints {
+    for endpoint in endpoints.values() {
         functions.insert(endpoint.function.clone(), endpoint.clone());
     }
 

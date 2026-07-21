@@ -1,12 +1,14 @@
 use dirs::{cache_dir, data_dir};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 // Define supported Bitcoin networks
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum Network {
+    #[default]
     Mainnet,
     Signet,
     Testnet4,
@@ -14,11 +16,6 @@ pub enum Network {
 }
 
 // Default implementation for Network
-impl Default for Network {
-    fn default() -> Self {
-        Network::Mainnet // Default network is Mainnet
-    }
-}
 
 // Network-specific configuration
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -107,7 +104,7 @@ impl AppConfig {
     }
 
     // Create mainnet configuration
-    fn create_mainnet_config(app_cache: &PathBuf, app_data: &PathBuf) -> NetworkConfig {
+    fn create_mainnet_config(app_cache: &Path, app_data: &Path) -> NetworkConfig {
         NetworkConfig {
             api_url: "https://api.counterparty.io:4000".to_string(),
             endpoints_url: "https://api.counterparty.io:4000/v2/routes".to_string(),
@@ -117,7 +114,7 @@ impl AppConfig {
     }
 
     // Create signet configuration
-    fn create_signet_config(app_cache: &PathBuf, app_data: &PathBuf) -> NetworkConfig {
+    fn create_signet_config(app_cache: &Path, app_data: &Path) -> NetworkConfig {
         NetworkConfig {
             api_url: "https://signet.counterparty.io:34000".to_string(),
             endpoints_url: "https://signet.counterparty.io:34000/v2/routes".to_string(),
@@ -127,7 +124,7 @@ impl AppConfig {
     }
 
     // Create testnet4 configuration
-    fn create_testnet4_config(app_cache: &PathBuf, app_data: &PathBuf) -> NetworkConfig {
+    fn create_testnet4_config(app_cache: &Path, app_data: &Path) -> NetworkConfig {
         NetworkConfig {
             api_url: "https://testnet4.counterparty.io:44000".to_string(),
             endpoints_url: "https://testnet4.counterparty.io:44000/v2/routes".to_string(),
@@ -137,7 +134,7 @@ impl AppConfig {
     }
 
     // Create regtest configuration
-    fn create_regtest_config(app_cache: &PathBuf, app_data: &PathBuf) -> NetworkConfig {
+    fn create_regtest_config(app_cache: &Path, app_data: &Path) -> NetworkConfig {
         NetworkConfig {
             api_url: "http://localhost:24000".to_string(),
             endpoints_url: "http://localhost:24000/v2/routes".to_string(),

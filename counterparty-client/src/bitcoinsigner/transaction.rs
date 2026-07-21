@@ -166,7 +166,9 @@ pub fn sign_transaction(
     // Track which inputs were signed
     let mut signed_inputs = vec![false; psbt.inputs.len()];
 
-    // Try to sign each input
+    // Try to sign each input (index is used to address psbt.inputs, utxos and
+    // signed_inputs in lock-step, so a range loop is the clearest form here).
+    #[allow(clippy::needless_range_loop)]
     for i in 0..psbt.inputs.len() {
         let utxo = utxos
             .get(i)

@@ -158,7 +158,7 @@ fn signs_p2pkh_input() {
     let (sig_bytes, pk_bytes) = (&pushes[0], &pushes[1]);
 
     let secp = Secp256k1::new();
-    let mut cache = SighashCache::new(&parsed);
+    let cache = SighashCache::new(&parsed);
     let sighash = cache
         .legacy_signature_hash(0, &spk, EcdsaSighashType::All as u32)
         .unwrap();

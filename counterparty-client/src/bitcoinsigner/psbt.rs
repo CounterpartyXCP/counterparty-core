@@ -29,7 +29,7 @@ pub fn create_psbt(tx: Transaction) -> Result<Psbt> {
 }
 
 /// Initialize sighash cache for signature calculations
-pub fn init_sighash_cache<'a>(tx: &'a Transaction) -> SighashCache<&'a Transaction> {
+pub fn init_sighash_cache(tx: &Transaction) -> SighashCache<&Transaction> {
     SighashCache::new(tx)
 }
 

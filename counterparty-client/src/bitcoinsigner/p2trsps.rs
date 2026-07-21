@@ -187,10 +187,8 @@ fn add_witness(
     // which can add unwanted length prefixes
 
     // Build witness directly as a series of elements
-    let mut witness_elements = Vec::new();
-
     // Element 1: Signature
-    witness_elements.push(signature);
+    let mut witness_elements = vec![signature];
 
     // Element 2: Script
     witness_elements.push(leaf_script.as_bytes().to_vec());

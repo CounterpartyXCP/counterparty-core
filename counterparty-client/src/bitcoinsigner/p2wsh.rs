@@ -14,18 +14,14 @@ fn is_pubkey_in_witness_script(witness_script: &ScriptBuf, public_key: &PublicKe
     let pubkey_bytes = public_key.to_bytes();
 
     // Parse the script into instructions
-    let mut iter = witness_script.instructions_minimal();
+    let iter = witness_script.instructions_minimal();
 
-    // Iterate through all elements in the script
-    while let Some(result) = iter.next() {
-        // Only process successfully parsed instructions
-        if let Ok(instruction) = result {
-            if let bitcoin::blockdata::script::Instruction::PushBytes(bytes) = instruction {
-                // Check if this pushed data is a public key
-                if bytes.len() == pubkey_bytes.len() && bytes.as_bytes() == pubkey_bytes.as_slice()
-                {
-                    return Ok(true);
-                }
+    // Iterate through all successfully parsed instructions
+    for instruction in iter.flatten() {
+        if let bitcoin::blockdata::script::Instruction::PushBytes(bytes) = instruction {
+            // Check if this pushed data is a public key
+            if bytes.len() == pubkey_bytes.len() && bytes.as_bytes() == pubkey_bytes.as_slice() {
+                return Ok(true);
             }
         }
     }

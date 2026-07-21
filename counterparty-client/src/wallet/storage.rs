@@ -15,7 +15,6 @@ use std::path::{Path, PathBuf};
 use cocoon::Cocoon;
 use secrecy::ExposeSecret;
 use secrecy::SecretString;
-use serde_json;
 
 use super::password::PasswordManager;
 use super::types::{AddressMap, Result, WalletError};
