@@ -1,4 +1,4 @@
-use clap::{Arg, Command};
+use clap::{Arg, ArgAction, Command};
 
 /// Builds the main wallet command with its subcommands
 pub fn build_command() -> Command {
@@ -121,6 +121,13 @@ fn build_export_address_command() -> Command {
                 .help("The blockchain address to export")
                 .required(true)
                 .value_name("ADDRESS"),
+        )
+        .arg(
+            Arg::new("yes")
+                .long("yes")
+                .short('y')
+                .help("Skip the confirmation prompt before revealing the private key")
+                .action(ArgAction::SetTrue),
         )
 }
 

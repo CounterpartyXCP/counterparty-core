@@ -549,6 +549,27 @@ fn header_message(config: &AppConfig, command_name: &str, config_path: &Path) {
     let _ = stdout.reset();
 }
 
+/// Detect the top-level subcommand (e.g. "wallet", "api", "completion") from the
+/// raw arguments, skipping global flags and the `--config-file <path>` value.
+/// Used to decide whether the wallet must be initialised (and its password
+/// requested) before parsing — only `wallet` commands need it.
+fn detect_subcommand() -> Option<String> {
+    let mut args = std::env::args().skip(1);
+    while let Some(arg) = args.next() {
+        if arg == "--config-file" {
+            // Skip the separate value token (the `--config-file=path` form is a
+            // single token and is handled by the flag branch below).
+            args.next();
+            continue;
+        }
+        if arg.starts_with('-') {
+            continue;
+        }
+        return Some(arg);
+    }
+    None
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     // Fast path: `--version`/`-V` must never require config, network access or a
@@ -625,8 +646,15 @@ async fn main() -> Result<()> {
     // Step 6: Load endpoints
     let endpoints = api::load_or_fetch_endpoints(&config).await?;
 
-    // Step 7: Initialize wallet (moved earlier in the process)
-    let mut wallet = wallet_commands::utils::init_wallet(&config)?;
+    // Step 7: Initialize the wallet only for commands that need it. `api`,
+    // `completion`, bare `--help` and `--update-cache` must never prompt for a
+    // wallet password or create a wallet as a side effect.
+    let needs_wallet = matches!(detect_subcommand().as_deref(), Some("wallet"));
+    let mut wallet: Option<crate::wallet::BitcoinWallet> = if needs_wallet {
+        Some(wallet_commands::utils::init_wallet(&config)?)
+    } else {
+        None
+    };
 
     // Now add subcommands after we have loaded endpoints
     app = app.subcommand(api::build_command(&endpoints));
@@ -642,10 +670,13 @@ async fn main() -> Result<()> {
     // Step 8: Add file reference support
     app = add_file_ref_support_recursive(app);
 
-    // Step 9: Add label resolution support for address/destination parameters
+    // Step 9: Add label resolution support for address/destination parameters,
+    // but only when a wallet is loaded (labels are a wallet feature).
     // (Quantity → satoshi conversion is done per-asset in the compose path,
     // based on each asset's divisibility; see wallet::quantity.)
-    app = add_label_resolution_recursive(app, &wallet);
+    if let Some(wallet) = &wallet {
+        app = add_label_resolution_recursive(app, wallet);
+    }
 
     // Step 11: Parse final command line arguments with the complete command structure
     let final_matches = app.clone().get_matches();
@@ -665,13 +696,21 @@ async fn main() -> Result<()> {
             api::execute_command(&config, sub_matches).await?;
         }
         Some(("wallet", sub_matches)) => {
+            // Safety net: if arg detection missed this (it should not), the wallet
+            // has not been initialised yet — do it now.
+            if wallet.is_none() {
+                wallet = Some(wallet_commands::utils::init_wallet(&config)?);
+            }
+            let wallet = wallet
+                .as_mut()
+                .expect("wallet initialised for wallet command");
             let cmd_name = sub_matches.subcommand_name().unwrap_or("wallet");
             header_message(
                 &config,
                 &format!(" Wallet {} ", cmd_name),
                 &config_file_path,
             );
-            wallet_commands::execute_command(&config, sub_matches, &endpoints, &mut wallet).await?;
+            wallet_commands::execute_command(&config, sub_matches, &endpoints, wallet).await?;
         }
         Some(("completion", sub_matches)) => {
             // Handle completion command - no header message needed

@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use clap::ArgMatches;
 
 use std::collections::HashMap;
+use std::io::{self, Write};
 
 use crate::commands::api;
 use crate::config::AppConfig;
@@ -61,15 +62,35 @@ pub fn handle_import_address(wallet: &mut BitcoinWallet, sub_matches: &ArgMatche
 pub fn handle_export_address(wallet: &BitcoinWallet, sub_matches: &ArgMatches) -> Result<()> {
     let address = sub_matches.get_one::<String>("address").unwrap();
 
-    // Always show private key (set show_private_key to Some(true))
-    let show_private_key = Some(true);
+    // Exporting reveals the private key in clear text, so confirm first unless
+    // the user explicitly opted in with --yes.
+    if !sub_matches.get_flag("yes") && !confirm_reveal_private_key(address)? {
+        helpers::print_error("Export cancelled", None);
+        return Ok(());
+    }
 
     let details = wallet
-        .show_address(address, show_private_key)
+        .show_address(address, Some(true))
         .map_err(|e| anyhow!("Failed to export address details: {}", e))?;
 
     helpers::print_colored_json(&details)?;
     Ok(())
+}
+
+/// Prompt the user before revealing an address's private key. Returns true only
+/// on an explicit yes.
+fn confirm_reveal_private_key(address: &str) -> Result<bool> {
+    helpers::print_warning(
+        "This will print the PRIVATE KEY for this address in clear text.",
+        None,
+    );
+    print!("Reveal the private key for {}? (y/N): ", address);
+    io::stdout().flush().ok();
+
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    let input = input.trim().to_lowercase();
+    Ok(input == "y" || input == "yes")
 }
 
 /// Handle the list_addresses subcommand
