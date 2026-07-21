@@ -29,10 +29,7 @@ fn create_transaction_command(func_name: &str, endpoint: &ApiEndpoint) -> (Strin
     let static_tx_name: &'static str = Box::leak(tx_name.into_boxed_str());
 
     // Create description for transaction command
-    let description = format!(
-        "Send a {}",
-        &endpoint.description.replace("Composes a ", "")
-    );
+    let description = format!("Send a {}", endpoint.description.replace("Composes a ", ""));
     let static_description: &'static str = Box::leak(description.into_boxed_str());
 
     // Create the command
@@ -58,7 +55,7 @@ fn add_argument_to_command(
     used_long_names.insert(arg.name.clone());
 
     // Create unique internal ID
-    let internal_id = format!("__transaction_{}_arg_{}_{}", command_name, idx, &arg.name);
+    let internal_id = format!("__transaction_{}_arg_{}_{}", command_name, idx, arg.name);
     let static_internal_id: &'static str = Box::leak(internal_id.into_boxed_str());
 
     // Use original argument name as long flag

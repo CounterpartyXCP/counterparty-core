@@ -84,7 +84,7 @@ pub async fn perform_api_request(
     let api_url = config.get_api_url();
     let full_url = format!("{}{}", api_url, api_path);
 
-    let spinner = helpers::print_loading(format!("Loading {}", &full_url).as_str());
+    let spinner = helpers::print_loading(format!("Loading {}", full_url).as_str());
 
     // Make the API request
     let client = http_client();

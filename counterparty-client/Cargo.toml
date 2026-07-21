@@ -9,7 +9,7 @@ clap = { version = "4.5.36", features = ["derive", "cargo"] }
 config = "0.13"
 # rustls (not native-tls/OpenSSL): no system OpenSSL dependency across
 # macOS/Linux/Windows, and drops the OpenSSL RUSTSEC advisory.
-reqwest = { version = "0.11", default-features = false, features = [
+reqwest = { version = "0.12", default-features = false, features = [
     "json",
     "rustls-tls",
 ] }
@@ -23,7 +23,15 @@ cocoon = "0.4.0"
 thiserror = "1.0"
 lazy_static = "1.4.0"
 serde_yaml = "0.9.3"
-syntect = "5.2.0"
+# Only the local JSON->YAML syntax highlighting in helpers.rs is used, so drop
+# syntect's default features. This removes the `plist-load`/`yaml-load` features
+# and their transitive `plist` -> `quick-xml` and `yaml-rust` deps (all flagged
+# by cargo-audit), and swaps the C `onig` regex engine for pure-Rust fancy-regex.
+syntect = { version = "5.2.0", default-features = false, features = [
+    "default-syntaxes",
+    "default-themes",
+    "regex-fancy",
+] }
 termcolor = "1.4.1"
 dirs = "5.0"
 toml = "0.8.20"

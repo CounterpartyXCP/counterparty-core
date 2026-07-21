@@ -692,7 +692,7 @@ pub async fn handle_transaction_command(
     // Handle reveal transaction if present
     if let Some(reveal_tx_info) = extract_reveal_transaction_info(&api_result) {
         helpers::print_success("Commit transaction signed:", None);
-        println!("{}\n", &signed_tx);
+        println!("{}\n", signed_tx);
 
         // Display transaction summary
         display_transaction_summary(&signed_tx, &utxo_list, config.network)?;
@@ -701,7 +701,7 @@ pub async fn handle_transaction_command(
         signed_reveal_tx = Some(reveal_tx_info.signed_tx.to_string());
 
         helpers::print_success("Reveal transaction signed:", None);
-        println!("{}\n", &signed_reveal_tx.as_ref().unwrap());
+        println!("{}\n", signed_reveal_tx.as_ref().unwrap());
 
         // Display transaction summary
         let reveal_utxo_list = build_reveal_utxo_list(&signed_tx)?;
@@ -712,7 +712,7 @@ pub async fn handle_transaction_command(
         )?;
     } else {
         helpers::print_success("Transaction signed:", None);
-        println!("{}\n", &signed_tx);
+        println!("{}\n", signed_tx);
         // Display transaction summary
         display_transaction_summary(&signed_tx, &utxo_list, config.network)?;
     }
@@ -754,7 +754,7 @@ pub async fn handle_sign_command(
 
     // Display the signed transaction
     helpers::print_success("Transaction signed successfully:", None);
-    println!("{}", &signed_tx);
+    println!("{}", signed_tx);
 
     // Display transaction summary
     display_transaction_summary(&signed_tx, &utxo_list, config.network)?;

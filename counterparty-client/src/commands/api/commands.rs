@@ -101,7 +101,7 @@ fn add_command_argument(
     used_long_names.insert(arg.name.clone());
 
     // Create unique internal ID
-    let internal_id = format!("__api_{}_arg_{}_{}", command_name, idx, &arg.name);
+    let internal_id = format!("__api_{}_arg_{}_{}", command_name, idx, arg.name);
     let static_internal_id: &'static str = Box::leak(internal_id.into_boxed_str());
 
     // Use original argument name as long flag
@@ -194,7 +194,7 @@ pub fn build_request_parameters(
     for arg in &endpoint.args {
         // Try to find the argument by iterating through the id_map
         for (key, original_name) in id_map.iter() {
-            if key.starts_with(&format!("{}:", &endpoint.function)) && original_name == &arg.name {
+            if key.starts_with(&format!("{}:", endpoint.function)) && original_name == &arg.name {
                 // Extract the internal ID from the key
                 let internal_id = key.split(':').nth(1).unwrap_or("");
 
