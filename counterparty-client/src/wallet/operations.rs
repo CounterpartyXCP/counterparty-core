@@ -8,7 +8,7 @@
 
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::Network;
-use secrecy::{ExposeSecret, Secret};
+use secrecy::{ExposeSecret, SecretString};
 use serde_json::{self, json, Value};
 use std::path::Path;
 
@@ -111,7 +111,7 @@ impl BitcoinWallet {
         // Store the address information
         let address_info = AddressInfo {
             public_key: key_data.public_key.to_string(),
-            private_key: Secret::new(key_data.private_key.to_string()),
+            private_key: SecretString::from(key_data.private_key.to_string()),
             label: final_label,
             address_type: addr_type.to_string(),
         };

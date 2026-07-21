@@ -5,7 +5,7 @@
 
 use bitcoin::secp256k1::{Secp256k1, SecretKey};
 use bitcoin::{Network, PrivateKey, PublicKey};
-use secrecy::{ExposeSecret, Secret};
+use secrecy::{ExposeSecret, SecretString};
 use std::str::FromStr;
 use zeroize::Zeroize;
 
@@ -17,7 +17,7 @@ pub struct KeyService;
 impl KeyService {
     /// Perform signing operations without exposing the private key
     pub fn sign_with_key<F, R>(
-        private_key_str: &Secret<String>,
+        private_key_str: &SecretString,
         network: Network,
         operation: F,
     ) -> Result<R>
@@ -74,7 +74,7 @@ mod tests {
     #[test]
     fn sign_with_key_exposes_matching_public_key() {
         let (wif, expected_pub) = fixed_wif(Network::Bitcoin);
-        let secret = Secret::new(wif);
+        let secret = SecretString::from(wif);
 
         let got =
             KeyService::sign_with_key(&secret, Network::Bitcoin, |_sk, pk| Ok(pk.to_string()))
@@ -86,7 +86,7 @@ mod tests {
     #[test]
     fn sign_with_key_can_sign_and_verify() {
         let (wif, _) = fixed_wif(Network::Bitcoin);
-        let secret = Secret::new(wif);
+        let secret = SecretString::from(wif);
         let secp = Secp256k1::new();
         let msg = Message::from_digest_slice(&[7u8; 32]).unwrap();
 
@@ -101,7 +101,7 @@ mod tests {
 
     #[test]
     fn sign_with_key_rejects_invalid_wif() {
-        let secret = Secret::new("this-is-not-a-wif".to_string());
+        let secret = SecretString::from("this-is-not-a-wif".to_string());
         let result: Result<()> =
             KeyService::sign_with_key(&secret, Network::Bitcoin, |_sk, _pk| Ok(()));
         assert!(result.is_err());

@@ -127,7 +127,7 @@ impl PasswordManager {
     fn get_from_keyring(&self) -> Result<Option<SecretString>> {
         let entry = self.get_entry()?;
         match entry.get_password() {
-            Ok(p) => Ok(Some(SecretString::new(p))),
+            Ok(p) => Ok(Some(SecretString::from(p))),
             Err(KeyringError::NoEntry) => Ok(None),
             Err(e) => Err(WalletError::KeyringError(format!(
                 "Failed to read password from keyring: {e}"
@@ -144,7 +144,7 @@ impl PasswordManager {
 
     fn delete_from_keyring(&self) -> Result<()> {
         let entry = self.get_entry()?;
-        match entry.delete_password() {
+        match entry.delete_credential() {
             Ok(()) | Err(KeyringError::NoEntry) => Ok(()),
             Err(e) => Err(WalletError::KeyringError(format!(
                 "Failed to delete password from keyring: {e}"
@@ -182,6 +182,6 @@ impl PasswordManager {
             ));
         }
 
-        Ok(SecretString::new(password))
+        Ok(SecretString::from(password))
     }
 }

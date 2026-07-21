@@ -69,7 +69,7 @@ pub fn print_colored_json(json_value: &Value) -> Result<()> {
     let theme_set = ThemeSet::load_defaults();
 
     // Convert JSON to YAML
-    let yaml_str = serde_yaml::to_string(json_value)?;
+    let yaml_str = serde_yaml_ng::to_string(json_value)?;
 
     // Choose YAML syntax (or fallback to plain text)
     let syntax = syntax_set

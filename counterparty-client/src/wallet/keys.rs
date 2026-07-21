@@ -10,7 +10,7 @@ use bitcoin::bip32::{DerivationPath, Xpriv};
 use bitcoin::key::{CompressedPublicKey, XOnlyPublicKey};
 use bitcoin::secp256k1::{All, Secp256k1};
 use bitcoin::{Address, Network, PrivateKey, PublicKey};
-use rand::{thread_rng, Rng};
+use rand::{rng, RngExt};
 use std::str::FromStr;
 use zeroize::Zeroizing;
 
@@ -85,7 +85,7 @@ pub fn generate_new_keys(
     secp: &Secp256k1<All>,
 ) -> Result<KeyData> {
     let mut entropy = Zeroizing::new([0u8; 16]);
-    thread_rng().fill(entropy.as_mut_slice());
+    rng().fill(entropy.as_mut_slice());
 
     let mnemonic = Mnemonic::from_entropy(entropy.as_slice())
         .map_err(|e| WalletError::Bip39Error(format!("Failed to generate mnemonic: {}", e)))?;

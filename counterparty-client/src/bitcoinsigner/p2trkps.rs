@@ -50,7 +50,7 @@ fn compute_signature(
     let tweaked_keypair = keypair.tap_tweak(secp, merkle_root);
 
     // Sign with Schnorr
-    let schnorr_sig = secp.sign_schnorr_no_aux_rand(&message, &tweaked_keypair.to_inner());
+    let schnorr_sig = secp.sign_schnorr_no_aux_rand(&message, &tweaked_keypair.to_keypair());
 
     // Add sighash type
     let taproot_signature = bitcoin::taproot::Signature {
@@ -62,7 +62,7 @@ fn compute_signature(
     // Verify signature
     let (xonly_pubkey, _) = tweaked_keypair.public_parts();
     if secp
-        .verify_schnorr(&schnorr_sig, &message, &xonly_pubkey.to_inner())
+        .verify_schnorr(&schnorr_sig, &message, &xonly_pubkey.to_x_only_public_key())
         .is_err()
     {
         return Err(WalletError::BitcoinError(

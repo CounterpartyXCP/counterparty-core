@@ -256,7 +256,7 @@ mod tests {
     //! JSON-serialized address map, plus the atomic-write helper.
 
     use super::*;
-    use secrecy::{ExposeSecret, Secret};
+    use secrecy::{ExposeSecret, SecretString};
 
     /// Build a `WalletStorage` pointing at `path` without touching the keyring
     /// (the `PasswordManager` is only used by methods we don't call here).
@@ -274,7 +274,7 @@ mod tests {
             super::super::types::AddressInfo {
                 public_key: "02aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899"
                     .to_string(),
-                private_key: Secret::new("cVwifKeyExampleValue".to_string()),
+                private_key: SecretString::from("cVwifKeyExampleValue".to_string()),
                 label: "test-label".to_string(),
                 address_type: "bech32".to_string(),
             },
@@ -341,7 +341,7 @@ mod tests {
     fn write_encrypted_then_decrypt_roundtrips_via_storage_methods() {
         let dir = tempfile::tempdir().unwrap();
         let storage = storage_at(&dir.path().join("wallet.db"));
-        let password = Secret::new("correct horse battery staple".to_string());
+        let password = SecretString::from("correct horse battery staple".to_string());
         let addresses = sample_map();
 
         storage.write_encrypted(&addresses, &password).unwrap();
@@ -358,7 +358,7 @@ mod tests {
         );
 
         // A wrong password must fail to decrypt.
-        let wrong = Secret::new("nope nope nope nope".to_string());
+        let wrong = SecretString::from("nope nope nope nope".to_string());
         assert!(storage.decrypt_addresses(&wrong).is_err());
     }
 
@@ -367,7 +367,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let wallet_file = dir.path().join("wallet.db");
         let prefix_file = wallet_file.with_extension("prefix");
-        let password = Secret::new("pw pw pw pw".to_string());
+        let password = SecretString::from("pw pw pw pw".to_string());
 
         // Write a legacy detached-prefix wallet by hand.
         let json = serde_json::to_string(&sample_map()).unwrap();

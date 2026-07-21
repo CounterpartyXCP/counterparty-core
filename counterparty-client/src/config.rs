@@ -170,7 +170,6 @@ impl AppConfig {
 
     // Load configuration from file and merge with current config
     pub fn load_from_file(&mut self, config_path: &PathBuf) -> anyhow::Result<()> {
-        use ::config::{Config, File};
         use anyhow::Context;
         use std::fs;
         use std::io::Write;
@@ -194,13 +193,11 @@ impl AppConfig {
             return Ok(());
         }
 
-        // Load configuration from the specified file
-        let settings_builder = Config::builder().add_source(File::from(config_path.clone()));
-
-        // If configuration can be loaded, update our AppConfig instance
-        if let Ok(settings) = settings_builder.build() {
-            if let Ok(file_config) = settings.try_deserialize::<AppConfig>() {
-                // Update configuration with values from the file
+        // Load configuration from the specified file. A malformed or unreadable
+        // config is ignored (we keep the current in-memory defaults), matching
+        // the previous best-effort behaviour.
+        if let Ok(contents) = fs::read_to_string(config_path) {
+            if let Ok(file_config) = toml::from_str::<AppConfig>(&contents) {
                 self.merge_from(file_config);
             }
         }
@@ -426,12 +423,8 @@ mod tests {
         );
 
         // Read the written TOML back the same way the app does on start-up.
-        use ::config::{Config, File};
-        let settings = Config::builder()
-            .add_source(File::from(path.clone()))
-            .build()
-            .unwrap();
-        let parsed: AppConfig = settings.try_deserialize().unwrap();
+        let contents = std::fs::read_to_string(&path).unwrap();
+        let parsed: AppConfig = toml::from_str(&contents).unwrap();
 
         assert_eq!(parsed.network, cfg.network);
         assert_eq!(parsed.api_url, cfg.api_url);

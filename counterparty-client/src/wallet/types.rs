@@ -1,6 +1,6 @@
 //! Common types and error definitions for the wallet module.
 
-use secrecy::Secret;
+use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
@@ -38,29 +38,29 @@ pub type Result<T> = std::result::Result<T, WalletError>;
 pub struct AddressInfo {
     pub public_key: String,
     #[serde(with = "serde_secret")]
-    pub private_key: Secret<String>,
+    pub private_key: SecretString,
     pub label: String,
     pub address_type: String, // Address type (p2pkh, p2wpkh/bech32)
 }
 
-// Serialization helpers for Secret<String>
+// Serialization helpers for SecretString
 mod serde_secret {
-    use secrecy::{ExposeSecret, Secret};
+    use secrecy::{ExposeSecret, SecretString};
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-    pub fn serialize<S>(secret: &Secret<String>, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(secret: &SecretString, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         secret.expose_secret().serialize(serializer)
     }
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<Secret<String>, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<SecretString, D::Error>
     where
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        Ok(Secret::new(s))
+        Ok(SecretString::from(s))
     }
 }
 

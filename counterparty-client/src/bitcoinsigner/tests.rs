@@ -30,7 +30,7 @@ use bitcoin::{
     absolute, transaction, Address, Amount, CompressedPublicKey, Network, OutPoint, PrivateKey,
     PublicKey, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Witness, XOnlyPublicKey,
 };
-use secrecy::Secret;
+use secrecy::SecretString;
 
 use super::sign_transaction;
 use super::types::{UTXOList, UTXO};
@@ -71,7 +71,7 @@ fn address_map(
         addr.to_string(),
         AddressInfo {
             public_key: pubkey.to_string(),
-            private_key: Secret::new(wif.to_string()),
+            private_key: SecretString::from(wif.to_string()),
             label: "test".to_string(),
             address_type: addr_type.to_string(),
         },
