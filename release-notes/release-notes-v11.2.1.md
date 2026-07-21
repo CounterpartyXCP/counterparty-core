@@ -67,6 +67,10 @@ The new health server listens on its own port (default: API port + 2 → `4002` 
 
 - **Correct the Bitcoin transaction fee calculation** (#3458). The Rust parser stopped walking a transaction's outputs at the first ordinary output after the Counterparty data (normally the change output), so any *further* outputs were dropped from the Bitcoin miner fee (`fee`) recorded for the transaction — e.g. `1db7a85e9bbbcd9f60a62411e94f1ae8d3851642d0e3ca73e095d522bf234293` was recorded as paying 19,388,665 sats while its inputs minus *all* outputs is 46,970 sats. Because `fee` participates in the `txlist_hash` consensus, the correction is gated behind a new `correct_transaction_fee` protocol-change height. **The mainnet, testnet3 and testnet4 activation heights are placeholders** — the change is dormant and has no consensus effect until a height is scheduled in a future release; regtest and signet enable it immediately. Only the recorded fee changes: destinations, dispensed amounts and data are untouched.
 
+## Tools
+
+- **New command-line client (`xcp`), beta** (#3127). This release introduces `counterparty-client/`, a standalone Rust CLI (binaries `xcp` and `counterparty-client`) that composes, signs and broadcasts Counterparty transactions against an API server using a local, `cocoon`-encrypted wallet (password held in the OS keyring). It exposes the full v2 API as commands, defaults to the official public HTTPS endpoints for mainnet/signet/testnet4 (regtest → `localhost`), and converts `wallet transaction` amounts to satoshis based on each asset's divisibility (raw `api compose_*` still expects satoshis). Build it from source — `cd counterparty-client && cargo build --release` — see [its README](../counterparty-client/README.md). It is **beta**: prefer signet/testnet4/regtest before using it with mainnet funds.
+
 ## Configuration
 
 - `--enable-api-v1` (off by default) — re-enable the legacy v1 JSON-RPC API (#3462).
