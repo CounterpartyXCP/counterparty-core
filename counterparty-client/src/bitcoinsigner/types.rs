@@ -141,6 +141,20 @@ impl AsRef<[UTXO]> for UTXOList {
     }
 }
 
+/// Trait for implementation of various transaction input signers
+/// This provides a common interface for all address types
+pub trait InputSigner {
+    /// Sign a specific input in a PSBT
+    fn sign_input(
+        sighash_cache: &mut SighashCache<&Transaction>,
+        input: &mut PsbtInput,
+        input_index: usize,
+        secret_key: &SecretKey,
+        public_key: &PublicKey,
+        utxo: &UTXO,
+    ) -> Result<()>;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -235,18 +249,4 @@ mod tests {
         assert_eq!(slice.len(), 1);
         assert_eq!(slice[0].amount, 5);
     }
-}
-
-/// Trait for implementation of various transaction input signers
-/// This provides a common interface for all address types
-pub trait InputSigner {
-    /// Sign a specific input in a PSBT
-    fn sign_input(
-        sighash_cache: &mut SighashCache<&Transaction>,
-        input: &mut PsbtInput,
-        input_index: usize,
-        secret_key: &SecretKey,
-        public_key: &PublicKey,
-        utxo: &UTXO,
-    ) -> Result<()>;
 }

@@ -370,7 +370,7 @@ mod tests {
         assert!(public.get("private_key").is_none());
 
         let private = w.show_address(&addr, Some(true)).unwrap();
-        assert!(private["private_key"].as_str().unwrap().len() > 0);
+        assert!(!private["private_key"].as_str().unwrap().is_empty());
     }
 
     #[test]
