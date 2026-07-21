@@ -43,7 +43,7 @@ impl Spinner {
 /// # Examples
 ///
 /// ```
-/// let spinner = print_loading("Chargement des données...");
+/// let spinner = print_loading("Loading data...");
 /// // Do some work
 /// spinner.stop();
 /// ```
@@ -129,10 +129,10 @@ pub fn print_colored_json(json_value: &Value) -> Result<()> {
 /// print_colored_json_list(&json_vec).unwrap();
 /// ```
 pub fn print_colored_json_list(json_values: &Vec<Value>) -> Result<()> {
-    // Créer un nouveau Value::Array contenant tous les éléments
+    // Create a single Value::Array containing all the elements
     let array_value = Value::Array(json_values.clone());
 
-    // Appeler print_colored_json une seule fois avec cette valeur
+    // Call print_colored_json once with that value
     print_colored_json(&array_value)
 }
 

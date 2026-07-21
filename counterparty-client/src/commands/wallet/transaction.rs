@@ -117,6 +117,7 @@ fn extract_parameter_for_arg(
 fn get_explorer_url(network: crate::config::Network, tx_id: &str) -> String {
     match network {
         crate::config::Network::Mainnet => format!("https://mempool.space/tx/{}", tx_id),
+        crate::config::Network::Signet => format!("https://mempool.space/signet/tx/{}", tx_id),
         crate::config::Network::Testnet4 => format!("https://mempool.space/testnet4/tx/{}", tx_id),
         crate::config::Network::Regtest => format!("Transaction ID: {}", tx_id), // No explorer for regtest
     }
@@ -319,6 +320,7 @@ fn script_to_address(script: &bitcoin::ScriptBuf, network: crate::config::Networ
     // Convert network to Bitcoin network
     let bitcoin_network = match network {
         crate::config::Network::Mainnet => bitcoin::Network::Bitcoin,
+        crate::config::Network::Signet => bitcoin::Network::Signet,
         crate::config::Network::Testnet4 => bitcoin::Network::Testnet,
         crate::config::Network::Regtest => bitcoin::Network::Regtest,
     };
@@ -374,19 +376,21 @@ async fn broadcast_transaction(config: &AppConfig, signed_tx: &str) -> Result<St
         .form(&params)
         .send()
         .await
-        .context("Failed to broadcast transaction")?;
+        .map_err(|e| api::friendly_send_error(e, &broadcast_url))?;
 
-    // Parse the response
-    let result: serde_json::Value = response
-        .json()
+    // Parse the response (as text first so a non-JSON body is reported clearly)
+    let status = response.status();
+    let body = response
+        .text()
         .await
-        .context("Failed to parse API response")?;
+        .with_context(|| format!("Failed to read response body from {}", broadcast_url))?;
+    let result = api::parse_json_body(&body, status, &broadcast_url)?;
 
     // Extract transaction ID from the response
     if let Some(tx_id) = result.get("result").and_then(|r| r.as_str()) {
         Ok(tx_id.to_string())
     } else if let Some(error) = result.get("error") {
-        Err(anyhow!("Broadcast failed: {}", error))
+        Err(api::friendly_api_error(error))
     } else {
         Err(anyhow!("Unexpected response format"))
     }
@@ -433,8 +437,8 @@ async fn call_compose_api(
     if let Some(api_result) = result.get("result") {
         Ok(api_result.clone())
     } else if let Some(error) = result.get("error") {
-        // Handle API error
-        Err(anyhow!("API error: {}", error))
+        // Handle API error with an actionable message (e.g. insufficient BTC)
+        Err(api::friendly_api_error(error))
     } else {
         // Generic error if neither 'result' nor 'error' is present
         Err(anyhow!("Unexpected API response format"))
@@ -631,6 +635,10 @@ pub async fn handle_transaction_command(
 
     // Extract parameters from command line arguments
     let mut params = extract_parameters_from_matches(&endpoint, transaction_name, sub_matches);
+
+    // Convert human-readable quantities to raw satoshis based on each asset's
+    // divisibility (the compose API expects satoshi integers).
+    super::quantity::normalize_quantities(config, transaction_name, &mut params).await?;
 
     // Get address and public key
     let public_key = get_address_and_public_key(&params, wallet)?;

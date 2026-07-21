@@ -8,6 +8,7 @@ use std::path::PathBuf;
 #[serde(rename_all = "lowercase")]
 pub enum Network {
     Mainnet,
+    Signet,
     Testnet4,
     Regtest,
 }
@@ -15,7 +16,7 @@ pub enum Network {
 // Default implementation for Network
 impl Default for Network {
     fn default() -> Self {
-        Network::Testnet4 // Default network is Testnet4
+        Network::Mainnet // Default network is Mainnet
     }
 }
 
@@ -44,7 +45,7 @@ pub struct AppConfig {
     #[serde(default)]
     pub network_configs: HashMap<Network, NetworkConfig>,
 
-    // Active network, defaults to Mainnet
+    // Active network, defaults to Mainnet (see Network::default)
     #[serde(default)]
     pub network: Network,
 }
@@ -60,14 +61,20 @@ impl AppConfig {
         let mut network_configs = HashMap::new();
 
         // Add mainnet config
+        let mainnet_config = Self::create_mainnet_config(&app_cache, &app_data);
+        network_configs.insert(Network::Mainnet, mainnet_config.clone());
+
+        // Add signet config
         network_configs.insert(
-            Network::Mainnet,
-            Self::create_mainnet_config(&app_cache, &app_data),
+            Network::Signet,
+            Self::create_signet_config(&app_cache, &app_data),
         );
 
         // Add testnet4 config
-        let testnet4_config = Self::create_testnet4_config(&app_cache, &app_data);
-        network_configs.insert(Network::Testnet4, testnet4_config.clone());
+        network_configs.insert(
+            Network::Testnet4,
+            Self::create_testnet4_config(&app_cache, &app_data),
+        );
 
         // Add regtest config
         network_configs.insert(
@@ -75,14 +82,14 @@ impl AppConfig {
             Self::create_regtest_config(&app_cache, &app_data),
         );
 
-        // Use testnet4 values for the root config (now default)
+        // Use mainnet values for the root config (default network)
         AppConfig {
-            api_url: testnet4_config.api_url.clone(),
-            endpoints_url: testnet4_config.endpoints_url.clone(),
-            cache_file: testnet4_config.cache_file.clone(),
-            data_dir: testnet4_config.data_dir.clone(),
+            api_url: mainnet_config.api_url.clone(),
+            endpoints_url: mainnet_config.endpoints_url.clone(),
+            cache_file: mainnet_config.cache_file.clone(),
+            data_dir: mainnet_config.data_dir.clone(),
             network_configs,
-            network: Network::Testnet4,
+            network: Network::Mainnet,
         }
     }
 
@@ -102,18 +109,28 @@ impl AppConfig {
     // Create mainnet configuration
     fn create_mainnet_config(app_cache: &PathBuf, app_data: &PathBuf) -> NetworkConfig {
         NetworkConfig {
-            api_url: "http://34.86.57.66:4001/".to_string(),
-            endpoints_url: "http://34.86.57.66:4001/v2/routes".to_string(),
+            api_url: "https://api.counterparty.io:4000".to_string(),
+            endpoints_url: "https://api.counterparty.io:4000/v2/routes".to_string(),
             cache_file: app_cache.join("mainnet/counterparty-endpoints.json"),
             data_dir: app_data.join("mainnet"),
+        }
+    }
+
+    // Create signet configuration
+    fn create_signet_config(app_cache: &PathBuf, app_data: &PathBuf) -> NetworkConfig {
+        NetworkConfig {
+            api_url: "https://signet.counterparty.io:34000".to_string(),
+            endpoints_url: "https://signet.counterparty.io:34000/v2/routes".to_string(),
+            cache_file: app_cache.join("signet/counterparty-endpoints.json"),
+            data_dir: app_data.join("signet"),
         }
     }
 
     // Create testnet4 configuration
     fn create_testnet4_config(app_cache: &PathBuf, app_data: &PathBuf) -> NetworkConfig {
         NetworkConfig {
-            api_url: "http://34.48.64.145:44001/".to_string(),
-            endpoints_url: "http://34.48.64.145:44001/v2/routes".to_string(),
+            api_url: "https://testnet4.counterparty.io:44000".to_string(),
+            endpoints_url: "https://testnet4.counterparty.io:44000/v2/routes".to_string(),
             cache_file: app_cache.join("testnet4/counterparty-endpoints.json"),
             data_dir: app_data.join("testnet4"),
         }
@@ -122,7 +139,7 @@ impl AppConfig {
     // Create regtest configuration
     fn create_regtest_config(app_cache: &PathBuf, app_data: &PathBuf) -> NetworkConfig {
         NetworkConfig {
-            api_url: "http://localhost:24000/".to_string(),
+            api_url: "http://localhost:24000".to_string(),
             endpoints_url: "http://localhost:24000/v2/routes".to_string(),
             cache_file: app_cache.join("regtest/counterparty-endpoints.json"),
             data_dir: app_data.join("regtest"),

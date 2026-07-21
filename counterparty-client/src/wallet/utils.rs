@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 pub fn to_bitcoin_network(network: config::Network) -> Network {
     match network {
         config::Network::Mainnet => Network::Bitcoin,
+        config::Network::Signet => Network::Signet,
         config::Network::Testnet4 => Network::Testnet,
         config::Network::Regtest => Network::Regtest,
     }
@@ -17,6 +18,7 @@ pub fn to_bitcoin_network(network: config::Network) -> Network {
 pub fn network_to_string(network: Network) -> &'static str {
     match network {
         Network::Bitcoin => "mainnet",
+        Network::Signet => "signet",
         Network::Testnet => "testnet4",
         Network::Regtest => "regtest",
         _ => "unknown",
@@ -27,6 +29,7 @@ pub fn network_to_string(network: Network) -> &'static str {
 pub fn get_network_dir(base_dir: &Path, network: config::Network) -> PathBuf {
     match network {
         config::Network::Mainnet => base_dir.join("mainnet"),
+        config::Network::Signet => base_dir.join("signet"),
         config::Network::Testnet4 => base_dir.join("testnet4"),
         config::Network::Regtest => base_dir.join("regtest"),
     }

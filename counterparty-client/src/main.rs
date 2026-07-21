@@ -305,6 +305,18 @@ fn add_common_cli_args(command: Command) -> Command {
                 .global(true)
                 .conflicts_with("regtest")
                 .conflicts_with("testnet4")
+                .conflicts_with("signet")
+                .display_order(999999),
+        )
+        .arg(
+            Arg::new("signet")
+                .long("signet")
+                .help("Use Signet network")
+                .action(ArgAction::SetTrue)
+                .global(true)
+                .conflicts_with("regtest")
+                .conflicts_with("testnet4")
+                .conflicts_with("mainnet")
                 .display_order(999999),
         )
         .arg(
@@ -315,6 +327,7 @@ fn add_common_cli_args(command: Command) -> Command {
                 .global(true)
                 .conflicts_with("regtest")
                 .conflicts_with("mainnet")
+                .conflicts_with("signet")
                 .display_order(999999),
         )
         .arg(
@@ -325,6 +338,7 @@ fn add_common_cli_args(command: Command) -> Command {
                 .global(true)
                 .conflicts_with("testnet4")
                 .conflicts_with("mainnet")
+                .conflicts_with("signet")
                 .display_order(999999),
         )
 }
@@ -457,61 +471,6 @@ fn add_label_resolution_recursive(cmd: Command, wallet: &wallet::BitcoinWallet) 
     process_command_args(cmd, wallet)
 }
 
-// Function to add quantity resolution support to convert floating-point BTC values to integer satoshi values
-fn add_quantity_resolution_recursive(cmd: Command) -> Command {
-    // Function to process a command's arguments recursively
-    fn process_command_args(mut cmd: Command) -> Command {
-        // Collect all arguments to avoid consumption during iteration
-        let args: Vec<_> = cmd.get_arguments().cloned().collect();
-
-        // Apply custom parser to quantity arguments
-        for arg in args {
-            let arg_id = arg.get_id().to_string();
-
-            // Check if this argument is for quantity (ends with "quantity")
-            if arg_id.ends_with("quantity") {
-                // Create a custom value parser for quantity conversion
-                let parser = move |s: &str| -> std::result::Result<String, String> {
-                    // Check if the input contains a decimal point (indicating a float)
-                    if s.contains('.') {
-                        match s.parse::<f64>() {
-                            Ok(value) => {
-                                // Convert from BTC to satoshi (multiply by 10^8)
-                                let satoshi = (value * 100_000_000.0).round() as i64;
-                                Ok(satoshi.to_string())
-                            }
-                            Err(_) => {
-                                // Not a valid floating-point number, return as is
-                                Ok(s.to_string())
-                            }
-                        }
-                    } else {
-                        // No decimal point, return as is (already in satoshi format)
-                        Ok(s.to_string())
-                    }
-                };
-
-                // Apply the custom parser to this argument
-                cmd = cmd.mut_arg(&arg_id, |a| a.value_parser(parser));
-            }
-        }
-
-        // Collect subcommand names to avoid consumption
-        let subcmds: Vec<_> = cmd.get_subcommands().cloned().collect();
-
-        // Process each subcommand recursively
-        for subcmd in subcmds {
-            let subcmd_name = subcmd.get_name().to_string();
-            cmd = cmd.mut_subcommand(&subcmd_name, |s| process_command_args(s.to_owned()));
-        }
-
-        cmd
-    }
-
-    // Apply recursive process to the command
-    process_command_args(cmd)
-}
-
 // Display header information message before executing commands
 fn header_message(config: &AppConfig, command_name: &str, config_path: &Path) {
     // Get active network configuration
@@ -523,6 +482,7 @@ fn header_message(config: &AppConfig, command_name: &str, config_path: &Path) {
     // Format network name with proper capitalization
     let network_name = match config.network {
         Network::Mainnet => "Mainnet",
+        Network::Signet => "Signet",
         Network::Testnet4 => "Testnet4",
         Network::Regtest => "Regtest",
     };
@@ -587,6 +547,13 @@ fn header_message(config: &AppConfig, command_name: &str, config_path: &Path) {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Fast path: `--version`/`-V` must never require config, network access or a
+    // wallet password. Handle it before any of the heavy setup below.
+    if std::env::args().any(|a| a == "--version" || a == "-V") {
+        println!("{} {}", get_binary_name(), env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
+
     // Pre-process arguments for file references
     pre_process_args()?;
 
@@ -596,7 +563,7 @@ async fn main() -> Result<()> {
     let bin_name: &'static str = Box::leak(binary_name.clone().into_boxed_str());
     let mut app = add_common_cli_args(
         Command::new(bin_name)
-            .version("0.1.0")
+            .version(env!("CARGO_PKG_VERSION"))
             .about("A command-line client for the Counterparty API and wallet"),
     )
     .arg(
@@ -629,6 +596,8 @@ async fn main() -> Result<()> {
     // Apply network settings from command line
     if temp_args.contains(&"--mainnet".to_string()) {
         config.set_network(Network::Mainnet);
+    } else if temp_args.contains(&"--signet".to_string()) {
+        config.set_network(Network::Signet);
     } else if temp_args.contains(&"--testnet4".to_string()) {
         config.set_network(Network::Testnet4);
     } else if temp_args.contains(&"--regtest".to_string()) {
@@ -641,6 +610,8 @@ async fn main() -> Result<()> {
     // Apply network settings again (command line takes precedence)
     if temp_args.contains(&"--mainnet".to_string()) {
         config.set_network(Network::Mainnet);
+    } else if temp_args.contains(&"--signet".to_string()) {
+        config.set_network(Network::Signet);
     } else if temp_args.contains(&"--testnet4".to_string()) {
         config.set_network(Network::Testnet4);
     } else if temp_args.contains(&"--regtest".to_string()) {
@@ -667,10 +638,9 @@ async fn main() -> Result<()> {
     // Step 8: Add file reference support
     app = add_file_ref_support_recursive(app);
 
-    // Step 9: Add quantity resolution support (convert BTC to satoshi for float values)
-    app = add_quantity_resolution_recursive(app);
-
-    // Step 10: Add label resolution support for address/destination parameters
+    // Step 9: Add label resolution support for address/destination parameters
+    // (Quantity → satoshi conversion is done per-asset in the compose path,
+    // based on each asset's divisibility; see wallet::quantity.)
     app = add_label_resolution_recursive(app, &wallet);
 
     // Step 11: Parse final command line arguments with the complete command structure

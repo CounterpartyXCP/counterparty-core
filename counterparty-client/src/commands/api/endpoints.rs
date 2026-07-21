@@ -28,14 +28,17 @@ async fn fetch_endpoints_from_api(config: &AppConfig) -> Result<HashMap<String, 
 
 // Fetches and parses a JSON response from a URL
 async fn fetch_json_response(client: &Client, url: &str) -> Result<Value> {
-    client
+    let response = client
         .get(url)
         .send()
         .await
-        .context("Failed to fetch API endpoints")?
-        .json()
+        .map_err(|e| super::execution::friendly_send_error(e, url))?;
+    let status = response.status();
+    let body = response
+        .text()
         .await
-        .context("Failed to parse API response")
+        .with_context(|| format!("Failed to read response body from {}", url))?;
+    super::execution::parse_json_body(&body, status, url)
 }
 
 // Parses endpoints from a JSON response

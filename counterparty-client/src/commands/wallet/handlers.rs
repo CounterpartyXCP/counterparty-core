@@ -191,7 +191,7 @@ pub async fn handle_address_balances(config: &AppConfig, sub_matches: &ArgMatche
 
                     // Get quantity from the quantity_normalized field at root level
                     if let Some(quantity_normalized) = balance_obj.get("quantity_normalized") {
-                        // Utilisons la valeur telle qu'elle est dans le JSON original
+                        // Use the value exactly as it appears in the original JSON
                         cleaned_balance.insert("quantity".to_string(), quantity_normalized.clone());
                     }
 
