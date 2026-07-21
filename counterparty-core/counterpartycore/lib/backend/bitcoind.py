@@ -2,14 +2,17 @@ import binascii
 import functools
 import json
 import logging
+import random
 import re
 import time
 from collections import OrderedDict
+from decimal import Decimal as D
 from multiprocessing import current_process
-from threading import current_thread
+from threading import current_thread, local
 
 import requests
 from bitcoinutils.keys import PublicKey
+from ecdsa.ellipticcurve import MalformedPointError
 from requests.exceptions import (  # pylint: disable=redefined-builtin
     ChunkedEncodingError,
     ConnectionError,
@@ -18,9 +21,9 @@ from requests.exceptions import (  # pylint: disable=redefined-builtin
 )
 
 from counterpartycore.lib import config, exceptions
-from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.parser import deserialize, utxosinfo
+from counterpartycore.lib.parser import deserialize, p2sh, protocol, utxosinfo
+from counterpartycore.lib.utils import multisig, script
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -32,6 +35,59 @@ TRANSACTIONS_CACHE_MAX_SIZE = 10000
 
 URL_USERNAMEPASS_REGEX = re.compile(".+://(.+)@")
 
+# os-backed RNG for retry-backoff jitter; avoids flagging the module-level
+# pseudo-random generator (Bandit B311) even though this is not security-sensitive.
+_JITTER_RNG = random.SystemRandom()
+
+# Per-API-request backend RPC fan-out budget (issue #3461). A single public API
+# request must not be able to trigger unbounded ``getrawtransaction`` fan-out — a
+# transaction with thousands of inputs, or a compose over an address with thousands
+# of UTXOs, would otherwise issue thousands of backend RPC calls and starve the
+# worker pool. ``handle_route`` arms a thread-local budget per request; every actual
+# backend call (counted at the HTTP chokepoints below, so ``lru_cache`` hits are
+# free) decrements it, and the request is rejected with a clear 400 once the budget
+# is exhausted. The budget is a thread-local (NOT ``flask.g``): this module is shared
+# with the parser, which has no Flask app context. It is armed ONLY for API requests,
+# so the parser is never bounded — bounding it would corrupt consensus.
+_api_rpc_accounting = local()
+
+
+def begin_api_rpc_accounting(limit):
+    """Arm the per-request backend RPC budget on the current thread. ``limit <= 0``
+    (or falsy) disables the bound while still counting calls (``float("inf")``),
+    matching the ``API_LIMIT_ROWS`` "0 = unlimited" convention. A ``remaining`` of
+    ``None`` means *unarmed* (parser / non-request threads) — never bounded."""
+    _api_rpc_accounting.count = 0
+    _api_rpc_accounting.remaining = float("inf") if not limit or limit <= 0 else limit
+
+
+def end_api_rpc_accounting():
+    """Disarm the budget on the current thread and return the number of backend RPC
+    calls made during the request. Exception-free: runs in ``handle_route``'s
+    ``finally`` and must always disarm, even after an error."""
+    count = getattr(_api_rpc_accounting, "count", 0)
+    _api_rpc_accounting.remaining = None
+    return count
+
+
+def _account_rpc_calls(n):
+    """Count ``n`` backend RPC calls against the current request's budget. A no-op
+    when unarmed (``remaining is None``) — always the case on parser threads and on
+    any thread that never called ``begin_api_rpc_accounting`` — so the parser is
+    provably never bounded. Raises once the budget is exhausted."""
+    remaining = getattr(_api_rpc_accounting, "remaining", None)
+    if remaining is None:
+        return
+    count = getattr(_api_rpc_accounting, "count", 0) + n
+    _api_rpc_accounting.count = count
+    if count > remaining:
+        raise exceptions.ApiRPCBudgetExceededError(
+            f"This request exceeds the maximum number of Bitcoin backend RPC calls "
+            f"allowed per API request ({int(remaining)}). Narrow the query (e.g. a "
+            f"smaller transaction), paginate, or for large composes pass the UTXOs "
+            f"directly via the `inputs_set` parameter to avoid backend lookups."
+        )
+
 
 def clean_url_for_log(url):
     m = URL_USERNAMEPASS_REGEX.match(url)
@@ -41,11 +97,72 @@ def clean_url_for_log(url):
     return url
 
 
+def _rpc_headers():
+    # Always send JSON content-type; conditionally include the X-API-Key
+    # header so the backend (e.g. Cloud Armor in front of bitcoind) can
+    # apply a higher per-key rate-limit bucket. Falls back to no header
+    # when `BACKEND_API_KEY` is unset, preserving the previous request
+    # shape for self-hosted nodes.
+    headers = {"content-type": "application/json"}
+    api_key = getattr(config, "BACKEND_API_KEY", None)
+    if api_key:
+        headers["X-API-Key"] = api_key
+    return headers
+
+
 # for testing
 def should_retry():
     if CurrentState().stopping():
         return False
     return True
+
+
+def request_timeout():
+    """Timeout passed to ``requests``. When a distinct connect timeout is
+    configured, return a ``(connect, read)`` tuple so a stalled/unreachable
+    backend fails the TCP connect quickly instead of hanging for the full
+    read timeout. Falls back to the single read timeout otherwise."""
+    connect_timeout = getattr(config, "BACKEND_CONNECT_TIMEOUT", None)
+    if connect_timeout:
+        return (connect_timeout, config.REQUESTS_TIMEOUT)
+    return config.REQUESTS_TIMEOUT
+
+
+def skip_rpc_retry(no_retry=False):
+    """Whether an RPC call must fail fast instead of entering the unbounded
+    connection-retry loop.
+
+    True for synchronous public API requests (which must never pin a Waitress/
+    Gunicorn worker while a degraded backend retries) and whenever the caller
+    explicitly opts out of retries. False for the parser/indexing path, which
+    must keep retrying to preserve consensus correctness (a skipped VIN would
+    fork the ledger)."""
+    return no_retry or is_api_request()
+
+
+def retry_backoff(tries):
+    """Jittered backoff (seconds) for the parser connection-retry loop.
+
+    Exponential growth capped at ``BACKEND_RETRY_MAX_SLEEP`` with full jitter,
+    so many independent nodes recovering from the same backend outage do not
+    reconnect in lockstep (a synchronized retry storm)."""
+    base = getattr(config, "BACKEND_RETRY_BASE_SLEEP", 1)
+    cap = getattr(config, "BACKEND_RETRY_MAX_SLEEP", 30)
+    ceiling = min(cap, base * (2 ** min(tries, 10)))
+    # full jitter: sleep uniformly in [base, ceiling]
+    return _JITTER_RNG.uniform(min(base, ceiling), ceiling)
+
+
+def interruptible_sleep(duration, check_interval=0.5):
+    """Sleep for duration seconds, but check for stop condition every check_interval seconds."""
+    elapsed = 0.0
+    while elapsed < duration:
+        if CurrentState().stopping():
+            return False  # Interrupted
+        sleep_time = min(check_interval, duration - elapsed)
+        time.sleep(sleep_time)
+        elapsed += sleep_time
+    return True  # Completed without interruption
 
 
 def get_json_response(response, retry=0):
@@ -61,7 +178,8 @@ def get_json_response(response, retry=0):
                 response.text,
                 stack_info=config.VERBOSE > 0,
             )
-            time.sleep(5)
+            if not interruptible_sleep(5):
+                raise exceptions.BitcoindRPCError("Shutdown requested during JSON retry") from e
             if retry < 5:
                 return get_json_response(response, retry=retry + 1)
         raise exceptions.BitcoindRPCError(  # noqa: B904
@@ -71,6 +189,14 @@ def get_json_response(response, retry=0):
 
 def rpc_call(payload, retry=0):
     """Calls to bitcoin core and returns the response"""
+    # Count this call against the per-request API budget (issue #3461). Only on the
+    # first entry: rpc_call retries backend-warming errors by recursing with the same
+    # payload, which must not be double-counted. For API requests this path is
+    # normally bypassed (skip_rpc_retry routes them to safe_rpc_payload); counting
+    # here still guards the edge case where an armed request reaches rpc_call.
+    if retry == 0:
+        _account_rpc_calls(len(payload) if isinstance(payload, list) else 1)
+
     url = config.BACKEND_URL
     response = None
     start_time = time.time()
@@ -83,9 +209,9 @@ def rpc_call(payload, retry=0):
             response = requests.post(
                 url,
                 data=json.dumps(payload),
-                headers={"content-type": "application/json"},
+                headers=_rpc_headers(),
                 verify=(not config.BACKEND_SSL_NO_VERIFY),
-                timeout=config.REQUESTS_TIMEOUT,
+                timeout=request_timeout(),
                 auth=("__cookie__", config.BACKEND_COOKIE) if config.BACKEND_COOKIE else None,
             )
 
@@ -97,19 +223,53 @@ def rpc_call(payload, retry=0):
                 raise exceptions.BitcoindRPCError(
                     f"Authorization error connecting to {clean_url_for_log(url)}: {response.status_code} {response.reason}"
                 )
-            if response.status_code == 503:
-                raise ConnectionError("Received 503 error from backend")
+            if response.status_code in (502, 503, 504):
+                # Transient gateway errors (commonly emitted by a reverse proxy
+                # or SSH tunnel sitting in front of the backend when it is
+                # briefly unreachable/overloaded). Route them through the
+                # connection-retry path instead of raising, so catch-up waits
+                # and retries rather than mis-resolving a VIN.
+                raise ConnectionError(f"Received {response.status_code} error from backend")
+            if response.status_code == 429:
+                # Rate limited - retry with exponential backoff
+                backoff_time = min(2**tries, 60)  # Max 60 seconds
+                logger.warning(
+                    "Rate limited by backend (429 Too Many Requests). Retrying in %s seconds... (Attempt: %s)",
+                    backoff_time,
+                    tries,
+                    stack_info=config.VERBOSE > 0,
+                )
+                if should_retry():
+                    if not interruptible_sleep(backoff_time):
+                        raise exceptions.BitcoindRPCError(
+                            "Shutdown requested during rate limit backoff"
+                        )
+                    continue
+                raise exceptions.BitcoindRPCError(str(response.status_code) + " " + response.reason)
             if response.status_code not in (200, 500):
                 raise exceptions.BitcoindRPCError(str(response.status_code) + " " + response.reason)
             break
-        except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError):
+        except (Timeout, ReadTimeout, ConnectionError, ChunkedEncodingError) as e:
+            # A synchronous public API request must never enter this unbounded
+            # loop and pin a worker; fail fast so the caller returns a bounded,
+            # retryable error. The parser path keeps retrying (consensus
+            # correctness) with jittered backoff to avoid a retry storm.
+            if is_api_request():
+                raise exceptions.BitcoindRPCError(
+                    f"Could not connect to backend at `{clean_url_for_log(url)}`: {e}"
+                ) from e
+            backoff = retry_backoff(tries)
             logger.warning(
-                "Could not connect to backend at `%s`. (Attempt: %s)",
+                "Could not connect to backend at `%s`. Retrying in %.1fs. (Attempt: %s)",
                 clean_url_for_log(url),
+                backoff,
                 tries,
                 stack_info=config.VERBOSE > 0,
             )
-            time.sleep(5)
+            if not interruptible_sleep(backoff):
+                raise exceptions.BitcoindRPCError(
+                    "Shutdown requested during connection retry"
+                ) from e
         except Exception as e:  # pylint: disable=broad-except
             broken_error = e
             break
@@ -139,7 +299,8 @@ def rpc_call(payload, retry=0):
         if should_retry():
             # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
             # seconds to start, this'll hit the maximum recursion depth limit.
-            time.sleep(10)
+            if not interruptible_sleep(10):
+                raise exceptions.BitcoindRPCError("Shutdown requested during error retry")
             return rpc_call(payload, retry=retry + 1)
         raise exceptions.BitcoindRPCError(warning_message)
     else:
@@ -170,7 +331,7 @@ def is_api_request():
 
 
 def rpc(method, params, no_retry=False):
-    if is_api_request() or no_retry:
+    if skip_rpc_retry(no_retry):
         return safe_rpc(method, params)
 
     payload = {
@@ -183,21 +344,29 @@ def rpc(method, params, no_retry=False):
 
 
 def safe_rpc_payload(payload):
+    # The guaranteed chokepoint for API requests (single lookups via safe_rpc and,
+    # since #3459, the getrawtransaction_batch fan-out both route here). Count every
+    # backend call against the per-request budget (issue #3461); a batch payload is a
+    # list, so it counts as one call per transaction fetched.
+    _account_rpc_calls(len(payload) if isinstance(payload, list) else 1)
+
     start_time = time.time()
     method = payload["method"] if isinstance(payload, dict) else payload[0]["method"]
     try:
         response = requests.post(
             config.BACKEND_URL,
             data=json.dumps(payload),
-            headers={"content-type": "application/json"},
+            headers=_rpc_headers(),
             verify=(not config.BACKEND_SSL_NO_VERIFY),
-            timeout=config.REQUESTS_TIMEOUT,
+            timeout=request_timeout(),
             auth=("__cookie__", config.BACKEND_COOKIE) if config.BACKEND_COOKIE else None,
         )
         if response is None:
             raise exceptions.BitcoindRPCError(
                 f"Cannot communicate with Bitcoin Core at `{clean_url_for_log(config.BACKEND_URL)}`. (server is set to run on {config.NETWORK_NAME}, is backend?)"
             )
+        if response.status_code == 429:
+            raise exceptions.BitcoindRPCError("429 Too Many Requests")
         response = response.json()
         if isinstance(response, list):
             return response
@@ -274,7 +443,11 @@ def getrawtransaction_batch(tx_hashes, verbose=False, return_dict=False, no_retr
             for j, tx_hash in enumerate(batch)
         ]
 
-        if no_retry:
+        # Mirror the single-call dispatcher in rpc(): API requests (and explicit
+        # no_retry callers) must fail fast via safe_rpc_payload rather than enter
+        # rpc_call's unbounded retry loop, which would otherwise pin an API worker
+        # while a degraded backend retries forever.
+        if skip_rpc_retry(no_retry):
             batch_results = safe_rpc_payload(payload)
         else:
             batch_results = rpc_call(payload)
@@ -307,20 +480,50 @@ def getrawmempool(verbose=False):
 def get_utxo_address_and_value(utxo, no_retry=False):
     tx_hash = utxo.split(":")[0]
     vout = int(utxo.split(":")[1])
-    try:
-        transaction = getrawtransaction(tx_hash, True, no_retry=no_retry)
-    except exceptions.BitcoindRPCError as e:
-        raise exceptions.InvalidUTXOError(f"Could not find UTXO {utxo}") from e
+    # A failure to *fetch* the transaction (RPC error, node behind/pruned) is a
+    # transient, node-local condition: it MUST propagate as ``BitcoindRPCError``
+    # so callers can retry/halt. Do NOT turn it into ``InvalidUTXOError`` — that
+    # would be indistinguishable from a *resolved* output that genuinely has no
+    # address, and a caller treating it as "unknown" would write a
+    # non-deterministic value into consensus state (see safe_get_utxo_address).
+    transaction = getrawtransaction(tx_hash, True, no_retry=no_retry)
     if vout >= len(transaction["vout"]):
         raise exceptions.InvalidUTXOError("vout index out of range")
-    if "address" not in transaction["vout"][vout]["scriptPubKey"]:
+    script_pub_key = transaction["vout"][vout]["scriptPubKey"]
+    address = script_pub_key.get("address")
+    if address is None and protocol.enabled("multisig_utxo_addresses"):
+        address = get_multisig_address_from_script_pub_key(script_pub_key)
+    if address is None:
         raise exceptions.InvalidUTXOError("vout does not have an address")
-    return transaction["vout"][vout]["scriptPubKey"]["address"], transaction["vout"][vout]["value"]
+    return address, transaction["vout"][vout]["value"]
+
+
+def get_multisig_address_from_script_pub_key(script_pub_key):
+    if "hex" not in script_pub_key:
+        return None
+    try:
+        if script.get_output_type(script_pub_key["hex"]) != "P2MS":
+            return None
+        asm = script.script_to_asm(script_pub_key["hex"])
+        pubkeys = asm[1:-2]
+        pubkeyhashes = [p2sh.pubkey_to_pubkeyhash(pubkey) for pubkey in pubkeys]
+        return multisig.construct_array(asm[0], pubkeyhashes, asm[-2])
+    except (exceptions.DecodeError, exceptions.MultiSigAddressError):
+        return None
 
 
 def safe_get_utxo_address(utxo):
+    # "unknown" is returned ONLY for the deterministic case where the output is
+    # resolvable but has no decodable address (non-standard script). That value
+    # is reproducible on every node and is part of consensus history (canonical
+    # mainnet balances carry it). A transient RPC failure instead raises
+    # ``BitcoindRPCError`` and is left to propagate so the parser retries (and
+    # ultimately halts) rather than writing a node-dependent "unknown" into the
+    # ledger — which would silently fork consensus. Retries are re-enabled here
+    # (no ``no_retry``): the address-less case never hits the RPC retry path, so
+    # retrying only guards against genuine transient RPC failures.
     try:
-        return get_utxo_address_and_value(utxo, no_retry=True)[0]
+        return get_utxo_address_and_value(utxo)[0]
     except exceptions.InvalidUTXOError:
         return "unknown"
 
@@ -328,10 +531,13 @@ def safe_get_utxo_address(utxo):
 def is_valid_utxo(utxo):
     if not utxosinfo.is_utxo_format(utxo):
         return False
+    # Compose-time validation only (non-consensus): any failure to resolve the
+    # UTXO — missing address or an RPC error (e.g. the tx does not exist) — means
+    # it can't be used as a UTXO, so report it invalid rather than propagating.
     try:
         get_utxo_address_and_value(utxo)
         return True
-    except exceptions.InvalidUTXOError:
+    except (exceptions.InvalidUTXOError, exceptions.BitcoindRPCError):
         return False
 
 
@@ -409,7 +615,8 @@ def wait_for_block(block_index):
             block_count,
             tip,
         )
-        time.sleep(10)
+        if not interruptible_sleep(10):
+            return  # Interrupted, exit early
         block_count = getblockcount()
 
 
@@ -425,6 +632,25 @@ def add_block_in_cache(block_index, block):
         BLOCKS_CACHE.popitem(last=False)
     for transaction in block["transactions"]:
         add_transaction_in_cache(transaction["tx_hash"], transaction)
+
+
+def reset_caches():
+    """Clear in-memory backend caches that may hold data tied to a specific
+    block_index. TRANSACTIONS_CACHE holds `deserialize_tx` output which
+    honours protocol gates, so a cache hit after a reorg can return data
+    deserialised under the orphaned chain's gates. Called from rollback."""
+    TRANSACTIONS_CACHE.clear()
+    BLOCKS_CACHE.clear()
+    # Also clear the @functools.lru_cache wrappers; without these calls
+    # an orphaned UTXO's cached (address, value) tuple persists across
+    # reorg even though Bitcoin Core may no longer recognise the tx.
+    # Same for getrawtransaction's cached payloads.
+    # Test fixtures monkey-patch these with plain functions that don't
+    # carry the lru_cache `cache_clear` attribute, so guard with hasattr.
+    if hasattr(getrawtransaction, "cache_clear"):
+        getrawtransaction.cache_clear()
+    if hasattr(get_utxo_address_and_value, "cache_clear"):
+        get_utxo_address_and_value.cache_clear()
 
 
 def get_decoded_transaction(tx_hash, block_index=None, no_retry=False):
@@ -481,7 +707,7 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                             == PublicKey.from_hex(pubkey).get_segwit_address().to_string()
                         ):
                             return pubkey
-                    except binascii.Error:
+                    except (binascii.Error, MalformedPointError):
                         pass
             elif "coinbase" not in vin:
                 scriptsig = vin["scriptSig"]
@@ -500,7 +726,7 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                             == PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
                         ):
                             return pubkey
-                    except binascii.Error:
+                    except (binascii.Error, MalformedPointError):
                         pass
         for vout in tx["vout"]:
             asm = vout["scriptPubKey"]["asm"].split(" ")
@@ -512,7 +738,7 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                         == PublicKey.from_hex(pubkey).get_address(compressed=False).to_string()
                     ):
                         return pubkey
-                except (binascii.Error, AttributeError):
+                except (binascii.Error, AttributeError, MalformedPointError):
                     pass
                 try:
                     if (
@@ -520,7 +746,7 @@ def search_pubkey_in_transactions(pubkeyhash, tx_hashes):
                         == PublicKey.from_hex(pubkey).get_address(compressed=True).to_string()
                     ):
                         return pubkey
-                except (binascii.Error, AttributeError):
+                except (binascii.Error, AttributeError, MalformedPointError):
                     pass
     return None
 
@@ -540,7 +766,7 @@ def list_unspent(source, allow_unconfirmed_inputs):
                 {
                     "txid": unspent["txid"],
                     "vout": unspent["vout"],
-                    "value": int(unspent["amount"] * config.UNIT),
+                    "value": int(D(str(unspent["amount"])) * D(config.UNIT)),
                     "amount": unspent["amount"],
                     "script_pub_key": unspent["scriptPubKey"],
                 }
@@ -554,21 +780,59 @@ def get_vin_info(vin, no_retry=False):
     vin_info = vin.get("info")
     if vin_info is None:
         return get_vin_info_legacy(vin, no_retry=no_retry)
-    else:
-        return vin_info["value"], vin_info["script_pub_key"], vin_info["is_segwit"]
+    return vin_info["value"], vin_info["script_pub_key"], vin_info["is_segwit"]
 
 
 def get_vin_info_legacy(vin, no_retry=False):
     try:
         vin_ctx = get_decoded_transaction(vin["hash"], no_retry=no_retry)
         vout = vin_ctx["vout"][vin["n"]]
+        # `is_segwit` MUST match the Rust fetcher (indexer/bitcoin_client.rs). Before the
+        # `fix_is_segwit` protocol change (block 902000) it is whether the *parent
+        # transaction* carries any witness (equivalently `txid != wtxid`), NOT whether
+        # the prevout output is itself a witness program. Computing it with
+        # `is_segwit_output()` unconditionally applies the post-fix semantics to pre-fix
+        # blocks, which flips the source of P2SH-encoded transactions funded by a segwit
+        # parent from bech32 to base58 and forks the ledger (observed at block 832867).
+        if protocol.enabled("fix_is_segwit"):
+            is_segwit = script.is_segwit_output(vout["script_pub_key"])
+        else:
+            is_segwit = vin_ctx["segwit"]
         return (
             vout["value"],
             vout["script_pub_key"],
-            composer.is_segwit_output(vout["script_pub_key"]),
+            is_segwit,
         )
     except exceptions.BitcoindRPCError as e:
-        raise exceptions.DecodeError("vin not found") from e
+        # While parsing the mempool the parent transaction may legitimately be
+        # unavailable (e.g. not yet relayed). Skipping the *unconfirmed* tx is
+        # safe: it will be re-evaluated once it confirms.
+        if CurrentState().parsing_mempool():
+            logger.warning(
+                "Failed to lookup parent transaction %s for VIN resolution. "
+                "Skipping unconfirmed (mempool) transaction.",
+                vin["hash"],
+            )
+            raise exceptions.DecodeError("vin not found") from e
+        # During catch-up the parent of a *confirmed* transaction must exist.
+        # A failure here is an infrastructure error (unhealthy/overloaded
+        # backend, a transient gateway 5xx, missing `txindex`, ...), NOT
+        # evidence that the transaction is non-Counterparty. Silently treating
+        # it as BTC-only would drop a real Counterparty transaction and
+        # permanently fork the ledger from consensus (this is exactly what
+        # happened at block 510556). Halt instead: the surrounding block is
+        # rolled back atomically and retried on the next run, so a transient
+        # blip never corrupts the ledger.
+        if CurrentState().stopping():
+            # A clean shutdown interrupted the lookup; propagate the original
+            # (shutdown) error rather than the consensus-corruption warning.
+            raise
+        raise exceptions.BitcoindRPCError(
+            f"Failed to resolve parent transaction {vin['hash']} for VIN resolution "
+            "while parsing a confirmed block. Refusing to silently skip a confirmed "
+            "transaction, which would corrupt consensus. Is `txindex` enabled and the "
+            "backend healthy?"
+        ) from e
 
 
 def get_transaction(tx_hash: str, result_format: str = "json"):

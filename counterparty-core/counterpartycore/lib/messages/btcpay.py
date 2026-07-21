@@ -18,7 +18,7 @@ LENGTH = 32 + 32
 ID = 11
 
 
-def validate(db, source, order_match_id, block_index):
+def validate(db, source, order_match_id, block_index):  # pylint: disable=unused-argument
     problems = []
     order_match = None
     order_matches = ledger.markets.get_order_match(db, match_id=order_match_id)
@@ -65,12 +65,31 @@ def validate(db, source, order_match_id, block_index):
     return destination, btc_quantity, escrowed_asset, escrowed_quantity, order_match, problems
 
 
-def compose(db, source: str, order_match_id: str, skip_validation: bool = False):
-    assert order_match_id[64] == "_"
+def _decode_order_match_id(order_match_id: str):
+    # API/compose path only: surface a malformed order_match_id as a clean
+    # ComposeError instead of leaking an IndexError/AssertionError (bad length
+    # or missing "_" separator) or a binascii.Error (non-hex halves).
+    if (
+        not isinstance(order_match_id, str)
+        or len(order_match_id) != 129
+        or order_match_id[64] != "_"
+    ):
+        raise exceptions.ComposeError(["invalid order match id"])
     tx0_hash, tx1_hash = (
         order_match_id[:64],
         order_match_id[65:],
     )  # UTF-8 encoding means that the indices are doubled.
+    try:
+        return (
+            binascii.unhexlify(bytes(tx0_hash, "utf-8")),
+            binascii.unhexlify(bytes(tx1_hash, "utf-8")),
+        )
+    except binascii.Error as exc:
+        raise exceptions.ComposeError(["invalid order match id"]) from exc
+
+
+def compose(db, source: str, order_match_id: str, skip_validation: bool = False):
+    tx0_hash_bytes, tx1_hash_bytes = _decode_order_match_id(order_match_id)
 
     destination, btc_quantity, _escrowed_asset, _escrowed_quantity, order_match, problems = (
         validate(db, source, order_match_id, CurrentState().current_block_index())
@@ -88,10 +107,6 @@ def compose(db, source: str, order_match_id: str, skip_validation: bool = False)
     if 10 - time_left < 4:
         logger.warning("Order match has only %s confirmation(s).", 10 - time_left)
 
-    tx0_hash_bytes, tx1_hash_bytes = (
-        binascii.unhexlify(bytes(tx0_hash, "utf-8")),
-        binascii.unhexlify(bytes(tx1_hash, "utf-8")),
-    )
     data = messagetype.pack(ID)
     data += struct.pack(FORMAT, tx0_hash_bytes, tx1_hash_bytes)
     return (source, [(destination, btc_quantity)], data)
@@ -129,11 +144,29 @@ def parse(db, tx, message):
     tx0_hash, tx1_hash, order_match_id, status = unpack(message)
 
     if status == "valid":
-        _destination, btc_quantity, escrowed_asset, escrowed_quantity, _order_match, problems = (
+        destination, btc_quantity, escrowed_asset, escrowed_quantity, _order_match, problems = (
             validate(db, tx["source"], order_match_id, tx["block_index"])
         )
         if problems:
             status = "invalid: " + "; ".join(problems)
+
+    if status == "valid":
+        # SECURITY: pre-fix, parse only checked `tx["btc_amount"] >= btc_quantity`
+        # without verifying that `tx["destination"]` actually equals the
+        # legitimate counterparty's address (`destination` returned by validate).
+        # Combined with `check_btcpay_source` (active mainnet >= block 313900)
+        # bypassing the source check, ANYONE could craft a btcpay tx that paid
+        # 1 BTC to their OWN address and the legitimate order_match_id in
+        # OP_RETURN -> parse credited the attacker with the escrowed asset.
+        # 11 years of zero exploitation on mainnet, but verified reproducible
+        # at the unit-test level (test_parse_attacker_diverts_btc_to_self).
+        # Gated behind `check_btcpay_destination` so historical re-validation
+        # preserves consensus determinism (existing 2,158 mainnet btcpays were
+        # all honest -- per gcloud kubectl SQL invariants), and the fix
+        # activates at a future block coordinated with the team.
+        if protocol.enabled("check_btcpay_destination", block_index=tx["block_index"]):
+            if tx["destination"] != destination:
+                status = "invalid: btc payment destination does not match order match counterparty"
 
     if status == "valid":
         # BTC must be paid all at once.

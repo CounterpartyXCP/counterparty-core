@@ -116,12 +116,12 @@ pub fn script_to_address(script_pubkey: Vec<u8>, network: &str) -> PyResult<Stri
 }
 
 #[pyfunction]
-fn script_to_asm(script_bytes: Vec<u8>, py: Python) -> PyResult<Vec<PyObject>> {
+fn script_to_asm(script_bytes: Vec<u8>, py: Python) -> PyResult<Vec<Py<PyAny>>> {
     // Wrap the code block that may panic inside `catch_unwind()`
     let result = panic::catch_unwind(|| {
         let script = ScriptBuf::from(script_bytes);
 
-        let mut asm: Vec<PyObject> = Vec::new();
+        let mut asm: Vec<Py<PyAny>> = Vec::new();
 
         for instruction in script.instructions() {
             match instruction {
@@ -130,7 +130,7 @@ fn script_to_asm(script_bytes: Vec<u8>, py: Python) -> PyResult<Vec<PyObject>> {
                         Instruction::Op(op) => opcode_to_bytes(op),
                         Instruction::PushBytes(data) => data.as_bytes().to_vec(),
                     };
-                    asm.push(PyBytes::new_bound(py, &py_instruction).into());
+                    asm.push(PyBytes::new(py, &py_instruction).into());
                 }
                 Err(_) => {
                     return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
@@ -455,7 +455,7 @@ pub fn unpack_address(packed: Vec<u8>, network: &str) -> PyResult<String> {
 }
 
 pub fn register_utils_module(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
-    let m = PyModule::new_bound(parent_module.py(), "utils")?;
+    let m = PyModule::new(parent_module.py(), "utils")?;
     m.add_function(wrap_pyfunction!(inverse_hash, &m)?)?;
     m.add_function(wrap_pyfunction!(script_to_asm, &m)?)?;
     m.add_function(wrap_pyfunction!(script_to_address, &m)?)?;

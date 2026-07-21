@@ -32,7 +32,7 @@ fn b58_decode_list(encoded_list: Vec<String>) -> PyResult<Vec<Vec<u8>>> {
 }
 
 pub fn register_b58_module(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
-    let m = PyModule::new_bound(parent_module.py(), "b58")?;
+    let m = PyModule::new(parent_module.py(), "b58")?;
     m.add_function(wrap_pyfunction!(b58_encode, &m)?)?;
     m.add_function(wrap_pyfunction!(b58_encode_list, &m)?)?;
     m.add_function(wrap_pyfunction!(b58_decode, &m)?)?;

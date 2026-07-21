@@ -52,4 +52,8 @@ class TelemetryDaemon:
         logger.info("Stopping Telemetry Daemon thread...")
         self.is_running = False
         self.collector.close()
-        self.thread.join()
+        self.thread.join(timeout=5)
+        if self.thread.is_alive():
+            logger.warning("Telemetry Daemon thread did not stop in time, continuing...")
+        else:
+            logger.info("Telemetry Daemon thread stopped.")

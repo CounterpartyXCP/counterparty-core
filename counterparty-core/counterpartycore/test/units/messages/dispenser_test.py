@@ -1,7 +1,28 @@
+import struct
+
 import pytest
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
+
+
+def test_unpack_invalid_asset_id():
+    payload = struct.pack(">QQQQB", 2, 1, 1, 1, dispenser.STATUS_OPEN)
+
+    assert dispenser.unpack(payload, return_dict=True) == {
+        "asset": None,
+        "give_quantity": None,
+        "escrow_quantity": None,
+        "mainchainrate": None,
+        "dispenser_status": None,
+        "action_address": None,
+        "oracle_address": None,
+        "status": "invalid: could not unpack",
+    }
+
+    with ProtocolChangesDisabled(["catch_invalid_dispenser_asset_id"]):
+        with pytest.raises(exceptions.AssetIDError):
+            dispenser.unpack(payload, return_dict=True)
 
 
 def test_validate(ledger_db, defaults):
@@ -88,7 +109,7 @@ def test_validate(ledger_db, defaults):
     ) == (
         None,
         [
-            "address doesn't have enough balance of XCP (91499999693 < 9223372036854775808)",
+            "address doesn't have enough balance of XCP (91399999693 < 9223372036854775808)",
             "integer overflow",
         ],
     )
@@ -118,6 +139,38 @@ def test_validate(ledger_db, defaults):
         config.BURN_START,
         None,
     ) == (None, ["dispenser must be created by source"])
+
+
+@pytest.mark.parametrize(
+    ("param_name", "param_value", "expected_problem"),
+    [
+        ("give_quantity", "100", "give_quantity must be an integer"),
+        ("escrow_quantity", "100", "escrow_quantity must be an integer"),
+        ("mainchainrate", "100", "mainchainrate must be an integer"),
+    ],
+)
+def test_validate_rejects_non_integer_parameters(
+    ledger_db, defaults, param_name, param_value, expected_problem
+):
+    params = {
+        "give_quantity": 100,
+        "escrow_quantity": 100,
+        "mainchainrate": 100,
+    }
+    params[param_name] = param_value
+
+    assert dispenser.validate(
+        ledger_db,
+        defaults["addresses"][0],
+        "XCP",
+        params["give_quantity"],
+        params["escrow_quantity"],
+        params["mainchainrate"],
+        dispenser.STATUS_OPEN,
+        None,
+        config.BURN_START,
+        None,
+    ) == (None, [expected_problem])
 
 
 def test_compose(ledger_db, defaults):
@@ -231,6 +284,50 @@ def test_compose_with_oracle(ledger_db, defaults, monkeypatch):
             defaults["p2tr_addresses"][1],
             True,
         )
+
+
+def test_compose_close_ignores_oracle_fee(ledger_db, defaults, monkeypatch):
+    def fail_calculate_oracle_fee(*args):
+        raise AssertionError("close dispenser should not calculate oracle fee")
+
+    monkeypatch.setattr(dispenser, "calculate_oracle_fee", fail_calculate_oracle_fee)
+
+    assert dispenser.compose(
+        ledger_db,
+        defaults["addresses"][5],
+        config.XCP,
+        0,
+        0,
+        0,
+        dispenser.STATUS_CLOSED,
+        None,
+        defaults["addresses"][1],
+        True,
+    ) == (
+        defaults["addresses"][5],
+        [],
+        b"\x0c\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\n",
+    )
+
+
+def test_validate_close_with_oracle_keeps_price_check(ledger_db, defaults, current_block_index):
+    assert dispenser.validate(
+        ledger_db,
+        defaults["addresses"][5],
+        config.XCP,
+        0,
+        0,
+        0,
+        dispenser.STATUS_CLOSED,
+        None,
+        current_block_index,
+        defaults["addresses"][1],
+    ) == (
+        None,
+        [
+            f"The oracle address {defaults['addresses'][1]} has not broadcasted any price yet",
+        ],
+    )
 
 
 def test_parse_open_dispenser(

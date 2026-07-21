@@ -19,7 +19,7 @@ from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.monitors import sentry
 from counterpartycore.lib.monitors.telemetry.oneshot import TelemetryOneShot
 from counterpartycore.lib.parser import blocks, check, deserialize, mempool
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import hashcodec, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -33,7 +33,10 @@ RAW_MEMPOOL = []
 
 
 def get_zmq_notifications_addresses():
-    zmq_notification = backend.bitcoind.get_zmq_notifications()
+    try:
+        zmq_notification = backend.bitcoind.get_zmq_notifications()
+    except exceptions.BitcoindRPCError as e:
+        raise exceptions.BitcoindZMQError("Error getting ZMQ notifications") from e
 
     if len(zmq_notification) == 0:
         raise exceptions.BitcoindZMQError("Bitcoin Core ZeroMQ notifications are not enabled.")
@@ -83,6 +86,12 @@ class BlockchainWatcher:
         self.db = db
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
+        # Pre-declare ZMQ attributes so connect_to_zmq() can safely close any
+        # prior instance on reconnect without tripping pylint
+        # access-member-before-definition warnings.
+        self.zmq_context = None
+        self.zmq_sub_socket_sequence = None
+        self.zmq_sub_socket_rawblock = None
         self.connect_to_zmq()
         self.mempool_block = []
         self.mempool_block_hashes = []
@@ -100,6 +109,32 @@ class BlockchainWatcher:
             self.mempool_parser.start()
 
     def connect_to_zmq(self):
+        # Close any prior sockets + context so a reconnect (called on
+        # ZMQError in receive_multipart) doesn't leak file descriptors and
+        # eventually exhaust the per-process limit on long-running indexers
+        # with flapping ZMQ connections.
+        # Best-effort teardown on the reconnect path: each step must not
+        # short-circuit the next one (and the fresh Context/socket creation
+        # below), otherwise a single failed close() would leave the watcher
+        # stuck without a working ZMQ stack. pyzmq can raise ZMQError but
+        # also OS-level errors / edge cases (already-closed socket, race
+        # with the asyncio loop) so we catch broadly and only log at debug.
+        if self.zmq_sub_socket_sequence is not None:
+            try:
+                self.zmq_sub_socket_sequence.close(linger=0)
+            except Exception as e:  # pylint: disable=broad-except
+                logger.debug("Error closing zmq_sub_socket_sequence: %s", e)
+        if self.zmq_sub_socket_rawblock is not None:
+            try:
+                self.zmq_sub_socket_rawblock.close(linger=0)
+            except Exception as e:  # pylint: disable=broad-except
+                logger.debug("Error closing zmq_sub_socket_rawblock: %s", e)
+        if self.zmq_context is not None:
+            try:
+                self.zmq_context.term()
+            except Exception as e:  # pylint: disable=broad-except
+                logger.debug("Error terminating zmq_context: %s", e)
+
         self.zmq_context = zmq.asyncio.Context()
         self.zmq_sub_socket_sequence = self.zmq_context.socket(zmq.SUB)
         self.zmq_sub_socket_sequence.setsockopt(zmq.RCVHWM, 0)
@@ -111,7 +146,10 @@ class BlockchainWatcher:
         self.zmq_sub_socket_sequence.connect(self.zmq_sequence_address)
         self.zmq_sub_socket_rawblock = self.zmq_context.socket(zmq.SUB)
         self.zmq_sub_socket_rawblock.setsockopt(zmq.RCVHWM, 0)
-        self.zmq_sub_socket_sequence.setsockopt(zmq.RCVTIMEO, ZMQ_TIMEOUT)
+        # Was setting RCVTIMEO on zmq_sub_socket_sequence twice (typo); rawblock
+        # uses zmq.NOBLOCK at recv time so the missing timeout was harmless,
+        # but make the timeout symmetric in case anyone removes NOBLOCK later.
+        self.zmq_sub_socket_rawblock.setsockopt(zmq.RCVTIMEO, ZMQ_TIMEOUT)
         self.zmq_sub_socket_rawblock.setsockopt_string(zmq.SUBSCRIBE, "rawblock")
         self.zmq_sub_socket_rawblock.connect(self.zmq_rawblock_address)
 
@@ -123,27 +161,74 @@ class BlockchainWatcher:
 
     def receive_rawblock(self, body):
         # parse blocks as they come in
-        decoded_block = deserialize.deserialize_block(
-            body.hex(),
-            parse_vouts=True,
-            block_index=CurrentState().current_block_index() + 1,
-        )
-        # check if already parsed by block.catch_up()
-        existing_block = ledger.blocks.get_block_by_hash(self.db, decoded_block["block_hash"])
-        if existing_block is None:
-            previous_block = ledger.blocks.get_block_by_hash(self.db, decoded_block["hash_prev"])
-            if previous_block is None:
-                # catch up with rpc if previous block is missing
-                logger.debug("Previous block is missing. Catching up...")
-                blocks.catch_up(self.db)
-                CurrentState().set_ledger_state(self.db, "Following")
-            else:
-                blocks.parse_new_block(self.db, decoded_block)
-            CurrentState().set_ledger_state(self.db, "Following")
-            if not config.NO_MEMPOOL:
-                mempool.clean_mempool(self.db)
-            if not config.NO_TELEMETRY:
-                TelemetryOneShot().submit()
+        try:
+            decoded_block = deserialize.deserialize_block(
+                body.hex(),
+                parse_vouts=True,
+                block_index=CurrentState().current_block_index() + 1,
+            )
+            # check if already parsed by block.catch_up()
+            existing_block = ledger.blocks.get_block_by_hash(self.db, decoded_block["block_hash"])
+            if existing_block is None:
+                previous_block = ledger.blocks.get_block_by_hash(
+                    self.db, decoded_block["hash_prev"]
+                )
+                if previous_block is None:
+                    # catch up with rpc if previous block is missing
+                    logger.debug("Previous block is missing. Catching up...")
+                    blocks.catch_up(self.db)
+                    CurrentState().set_ledger_state(self.db, "Following")
+                    if not config.NO_MEMPOOL:
+                        try:
+                            mempool.clean_mempool(self.db)
+                        except (
+                            exceptions.BitcoindRPCError,
+                            exceptions.BitcoindZMQError,
+                        ) as e:
+                            logger.warning(
+                                "clean_mempool failed after catch_up (will retry next block): %s",
+                                e,
+                            )
+                else:
+                    # Atomic: parse_new_block + clean_mempool share one outer
+                    # transaction so a reader (e.g. APIWatcher polling the
+                    # ledger DB) cannot observe BLOCK_PARSED visible while
+                    # the just-confirmed tx's mempool rows are still around.
+                    # Without this, scenarios_test races on `mempool/events`
+                    # being empty right after wait_for_counterparty_server
+                    # returns: the APIWatcher had already seen the commit
+                    # from parse_new_block (and bumped LAST_BLOCK_PARSED in
+                    # state_db) while the separate clean_mempool DELETEs had
+                    # not yet committed in ledger_db.
+                    with self.db:
+                        blocks.parse_new_block(self.db, decoded_block)
+                        if not config.NO_MEMPOOL:
+                            try:
+                                mempool.clean_mempool(self.db)
+                            except (
+                                exceptions.BitcoindRPCError,
+                                exceptions.BitcoindZMQError,
+                            ) as e:
+                                # A transient RPC failure inside getrawmempool
+                                # must not roll back the just-parsed block;
+                                # the next receive_rawblock will retry the
+                                # mempool sweep. We still keep the block
+                                # commit because chain progress is critical.
+                                logger.warning(
+                                    "clean_mempool failed (will retry next block): %s", e
+                                )
+                    CurrentState().set_ledger_state(self.db, "Following")
+                if not config.NO_TELEMETRY:
+                    TelemetryOneShot().submit()
+        except exceptions.ParseTransactionError:
+            # Consensus halt; let the outer handler stop the watcher.
+            raise
+        except Exception as e:  # pylint: disable=broad-except
+            # Operational failures (malformed rawblock, transient telemetry/RPC
+            # error) should not tear down the watcher -- next ZMQ message or
+            # the next is_late() tick will trigger catch_up() to recover.
+            logger.warning("receive_rawblock skipped: %s", e)
+            capture_exception(e)
 
     def receive_hashtx(self, body, sequence):
         self.hash_by_sequence[sequence] = body.hex()
@@ -234,6 +319,10 @@ class BlockchainWatcher:
                 return
             raise e
         except Exception as e:  # pylint: disable=broad-except
+            # Anything other than EAGAIN here means the socket is in a bad
+            # state (closed, context terminated, asyncio<->zmq desync, OS
+            # error). Don't let it crash the watcher: rebuild the ZMQ stack
+            # via connect_to_zmq() and let the next handle() tick retry.
             logger.error("Error receiving message: %s. Reconnecting...", e)
             capture_exception(e)
             self.connect_to_zmq()
@@ -241,6 +330,22 @@ class BlockchainWatcher:
         try:
             self.receive_message(topic, body, seq)
         except Exception as e:  # pylint: disable=broad-except
+            # A shutdown interrupt (stop() -> RawMempoolParser.stop() ->
+            # db.interrupt() on the connection shared with this watcher)
+            # aborts whatever query parse_tx is running, surfacing here as
+            # apsw.InterruptError -> ParseTransactionError("interrupted").
+            # That's expected teardown noise, not a processing failure: log
+            # it quietly and exit without paging Sentry or re-raising to
+            # force a "fail loud" restart of an already-stopping process.
+            if self.stop_event.is_set():
+                logger.debug("Watcher interrupted during shutdown: %s", e)
+                return
+            # Re-raise after logging + Sentry so the outer handle() loop
+            # can stop() the watcher: any failure while *processing* a
+            # message (vs. receiving it) is not safely retriable here -- it
+            # would either corrupt sequence/raw_tx_cache state or silently
+            # skip a tx/block. Better to fail loud and let the supervisor
+            # restart catch_up() from scratch.
             logger.error("Error processing message: %s", e)
             # import traceback
             # print(traceback.format_exc())  # for debugging
@@ -251,7 +356,13 @@ class BlockchainWatcher:
         last_parsed_block = ledger.blocks.get_last_block(self.db)
         if last_parsed_block:
             last_parsed_block_index = last_parsed_block["block_index"]
-            bitcoind_block_index = backend.bitcoind.getblockcount()
+            try:
+                bitcoind_block_index = backend.bitcoind.getblockcount()
+            except exceptions.BitcoindRPCError as e:
+                # Don't tear down the watcher on a transient auth/RPC flap;
+                # the outer handle() loop catches and stop()s on any raise.
+                logger.warning("is_late: getblockcount failed: %s", e)
+                return False
             return last_parsed_block_index < bitcoind_block_index
         return False
 
@@ -282,14 +393,35 @@ class BlockchainWatcher:
                     await self.receive_multipart(self.zmq_sub_socket_rawblock, "rawblock")
                     self.last_block_check_time = time.time()
 
-                    if self.is_late() and late_since is None:
-                        late_since = time.time()
+                    if self.is_late():
+                        if late_since is None:
+                            late_since = time.time()
                     else:
                         late_since = None
                     if late_since is not None and time.time() - late_since > 60:
                         logger.warning("ZMQ is late. Catching up...")
                         blocks.catch_up(self.db)
                         CurrentState().set_ledger_state(self.db, "Following")
+                        # Mirror the post-catch_up behaviour of receive_rawblock:
+                        # without this sweep, any mempool tx that confirmed in
+                        # the blocks parsed by catch_up() stays visible via
+                        # `mempool/events` until the next ZMQ rawblock arrives,
+                        # because clean_mempool only runs in receive_rawblock
+                        # and at watcher startup. Same reason scenarios_test
+                        # races on `mempool/events` after a `cancel` tx that
+                        # was confirmed via this code path.
+                        if not config.NO_MEMPOOL:
+                            try:
+                                mempool.clean_mempool(self.db)
+                            except (
+                                exceptions.BitcoindRPCError,
+                                exceptions.BitcoindZMQError,
+                            ) as e:
+                                logger.warning(
+                                    "clean_mempool failed after catch_up "
+                                    "(will retry next block): %s",
+                                    e,
+                                )
                         late_since = None
 
                 # Yield control to the event loop to allow other tasks to run
@@ -298,6 +430,11 @@ class BlockchainWatcher:
                 logger.debug("BlockchainWatcher.handle() was cancelled.")
                 break  # Exit the loop if the task is cancelled
             except Exception as e:  # pylint: disable=broad-except
+                # Last-resort safety net for the watcher's main loop: if
+                # any unhandled error escapes (re-raise from receive_message,
+                # bug in mempool/catch_up, etc.) we must stop() cleanly
+                # instead of leaving a half-dead asyncio task running with
+                # open ZMQ sockets. Sentry gets the exception for triage.
                 logger.error("Error in handle loop: %s", e)
                 capture_exception(e)
                 # import traceback
@@ -315,17 +452,38 @@ class BlockchainWatcher:
             self.loop.close()
 
     def stop(self):
-        logger.debug("Stopping blockchain watcher...")
-        # Cancel the handle task
-        self.stop_event.set()
-        self.task.cancel()
-        self.loop.stop()
-        # Clean up ZMQ context
-        self.zmq_context.destroy()
-        # Stop mempool parser
-        if self.mempool_parser:
-            self.mempool_parser.stop()
-        logger.debug("Blockchain watcher stopped.")
+        # Protect entire shutdown from KeyboardInterrupt
+        try:
+            logger.debug("Stopping blockchain watcher...")
+            # Signal the handle loop to stop
+            self.stop_event.set()
+            # Cancel the handle task
+            if self.task and not self.task.done():
+                self.task.cancel()
+            # Stop the event loop (thread-safe in Python 3.9+)
+            if self.loop.is_running():
+                self.loop.call_soon_threadsafe(self.loop.stop)
+            # Clean up ZMQ sockets and context
+            try:
+                # Close sockets first with linger=0 to avoid blocking
+                self.zmq_sub_socket_sequence.setsockopt(zmq.LINGER, 0)
+                self.zmq_sub_socket_sequence.close()
+                self.zmq_sub_socket_rawblock.setsockopt(zmq.LINGER, 0)
+                self.zmq_sub_socket_rawblock.close()
+                self.zmq_context.term()
+            except Exception as e:  # pylint: disable=broad-except
+                # Same idea as connect_to_zmq()'s teardown: a failed
+                # close()/term() (already-closed socket, asyncio race,
+                # OS error) must not abort the rest of stop() -- the
+                # mempool parser still needs to be joined below and the
+                # process is already on its way out.
+                logger.debug("Error cleaning up ZMQ: %s", e)
+            # Stop mempool parser
+            if self.mempool_parser:
+                self.mempool_parser.stop()
+            logger.debug("Blockchain watcher stopped.")
+        except KeyboardInterrupt:
+            pass  # Ignore repeated Ctrl+C during shutdown
 
 
 def get_raw_mempool(db):
@@ -339,7 +497,8 @@ def get_raw_mempool(db):
         if NotSupportedTransactionsCache().is_not_supported(txid):
             continue
         existing_tx_in_mempool = cursor.execute(
-            "SELECT * FROM mempool WHERE tx_hash = ? LIMIT 1", (txid,)
+            "SELECT * FROM mempool WHERE tx_hash = ? LIMIT 1",
+            (hashcodec.hash_to_db(txid),),
         ).fetchone()
         if existing_tx_in_mempool:
             continue
@@ -379,16 +538,29 @@ class RawMempoolParser(threading.Thread):
         )
 
     def stop(self):
-        logger.debug("Stopping RawMempoolParser...")
-        self.db.interrupt()
-        # if self.is_alive():
-        self.stop_event.set()
-        self.join()
+        try:
+            logger.debug("Stopping RawMempoolParser...")
+            self.db.interrupt()
+            self.stop_event.set()
+            self.join(timeout=5)  # Don't wait forever
+        except KeyboardInterrupt:
+            pass  # Ignore repeated Ctrl+C during shutdown
 
 
 class NotSupportedTransactionsCache(metaclass=helpers.SingletonMeta):
+    # Maximum number of tx hashes kept in memory and on disk. The cache only
+    # needs to cover transactions that may still reappear in the mempool;
+    # evicting a hash early is harmless (the tx is just re-parsed and
+    # re-added the next time it is seen), while an unbounded cache grows by
+    # every non-Counterparty transaction on the network (~50-120MB/day on
+    # mainnet) and is persisted across restarts, so it never resets.
+    MAX_SIZE = 1_000_000
+
     def __init__(self):
-        self.not_suppported_txs = []
+        # Use set for O(1) lookups instead of O(n) list
+        self.not_suppported_txs = set()
+        # Keep a list for ordering (for backup/restore and FIFO eviction)
+        self._ordered_txs = []
         self.cache_path = os.path.join(
             config.CACHE_DIR, f"not_supported_tx_cache.{config.NETWORK_NAME}.txt"
         )
@@ -397,26 +569,60 @@ class NotSupportedTransactionsCache(metaclass=helpers.SingletonMeta):
     def restore(self):
         if os.path.exists(self.cache_path):
             with open(self.cache_path, "r", encoding="utf-8") as f:
-                self.not_suppported_txs = [line.strip() for line in f]
+                lines = [stripped for line in f if (stripped := line.strip())]
+            # Deduplicate (the file is append-only between compactions),
+            # keeping the most recent occurrence, then keep only the last
+            # MAX_SIZE entries.
+            seen = set()
+            deduped_reversed = []
+            for tx_hash in reversed(lines):
+                if tx_hash not in seen:
+                    seen.add(tx_hash)
+                    deduped_reversed.append(tx_hash)
+            deduped_reversed.reverse()
+            self._ordered_txs = deduped_reversed[-self.MAX_SIZE :]
+            self.not_suppported_txs = set(self._ordered_txs)
+            # Rewrite once at startup: compacts the file and guarantees the
+            # trailing-newline format that add() relies on when appending
+            # (legacy files were written without a trailing newline).
+            self.backup()
             logger.debug(
                 "Restored %d not supported transactions from cache", len(self.not_suppported_txs)
             )
 
     def backup(self):
         with open(self.cache_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(self.not_suppported_txs[-200000:]))  # limit to 200k txs
+            f.writelines(tx_hash + "\n" for tx_hash in self._ordered_txs)
         logger.trace(
             f"Backed up {len(self.not_suppported_txs)} not supported transactions to cache"
         )
 
     def clear(self):
-        self.not_suppported_txs = []
+        self.not_suppported_txs = set()
+        self._ordered_txs = []
         if os.path.exists(self.cache_path):
             os.remove(self.cache_path)
 
     def add(self, more_not_supported_txs):
-        self.not_suppported_txs += more_not_supported_txs
-        self.backup()
+        new_txs = []
+        for tx in more_not_supported_txs:
+            if tx not in self.not_suppported_txs:
+                self.not_suppported_txs.add(tx)
+                self._ordered_txs.append(tx)
+                new_txs.append(tx)
+        if not new_txs:
+            return
+        if len(self._ordered_txs) > self.MAX_SIZE:
+            # Evict oldest entries and compact the file.
+            evicted = self._ordered_txs[: -self.MAX_SIZE]
+            self._ordered_txs = self._ordered_txs[-self.MAX_SIZE :]
+            for tx_hash in evicted:
+                self.not_suppported_txs.discard(tx_hash)
+            self.backup()
+        else:
+            # Append only the new hashes instead of rewriting the whole file.
+            with open(self.cache_path, "a", encoding="utf-8") as f:
+                f.writelines(tx_hash + "\n" for tx_hash in new_txs)
 
     def is_not_supported(self, tx_hash):
         return tx_hash in self.not_suppported_txs

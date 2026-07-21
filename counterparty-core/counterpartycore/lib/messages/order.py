@@ -19,6 +19,7 @@ D = decimal.Decimal
 FORMAT = ">QQQQHQ"
 LENGTH = 8 + 8 + 8 + 8 + 2 + 8
 ID = 10
+MAX_EXPIRATION_U16 = 2**16 - 1
 
 
 def exact_penalty(db, address, block_index, tx_index):
@@ -237,18 +238,10 @@ def validate(
     problems = []
     cursor = db.cursor()
 
-    # For SQLite3
-    if (
-        give_quantity > config.MAX_INT
-        or get_quantity > config.MAX_INT
-        or fee_required > config.MAX_INT
-        or block_index + expiration > config.MAX_INT
-    ):
-        problems.append("integer overflow")
-
-    if give_asset == config.BTC and get_asset == config.BTC:
-        problems.append(f"cannot trade {config.BTC} for itself")
-
+    # Type checks first so non-integer parameters return a clear validation
+    # error instead of raising a TypeError in the comparisons below. These are
+    # never triggered by parse() (struct.unpack always yields ints), so this
+    # block is a no-op on the consensus path.
     if not isinstance(give_quantity, int):
         problems.append("give_quantity must be in satoshis")
         return problems
@@ -261,6 +254,20 @@ def validate(
     if not isinstance(expiration, int):
         problems.append("expiration must be expressed as an integer block delta")
         return problems
+
+    # For SQLite3. Kept before the BTC-for-BTC check to preserve the exact
+    # `problems` ordering (and thus the stored `status` string) on the parse
+    # path, avoiding a protocol change.
+    if (
+        give_quantity > config.MAX_INT
+        or get_quantity > config.MAX_INT
+        or fee_required > config.MAX_INT
+        or block_index + expiration > config.MAX_INT
+    ):
+        problems.append("integer overflow")
+
+    if give_asset == config.BTC and get_asset == config.BTC:
+        problems.append(f"cannot trade {config.BTC} for itself")
 
     if give_quantity <= 0:
         problems.append("non‐positive give quantity")
@@ -283,7 +290,10 @@ def validate(
         db, status="valid", asset=get_asset, current_block_index=block_index
     ):
         problems.append(f"no such asset to get ({get_asset})")
-    if expiration > config.MAX_EXPIRATION:
+    if protocol.enabled("indefinite_orders", block_index=block_index):
+        if expiration > MAX_EXPIRATION_U16:
+            problems.append("expiration overflow")
+    elif expiration > config.MAX_EXPIRATION:
         problems.append("expiration overflow")
 
     cursor.close()
@@ -436,6 +446,18 @@ def parse(db, tx, message):
                 event=tx["tx_hash"],
             )
 
+    # Compute expire_index based on the `indefinite_orders` protocol gate.
+    # After activation: expiration=0 means indefinite (NULL), and expiration=N
+    # means exactly N blocks of life (block_index + N - 1).
+    # Before activation: expire_index = block_index + expiration (legacy off-by-one).
+    if protocol.enabled("indefinite_orders", block_index=tx["block_index"]):
+        if expiration == 0:
+            expire_index = None
+        else:
+            expire_index = tx["block_index"] + expiration - 1
+    else:
+        expire_index = tx["block_index"] + expiration
+
     # Add parsed transaction to message-type–specific table.
     bindings = {
         "tx_index": tx["tx_index"],
@@ -449,7 +471,7 @@ def parse(db, tx, message):
         "get_quantity": get_quantity,
         "get_remaining": get_quantity,
         "expiration": expiration,
-        "expire_index": tx["block_index"] + expiration,
+        "expire_index": expire_index,
         "fee_required": fee_required,
         "fee_required_remaining": fee_required,
         "fee_provided": tx["fee"],
@@ -513,6 +535,18 @@ def match(db, tx, block_index=None):
     tx1_fee_required_remaining = tx1["fee_required_remaining"]
     tx1_fee_provided_remaining = tx1["fee_provided_remaining"]
 
+    # AMM pool lookup.
+    amm_pool = None
+    if protocol.enabled("amm_pools", block_index=tx["block_index"]) and config.BTC not in (
+        tx1["give_asset"],
+        tx1["get_asset"],
+    ):
+        amm_pool = ledger.markets.get_pool(
+            db, *ledger.markets.sort_pair(tx1["give_asset"], tx1["get_asset"])
+        )
+        if amm_pool and not ledger.markets.pool_has_liquidity(amm_pool):
+            amm_pool = None
+
     tx1_status = tx1["status"]
     for tx0 in order_matches:
         # Sanity check. Should never happen.
@@ -574,6 +608,57 @@ def match(db, tx, block_index=None):
                 if tx1_fee_required_remaining < 0:
                     logger.trace("Skipping: negative tx1 fee required remaining")
                     continue
+
+        # Routing rule: use pool liquidity while its marginal price
+        # beats the next book order's limit price, then fill the book
+        # order, then repeat. Remainder after all book orders goes to
+        # pool. This guarantees best-price execution for the taker.
+        if amm_pool and tx1_give_remaining > 0:
+            pool_fill_quantity, pool_output = ledger.markets.try_pool_fill(
+                tx1,
+                amm_pool,
+                tx1_give_remaining,
+                target_price_num=tx0["get_quantity"],
+                target_price_den=tx0["give_quantity"],
+                block_index=block_index,
+            )
+            if pool_fill_quantity > 0:
+                ledger.markets.execute_pool_match(
+                    db, tx, tx1, amm_pool, pool_fill_quantity, pool_output
+                )
+                tx1_give_remaining -= pool_fill_quantity
+                tx1_get_remaining -= pool_output
+                amm_pool = ledger.markets.get_pool(
+                    db, *ledger.markets.sort_pair(tx1["give_asset"], tx1["get_asset"])
+                )
+
+                if tx1_give_remaining <= 0 or (
+                    tx1_get_remaining <= 0 and protocol.enabled("recredit_give_remaining")
+                ):
+                    tx1_status = "filled"
+                    if tx1_give_remaining > 0:
+                        ledger.events.credit(
+                            db,
+                            tx1["source"],
+                            tx1["give_asset"],
+                            tx1_give_remaining,
+                            tx["block_index"],
+                            event=tx1["tx_hash"],
+                            action="filled",
+                        )
+                    tx1_give_remaining = 0
+
+                set_data = {
+                    "give_remaining": tx1_give_remaining,
+                    "get_remaining": tx1_get_remaining,
+                    "fee_required_remaining": tx1_fee_required_remaining,
+                    "fee_provided_remaining": tx1_fee_provided_remaining,
+                    "status": tx1_status,
+                }
+                ledger.markets.update_order(db, tx1["tx_hash"], set_data)
+
+                if tx1_status == "filled":
+                    break
 
         # If the prices agree, make the trade. The found order sets the price,
         # and they trade as much as they can.
@@ -773,7 +858,10 @@ def match(db, tx, block_index=None):
 
             # Calculate when the match will expire.
             if protocol.enabled("20_blocks_expiration"):  # Protocol change.
-                match_expire_index = block_index + 20
+                if protocol.enabled("indefinite_orders", block_index=block_index):
+                    match_expire_index = block_index + 20 - 1
+                else:
+                    match_expire_index = block_index + 20
             elif protocol.enabled("no_backwards_compatibility"):  # Protocol change.
                 match_expire_index = block_index + 10
             else:
@@ -810,6 +898,51 @@ def match(db, tx, block_index=None):
 
             if tx1_status == "filled":
                 break
+
+    # Fill any remaining quantity from AMM pool after book orders exhausted.
+    if tx1_status == "open" and amm_pool and tx1_give_remaining > 0:
+        amm_pool = ledger.markets.get_pool(
+            db, *ledger.markets.sort_pair(tx1["give_asset"], tx1["get_asset"])
+        )
+        pool_fill_quantity, pool_output = ledger.markets.try_pool_fill(
+            tx1,
+            amm_pool,
+            tx1_give_remaining,
+            target_price_num=tx1["give_quantity"],
+            target_price_den=tx1["get_quantity"],
+            block_index=block_index,
+        )
+        if pool_fill_quantity > 0:
+            ledger.markets.execute_pool_match(
+                db, tx, tx1, amm_pool, pool_fill_quantity, pool_output
+            )
+            tx1_give_remaining -= pool_fill_quantity
+            tx1_get_remaining -= pool_output
+
+            if tx1_give_remaining <= 0 or (
+                tx1_get_remaining <= 0 and protocol.enabled("recredit_give_remaining")
+            ):
+                tx1_status = "filled"
+                if tx1_give_remaining > 0:
+                    ledger.events.credit(
+                        db,
+                        tx1["source"],
+                        tx1["give_asset"],
+                        tx1_give_remaining,
+                        tx["block_index"],
+                        event=tx1["tx_hash"],
+                        action="filled",
+                    )
+                tx1_give_remaining = 0
+
+            set_data = {
+                "give_remaining": tx1_give_remaining,
+                "get_remaining": tx1_get_remaining,
+                "fee_required_remaining": tx1_fee_required_remaining,
+                "fee_provided_remaining": tx1_fee_provided_remaining,
+                "status": tx1_status,
+            }
+            ledger.markets.update_order(db, tx1["tx_hash"], set_data)
 
     cursor.close()
     return

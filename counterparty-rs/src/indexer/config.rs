@@ -1,6 +1,10 @@
 use std::fmt::Display;
 
-use pyo3::{exceptions::PyValueError, types::PyDict, FromPyObject, PyAny, PyErr, PyResult};
+use pyo3::{
+    exceptions::PyValueError,
+    types::{PyAnyMethods, PyDict, PyDictMethods},
+    Borrowed, FromPyObject, PyAny, PyErr, PyResult,
+};
 use tracing::level_filters::LevelFilter;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -9,8 +13,9 @@ pub enum Mode {
     Fetcher,
 }
 
-impl<'source> FromPyObject<'source> for Mode {
-    fn extract(obj: &'source PyAny) -> PyResult<Self> {
+impl<'a, 'py> FromPyObject<'a, 'py> for Mode {
+    type Error = PyErr;
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
         let mode_str: String = obj.extract()?;
         match mode_str.trim().to_lowercase().as_str() {
             "indexer" => Ok(Mode::Indexer),
@@ -31,8 +36,9 @@ impl From<LogLevel> for LevelFilter {
     }
 }
 
-impl<'source> FromPyObject<'source> for LogLevel {
-    fn extract(obj: &'source PyAny) -> PyResult<Self> {
+impl<'a, 'py> FromPyObject<'a, 'py> for LogLevel {
+    type Error = PyErr;
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
         let level_str: String = obj.extract()?;
         match level_str.trim().to_lowercase().as_str() {
             "trace" => Ok(LogLevel(LevelFilter::TRACE)),
@@ -57,8 +63,9 @@ pub enum Network {
     Signet,
 }
 
-impl<'source> FromPyObject<'source> for Network {
-    fn extract(obj: &'source PyAny) -> PyResult<Self> {
+impl<'a, 'py> FromPyObject<'a, 'py> for Network {
+    type Error = PyErr;
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
         let network_str: String = obj.extract()?;
         match network_str.trim().to_lowercase().as_str() {
             "mainnet" => Ok(Network::Mainnet),
@@ -95,6 +102,8 @@ pub struct Heights {
     pub multisig_addresses: u32,
     pub taproot_support: u32,
     pub fix_is_segwit: u32,
+    pub ordinals_metadata_support: u32,
+    pub correct_transaction_fee: u32,
 }
 
 impl Heights {
@@ -108,6 +117,8 @@ impl Heights {
                 multisig_addresses: 333500,
                 taproot_support: 902000,
                 fix_is_segwit: 902000,
+                ordinals_metadata_support: 999999999,
+                correct_transaction_fee: 999999999,
             },
             Network::Testnet3 => Heights {
                 segwit: 1440200,
@@ -117,6 +128,8 @@ impl Heights {
                 multisig_addresses: 0,
                 taproot_support: 4410000,
                 fix_is_segwit: 4410000,
+                ordinals_metadata_support: 999999999,
+                correct_transaction_fee: 999999999,
             },
             Network::Testnet4 => Heights {
                 segwit: 0,
@@ -126,6 +139,8 @@ impl Heights {
                 multisig_addresses: 0,
                 taproot_support: 85000,
                 fix_is_segwit: 85000,
+                ordinals_metadata_support: 999999999,
+                correct_transaction_fee: 999999999,
             },
             Network::Regtest => Heights {
                 segwit: 0,
@@ -135,6 +150,8 @@ impl Heights {
                 multisig_addresses: 0,
                 taproot_support: 0,
                 fix_is_segwit: 0,
+                ordinals_metadata_support: 0,
+                correct_transaction_fee: 0,
             },
             Network::Signet => Heights {
                 segwit: 0,
@@ -144,6 +161,8 @@ impl Heights {
                 multisig_addresses: 0,
                 taproot_support: 0,
                 fix_is_segwit: 0,
+                ordinals_metadata_support: 0,
+                correct_transaction_fee: 0,
             },
         }
     }
@@ -154,6 +173,10 @@ pub struct Config {
     pub rpc_address: String,
     pub rpc_user: String,
     pub rpc_password: String,
+    // Optional `X-API-Key` header value sent on every backend RPC call;
+    // matches the Python `BACKEND_API_KEY` setting and is used to grant
+    // a higher rate-limit bucket on Cloud-Armor-style proxies.
+    pub rpc_api_key: Option<String>,
     pub log_file: String,
     pub log_level: LogLevel,
     pub db_dir: String,
@@ -199,6 +222,14 @@ impl Config {
         height >= self.heights.fix_is_segwit || self.enable_all_protocol_changes
     }
 
+    pub fn ordinals_metadata_support_enabled(&self, height: u32) -> bool {
+        height >= self.heights.ordinals_metadata_support || self.enable_all_protocol_changes
+    }
+
+    pub fn correct_transaction_fee_enabled(&self, height: u32) -> bool {
+        height >= self.heights.correct_transaction_fee || self.enable_all_protocol_changes
+    }
+
     pub fn unspendable(&self) -> String {
         match self.network {
             Network::Mainnet => "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
@@ -211,9 +242,10 @@ impl Config {
     }
 }
 
-impl<'source> FromPyObject<'source> for Config {
-    fn extract(obj: &'source PyAny) -> PyResult<Self> {
-        let dict = obj.downcast::<PyDict>()?;
+impl<'a, 'py> FromPyObject<'a, 'py> for Config {
+    type Error = PyErr;
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
+        let dict = obj.cast::<PyDict>()?;
         let rpc_address: String = dict
             .get_item("rpc_address")?
             .ok_or(PyErr::new::<PyValueError, _>("'rpc_address' is required"))?
@@ -226,6 +258,23 @@ impl<'source> FromPyObject<'source> for Config {
             .get_item("rpc_password")?
             .ok_or(PyErr::new::<PyValueError, _>("'rpc_password' is required"))?
             .extract()?;
+        // `rpc_api_key` is optional: omit it for self-hosted nodes; supply it
+        // when talking to a public, rate-limited proxy.
+        let rpc_api_key: Option<String> = match dict.get_item("rpc_api_key") {
+            Ok(Some(item)) => {
+                if item.is_none() {
+                    None
+                } else {
+                    let s: String = item.extract()?;
+                    if s.is_empty() {
+                        None
+                    } else {
+                        Some(s)
+                    }
+                }
+            }
+            _ => None,
+        };
         let db_dir: String = dict
             .get_item("db_dir")?
             .ok_or(PyErr::new::<PyValueError, _>("'db_dir' is required"))?
@@ -308,6 +357,7 @@ impl<'source> FromPyObject<'source> for Config {
             rpc_address,
             rpc_user,
             rpc_password,
+            rpc_api_key,
             log_file,
             log_level,
             db_dir,

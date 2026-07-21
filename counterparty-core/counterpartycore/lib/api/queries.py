@@ -1,20 +1,419 @@
 # pylint: disable=too-many-lines
 
+import ast
+import inspect
 import json
+import re
+import textwrap
 import typing
+import weakref
 from typing import Literal
 
+import apsw
 from sentry_sdk import start_span as start_sentry_span
 
-from counterpartycore.lib.api import caches
-from counterpartycore.lib.utils.helpers import divide
+from counterpartycore.lib.ledger.markets import (
+    compute_pool_fill,
+    compute_pool_input_for_target_price,
+    compute_pool_output,
+    get_pool_fee_bps,
+    pool_has_liquidity,
+    sort_pair,
+)
+from counterpartycore.lib.utils import database, hashcodec
+from counterpartycore.lib.utils.helpers import MATCH_ID_SQL, divide
+
+
+def _convert_hash_value(field, value):
+    """If the WHERE clause targets a hash column and the caller passes a hex
+    string, convert it to BLOB so it can match the at-rest representation."""
+    if value is None:
+        return value
+    if isinstance(value, bytes):
+        return value
+    if field in hashcodec.HASH_COLUMN_NAMES and isinstance(value, str):
+        try:
+            return hashcodec.hash_to_db(value)
+        except ValueError:
+            return value
+    return value
+
+
+# Legacy hash filter keys in callers that have been replaced by
+# ``*_tx_index`` foreign keys. ``select_rows`` rewrites the WHERE clause so the
+# existing API surface (which still accepts hex tx_hash query params) can
+# resolve via a transactions subquery.
+_HASH_FK_WHERE_REWRITE = {
+    "dispenser_tx_hash": "dispenser_tx_index",
+    "fairminter_tx_hash": "fairminter_tx_index",
+    "order_tx_hash": "order_tx_index",
+    "offer_hash": "offer_tx_index",
+}
+
+# For tables where a legacy hash column was dropped and replaced by a
+# ``*_tx_index`` FK, ``select_rows`` rewrites ``SELECT *`` to re-expose the
+# legacy hash via a JOIN against ``transactions`` so the API response shape is
+# preserved. The mapping uses ``ledger_db.transactions`` so it also works when
+# the query targets a State DB connection (which ATTACHes the Ledger DB as
+# ``ledger_db`` at read-only open time).
+_HASH_FK_PROJECTIONS = {
+    "dispenses": ("dispenser_tx_index", "dispenser_tx_hash"),
+    "dispenser_refills": ("dispenser_tx_index", "dispenser_tx_hash"),
+    "fairmints": ("fairminter_tx_index", "fairminter_tx_hash"),
+    "pool_matches": ("order_tx_index", "order_tx_hash"),
+    "cancels": ("offer_tx_index", "offer_hash"),
+}
+
+# Match tables that dropped the composite TEXT ``id`` column. ``select_rows``
+# re-exposes ``id`` from the local ``tx0_hash``/``tx1_hash`` BLOB columns the
+# tables still carry (no JOIN needed) via the ``hex_lower`` UDF.
+_MATCH_ID_LOCAL_TABLES = frozenset({"order_matches", "bet_matches", "rps_matches"})
+
+# Tables (read from the Ledger DB) whose single TEXT ``*_match_id`` column was
+# replaced by a ``(*_tx0_index, *_tx1_index)`` integer pair. ``select_rows``
+# hides the two FK columns and re-exposes the legacy id via two correlated
+# subqueries against ``transactions`` so the API row shape is preserved.
+# Mapping: table -> (tx0_index_col, tx1_index_col, legacy_id_col)
+_MATCH_ID_FK_PROJECTIONS = {
+    "btcpays": ("order_match_tx0_index", "order_match_tx1_index", "order_match_id"),
+    "bet_match_resolutions": ("bet_match_tx0_index", "bet_match_tx1_index", "bet_match_id"),
+    "rpsresolves": ("rps_match_tx0_index", "rps_match_tx1_index", "rps_match_id"),
+}
+
+# Pseudo WHERE keys used by match-id callers: the value is a single tx_hash that
+# must match either leg of the composite match id. ``select_rows`` resolves the
+# hash to a tx_index and ORs it against both ``*_tx0_index``/``*_tx1_index``
+# columns (the old ``*_match_id LIKE '%hash%'`` matched either half).
+# Mapping: key -> (tx0_index_col, tx1_index_col)
+_MATCH_ID_HASH_WHERE = {
+    "order_match_hash": ("order_match_tx0_index", "order_match_tx1_index"),
+    "bet_match_hash": ("bet_match_tx0_index", "bet_match_tx1_index"),
+    "rps_match_hash": ("rps_match_tx0_index", "rps_match_tx1_index"),
+}
+
+
+# Per-connection cache so we run the schema probe at most once per pooled
+# connection instead of on every ``select_rows`` call. Using a
+# ``WeakKeyDictionary`` lets the entry disappear automatically when the
+# connection is garbage-collected.
+_TX_TABLE_NAME_CACHE: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
+
+# Same per-connection caching for the "is this a Ledger DB?" probes used by
+# ``select_rows`` to decide whether asset/address filters need the
+# name->index / string->id rewrite. Without these, every API read issued two
+# extra SQL probes (``main.assets`` / ``main.address_list``); the result is
+# fixed for the life of a connection.
+_ASSETS_INDEX_TABLE_CACHE: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
+_ADDRESS_INDEX_TABLE_CACHE: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
+
+
+def _resolve_local_index_table(db, qualified_name, cache):
+    """Return ``qualified_name`` if it is a *local* (``main.``) table on this
+    connection -- i.e. a Ledger DB -- else ``None``. On a State DB connection the
+    table is only reachable as the ATTACHed ``ledger_db.<name>``, so the
+    ``main.``-qualified probe fails and we return ``None``. Cached per connection
+    (empty-string sentinel for the negative result), mirroring
+    ``_resolve_transactions_table_name``.
+
+    ``qualified_name`` is always a hard-coded ``main.``-prefixed constant from
+    the caller, so the f-string is safe.
+    """
+    cached = cache.get(db)
+    if cached is not None:
+        return cached if cached != "" else None
+    try:
+        db.cursor().execute(f"SELECT 1 FROM {qualified_name} LIMIT 0")  # nosec B608  # noqa: S608
+        resolved = qualified_name
+    except apsw.SQLError:
+        resolved = None
+    cache[db] = resolved if resolved is not None else ""
+    return resolved
+
+
+_ALLOWED_TX_TABLE_NAMES = frozenset({"transactions", "ledger_db.transactions"})
+
+
+def _safe_tx_table(table_name):
+    if table_name not in _ALLOWED_TX_TABLE_NAMES:
+        raise ValueError(f"Unexpected transactions table name: {table_name!r}")
+    return table_name
+
+
+def _probe_transactions_table(cursor, qualified_name):
+    """Return ``qualified_name`` if the cursor can SELECT from it, else None.
+
+    The absence of the table is the expected negative path here (e.g. early
+    bootstrap before the Ledger DB exists, or when ``ledger_db`` is not
+    ATTACHed). Returning ``None`` lets the caller try the next candidate.
+
+    ``qualified_name`` is always a hard-coded constant from this module
+    (``transactions`` or ``ledger_db.transactions``); the f-string is safe.
+    """
+    try:
+        cursor.execute(f"SELECT 1 FROM {qualified_name} LIMIT 0")  # nosec B608  # noqa: S608
+    except apsw.SQLError:
+        return None
+    return qualified_name
+
+
+def _resolve_transactions_table_name(db):
+    """Return ``transactions`` if the connection sees that table directly,
+    ``ledger_db.transactions`` if ``ledger_db`` is attached and contains it,
+    or ``None`` otherwise (in which case hash-FK projections are skipped).
+
+    The result is cached per connection: API hot paths read from ``messages``
+    and the ``_HASH_FK_PROJECTIONS`` tables on every call; without the cache
+    each call would issue 1-2 extra SQL probes against the connection.
+    """
+    cached = _TX_TABLE_NAME_CACHE.get(db)
+    if cached is not None:
+        return cached if cached != "" else None
+
+    cursor = db.cursor()
+    resolved = _probe_transactions_table(cursor, "transactions")
+    if resolved is None:
+        resolved = _probe_transactions_table(cursor, "ledger_db.transactions")
+
+    # Cache an empty sentinel for the negative result so we don't keep
+    # re-probing connections that won't see ``transactions`` (e.g. early
+    # bootstrap before the Ledger DB exists). The None case is short-lived
+    # in practice and the cache entry will be replaced on the next attach.
+    _TX_TABLE_NAME_CACHE[db] = resolved if resolved is not None else ""
+    return resolved
+
+
+# Cache of table -> list of public columns (everything except the internal
+# ``*_tx_index`` FK that replaced the legacy hash). Populated lazily on first
+# projection.
+_HASH_FK_PUBLIC_COLUMNS: dict[str, tuple[str, ...]] = {}
+
+
+# Columns shared between a main table and the joined ``transactions`` table
+# that need explicit ``__m.`` qualification when ``select_rows`` adds the
+# JOIN for ``messages`` / ``_HASH_FK_PROJECTIONS`` tables. Lifted out of the
+# function body so the tuple isn't reallocated on every API call.
+_AMBIGUOUS_COLS = frozenset(
+    {
+        "block_index",
+        "tx_index",
+        "rowid",
+        "tx_hash",
+        "source",
+        "destination",
+        "block_time",
+        "btc_amount",
+        "fee",
+        "data",
+        "supported",
+        "utxos_info",
+        "transaction_type",
+    }
+)
+_MESSAGES_QUALIFY_M_FIELDS = frozenset({"block_index", "tx_index", "rowid", "message_index"})
+
+# Views whose ``COUNT(*)`` can be safely answered by counting rows from a
+# single underlying table (the LEFT JOINs in the view's definition do not
+# multiply rows because they all join on a unique key on the right side).
+# Mapping: view_name -> (main_table, columns_only_on_main_table). When the
+# caller's WHERE filter is restricted to those columns we can replace the
+# view's FROM with ``main_table`` and skip its internal JOINs entirely.
+# ``all_transactions_with_status`` is omitted on purpose: it counts over
+# ``mempool_transactions UNION ALL transactions`` and there is no single
+# underlying table to substitute.
+#
+# ``source``/``destination`` are deliberately NOT listed as safe columns: the
+# view exposes them as the decoded address *string* while the underlying
+# ``transactions`` table stores the compact integer ``address_id``. A WHERE
+# filter on those columns (resolved against the view as a string -- see
+# ``_INDEX_RESOLVING_VIEWS``) would compare a string against an integer id on
+# the base table and count zero, making the count inconsistent with the rows.
+# Omitting them falls the COUNT back to the view itself (string == string).
+_COUNT_FROM_OVERRIDE = {
+    "transactions_with_status": (
+        "transactions",
+        frozenset(
+            {
+                "tx_index",
+                "tx_hash",
+                "block_index",
+                "block_time",
+                "btc_amount",
+                "fee",
+                "data",
+                "supported",
+                "utxos_info",
+                "transaction_type",
+            }
+        ),
+    ),
+}
+
+# Views that already resolve the compact ``asset_index``/``address_id`` foreign
+# keys back to the asset *name* / address *string* in their own definition
+# (every index-typed column they expose is wrapped in a
+# ``(SELECT ... FROM assets/address_list WHERE ...)`` subquery). A WHERE/ORDER BY
+# filter on those columns must therefore stay a plain string comparison: the
+# name->index / string->id subquery rewrite that ``select_rows`` applies to
+# *base* Ledger DB tables would compare the view's decoded string against an
+# integer index and silently match nothing. ``_is_asset_index_col`` /
+# ``_is_address_index_col`` consult this set to suppress the rewrite. Keep it in
+# sync with the index-decoding ``CREATE VIEW`` statements in
+# ``ledger.migration_data.compact_hash_schema`` (``VIEWS_AFTER_REWRITE``).
+_INDEX_RESOLVING_VIEWS = frozenset(
+    {
+        "all_transactions",
+        "transactions_with_status",
+        "all_transactions_with_status",
+        "all_holders",
+    }
+)
+
+# Resolving *transaction* views expose ``source``/``destination`` as the decoded
+# address *string* (a correlated ``(SELECT address FROM address_list ...)`` in the
+# view definition). A WHERE filter on that string cannot use an index, so it scans
+# the whole ``transactions`` table and decodes every row -- ~16s for a busy
+# address. Rewrite such a filter into ``tx_index IN (SELECT tx_index FROM <base>
+# WHERE source/destination = <resolved id>)`` so the base table's integer index
+# (``transactions_source_idx`` etc.) is used and only the matching page is
+# decoded. Mapping: view -> tuple of legs ``(base_table, keeps_text_address,
+# confirmed_guard)``. The transient ``mempool_transactions`` is excluded from
+# address normalization (see migration 0010) and keeps TEXT ``source``/
+# ``destination``, so its leg matches the raw string; the normalized
+# ``transactions`` leg resolves to ``address_id``.
+#
+# ``confirmed_guard`` disambiguates a leg on the view's ``confirmed`` flag and is
+# REQUIRED whenever a view unions two base tables that share the ``tx_index``
+# space. ``all_transactions_with_status`` is ``mempool_transactions UNION ALL
+# transactions``: a mempool tx_index is assigned as ``max(last_mempool,
+# last_confirmed) + 1`` and a lingering mempool tx is never re-indexed, so a
+# *later* confirmed tx of a different address reuses that ``tx_index``. A bare
+# ``tx_index IN (mempool_leg UNION ALL transactions_leg)`` would then cross-match
+# the other leg's row on such a collision (a foreign address's tx leaking into
+# the result). Gating each leg on ``confirmed`` keeps a leg's ``tx_index`` set
+# from matching the other leg's rows. The single-base ``transactions_with_status``
+# needs no guard (``tx_index`` is unique in ``transactions``) and has no
+# ``confirmed`` column, so its guard is ``None``.
+_TX_VIEW_ADDRESS_FILTER_BASES = {
+    "transactions_with_status": (("transactions", False, None),),
+    "all_transactions_with_status": (
+        ("transactions", False, "confirmed"),
+        ("mempool_transactions", True, "NOT confirmed"),
+    ),
+}
+# The only address columns the transaction views (and their base tables) expose.
+_TX_VIEW_ADDRESS_COLUMNS = frozenset({"source", "destination"})
+
+
+def _hash_fk_public_columns(db, table):
+    """Return the list of column names to expose to the API for a table
+    where the legacy hash was replaced by a ``*_tx_index`` FK, i.e. every
+    column of the underlying table *except* that internal FK.
+
+    The legacy hash column is re-hydrated separately by the caller via a
+    ``LEFT JOIN`` against ``transactions``.
+    """
+    cached = _HASH_FK_PUBLIC_COLUMNS.get(table)
+    if cached is not None:
+        return cached
+    index_col, _hash_col = _HASH_FK_PROJECTIONS[table]
+    cursor = db.cursor()
+    rows = cursor.execute(f"PRAGMA table_info({table})").fetchall()  # nosec B608  # noqa: S608
+    cols = []
+    for row in rows:
+        if isinstance(row, dict):
+            name = row["name"]
+        else:
+            name = row[1]
+        if name == index_col:
+            continue
+        cols.append(name)
+    cols_tuple = tuple(cols)
+    _HASH_FK_PUBLIC_COLUMNS[table] = cols_tuple
+    return cols_tuple
+
+
+# Cache of table -> public columns for ``_MATCH_ID_FK_PROJECTIONS`` tables
+# (everything except the two ``*_tx_index`` FK columns that replaced the
+# legacy ``*_match_id``).
+_MATCH_ID_PUBLIC_COLUMNS: dict[str, tuple[str, ...]] = {}
+
+
+def _match_id_public_columns(db, table):
+    """Return the columns to expose for a ``_MATCH_ID_FK_PROJECTIONS`` table:
+    every column except the two internal ``*_tx_index`` FK columns that
+    replaced the legacy ``*_match_id`` (which the caller re-hydrates via two
+    correlated subqueries against ``transactions``)."""
+    cached = _MATCH_ID_PUBLIC_COLUMNS.get(table)
+    if cached is not None:
+        return cached
+    tx0_col, tx1_col, _id_col = _MATCH_ID_FK_PROJECTIONS[table]
+    cursor = db.cursor()
+    rows = cursor.execute(f"PRAGMA table_info({table})").fetchall()  # nosec B608  # noqa: S608
+    cols = []
+    for row in rows:
+        name = row["name"] if isinstance(row, dict) else row[1]
+        if name in (tx0_col, tx1_col):
+            continue
+        cols.append(name)
+    cols_tuple = tuple(cols)
+    _MATCH_ID_PUBLIC_COLUMNS[table] = cols_tuple
+    return cols_tuple
+
+
+def _project_messages_tx_hash(select_clause):
+    """Rewrite identifiers in a ``SELECT`` clause targeting the joined
+    ``messages``/``transactions`` view (``messages.tx_hash`` was dropped in
+    favour of an FK on ``transactions``):
+
+    - ``tx_hash`` -> ``__txh.tx_hash AS tx_hash`` (the column alias keeps
+      ``tx_hash``, which is in ``hashcodec.HASH_COLUMN_NAMES`` so the
+      connection rowtracer converts BLOB -> hex without a per-row UDF).
+    - bare ``block_index`` -> ``__m.block_index AS block_index``
+      (both ``messages`` and ``transactions`` have ``block_index``; without
+      a qualifier the join is ambiguous).
+    - bare ``rowid`` -> ``__m.rowid AS rowid``
+      (both tables have an implicit ``rowid``; the join needs an explicit
+      qualifier).
+
+    Uses word-boundary safe rewrites so ``last_status_tx_hash`` etc. are not
+    touched.
+    """
+    rewritten = re.sub(
+        r"(?<![A-Za-z0-9_\.])tx_hash(?![A-Za-z0-9_])",
+        "__txh.tx_hash AS tx_hash",
+        select_clause,
+    )
+    rewritten = re.sub(
+        r"(?<![A-Za-z0-9_\.])block_index(?![A-Za-z0-9_])",
+        "__m.block_index AS block_index",
+        rewritten,
+    )
+    # Collapse ``rowid AS rowid`` to ``__m.rowid AS rowid``. We need a
+    # dedicated pass first so the bare-``rowid`` rewrite below does not
+    # mangle the alias position.
+    rewritten = re.sub(
+        r"(?<![A-Za-z0-9_\.])rowid\s+AS\s+rowid(?![A-Za-z0-9_])",
+        "__m.rowid AS rowid",
+        rewritten,
+        flags=re.IGNORECASE,
+    )
+    # Qualify a bare ``rowid`` column reference (used by callers that select
+    # rowid without an explicit alias). Skip when already qualified
+    # (``__m.rowid``) or when it appears as an alias (``AS rowid``).
+    rewritten = re.sub(
+        r"(?<![A-Za-z0-9_\.])(?<!AS\s)rowid(?![A-Za-z0-9_])",
+        "__m.rowid AS rowid",
+        rewritten,
+    )
+    return rewritten
+
 
 OrderStatus = Literal["all", "open", "expired", "filled", "cancelled"]
 OrderMatchesStatus = Literal["all", "pending", "completed", "expired"]
 BetStatus = Literal["cancelled", "dropped", "expired", "filled", "open"]
 DispenserStatus = Literal["all", "open", "closed", "closing", "open_empty_address"]
-DispenserStatusNumber = {"open": 0, "closed": 10, "closing": 11, "open_empty_address": 1}
-DispenserStatusNumberInverted = {value: key for key, value in DispenserStatusNumber.items()}
+DispenserStatusNumber = {"open": 0, "closed": 10, "closing": 11, "open_empty_address": 1}  # pylint: disable=invalid-name
+DispenserStatusNumberInverted = {value: key for key, value in DispenserStatusNumber.items()}  # pylint: disable=invalid-name
 FairmintersStatus = Literal["all", "open", "closed", "pending"]
 IssuancesAssetEvents = Literal[
     "all",
@@ -124,7 +523,9 @@ SUPPORTED_SORT_FIELDS = {
         "backward_quantity",
         "match_expire_index",
     ],
-    "orders": [
+    # The orders endpoints query the `orders_info` view, so the key must match
+    # the table name passed to select_rows() (the runtime sort lookup key).
+    "orders_info": [
         "block_index",
         "give_asset",
         "give_quantity",
@@ -143,6 +544,38 @@ SUPPORTED_SORT_FIELDS = {
         "satoshirate",
         "price",
     ],
+    "issuances": [
+        "block_index",
+        "asset",
+        "asset_longname",
+        "quantity",
+        "fee_paid",
+    ],
+    "broadcasts": [
+        "block_index",
+        "timestamp",
+        "value",
+        "fee_fraction_int",
+    ],
+    "dispenses": [
+        "block_index",
+        "asset",
+        "dispense_quantity",
+        "btc_amount",
+    ],
+    "dividends": [
+        "block_index",
+        "asset",
+        "dividend_asset",
+        "quantity_per_unit",
+        "fee_paid",
+    ],
+    "sends": [
+        "block_index",
+        "asset",
+        "quantity",
+        "fee_paid",
+    ],
     "xcp_holders": [
         "quantity",
         "holding_type",
@@ -153,9 +586,95 @@ SUPPORTED_SORT_FIELDS = {
         "holding_type",
         "status",
     ],
+    "pools": [
+        "block_index",
+        "reserve_a",
+        "reserve_b",
+    ],
+    "pool_matches": [
+        "block_index",
+        "forward_quantity",
+        "backward_quantity",
+    ],
 }
 
 ADDRESS_FIELDS = ["source", "address", "issuer", "destination"]
+
+
+def _possible_str_values(node):
+    """The `str` values an expression can evaluate to.
+
+    For a ternary we take both branches (e.g. get_asset_holders chooses between
+    `asset_holders` and `xcp_holders`) while ignoring literals in the condition.
+    Other shapes fall back to any string constant in the subtree.
+    """
+    if isinstance(node, ast.Constant):
+        return [node.value] if isinstance(node.value, str) else []
+    if isinstance(node, ast.IfExp):
+        return _possible_str_values(node.body) + _possible_str_values(node.orelse)
+    return [
+        sub.value
+        for sub in ast.walk(node)
+        if isinstance(sub, ast.Constant) and isinstance(sub.value, str)
+    ]
+
+
+def _select_rows_sort_tables(function):
+    """Tables passed to `select_rows(..., sort=...)` inside `function`.
+
+    The runtime sort logic in `select_rows()` keys `SUPPORTED_SORT_FIELDS` by
+    the SQL table/view name, so documentation must resolve the same table to
+    stay truthful. We only collect tables from calls that actually forward a
+    `sort` argument: a getter that builds its own SQL (or never forwards sort)
+    therefore advertises nothing, which is the honest result.
+    """
+    try:
+        source = textwrap.dedent(inspect.getsource(function))
+    except (OSError, TypeError):
+        return []
+    tree = ast.parse(source)
+
+    # Resolve a table passed as a local variable (e.g. get_asset_holders picks
+    # asset_holders/xcp_holders depending on the asset) back to its literals.
+    assigned = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and len(node.targets) == 1:
+            target = node.targets[0]
+            if isinstance(target, ast.Name):
+                assigned[target.id] = _possible_str_values(node.value)
+
+    tables = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        called = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
+        if called != "select_rows":
+            continue
+        if not any(kw.arg == "sort" for kw in node.keywords):
+            continue
+        if len(node.args) < 2:
+            continue
+        table_arg = node.args[1]
+        if isinstance(table_arg, ast.Constant) and isinstance(table_arg.value, str):
+            tables.append(table_arg.value)
+        elif isinstance(table_arg, ast.Name):
+            tables.extend(assigned.get(table_arg.id, []))
+    return tables
+
+
+def get_sortable_fields(function):
+    """Sortable fields to document for a route function.
+
+    Resolves the SQL table(s) the function sorts on and returns the matching
+    `SUPPORTED_SORT_FIELDS`, de-duplicated and order-preserving. Returns `None`
+    when the function exposes no sortable fields.
+    """
+    fields = []
+    for table in _select_rows_sort_tables(function):
+        for field in SUPPORTED_SORT_FIELDS.get(table, []):
+            if field not in fields:
+                fields.append(field)
+    return fields or None
 
 
 class QueryResult:
@@ -164,6 +683,12 @@ class QueryResult:
         self.next_cursor = next_cursor
         self.result_count = result_count
         self.table = table
+
+
+def normalize_transaction_rows(result):
+    for row in result:
+        if "btc_amount" in row and row["btc_amount"] is None:
+            row["btc_amount"] = 0
 
 
 def select_rows(
@@ -179,6 +704,7 @@ def select_rows(
     order="DESC",
     wrap_where=None,
     sort=None,
+    with_count=True,
 ):
     if offset is not None or sort is not None:
         last_cursor = None
@@ -195,33 +721,285 @@ def select_rows(
 
     bindings = []
 
+    # ``messages.tx_hash`` has been dropped from storage. Reads from
+    # ``messages`` are rewritten to come from a JOIN against ``transactions``
+    # so legacy callers that still filter or project on ``tx_hash`` keep
+    # working.
+    rewrite_messages_tx_hash = table == "messages"
+
+    table_has_hash_fk = table in _HASH_FK_PROJECTIONS
+
+    def _qualify(field):
+        """Disambiguate columns when the SELECT joins ``messages`` or one of
+        the ``_HASH_FK_PROJECTIONS`` tables against ``transactions``."""
+        if rewrite_messages_tx_hash:
+            if field in _MESSAGES_QUALIFY_M_FIELDS:
+                return f"__m.{field}"
+            if field == "tx_hash":
+                return "__txh.tx_hash"
+        elif table_has_hash_fk:
+            if field in _AMBIGUOUS_COLS:
+                return f"__m.{field}"
+        return field
+
+    # ``where_needs_join`` tracks whether the rewritten WHERE clause
+    # references a column that only exists on the joined ``__txh`` /
+    # ``__txjoin`` (i.e. ``messages.tx_hash`` is filtered). When False, the
+    # COUNT(*) query is rebuilt against the main table alone to skip a
+    # full-table LEFT JOIN that contributes nothing to the row count.
+    where_needs_join = False
+    # Set of base field names referenced anywhere in the WHERE clause; used
+    # to decide whether the ``_COUNT_FROM_OVERRIDE`` shortcut is safe.
+    where_fields_used: set[str] = set()
+
+    # Resolve the transactions table once so _HASH_FK_WHERE_REWRITE subqueries
+    # use the same table name as the FROM clause JOIN (or emit a false condition
+    # when no transactions table is reachable from this connection).
+    _where_tx_table = _resolve_transactions_table_name(db)
+
+    # Asset-name columns are stored as the compact integer ``asset_index`` on
+    # Ledger DB tables, while the State DB consolidated tables keep the name.
+    # Detect a Ledger DB connection by probing for a *local* ``main.assets``
+    # table: on a State DB connection ``assets`` is only reachable as the
+    # ATTACHed ``ledger_db.assets`` (so unqualified ``assets`` resolves there
+    # too -- ``main.`` makes the probe connection-specific). Only Ledger DB
+    # asset filters need the name->index subquery rewrite. Cached per connection.
+    _assets_index_table = _resolve_local_index_table(db, "main.assets", _ASSETS_INDEX_TABLE_CACHE)
+
+    def _is_asset_index_col(field):
+        return (
+            _assets_index_table is not None
+            and table not in _INDEX_RESOLVING_VIEWS
+            and field in database.ASSET_INDEX_COLUMN_NAMES
+        )
+
+    # Address columns are stored as the compact integer ``address_id`` on Ledger
+    # DB tables, while the State DB consolidated tables keep the string. Detect a
+    # Ledger DB connection by probing for a *local* ``main.address_list`` (mirror
+    # the asset probe above). Only Ledger DB address filters need the
+    # string->id subquery rewrite. Cached per connection.
+    _address_index_table = _resolve_local_index_table(
+        db, "main.address_list", _ADDRESS_INDEX_TABLE_CACHE
+    )
+
+    def _is_address_index_col(field):
+        return (
+            _address_index_table is not None
+            and table not in _INDEX_RESOLVING_VIEWS
+            and field in database.ADDRESS_INDEX_COLUMN_NAMES
+        )
+
+    def _is_tx_view_address_col(field):
+        # Only on a Ledger DB (``_address_index_table`` probe) do the transaction
+        # views decode the id; on a State DB their ``source``/``destination`` are
+        # plain indexed TEXT and the default equality clause is already fast.
+        return (
+            _address_index_table is not None
+            and table in _TX_VIEW_ADDRESS_FILTER_BASES
+            and field in _TX_VIEW_ADDRESS_COLUMNS
+        )
+
+    def _tx_view_address_clause(field, values):
+        """Rewrite an address equality/IN filter on a resolving transaction view
+        into an indexed ``tx_index IN (...)`` subquery against the base table(s).
+        ``field`` is ``source``/``destination`` (a constant column name, not user
+        input); ``values`` is the list of address strings. Returns
+        ``(sql_clause, extra_bindings)``. When a view unions two base tables that
+        share the ``tx_index`` space (``all_transactions_with_status``), each leg
+        is gated on the view's ``confirmed`` flag so a ``tx_index`` collision
+        between a lingering mempool tx and a confirmed tx of a different address
+        cannot cross-match (see ``_TX_VIEW_ADDRESS_FILTER_BASES``)."""
+        placeholders = ",".join(["?"] * len(values))
+        clauses = []
+        extra = []
+        for base_table, keeps_text_address, confirmed_guard in _TX_VIEW_ADDRESS_FILTER_BASES[table]:
+            if keeps_text_address:
+                subquery = f"SELECT tx_index FROM {base_table} WHERE {field} IN ({placeholders})"  # noqa: S608  # nosec B608
+            else:
+                subquery = (
+                    f"SELECT tx_index FROM {base_table} WHERE {field} IN "  # noqa: S608  # nosec B608
+                    f"(SELECT address_id FROM {_address_index_table} WHERE address IN ({placeholders}))"
+                )
+            extra += values
+            if confirmed_guard is None:
+                clauses.append(f"tx_index IN ({subquery})")
+            else:
+                clauses.append(f"({confirmed_guard} AND tx_index IN ({subquery}))")
+        return f"({' OR '.join(clauses)})", extra
+
     or_where = []
     for where_dict in where:
         where_field = []
         for key, value in where_dict.items():
             if key.endswith("__gt"):
-                where_field.append(f"{key[:-4]} > ?")
-                bindings.append(value)
+                field = key[:-4]
+                where_field.append(f"{_qualify(field)} > ?")
+                bindings.append(_convert_hash_value(field, value))
             elif key.endswith("__like"):
-                where_field.append(f"{key[:-6]} LIKE ?")
+                field = key[:-6]
+                if _is_asset_index_col(field):
+                    where_field.append(
+                        f"{_qualify(field)} IN (SELECT asset_index FROM {_assets_index_table} WHERE asset_name LIKE ?)"  # noqa: S608  # nosec B608
+                    )
+                elif _is_address_index_col(field):
+                    where_field.append(
+                        f"{_qualify(field)} IN (SELECT address_id FROM {_address_index_table} WHERE address LIKE ?)"  # noqa: S608  # nosec B608
+                    )
+                else:
+                    where_field.append(f"{_qualify(field)} LIKE ?")
                 bindings.append(value)
             elif key.endswith("__notlike"):
-                where_field.append(f"{key[:-9]} NOT LIKE ?")
+                field = key[:-9]
+                if _is_asset_index_col(field):
+                    where_field.append(
+                        f"{_qualify(field)} NOT IN (SELECT asset_index FROM {_assets_index_table} WHERE asset_name LIKE ?)"  # noqa: S608  # nosec B608
+                    )
+                elif _is_address_index_col(field):
+                    where_field.append(
+                        f"{_qualify(field)} NOT IN (SELECT address_id FROM {_address_index_table} WHERE address LIKE ?)"  # noqa: S608  # nosec B608
+                    )
+                else:
+                    where_field.append(f"{_qualify(field)} NOT LIKE ?")
                 bindings.append(value)
             elif key.endswith("__in"):
-                where_field.append(f"{key[:-4]} IN ({','.join(['?'] * len(value))})")
-                bindings += value
+                field = key[:-4]
+                if field in _HASH_FK_WHERE_REWRITE:
+                    new_field = _HASH_FK_WHERE_REWRITE[field]
+                    if _where_tx_table is None:
+                        where_field.append("(0 = 1)")
+                    else:
+                        placeholders = ",".join(
+                            [
+                                f"(SELECT tx_index FROM {_safe_tx_table(_where_tx_table)} WHERE tx_hash = ?)"  # noqa: S608  # nosec B608
+                            ]
+                            * len(value)
+                        )
+                        where_field.append(f"{new_field} IN ({placeholders})")
+                        bindings += [hashcodec.hash_to_db(v) for v in value]
+                    # ``field`` becomes the resolved FK column so the
+                    # ``_COUNT_FROM_OVERRIDE`` gate sees the actual schema
+                    # column rather than the legacy hex hash alias.
+                    field = new_field
+                elif _is_tx_view_address_col(field):
+                    clause, extra = _tx_view_address_clause(field, list(value))
+                    where_field.append(clause)
+                    bindings += extra
+                    # The emitted clause filters on ``tx_index``; record that so
+                    # the ``_COUNT_FROM_OVERRIDE`` gate can count from the base
+                    # table (``tx_index`` is a safe column) instead of the view.
+                    field = "tx_index"
+                elif _is_asset_index_col(field):
+                    where_field.append(
+                        f"{_qualify(field)} IN (SELECT asset_index FROM {_assets_index_table} "  # noqa: S608  # nosec B608
+                        f"WHERE asset_name IN ({','.join(['?'] * len(value))}))"
+                    )
+                    bindings += list(value)
+                elif _is_address_index_col(field):
+                    where_field.append(
+                        f"{_qualify(field)} IN (SELECT address_id FROM {_address_index_table} "  # noqa: S608  # nosec B608
+                        f"WHERE address IN ({','.join(['?'] * len(value))}))"
+                    )
+                    bindings += list(value)
+                else:
+                    where_field.append(f"{_qualify(field)} IN ({','.join(['?'] * len(value))})")
+                    bindings += [_convert_hash_value(field, v) for v in value]
             elif key.endswith("__notnull"):
-                where_field.append(f"{key[:-9]} IS NOT NULL")
+                field = key[:-9]
+                where_field.append(f"{_qualify(field)} IS NOT NULL")
             elif key.endswith("__null"):
-                where_field.append(f"{key[:-6]} IS NULL")
+                field = key[:-6]
+                where_field.append(f"{_qualify(field)} IS NULL")
+            elif key.endswith("__nocase"):
+                field = key[:-8]
+                where_field.append(f"{_qualify(field)} = ? COLLATE NOCASE")
+                bindings.append(_convert_hash_value(field, value))
             else:
-                if key in ADDRESS_FIELDS and len(value.split(",")) > 1:
+                if key in _MATCH_ID_HASH_WHERE:
+                    # ``*_match_hash``: resolve the hex tx_hash to a tx_index and
+                    # OR it against both legs of the composite match id (the old
+                    # ``*_match_id LIKE '%hash%'`` matched either half).
+                    tx0_col, tx1_col = _MATCH_ID_HASH_WHERE[key]
+                    if _where_tx_table is None:
+                        where_field.append("(0 = 1)")
+                    else:
+                        subq = f"(SELECT tx_index FROM {_safe_tx_table(_where_tx_table)} WHERE tx_hash = ?)"  # noqa: S608  # nosec B608
+                        where_field.append(f"({tx0_col} = {subq} OR {tx1_col} = {subq})")
+                        bindings.append(hashcodec.hash_to_db(value))
+                        bindings.append(hashcodec.hash_to_db(value))
+                    field = key
+                elif key in _HASH_FK_WHERE_REWRITE:
+                    new_field = _HASH_FK_WHERE_REWRITE[key]
+                    if _where_tx_table is None:
+                        where_field.append("(0 = 1)")
+                    else:
+                        where_field.append(
+                            f"{new_field} = (SELECT tx_index FROM {_safe_tx_table(_where_tx_table)} WHERE tx_hash = ?)"  # noqa: S608  # nosec B608
+                        )
+                        bindings.append(hashcodec.hash_to_db(value))
+                    # ``key`` is the legacy hex hash column (e.g.
+                    # ``dispenser_tx_hash``); record the *resolved* FK column
+                    # name so the override gate sees the actual schema column.
+                    field = new_field
+                elif _is_tx_view_address_col(key):
+                    values = value.split(",") if isinstance(value, str) else [value]
+                    clause, extra = _tx_view_address_clause(key, values)
+                    where_field.append(clause)
+                    bindings += extra
+                    # The emitted clause filters on ``tx_index``; record that so
+                    # the ``_COUNT_FROM_OVERRIDE`` gate can count from the base
+                    # table (``tx_index`` is a safe column) instead of the view.
+                    field = "tx_index"
+                elif _is_address_index_col(key):
+                    # Ledger DB: address columns store the compact ``address_id``;
+                    # rewrite the (possibly comma-separated) address value(s) to
+                    # an ``address_list`` subquery. On a State DB connection
+                    # ``_is_address_index_col`` is False and the TEXT branches
+                    # below handle it.
+                    values = value.split(",") if isinstance(value, str) else [value]
+                    if len(values) > 1:
+                        where_field.append(
+                            f"{_qualify(key)} IN (SELECT address_id FROM {_address_index_table} "  # noqa: S608  # nosec B608
+                            f"WHERE address IN ({','.join(['?'] * len(values))}))"
+                        )
+                        bindings += values
+                    else:
+                        where_field.append(
+                            f"{_qualify(key)} = (SELECT address_id FROM {_address_index_table} WHERE address = ?)"  # noqa: S608  # nosec B608
+                        )
+                        bindings.append(value)
+                    field = key
+                elif (
+                    key == "utxo"
+                    and _address_index_table is not None
+                    and isinstance(value, str)
+                    and ":" in value
+                ):
+                    # Ledger DB: ``utxo`` is stored as the compact
+                    # ``(utxo_tx_hash BLOB, utxo_vout)`` pair; split the filter.
+                    tx_hash_hex, _, vout = value.partition(":")
+                    where_field.append("utxo_tx_hash = ? AND utxo_vout = ?")
+                    bindings.append(hashcodec.hash_to_db(tx_hash_hex))
+                    bindings.append(int(vout))
+                    field = key
+                elif key in ADDRESS_FIELDS and len(value.split(",")) > 1:
                     where_field.append(f"{key} IN ({','.join(['?'] * len(value.split(',')))})")
                     bindings += value.split(",")
-                else:
-                    where_field.append(f"{key} = ?")
+                    field = key
+                elif _is_asset_index_col(key):
+                    where_field.append(
+                        f"{_qualify(key)} = (SELECT asset_index FROM {_assets_index_table} WHERE asset_name = ?)"  # noqa: S608  # nosec B608
+                    )
                     bindings.append(value)
+                    field = key
+                else:
+                    where_field.append(f"{_qualify(key)} = ?")
+                    bindings.append(_convert_hash_value(key, value))
+                    field = key
+            # Track the base field name and whether the WHERE references a
+            # column that only exists on a joined table.
+            where_fields_used.add(field)
+            if rewrite_messages_tx_hash and field == "tx_hash":
+                where_needs_join = True
 
         and_where_clause = ""
         if where_field:
@@ -239,13 +1017,14 @@ def select_rows(
         where_clause_count = ""
     bindings_count = list(bindings)
 
+    cursor_field_qualified = _qualify(cursor_field)
     if offset is None and last_cursor is not None:
         if where_clause != "":
             where_clause = f"({where_clause}) AND "
         if order == "ASC":
-            where_clause += f" {cursor_field} >= ?"
+            where_clause += f" {cursor_field_qualified} >= ?"
         else:
-            where_clause += f" {cursor_field} <= ?"
+            where_clause += f" {cursor_field_qualified} <= ?"
         bindings.append(last_cursor)
 
     if where_clause:
@@ -258,9 +1037,9 @@ def select_rows(
         group_by_clause = f"GROUP BY {group_by}"
 
     if select == "*":
-        select = f"*, {cursor_field} AS {cursor_field}"
+        select = f"*, {cursor_field_qualified} AS {cursor_field}"
     elif cursor_field not in select:
-        select = f"{select}, {cursor_field} AS {cursor_field}"
+        select = f"{select}, {cursor_field_qualified} AS {cursor_field}"
     if (
         table
         in [
@@ -273,25 +1052,186 @@ def select_rows(
         ]
         and "COUNT(*)" not in select
     ):
-        select += ", NULLIF(destination, '') AS destination"
+        # When ``dispenses`` rows are read through the hash-FK JOIN, the
+        # outer ``transactions`` row also contains a ``destination`` column;
+        # qualify the reference so SQLite knows we mean the dispense row.
+        dest_ref = "__m.destination" if table_has_hash_fk else "destination"
+        select += f", NULLIF({dest_ref}, '') AS destination"
+    # `credits` and `debits` rows carry no natural unique key: several identical
+    # rows can be written within a single transaction (e.g. an MPMA send or a
+    # dividend crediting the same address+asset more than once). The rows are
+    # then byte-identical and only distinguishable by their (stripped) rowid, so
+    # consumers replicating the API silently collapse them. Expose the row's
+    # stable unique id under a non-stripped name so they can be told apart.
+    # See https://github.com/CounterpartyXCP/counterparty-core/issues/3320
+    if table in ["credits", "debits"] and "COUNT(*)" not in select:
+        select += f", rowid AS {table[:-1]}_index"
 
-    query = f"SELECT {select} FROM {table} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
-    query_count = f"SELECT {select} FROM {table} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
+    # Rewrite ``SELECT ... tx_hash ... FROM messages`` to project
+    # ``transactions.tx_hash`` through the join we set up above.
+    if rewrite_messages_tx_hash:
+        txtable = _resolve_transactions_table_name(db)
+        if txtable is None:
+            from_clause = "messages AS __m"
+            # Word-boundary safe substitution so embedded substrings such as
+            # ``last_status_tx_hash`` (not a column on ``messages`` today, but
+            # this branch is shared with future schema additions) are not
+            # corrupted by a naive ``str.replace``.
+            select_rewritten = re.sub(
+                r"(?<![A-Za-z0-9_\.])tx_hash(?![A-Za-z0-9_])",
+                "NULL AS tx_hash",
+                select,
+            )
+        else:
+            from_clause = f"messages AS __m LEFT JOIN {_safe_tx_table(txtable)} AS __txh ON __txh.tx_index = __m.tx_index"
+            # Project tx_hash from the joined transactions; leave other columns
+            # untouched. We do a token-level rewrite so embedded substrings such
+            # as ``last_status_tx_hash`` are not touched.
+            select_rewritten = _project_messages_tx_hash(select)
+    elif table_has_hash_fk:
+        # Add the legacy hash column back via a JOIN against ``transactions``
+        # so the API row shape remains unchanged after the column drop.
+        # Explicitly enumerate public columns so the internal ``*_tx_index``
+        # FK that replaced the legacy hash does NOT leak into the response.
+        index_col, hash_col = _HASH_FK_PROJECTIONS[table]
+        public_cols = _hash_fk_public_columns(db, table)
+        explicit_cols = ", ".join(f"__m.{c}" for c in public_cols)
+        txtable = _resolve_transactions_table_name(db)
+        if txtable is None:
+            # No transactions table available (e.g. State DB without the
+            # Ledger DB attached). Skip the JOIN and surface a NULL legacy
+            # hash; callers that need the real hash can fetch it separately.
+            from_clause = f"{table} AS __m"
+            if "*" in select:
+                select_rewritten = select.replace("*", f"{explicit_cols}, NULL AS {hash_col}", 1)
+            else:
+                select_rewritten = f"{select}, NULL AS {hash_col}"
+        else:
+            from_clause = (
+                f"{table} AS __m LEFT JOIN {_safe_tx_table(txtable)} AS __txjoin "
+                f"ON __txjoin.tx_index = __m.{index_col}"
+            )
+            # ``hash_col`` (dispenser_tx_hash / fairminter_tx_hash / order_tx_hash
+            # / offer_hash) is in ``hashcodec.HASH_COLUMN_NAMES`` so the rowtracer
+            # converts the BLOB to 64-char hex; no per-row Python UDF needed.
+            if "*" in select:
+                # Expand the bare ``*`` to the explicit public column list
+                # and re-add the legacy hash via the JOIN.
+                select_rewritten = select.replace(
+                    "*",
+                    f"{explicit_cols}, __txjoin.tx_hash AS {hash_col}",
+                    1,
+                )
+            else:
+                select_rewritten = f"{select}, __txjoin.tx_hash AS {hash_col}"
+    elif table in _MATCH_ID_FK_PROJECTIONS:
+        # Re-expose the legacy ``*_match_id`` (``tx0hash_tx1hash``) via two
+        # correlated subqueries against ``transactions`` and hide the internal
+        # ``*_tx_index`` FK columns so the API row shape is preserved.
+        tx0_col, tx1_col, id_col = _MATCH_ID_FK_PROJECTIONS[table]
+        public_cols = _match_id_public_columns(db, table)
+        explicit_cols = ", ".join(public_cols)
+        from_clause = table
+        txtable = _resolve_transactions_table_name(db)
+        if txtable is None:
+            id_expr = f"NULL AS {id_col}"
+        else:
+            t = _safe_tx_table(txtable)
+            # ``t`` is validated by ``_safe_tx_table``; the column names come
+            # from the constant ``_MATCH_ID_FK_PROJECTIONS`` map -- no user input.
+            id_expr = (
+                f"(SELECT hex_lower(tx_hash) FROM {t} WHERE tx_index = {tx0_col})"  # noqa: S608  # nosec B608
+                f" || '_' || "
+                f"(SELECT hex_lower(tx_hash) FROM {t} WHERE tx_index = {tx1_col}) AS {id_col}"
+            )
+        if "*" in select:
+            select_rewritten = select.replace("*", f"{explicit_cols}, {id_expr}", 1)
+        else:
+            select_rewritten = f"{select}, {id_expr}"
+    else:
+        from_clause = table
+        select_rewritten = select
+
+    # Match tables keep ``tx0_hash``/``tx1_hash`` BLOB; re-expose the dropped
+    # composite TEXT ``id`` locally via the ``hex_lower`` UDF (no JOIN).
+    if table in _MATCH_ID_LOCAL_TABLES:
+        select_rewritten = f"{select_rewritten}, {MATCH_ID_SQL} AS id"
+
+    query = f"SELECT {select_rewritten} FROM {from_clause} {where_clause} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
+
+    # COUNT(*) query fast-path: when there is no ``group_by`` and no
+    # ``wrap_where``, the LEFT JOINs we added for ``messages`` and the
+    # ``_HASH_FK_PROJECTIONS`` tables do not affect the row count (they all
+    # join on a unique key on the right). Building the COUNT against the
+    # main table alone, with a tightly scoped ``WHERE``, lets SQLite use
+    # the appropriate index and skip materializing JOIN rows. For a
+    # 100K-row ledger this turns a 20ms wrap-COUNT into a sub-ms direct
+    # COUNT. Falls back to the legacy wrap pattern when ``group_by`` is
+    # present (where the wrap is required for correct semantics) or when
+    # ``wrap_where`` filters on JOIN'd columns.
+    count_fast_from = None
+    if not group_by_clause and wrap_where is None:
+        if rewrite_messages_tx_hash:
+            # ``messages`` reads need the JOIN only if the caller filters on
+            # ``tx_hash`` (the joined ``__txh`` column). All other filters
+            # are on plain ``messages`` columns, so we count from
+            # ``messages`` directly.
+            if where_needs_join:
+                count_fast_from = from_clause
+            else:
+                count_fast_from = "messages AS __m"
+        elif table_has_hash_fk:
+            # The hash-FK rewrite resolves ``*_tx_hash`` filters via a
+            # correlated subquery on ``transactions`` (see
+            # ``_HASH_FK_WHERE_REWRITE``), so the LEFT JOIN is only there
+            # to expose the legacy hash column to the SELECT. Skip it
+            # entirely for COUNT.
+            count_fast_from = f"{table} AS __m"
+        elif table in _MATCH_ID_FK_PROJECTIONS or table in _MATCH_ID_LOCAL_TABLES:
+            # The match-id projection only adds SELECT-clause subqueries (and,
+            # for ``_MATCH_ID_FK_PROJECTIONS``, a WHERE rewritten to the FK
+            # columns of the same table); the row count is unaffected, so we
+            # COUNT against the table directly and skip the projection work.
+            count_fast_from = table
+        elif table in _COUNT_FROM_OVERRIDE:
+            # Views like ``transactions_with_status`` wrap a LEFT JOIN
+            # against ``blocks`` / ``transactions_status``; counting from
+            # the underlying ``transactions`` table is equivalent (the
+            # LEFT JOINs are on a unique key on the right) -- but only if
+            # the caller's filter is restricted to columns that exist on
+            # the underlying table.
+            main_table, safe_columns = _COUNT_FROM_OVERRIDE[table]
+            if where_fields_used <= safe_columns:
+                count_fast_from = main_table
+
+    if count_fast_from is not None:
+        query_count = f"SELECT COUNT(*) AS count FROM {count_fast_from} {where_clause_count}"  # nosec B608  # noqa: S608 # nosec B608
+    else:
+        # Legacy wrap-COUNT path: required when ``group_by`` is set or the
+        # caller passes ``wrap_where`` whose filter may reference JOIN'd
+        # columns.
+        query_count = (
+            f"SELECT {select_rewritten} FROM {from_clause} {where_clause_count} {group_by_clause}"  # nosec B608  # noqa: S608 # nosec B608
+        )
 
     if wrap_where is not None:
         wrap_where_field = []
         for key, value in wrap_where.items():
             if key.endswith("__gt"):
-                wrap_where_field.append(f"{key[:-4]} > ?")
+                field = key[:-4]
+                wrap_where_field.append(f"{field} > ?")
             else:
-                wrap_where_field.append(f"{key} = ?")
-            bindings.append(value)
-            bindings_count.append(value)
+                field = key
+                wrap_where_field.append(f"{field} = ?")
+            converted = _convert_hash_value(field, value)
+            bindings.append(converted)
+            bindings_count.append(converted)
         wrap_where_clause = " AND ".join(wrap_where_field)
         wrap_where_clause = f"WHERE {wrap_where_clause}"
         query = f"SELECT * FROM ({query}) {wrap_where_clause}"  # nosec B608  # noqa: S608 # nosec B608
         query_count = f"SELECT COUNT(*) AS count FROM ({query_count}) {wrap_where_clause}"  # nosec B608  # noqa: S608 # nosec B608
-    else:
+    elif count_fast_from is None:
+        # ``group_by`` path: COUNT(*) over the grouped sub-select.
         query_count = f"SELECT COUNT(*) AS count FROM ({query_count})"  # nosec B608  # noqa: S608 # nosec B608
 
     order_by = []
@@ -305,8 +1245,33 @@ def select_rows(
                 sort_order = "ASC"
             if sort_order.upper() not in ["ASC", "DESC"]:
                 sort_order = "ASC"
-            if sort_name in SUPPORTED_SORT_FIELDS.get(table, []):
-                order_by.append(f"{sort_name} {sort_order.upper()}")
+            if table == "balances" and sort_name == "asset":
+                order_by.append(f"COALESCE(asset_longname, asset) {sort_order.upper()}")
+            elif sort_name in SUPPORTED_SORT_FIELDS.get(table, []):
+                # On a Ledger DB table the asset/address columns store the
+                # compact integer index, so a bare ``ORDER BY asset`` would sort
+                # by issuance order / id instead of the name/string the legacy
+                # API ordered by. Resolve the index back to the name/string in
+                # the ORDER BY to preserve the pre-normalization sort order
+                # (the probes are None on the State DB, where these columns keep
+                # their TEXT name/string and the bare clause is correct).
+                if _is_asset_index_col(sort_name):
+                    order_by.append(
+                        f"(SELECT asset_name FROM {_assets_index_table} "  # noqa: S608 # nosec B608
+                        f"WHERE asset_index = {sort_name}) {sort_order.upper()}"
+                    )
+                elif _is_address_index_col(sort_name):
+                    order_by.append(
+                        f"(SELECT address FROM {_address_index_table} "  # noqa: S608 # nosec B608
+                        f"WHERE address_id = {sort_name}) {sort_order.upper()}"
+                    )
+                else:
+                    # Qualify like the WHERE/cursor clauses: on _HASH_FK_PROJECTIONS
+                    # tables the FROM is ``<table> AS __m LEFT JOIN transactions``, so a
+                    # bare sort column that also exists on transactions (block_index,
+                    # btc_amount) is an ambiguous reference. ``_qualify`` prefixes those
+                    # with ``__m.`` and leaves every other field untouched.
+                    order_by.append(f"{_qualify(sort_name)} {sort_order.upper()}")
     elif table == "all_transactions_with_status":
         order_by.append("confirmed ASC")
         order_by.append(f"{cursor_field} {order}")
@@ -325,13 +1290,20 @@ def select_rows(
         cursor.execute(query, bindings)
         result = cursor.fetchall()
 
-    with start_sentry_span(op="db.sql.execute", description=query_count) as sql_span:
-        sql_span.set_tag("db.system", "sqlite3")
-        cursor.execute(query_count, bindings_count)
-        result_count = cursor.fetchone()["count"]
+    result_count = None
+    if with_count:
+        with start_sentry_span(op="db.sql.execute", description=query_count) as sql_span:
+            sql_span.set_tag("db.system", "sqlite3")
+            cursor.execute(query_count, bindings_count)
+            result_count = cursor.fetchone()["count"]
 
     if result and len(result) > limit:
-        next_cursor = result[-1][cursor_field]
+        # Don't return a cursor when using sort or offset
+        # (cursor is ignored in those cases, so returning one would cause infinite loops)
+        if sort is not None or offset is not None:
+            next_cursor = None
+        else:
+            next_cursor = result[-1][cursor_field]
         result = result[:-1]
     else:
         next_cursor = None
@@ -342,6 +1314,9 @@ def select_rows(
                 break
             row["params"] = json.loads(row["params"])
 
+    if table in ["all_transactions_with_status", "transactions_with_status"]:
+        normalize_transaction_rows(result)
+
     if table == "all_transactions_with_status":
         for row in result:
             row["confirmed"] = bool(row["confirmed"])
@@ -350,7 +1325,15 @@ def select_rows(
 
 
 def select_row(db, table, where, select="*", group_by=""):
-    query_result = select_rows(db, table, where, limit=1, select=select, group_by=group_by)
+    query_result = select_rows(
+        db,
+        table,
+        where,
+        limit=1,
+        select=select,
+        group_by=group_by,
+        with_count=False,
+    )
     if query_result.result:
         return QueryResult(query_result.result[0], None, table, 1)
     return None
@@ -559,6 +1542,26 @@ def get_transactions_by_addresses(
     )
 
 
+def get_address(ledger_db, address: str):
+    """
+    Returns the latest options for an address.
+    :param str address: The address to return (e.g. $ADDRESS_1)
+    """
+    query_result = select_row(ledger_db, "addresses", where={"address": address})
+    if query_result:
+        return query_result
+    return QueryResult(
+        {
+            "address": address,
+            "options": 0,
+            "block_index": None,
+        },
+        None,
+        "addresses",
+        1,
+    )
+
+
 def get_transaction_types_count(state_db):
     """
     Returns the count of each transaction type
@@ -636,8 +1639,39 @@ def get_transaction_by_tx_index(ledger_db, tx_index: int):
     )
 
 
+def get_total_events_count(state_db, event_names=None):
+    """
+    Returns the total number of events, optionally restricted to `event_names`.
+
+    Reads the pre-aggregated `events_count` table (one row per event type) instead
+    of running `COUNT(*)` over the whole `messages` table, which is a full scan.
+    `events_count` is maintained incrementally as events are written and fully
+    recomputed on every State DB rollback, so the total stays exact.
+    """
+    cursor = state_db.cursor()
+    if event_names is None:
+        row = cursor.execute("SELECT SUM(count) AS count FROM events_count").fetchone()
+    else:
+        names = [name for name in event_names if name]
+        if not names:
+            return 0
+        placeholders = ",".join(["?"] * len(names))
+        row = cursor.execute(
+            f"SELECT SUM(count) AS count FROM events_count WHERE event IN ({placeholders})",  # noqa: S608 # nosec B608
+            names,
+        ).fetchone()
+    if row is None or row["count"] is None:
+        return 0
+    return row["count"]
+
+
 def get_all_events(
-    ledger_db, event_name: str = None, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    state_db,
+    event_name: str = None,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
 ):
     """
     Returns all events
@@ -647,9 +1681,11 @@ def get_all_events(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
     where = None
+    event_names = None
     if event_name:
-        where = [{"event": event} for event in event_name.split(",")]
-    return select_rows(
+        event_names = event_name.split(",")
+        where = [{"event": event} for event in event_names]
+    query_result = select_rows(
         ledger_db,
         "messages",
         where=where,
@@ -658,7 +1694,10 @@ def get_all_events(
         limit=limit,
         offset=offset,
         select="message_index AS event_index, event, bindings AS params, tx_hash, block_index",
+        with_count=False,
     )
+    query_result.result_count = get_total_events_count(state_db, event_names)
+    return query_result
 
 
 def get_events_by_block(
@@ -843,7 +1882,7 @@ def get_event_by_index(ledger_db, event_index: int):
 
 
 def get_events_by_name(
-    ledger_db, event: str, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db, state_db, event: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
     Returns the events filtered by event name
@@ -852,7 +1891,7 @@ def get_events_by_name(
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
-    return select_rows(
+    query_result = select_rows(
         ledger_db,
         "messages",
         where={"event": event},
@@ -861,11 +1900,15 @@ def get_events_by_name(
         limit=limit,
         offset=offset,
         select="message_index AS event_index, event, bindings AS params, tx_hash, block_index",
+        with_count=False,
     )
+    query_result.result_count = get_total_events_count(state_db, [event])
+    return query_result
 
 
 def get_events_by_addresses(
     ledger_db,
+    state_db,
     addresses: str,
     event_name: str = None,
     cursor: int = None,
@@ -880,27 +1923,24 @@ def get_events_by_addresses(
     :param int limit: The maximum number of events to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    where = [{"address__in": addresses.split(",")}]
+    if event_name:
+        where[0]["event__in"] = event_name.split(",")
     events = select_rows(
-        caches.AddressEventsCache().cache_db,
+        state_db,
         "address_events",
-        where=[{"address__in": addresses.split(",")}],
+        where=where,
         cursor_field="event_index",
         last_cursor=cursor,
         limit=limit,
         offset=offset,
     )
     events_indexes = [event["event_index"] for event in events.result]
-    where = {"message_index__in": events_indexes}
-    if event_name:
-        where["event__in"] = event_name.split(",")
     result = select_rows(
         ledger_db,
         "messages",
-        where=where,
+        where={"message_index__in": events_indexes},
         cursor_field="event_index",
-        last_cursor=cursor,
-        limit=limit,
-        offset=offset,
         select="message_index AS event_index, event, bindings AS params, tx_hash, block_index",
     )
     return QueryResult(result.result, events.next_cursor, "messages", events.result_count)
@@ -1261,7 +2301,12 @@ def prepare_sends_where(send_type: SendType, other_conditions=None):
 
 
 def get_sends(
-    ledger_db, send_type: SendType = "all", cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    send_type: SendType = "all",
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns all the sends include Enhanced and MPMA sends
@@ -1269,6 +2314,7 @@ def get_sends(
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -1277,6 +2323,7 @@ def get_sends(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -1287,6 +2334,7 @@ def get_sends_by_block(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of a block
@@ -1295,6 +2343,7 @@ def get_sends_by_block(
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -1303,6 +2352,7 @@ def get_sends_by_block(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -1313,6 +2363,7 @@ def get_sends_by_transaction_hash(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of a block
@@ -1321,6 +2372,7 @@ def get_sends_by_transaction_hash(
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -1329,6 +2381,7 @@ def get_sends_by_transaction_hash(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -1339,6 +2392,7 @@ def get_sends_by_asset(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of an asset
@@ -1347,6 +2401,7 @@ def get_sends_by_asset(
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -1355,6 +2410,7 @@ def get_sends_by_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -1500,6 +2556,7 @@ def get_issuances(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns all the issuances
@@ -1507,6 +2564,7 @@ def get_issuances(
     :param str asset_events: Filter result by one or several comma separated asset events
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     where = prepare_issuance_where(asset_events, {"status": "valid"})
     return select_rows(
@@ -1516,6 +2574,7 @@ def get_issuances(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -1526,6 +2585,7 @@ def get_issuances_by_block(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the issuances of a block
@@ -1534,6 +2594,7 @@ def get_issuances_by_block(
     :param int cursor: The last index of the issuances to return
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     where = prepare_issuance_where(asset_events, {"block_index": block_index, "status": "valid"})
     return select_rows(
@@ -1543,6 +2604,7 @@ def get_issuances_by_block(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -1561,6 +2623,7 @@ def get_issuances_by_asset(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the issuances of an asset
@@ -1569,11 +2632,12 @@ def get_issuances_by_asset(
     :param int cursor: The last index of the issuances to return
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     where = prepare_issuance_where(
         asset_events, {"asset": asset.upper(), "status": "valid"}
     ) + prepare_issuance_where(
-        asset_events, {"UPPER(asset_longname)": asset.upper(), "status": "valid"}
+        asset_events, {"asset_longname__nocase": asset.upper(), "status": "valid"}
     )
     return select_rows(
         ledger_db,
@@ -1582,6 +2646,7 @@ def get_issuances_by_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -1592,6 +2657,7 @@ def get_issuances_by_address(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the issuances of an address
@@ -1600,6 +2666,7 @@ def get_issuances_by_address(
     :param int cursor: The last index of the issuances to return
     :param int limit: The maximum number of issuances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     where = prepare_issuance_where(asset_events, {"issuer": address, "status": "valid"})
     return select_rows(
@@ -1609,15 +2676,19 @@ def get_issuances_by_address(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
-def get_dispenses(ledger_db, cursor: int = None, limit: int = 100, offset: int = None):
+def get_dispenses(
+    ledger_db, cursor: int = None, limit: int = 100, offset: int = None, sort: str = None
+):
     """
     Returns all the dispenses
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. dispense_quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -1625,6 +2696,7 @@ def get_dispenses(ledger_db, cursor: int = None, limit: int = 100, offset: int =
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -1644,7 +2716,12 @@ def get_dispense(ledger_db, tx_hash: str):
 
 
 def get_dispenses_by_block(
-    ledger_db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    block_index: int,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dispenses of a block
@@ -1652,6 +2729,7 @@ def get_dispenses_by_block(
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. dispense_quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -1660,11 +2738,17 @@ def get_dispenses_by_block(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
 def get_dispenses_by_transaction_hash(
-    ledger_db, tx_hash: str, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    tx_hash: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dispenses of a block
@@ -1672,6 +2756,7 @@ def get_dispenses_by_transaction_hash(
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. dispense_quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -1680,11 +2765,17 @@ def get_dispenses_by_transaction_hash(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
 def get_dispenses_by_dispenser(
-    ledger_db, dispenser_hash: str, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    dispenser_hash: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dispenses of a dispenser
@@ -1692,6 +2783,7 @@ def get_dispenses_by_dispenser(
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. dispense_quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -1700,11 +2792,17 @@ def get_dispenses_by_dispenser(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
 def get_dispenses_by_source(
-    ledger_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    address: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dispenses of a source
@@ -1712,6 +2810,7 @@ def get_dispenses_by_source(
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. dispense_quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -1720,11 +2819,17 @@ def get_dispenses_by_source(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
 def get_dispenses_by_destination(
-    ledger_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    address: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dispenses of a destination
@@ -1732,6 +2837,7 @@ def get_dispenses_by_destination(
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. dispense_quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -1740,6 +2846,7 @@ def get_dispenses_by_destination(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -1750,6 +2857,7 @@ def get_dispenses_by_asset(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dispenses of an asset
@@ -1758,6 +2866,7 @@ def get_dispenses_by_asset(
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. dispense_quantity:desc)
     """
     where = {"asset": asset.upper()}
     if block_index:
@@ -1769,11 +2878,18 @@ def get_dispenses_by_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
 def get_dispenses_by_source_and_asset(
-    ledger_db, address: str, asset: str, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    address: str,
+    asset: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dispenses of an address and an asset
@@ -1782,6 +2898,7 @@ def get_dispenses_by_source_and_asset(
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. dispense_quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -1790,11 +2907,18 @@ def get_dispenses_by_source_and_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
 def get_dispenses_by_destination_and_asset(
-    ledger_db, address: str, asset: str, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    address: str,
+    asset: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dispenses of an address and an asset
@@ -1803,6 +2927,7 @@ def get_dispenses_by_destination_and_asset(
     :param int cursor: The last index of the dispenses to return
     :param int limit: The maximum number of dispenses to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. dispense_quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -1811,6 +2936,7 @@ def get_dispenses_by_destination_and_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -1885,7 +3011,7 @@ def get_sweeps_by_address(
 def get_address_balances(
     state_db,
     address: str,
-    type: BalanceType = all,  # pylint: disable=W0622
+    type: BalanceType = "all",  # pylint: disable=W0622
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
@@ -1975,7 +3101,6 @@ def get_balances_by_addresses(
     cursor: str = None,
     limit: int = 100,
     offset: int = None,
-    sort: str = None,
 ):
     """
     Returns the balances of several addresses
@@ -1985,7 +3110,6 @@ def get_balances_by_addresses(
     :param str cursor: The last index of the balances to return
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
-    :param str sort: The sort order of the balances to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     address_list = addresses.split(",")
     cursor_db = state_db.cursor()
@@ -2123,18 +3247,19 @@ def get_balances_by_address_and_asset(
     :param int limit: The maximum number of balances to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     """
+    asset_name = asset.upper()
     where = [
-        {"address": address, "asset": asset.upper(), "quantity__gt": 0},
-        {"address": address, "asset_longname": asset.upper(), "quantity__gt": 0},
-        {"utxo_address": address, "asset": asset.upper(), "quantity__gt": 0},
-        {"utxo_address": address, "asset_longname": asset.upper(), "quantity__gt": 0},
+        {"address": address, "asset": asset_name, "quantity__gt": 0},
+        {"address": address, "asset_longname": asset, "quantity__gt": 0},
+        {"utxo_address": address, "asset": asset_name, "quantity__gt": 0},
+        {"utxo_address": address, "asset_longname": asset, "quantity__gt": 0},
     ]
     if type == "utxo":
         where.pop(0)
-        where.pop(1)
+        where.pop(0)  # pop twice to remove first two elements
     elif type == "address":
-        where.pop(2)
-        where.pop(3)
+        where.pop()  # pop last element (index 3)
+        where.pop()  # pop new last element (was index 2)
 
     return select_rows(
         state_db,
@@ -2207,12 +3332,14 @@ def get_valid_broadcasts(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns all valid broadcasts
     :param int cursor: The last index of the broadcasts to return
     :param int limit: The maximum number of broadcasts to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. timestamp:desc)
     """
     return select_rows(
         ledger_db,
@@ -2222,6 +3349,7 @@ def get_valid_broadcasts(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2231,6 +3359,7 @@ def get_broadcasts_by_source(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the broadcasts of a source
@@ -2238,6 +3367,7 @@ def get_broadcasts_by_source(
     :param int cursor: The last index of the broadcasts to return
     :param int limit: The maximum number of broadcasts to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. timestamp:desc)
     """
     return select_rows(
         ledger_db,
@@ -2247,6 +3377,7 @@ def get_broadcasts_by_source(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2289,6 +3420,7 @@ def get_sends_by_address(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of an address
@@ -2297,6 +3429,7 @@ def get_sends_by_address(
     :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -2313,6 +3446,7 @@ def get_sends_by_address(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2324,6 +3458,7 @@ def get_sends_by_address_and_asset(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of an address and asset
@@ -2333,6 +3468,7 @@ def get_sends_by_address_and_asset(
     :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -2349,6 +3485,7 @@ def get_sends_by_address_and_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2359,6 +3496,7 @@ def get_receive_by_address(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the receives of an address
@@ -2367,6 +3505,7 @@ def get_receive_by_address(
     :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -2375,6 +3514,7 @@ def get_receive_by_address(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2386,6 +3526,7 @@ def get_receive_by_address_and_asset(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the receives of an address and asset
@@ -2395,6 +3536,7 @@ def get_receive_by_address_and_asset(
     :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
     return select_rows(
         ledger_db,
@@ -2403,6 +3545,7 @@ def get_receive_by_address_and_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2431,7 +3574,14 @@ def prepare_dispenser_where(status, other_conditions=None, exclude_with_oracle=F
     return where
 
 
-SELECT_DISPENSERS = "*, (satoshirate * 1.0) / (give_quantity * 1.0) AS price"
+SELECT_DISPENSERS = """
+*,
+CASE
+    WHEN COALESCE((SELECT divisible FROM assets_info WHERE assets_info.asset = dispensers.asset), 0) = 1
+    THEN (satoshirate * 100000000.0) / (give_quantity * 1.0)
+    ELSE (satoshirate * 1.0) / (give_quantity * 1.0)
+END AS price
+"""
 
 
 def get_dispensers(
@@ -2490,6 +3640,40 @@ def get_dispensers_by_address(
         "dispensers",
         where=prepare_dispenser_where(
             status, {"source": address}, exclude_with_oracle=exclude_with_oracle
+        ),
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+        sort=sort,
+        select=SELECT_DISPENSERS,
+    )
+
+
+def get_dispensers_by_origin(
+    state_db,
+    address: str,
+    status: DispenserStatus = "all",
+    exclude_with_oracle: bool = False,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
+):
+    """
+    Returns the dispensers whose origin is an address
+    :param str address: The dispenser origin address to return (e.g. $ADDRESS_1)
+    :param str status: The status of the dispensers to return
+    :param bool exclude_with_oracle: Whether to exclude dispensers with an oracle
+    :param int cursor: The last index of the dispensers to return
+    :param int limit: The maximum number of dispensers to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the dispensers to return (overrides the `cursor` parameter) (e.g. give_quantity:desc)
+    """
+    return select_rows(
+        state_db,
+        "dispensers",
+        where=prepare_dispenser_where(
+            status, {"origin": address}, exclude_with_oracle=exclude_with_oracle
         ),
         last_cursor=cursor,
         limit=limit,
@@ -2580,7 +3764,7 @@ def get_asset(state_db, asset: str):
     Returns an asset by its name
     :param str asset: The name of the asset to return (e.g. $ASSET_1)
     """
-    where = [{"asset": asset.upper()}, {"UPPER(asset_longname)": asset.upper()}]
+    where = [{"asset": asset.upper()}, {"asset_longname__nocase": asset.upper()}]
     return select_row(
         state_db,
         "assets_info",
@@ -2710,12 +3894,15 @@ def get_valid_assets_by_issuer_or_owner(
     )
 
 
-def get_dividends(ledger_db, cursor: int = None, limit: int = 100, offset: int = None):
+def get_dividends(
+    ledger_db, cursor: int = None, limit: int = 100, offset: int = None, sort: str = None
+):
     """
     Returns all the dividends
     :param int cursor: The last index of the dividend to return
     :param int limit: The maximum number of dividend to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity_per_unit:desc)
     """
     return select_rows(
         ledger_db,
@@ -2724,6 +3911,7 @@ def get_dividends(ledger_db, cursor: int = None, limit: int = 100, offset: int =
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2740,7 +3928,12 @@ def get_dividend(ledger_db, dividend_hash: str):
 
 
 def get_dividends_by_asset(
-    ledger_db, asset: str, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    asset: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dividends of an asset
@@ -2748,6 +3941,7 @@ def get_dividends_by_asset(
     :param int cursor: The last index of the dividend to return
     :param int limit: The maximum number of dividend to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity_per_unit:desc)
     """
     return select_rows(
         ledger_db,
@@ -2756,11 +3950,17 @@ def get_dividends_by_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
 def get_dividends_distributed_by_address(
-    ledger_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+    ledger_db,
+    address: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
 ):
     """
     Returns the dividends distributed by an address
@@ -2768,6 +3968,7 @@ def get_dividends_distributed_by_address(
     :param int cursor: The last index of the assets to return
     :param int limit: The maximum number of assets to return (e.g. 5)
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity_per_unit:desc)
     """
     return select_rows(
         ledger_db,
@@ -2776,6 +3977,7 @@ def get_dividends_distributed_by_address(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
+        sort=sort,
     )
 
 
@@ -2817,9 +4019,10 @@ def get_asset_balances(
     :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
     :param str sort: The sort order of the balances to return (overrides the `cursor` parameter) (e.g. quantity:desc)
     """
+    asset_name = asset.upper()
     where = [
-        {"asset": asset.upper(), "quantity__gt": 0},
-        {"asset_longname": asset.upper(), "quantity__gt": 0},
+        {"asset": asset_name, "quantity__gt": 0},
+        {"asset_longname": asset, "quantity__gt": 0},
     ]
     if type == "utxo":
         where[0]["utxo__notnull"] = True
@@ -2864,9 +4067,11 @@ def prepare_order_matches_where(status, other_conditions=None):
     return prepare_where_status(status, OrderMatchesStatus, other_conditions=other_conditions)
 
 
-SELECT_ORDERS = "*, "
-SELECT_ORDERS += "COALESCE((get_quantity * 1.0) / (give_quantity * 1.0), 0) AS give_price, "
-SELECT_ORDERS += "COALESCE((give_quantity * 1.0) / (get_quantity * 1.0), 0) AS get_price"
+SELECT_ORDERS = (
+    "*, "
+    "COALESCE((get_quantity * 1.0) / (give_quantity * 1.0), 0) AS give_price, "
+    "COALESCE((give_quantity * 1.0) / (get_quantity * 1.0), 0) AS get_price"
+)
 SELECT_ORDER_MATCHES = SELECT_ORDERS.replace("get_", "forward_").replace("give_", "backward_")
 
 
@@ -3249,7 +4454,7 @@ def get_btcpays_by_order(
     return select_rows(
         ledger_db,
         "btcpays",
-        where={"order_match_id__like": f"%{order_hash}%"},
+        where={"order_match_hash": order_hash},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -3310,7 +4515,7 @@ def get_resolutions_by_bet(
     return select_rows(
         ledger_db,
         "bet_match_resolutions",
-        where={"bet_match_id__like": f"%{bet_hash}%"},
+        where={"bet_match_hash": bet_hash},
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -3556,3 +4761,605 @@ def get_fairmints_by_block(
         limit=limit,
         offset=offset,
     )
+
+
+#####################
+#       POOLS       #
+#####################
+
+
+def get_pools(
+    state_db,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
+):
+    """
+    Returns all AMM liquidity pools
+    :param int cursor: The last index of the pools to return
+    :param int limit: The maximum number of pools to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the pools to return (e.g. reserve_a:desc)
+    """
+    return select_rows(
+        state_db,
+        "pools",
+        where=None,
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+        sort=sort,
+    )
+
+
+def get_pool_by_pair(
+    state_db,
+    asset1: str,
+    asset2: str,
+):
+    """
+    Returns the AMM pool for a given asset pair
+    :param str asset1: The first asset in the pair (e.g. XCP)
+    :param str asset2: The second asset in the pair (e.g. POOLTEST)
+    """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
+    a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
+    return select_row(
+        state_db,
+        "pools",
+        where={"asset_a": a, "asset_b": b},
+    )
+
+
+def get_pool_deposits_by_pair(
+    state_db,
+    asset1: str,
+    asset2: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns deposits for a given pool pair
+    :param str asset1: The first asset in the pair (e.g. XCP)
+    :param str asset2: The second asset in the pair (e.g. $ASSET_1)
+    :param int cursor: The last index of the deposits to return
+    :param int limit: The maximum number of deposits to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
+    a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
+    return select_rows(
+        state_db,
+        "pool_deposits",
+        where={"asset_a": a, "asset_b": b, "status": "valid"},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_withdrawals_by_pair(
+    state_db,
+    asset1: str,
+    asset2: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns withdrawals for a given pool pair
+    :param str asset1: The first asset in the pair (e.g. XCP)
+    :param str asset2: The second asset in the pair (e.g. $ASSET_1)
+    :param int cursor: The last index of the withdrawals to return
+    :param int limit: The maximum number of withdrawals to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
+    a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
+    return select_rows(
+        state_db,
+        "pool_withdrawals",
+        where={"asset_a": a, "asset_b": b, "status": "valid"},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_matches_by_pair(
+    state_db,
+    asset1: str,
+    asset2: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns pool matches (swaps) for a given pool pair
+    :param str asset1: The first asset in the pair (e.g. XCP)
+    :param str asset2: The second asset in the pair (e.g. $ASSET_1)
+    :param int cursor: The last index of the pool matches to return
+    :param int limit: The maximum number of pool matches to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
+    a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
+    return select_rows(
+        state_db,
+        "pool_matches",
+        where={"asset_a": a, "asset_b": b},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_all_pool_matches(
+    state_db,
+    block_index: int = None,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+    sort: str = None,
+):
+    """
+    Returns all pool matches (swaps against AMM pools)
+    :param int block_index: The block index to filter by (e.g. 840000)
+    :param int cursor: The last index of the pool matches to return
+    :param int limit: The maximum number of pool matches to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param str sort: The sort order of the pool matches to return (e.g. forward_quantity:desc)
+    """
+    where = {"block_index": block_index} if block_index else {}
+    return select_rows(
+        state_db,
+        "pool_matches",
+        where=where or None,
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+        sort=sort,
+    )
+
+
+def get_pool_deposits_by_block(
+    ledger_db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns pool deposits in a given block
+    :param int block_index: The block index (e.g. 840000)
+    :param int cursor: The last index of the deposits to return
+    :param int limit: The maximum number of deposits to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "pool_deposits",
+        where={"block_index": block_index},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_withdrawals_by_block(
+    ledger_db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns pool withdrawals in a given block
+    :param int block_index: The block index (e.g. 840000)
+    :param int cursor: The last index of the withdrawals to return
+    :param int limit: The maximum number of withdrawals to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "pool_withdrawals",
+        where={"block_index": block_index},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_matches_by_block(
+    ledger_db, block_index: int, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns pool matches (swaps) in a given block
+    :param int block_index: The block index (e.g. 840000)
+    :param int cursor: The last index of the pool matches to return
+    :param int limit: The maximum number of pool matches to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "pool_matches",
+        where={"block_index": block_index},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_deposits_by_address(
+    state_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns pool deposits by a given address
+    :param str address: The address to query (e.g. $ADDRESS_1)
+    :param int cursor: The last index of the deposits to return
+    :param int limit: The maximum number of deposits to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        state_db,
+        "pool_deposits",
+        where={"source": address, "status": "valid"},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_withdrawals_by_address(
+    state_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns pool withdrawals by a given address
+    :param str address: The address to query (e.g. $ADDRESS_1)
+    :param int cursor: The last index of the withdrawals to return
+    :param int limit: The maximum number of withdrawals to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        state_db,
+        "pool_withdrawals",
+        where={"source": address, "status": "valid"},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_positions_by_address(
+    state_db,
+    address: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns all AMM pool LP positions for a given address
+    :param str address: The address to query LP positions for (e.g. $ADDRESS_1)
+    :param int cursor: The last index of the positions to return
+    :param int limit: The maximum number of positions to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    db_cursor = state_db.cursor()
+    query_bindings = [address]
+    cursor_clause = ""
+    if offset is None and cursor is not None:
+        cursor_clause = "AND b.rowid <= ?"
+        query_bindings.append(cursor)
+    query = f"""
+        SELECT
+            p.asset_a,
+            p.asset_b,
+            p.lp_asset,
+            p.reserve_a,
+            p.reserve_b,
+            b.quantity,
+            b.rowid AS rowid
+        FROM balances b
+        JOIN pools p ON b.asset = p.lp_asset
+        WHERE b.address = ?
+          AND b.quantity > 0
+          {cursor_clause}
+        ORDER BY b.rowid DESC
+        LIMIT ?
+    """  # noqa S608 # nosec B608
+    query_bindings.append(limit + 1)
+    if offset is not None:
+        query += " OFFSET ?"
+        query_bindings.append(offset)
+    count_query = """
+        SELECT COUNT(*) AS count
+        FROM balances b
+        JOIN pools p ON b.asset = p.lp_asset
+        WHERE b.address = ?
+          AND b.quantity > 0
+    """  # noqa S608 # nosec B608
+    db_cursor.execute(query, query_bindings)
+    rows = db_cursor.fetchall()
+    db_cursor.execute(count_query, (address,))
+    result_count = db_cursor.fetchone()["count"]
+    db_cursor.close()
+
+    if len(rows) > limit:
+        next_cursor = None if offset is not None else rows[-1]["rowid"]
+        rows = rows[:limit]
+    else:
+        next_cursor = None
+
+    return QueryResult(rows, next_cursor, "pools", result_count)
+
+
+def get_pool_price_history(
+    ledger_db,
+    asset1: str,
+    asset2: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns the price history for a pool pair (reserve snapshots at each state change).
+    Each entry includes block_index, reserves, and computed price.
+    Can be used to build price charts and compute TWAP.
+    :param str asset1: The first asset in the pair (e.g. XCP)
+    :param str asset2: The second asset in the pair (e.g. $ASSET_1)
+    :param int cursor: The last index of the entries to return
+    :param int limit: The maximum number of entries to return (e.g. 100)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
+    a, b = (asset1, asset2) if asset1 < asset2 else (asset2, asset1)
+    return select_rows(
+        ledger_db,
+        "pools",
+        where={"asset_a": a, "asset_b": b},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_matches_by_order(
+    state_db,
+    order_hash: str,
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns pool matches (swaps against the AMM) for a given order
+    :param str order_hash: The hash of the order transaction (e.g. $ORDER_WITH_MATCH_HASH)
+    :param int cursor: The last index of the pool matches to return
+    :param int limit: The maximum number of pool matches to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        state_db,
+        "pool_matches",
+        where={"order_tx_hash": order_hash},
+        cursor_field="tx_index",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_pool_quote(state_db, asset1: str, asset2: str, quantity: int):
+    """
+    Returns the estimated swap output considering both AMM pool and resting order book.
+    Reflects current state only; actual execution may differ if trades confirm before yours.
+    :param asset1: The asset you want to sell (e.g. XCP)
+    :param asset2: The asset you want to receive (e.g. $ASSET_1)
+    :param quantity: The quantity of asset1 to sell (in satoshis) (e.g. 1000000)
+    """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
+    give_asset = asset1
+    give_quantity = quantity
+    sorted_a, sorted_b = sort_pair(asset1, asset2)
+    pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
+    pool = pool_row.result if pool_row else None
+    has_pool = pool is not None and pool_has_liquidity(pool)
+
+    orders_result = select_rows(
+        state_db,
+        "orders_info",
+        where={"give_asset": asset2, "get_asset": asset1, "status": "open"},
+        cursor_field="tx_index",
+        sort="give_price:asc",
+        limit=1000,
+    )
+    book_orders = orders_result.result if orders_result else []
+
+    if not has_pool and not book_orders:
+        return {
+            "pool_exists": False,
+            "estimated_output": 0,
+            "book_orders": 0,
+            "message": "No pool or orders exist for this pair.",
+        }
+
+    give_remaining = give_quantity
+    pool_input_total = 0
+    pool_output_total = 0
+    book_output = 0
+    book_orders_matched = 0
+
+    if has_pool:
+        fee_bps = get_pool_fee_bps(pool)
+        if give_asset == pool["asset_a"]:
+            sim_ri, sim_ro = pool["reserve_a"], pool["reserve_b"]
+        else:
+            sim_ri, sim_ro = pool["reserve_b"], pool["reserve_a"]
+    else:
+        fee_bps = 0
+        sim_ri, sim_ro = 0, 0
+
+    for order in book_orders:
+        if give_remaining <= 0:
+            break
+
+        order_give_remaining = order["give_remaining"]
+        if order_give_remaining <= 0:
+            continue
+
+        if has_pool and sim_ri > 0 and sim_ro > 0:
+            pool_fill = compute_pool_input_for_target_price(
+                sim_ri, sim_ro, order["get_quantity"], order["give_quantity"], fee_bps
+            )
+            pool_fill = min(pool_fill, give_remaining)
+
+            if pool_fill > 0:
+                pout = compute_pool_output(sim_ri, sim_ro, pool_fill, fee_bps)
+                if pout > 0:
+                    pool_output_total += pout
+                    pool_input_total += pool_fill
+                    give_remaining -= pool_fill
+                    sim_ri += pool_fill
+                    sim_ro -= pout
+
+        if give_remaining <= 0:
+            break
+
+        can_take = min(give_remaining, order["get_remaining"])
+        if can_take <= 0:
+            continue
+        get_from_order = can_take * order["give_quantity"] // order["get_quantity"]
+        if get_from_order > order_give_remaining:
+            get_from_order = order_give_remaining
+            can_take = get_from_order * order["get_quantity"] // order["give_quantity"]
+
+        if get_from_order > 0 and can_take > 0:
+            book_output += get_from_order
+            give_remaining -= can_take
+            book_orders_matched += 1
+
+    if give_remaining > 0 and has_pool and sim_ri > 0 and sim_ro > 0:
+        pool_fill, pout = compute_pool_fill(sim_ri, sim_ro, give_remaining, fee_bps)
+        if pout > 0:
+            pool_output_total += pout
+            pool_input_total += pool_fill
+            give_remaining -= pool_fill
+
+    total_output = pool_output_total + book_output
+    if has_pool and give_asset == pool["asset_a"]:
+        orig_ri, orig_ro = pool["reserve_a"], pool["reserve_b"]
+    elif has_pool:
+        orig_ri, orig_ro = pool["reserve_b"], pool["reserve_a"]
+    else:
+        orig_ri, orig_ro = 0, 0
+    marginal_price = orig_ro / orig_ri if orig_ri > 0 else 0
+    effective_price = total_output / give_quantity if give_quantity > 0 else 0
+    price_impact = (1 - effective_price / marginal_price) * 100 if marginal_price > 0 else 0
+
+    result = {
+        "estimated_output": total_output,
+        "pool_output": pool_output_total,
+        "book_output": book_output,
+        "book_orders_matched": book_orders_matched,
+        "give_remaining": give_remaining,
+        "effective_price": effective_price,
+        "price_impact": round(price_impact, 4),
+    }
+    if has_pool:
+        result["pool_exists"] = True
+        result["fee_bps"] = fee_bps
+        result["fee_amount"] = pool_input_total * fee_bps // 10000 if fee_bps > 0 else 0
+    else:
+        result["pool_exists"] = False
+
+    return result
+
+
+def get_pool_quote_deposit(state_db, asset1: str, asset2: str, quantity: int):
+    """
+    Returns the required quantities of both assets and expected LP tokens for a deposit.
+    :param asset1: The first asset in the pair (e.g. XCP)
+    :param asset2: The second asset in the pair (e.g. $ASSET_1)
+    :param quantity: The quantity of asset1 to deposit (in satoshis) (e.g. 1000000)
+    """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
+    sorted_a, sorted_b = sort_pair(asset1, asset2)
+    pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
+    pool = pool_row.result if pool_row else None
+
+    if pool is None or not pool_has_liquidity(pool):
+        return {
+            "first_deposit": True,
+            "asset_a": sorted_a,
+            "asset_b": sorted_b,
+            "quantity_a_required": None,
+            "quantity_b_required": None,
+            "quantity_minted_estimate": None,
+            "message": "First deposit: provide both quantities to set the initial price.",
+        }
+
+    lp_info = select_row(state_db, "assets_info", where={"asset": pool["lp_asset"]})
+    total_supply = lp_info.result["supply"] if lp_info else 0
+
+    # ceil the partner so the user's pair lands on the A-constraint branch
+    # in compute_actual_deposit_amounts and mints the quoted LP exactly
+    if asset1 == sorted_a:
+        quantity_a_required = quantity
+        quantity_b_required = -(-quantity * pool["reserve_b"] // pool["reserve_a"])
+        lp_estimate = quantity * total_supply // pool["reserve_a"] if total_supply else 0
+    else:
+        quantity_b_required = quantity
+        quantity_a_required = -(-quantity * pool["reserve_a"] // pool["reserve_b"])
+        lp_estimate = quantity * total_supply // pool["reserve_b"] if total_supply else 0
+
+    return {
+        "first_deposit": False,
+        "asset_a": sorted_a,
+        "asset_b": sorted_b,
+        "quantity_a_required": quantity_a_required,
+        "quantity_b_required": quantity_b_required,
+        "quantity_minted_estimate": lp_estimate,
+    }
+
+
+def get_pool_quote_withdraw(state_db, asset1: str, asset2: str, quantity: int):
+    """
+    Returns the estimated assets received for burning a given amount of LP tokens.
+    :param asset1: The first asset in the pair (e.g. XCP)
+    :param asset2: The second asset in the pair (e.g. $ASSET_1)
+    :param quantity: The quantity of LP tokens to destroy (in satoshis) (e.g. 1000000)
+    """
+    asset1 = asset1.upper()
+    asset2 = asset2.upper()
+    sorted_a, sorted_b = sort_pair(asset1, asset2)
+    pool_row = select_row(state_db, "pools", where={"asset_a": sorted_a, "asset_b": sorted_b})
+    pool = pool_row.result if pool_row else None
+    if pool is None or not pool_has_liquidity(pool):
+        return {"pool_exists": False, "message": "Pool does not exist or is empty."}
+
+    lp_info = select_row(state_db, "assets_info", where={"asset": pool["lp_asset"]})
+    total_supply = lp_info.result["supply"] if lp_info else 0
+
+    if total_supply <= 0:
+        return {"pool_exists": True, "supply": 0, "message": "No LP tokens in circulation."}
+
+    quantity_a = quantity * pool["reserve_a"] // total_supply
+    quantity_b = quantity * pool["reserve_b"] // total_supply
+
+    return {
+        "pool_exists": True,
+        "asset_a": sorted_a,
+        "asset_b": sorted_b,
+        "quantity": quantity,
+        "supply": total_supply,
+        "quantity_a_estimate": quantity_a,
+        "quantity_b_estimate": quantity_b,
+        "reserve_a": pool["reserve_a"],
+        "reserve_b": pool["reserve_b"],
+    }

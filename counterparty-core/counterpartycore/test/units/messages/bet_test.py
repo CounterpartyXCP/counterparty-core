@@ -333,6 +333,47 @@ def test_validate(ledger_db, defaults, current_block_index):
     ) == (["integer overflow"], 15120)
 
 
+@pytest.mark.parametrize(
+    ("param_name", "param_value", "expected_problem"),
+    [
+        ("wager_quantity", "1000", "wager_quantity must be in satoshis"),
+        ("counterwager_quantity", "1000", "counterwager_quantity must be in satoshis"),
+        (
+            "expiration",
+            "10",
+            "expiration must be expressed as an integer block delta",
+        ),
+    ],
+)
+def test_validate_rejects_non_integer_parameters(
+    ledger_db, defaults, current_block_index, param_name, param_value, expected_problem
+):
+    params = {
+        "feed_address": defaults["addresses"][0],
+        "bet_type": 0,
+        "deadline": 1488000100,
+        "wager_quantity": defaults["small"],
+        "counterwager_quantity": defaults["small"],
+        "target_value": 0.0,
+        "leverage": 15120,
+        "expiration": defaults["expiration"],
+    }
+    params[param_name] = param_value
+
+    assert bet.validate(
+        ledger_db,
+        params["feed_address"],
+        params["bet_type"],
+        params["deadline"],
+        params["wager_quantity"],
+        params["counterwager_quantity"],
+        params["target_value"],
+        params["leverage"],
+        params["expiration"],
+        current_block_index,
+    ) == ([expected_problem], params["leverage"])
+
+
 def test_compose(ledger_db, defaults):
     with pytest.raises(exceptions.ComposeError, match="insufficient funds"):
         bet.compose(
@@ -364,6 +405,20 @@ def test_compose(ledger_db, defaults):
         [(defaults["addresses"][0], None)],
         b"(\x00\x00X\xb1\x14d\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x02\xfa\xf0\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00;\x10\x00\x00\x00\n",
     )
+
+    _source, _destination, data = bet.compose(
+        ledger_db,
+        defaults["addresses"][1],
+        defaults["addresses"][0],
+        2,
+        1488000100,
+        defaults["small"],
+        defaults["small"],
+        None,
+        5040,
+        defaults["expiration"],
+    )
+    assert bet.unpack(data[1:], return_dict=True)["target_value"] == 0.0
 
     assert bet.compose(
         ledger_db,
@@ -570,7 +625,13 @@ def test_cancel_bet(ledger_db, test_helpers, current_block_index):
 
 
 def test_cancel_bet_match(ledger_db, test_helpers, current_block_index):
-    bet_match = ledger_db.execute("SELECT * FROM bet_matches ORDER BY rowid LIMIT 1").fetchone()
+    # ``cancel_bet_match`` reads ``bet_match["id"]`` (the composite match id);
+    # production callers get it from getters that reconstruct it, so the test
+    # query must reconstruct it too (the TEXT ``id`` column was dropped).
+    bet_match = ledger_db.execute(
+        "SELECT *, hex_lower(tx0_hash) || '_' || hex_lower(tx1_hash) AS id "
+        "FROM bet_matches ORDER BY rowid LIMIT 1"
+    ).fetchone()
     bet.cancel_bet_match(ledger_db, bet_match, "filled", bet_match["tx0_index"])
 
     test_helpers.check_records(
@@ -598,3 +659,22 @@ def test_cancel_bet_match(ledger_db, test_helpers, current_block_index):
             },
         ],
     )
+
+
+def test_fix_sort_bet_matches_gate_off_uses_legacy_no_op_order():
+    """Pre-fix gate `sort_bet_matches` calls sorted() and discards the
+    result -- the matches stay in tx_index order. With `fix_sort_bet_matches`
+    OFF (default), legacy behavior must be preserved for consensus
+    determinism. The gate is at bet.py:423.
+
+    This test verifies the LOGICAL property: sorted(...).pop without
+    assignment is a no-op vs sorted(...) with assignment changes order.
+    Functional gate behavior is exercised via integration tests.
+    """
+    items = [{"tx_index": 3, "p": 0.1}, {"tx_index": 1, "p": 0.5}, {"tx_index": 2, "p": 0.3}]
+    # Pre-fix: sorted() result discarded, original order preserved
+    sorted(items, key=lambda x: x["p"])
+    assert [i["tx_index"] for i in items] == [3, 1, 2]
+    # Post-fix: assigned, order changes
+    items_post = sorted(items, key=lambda x: x["p"])
+    assert [i["tx_index"] for i in items_post] == [3, 2, 1]

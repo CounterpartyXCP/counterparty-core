@@ -49,6 +49,12 @@ def test_compose(ledger_db, defaults):
         b"n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01WASTE",
     )
 
+    assert destroy.compose(ledger_db, defaults["addresses"][0], "XCP", 1, "WASTE") == (
+        defaults["addresses"][0],
+        [],
+        b"n\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01WASTE",
+    )
+
     assert destroy.compose(ledger_db, defaults["addresses"][0], "XCP", 1, b"WASTEEEEE") == (
         defaults["addresses"][0],
         [],

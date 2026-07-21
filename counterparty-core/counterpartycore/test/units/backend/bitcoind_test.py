@@ -1,13 +1,38 @@
 import json
 import re
 import time
+from unittest.mock import patch
 
 import pytest
-from counterpartycore.lib import exceptions
+import requests
+from bitcoinutils.transactions import Script
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.backend import bitcoind
 from counterpartycore.lib.utils import helpers
 from counterpartycore.test.fixtures import decodedtxs
 from counterpartycore.test.mocks.bitcoind import original_get_vin_info
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
+
+ORIGINAL_GET_UTXO_ADDRESS_AND_VALUE = bitcoind.get_utxo_address_and_value
+MULTISIG_PUBKEYS = [
+    "0427db4059d24bab05df3f6bcc768fb01bd976b973f93e72cce2dfbfbed5a32056c9040a2c2ea4c10c812a54fed7ff2e6a917dbc843362d398f6ace4000fafa5c6",
+    "043e12a6cb1c7c156f789110abf8397b714047414b5a32c742f17ccf93ff23bdf3128f946207086bcef012558240cd16182c741123e93ed18327c4cd6ebac668a9",
+    "04e4168c172283c7dfaa85d2004f763a28bf6d0f1602fc1452ccec62a7c8a66e422af1410fbf24a47355ddc43dfe3491cb1b806574ccd1c434680466dcff926f01",
+]
+MULTISIG_ADDRESS = "2_16KsHvVQj6aGvVQpAUgRcfpVug3regjiUs_17yjtboB7RjK2BoQ78k51NtJ4cDQGYZQyb_1NNXBUF3rqXtFbWhK5nujSpvt9yApsRUT7_3"
+
+
+def multisig_script_pub_key():
+    return {
+        "asm": f"2 {' '.join(MULTISIG_PUBKEYS)} 3 OP_CHECKMULTISIG",
+        "hex": Script([2, *MULTISIG_PUBKEYS, 3, "OP_CHECKMULTISIG"]).to_hex(),
+        "type": "multisig",
+    }
+
+
+def clear_get_utxo_address_and_value_cache():
+    if hasattr(ORIGINAL_GET_UTXO_ADDRESS_AND_VALUE, "cache_clear"):
+        ORIGINAL_GET_UTXO_ADDRESS_AND_VALUE.cache_clear()
 
 
 class MockResponse:
@@ -263,6 +288,58 @@ def test_search_pubkey_in_transactions_bech32(monkeypatch):
     helpers.setup_bitcoinutils("regtest")
 
 
+def test_search_pubkey_in_transactions_p2wsh_multisig(monkeypatch):
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.getrawtransaction",
+        lambda x, y: {
+            "txid": "d4387de0bb04a9952e421caab34104e007f9776ffc3bbff023695f2fdd74b1ce",
+            "hash": "fa6c4b77b577ec45ed56cbf0fdb575fdda574f5935bbef7366f2cb58d6346f87",
+            "version": 1,
+            "size": 382,
+            "locktime": 0,
+            "vin": [
+                {
+                    "txid": "f274037b92cd0a90d7cf6f34be025d02065e7d032980edf955a3f2c66c278bfb",
+                    "vout": 1,
+                    "scriptSig": {"asm": "", "hex": ""},
+                    "txinwitness": [
+                        "",
+                        "30440220776030e83ebd30b9461169df4e6b9e4ff63f940564fdc5691db220a7c12387720220639257fe96ea4fb64128a110f16a5b3e6fab84cd843f4686cd405be9fe783e9f01",
+                        "3044022042e06cf65a08aac0ee6d4db4eb1bae5518628583ca9e942120bb22c99c6b070e02204011dddbe64e8f14a23c8182dfe78e814d3deb3ac704d94ef19b38507a200d4701",
+                        "52210209d604337bcb785d1fba1fec16556e6ed914d12ee08bc8a87e7fe4f81607c3fd210387d133ae86d83ae28c6615882b88e53cbcf9cad9aaeaf55816dfba9b55ee4f3a21024cc0c0ec7d678c70606cf07c373f1b7db86d0f41f404cea48512b37379395a6f53ae",
+                    ],
+                    "sequence": 4294967293,
+                }
+            ],
+            "vout": [
+                {
+                    "value": 0.00102146,
+                    "n": 0,
+                    "scriptPubKey": {
+                        "address": "14xyFwHGmrGJjGtMbjJoJHqrLZvf6MibYU",
+                        "asm": "OP_DUP OP_HASH160 2b7e3776eb8e160e2fd628e8d1cacbe44cec013e OP_EQUALVERIFY OP_CHECKSIG",
+                        "hex": "76a9142b7e3776eb8e160e2fd628e8d1cacbe44cec013e88ac",
+                        "type": "pubkeyhash",
+                    },
+                },
+            ],
+            "hex": "01000000000101fb8b276cc6f2a355f9ed8029037d5e06025d02be346fcfd7900acd927b0374f20100000000fdffffff02028f0100000000001976a9142b7e3776eb8e160e2fd628e8d1cacbe44cec013e88ac152d2800000000002200203722913c3426c12d25a4747f93f351e4f00c96a1514b2d6f7c46cef1a463808c04004730440220776030e83ebd30b9461169df4e6b9e4ff63f940564fdc5691db220a7c12387720220639257fe96ea4fb64128a110f16a5b3e6fab84cd843f4686cd405be9fe783e9f01473044022042e06cf65a08aac0ee6d4db4eb1bae5518628583ca9e942120bb22c99c6b070e02204011dddbe64e8f14a23c8182dfe78e814d3deb3ac704d94ef19b38507a200d47016952210209d604337bcb785d1fba1fec16556e6ed914d12ee08bc8a87e7fe4f81607c3fd210387d133ae86d83ae28c6615882b88e53cbcf9cad9aaeaf55816dfba9b55ee4f3a21024cc0c0ec7d678c70606cf07c373f1b7db86d0f41f404cea48512b37379395a6f53ae00000000",
+        },
+    )
+
+    helpers.setup_bitcoinutils("mainnet")
+
+    assert (
+        bitcoind.search_pubkey_in_transactions(
+            "14xyFwHGmrGJjGtMbjJoJHqrLZvf6MibYU",
+            ["d4387de0bb04a9952e421caab34104e007f9776ffc3bbff023695f2fdd74b1ce"],
+        )
+        is None
+    )
+
+    helpers.setup_bitcoinutils("regtest")
+
+
 def test_search_pubkey_in_transactions_p2pkh(monkeypatch):
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.getrawtransaction",
@@ -439,11 +516,451 @@ def test_get_vin_info_legacy(monkeypatch):
     )
 
 
-def test_get_vin_info_legacy_error(monkeypatch):
+def test_get_vin_info_legacy_error_halts_during_catchup(monkeypatch):
+    """During catch-up (a confirmed block) a failure to resolve the parent
+    transaction must HALT (raise), never be swallowed into a silent skip.
+    Silently skipping a confirmed Counterparty tx forks the ledger -- this is
+    the regression that caused the block 510556 divergence. The diagnostic must
+    point operators at the cause (parent txid + `txindex`)."""
+
+    def raise_error(*args, **kwargs):
+        raise exceptions.BitcoindRPCError("No such mempool or blockchain transaction")
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+    monkeypatch.setattr(bitcoind.CurrentState, "parsing_mempool", lambda self: False)
+    monkeypatch.setattr(bitcoind.CurrentState, "stopping", lambda self: False)
+
+    parent_txid = "fba2aa8d334a6c74eaa8b0998be6c29477ff4d927449e9a07efa0ec374fc73bf"
+    with pytest.raises(exceptions.BitcoindRPCError, match="Refusing to silently skip") as exc:
+        bitcoind.get_vin_info_legacy({"hash": parent_txid, "n": 1})
+    assert parent_txid in str(exc.value)
+    assert "txindex" in str(exc.value)
+
+
+def test_get_vin_info_legacy_error_skips_in_mempool(monkeypatch):
+    """While parsing the mempool an unresolvable parent is acceptable: the
+    *unconfirmed* tx is skipped (DecodeError) and a warning is logged. It is
+    re-evaluated once it confirms."""
+
     def raise_error(*args, **kwargs):
         raise exceptions.BitcoindRPCError
 
     monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+    monkeypatch.setattr(bitcoind.CurrentState, "parsing_mempool", lambda self: True)
 
-    with pytest.raises(exceptions.DecodeError, match="vin not found"):
-        bitcoind.get_vin_info_legacy({"hash": "hash", "n": 0})
+    parent_txid = "fba2aa8d334a6c74eaa8b0998be6c29477ff4d927449e9a07efa0ec374fc73bf"
+    with patch.object(bitcoind.logger, "warning") as mock_warning:
+        with pytest.raises(exceptions.DecodeError, match="vin not found"):
+            bitcoind.get_vin_info_legacy({"hash": parent_txid, "n": 1})
+
+    mock_warning.assert_called_once()
+    logged_message = mock_warning.call_args[0][0] % mock_warning.call_args[0][1:]
+    assert parent_txid in logged_message
+
+
+def test_get_vin_info_falls_back_to_legacy(monkeypatch):
+    """When Rust VIN info is None, get_vin_info falls back to legacy lookup."""
+    monkeypatch.setattr(
+        bitcoind,
+        "get_decoded_transaction",
+        lambda *args, **kwargs: {
+            "vout": [
+                {
+                    "value": 10554,
+                    "script_pub_key": "76a9140132c2887759f123166b3048b5ec599ea0d5b8f988ac",
+                }
+            ]
+        },
+    )
+    vin = {
+        "hash": "01f38776b07990118cb3720b9143adbde3725af12e0394cdd02c36458c6b3a03",
+        "n": 0,
+        "info": None,
+    }
+    value, script_pub_key, is_segwit = original_get_vin_info(vin)
+    assert value == 10554
+    assert script_pub_key == "76a9140132c2887759f123166b3048b5ec599ea0d5b8f988ac"
+    assert is_segwit is False
+
+
+def test_get_vin_info_fallback_halts_during_catchup(monkeypatch):
+    """When Rust VIN info is None AND the legacy fallback also fails during
+    catch-up, the node must HALT rather than silently skip the confirmed
+    transaction. This is the scenario that silently forked a user's ledger at
+    block 510556."""
+
+    def raise_error(*args, **kwargs):
+        raise exceptions.BitcoindRPCError("No such mempool or blockchain transaction")
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+    monkeypatch.setattr(bitcoind.CurrentState, "parsing_mempool", lambda self: False)
+    monkeypatch.setattr(bitcoind.CurrentState, "stopping", lambda self: False)
+
+    parent_txid = "01f38776b07990118cb3720b9143adbde3725af12e0394cdd02c36458c6b3a03"
+    vin_without_info = {"hash": parent_txid, "n": 1, "info": None}
+
+    with pytest.raises(exceptions.BitcoindRPCError, match="Refusing to silently skip") as exc:
+        original_get_vin_info(vin_without_info)
+    assert parent_txid in str(exc.value)
+
+
+def test_reset_caches_clears_dicts():
+    """reset_caches() must clear TRANSACTIONS_CACHE and BLOCKS_CACHE so that
+    a reorg does not leave block-indexed deserialised data behind."""
+    bitcoind.TRANSACTIONS_CACHE["sentinel_tx"] = {"foo": "bar"}
+    bitcoind.BLOCKS_CACHE[123] = {"baz": "qux"}
+
+    bitcoind.reset_caches()
+
+    assert "sentinel_tx" not in bitcoind.TRANSACTIONS_CACHE
+    assert 123 not in bitcoind.BLOCKS_CACHE
+
+
+def test_get_multisig_address_from_script_pub_key():
+    old_address_version = config.ADDRESSVERSION
+    config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+    try:
+        address = bitcoind.get_multisig_address_from_script_pub_key(multisig_script_pub_key())
+    finally:
+        config.ADDRESSVERSION = old_address_version
+
+    assert address == MULTISIG_ADDRESS
+
+
+def test_get_utxo_address_and_value_supports_multisig_when_protocol_enabled(monkeypatch):
+    def mock_getrawtransaction(*args, **kwargs):
+        return {"vout": [{"scriptPubKey": multisig_script_pub_key(), "value": 0.001}]}
+
+    old_address_version = config.ADDRESSVERSION
+    config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+    clear_get_utxo_address_and_value_cache()
+    monkeypatch.setattr(bitcoind, "getrawtransaction", mock_getrawtransaction)
+    try:
+        assert ORIGINAL_GET_UTXO_ADDRESS_AND_VALUE("multisig-txid:0") == (
+            MULTISIG_ADDRESS,
+            0.001,
+        )
+    finally:
+        clear_get_utxo_address_and_value_cache()
+        config.ADDRESSVERSION = old_address_version
+
+
+def test_get_utxo_address_and_value_rejects_multisig_when_protocol_disabled(monkeypatch):
+    def mock_getrawtransaction(*args, **kwargs):
+        return {"vout": [{"scriptPubKey": multisig_script_pub_key(), "value": 0.001}]}
+
+    old_address_version = config.ADDRESSVERSION
+    config.ADDRESSVERSION = config.ADDRESSVERSION_MAINNET
+    clear_get_utxo_address_and_value_cache()
+    monkeypatch.setattr(bitcoind, "getrawtransaction", mock_getrawtransaction)
+    try:
+        with ProtocolChangesDisabled(["multisig_utxo_addresses"]):
+            with pytest.raises(exceptions.InvalidUTXOError, match="vout does not have an address"):
+                ORIGINAL_GET_UTXO_ADDRESS_AND_VALUE("legacy-multisig-txid:0")
+    finally:
+        clear_get_utxo_address_and_value_cache()
+        config.ADDRESSVERSION = old_address_version
+
+
+def test_safe_get_utxo_address_returns_unknown_only_for_address_less_output(monkeypatch):
+    """A *resolved* output with no decodable address is deterministic across
+    nodes: safe_get_utxo_address returns the consensus "unknown" sentinel."""
+
+    def raise_invalid(utxo, no_retry=False):
+        raise exceptions.InvalidUTXOError("vout does not have an address")
+
+    monkeypatch.setattr(bitcoind, "get_utxo_address_and_value", raise_invalid)
+    assert bitcoind.safe_get_utxo_address("addressless-txid:0") == "unknown"
+
+
+def test_safe_get_utxo_address_halts_on_rpc_failure(monkeypatch):
+    """A transient RPC failure is node-local and must NOT be silently turned into
+    the consensus "unknown" sentinel (that would fork the ledger). It propagates
+    as BitcoindRPCError so the parser halts and retries instead."""
+
+    def raise_rpc(utxo, no_retry=False):
+        raise exceptions.BitcoindRPCError("Could not connect to bitcoind")
+
+    monkeypatch.setattr(bitcoind, "get_utxo_address_and_value", raise_rpc)
+    with pytest.raises(exceptions.BitcoindRPCError):
+        bitcoind.safe_get_utxo_address("some-txid:0")
+
+
+def test_is_valid_utxo_false_on_rpc_failure(monkeypatch):
+    """Compose-time validation reports an unresolvable UTXO as invalid rather
+    than propagating the RPC error."""
+
+    def raise_rpc(utxo, no_retry=False):
+        raise exceptions.BitcoindRPCError("No such mempool or blockchain transaction")
+
+    monkeypatch.setattr(bitcoind, "get_utxo_address_and_value", raise_rpc)
+    assert bitcoind.is_valid_utxo("nonexistent-txid:0") is False
+
+
+def test_reset_caches_handles_missing_lru_cache_clear(monkeypatch):
+    """Test fixtures monkey-patch lru_cache wrappers with plain functions
+    that don't carry a `cache_clear` attribute. reset_caches() must guard
+    against this with hasattr() instead of raising AttributeError."""
+
+    def fake_func(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(bitcoind, "getrawtransaction", fake_func)
+    monkeypatch.setattr(bitcoind, "get_utxo_address_and_value", fake_func)
+
+    assert not hasattr(fake_func, "cache_clear")
+
+    bitcoind.reset_caches()
+
+
+# ---------------------------------------------------------------------------
+# Bounded backend RPC retries / overload protection (issue #3459)
+# ---------------------------------------------------------------------------
+
+
+def make_failing_post(fail_times, call_log, exc=requests.exceptions.ConnectionError):
+    """Return a ``requests.post`` replacement that raises ``exc`` for the first
+    ``fail_times`` calls, then returns a valid response. Records every call in
+    ``call_log`` so tests can assert the number of attempts."""
+
+    def _post(*args, **kwargs):
+        call_log.append(1)
+        if len(call_log) <= fail_times:
+            raise exc("backend unavailable")
+        payload = json.loads(kwargs["data"])
+        if isinstance(payload, list):
+            return MockResponse(
+                200, [{"id": item["id"], "result": {"txid": "ok"}} for item in payload]
+            )
+        return MockResponse(200, {"result": "ok"})
+
+    return _post
+
+
+@pytest.mark.parametrize(
+    "exc",
+    [requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout],
+    ids=["connection_refused", "slow_response"],
+)
+def test_rpc_api_request_fails_fast(monkeypatch, exc):
+    """A synchronous API request must fail fast (single attempt) instead of
+    entering the unbounded connection-retry loop that would pin a worker."""
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: True)
+    calls = []
+    monkeypatch.setattr("requests.post", make_failing_post(1_000, calls, exc=exc))
+
+    with pytest.raises(exceptions.BitcoindRPCError):
+        bitcoind.rpc("getblockcount", [])
+
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    "exc",
+    [requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout],
+    ids=["connection_refused", "slow_response"],
+)
+def test_getrawtransaction_batch_api_request_fails_fast(monkeypatch, exc):
+    """Regression for issue #3459: the batch RPC path used to ignore
+    is_api_request() and always call rpc_call(), retrying forever and pinning
+    the API worker. It must now fail fast for API requests, exactly like the
+    single-call dispatcher."""
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: True)
+    calls = []
+    monkeypatch.setattr("requests.post", make_failing_post(1_000, calls, exc=exc))
+
+    with pytest.raises(exceptions.BitcoindRPCError):
+        bitcoind.getrawtransaction_batch(["deadbeef"], verbose=True)
+
+    assert len(calls) == 1
+
+
+def test_getrawtransaction_batch_no_retry_flag_fails_fast(monkeypatch):
+    """Explicit no_retry=True (e.g. mempool parsing) must also fail fast even
+    outside an API context."""
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    calls = []
+    monkeypatch.setattr("requests.post", make_failing_post(1_000, calls))
+
+    with pytest.raises(exceptions.BitcoindRPCError):
+        bitcoind.getrawtransaction_batch(["deadbeef"], verbose=True, no_retry=True)
+
+    assert len(calls) == 1
+
+
+def test_rpc_call_parser_retries_then_recovers(monkeypatch):
+    """The parser/indexing path keeps retrying a transiently-failing backend
+    (consensus correctness) and succeeds once the backend recovers."""
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    # don't actually sleep between retries
+    monkeypatch.setattr(bitcoind, "interruptible_sleep", lambda *a, **k: True)
+    calls = []
+    monkeypatch.setattr("requests.post", make_failing_post(3, calls))
+
+    result = bitcoind.rpc("getblockcount", [])
+
+    assert result == "ok"
+    assert len(calls) == 4  # 3 transient failures + 1 success
+
+
+def test_batch_parser_retries_then_recovers(monkeypatch):
+    """Same intermittent-recovery guarantee for the batch path on the parser
+    side."""
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    monkeypatch.setattr(bitcoind, "interruptible_sleep", lambda *a, **k: True)
+    calls = []
+    monkeypatch.setattr("requests.post", make_failing_post(2, calls))
+
+    result = bitcoind.getrawtransaction_batch(["deadbeef"], verbose=True, return_dict=True)
+
+    assert result == {"deadbeef": {"txid": "ok"}}
+    assert len(calls) == 3  # 2 transient failures + 1 success
+
+
+def test_request_timeout_uses_connect_tuple(monkeypatch):
+    """request_timeout() returns a (connect, read) tuple when a connect timeout
+    is configured, so an unreachable backend fails the connect quickly."""
+    monkeypatch.setattr(config, "BACKEND_CONNECT_TIMEOUT", 5)
+    monkeypatch.setattr(config, "REQUESTS_TIMEOUT", 20)
+    assert bitcoind.request_timeout() == (5, 20)
+
+    monkeypatch.setattr(config, "BACKEND_CONNECT_TIMEOUT", None)
+    assert bitcoind.request_timeout() == 20
+
+
+def test_rpc_passes_connect_timeout_to_requests(monkeypatch):
+    """The connect timeout must actually reach requests.post."""
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    monkeypatch.setattr(config, "BACKEND_CONNECT_TIMEOUT", 3)
+    captured = {}
+
+    def _post(*args, **kwargs):
+        captured["timeout"] = kwargs["timeout"]
+        return MockResponse(200, {"result": "ok"})
+
+    monkeypatch.setattr("requests.post", _post)
+    bitcoind.rpc("getblockcount", [])
+    assert captured["timeout"] == (3, config.REQUESTS_TIMEOUT)
+
+
+def test_retry_backoff_is_bounded_and_jittered(monkeypatch):
+    """Backoff grows with the attempt count but stays within [base, cap], and
+    is randomized so recovering nodes do not reconnect in lockstep."""
+    monkeypatch.setattr(config, "BACKEND_RETRY_BASE_SLEEP", 1)
+    monkeypatch.setattr(config, "BACKEND_RETRY_MAX_SLEEP", 30)
+    values = set()
+    for tries in range(1, 60):
+        backoff = bitcoind.retry_backoff(tries)
+        assert 1 <= backoff <= 30
+        values.add(backoff)
+    # jitter should produce a spread of distinct values, not a constant
+    assert len(values) > 1
+
+
+def test_skip_rpc_retry(monkeypatch):
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    assert bitcoind.skip_rpc_retry(no_retry=False) is False
+    assert bitcoind.skip_rpc_retry(no_retry=True) is True
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: True)
+    assert bitcoind.skip_rpc_retry(no_retry=False) is True
+
+
+# ---------------------------------------------------------------------------
+# Per-request backend RPC fan-out budget (issue #3461)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def rpc_budget_reset():
+    # The budget lives on the (pytest) thread; always disarm after the test so
+    # armed state never leaks into unrelated tests running on the same thread.
+    yield
+    bitcoind.end_api_rpc_accounting()
+
+
+def _always_ok_post():
+    """requests.post replacement that always returns a valid response, handling
+    both single (dict) and batch (list) payloads."""
+    return make_failing_post(0, [])
+
+
+def test_rpc_accounting_counts_actual_calls(monkeypatch, rpc_budget_reset):
+    monkeypatch.setattr("requests.post", _always_ok_post())
+    bitcoind.begin_api_rpc_accounting(10)
+    for _ in range(4):
+        bitcoind.rpc("getblockcount", [])
+    assert bitcoind.end_api_rpc_accounting() == 4
+
+
+def test_rpc_accounting_rejects_over_budget(monkeypatch, rpc_budget_reset):
+    monkeypatch.setattr("requests.post", _always_ok_post())
+    bitcoind.begin_api_rpc_accounting(2)
+    bitcoind.rpc("getblockcount", [])
+    bitcoind.rpc("getblockcount", [])
+    with pytest.raises(exceptions.ApiRPCBudgetExceededError) as exc_info:
+        bitcoind.rpc("getblockcount", [])
+    # message names the limit so the client error is actionable
+    assert "2" in str(exc_info.value)
+
+
+def test_rpc_accounting_batch_counts_per_transaction(monkeypatch, rpc_budget_reset):
+    monkeypatch.setattr("requests.post", _always_ok_post())
+    # a batch of 4 hashes under a budget of 5 consumes 4 (one call per tx, not per POST)
+    bitcoind.begin_api_rpc_accounting(5)
+    bitcoind.getrawtransaction_batch(["a", "b", "c", "d"], verbose=True, no_retry=True)
+    assert bitcoind.end_api_rpc_accounting() == 4
+
+
+def test_rpc_accounting_batch_over_budget_rejected(monkeypatch, rpc_budget_reset):
+    monkeypatch.setattr("requests.post", _always_ok_post())
+    bitcoind.begin_api_rpc_accounting(3)
+    with pytest.raises(exceptions.ApiRPCBudgetExceededError):
+        bitcoind.getrawtransaction_batch(["a", "b", "c", "d"], verbose=True, no_retry=True)
+
+
+def test_rpc_accounting_cache_hits_are_free(monkeypatch, rpc_budget_reset):
+    bitcoind.getrawtransaction.cache_clear()
+    monkeypatch.setattr("requests.post", _always_ok_post())
+    bitcoind.begin_api_rpc_accounting(1)
+    tx_hash = "aa" * 32
+    bitcoind.getrawtransaction(tx_hash)  # first: real backend call, consumes 1
+    bitcoind.getrawtransaction(tx_hash)  # second: lru_cache hit, free (else budget of 1 trips)
+    assert bitcoind.end_api_rpc_accounting() == 1
+    bitcoind.getrawtransaction.cache_clear()
+
+
+def test_rpc_accounting_unarmed_is_noop(monkeypatch):
+    """Parser threads (and any thread that never armed the budget) are never
+    bounded: many backend calls neither raise nor are capped."""
+    monkeypatch.setattr("requests.post", _always_ok_post())
+    bitcoind.end_api_rpc_accounting()  # ensure disarmed (remaining is None)
+    for _ in range(50):
+        bitcoind.rpc("getblockcount", [])  # no ApiRPCBudgetExceededError
+
+
+def test_rpc_accounting_zero_is_unlimited_but_counts(monkeypatch, rpc_budget_reset):
+    monkeypatch.setattr("requests.post", _always_ok_post())
+    bitcoind.begin_api_rpc_accounting(0)  # 0 = unlimited
+    for _ in range(50):
+        bitcoind.rpc("getblockcount", [])  # never raises
+    assert bitcoind.end_api_rpc_accounting() == 50  # still counted for telemetry
+
+
+def test_rpc_accounting_retry_recursion_counts_once(monkeypatch, rpc_budget_reset):
+    """rpc_call retries backend-warming errors (-28) by recursing with the same
+    payload; the budget must count that payload once, not once per retry."""
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    monkeypatch.setattr(bitcoind, "interruptible_sleep", lambda *a, **k: True)
+    # -28 twice, then success (mock_requests_post handles return_code_28 / return_200)
+    calls = []
+
+    def _post(*args, **kwargs):
+        calls.append(1)
+        if len(calls) <= 2:
+            return MockResponse(200, {"error": {"message": "Error 28", "code": -28}})
+        return MockResponse(200, {"result": "ok"})
+
+    monkeypatch.setattr("requests.post", _post)
+    bitcoind.begin_api_rpc_accounting(1)  # budget of 1: a double-count would trip it
+    assert bitcoind.rpc("getblockcount", []) == "ok"
+    assert bitcoind.end_api_rpc_accounting() == 1

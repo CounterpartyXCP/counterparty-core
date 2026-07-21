@@ -104,7 +104,10 @@ where
 }
 
 pub fn in_reorg_window(height: u32, target_height: u32, reorg_window: u32) -> bool {
-    height >= target_height - reorg_window
+    // Additive form avoids u32 underflow when target_height < reorg_window
+    // (small regtest/signet chains). The original `target_height - reorg_window`
+    // panicked in debug and wrapped silently in release.
+    height + reorg_window >= target_height
 }
 
 #[derive(Clone)]

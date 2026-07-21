@@ -234,7 +234,16 @@ def get_rows(
     filters = new_filters
 
     # validate filter(s)
+    field_name_re = re.compile(r"^[a-z0-9_]+$")
     for filter_ in filters:
+        # filter_["field"] is f-string interpolated into the SQL at line ~281;
+        # without this allowlist an attacker can supply arbitrary SQL via the
+        # field key (e.g. "1) UNION SELECT ... --") and read any column the
+        # API process can see. Apply the same regex used for order_by.
+        if "field" in filter_ and (
+            not isinstance(filter_["field"], str) or not field_name_re.match(filter_["field"])
+        ):
+            raise exceptions.APIError("Invalid filter field name; must match [a-z0-9_]+")
         for field in ["field", "op", "value"]:  # should have all fields
             if field not in filter_:
                 raise exceptions.APIError(f"A specified filter is missing the '{field}' field")
@@ -311,8 +320,14 @@ def get_rows(
     # legacy filters
     if not show_expired and table == "orders":
         # Ignore BTC orders one block early.
+        # `expire_index IS NULL` keeps indefinite orders (introduced by
+        # `indefinite_orders` protocol change) visible: in SQL `NULL > X`
+        # evaluates to NULL (falsy), so without this clause a BTC sell
+        # order with `expiration=0` would always be filtered out here.
         expire_index = CurrentState().current_block_index() + 1
-        more_conditions.append("""((give_asset == ? AND expire_index > ?) OR give_asset != ?)""")
+        more_conditions.append(
+            """((give_asset == ? AND (expire_index > ? OR expire_index IS NULL)) OR give_asset != ?)"""
+        )
         bindings += [config.BTC, expire_index, config.BTC]
 
     if (len(conditions) + len(more_conditions)) > 0:
@@ -477,8 +492,11 @@ class APIStatusPoller(threading.Thread):
     def stop(self):
         logger.info("Stopping API v1 Status Poller thread...")
         self.stop_event.set()
-        self.join()
-        logger.info("API v1 Status Poller thread stopped.")
+        self.join(timeout=5)
+        if self.is_alive():
+            logger.warning("API v1 Status Poller thread did not stop in time, continuing...")
+        else:
+            logger.info("API v1 Status Poller thread stopped.")
 
     def run(self):
         logger.info("Starting v1 API Status Poller thread...")
@@ -1244,8 +1262,11 @@ class APIServer(threading.Thread):
         logger.info("Stopping API Server v1 thread...")
         if self.server:
             self.server.shutdown()
-        self.join()
-        logger.info("API Server v1 thread stopped.")
+        self.join(timeout=5)
+        if self.is_alive():
+            logger.warning("API Server v1 thread did not stop in time, continuing...")
+        else:
+            logger.info("API Server v1 thread stopped.")
 
     def run(self):
         logger.info("Starting API Server v1 thread...")

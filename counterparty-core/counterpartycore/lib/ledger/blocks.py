@@ -1,4 +1,5 @@
 from counterpartycore.lib import config
+from counterpartycore.lib.utils import hashcodec
 
 
 def get_block(db, block_index: int):
@@ -39,7 +40,7 @@ def get_block_by_hash(db, block_hash: str):
         SELECT * FROM blocks
         WHERE block_hash = ?
     """
-    bindings = (block_hash,)
+    bindings = (hashcodec.hash_to_db(block_hash),)
     cursor = db.cursor()
     cursor.execute(query, bindings)
     return cursor.fetchone()
@@ -78,22 +79,40 @@ def get_blocks_time(db, block_indexes):
     blocks = cursor.fetchall()
     result = {}
     for block in blocks:
-        result[block["block_index"]] = block["block_time"]
+        result[block["block_index"]] = int(block["block_time"])
     return result
 
 
 def get_vouts(db, tx_hash):
     cursor = db.cursor()
+    # ``transaction_outputs.tx_hash`` was dropped in favour of an integer
+    # ``tx_index`` FK. Resolve from the hex ``tx_hash`` via the
+    # ``transactions`` table and expose ``tx_hash`` (hex, via rowtracer)
+    # for backwards-compatibility.
     query = """
-        SELECT txs.source AS source, txs_outs.*
+        SELECT txs.source AS source, txs.tx_hash AS tx_hash, txs_outs.*
         FROM transaction_outputs txs_outs
-        LEFT JOIN transactions txs ON txs.tx_hash = txs_outs.tx_hash
-        WHERE txs_outs.tx_hash=:tx_hash
+        LEFT JOIN transactions txs ON txs.tx_index = txs_outs.tx_index
+        WHERE txs_outs.tx_index = (SELECT tx_index FROM transactions WHERE tx_hash = ?)
         ORDER BY txs_outs.out_index
     """
-    bindings = {"tx_hash": tx_hash}
+    bindings = (hashcodec.hash_to_db(tx_hash),)
     cursor.execute(query, bindings)
     return cursor.fetchall()
+
+
+def tx_index_of(db, tx_hash):
+    """Resolve a hex ``tx_hash`` to its ``tx_index`` via the transactions
+    table. Returns ``None`` if not found."""
+    if tx_hash is None:
+        return None
+    cursor = db.cursor()
+    cursor.execute(
+        "SELECT tx_index FROM transactions WHERE tx_hash = ?",
+        (hashcodec.hash_to_db(tx_hash),),
+    )
+    row = cursor.fetchone()
+    return row["tx_index"] if row else None
 
 
 def get_transactions(db, tx_hash=None, tx_index=None):
@@ -102,7 +121,7 @@ def get_transactions(db, tx_hash=None, tx_index=None):
     bindings = []
     if tx_hash is not None:
         where.append("tx_hash = ?")
-        bindings.append(tx_hash)
+        bindings.append(hashcodec.hash_to_db(tx_hash))
     if tx_index is not None:
         where.append("tx_index = ?")
         bindings.append(tx_index)

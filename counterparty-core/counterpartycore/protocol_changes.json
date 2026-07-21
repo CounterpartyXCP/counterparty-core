@@ -1052,6 +1052,24 @@
                         "fee_upper_threshold": 15,
                         "base_fee": 1,
                         "fee_sigmoid_k": 1
+                    },
+                    "70": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
+                    },
+                    "120": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
+                    },
+                    "121": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
                     }
                 }
             }
@@ -1069,6 +1087,24 @@
                         "fee_sigmoid_k": 1
                     },
                     "101": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
+                    },
+                    "70": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
+                    },
+                    "120": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
+                    },
+                    "121": {
                         "fee_lower_threshold": 3,
                         "fee_upper_threshold": 15,
                         "base_fee": 1,
@@ -1091,6 +1127,24 @@
                         "fee_upper_threshold": 15,
                         "base_fee": 1,
                         "fee_sigmoid_k": 1
+                    },
+                    "70": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
+                    },
+                    "120": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
+                    },
+                    "121": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
                     }
                 }
             }
@@ -1105,6 +1159,24 @@
                         "fee_sigmoid_k": 1
                     },
                     "101": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
+                    },
+                    "70": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
+                    },
+                    "120": {
+                        "fee_lower_threshold": 3,
+                        "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
+                    },
+                    "121": {
                         "fee_lower_threshold": 3,
                         "fee_upper_threshold": 15,
                         "base_fee": 1,
@@ -1184,6 +1256,240 @@
         "block_index": 902000,
         "testnet3_block_index": 4410000,
         "testnet4_block_index": 85000,
+        "signet_block_index": 0
+    },
+    "fix_sort_bet_matches": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 952800,
+        "testnet3_block_index": 4961300,
+        "testnet4_block_index": 136300,
+        "signet_block_index": 310300
+    },
+    "canonical_subasset_compact": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 952800,
+        "testnet3_block_index": 4961300,
+        "testnet4_block_index": 136300,
+        "signet_block_index": 310300
+    },
+    "check_btcpay_destination": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 952800,
+        "testnet3_block_index": 4961300,
+        "testnet4_block_index": 136300,
+        "signet_block_index": 310300
+    },
+    "fix_attach_op_return_check": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 952800,
+        "testnet3_block_index": 4961300,
+        "testnet4_block_index": 136300,
+        "signet_block_index": 310300
+    },
+    "extended_mime_types_support": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 952800,
+        "testnet3_block_index": 4961300,
+        "testnet4_block_index": 136300,
+        "signet_block_index": 310300
+    },
+    "ordinals_metadata_support": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 952800,
+        "testnet3_block_index": 4961300,
+        "testnet4_block_index": 136300,
+        "signet_block_index": 310300
+    },
+    "indefinite_orders": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 952800,
+        "testnet3_block_index": 4961300,
+        "testnet4_block_index": 136300,
+        "signet_block_index": 310300
+    },
+    "amm_pools": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 952800,
+        "testnet3_block_index": 4961300,
+        "testnet4_block_index": 136300,
+        "signet_block_index": 310300
+    },
+    "catch_invalid_dispenser_asset_id": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 952800,
+        "testnet3_block_index": 4961300,
+        "testnet4_block_index": 136300,
+        "signet_block_index": 310300
+    },
+    "subasset_compact_expand_cap": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 952800,
+        "testnet3_block_index": 4961300,
+        "testnet4_block_index": 136300,
+        "signet_block_index": 310300
+    },
+    "persist_invalid_sweep": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 952800,
+        "testnet3_block_index": 4961300,
+        "testnet4_block_index": 136300,
+        "signet_block_index": 310300
+    },
+    "fairminter_integer_fee_paid": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 952800,
+        "testnet3_block_index": 4961300,
+        "testnet4_block_index": 136300,
+        "signet_block_index": 310300
+    },
+    "dispense_skip_unusable_oracle_price": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 952800,
+        "testnet3_block_index": 4961300,
+        "testnet4_block_index": 136300,
+        "signet_block_index": 310300
+    },
+    "broadcast_safe_unpack": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 952800,
+        "testnet3_block_index": 4961300,
+        "testnet4_block_index": 136300,
+        "signet_block_index": 310300
+    },
+    "broadcast_safe_validate": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 952800,
+        "testnet3_block_index": 4961300,
+        "testnet4_block_index": 136300,
+        "signet_block_index": 310300
+    },
+    "issuance_safe_unpack": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 952800,
+        "testnet3_block_index": 4961300,
+        "testnet4_block_index": 136300,
+        "signet_block_index": 310300
+    },
+    "issuance_safe_validate": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 1,
+        "minimum_version_revision": 0,
+        "block_index": 952800,
+        "testnet3_block_index": 4961300,
+        "testnet4_block_index": 136300,
+        "signet_block_index": 310300
+    },
+    "sweep_skip_zero_balances": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 2,
+        "minimum_version_revision": 0,
+        "block_index": 961100,
+        "testnet3_block_index": 5064400,
+        "testnet4_block_index": 147200,
+        "signet_block_index": 316200
+    },
+    "fix_fairminter_commission_minimum": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 2,
+        "minimum_version_revision": 0,
+        "block_index": 961100,
+        "testnet3_block_index": 5064400,
+        "testnet4_block_index": 147200,
+        "signet_block_index": 316200
+    },
+    "multisig_utxo_addresses": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 2,
+        "minimum_version_revision": 0,
+        "block_index": 961100,
+        "testnet3_block_index": 5064400,
+        "testnet4_block_index": 147200,
+        "signet_block_index": 316200
+    },
+    "issuance_callable_lock_fix": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 2,
+        "minimum_version_revision": 0,
+        "block_index": 961100,
+        "testnet3_block_index": 5064400,
+        "testnet4_block_index": 147200,
+        "signet_block_index": 316200
+    },
+    "fairmint_pool": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 2,
+        "minimum_version_revision": 0,
+        "block_index": 961100,
+        "testnet3_block_index": 5064400,
+        "testnet4_block_index": 147200,
+        "signet_block_index": 0
+    },
+    "fix_pool_best_price_routing": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 2,
+        "minimum_version_revision": 0,
+        "block_index": 961100,
+        "testnet3_block_index": 5064400,
+        "testnet4_block_index": 147200,
+        "signet_block_index": 316200
+    },
+    "fix_pool_deposit_product_overflow": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 2,
+        "minimum_version_revision": 0,
+        "block_index": 961100,
+        "testnet3_block_index": 5064400,
+        "testnet4_block_index": 147200,
+        "signet_block_index": 316200
+    },
+    "enforce_utxo_vout_max": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 2,
+        "minimum_version_revision": 0,
+        "block_index": 961100,
+        "testnet3_block_index": 5064400,
+        "testnet4_block_index": 147200,
+        "signet_block_index": 316200
+    },
+    "correct_transaction_fee": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 2,
+        "minimum_version_revision": 1,
+        "block_index": 999999999,
+        "testnet3_block_index": 999999999,
+        "testnet4_block_index": 999999999,
         "signet_block_index": 0
     }
 }

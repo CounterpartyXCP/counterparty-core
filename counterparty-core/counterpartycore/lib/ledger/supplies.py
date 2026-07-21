@@ -1,6 +1,8 @@
 from counterpartycore.lib import config
 from counterpartycore.lib.ledger.caches import AssetCache
 from counterpartycore.lib.parser import protocol
+from counterpartycore.lib.utils import database
+from counterpartycore.lib.utils.helpers import MATCH_ID_SQL
 
 
 # Ugly way to get holders but we want to preserve the order with the old query
@@ -9,7 +11,7 @@ def _get_holders(cursor, id_fields, hold_fields_1, exclude_empty_holders=False):
     save_records = {}
     for record in cursor:
         record_id = " ".join([str(record[field]) for field in id_fields])
-        if id not in save_records:
+        if record_id not in save_records:
             save_records[record_id] = record
             continue
         if save_records[record_id]["rowid"] < record["rowid"]:
@@ -36,6 +38,9 @@ def holders(db, asset, exclude_empty_holders=False):
     """Return holders of the asset."""
     all_holders = []
     cursor = db.cursor()
+    # Asset columns are stored as the compact asset_index; resolve the name once
+    # for the WHERE filters below (``asset`` stays the name for the XCP check).
+    asset_idx = database.asset_index_from_name(db, asset)
 
     # Balances
 
@@ -44,7 +49,7 @@ def holders(db, asset, exclude_empty_holders=False):
         FROM balances
         WHERE asset = ? AND address IS NOT NULL
     """
-    bindings = (asset,)
+    bindings = (asset_idx,)
     cursor.execute(query, bindings)
     all_holders += _get_holders(
         cursor,
@@ -53,14 +58,20 @@ def holders(db, asset, exclude_empty_holders=False):
         exclude_empty_holders=exclude_empty_holders,
     )
 
+    # ``utxo`` is stored as the compact ``(utxo_tx_hash, utxo_vout)`` pair; the
+    # rowtracer reconstructs the ``utxo`` string. ``holders()`` order is
+    # consensus-relevant (dividends credit holders in this order), so reproduce
+    # the original ``ORDER BY utxo`` by ordering on the reconstructed
+    # ``tx_hash:vout`` string (``hex_lower`` yields the lowercase hex the utxo
+    # string used).
     query = """
         SELECT *, rowid
         FROM balances
-        WHERE asset = ? AND utxo IS NOT NULL
-        ORDER BY utxo
+        WHERE asset = ? AND utxo_tx_hash IS NOT NULL
+        ORDER BY hex_lower(utxo_tx_hash) || ':' || utxo_vout
     """
 
-    bindings = (asset,)
+    bindings = (asset_idx,)
     cursor.execute(query, bindings)
     all_holders += _get_holders(
         cursor,
@@ -79,7 +90,7 @@ def holders(db, asset, exclude_empty_holders=False):
         ) WHERE status = ?
         ORDER BY tx_index
     """
-    bindings = (asset, "open")
+    bindings = (asset_idx, "open")
     cursor.execute(query, bindings)
     all_holders += _get_holders(
         cursor,
@@ -89,15 +100,15 @@ def holders(db, asset, exclude_empty_holders=False):
     )
 
     # Funds escrowed in pending order matches. (Protocol change.)
-    query = """
+    query = f"""
         SELECT * FROM (
-            SELECT *, MAX(rowid)
+            SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid)
             FROM order_matches
             WHERE forward_asset = ?
-            GROUP BY id
+            GROUP BY {MATCH_ID_SQL}
         ) WHERE status = ?
-    """
-    bindings = (asset, "pending")
+    """  # noqa: S608 # nosec B608
+    bindings = (asset_idx, "pending")
     cursor.execute(query, bindings)
     all_holders += _get_holders(
         cursor,
@@ -106,15 +117,15 @@ def holders(db, asset, exclude_empty_holders=False):
         # exclude_empty_holders=exclude_empty_holders,
     )
 
-    query = """
+    query = f"""
         SELECT * FROM (
-            SELECT *, MAX(rowid) AS rowid
+            SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid) AS rowid
             FROM order_matches
             WHERE backward_asset = ?
         ) WHERE status = ?
         ORDER BY rowid
-    """
-    bindings = (asset, "pending")
+    """  # noqa: S608 # nosec B608
+    bindings = (asset_idx, "pending")
     cursor.execute(query, bindings)
     all_holders += _get_holders(
         cursor,
@@ -142,13 +153,13 @@ def holders(db, asset, exclude_empty_holders=False):
             # exclude_empty_holders=exclude_empty_holders,
         )
 
-        query = """
+        query = f"""
             SELECT * FROM (
-                SELECT *, MAX(rowid)
+                SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid)
                 FROM bet_matches
-                GROUP BY id
+                GROUP BY {MATCH_ID_SQL}
             ) WHERE status = ?
-        """
+        """  # noqa: S608 # nosec B608
         bindings = ("pending",)
         cursor.execute(query, bindings)
         all_holders += _get_holders(
@@ -176,13 +187,13 @@ def holders(db, asset, exclude_empty_holders=False):
             # exclude_empty_holders=exclude_empty_holders,
         )
 
-        query = """
+        query = f"""
             SELECT * FROM (
-                SELECT *, MAX(rowid)
+                SELECT *, {MATCH_ID_SQL} AS id, MAX(rowid)
                 FROM rps_matches
-                GROUP BY id
+                GROUP BY {MATCH_ID_SQL}
             ) WHERE status IN (?, ?, ?)
-        """
+        """  # noqa: S608 # nosec B608
         bindings = ("pending", "pending and resolved", "resolved and pending")
         cursor.execute(query, bindings)
         all_holders += _get_holders(
@@ -204,7 +215,7 @@ def holders(db, asset, exclude_empty_holders=False):
             ) WHERE status = ?
             ORDER BY tx_index
         """
-        bindings = (asset, 0)
+        bindings = (asset_idx, 0)
         cursor.execute(query, bindings)
         all_holders += _get_holders(
             cursor,
@@ -241,7 +252,7 @@ def xcp_destroyed(db):
         FROM destructions
         WHERE (status = ? AND asset = ?)
     """
-    bindings = ("valid", config.XCP)
+    bindings = ("valid", database.asset_index_from_name(db, config.XCP))
     cursor.execute(query, bindings)
     destroyed_total = list(cursor)[0]["total"] or 0
 
@@ -315,7 +326,7 @@ def destructions(db):
         WHERE (status = ? AND asset != ?)
         GROUP BY asset
     """
-    bindings = ("valid", config.XCP)
+    bindings = ("valid", database.asset_index_from_name(db, config.XCP))
     cursor.execute(query, bindings)
 
     for destruction in cursor:
@@ -335,7 +346,7 @@ def asset_issued_total_no_cache(db, asset):
         FROM issuances
         WHERE (status = ? AND asset = ?)
     """
-    bindings = ("valid", asset)
+    bindings = ("valid", database.asset_index_from_name(db, asset))
     cursor.execute(query, bindings)
     issued_total = list(cursor)[0]["total"] or 0
     cursor.close()
@@ -350,7 +361,7 @@ def asset_destroyed_total_no_cache(db, asset):
         FROM destructions
         WHERE (status = ? AND asset = ?)
     """
-    bindings = ("valid", asset)
+    bindings = ("valid", database.asset_index_from_name(db, asset))
     cursor.execute(query, bindings)
     destroyed_total = list(cursor)[0]["total"] or 0
     cursor.close()
@@ -379,11 +390,14 @@ def supplies(db):
 
 def held(db):
     queries = [
+        # ``address``/``asset`` are now small integers; concatenating them
+        # without a separator would collide (e.g. 5||37 == 53||7), so use ':'.
+        # ``utxo`` is the compact ``(utxo_tx_hash, utxo_vout)`` pair.
         """
         SELECT asset, SUM(quantity) AS total FROM (
-            SELECT address, asset, quantity, (address || asset) AS aa, MAX(rowid)
+            SELECT address, asset, quantity, (address || ':' || asset) AS aa, MAX(rowid)
             FROM balances
-            WHERE address IS NOT NULL AND utxo IS NULL
+            WHERE address IS NOT NULL AND utxo_tx_hash IS NULL
             GROUP BY aa
         ) GROUP BY asset
         """,
@@ -391,14 +405,14 @@ def held(db):
         SELECT asset, SUM(quantity) AS total FROM (
             SELECT NULL, asset, quantity
             FROM balances
-            WHERE address IS NULL AND utxo IS NULL
+            WHERE address IS NULL AND utxo_tx_hash IS NULL
         ) GROUP BY asset
         """,
         """
         SELECT asset, SUM(quantity) AS total FROM (
-            SELECT utxo, asset, quantity, (utxo || asset) AS aa, MAX(rowid)
+            SELECT asset, quantity, (hex_lower(utxo_tx_hash) || ':' || utxo_vout || ':' || asset) AS aa, MAX(rowid)
             FROM balances
-            WHERE address IS NULL AND utxo IS NOT NULL
+            WHERE address IS NULL AND utxo_tx_hash IS NOT NULL
             GROUP BY aa
         ) GROUP BY asset
         """,
@@ -413,7 +427,8 @@ def held(db):
         SELECT give_asset AS asset, SUM(give_remaining) AS total FROM (
             SELECT give_asset, give_remaining, status, MAX(rowid)
             FROM orders
-            WHERE give_asset = 'XCP' AND get_asset = 'BTC'
+            WHERE give_asset = (SELECT asset_index FROM assets WHERE asset_name = 'XCP')
+              AND get_asset = (SELECT asset_index FROM assets WHERE asset_name = 'BTC')
             GROUP BY tx_hash
         ) WHERE status = 'filled' GROUP BY asset
         """,
@@ -421,49 +436,49 @@ def held(db):
         SELECT forward_asset AS asset, SUM(forward_quantity) AS total FROM (
             SELECT forward_asset, forward_quantity, status, MAX(rowid)
             FROM order_matches
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = 'pending' GROUP BY asset
         """,
         """
         SELECT backward_asset AS asset, SUM(backward_quantity) AS total FROM (
             SELECT backward_asset, backward_quantity, status, MAX(rowid)
             FROM order_matches
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = 'pending' GROUP BY asset
         """,
         """
-        SELECT 'XCP' AS asset, SUM(wager_remaining) AS total FROM (
+        SELECT (SELECT asset_index FROM assets WHERE asset_name = 'XCP') AS asset, SUM(wager_remaining) AS total FROM (
             SELECT wager_remaining, status, MAX(rowid)
             FROM bets
             GROUP BY tx_hash
         ) WHERE status = 'open'
         """,
         """
-        SELECT 'XCP' AS asset, SUM(forward_quantity) AS total FROM (
+        SELECT (SELECT asset_index FROM assets WHERE asset_name = 'XCP') AS asset, SUM(forward_quantity) AS total FROM (
             SELECT forward_quantity, status, MAX(rowid)
             FROM bet_matches
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = 'pending'
         """,
         """
-        SELECT 'XCP' AS asset, SUM(backward_quantity) AS total FROM (
+        SELECT (SELECT asset_index FROM assets WHERE asset_name = 'XCP') AS asset, SUM(backward_quantity) AS total FROM (
             SELECT backward_quantity, status, MAX(rowid)
             FROM bet_matches
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status = 'pending'
         """,
         """
-        SELECT 'XCP' AS asset, SUM(wager) AS total FROM (
+        SELECT (SELECT asset_index FROM assets WHERE asset_name = 'XCP') AS asset, SUM(wager) AS total FROM (
             SELECT wager, status, MAX(rowid)
             FROM rps
             GROUP BY tx_hash
         ) WHERE status = 'open'
         """,
         """
-        SELECT 'XCP' AS asset, SUM(wager * 2) AS total FROM (
+        SELECT (SELECT asset_index FROM assets WHERE asset_name = 'XCP') AS asset, SUM(wager * 2) AS total FROM (
             SELECT wager, status, MAX(rowid)
             FROM rps_matches
-            GROUP BY id
+            GROUP BY tx0_index, tx1_index
         ) WHERE status IN ('pending', 'pending and resolved', 'resolved and pending')
         """,
         """
@@ -472,6 +487,20 @@ def held(db):
             FROM dispensers
             GROUP BY tx_hash
         ) WHERE status IN (0, 1, 11) GROUP BY asset
+        """,
+        """
+        SELECT asset_a AS asset, SUM(reserve_a) AS total FROM (
+            SELECT asset_a, reserve_a, MAX(rowid)
+            FROM pools
+            GROUP BY asset_a, asset_b
+        ) WHERE reserve_a > 0 GROUP BY asset
+        """,
+        """
+        SELECT asset_b AS asset, SUM(reserve_b) AS total FROM (
+            SELECT asset_b, reserve_b, MAX(rowid)
+            FROM pools
+            GROUP BY asset_a, asset_b
+        ) WHERE reserve_b > 0 GROUP BY asset
         """,
     ]
     # no sql injection here

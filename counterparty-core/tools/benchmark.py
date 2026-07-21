@@ -238,7 +238,7 @@ def prepare_benchmark_db(database_file):
 def compare_strings(string1, string2):
     """Compare strings diff-style."""
     diff = list(difflib.unified_diff(string1.splitlines(1), string2.splitlines(1), n=0))
-    if len(diff):
+    if diff:
         print(f"\n{len(diff)} Differences:")
         print("\n".join(diff))
         print(f"\n{len(diff)} differences")

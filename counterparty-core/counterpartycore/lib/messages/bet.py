@@ -126,17 +126,6 @@ def validate(
     if leverage is None:
         leverage = 5040
 
-    # For SQLite3
-    if (
-        wager_quantity > config.MAX_INT  # pylint: disable=too-many-boolean-expressions
-        or counterwager_quantity > config.MAX_INT
-        or bet_type > config.MAX_INT
-        or deadline > config.MAX_INT
-        or leverage > config.MAX_INT
-        or block_index + expiration > config.MAX_INT
-    ):
-        problems.append("integer overflow")
-
     # Look at feed to be bet on.
     broadcasts = ledger.other.get_broadcasts_by_source(db, feed_address, "valid", order_by="ASC")
     if not broadcasts:
@@ -171,6 +160,17 @@ def validate(
     if not isinstance(expiration, int):
         problems.append("expiration must be expressed as an integer block delta")
         return problems, leverage
+
+    # For SQLite3
+    if (
+        wager_quantity > config.MAX_INT  # pylint: disable=too-many-boolean-expressions
+        or counterwager_quantity > config.MAX_INT
+        or bet_type > config.MAX_INT
+        or deadline > config.MAX_INT
+        or leverage > config.MAX_INT
+        or block_index + expiration > config.MAX_INT
+    ):
+        problems.insert(0, "integer overflow")
 
     if wager_quantity <= 0:
         problems.append("non‐positive wager")
@@ -208,6 +208,9 @@ def compose(
     expiration: int,
     skip_validation: bool = False,
 ):
+    if target_value is None:
+        target_value = 0.0
+
     if ledger.balances.get_balance(db, source, config.XCP) < wager_quantity:
         raise exceptions.ComposeError("insufficient funds")
 
@@ -414,7 +417,19 @@ def match(db, tx):
     tx1_counterwager_remaining = tx1["counterwager_remaining"]
 
     bet_matches = ledger.other.get_matching_bets(db, tx1["feed_address"], counterbet_type)
-    if protocol.enabled("sort_bet_matches"):  # Protocol change.
+    if protocol.enabled("fix_sort_bet_matches", block_index=tx1["block_index"]):
+        # Pre-fix gate: `sorted()` was called and the result discarded -- a
+        # no-op since sort_bet_matches activated. Bet matches were processed
+        # in tx_index/tx_hash order from get_matching_bets, not best-price-
+        # first as the original gate name suggests. Cannot retroactively fix
+        # without a consensus break, so this corrected pass is gated behind
+        # the new `fix_sort_bet_matches` activation block.
+        bet_matches = sorted(bet_matches, key=lambda x: x["tx_index"])
+        bet_matches = sorted(
+            bet_matches,
+            key=lambda x: ledger.issuances.price(x["wager_quantity"], x["counterwager_quantity"]),
+        )
+    elif protocol.enabled("sort_bet_matches"):  # Protocol change.
         sorted(bet_matches, key=lambda x: x["tx_index"])  # Sort by tx index second.
         sorted(
             bet_matches,

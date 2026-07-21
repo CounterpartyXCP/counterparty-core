@@ -1,0 +1,42 @@
+name: Clean Integration Cache
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: 'Network cache to clean (signet, testnet4, all)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - signet
+          - testnet4
+
+jobs:
+  clean-cache:
+    name: Clean ${{ inputs.network }} cache
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Clean signet cache
+        if: inputs.network == 'all' || inputs.network == 'signet'
+        run: |
+          echo "Cleaning signet integration cache..."
+          gh cache delete --repo ${{ github.repository }} integration-signet- || echo "No signet cache found"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Clean testnet4 cache
+        if: inputs.network == 'all' || inputs.network == 'testnet4'
+        run: |
+          echo "Cleaning testnet4 integration cache..."
+          gh cache delete --repo ${{ github.repository }} integration-testnet4- || echo "No testnet4 cache found"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: List remaining caches
+        run: |
+          echo "Remaining integration caches:"
+          gh cache list --repo ${{ github.repository }} | grep -E "^integration-" || echo "No integration caches remaining"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

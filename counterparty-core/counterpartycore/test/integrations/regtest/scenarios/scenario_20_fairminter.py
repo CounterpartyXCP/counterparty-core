@@ -134,7 +134,7 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "ASSET_ISSUANCE",
-                        "event_index": "$EVENT_INDEX_4",
+                        "event_index": "$EVENT_INDEX_7",
                         "params": {
                             "asset": "A95428960939749879",
                             "asset_events": "open_fairminter",
@@ -162,7 +162,7 @@ SCENARIO = [
                     },
                     {
                         "event": "NEW_FAIRMINTER",
-                        "event_index": "$EVENT_INDEX_3",
+                        "event_index": "$EVENT_INDEX_6",
                         "params": {
                             "asset": "A95428960939749879",
                             "asset_longname": "PARENTA.SUBASSETA",
@@ -179,6 +179,8 @@ SCENARIO = [
                             "max_mint_per_tx": 100,
                             "max_mint_per_address": 0,
                             "minted_asset_commission_int": 0,
+                            "pool_quantity": 0,
+                            "lp_asset": None,
                             "pre_minted": False,
                             "premint_quantity": 0,
                             "price": 0,
@@ -226,7 +228,7 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "ASSET_ISSUANCE",
-                        "event_index": "$EVENT_INDEX_7",
+                        "event_index": "$EVENT_INDEX_4",
                         "params": {
                             "asset": "A95428960545690062",
                             "asset_events": "open_fairminter",
@@ -254,7 +256,7 @@ SCENARIO = [
                     },
                     {
                         "event": "NEW_FAIRMINTER",
-                        "event_index": "$EVENT_INDEX_6",
+                        "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "asset": "A95428960545690062",
                             "asset_longname": "PARENTB.SUBASSETB",
@@ -271,6 +273,8 @@ SCENARIO = [
                             "max_mint_per_tx": 100,
                             "max_mint_per_address": 0,
                             "minted_asset_commission_int": 0,
+                            "pool_quantity": 0,
+                            "lp_asset": None,
                             "pre_minted": False,
                             "premint_quantity": 0,
                             "price": 0,
@@ -362,6 +366,8 @@ SCENARIO = [
                             "max_mint_per_tx": 100,
                             "max_mint_per_address": 0,
                             "minted_asset_commission_int": 0,
+                            "pool_quantity": 0,
+                            "lp_asset": None,
                             "pre_minted": False,
                             "premint_quantity": 0,
                             "price": 0,
@@ -451,6 +457,8 @@ SCENARIO = [
                             "max_mint_per_tx": 100,
                             "max_mint_per_address": 0,
                             "minted_asset_commission_int": 0,
+                            "pool_quantity": 0,
+                            "lp_asset": None,
                             "pre_minted": False,
                             "premint_quantity": 0,
                             "price": 0,
@@ -544,6 +552,8 @@ SCENARIO = [
                             "max_mint_per_tx": 100,
                             "max_mint_per_address": 0,
                             "minted_asset_commission_int": 0,
+                            "pool_quantity": 0,
+                            "lp_asset": None,
                             "pre_minted": False,
                             "premint_quantity": 0,
                             "price": 0,

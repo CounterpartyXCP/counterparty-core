@@ -96,6 +96,9 @@ def initialise_config(
     regtest=False,
     signet=False,
     api_limit_rows=1000,
+    api_max_backend_rpc_calls=1000,
+    disable_api_cache=False,
+    api_cache_max_rows=50000,
     backend_connect=None,
     backend_port=None,
     backend_user=None,
@@ -104,6 +107,7 @@ def initialise_config(
     backend_ssl=False,
     backend_ssl_no_verify=False,
     backend_poll_interval=None,
+    backend_api_key=None,
     rpc_host=None,
     rpc_port=None,
     rpc_user=None,
@@ -114,8 +118,10 @@ def initialise_config(
     api_user=None,
     api_password=None,
     api_no_allow_cors=False,
+    enable_api_v1=False,
     force=False,
     requests_timeout=config.DEFAULT_REQUESTS_TIMEOUT,
+    backend_connect_timeout=config.DEFAULT_BACKEND_CONNECT_TIMEOUT,
     rpc_batch_size=config.DEFAULT_RPC_BATCH_SIZE,
     skip_asset_conservation_check=False,
     backend_ssl_verify=None,
@@ -129,14 +135,21 @@ def initialise_config(
     enable_zmq_publisher=False,
     zmq_publisher_port=None,
     db_connection_pool_size=config.DEFAULT_DB_CONNECTION_POOL_SIZE,
+    db_max_connections=config.DEFAULT_DB_MAX_CONNECTIONS,
     wsgi_server=None,
     waitress_threads=None,
     gunicorn_workers=None,
     gunicorn_threads_per_worker=None,
+    no_healthz_server=False,
+    healthz_port=None,
+    healthz_saturation_grace=config.DEFAULT_HEALTHZ_SATURATION_GRACE_SECONDS,
     database_file=None,  # for tests
     electrs_url=None,
     api_only=False,
     profile=False,
+    api_cache_size=1000,
+    memory_profile=False,
+    memory_profile_tracemalloc=False,
     enable_all_protocol_changes=False,
 ):
     # log config already initialized
@@ -227,6 +240,7 @@ def initialise_config(
             os.rename(old_testnet3_state_db, config.STATE_DATABASE)
 
     config.API_LIMIT_ROWS = api_limit_rows
+    config.API_MAX_BACKEND_RPC_CALLS = api_max_backend_rpc_calls
 
     ##############
     # THINGS WE CONNECT TO
@@ -301,6 +315,15 @@ def initialise_config(
         config.BACKEND_POLL_INTERVAL = backend_poll_interval
     else:
         config.BACKEND_POLL_INTERVAL = 3.0
+
+    # Optional API key for premium rate limits behind a Cloud-Armor-style
+    # gateway. The key is sent as the `X-API-Key` HTTP header on every
+    # backend RPC request (Python and Rust BatchRpcClient). The CLI flag
+    # takes precedence; otherwise we fall back to the `BACKEND_API_KEY`
+    # environment variable so CI can inject the secret without exposing
+    # it in the process command line (CodeQL flags any sensitive value
+    # passed as an argv element that ends up echoed by `sh`/`subprocess`).
+    config.BACKEND_API_KEY = backend_api_key or os.environ.get("BACKEND_API_KEY") or None
 
     # Construct backend URL.
     if backend_cookie_file is not None and os.path.exists(backend_cookie_file):
@@ -441,6 +464,36 @@ def initialise_config(
             "Please specific a valid port number rpc-port configuration parameter"
         ) from e
 
+    # Dedicated health-check listener (isolated from the API worker pool, issue #3460)
+    config.NO_HEALTHZ_SERVER = no_healthz_server
+    config.HEALTHZ_SATURATION_GRACE = healthz_saturation_grace
+    if healthz_port:
+        config.HEALTHZ_PORT = healthz_port
+    else:
+        if config.TESTNET3:
+            config.HEALTHZ_PORT = config.DEFAULT_HEALTHZ_PORT_TESTNET3
+        elif config.TESTNET4:
+            config.HEALTHZ_PORT = config.DEFAULT_HEALTHZ_PORT_TESTNET4
+        elif config.REGTEST:
+            config.HEALTHZ_PORT = config.DEFAULT_HEALTHZ_PORT_REGTEST
+        elif config.SIGNET:
+            config.HEALTHZ_PORT = config.DEFAULT_HEALTHZ_PORT_SIGNET
+        else:
+            config.HEALTHZ_PORT = config.DEFAULT_HEALTHZ_PORT
+    try:
+        config.HEALTHZ_PORT = int(config.HEALTHZ_PORT)
+        if not (config.HEALTHZ_PORT > 1 and config.HEALTHZ_PORT < 65535):
+            raise exceptions.ConfigurationError("invalid health-check port number")
+    except Exception as e:  # noqa: E722 # pylint: disable=broad-exception-caught
+        raise exceptions.ConfigurationError(
+            "Please specify a valid port number for the healthz-port configuration parameter"
+        ) from e
+    if config.HEALTHZ_PORT in (config.API_PORT, config.RPC_PORT, config.ZMQ_PUBLISHER_PORT):
+        raise exceptions.ConfigurationError(
+            f"health-check port ({config.HEALTHZ_PORT}) must differ from the API, RPC "
+            "and ZeroMQ publisher ports"
+        )
+
     # Server API user
     if api_user:
         config.API_USER = api_user
@@ -453,6 +506,13 @@ def initialise_config(
         config.API_NO_ALLOW_CORS = api_no_allow_cors
     else:
         config.API_NO_ALLOW_CORS = False
+
+    # Legacy v1 JSON-RPC API. Disabled by default: it is deprecated and exposes
+    # an outsized denial-of-service surface (cheap POSTs triggering expensive DB
+    # work and large Bitcoin RPC fan-out). Opt back in with `--enable-api-v1`.
+    # The prominent startup warning is emitted once, where v1 is actually
+    # started (see `cli/server.py`), to avoid duplicating it in every process.
+    config.ENABLE_API_V1 = enable_api_v1
 
     ##############
     # OTHER SETTINGS
@@ -511,6 +571,7 @@ def initialise_config(
     # Misc
     config.P2SH_DUST_RETURN_PUBKEY = p2sh_dust_return_pubkey
     config.REQUESTS_TIMEOUT = requests_timeout
+    config.BACKEND_CONNECT_TIMEOUT = backend_connect_timeout
     config.CHECK_ASSET_CONSERVATION = not skip_asset_conservation_check
     config.UTXO_LOCKS_MAX_ADDRESSES = utxo_locks_max_addresses
     config.UTXO_LOCKS_MAX_AGE = utxo_locks_max_age
@@ -523,30 +584,43 @@ def initialise_config(
     config.NO_TELEMETRY = no_telemetry
 
     config.DB_CONNECTION_POOL_SIZE = db_connection_pool_size
+    config.DB_MAX_CONNECTIONS = db_max_connections
     config.WSGI_SERVER = wsgi_server
     config.WAITRESS_THREADS = waitress_threads
     config.GUNICORN_THREADS_PER_WORKER = gunicorn_threads_per_worker
     config.GUNICORN_WORKERS = gunicorn_workers
 
     if electrs_url:
-        if not helpers.is_url(electrs_url):
-            raise exceptions.ConfigurationError("Invalid Electrs URL")
-        config.ELECTRS_URL = electrs_url
+        if isinstance(electrs_url, str):
+            electrs_url = [electrs_url]
+        for url in electrs_url:
+            if not helpers.is_url(url):
+                raise exceptions.ConfigurationError(f"Invalid Electrs URL: {url}")
+        config.ELECTRS_URLS = electrs_url
+        config.ELECTRS_URLS_IS_DEFAULT = False
     else:
         if config.NETWORK_NAME == "testnet":
-            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_TESTNET3
-        if config.NETWORK_NAME == "testnet4":
-            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_TESTNET4
+            config.ELECTRS_URLS = config.DEFAULT_ELECTRS_URLS_TESTNET3
+        elif config.NETWORK_NAME == "testnet4":
+            config.ELECTRS_URLS = config.DEFAULT_ELECTRS_URLS_TESTNET4
         elif config.NETWORK_NAME == "mainnet":
-            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_MAINNET
+            config.ELECTRS_URLS = config.DEFAULT_ELECTRS_URLS_MAINNET
         elif config.NETWORK_NAME == "signet":
-            config.ELECTRS_URL = config.DEFAULT_ELECTRS_URL_SIGNET
+            config.ELECTRS_URLS = config.DEFAULT_ELECTRS_URLS_SIGNET
         else:
-            config.ELECTRS_URL = None
+            config.ELECTRS_URLS = None
+        config.ELECTRS_URLS_IS_DEFAULT = config.ELECTRS_URLS is not None
 
     config.API_ONLY = api_only
     config.PROFILE = profile
+    # clamp negatives to 0 ("0 effectively disables caching"); never below
+    config.API_CACHE_SIZE = max(0, api_cache_size)
+    # tracemalloc tracking is an extension of the memory profiler
+    config.MEMORY_PROFILE = memory_profile or memory_profile_tracemalloc
+    config.MEMORY_PROFILE_TRACEMALLOC = memory_profile_tracemalloc
     config.ENABLE_ALL_PROTOCOL_CHANGES = enable_all_protocol_changes
+    config.DISABLE_API_CACHE = disable_api_cache
+    config.API_CACHE_MAX_ROWS = max(0, api_cache_max_rows)
 
 
 def initialise_log_and_config(args, api=False, log_stream=None):
@@ -558,6 +632,9 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "regtest": args.regtest,
         "signet": args.signet,
         "api_limit_rows": args.api_limit_rows,
+        "api_max_backend_rpc_calls": getattr(args, "api_max_backend_rpc_calls", 1000),
+        "disable_api_cache": getattr(args, "disable_api_cache", False),
+        "api_cache_max_rows": getattr(args, "api_cache_max_rows", 50000),
         "backend_connect": args.backend_connect,
         "backend_port": args.backend_port,
         "backend_user": args.backend_user,
@@ -566,6 +643,7 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "backend_ssl": args.backend_ssl,
         "backend_ssl_no_verify": args.backend_ssl_no_verify,
         "backend_poll_interval": args.backend_poll_interval,
+        "backend_api_key": getattr(args, "backend_api_key", None),
         "rpc_host": args.rpc_host,
         "rpc_port": args.rpc_port,
         "rpc_user": args.rpc_user,
@@ -576,7 +654,11 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "api_user": args.api_user,
         "api_password": args.api_password,
         "api_no_allow_cors": args.api_no_allow_cors,
+        "enable_api_v1": getattr(args, "enable_api_v1", False),
         "requests_timeout": args.requests_timeout,
+        "backend_connect_timeout": getattr(
+            args, "backend_connect_timeout", config.DEFAULT_BACKEND_CONNECT_TIMEOUT
+        ),
         "rpc_batch_size": args.rpc_batch_size,
         "skip_asset_conservation_check": args.skip_asset_conservation_check,
         "force": args.force,
@@ -588,13 +670,22 @@ def initialise_log_and_config(args, api=False, log_stream=None):
         "enable_zmq_publisher": args.enable_zmq_publisher,
         "zmq_publisher_port": args.zmq_publisher_port,
         "db_connection_pool_size": args.db_connection_pool_size,
+        "db_max_connections": args.db_max_connections,
         "wsgi_server": args.wsgi_server,
         "waitress_threads": args.waitress_threads,
         "gunicorn_workers": args.gunicorn_workers,
         "gunicorn_threads_per_worker": args.gunicorn_threads_per_worker,
+        "no_healthz_server": getattr(args, "no_healthz_server", False),
+        "healthz_port": getattr(args, "healthz_port", None),
+        "healthz_saturation_grace": getattr(
+            args, "healthz_saturation_grace", config.DEFAULT_HEALTHZ_SATURATION_GRACE_SECONDS
+        ),
         "electrs_url": args.electrs_url,
         "api_only": args.api_only,
         "profile": args.profile,
+        "api_cache_size": getattr(args, "api_cache_size", 1000),
+        "memory_profile": args.memory_profile,
+        "memory_profile_tracemalloc": getattr(args, "memory_profile_tracemalloc", False),
         "enable_all_protocol_changes": args.enable_all_protocol_changes,
     }
     # for tests

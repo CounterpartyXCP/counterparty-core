@@ -33,6 +33,27 @@ def test_currentstate(ledger_db, current_block_index, monkeypatch):
     assert currentstate.CurrentState().get("toto") == "tata"
 
 
+def test_currentstate_stopping(ledger_db):
+    """Test set_stopping and stopping methods."""
+    currentstate.CurrentState().init()  # Reset state
+
+    # Initially, stopping should return False
+    assert currentstate.CurrentState().stopping() is False
+
+    # After setting stopping, it should return True
+    currentstate.CurrentState().set_stopping()
+    assert currentstate.CurrentState().stopping() is True
+
+
+def test_currentstate_backend_height_not_set():
+    """Test current_backend_height and current_block_count when BACKEND_HEIGHT_VALUE is not set."""
+    currentstate.CurrentState().init()  # Reset state to clear BACKEND_HEIGHT_VALUE
+
+    # When BACKEND_HEIGHT_VALUE is not set, both methods should return None
+    assert currentstate.CurrentState().current_backend_height() is None
+    assert currentstate.CurrentState().current_block_count() is None
+
+
 def test_backend_height(monkeypatch):
     current_backend_height = 1000
     current_block_count = 980

@@ -1,8 +1,8 @@
 use super::config::Config;
 use pyo3::{
     exceptions::PyException,
-    types::{PyAnyMethods, PyBytes, PyDict, PyTuple},
-    IntoPy, PyObject, Python,
+    prelude::*,
+    types::{PyAny, PyBytes, PyDict},
 };
 
 #[derive(Clone)]
@@ -21,32 +21,29 @@ pub struct Vin {
     pub info: Option<VinOutput>,
 }
 
-impl IntoPy<PyObject> for Vin {
-    #[allow(clippy::unwrap_used)]
-    fn into_py(self, py: Python<'_>) -> PyObject {
-        let dict = PyDict::new_bound(py);
-        dict.set_item("hash", self.hash).unwrap();
-        dict.set_item("n", self.n).unwrap();
-        dict.set_item("sequence", self.sequence).unwrap();
-        dict.set_item("script_sig", PyBytes::new_bound(py, &self.script_sig))
-            .unwrap();
+impl<'py> IntoPyObject<'py> for Vin {
+    type Target = PyAny;
+    type Output = Bound<'py, PyAny>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        let dict = PyDict::new(py);
+        dict.set_item("hash", self.hash)?;
+        dict.set_item("n", self.n)?;
+        dict.set_item("sequence", self.sequence)?;
+        dict.set_item("script_sig", PyBytes::new(py, &self.script_sig))?;
 
         if let Some(info) = self.info {
-            let info_dict = PyDict::new_bound(py);
-            info_dict
-                .set_item(
-                    "script_pub_key",
-                    PyBytes::new_bound(py, &info.script_pub_key),
-                )
-                .unwrap();
-            info_dict.set_item("value", info.value).unwrap();
-            info_dict.set_item("is_segwit", info.is_segwit).unwrap();
-            dict.set_item("info", info_dict).unwrap();
+            let info_dict = PyDict::new(py);
+            info_dict.set_item("script_pub_key", PyBytes::new(py, &info.script_pub_key))?;
+            info_dict.set_item("value", info.value)?;
+            info_dict.set_item("is_segwit", info.is_segwit)?;
+            dict.set_item("info", info_dict)?;
         } else {
-            dict.set_item("info", py.None()).unwrap();
+            dict.set_item("info", py.None())?;
         }
 
-        dict.unbind().into()
+        Ok(dict.into_any())
     }
 }
 
@@ -57,18 +54,17 @@ pub struct Vout {
     //pub is_segwit: bool,
 }
 
-impl IntoPy<PyObject> for Vout {
-    #[allow(clippy::unwrap_used)]
-    fn into_py(self, py: Python<'_>) -> PyObject {
-        let dict = PyDict::new_bound(py);
-        dict.set_item("value", self.value).unwrap();
-        dict.set_item(
-            "script_pub_key",
-            PyBytes::new_bound(py, &self.script_pub_key),
-        )
-        .unwrap();
-        //dict.set_item("is_segwit", self.is_segwit).unwrap();
-        dict.unbind().into()
+impl<'py> IntoPyObject<'py> for Vout {
+    type Target = PyAny;
+    type Output = Bound<'py, PyAny>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        let dict = PyDict::new(py);
+        dict.set_item("value", self.value)?;
+        dict.set_item("script_pub_key", PyBytes::new(py, &self.script_pub_key))?;
+        //dict.set_item("is_segwit", self.is_segwit)?;
+        Ok(dict.into_any())
     }
 }
 
@@ -78,9 +74,15 @@ pub struct PotentialDispenser {
     pub value: Option<u64>,
 }
 
-impl IntoPy<PyObject> for PotentialDispenser {
-    fn into_py(self, py: Python<'_>) -> PyObject {
-        PyTuple::new_bound(py, &[self.destination.into_py(py), self.value.into_py(py)]).into_py(py)
+impl<'py> IntoPyObject<'py> for PotentialDispenser {
+    type Target = PyAny;
+    type Output = Bound<'py, PyAny>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        (self.destination, self.value)
+            .into_pyobject(py)
+            .map(|t| t.into_any())
     }
 }
 
@@ -94,25 +96,22 @@ pub struct ParsedVouts {
     pub is_reveal_tx: bool,
 }
 
-impl IntoPy<PyObject> for ParsedVouts {
-    fn into_py(self, py: Python<'_>) -> PyObject {
-        let dispensers: Vec<PyObject> = self
-            .potential_dispensers
-            .into_iter()
-            .map(|pd| pd.into_py(py))
-            .collect();
-        PyTuple::new_bound(
-            py,
-            &[
-                self.destinations.into_py(py),
-                self.btc_amount.into_py(py),
-                self.fee.into_py(py),
-                PyBytes::new_bound(py, &self.data).into_py(py),
-                dispensers.into_py(py),
-                self.is_reveal_tx.into_py(py),
-            ],
+impl<'py> IntoPyObject<'py> for ParsedVouts {
+    type Target = PyAny;
+    type Output = Bound<'py, PyAny>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        (
+            self.destinations,
+            self.btc_amount,
+            self.fee,
+            PyBytes::new(py, &self.data),
+            self.potential_dispensers,
+            self.is_reveal_tx,
         )
-        .into_py(py)
+            .into_pyobject(py)
+            .map(|t| t.into_any())
     }
 }
 
@@ -130,37 +129,35 @@ pub struct Transaction {
     pub vout: Vec<Vout>,
 }
 
-impl IntoPy<PyObject> for Transaction {
-    #[allow(clippy::unwrap_used)]
-    fn into_py(self, py: Python<'_>) -> PyObject {
-        let dict = PyDict::new_bound(py);
-        dict.set_item("version", self.version).unwrap();
-        dict.set_item("segwit", self.segwit).unwrap();
-        dict.set_item("coinbase", self.coinbase).unwrap();
-        dict.set_item("lock_time", self.lock_time).unwrap();
-        dict.set_item("tx_id", self.tx_id).unwrap();
-        dict.set_item("tx_hash", self.tx_hash).unwrap();
-        dict.set_item("vtxinwit", self.vtxinwit).unwrap();
+impl<'py> IntoPyObject<'py> for Transaction {
+    type Target = PyAny;
+    type Output = Bound<'py, PyAny>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        let dict = PyDict::new(py);
+        dict.set_item("version", self.version)?;
+        dict.set_item("segwit", self.segwit)?;
+        dict.set_item("coinbase", self.coinbase)?;
+        dict.set_item("lock_time", self.lock_time)?;
+        dict.set_item("tx_id", self.tx_id)?;
+        dict.set_item("tx_hash", self.tx_hash)?;
+        dict.set_item("vtxinwit", self.vtxinwit)?;
 
         match self.parsed_vouts {
             Ok(parsed_vouts) => {
-                dict.set_item("parsed_vouts", parsed_vouts.into_py(py))
-                    .unwrap();
+                dict.set_item("parsed_vouts", parsed_vouts)?;
             }
             Err(error) => {
                 let exception = PyException::new_err(error);
-                dict.set_item("parsed_vouts", exception.into_py(py))
-                    .unwrap();
+                dict.set_item("parsed_vouts", exception.value(py))?;
             }
         }
 
-        let vin_list: Vec<PyObject> = self.vin.into_iter().map(|vin| vin.into_py(py)).collect();
-        dict.set_item("vin", vin_list).unwrap();
+        dict.set_item("vin", self.vin)?;
+        dict.set_item("vout", self.vout)?;
 
-        let vout_list: Vec<PyObject> = self.vout.into_iter().map(|vout| vout.into_py(py)).collect();
-        dict.set_item("vout", vout_list).unwrap();
-
-        dict.unbind().into()
+        Ok(dict.into_any())
     }
 }
 
@@ -178,31 +175,26 @@ pub struct Block {
     pub transactions: Vec<Transaction>,
 }
 
-impl IntoPy<PyObject> for Block {
-    #[allow(clippy::unwrap_used)]
-    fn into_py(self, py: Python<'_>) -> PyObject {
-        let dict = PyDict::new_bound(py);
-        dict.set_item("height", self.height).unwrap();
-        dict.set_item("block_index", self.height).unwrap();
-        dict.set_item("version", self.version).unwrap();
-        dict.set_item("hash_prev", self.hash_prev).unwrap();
-        dict.set_item("hash_merkle_root", self.hash_merkle_root)
-            .unwrap();
-        dict.set_item("block_time", self.block_time).unwrap();
-        dict.set_item("bits", self.bits).unwrap();
-        dict.set_item("nonce", self.nonce).unwrap();
-        dict.set_item("block_hash", self.block_hash).unwrap();
-        dict.set_item("transaction_count", self.transaction_count)
-            .unwrap();
+impl<'py> IntoPyObject<'py> for Block {
+    type Target = PyAny;
+    type Output = Bound<'py, PyAny>;
+    type Error = PyErr;
 
-        let transactions_list: Vec<PyObject> = self
-            .transactions
-            .into_iter()
-            .map(|tx| tx.into_py(py))
-            .collect();
-        dict.set_item("transactions", transactions_list).unwrap();
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        let dict = PyDict::new(py);
+        dict.set_item("height", self.height)?;
+        dict.set_item("block_index", self.height)?;
+        dict.set_item("version", self.version)?;
+        dict.set_item("hash_prev", self.hash_prev)?;
+        dict.set_item("hash_merkle_root", self.hash_merkle_root)?;
+        dict.set_item("block_time", self.block_time)?;
+        dict.set_item("bits", self.bits)?;
+        dict.set_item("nonce", self.nonce)?;
+        dict.set_item("block_hash", self.block_hash)?;
+        dict.set_item("transaction_count", self.transaction_count)?;
+        dict.set_item("transactions", self.transactions)?;
 
-        dict.unbind().into()
+        Ok(dict.into_any())
     }
 }
 

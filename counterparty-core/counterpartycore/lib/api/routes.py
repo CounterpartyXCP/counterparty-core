@@ -3,12 +3,30 @@ import typing
 
 from docstring_parser import parse as parse_docstring
 
+from counterpartycore.lib import config
 from counterpartycore.lib.api import apiv1, compose, composer, healthz, queries
 from counterpartycore.lib.backend import bitcoind, electrs
+
+ROUTE_CATEGORIES_WITHOUT_VERBOSE = {"bitcoin", "compose", "healthz", "routes", "v1"}
+
+CSV_ENUM_ANNOTATIONS = (
+    queries.TransactionType,
+    queries.SendType,
+    queries.IssuancesAssetEvents,
+    queries.DispenserStatus,
+    queries.OrderStatus,
+    queries.OrderMatchesStatus,
+    queries.FairmintersStatus,
+)
 
 
 def get_routes():
     """Return the API routes."""
+    # The legacy v1 routes are only served when the operator opts in with
+    # `--enable-api-v1`; keep the `/v2/routes` listing consistent with what is
+    # actually registered (see `apiserver.init_flask_app`).
+    if not config.ENABLE_API_V1:
+        return {path: route for path, route in ROUTES.items() if route["category"] != "v1"}
     return ROUTES
 
 
@@ -43,11 +61,18 @@ ALL_ROUTES = {
     "/v2/blocks/<int:block_index>/sweeps": (queries.get_sweeps_by_block, "blocks"),
     "/v2/blocks/<int:block_index>/fairminters": (queries.get_fairminters_by_block, "blocks"),
     "/v2/blocks/<int:block_index>/fairmints": (queries.get_fairmints_by_block, "blocks"),
+    "/v2/blocks/<int:block_index>/pool_deposits": (queries.get_pool_deposits_by_block, "blocks"),
+    "/v2/blocks/<int:block_index>/pool_withdrawals": (
+        queries.get_pool_withdrawals_by_block,
+        "blocks",
+    ),
+    "/v2/blocks/<int:block_index>/pool_matches": (queries.get_pool_matches_by_block, "blocks"),
     ### /transactions ###
     "/v2/transactions": (queries.get_transactions, "transactions"),
     "/v2/transactions/counts": (queries.get_transaction_types_count, "transactions"),
     "/v2/transactions/info": (compose.info, "transactions"),
     "/v2/transactions/<tx_hash>/info": (compose.info_by_tx_hash, "transactions"),
+    "/v2/bitcoin/transactions/<tx_hash>/info": (compose.info_by_tx_hash, "bitcoin"),
     "/v2/transactions/unpack": (compose.unpack, "transactions"),
     "/v2/transactions/<int:tx_index>": (queries.get_transaction_by_tx_index, "transactions"),
     "/v2/transactions/<tx_hash>": (queries.get_transaction_by_hash, "transactions"),
@@ -74,6 +99,8 @@ ALL_ROUTES = {
     "/v2/addresses/transactions": (queries.get_transactions_by_addresses, "addresses"),
     "/v2/addresses/events": (queries.get_events_by_addresses, "addresses"),
     "/v2/addresses/mempool": (queries.get_mempool_events_by_addresses, "addresses"),
+    "/v2/addresses/<address>": (queries.get_address, "addresses"),
+    "/v2/addresses/<address>/options": (queries.get_address, "addresses"),
     "/v2/addresses/<address>/balances": (queries.get_address_balances, "addresses"),
     "/v2/addresses/<address>/balances/<asset>": (
         queries.get_balances_by_address_and_asset,
@@ -96,6 +123,14 @@ ALL_ROUTES = {
         "addresses",
     ),
     "/v2/addresses/<address>/dispensers": (queries.get_dispensers_by_address, "addresses"),
+    "/v2/addresses/<address>/dispensers/source": (
+        queries.get_dispensers_by_address,
+        "addresses",
+    ),
+    "/v2/addresses/<address>/dispensers/origin": (
+        queries.get_dispensers_by_origin,
+        "addresses",
+    ),
     "/v2/addresses/<address>/dispensers/<asset>": (
         queries.get_dispenser_by_address_and_asset,
         "addresses",
@@ -161,6 +196,19 @@ ALL_ROUTES = {
     "/v2/addresses/<address>/compose/dispense": (compose.compose_dispense, "compose"),
     "/v2/addresses/<address>/compose/fairminter": (compose.compose_fairminter, "compose"),
     "/v2/addresses/<address>/compose/fairmint": (compose.compose_fairmint, "compose"),
+    "/v2/addresses/<address>/compose/pooldeposit": (compose.compose_pooldeposit, "compose"),
+    "/v2/addresses/<address>/compose/pooldeposit/estimatexcpfees": (
+        compose.get_pool_deposit_estimate_xcp_fee,
+        "compose",
+    ),
+    "/v2/addresses/<address>/compose/poolwithdraw": (compose.compose_poolwithdraw, "compose"),
+    "/v2/addresses/<address>/compose/poolwithdraw/estimatexcpfees": (
+        compose.get_pool_withdraw_estimate_xcp_fee,
+        "compose",
+    ),
+    "/v2/pools/<asset1>/<asset2>/quote": (queries.get_pool_quote, "pools"),
+    "/v2/pools/<asset1>/<asset2>/quote/deposit": (queries.get_pool_quote_deposit, "pools"),
+    "/v2/pools/<asset1>/<asset2>/quote/withdraw": (queries.get_pool_quote_withdraw, "pools"),
     "/v2/addresses/<address>/compose/attach": (compose.compose_attach, "compose"),
     "/v2/addresses/<address>/compose/attach/estimatexcpfees": (
         compose.get_attach_estimate_xcp_fee,
@@ -168,6 +216,7 @@ ALL_ROUTES = {
     ),
     "/v2/utxos/<utxo>/compose/detach": (compose.compose_detach, "compose"),
     "/v2/utxos/<utxo>/compose/movetoutxo": (compose.compose_movetoutxo, "compose"),
+    "/v2/compose/detach": (compose.compose_detach_by_utxos, "compose"),
     "/v2/compose/attach/estimatexcpfees": (compose.get_attach_estimate_xcp_fee, "compose"),
     ### /assets ###
     "/v2/assets": (queries.get_valid_assets, "assets"),
@@ -204,6 +253,21 @@ ALL_ROUTES = {
     "/v2/orders/<asset1>/<asset2>": (queries.get_orders_by_two_assets, "orders"),
     "/v2/orders/<asset1>/<asset2>/matches": (queries.get_order_matches_by_two_assets, "orders"),
     "/v2/order_matches": (queries.get_all_order_matches, "orders"),
+    "/v2/orders/<order_hash>/pool_matches": (queries.get_pool_matches_by_order, "orders"),
+    "/v2/pool_matches": (queries.get_all_pool_matches, "pools"),
+    ### /pools ###
+    "/v2/pools": (queries.get_pools, "pools"),
+    "/v2/pools/<asset1>/<asset2>": (queries.get_pool_by_pair, "pools"),
+    "/v2/pools/<asset1>/<asset2>/deposits": (queries.get_pool_deposits_by_pair, "pools"),
+    "/v2/pools/<asset1>/<asset2>/withdrawals": (queries.get_pool_withdrawals_by_pair, "pools"),
+    "/v2/pools/<asset1>/<asset2>/matches": (queries.get_pool_matches_by_pair, "pools"),
+    "/v2/pools/<asset1>/<asset2>/price_history": (queries.get_pool_price_history, "pools"),
+    "/v2/addresses/<address>/pool_deposits": (queries.get_pool_deposits_by_address, "addresses"),
+    "/v2/addresses/<address>/pool_withdrawals": (
+        queries.get_pool_withdrawals_by_address,
+        "addresses",
+    ),
+    "/v2/addresses/<address>/pools": (queries.get_pool_positions_by_address, "addresses"),
     ### /bets ###
     "/v2/bets": (queries.get_bets, "bets"),
     "/v2/bets/<bet_hash>": (queries.get_bet, "bets"),
@@ -293,7 +357,13 @@ def function_needs_db(function):
     return " ".join(dbs)
 
 
-def prepare_route_args(function):
+def should_include_verbose_arg(function, route_category=None):
+    if route_category in ROUTE_CATEGORIES_WITHOUT_VERBOSE:
+        return False
+    return not function.__name__.endswith("_v1")
+
+
+def prepare_route_args(function, route_category=None):
     args = []
     function_args = inspect.signature(function).parameters
     args_description = get_args_description(function)
@@ -325,10 +395,24 @@ def prepare_route_args(function):
         if route_arg["type"] == "Literal":
             route_arg["type"] = "enum[str]"
             route_arg["members"] = list(typing.get_args(annotation))
+            if annotation == queries.DispenserStatus:
+                route_arg["members"].extend(
+                    str(value) for value in queries.DispenserStatusNumber.values()
+                )
+            if annotation in CSV_ENUM_ANNOTATIONS:
+                route_arg["allow_csv"] = True
         if arg_name in args_description:
             route_arg["description"] = args_description[arg_name]
+        if arg_name == "sort":
+            sort_fields = queries.get_sortable_fields(function)
+            if sort_fields:
+                route_arg["supported_values"] = sort_fields
+                route_arg["description"] = (
+                    f"{route_arg.get('description', 'The sort order to return')}. "
+                    f"Sortable fields: {', '.join(sort_fields)}."
+                )
         args.append(route_arg)
-    if not function.__name__.endswith("_v1"):
+    if should_include_verbose_arg(function, route_category):
         args.append(
             {
                 "name": "verbose",
@@ -354,7 +438,7 @@ def prepare_routes(routes):
         prepared_routes[route] = {
             "function": route_function,
             "description": get_function_description(route_function),
-            "args": prepare_route_args(route_function),
+            "args": prepare_route_args(route_function, route_category),
             "category": route_category,
         }
     return prepared_routes

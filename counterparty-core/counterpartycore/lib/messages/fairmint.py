@@ -18,20 +18,35 @@ def D(value):  # pylint: disable=invalid-name
     return decimal.Decimal(str(value))
 
 
+def resolve_asset_name(db, asset):
+    return ledger.issuances.resolve_subasset_longname(db, asset)
+
+
 def validate(
     db,
     source,
     asset,
     quantity=0,
+    block_index=None,
 ):
     problems = []
 
-    if not isinstance(quantity, int):
+    invalid_quantity = not isinstance(quantity, int)
+    if invalid_quantity:
         problems.append("quantity must be an integer")
 
+    # NOTE: do not resolve subasset longnames here. validate() is on the
+    # consensus parse path (parse() calls it with the asset returned by
+    # unpack(), which is already canonical for v2/CBOR fairmints and the raw
+    # message string for legacy ones). Resolving here would change the stored
+    # `status` of a legacy-format fairmint carrying a subasset longname without
+    # a protocol change. Longname resolution happens in compose() instead.
     fairminter = ledger.issuances.get_fairminter_by_asset(db, asset)
     if not fairminter:
         problems.append(f"fairminter not found for asset: `{asset}`")
+        return problems
+
+    if invalid_quantity:
         return problems
 
     if fairminter["status"] != "open":
@@ -59,6 +74,12 @@ def validate(
         if quantity > config.MAX_INT:
             problems.append("quantity exceeds maximum allowed value")
             return problems
+        if (
+            protocol.enabled("fairmint_pool", block_index=block_index)
+            and quantity % fairminter["quantity_by_price"] != 0
+        ):
+            problems.append("quantity is not a multiple of lot_size")
+            return problems
         # check id we don't exceed the hard cap
         if fairminter["hard_cap"] > 0 and asset_supply + quantity > fairminter["hard_cap"]:
             problems.append("asset supply quantity exceeds hard cap")
@@ -70,41 +91,46 @@ def validate(
         balance = ledger.balances.get_balance(db, source, config.XCP)
         if balance < xcp_total_price:
             problems.append("insufficient XCP balance")
-    elif not protocol.enabled("partial_mint_to_reach_hard_cap"):
-        # check id we don't exceed the hard cap
-        if (
-            fairminter["hard_cap"] > 0
-            and asset_supply + fairminter["max_mint_per_tx"] > fairminter["hard_cap"]
-        ):
-            problems.append("asset supply quantity exceeds hard cap")
+    else:
+        if protocol.enabled("fairmint_pool", block_index=block_index) and quantity > 0:
+            problems.append("quantity is not allowed for free fairminters")
+        if not protocol.enabled("partial_mint_to_reach_hard_cap"):
+            if (
+                fairminter["hard_cap"] > 0
+                and asset_supply + fairminter["max_mint_per_tx"] > fairminter["hard_cap"]
+            ):
+                problems.append("asset supply quantity exceeds hard cap")
 
     return problems
 
 
 def compose(db, source: str, asset: str, quantity: int = 0, skip_validation: bool = False):
-    problems = validate(db, source, asset, quantity)
+    resolved_asset = resolve_asset_name(db, asset)
+    if quantity != 0 and not skip_validation:
+        if not isinstance(quantity, int):
+            raise exceptions.ComposeError("quantity must be an integer")
+        fairminter = ledger.issuances.get_fairminter_by_asset(db, resolved_asset)
+        if fairminter and fairminter["price"] == 0:
+            raise exceptions.ComposeError("quantity is not allowed for free fairminters")
+        if fairminter and quantity % fairminter["quantity_by_price"] != 0:
+            raise exceptions.ComposeError("quantity is not a multiple of lot_size")
+
+    problems = validate(db, source, resolved_asset, quantity)
     if len(problems) > 0 and not skip_validation:
         raise exceptions.ComposeError(problems)
-
-    if quantity != 0 and not skip_validation:
-        fairminter = ledger.issuances.get_fairminter_by_asset(db, asset)
-        if fairminter["price"] == 0:
-            raise exceptions.ComposeError("quantity is not allowed for free fairminters")
-        elif quantity % fairminter["quantity_by_price"] != 0:
-            raise exceptions.ComposeError("quantity is not a multiple of lot_size")
 
     # create message
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
 
     if protocol.enabled("fairminter_v2"):
-        asset_id = ledger.issuances.generate_asset_id(asset)
+        asset_id = ledger.issuances.generate_asset_id(resolved_asset)
         data += cbor2.dumps([asset_id, quantity])
     else:
         data_content = "|".join(
             [
                 str(value)
                 for value in [
-                    asset,
+                    resolved_asset,
                     quantity,
                 ]
             ]
@@ -143,9 +169,39 @@ def unpack(message, return_dict=False, block_index=None):
         return ("", 0)
 
 
+def _handle_hard_cap_reached(db, fairminter, block_index):
+    if fairminter["soft_cap"] == 0:
+        ledger.issuances.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
+        return
+
+    pool_quantity = fairminter.get("pool_quantity") or 0
+    deadline = fairminter["soft_cap_deadline_block"]
+
+    if pool_quantity > 0:
+        # defer pool creation to after_block (anti-sandwich)
+        if deadline > block_index:
+            ledger.issuances.update_fairminter(
+                db, fairminter["tx_hash"], {"soft_cap_deadline_block": block_index}
+            )
+        elif deadline < block_index:
+            # Unreachable: after_block(deadline) would have closed the fairminter
+            # already, so fairmint.validate would have rejected this mint upstream.
+            # Halt rather than silently close — closing here leaves the escrowed
+            # pool tokens stranded at UNSPENDABLE.
+            raise exceptions.ParseTransactionError(
+                f"fairminter {fairminter['tx_hash']}: hard cap reached at block {block_index} "
+                f"but soft_cap_deadline {deadline} already passed"
+            )
+        return
+
+    if deadline >= block_index:
+        fairminter_mod.soft_cap_deadline_reached(db, fairminter, block_index)
+    ledger.issuances.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
+
+
 def parse(db, tx, message):
-    (asset, quantity) = unpack(message)
-    problems = validate(db, tx["source"], asset, quantity)
+    (asset, quantity) = unpack(message, block_index=tx["block_index"])
+    problems = validate(db, tx["source"], asset, quantity, block_index=tx["block_index"])
 
     # if problems, insert into fairmints table with status invalid and return
     status = "valid"
@@ -324,13 +380,7 @@ def parse(db, tx, message):
                 bindings["locked"] = True
             if fairminter["lock_description"]:
                 bindings["description_locked"] = True
-            # and we close the fairminter
-            if (
-                fairminter["soft_cap"] > 0
-                and fairminter["soft_cap_deadline_block"] >= tx["block_index"]
-            ):
-                fairminter_mod.soft_cap_deadline_reached(db, fairminter, tx["block_index"])
-            ledger.issuances.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
+            _handle_hard_cap_reached(db, fairminter, tx["block_index"])
 
     # we insert the new issuance
     ledger.events.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")

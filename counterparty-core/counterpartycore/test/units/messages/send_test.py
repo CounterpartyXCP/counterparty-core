@@ -247,10 +247,21 @@ def test_compose_no_valid(ledger_db, defaults, current_block_index):
             defaults["quantity"] / 3,
         )
 
-    with pytest.raises(exceptions.ComposeError, match="insufficient funds"):
+    with pytest.raises(exceptions.ComposeError, match="integer overflow"):
         send.compose(
             ledger_db, defaults["addresses"][0], defaults["addresses"][1], "MAXI", 2**63 + 1
         )
+
+    with ProtocolChangesDisabled(["enhanced_sends"]):
+        with pytest.raises(exceptions.ComposeError, match="integer overflow"):
+            send.compose(
+                ledger_db,
+                defaults["addresses"][0],
+                defaults["addresses"][1],
+                "BTC",
+                config.MAX_INT + 1,
+                no_dispense=True,
+            )
 
     insert_required_option(ledger_db, current_block_index, defaults)
 
@@ -282,6 +293,156 @@ def test_compose_no_valid(ledger_db, defaults, current_block_index):
                 memo="12345",
                 use_enhanced_send=True,
             )
+
+
+def test_compose_mpma_errors(ledger_db, defaults, current_block_index):
+    """Test MPMA compose error cases."""
+    # Test MPMA limit exceeded
+    too_many_destinations = [defaults["addresses"][1]] * (config.MPMA_LIMIT + 1)
+    too_many_assets = ["XCP"] * (config.MPMA_LIMIT + 1)
+    too_many_quantities = [100000] * (config.MPMA_LIMIT + 1)
+
+    with pytest.raises(exceptions.ComposeError, match="mpma sends have a maximum of .* sends"):
+        send.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            too_many_destinations,
+            too_many_assets,
+            too_many_quantities,
+        )
+
+    # Test memo/memo_is_hex list length mismatch
+    with pytest.raises(
+        exceptions.ComposeError,
+        match="memo and memo_is_hex lists should have the same length",
+    ):
+        send.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            [defaults["addresses"][1], defaults["addresses"][2]],
+            ["XCP", "XCP"],
+            [100000, 100000],
+            memo=["memo1", "memo2"],
+            memo_is_hex=[False],  # Length mismatch
+        )
+
+    # Test memo list length != destination length
+    with pytest.raises(
+        exceptions.ComposeError,
+        match="memo/memo_is_hex lists should have the same length as sends",
+    ):
+        send.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            [defaults["addresses"][1], defaults["addresses"][2]],
+            ["XCP", "XCP"],
+            [100000, 100000],
+            memo=["memo1"],  # Only one memo for 2 destinations
+            memo_is_hex=[False],
+        )
+
+    # Test dict memo missing keys
+    with pytest.raises(
+        exceptions.ComposeError,
+        match='when specifying memo/memo_is_hex as a dict, they must contain keys "list" and "msg_wide"',
+    ):
+        send.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            [defaults["addresses"][1], defaults["addresses"][2]],
+            ["XCP", "XCP"],
+            [100000, 100000],
+            memo={"list": ["memo1", "memo2"]},  # Missing msg_wide
+            memo_is_hex={"list": [False, False], "msg_wide": False},
+        )
+
+    # Test dict memo list length mismatch
+    with pytest.raises(
+        exceptions.ComposeError,
+        match="length of memo.list and memo_is_hex.list must be equal",
+    ):
+        send.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            [defaults["addresses"][1], defaults["addresses"][2]],
+            ["XCP", "XCP"],
+            [100000, 100000],
+            memo={"list": ["memo1", "memo2"], "msg_wide": ""},
+            memo_is_hex={"list": [False], "msg_wide": False},  # Length mismatch
+        )
+
+    # Test dict memo list length != destination length
+    with pytest.raises(
+        exceptions.ComposeError,
+        match="length of memo.list/memo_is_hex.list must be equal to the amount of sends",
+    ):
+        send.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            [defaults["addresses"][1], defaults["addresses"][2]],
+            ["XCP", "XCP"],
+            [100000, 100000],
+            memo={"list": ["memo1"], "msg_wide": ""},  # Only one for 2 destinations
+            memo_is_hex={"list": [False], "msg_wide": False},
+        )
+
+    # Test destination/asset/quantity array length mismatch
+    with pytest.raises(
+        exceptions.ComposeError,
+        match="destination, asset and quantity arrays must have the same amount of elements",
+    ):
+        send.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            [defaults["addresses"][1], defaults["addresses"][2]],
+            ["XCP"],  # Only one asset for 2 destinations
+            [100000, 100000],
+        )
+
+
+def test_compose_mpma_valid_with_memo_list(ledger_db, defaults, current_block_index):
+    """Test valid MPMA compose with memo as list."""
+    result = send.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        [defaults["addresses"][1], defaults["addresses"][2]],
+        ["XCP", "XCP"],
+        [100000, 100000],
+        memo=["memo1", "memo2"],
+        memo_is_hex=[False, False],
+    )
+    assert result[0] == defaults["addresses"][0]
+    assert result[2] is not None
+
+
+def test_compose_mpma_valid_with_memo_dict(ledger_db, defaults, current_block_index):
+    """Test valid MPMA compose with memo as dict."""
+    result = send.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        [defaults["addresses"][1], defaults["addresses"][2]],
+        ["XCP", "XCP"],
+        [100000, 100000],
+        memo={"list": ["memo1", "memo2"], "msg_wide": "wide_memo"},
+        memo_is_hex={"list": [False, False], "msg_wide": False},
+    )
+    assert result[0] == defaults["addresses"][0]
+    assert result[2] is not None
+
+
+def test_compose_mpma_valid_with_wide_memo(ledger_db, defaults, current_block_index):
+    """Test valid MPMA compose with message-wide memo (case 3)."""
+    result = send.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        [defaults["addresses"][1], defaults["addresses"][2]],
+        ["XCP", "XCP"],
+        [100000, 100000],
+        memo="wide_memo",
+        memo_is_hex=False,
+    )
+    assert result[0] == defaults["addresses"][0]
+    assert result[2] is not None
 
 
 def test_parse_send1(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):

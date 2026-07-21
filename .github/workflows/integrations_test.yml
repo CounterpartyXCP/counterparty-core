@@ -3,6 +3,9 @@ name: Integrations Test
 on:
   push:
     branches: "**"
+  schedule:
+    # Run daily at 5:00 AM UTC to keep the integration cache fresh
+    - cron: '0 5 * * *'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -52,6 +55,7 @@ jobs:
           # rollback 3 checkpoints and catchup
           - name: Testnet4 Bootstrap And Catchup
             test-path: integrations/testnet4_test.py
+            integration_cache_network: testnet4
 
           - name: Testnet4 Start and Shutdown
             test-path: integrations/shutdown_test.py
@@ -64,6 +68,7 @@ jobs:
           # bootstrap, rollback and reparse,
           - name: Signet Bootstrap And Catchup
             test-path: integrations/signet_test.py
+            integration_cache_network: signet
 
           # Other tests
 
@@ -87,4 +92,5 @@ jobs:
       only_on_develop:  ${{ matrix.only_on_develop || false }}
       os: ${{ matrix.os || 'ubuntu-22.04' }}
       no_cov_report: ${{ matrix.no_cov_report || false }}
+      integration_cache_network: ${{ matrix.integration_cache_network || '' }}
     secrets: inherit

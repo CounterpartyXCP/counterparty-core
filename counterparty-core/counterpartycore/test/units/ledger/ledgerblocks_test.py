@@ -6,16 +6,16 @@ def test_blocks_functions(ledger_db, current_block_index):
     last_block = blocks.get_block(ledger_db, current_block_index)
     assert (
         last_block["block_hash"]
-        == "8bb22b9d86a16dc8231d3da9e1279cf75824876af6bcb26394b8d9bb67e35937"
+        == "d478c438aec59c5a9c2079f7320d41363f1c7702b8975e47204ff2865340cfb3"
     )
     assert last_block["block_index"] == current_block_index
     assert (
         last_block["ledger_hash"]
-        == "5e9a6d091e2e6d81b669f32eb1b8bcab1ab5cbe416dd7ddf1b19e4352181204a"
+        == "9f547b55042d971e96c2b89993c1bc535e105865a2a423a95e7720e7fe8efc32"
     )
     assert (
         last_block["txlist_hash"]
-        == "c9ae2c34029a5d4ae2e4574cc3617c3f5d2fa0c24710ea525386936e70f1511d"
+        == "e8f70d1c801d487862de1826a61d6aaaf3b4224ab32b92f788c2c4f6e429055c"
     )
 
     assert blocks.last_db_index(ledger_db) == current_block_index
@@ -23,28 +23,27 @@ def test_blocks_functions(ledger_db, current_block_index):
     last_block = blocks.get_block_by_hash(ledger_db, last_block["block_hash"])
     assert (
         last_block["block_hash"]
-        == "8bb22b9d86a16dc8231d3da9e1279cf75824876af6bcb26394b8d9bb67e35937"
+        == "d478c438aec59c5a9c2079f7320d41363f1c7702b8975e47204ff2865340cfb3"
     )
     assert last_block["block_index"] == current_block_index
     assert (
         last_block["ledger_hash"]
-        == "5e9a6d091e2e6d81b669f32eb1b8bcab1ab5cbe416dd7ddf1b19e4352181204a"
+        == "9f547b55042d971e96c2b89993c1bc535e105865a2a423a95e7720e7fe8efc32"
     )
     assert (
         last_block["txlist_hash"]
-        == "c9ae2c34029a5d4ae2e4574cc3617c3f5d2fa0c24710ea525386936e70f1511d"
+        == "e8f70d1c801d487862de1826a61d6aaaf3b4224ab32b92f788c2c4f6e429055c"
     )
 
     assert (
         blocks.get_block_hash(ledger_db, current_block_index)
-        == "8bb22b9d86a16dc8231d3da9e1279cf75824876af6bcb26394b8d9bb67e35937"
+        == "d478c438aec59c5a9c2079f7320d41363f1c7702b8975e47204ff2865340cfb3"
     )
     assert blocks.get_block_hash(ledger_db, 999999999999999) is None
     assert blocks.get_vouts(ledger_db, "hash") == []
 
     all_txs = blocks.get_transactions(ledger_db)
-    print(all_txs[0]["tx_hash"], all_txs[0]["tx_index"])
-    assert len(all_txs) == 68
+    assert len(all_txs) == 72
     assert (
         all_txs[0]["tx_hash"] == "5adde02c200e7959a453c2fc362e9baf20fe4ef3c8a37b9ce601be238ad4e6fa"
     )
@@ -57,6 +56,45 @@ def test_blocks_functions(ledger_db, current_block_index):
 
     assert blocks.get_transaction(ledger_db, all_txs[0]["tx_hash"]) == all_txs[0]
     assert blocks.get_transaction(ledger_db, "foobar") is None
+
+
+def test_get_last_block(ledger_db, current_block_index):
+    block = blocks.get_last_block(ledger_db)
+    assert block is not None
+    assert block["block_index"] == current_block_index
+
+
+def test_get_blocks_time(ledger_db, current_block_index):
+    result = blocks.get_blocks_time(ledger_db, [current_block_index])
+    assert current_block_index in result
+    assert isinstance(result[current_block_index], int)
+
+
+def test_get_blocks_time_empty(ledger_db):
+    result = blocks.get_blocks_time(ledger_db, [999999999])
+    assert result == {}
+
+
+def test_tx_index_of_none(ledger_db):
+    assert blocks.tx_index_of(ledger_db, None) is None
+
+
+def test_tx_index_of_found(ledger_db):
+    all_txs = blocks.get_transactions(ledger_db)
+    tx_hash = all_txs[0]["tx_hash"]
+    idx = blocks.tx_index_of(ledger_db, tx_hash)
+    assert idx == all_txs[0]["tx_index"]
+
+
+def test_tx_index_of_not_found(ledger_db):
+    assert blocks.tx_index_of(ledger_db, "a" * 64) is None
+
+
+def test_set_transaction_status(ledger_db):
+    all_txs = blocks.get_transactions(ledger_db)
+    tx_index = all_txs[0]["tx_index"]
+    blocks.set_transaction_status(ledger_db, tx_index, True)
+    blocks.set_transaction_status(ledger_db, tx_index, False)
 
 
 def test_no_blocks_table(empty_ledger_db):

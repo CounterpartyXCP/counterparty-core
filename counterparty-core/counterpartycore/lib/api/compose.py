@@ -5,15 +5,22 @@ from counterpartycore.lib import (
     backend,
     config,
     exceptions,
+    ledger,
     messages,
 )
 from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import gas
 from counterpartycore.lib.messages.attach import ID as UTXO_ID
-from counterpartycore.lib.parser import deserialize, gettxinfo, messagetype
+from counterpartycore.lib.parser import deserialize, gettxinfo, messagetype, p2sh
+from counterpartycore.lib.utils import script
 
 D = decimal.Decimal
+
+
+def _add_xcp_fee(result, xcp_fee):
+    result["xcp_fee"] = xcp_fee
+    return result
 
 
 def compose_bet(
@@ -180,7 +187,10 @@ def compose_dividend(
         "asset": asset,
         "dividend_asset": dividend_asset,
     }
-    return composer.compose_transaction(db, "dividend", params, construct_params)
+    return _add_xcp_fee(
+        composer.compose_transaction(db, "dividend", params, construct_params),
+        messages.dividend.get_estimate_xcp_fee(db, asset),
+    )
 
 
 def get_dividend_estimate_xcp_fee(db, address: str, asset: str):  # noqa # pylint: disable=W0613
@@ -265,7 +275,7 @@ def compose_mpma(
         if not quantity.isdigit():
             raise exceptions.ComposeError("Quantity must be an integer")
     quantity_list = [int(quantity) for quantity in quantity_list]
-    asset_dest_quant_list = list(zip(asset_list, destination_list, quantity_list))
+    asset_dest_quant_list = list(zip(asset_list, destination_list, quantity_list, strict=True))
 
     if memos:
         if not isinstance(memos, list):
@@ -305,7 +315,7 @@ def compose_order(
     :param give_quantity: The quantity of the asset that will be given (in satoshis, hence integer) (e.g. 1000)
     :param get_asset: The asset that will be received in the trade (e.g. $ASSET_1)
     :param get_quantity: The quantity of the asset that will be received (in satoshis, hence integer) (e.g. 1000)
-    :param expiration: The number of blocks for which the order should be valid (e.g. 100)
+    :param expiration: The number of blocks for which the order should be valid. Use 0 for indefinite (open until filled or cancelled). (e.g. 100)
     :param fee_required: The miners’ fee required to be paid by orders for them to match this one; in BTC; required only if buying BTC (may be zero, though) (e.g. 100)
     """
     params = {
@@ -374,7 +384,14 @@ def compose_dispense(
         "destination": dispenser,
         "quantity": quantity,
     }
-    return composer.compose_transaction(db, "dispense", params, construct_params)
+    result = composer.compose_transaction(db, "dispense", params, construct_params)
+    if "params" in result:
+        result["params"]["address"] = result["params"].pop("source")
+        result["params"]["dispenser"] = result["params"].pop("destination")
+        result["params"]["quantity_normalized"] = (
+            f"{D(result['params']['quantity']) / D(config.UNIT):.8f}"
+        )
+    return result
 
 
 def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **construct_params):
@@ -395,7 +412,10 @@ def compose_sweep(db, address: str, destination: str, flags: int, memo: str, **c
         "flags": flags,
         "memo": memo,
     }
-    return composer.compose_transaction(db, "sweep", params, construct_params)
+    return _add_xcp_fee(
+        composer.compose_transaction(db, "sweep", params, construct_params),
+        messages.sweep.get_total_fee(db, address, CurrentState().current_block_index(), flags),
+    )
 
 
 def get_sweep_estimate_xcp_fee(db, address: str):
@@ -414,6 +434,7 @@ def compose_fairminter(
     lot_price: int = 0,
     lot_size: int = 1,
     max_mint_per_tx: int = 0,
+    max_mint_per_address: int = 0,
     hard_cap: int = 0,
     premint_quantity: int = 0,
     start_block: int = 0,
@@ -427,6 +448,8 @@ def compose_fairminter(
     divisible: bool = True,
     description: str = "",
     mime_type: str = "",
+    pool_quantity: int = 0,
+    lp_asset: str = "",
     price: int = 0,
     quantity_by_price: int = 1,
     **construct_params,
@@ -439,6 +462,7 @@ def compose_fairminter(
     :param lot_price: Formerly `price`. The price in XCP of the asset to issue (e.g. 10)
     :param lot_size: Formerly `quantity_by_price`. The quantity of asset to mint per `price` paid
     :param max_mint_per_tx: Amount minted if price is equal to 0; otherwise, maximum amount of asset that can be minted in a single transaction; if 0, there is no limit
+    :param max_mint_per_address: Maximum amount of asset that can be minted by a single address; if 0, there is no limit
     :param hard_cap: The maximum amount of asset that can be minted; if 0 there is no limit
     :param premint_quantity: Amount of asset to be minted when the sale starts, if 0, no premint; preminted assets are sent to the source of the transaction
     :param start_block: The block at which the sale starts
@@ -452,6 +476,8 @@ def compose_fairminter(
     :param divisible: If True, the asset is divisible
     :param description: The description of the asset. Overrides the current description if the asset already exists.
     :param mime_type: The MIME type of the description. For binary MIME type, the `description` must be in hexadecimal format (default: text/plain).
+    :param pool_quantity: Amount of asset reserved for the AMM pool; paired with all raised XCP at soft cap resolution to create a TOKEN/XCP pool (LP tokens are permanently locked)
+    :param lp_asset: The numeric asset name to use for the pool's LP token (e.g. A95428956661682177); if empty and pool_quantity > 0, one is generated automatically
     :param price: alias for `lot_price`
     :param quantity_by_price: alias for `lot_size`
     """
@@ -465,6 +491,7 @@ def compose_fairminter(
         "price": price_arg,
         "quantity_by_price": quantity_by_price_arg,
         "max_mint_per_tx": max_mint_per_tx,
+        "max_mint_per_address": max_mint_per_address,
         "hard_cap": hard_cap,
         "premint_quantity": premint_quantity,
         "start_block": start_block,
@@ -478,6 +505,8 @@ def compose_fairminter(
         "divisible": divisible,
         "description": description,
         "mime_type": mime_type,
+        "pool_quantity": pool_quantity,
+        "lp_asset": lp_asset,
     }
     return composer.compose_transaction(db, "fairminter", params, construct_params)
 
@@ -491,6 +520,101 @@ def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construc
     """
     params = {"source": address, "asset": asset, "quantity": quantity}
     return composer.compose_transaction(db, "fairmint", params, construct_params)
+
+
+def compose_pooldeposit(
+    db,
+    address: str,
+    asset_a: str = None,
+    asset_b: str = None,
+    quantity_a: int = None,
+    quantity_b: int = None,
+    min_lp_quantity: int = 0,
+    lp_asset: str = None,
+    **construct_params,
+):
+    """
+    Composes a transaction to deposit liquidity into an AMM pool.
+    For the first deposit, both quantities set the initial price.
+    For subsequent deposits, quantities are maximums; only proportional amounts are debited.
+    Use the quote/deposit endpoint to get the current ratio before composing.
+    :param address: The address providing liquidity (e.g. $ADDRESS_1)
+    :param asset_a: The first asset in the pair (e.g. XCP)
+    :param asset_b: The second asset in the pair (e.g. POOLTEST)
+    :param quantity_a: The quantity of asset_a to deposit (in satoshis, hence integer) (e.g. 1000000)
+    :param quantity_b: The quantity of asset_b to deposit (in satoshis, hence integer) (e.g. 1000000)
+    :param min_lp_quantity: Minimum LP tokens to receive; reverts if slippage exceeds this (e.g. 0)
+    :param lp_asset: Optional LP asset name for first deposit; auto-generated if omitted
+    """
+    params = {
+        "source": address,
+        "asset_a": asset_a,
+        "asset_b": asset_b,
+        "quantity_a": quantity_a,
+        "quantity_b": quantity_b,
+        "min_lp_quantity": min_lp_quantity,
+        "lp_asset": lp_asset,
+    }
+    return _add_xcp_fee(
+        composer.compose_transaction(db, "pooldeposit", params, construct_params),
+        gas.get_transaction_fee(db, 120, CurrentState().current_block_index()),
+    )
+
+
+def get_pool_deposit_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
+    """
+    Returns the estimated XCP fee for a pool deposit transaction.
+    :param address: The address depositing liquidity (e.g. $ADDRESS_1)
+    """
+    return gas.get_transaction_fee(db, 120, CurrentState().current_block_index())
+
+
+def compose_poolwithdraw(
+    db,
+    address: str,
+    asset_a: str = None,
+    asset_b: str = None,
+    quantity: int = None,
+    min_quantity_a: int = 0,
+    min_quantity_b: int = 0,
+    lp_asset: str = None,
+    **construct_params,
+):
+    """
+    Composes a transaction to withdraw liquidity from an AMM pool.
+    :param address: The address withdrawing liquidity (e.g. $ADDRESS_1)
+    :param asset_a: The first asset in the pair (e.g. XCP)
+    :param asset_b: The second asset in the pair (e.g. POOLTEST)
+    :param quantity: The quantity of LP tokens to destroy (in satoshis, hence integer) (e.g. 1000000)
+    :param min_quantity_a: Minimum asset_a to receive; reverts if slippage exceeds this (e.g. 0)
+    :param min_quantity_b: Minimum asset_b to receive; reverts if slippage exceeds this (e.g. 0)
+    :param lp_asset: The LP token asset name (alternative to asset_a/asset_b)
+    """
+    if lp_asset and not asset_a and not asset_b:
+        pool = ledger.markets.get_pool_by_lp_asset(db, lp_asset)
+        if not pool:
+            raise exceptions.ComposeError(f"no pool found for LP asset {lp_asset}")
+        asset_a, asset_b = pool["asset_a"], pool["asset_b"]
+    params = {
+        "source": address,
+        "asset_a": asset_a,
+        "asset_b": asset_b,
+        "quantity": quantity,
+        "min_quantity_a": min_quantity_a,
+        "min_quantity_b": min_quantity_b,
+    }
+    return _add_xcp_fee(
+        composer.compose_transaction(db, "poolwithdraw", params, construct_params),
+        gas.get_transaction_fee(db, 121, CurrentState().current_block_index()),
+    )
+
+
+def get_pool_withdraw_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
+    """
+    Returns the estimated XCP fee for a pool withdrawal transaction.
+    :param address: The address withdrawing liquidity (e.g. $ADDRESS_1)
+    """
+    return gas.get_transaction_fee(db, 121, CurrentState().current_block_index())
 
 
 def compose_attach(
@@ -518,7 +642,10 @@ def compose_attach(
         "utxo_value": utxo_value,
         "destination_vout": destination_vout,
     }
-    return composer.compose_transaction(db, "attach", params, construct_params)
+    return _add_xcp_fee(
+        composer.compose_transaction(db, "attach", params, construct_params),
+        gas.get_transaction_fee(db, UTXO_ID, CurrentState().current_block_index()),
+    )
 
 
 def get_attach_estimate_xcp_fee(db, address: str = None):  # noqa  # pylint: disable=W0613
@@ -545,6 +672,40 @@ def compose_detach(
         "destination": destination,
     }
     return composer.compose_transaction(db, "detach", params, construct_params)
+
+
+def compose_detach_by_utxos(
+    db,
+    utxos: str,
+    destination: str = None,
+    **construct_params,
+):
+    """
+    Composes a transaction to detach assets from multiple UTXOs to an address.
+    :param utxos: A comma-separated list of UTXOs from which assets are detached (e.g. $UTXO_WITH_BALANCE)
+    :param destination: The address to detach the assets to, if not provided the address corresponding to each UTXO is used (e.g. $ADDRESS_1)
+    """
+    if construct_params.get("inputs_set") is not None:
+        raise exceptions.ComposeError("`utxos` cannot be combined with `inputs_set`")
+
+    parsed_utxos = composer.prepare_inputs_set(utxos)
+    source = f"{parsed_utxos[0]['txid']}:{parsed_utxos[0]['vout']}"
+    if construct_params.get("validate", True):
+        # pick a UTXO that actually holds assets as the source, so the detach
+        # composer's "no assets to detach" check passes. `get_utxo_balances`
+        # can return zero-quantity rows, hence the explicit `quantity > 0` check.
+        for parsed_utxo in parsed_utxos:
+            utxo_id = f"{parsed_utxo['txid']}:{parsed_utxo['vout']}"
+            utxo_balances = ledger.balances.get_utxo_balances(db, utxo_id)
+            if any(balance["quantity"] > 0 for balance in utxo_balances):
+                source = utxo_id
+                break
+
+    construct_params["inputs_set"] = utxos
+    construct_params["use_all_inputs_set"] = True
+    construct_params["use_utxos_with_balances"] = True
+
+    return compose_detach(db, source, destination, **construct_params)
 
 
 def compose_movetoutxo(db, utxo: str, destination: str, utxo_value: int = None, **construct_params):
@@ -574,6 +735,104 @@ def info_by_tx_hash(db, tx_hash: str):
     return info(db, rawtransaction)
 
 
+def _get_first_witness_stack(decoded_tx):
+    witness_stacks = decoded_tx.get("vtxinwit") or []
+    if len(witness_stacks) == 0:
+        return []
+    first_stack = witness_stacks[0]
+    if isinstance(first_stack, list | tuple):
+        return first_stack
+    return witness_stacks
+
+
+def _get_p2wpkh_source_from_witness(decoded_tx):
+    witness_stack = _get_first_witness_stack(decoded_tx)
+    if len(witness_stack) < 2:
+        return None
+
+    pubkey = witness_stack[-1]
+    if isinstance(pubkey, str):
+        try:
+            pubkey = binascii.unhexlify(pubkey)
+        except (binascii.Error, TypeError):
+            return None
+    if not isinstance(pubkey, bytes):
+        return None
+    if len(pubkey) not in (33, 65) or pubkey[0] not in (2, 3, 4):
+        return None
+
+    try:
+        return script.script_to_address(b"\x00\x14" + p2sh.hash160(pubkey))
+    except exceptions.DecodeError:
+        return None
+
+
+def _get_p2wpkh_source_from_script_sig(decoded_tx):
+    for vin in decoded_tx.get("vin", []):
+        script_sig = vin.get("script_sig")
+        if isinstance(script_sig, str):
+            try:
+                script_sig = binascii.unhexlify(script_sig)
+            except (binascii.Error, TypeError):
+                continue
+        if not isinstance(script_sig, bytes):
+            continue
+
+        if len(script_sig) == 22 and script_sig[0] == 0 and script_sig[1] == 20:
+            source_script = script_sig
+        elif (
+            len(script_sig) == 23
+            and script_sig[0] == 22
+            and script_sig[1] == 0
+            and script_sig[2] == 20
+        ):
+            source_script = script_sig[1:]
+        else:
+            continue
+
+        try:
+            return script.script_to_address(source_script)
+        except exceptions.DecodeError:
+            continue
+
+    return None
+
+
+def _get_p2wpkh_source_from_input(decoded_tx):
+    return _get_p2wpkh_source_from_script_sig(decoded_tx) or _get_p2wpkh_source_from_witness(
+        decoded_tx
+    )
+
+
+def _get_btc_only_info_from_decoded_tx(decoded_tx):
+    source = _get_p2wpkh_source_from_input(decoded_tx)
+    addressable_outputs = []
+
+    for vout in decoded_tx.get("vout", []):
+        script_pub_key = vout.get("script_pub_key")
+        if not script_pub_key:
+            continue
+        try:
+            address = script.script_to_address(script_pub_key)
+        except exceptions.DecodeError:
+            continue
+        addressable_outputs.append((address, vout.get("value")))
+
+    if len(addressable_outputs) == 0:
+        return source, None, None, None, None
+
+    payment_outputs = [
+        (address, value)
+        for address, value in addressable_outputs
+        if source is None or address != source
+    ]
+    if len(payment_outputs) == 0:
+        payment_outputs = addressable_outputs
+
+    destination, btc_amount = payment_outputs[0]
+    return source, destination, btc_amount, None, None
+
+
 def info(db, rawtransaction: str, block_index: int = None):
     """
     Returns Counterparty information from a raw transaction in hex format.
@@ -598,7 +857,7 @@ def info(db, rawtransaction: str, block_index: int = None):
             )
         )
     except exceptions.BitcoindRPCError:
-        source, destination, btc_amount, fee, data = None, None, None, None, None
+        source, destination, btc_amount, fee, data = _get_btc_only_info_from_decoded_tx(decoded_tx)
 
     result = {
         "source": source,
@@ -745,6 +1004,14 @@ def unpack(db, datahex: str, block_index: int = None):
         elif message_type_id == messages.detach.ID:
             message_type_name = "detach"
             message_data = messages.detach.unpack(message, return_dict=True)
+        # Pool Deposit
+        elif message_type_id == messages.pooldeposit.ID:
+            message_type_name = "pooldeposit"
+            message_data = messages.pooldeposit.unpack(db, message, return_dict=True)
+        # Pool Withdraw
+        elif message_type_id == messages.poolwithdraw.ID:
+            message_type_name = "poolwithdraw"
+            message_data = messages.poolwithdraw.unpack(db, message, return_dict=True)
     except (exceptions.UnpackError, UnicodeDecodeError) as e:
         message_data = {"error": str(e)}
 

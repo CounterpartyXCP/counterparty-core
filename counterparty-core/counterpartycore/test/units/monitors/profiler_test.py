@@ -1,6 +1,5 @@
 import os
 import shutil
-import sys
 import tempfile
 import time
 
@@ -56,45 +55,34 @@ class TestProfiler:
         assert profiler.profiler is None
         assert not profiler.active_profiling
         assert profiler.last_report_time is None
-
-        # Check Python version-specific behavior
-        if sys.version_info >= (3, 12):
-            assert profiler._is_supported is False
-        else:
-            assert profiler._is_supported is True
+        assert profiler._is_supported is True
 
     def test_profiler_start(self):
         """Test starting the profiler"""
-        # Skip test on Python 3.12+
-        if sys.version_info >= (3, 12):
-            return
-
         profiler = Profiler()
-        profiler.start()
-        assert profiler.profiler is not None
-        assert profiler.active_profiling
-        assert profiler.last_report_time is not None
+        try:
+            profiler.start()
+            assert profiler.profiler is not None
+            assert profiler.active_profiling
+            assert profiler.last_report_time is not None
+        finally:
+            profiler.stop()
 
     def test_profiler_start_already_active(self):
         """Test starting the profiler when it's already active"""
-        # Skip test on Python 3.12+
-        if sys.version_info >= (3, 12):
-            return
-
         profiler = Profiler()
-        profiler.start()
-        initial_time = profiler.last_report_time
-        time.sleep(0.1)  # Small delay
-        profiler.start()  # Call start again
-        # Should remain the same since we're already profiling
-        assert profiler.last_report_time == initial_time
+        try:
+            profiler.start()
+            initial_time = profiler.last_report_time
+            time.sleep(0.1)  # Small delay
+            profiler.start()  # Call start again
+            # Should remain the same since we're already profiling
+            assert profiler.last_report_time == initial_time
+        finally:
+            profiler.stop()
 
     def test_profiler_stop_and_save(self):
         """Test stopping and saving the profiler data"""
-        # Skip test on Python 3.12+
-        if sys.version_info >= (3, 12):
-            return
-
         # Ensure directory exists
         os.makedirs(config.CACHE_DIR, exist_ok=True)
 
@@ -134,41 +122,39 @@ class TestProfiler:
 
     def test_profiler_gen_profile_if_needed_not_elapsed(self):
         """Test generating profile when interval hasn't elapsed"""
-        # Skip test on Python 3.12+
-        if sys.version_info >= (3, 12):
-            return
-
         profiler = Profiler()
-        profiler.start()
         old_interval = config.PROFILE_INTERVAL_MINUTES
-        config.PROFILE_INTERVAL_MINUTES = 60  # Set to a large value
-        initial_time = profiler.last_report_time
-        profiler.gen_profile_if_needed()
-        # Nothing should change
-        assert profiler.last_report_time == initial_time
-        assert profiler.active_profiling
-        config.PROFILE_INTERVAL_MINUTES = old_interval  # Restore original value
+        try:
+            profiler.start()
+            config.PROFILE_INTERVAL_MINUTES = 60  # Set to a large value
+            initial_time = profiler.last_report_time
+            profiler.gen_profile_if_needed()
+            # Nothing should change
+            assert profiler.last_report_time == initial_time
+            assert profiler.active_profiling
+        finally:
+            config.PROFILE_INTERVAL_MINUTES = old_interval
+            profiler.stop()
 
     def test_profiler_gen_profile_if_needed_elapsed(self):
         """Test generating profile when interval has elapsed"""
-        # Skip test on Python 3.12+
-        if sys.version_info >= (3, 12):
-            return
-
         # Ensure directory exists
         os.makedirs(config.CACHE_DIR, exist_ok=True)
 
         profiler = Profiler()
-        profiler.start()
-        time.sleep(0.1)  # Ensure we exceed the interval
-        initial_time = profiler.last_report_time
+        try:
+            profiler.start()
+            time.sleep(0.1)  # Ensure we exceed the interval
+            initial_time = profiler.last_report_time
 
-        # Execute the function
-        profiler.gen_profile_if_needed()
+            # Execute the function
+            profiler.gen_profile_if_needed()
 
-        # Should have restarted profiling
-        assert profiler.last_report_time > initial_time
-        assert profiler.active_profiling
+            # Should have restarted profiling
+            assert profiler.last_report_time > initial_time
+            assert profiler.active_profiling
+        finally:
+            profiler.stop()
 
         # Check if profile files exist
         files = [
@@ -182,10 +168,6 @@ class TestProfiler:
 
     def test_profiler_stop(self):
         """Test completely stopping the profiler"""
-        # Skip test on Python 3.12+
-        if sys.version_info >= (3, 12):
-            return
-
         # Ensure directory exists
         os.makedirs(config.CACHE_DIR, exist_ok=True)
 
@@ -215,17 +197,14 @@ class TestProfiler:
         assert not profiler.active_profiling
         assert profiler.profiler is None
 
-    def test_py312_compatibility(self):
-        """Test that profiler gracefully handles Python 3.12+ environments"""
-        if sys.version_info >= (3, 12):
-            profiler = Profiler()
-            # Should be disabled on Python 3.12+
-            assert profiler._is_supported is False
+    def test_profiler_enabled_on_current_python(self):
+        """Test that the profiler runs on the supported Python runtime."""
+        profiler = Profiler()
+        assert profiler._is_supported is True
 
-            # All operations should be no-ops
+        try:
             profiler.start()
-            assert profiler.active_profiling is False
-
-            profiler.stop_and_save()  # Should not raise exceptions
-            profiler.gen_profile_if_needed()  # Should not raise exceptions
-            profiler.stop()  # Should not raise exceptions
+            assert profiler.active_profiling is True
+        finally:
+            profiler.stop()
+        assert profiler.active_profiling is False

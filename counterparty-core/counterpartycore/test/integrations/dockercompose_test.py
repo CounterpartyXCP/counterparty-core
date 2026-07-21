@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import tempfile
@@ -23,8 +24,6 @@ def print_docker_output(out, printed_line_count):
 
 
 def rpc_call(url, method, params):
-    import json
-
     headers = {"content-type": "application/json"}
     payload = {
         "method": method,
@@ -41,8 +40,9 @@ def rpc_call(url, method, params):
 
 
 def test_docker_compose():
+    print(f"config.VERSION_STRING: {config.VERSION_STRING}")
     sh.docker("system", "prune", "--all", "--force", _out=sys.stdout, _err_to_out=True)
-
+    print("pruned")
     try:
         TMP_DIR = tempfile.gettempdir()
         DATA_DIR = os.path.join(TMP_DIR, "counterparty-docker-data")
@@ -56,7 +56,7 @@ def test_docker_compose():
             docker_compose_file = f.read()
         docker_compose_file = docker_compose_file.replace(
             f"image: counterparty/counterparty:v{config.VERSION_STRING}",
-            "image: counterparty/counterparty:v10.9.1",
+            "image: counterparty/counterparty:v11.0.4",
         )
         with open(os.path.join(BASE_DIR, "docker-compose-test.yml"), "w") as f:
             f.write(docker_compose_file)
@@ -78,7 +78,7 @@ def test_docker_compose():
         start_time = time.time()
         while True:
             printed_line_count, printed_line = print_docker_output(out, printed_line_count)
-            if "Ledger.Main - Watching for new blocks..." in printed_line:
+            if "Ledger.CounterpartyServer - Watching for new blocks..." in printed_line:
                 result = requests.get("http://localhost:24000/v2/", timeout=30).json()
                 print(result)
                 assert result["result"]["server_ready"]

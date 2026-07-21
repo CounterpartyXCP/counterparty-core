@@ -1,12 +1,13 @@
 import pytest
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.ledger import caches, events
+from counterpartycore.lib.utils import database
 
 
 def test_events_functions(ledger_db, defaults):
     result = events.last_message(ledger_db)
-    assert result["block_index"] == 1931
-    assert result["message_index"] == 4020
+    assert result["block_index"] == 1934
+    assert result["message_index"] == 4052
     assert result["event"] == "BLOCK_PARSED"
 
     assert events.debit(ledger_db, defaults["addresses"][0], "XCP", 1, 0) is None
@@ -37,6 +38,11 @@ def test_events_functions(ledger_db, defaults):
 
 def test_insert_record(ledger_db, defaults):
     caches.AssetCache(ledger_db)
+    # Register the synthetic asset so its compact asset_index resolves
+    # (destructions.asset is the integer asset_index FK, not the name).
+    ledger_db.execute(
+        "INSERT OR IGNORE INTO assets (asset_id, asset_name) VALUES ('999999999', 'foobar')"
+    )
     events.insert_record(
         ledger_db,
         "destructions",
@@ -48,14 +54,18 @@ def test_insert_record(ledger_db, defaults):
         "ASSET_DESTRUCTION",
         event_info={"key": "value"},
     )
-    last_record = ledger_db.execute("SELECT * FROM destructions WHERE asset = 'foobar'").fetchone()
+    last_record = ledger_db.execute(
+        "SELECT * FROM destructions WHERE asset = (SELECT asset_index FROM assets WHERE asset_name = 'foobar')"
+    ).fetchone()
     assert last_record["asset"] == "foobar"
 
 
 def get_utxo(ledger_db, address):
+    # ``utxo_address`` is the compact ``address_id`` FK; resolve the address
+    # string to its id before filtering.
     return ledger_db.execute(
         "SELECT * FROM balances WHERE utxo_address = ? AND quantity > 0",
-        (address,),
+        (database.address_index_from_name(ledger_db, address),),
     ).fetchone()
 
 
@@ -155,32 +165,37 @@ def test_replay_events(ledger_db, defaults):
             f'{{"address":"{defaults["addresses"][0]}","asset":"XCP","block_index":308509,"calling_function":"recredit wager","event":"5f206584e5198c593b273cb91543ab26143b4e70f4f5d96f6c6e2c35f9835f8e_1a3748c324d1ade4ecfcc6950278ece8c35f3225740c38ce0eab3ecbfaa0960b","quantity":100000000,"tx_index":20273}}',
         ],
     ]
+    # ``address``/``source`` are now the compact ``address_id`` FK; resolve the
+    # address string before filtering.
+    addr_id = database.address_index_from_name(ledger_db, defaults["addresses"][0])
     debits_before = ledger_db.execute(
         "SELECT COUNT(*) AS count FROM debits WHERE address = ? and action = ?",
-        (defaults["addresses"][0], "open RPS"),
+        (addr_id, "open RPS"),
     ).fetchone()["count"]
     credits_before = ledger_db.execute(
         "SELECT COUNT(*) AS count FROM credits WHERE address = ? and calling_function = ?",
-        (defaults["addresses"][0], "recredit wager"),
+        (addr_id, "recredit wager"),
     ).fetchone()["count"]
     rps_before = ledger_db.execute(
         "SELECT COUNT(*) AS count FROM rps WHERE source = ? and status = ?",
-        (defaults["addresses"][0], "matched"),
+        (addr_id, "matched"),
     ).fetchone()["count"]
 
     events.replay_events(ledger_db, rps_events)
 
+    # re-resolve: replay may have created the address row for the first time
+    addr_id = database.address_index_from_name(ledger_db, defaults["addresses"][0])
     debits_after = ledger_db.execute(
         "SELECT COUNT(*) AS count FROM debits WHERE address = ? and action = ?",
-        (defaults["addresses"][0], "open RPS"),
+        (addr_id, "open RPS"),
     ).fetchone()["count"]
     credits_after = ledger_db.execute(
         "SELECT COUNT(*) AS count FROM credits WHERE address = ? and calling_function = ?",
-        (defaults["addresses"][0], "recredit wager"),
+        (addr_id, "recredit wager"),
     ).fetchone()["count"]
     rps_after = ledger_db.execute(
         "SELECT COUNT(*) AS count FROM rps WHERE source = ? and status = ?",
-        (defaults["addresses"][0], "matched"),
+        (addr_id, "matched"),
     ).fetchone()["count"]
 
     assert debits_before + 1 == debits_after

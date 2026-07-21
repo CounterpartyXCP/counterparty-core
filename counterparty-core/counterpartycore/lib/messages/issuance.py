@@ -130,20 +130,21 @@ def validate(
             (not protocol.enabled("cip03", block_index)) or (not reset)
         ):
             problems.append("cannot change divisibility")
-        if (not protocol.enabled("issuance_callability_parameters_removal", block_index)) and bool(
-            last_issuance["callable"]
-        ) != bool(callable_):
-            problems.append("cannot change callability")
-        if last_issuance["call_date"] > call_date and (
-            call_date != 0
-            or (
-                not protocol.enabled("default_values_for_callable")
-                and not protocol.is_test_network()
-            )
-        ):
-            problems.append("cannot advance call date")
-        if last_issuance["call_price"] > call_price:
-            problems.append("cannot reduce call price")
+        if not protocol.enabled("issuance_callable_lock_fix", block_index):
+            if (
+                not protocol.enabled("issuance_callability_parameters_removal", block_index)
+            ) and bool(last_issuance["callable"]) != bool(callable_):
+                problems.append("cannot change callability")
+            if last_issuance["call_date"] > call_date and (
+                call_date != 0
+                or (
+                    not protocol.enabled("default_values_for_callable")
+                    and not protocol.is_test_network()
+                )
+            ):
+                problems.append("cannot advance call date")
+            if last_issuance["call_price"] > call_price:
+                problems.append("cannot reduce call price")
         if issuance_locked and quantity:
             problems.append("locked asset and non‐zero quantity")
         if issuance_locked and reset:
@@ -164,6 +165,10 @@ def validate(
         #    problems.append('cannot transfer a non‐existent asset')
         if reset:
             problems.append("cannot reset a non existent asset")
+        if protocol.enabled(
+            "fairmint_pool", block_index=block_index
+        ) and ledger.issuances.get_active_fairminter_by_lp_asset(db, asset):
+            problems.append(f"{asset} is earmarked by an active fairminter")
 
     # validate parent ownership for subasset
     if subasset_longname is not None and not reissuance:
@@ -188,17 +193,18 @@ def validate(
             problems.append("a subasset must be a numeric asset")
 
     # Check for existence of fee funds.
-    if quantity or protocol.enabled("pay_only_first_issuance"):  # Protocol change.
+    if quantity or protocol.enabled("pay_only_first_issuance", block_index=block_index):
         if not reissuance or (
-            not protocol.enabled("enable_rematch") and not protocol.is_test_network()
+            not protocol.enabled("enable_rematch", block_index=block_index)
+            and not protocol.is_test_network()
         ):  # Pay fee only upon first issuance. (Protocol change.)
             cursor = db.cursor()
             balance = ledger.balances.get_balance(db, source, config.XCP)
             cursor.close()
-            if protocol.enabled("numeric_asset_names"):  # Protocol change.
+            if protocol.enabled("numeric_asset_names", block_index=block_index):
                 if subasset_longname is not None and protocol.enabled(
-                    "subassets"
-                ):  # Protocol change.
+                    "subassets", block_index=block_index
+                ):
                     if protocol.enabled("free_subassets", block_index):
                         fee = 0
                     else:
@@ -208,11 +214,11 @@ def validate(
                     fee = 0
                 else:
                     fee = int(0.5 * config.UNIT)
-            elif protocol.enabled("issuance_fee_update_3"):  # Protocol change.
+            elif protocol.enabled("issuance_fee_update_3", block_index=block_index):
                 fee = int(0.5 * config.UNIT)
-            elif protocol.enabled("issuance_fee_update_2"):  # Protocol change.
+            elif protocol.enabled("issuance_fee_update_2", block_index=block_index):
                 fee = 5 * config.UNIT
-            elif protocol.enabled("issuance_fee_update_1"):  # Protocol change.
+            elif protocol.enabled("issuance_fee_update_1", block_index=block_index):
                 fee = 5
             if fee and (balance < fee):
                 problems.append("insufficient funds")
@@ -254,8 +260,8 @@ def validate(
     ):
         problems.append("integer overflow")
 
-    if protocol.enabled("taproot_support") and description is not None:
-        problems += helpers.check_content(mime_type, description)
+    if protocol.enabled("taproot_support", block_index=block_index) and description is not None:
+        problems += helpers.check_content(mime_type, description, block_index=block_index)
 
     return (
         call_date,
@@ -658,19 +664,38 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                         description,
                     ) = cbor2.loads(message)
                     subasset_longname = assetnames.expand_subasset_longname(
-                        compacted_subasset_longname
+                        compacted_subasset_longname, block_index=block_index
                     )
                 else:
                     raise exceptions.UnpackError("Invalid message type ID")
 
                 mime_type = mime_type or "text/plain"
                 if description is not None:
-                    description = helpers.bytes_to_content(description, mime_type)
+                    description = helpers.bytes_to_content(
+                        description, mime_type, block_index=block_index
+                    )
                 callable_, call_date, call_price = False, 0, 0.0
 
                 unpacked = True
             except Exception:  # pylint: disable=broad-exception-caught
                 unpacked = False  # Fallback to legacy unpacking
+
+            # CBOR canonical-form guard: distinct compacted byte strings can
+            # expand to the same longname (leading zero pad, or the phantom '!'
+            # digit when an intermediate integer is divisible by 68). Without
+            # canonicalization an attacker mints subassets under a rendering
+            # they didn't honestly compose. Run AFTER the inner try so the
+            # raise is NOT swallowed by the broad-except fallback to legacy
+            # parsing -- propagate to the outer (exceptions.UnpackError, ...)
+            # handler at the function scope, which marks the record invalid.
+            if (
+                unpacked
+                and message_type_id in [SUBASSET_ID, LR_SUBASSET_ID]
+                and protocol.enabled("canonical_subasset_compact", block_index=block_index)
+                and assetnames.compact_subasset_longname(subasset_longname)
+                != compacted_subasset_longname
+            ):
+                raise exceptions.UnpackError("non-canonical compacted subasset longname")
 
         if not unpacked:
             if message_type_id in [LR_SUBASSET_ID, SUBASSET_ID]:
@@ -718,7 +743,9 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
                                 description = None
                         except UnicodeDecodeError:
                             description = ""
-                subasset_longname = assetnames.expand_subasset_longname(compacted_subasset_longname)
+                subasset_longname = assetnames.expand_subasset_longname(
+                    compacted_subasset_longname, block_index=block_index
+                )
                 callable_, call_date, call_price = False, 0, 0.0
 
             elif (
@@ -841,6 +868,44 @@ def unpack(db, message, message_type_id, block_index, return_dict=False):
             None,
         )
         status = "invalid: could not unpack"
+    except (
+        exceptions.AssetNameError,
+        struct.error,
+        TypeError,
+        ValueError,
+        OverflowError,
+    ) as e:
+        if not protocol.enabled("issuance_safe_unpack", block_index=block_index):
+            raise
+        logger.warning("unpack error: %s", e)
+        (
+            asset_id,
+            asset,
+            subasset_longname,
+            quantity,
+            divisible,
+            lock,
+            reset,
+            callable_,
+            call_date,
+            call_price,
+            description,
+            mime_type,
+        ) = (
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+        status = "invalid: could not unpack"
 
     if return_dict:
         return {
@@ -918,42 +983,52 @@ def parse(db, tx, message, message_type_id):
     reissuance = None
     fee = 0
     if status == "valid":
-        (  # pylint: disable=unbalanced-tuple-unpacking
-            call_date,
-            call_price,
-            problems,
-            fee,
-            description,
-            divisible,
-            lock,
-            reset,
-            reissuance,
-            reissued_asset_longname,
-        ) = validate(
-            db,
-            tx["source"],
-            asset,
-            quantity,
-            divisible,
-            lock,
-            reset,
-            callable_,
-            call_date,
-            call_price,
-            description,
-            subasset_parent,
-            subasset_longname,
-            block_index=tx["block_index"],
-            mime_type=mime_type,
-        )
+        try:
+            (  # pylint: disable=unbalanced-tuple-unpacking
+                call_date,
+                call_price,
+                problems,
+                fee,
+                description,
+                divisible,
+                lock,
+                reset,
+                reissuance,
+                reissued_asset_longname,
+            ) = validate(
+                db,
+                tx["source"],
+                asset,
+                quantity,
+                divisible,
+                lock,
+                reset,
+                callable_,
+                call_date,
+                call_price,
+                description,
+                subasset_parent,
+                subasset_longname,
+                block_index=tx["block_index"],
+                mime_type=mime_type,
+            )
 
-        if problems:
-            status = "invalid: " + "; ".join(problems)
-        if (
-            not protocol.enabled("integer_overflow_fix", block_index=tx["block_index"])
-            and "total quantity overflow" in problems
-        ):
-            quantity = 0
+            if problems:
+                status = "invalid: " + "; ".join(problems)
+            if (
+                not protocol.enabled("integer_overflow_fix", block_index=tx["block_index"])
+                and "total quantity overflow" in problems
+            ):
+                quantity = 0
+        except (TypeError, ValueError, OverflowError, AssertionError) as e:
+            if not protocol.enabled("issuance_safe_validate", block_index=tx["block_index"]):
+                raise
+            # CBOR-encoded messages (from hand-rolled txs) can carry values of
+            # unexpected types or arities that cause validate() or downstream
+            # comparisons to raise. Mark the tx invalid rather than halting.
+            logger.warning("issuance validate error on tx %s: %s", tx["tx_hash"], e)
+            status = "invalid: validation error"
+            problems = [str(e)]
 
     # Reset?
     if (status == "valid") and reset and protocol.enabled("cip03", tx["block_index"]):
@@ -1099,23 +1174,36 @@ def parse(db, tx, message, message_type_id):
         if reissuance and quantity > 0:
             asset_events.append("reissuance")
 
+        # Clamp numeric fields to SQLite's signed-64-bit INTEGER range so that
+        # inserting an invalid-status record with attacker-supplied huge values
+        # (e.g., from CBOR) does not raise OverflowError.
+        def _clamp(v):
+            if isinstance(v, int) and (v > config.MAX_INT or v < -(config.MAX_INT)):
+                return None
+            return v
+
+        safe_quantity = _clamp(quantity)
+        safe_call_date = _clamp(call_date)
+        safe_call_price = _clamp(call_price) if isinstance(call_price, int) else call_price
+        safe_fee = _clamp(fee)
+
         # Add parsed transaction to message-type–specific table.
         bindings = {
             "tx_index": tx["tx_index"],
             "tx_hash": tx["tx_hash"],
             "block_index": tx["block_index"],
             "asset": asset,
-            "quantity": quantity,
+            "quantity": safe_quantity,
             "divisible": divisible,
             "source": tx["source"],
             "issuer": issuer,
             "transfer": transfer,
             "callable": callable_,
-            "call_date": call_date,
-            "call_price": call_price,
+            "call_date": safe_call_date,
+            "call_price": safe_call_price,
             "description": description,
             "mime_type": mime_type,
-            "fee_paid": fee,
+            "fee_paid": safe_fee,
             "locked": lock,
             "description_locked": description_locked,
             "reset": reset,
@@ -1128,6 +1216,26 @@ def parse(db, tx, message, message_type_id):
         if "cannot issue during fair minting" in status:
             bindings["fair_minting"] = True
         if "integer overflow" not in status:
+            # Final safety clamp: any remaining int that exceeds SQLite's signed
+            # 64-bit range would raise OverflowError inside insert_record. This
+            # happens in practice when CBOR-encoded hand-rolled txs supply huge
+            # values that flow through validate() into the invalid-record bindings.
+            for _k, _v in list(bindings.items()):
+                if isinstance(_v, int) and (_v > config.MAX_INT or _v < -config.MAX_INT):
+                    bindings[_k] = None
+            # Intern the asset name so the compact ``issuances.asset`` FK resolves
+            # even for INVALID issuances. Valid creations register the asset via
+            # the ASSET_CREATION event above, and reissuances reuse the existing
+            # row, but an invalid issuance (e.g. "insufficient funds") created no
+            # ``assets`` row -- its FK would store NULL. Legacy kept the raw name,
+            # so ``COUNT(DISTINCT asset)`` (get_issuances_count -> the sweep
+            # antispam fee) must still count invalid-only assets; a NULL is
+            # skipped by COUNT(DISTINCT) and forks the ledger (block 850500).
+            # DB-only + idempotent (INSERT OR IGNORE): emits no journal/event, so
+            # the consensus message stream is unchanged; longname stays NULL so
+            # get_assets_by_longname keeps matching legacy.
+            if asset is not None and asset_id is not None:
+                ledger.events.ensure_asset(db, asset_id, asset, tx["block_index"], None)
             ledger.events.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
 
         logger.info(

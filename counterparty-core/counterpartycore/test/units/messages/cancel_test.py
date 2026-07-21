@@ -6,8 +6,8 @@ from counterpartycore.lib.messages import cancel
 def get_open_order(ledger_db):
     return ledger_db.execute(
         """
-            SELECT * FROM 
-                (SELECT tx_hash, status, source, MAX(rowid) FROM orders GROUP BY tx_hash) 
+            SELECT * FROM
+                (SELECT tx_hash, status, source, MAX(rowid) FROM orders GROUP BY tx_hash)
             WHERE status='open' ORDER BY tx_hash DESC LIMIT 1
         """
     ).fetchone()
@@ -29,12 +29,39 @@ def test_compose(ledger_db, defaults):
         cancel.compose(ledger_db, "addresses", open_order["tx_hash"])
 
     closed_bet = ledger_db.execute(
-        "SELECT * FROM bets WHERE source = ? ORDER BY rowid DESC LIMIT 1",
+        "SELECT * FROM bets WHERE source = (SELECT address_id FROM address_list WHERE address = ?) "
+        "ORDER BY rowid DESC LIMIT 1",
         (defaults["addresses"][1],),
     ).fetchone()
 
     with pytest.raises(exceptions.ComposeError, match="offer not open"):
         cancel.compose(ledger_db, closed_bet["source"], closed_bet["tx_hash"])
+
+
+def test_compose_rejects_invalid_offer_hash_with_skip_validation(ledger_db, defaults):
+    # With skip_validation=True the validate() checks are bypassed, so a
+    # malformed offer_hash would reach binascii.unhexlify and leak a
+    # binascii.Error. It must surface as a clean ComposeError instead.
+    with pytest.raises(exceptions.ComposeError, match="invalid offer hash"):
+        cancel.compose(ledger_db, defaults["addresses"][0], "not-hex", skip_validation=True)
+
+    with pytest.raises(exceptions.ComposeError, match="invalid offer hash"):
+        cancel.compose(ledger_db, defaults["addresses"][0], "z" * 64, skip_validation=True)
+
+
+def test_unpack_invalid_length():
+    offer_hash, status = cancel.unpack(b"short")
+    assert offer_hash is None
+    assert status == "invalid: could not unpack"
+
+    offer_hash, status = cancel.unpack(b"")
+    assert offer_hash is None
+    assert status == "invalid: could not unpack"
+
+
+def test_unpack_return_dict():
+    result = cancel.unpack(b"short", return_dict=True)
+    assert result == {"offer_hash": None, "status": "invalid: could not unpack"}
 
 
 def test_parse_cancel_order(ledger_db, blockchain_mock, test_helpers, current_block_index):

@@ -6,12 +6,13 @@ import traceback
 from multiprocessing import Value
 
 import pytest
+from _pytest.monkeypatch import MonkeyPatch
 from bitcoinutils.keys import PublicKey
 from counterpartycore.lib import backend, config, exceptions, parser
 from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import blocks, check, deserialize
-from counterpartycore.lib.utils import helpers, multisig, opcodes, script
+from counterpartycore.lib.utils import hashcodec, helpers, multisig, opcodes, script
 
 from ..fixtures.defaults import DEFAULT_PARAMS
 
@@ -53,13 +54,22 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
         ]
 
     def get_vin_info(self, vin):
-        if vin["hash"] == "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff":
+        if vin["hash"] in self.source_by_txid:
+            source = self.source_by_txid[vin["hash"]]
+        elif vin["hash"] == "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff":
             source = self.source_by_txid[list(self.source_by_txid.keys())[0]]
         else:
-            source = self.source_by_txid[vin["hash"]]
+            raise KeyError(f"txid not found: {vin['hash']}")
         value = int(10 * config.UNIT)
+
+        construct_params = {}
+        if multisig.is_multisig(source):
+            _signatures_required, addresses, _signatures_possible = multisig.extract_array(source)
+            pubkeys = [DEFAULT_PARAMS["pubkey"][addr] for addr in addresses]
+            construct_params["pubkeys"] = ",".join(pubkeys)
+
         script_pub_key = composer.address_to_script_pub_key(
-            source, network=config.NETWORK_NAME
+            source, construct_params=construct_params, network=config.NETWORK_NAME
         ).to_hex()
         is_segwit = composer.is_segwit_output(script_pub_key)
         return value, script_pub_key, is_segwit
@@ -105,14 +115,21 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
         use_first_tx=False,
         fee=2000,
         data=None,
+        transaction_type=None,
     ):
         # we take an existing tx to avoid foreign key constraint errors
         cursor = ledger_db.cursor()
-        tx = cursor.execute(
-            f"SELECT * FROM transactions WHERE source = ? ORDER BY rowid {'ASC' if use_first_tx else 'DESC'} LIMIT 1",  # noqa S608
-            (source,),
-        ).fetchone()
-        print(tx)
+        # ``transactions.source`` is the compact ``address_id`` FK after the
+        # address-normalization migration; resolve the address string to its id.
+        if transaction_type is not None:
+            sql = "SELECT * FROM transactions WHERE source = (SELECT address_id FROM address_list WHERE address = ?) AND transaction_type = ? ORDER BY rowid DESC LIMIT 1"
+            tx = cursor.execute(sql, (source, transaction_type)).fetchone()
+        else:
+            tx = cursor.execute(
+                f"SELECT * FROM transactions WHERE source = (SELECT address_id FROM address_list WHERE address = ?) ORDER BY rowid {'ASC' if use_first_tx else 'DESC'} LIMIT 1",  # noqa S608
+                (source,),
+            ).fetchone()
+
         if tx is None:
             tx = cursor.execute("SELECT * FROM transactions ORDER BY rowid DESC LIMIT 1").fetchone()
 
@@ -182,7 +199,8 @@ def sendrawtransaction(db, rawtransaction):
     mine_block(db, [decoded_tx])
     cursor = db.cursor()
     transaction = cursor.execute(
-        "SELECT * FROM transactions WHERE tx_hash = ?", (decoded_tx["tx_id"],)
+        "SELECT * FROM transactions WHERE tx_hash = ?",
+        (hashcodec.hash_to_db(decoded_tx["tx_id"]),),
     ).fetchone()
     assert transaction is not None
 
@@ -203,8 +221,6 @@ def search_pubkey(source, tx_hashes):
 
 @pytest.fixture(scope="session")
 def monkeymodule():
-    from _pytest.monkeypatch import MonkeyPatch
-
     mpatch = MonkeyPatch()
     yield mpatch
     mpatch.undo()

@@ -45,12 +45,20 @@ def validate(db, source, offer_hash):
 
 
 def compose(db, source: str, offer_hash: str, skip_validation: bool = False):
-    # Check that offer exists.
     _offer, _offer_type, problems = validate(db, source, offer_hash)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
 
-    offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, "utf-8"))
+    # API/compose path only: surface a malformed offer_hash as a clean
+    # ComposeError instead of leaking a binascii.Error. Reachable e.g. with
+    # skip_validation=True, which bypasses the validate() checks above.
+    if not isinstance(offer_hash, str) or len(offer_hash) != 64:
+        raise exceptions.ComposeError(["invalid offer hash"])
+    try:
+        offer_hash_bytes = binascii.unhexlify(bytes(offer_hash, "utf-8"))
+    except binascii.Error as exc:
+        raise exceptions.ComposeError(["invalid offer hash"]) from exc
+
     data = messagetype.pack(ID)
     data += struct.pack(FORMAT, offer_hash_bytes)
     return (source, [], data)
@@ -75,10 +83,9 @@ def unpack(message, return_dict=False):
 
 
 def parse(db, tx, message):
-    cursor = db.cursor()
-
     # Unpack message.
     offer_hash, status = unpack(message)
+    offer_type = None
 
     if status == "valid":
         offer, offer_type, problems = validate(db, tx["source"], offer_hash)
@@ -113,8 +120,6 @@ def parse(db, tx, message):
         "offer_type": offer_type.capitalize() if offer_type else "Invalid",
     }
     logger.info("Cancel %(offer_type)s %(offer_hash)s (%(tx_hash)s) [%(status)s]", log_data)
-
-    cursor.close()
 
     ledger.blocks.set_transaction_status(
         db,

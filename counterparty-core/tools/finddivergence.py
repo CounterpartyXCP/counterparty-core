@@ -15,7 +15,7 @@ START_BLOCK = 872150
 def compare_strings(string1, string2):
     """Compare strings diff-style."""
     diff = list(difflib.unified_diff(string1.splitlines(1), string2.splitlines(1), n=0))
-    if len(diff):
+    if diff:
         print("\nDifferences:")
         print("\n".join(diff))
     return len(diff)

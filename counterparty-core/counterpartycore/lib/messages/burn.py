@@ -45,6 +45,28 @@ def validate(destination, quantity, block_index):
     return problems
 
 
+def calculate_earned_quantity(burned: int, block_index: int) -> int:
+    """Return quantity of XCP earned for the given burn."""
+
+    burn_start = config.BURN_START
+    calculation_burn_end = config.BURN_END
+    if config.TESTNET3:
+        calculation_burn_end = config.OLD_BURN_END_TESTNET3
+
+    total_time = calculation_burn_end - burn_start
+    if total_time <= 0:
+        return round(burned * 1000)
+
+    # On testnet3 multipliers freeze at the legacy cutoff so late burns stay constant.
+    if block_index >= calculation_burn_end:
+        multiplier = 1000
+    else:
+        partial_time = calculation_burn_end - block_index
+        multiplier = 1000 + (500 * Fraction(partial_time, total_time))
+
+    return round(burned * multiplier)
+
+
 def compose(db, source: str, quantity: int, overburn: bool = False, skip_validation: bool = False):
     cursor = db.cursor()
     destination = config.UNSPENDABLE
@@ -95,10 +117,7 @@ def parse(db, tx):
             else:
                 burned = sent
 
-            total_time = config.BURN_END - config.BURN_START
-            partial_time = config.BURN_END - tx["block_index"]
-            multiplier = 1000 + (500 * Fraction(partial_time, total_time))
-            earned = round(burned * multiplier)
+            earned = calculate_earned_quantity(burned, tx["block_index"])
 
             # Credit source address with earned XCP.
             ledger.events.credit(

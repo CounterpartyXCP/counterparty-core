@@ -98,6 +98,15 @@ CONFIG_ARGS = [
             "help": "limit api calls to the set results (defaults to 1000). Setting to 0 removes the limit.",
         },
     ],
+    [
+        ("--api-max-backend-rpc-calls",),
+        {
+            "type": int,
+            "default": 1000,
+            "help": "max Bitcoin backend RPC calls a single API request may trigger before "
+            "it is rejected with a 400 (defaults to 1000). Setting to 0 removes the limit.",
+        },
+    ],
     [("--backend-name",), {"default": "addrindex", "help": "the backend name to connect to"}],
     [
         ("--backend-connect",),
@@ -147,6 +156,13 @@ CONFIG_ARGS = [
             "type": float_range(3.0),
             "default": 3.0,
             "help": "poll interval, in seconds. Minimum 3.0. (default: 3.0)",
+        },
+    ],
+    [
+        ("--backend-api-key",),
+        {
+            "default": None,
+            "help": "optional API key sent as the `X-API-Key` HTTP header on every backend RPC request, used by Cloud-Armor-like rate limiters to grant a higher quota (default: none)",
         },
     ],
     [
@@ -201,6 +217,14 @@ CONFIG_ARGS = [
         },
     ],
     [
+        ("--enable-api-v1",),
+        {
+            "action": "store_true",
+            "default": False,
+            "help": "enable the deprecated legacy v1 JSON-RPC API (disabled by default; exposes a denial-of-service surface, not recommended on public deployments)",
+        },
+    ],
+    [
         ("--api-host",),
         {
             "default": "127.0.0.1",
@@ -234,7 +258,16 @@ CONFIG_ARGS = [
         {
             "type": int,
             "default": config.DEFAULT_REQUESTS_TIMEOUT,
-            "help": "timeout value (in seconds) used for all HTTP requests (default: 5)",
+            "help": "read timeout (in seconds) used for all HTTP requests (default: 20)",
+        },
+    ],
+    [
+        ("--backend-connect-timeout",),
+        {
+            "type": int,
+            "default": config.DEFAULT_BACKEND_CONNECT_TIMEOUT,
+            "help": "TCP connect timeout (in seconds) for backend RPC requests, so an "
+            "unreachable backend fails fast instead of pinning an API worker (default: 5)",
         },
     ],
     [
@@ -251,6 +284,18 @@ CONFIG_ARGS = [
     ],
     [("--data-dir",), {"default": None, "help": "the path to the data directory"}],
     [("--cache-dir",), {"default": None, "help": "the path to the cache directory"}],
+    [
+        ("--disable-api-cache",),
+        {"action": "store_true", "default": False, "help": "disable the API response cache"},
+    ],
+    [
+        ("--api-cache-max-rows",),
+        {
+            "type": int,
+            "default": 50000,
+            "help": "Max total rows held in the API response cache (BLOCK_CACHE); bounds its memory while keeping many small entries cached. 0 disables the row bound.",
+        },
+    ],
     [
         ("--log-file",),
         {"nargs": "?", "const": None, "default": False, "help": "log to the specified file"},
@@ -330,8 +375,16 @@ CONFIG_ARGS = [
         ("--db-connection-pool-size",),
         {
             "type": int,
-            "default": 20,
-            "help": "size of the database connection pool",
+            "default": config.DEFAULT_DB_CONNECTION_POOL_SIZE,
+            "help": "size of the database connection pool per thread",
+        },
+    ],
+    [
+        ("--db-max-connections",),
+        {
+            "type": int,
+            "default": config.DEFAULT_DB_MAX_CONNECTIONS,
+            "help": "Maximum total database connections across all threads (0 = unlimited)",
         },
     ],
     [
@@ -376,11 +429,36 @@ CONFIG_ARGS = [
             "help": "number of threads per worker for the Gunicorn WSGI server (if enabled)",
         },
     ],
+    [
+        ("--no-healthz-server",),
+        {
+            "action": "store_true",
+            "default": False,
+            "help": "disable the dedicated health-check listener isolated from the API worker pool",
+        },
+    ],
+    [
+        ("--healthz-port",),
+        {
+            "type": int,
+            "help": "port for the dedicated health-check listener (default: API port + 2)",
+        },
+    ],
+    [
+        ("--healthz-saturation-grace",),
+        {
+            "type": int,
+            "default": config.DEFAULT_HEALTHZ_SATURATION_GRACE_SECONDS,
+            "help": "seconds the API worker pool must stay saturated before readiness reports "
+            "degraded (503); 0 disables the saturation axis of readiness",
+        },
+    ],
     [("--bootstrap-url",), {"type": str, "help": "the URL of the bootstrap snapshot to use"}],
     [
         ("--electrs-url",),
         {
-            "help": "the complete URL of the Electrs API, possibly including a specific port, for example: `https://mempool.space/api`",
+            "action": "append",
+            "help": "the complete URL of an Electrs API. Can be specified multiple times for failover. Example: `https://mempool.space/api`",
         },
     ],
     [
@@ -410,7 +488,7 @@ CONFIG_ARGS = [
     [
         ("--catch-up",),
         {
-            "choices": ["normal", "bootstrap", "bootstrap-always"],
+            "choices": ["normal", "bootstrap", "bootstrap-once", "bootstrap-always"],
             "default": "normal",
             "help": "Catch up mode (default: normal)",
         },
@@ -421,6 +499,30 @@ CONFIG_ARGS = [
             "action": "store_true",
             "default": False,
             "help": "Enable cProfile profiling for catchup; dumps output to a file in the cache dir",
+        },
+    ],
+    [
+        ("--api-cache-size",),
+        {
+            "type": int,
+            "default": 1000,
+            "help": "Max entries in the API response cache (BLOCK_CACHE). Lower bounds memory; 0 effectively disables caching.",
+        },
+    ],
+    [
+        ("--memory-profile",),
+        {
+            "action": "store_true",
+            "default": False,
+            "help": "Enable memory profiling; logs memory usage and cache sizes periodically",
+        },
+    ],
+    [
+        ("--memory-profile-tracemalloc",),
+        {
+            "action": "store_true",
+            "default": False,
+            "help": "Enable tracemalloc allocation tracking in the memory profiler; logs top allocation sites (adds overhead, implies --memory-profile)",
         },
     ],
     [
@@ -465,6 +567,13 @@ def welcome_message(action, server_configfile):
         cprint(f"API Access Log: {config.API_LOG}", "light_grey")
     else:
         cprint("Warning: API access log disabled", "yellow")
+
+    if getattr(config, "ELECTRS_URLS_IS_DEFAULT", False):
+        cprint(
+            "Warning: Using default Electrs URLs; not recommended for production. "
+            "Set --electrs-url to your own Electrs server.",
+            "yellow",
+        )
 
     cprint(f"Python version: {sys.version}", "light_grey")
 
@@ -534,6 +643,54 @@ def arg_parser(no_config_file=False, app_name=APP_NAME):
     )
     setup.add_config_arguments(parser_bootstrap, CONFIG_ARGS, configfile)
 
+    parser_prepare_bootstrap = subparsers.add_parser(
+        "prepare-bootstrap",
+        help="prepare, compress and sign bootstrap snapshots from the local databases",
+    )
+    parser_prepare_bootstrap.add_argument(
+        "--signing-key",
+        default=bootstrap.DEFAULT_SIGNING_KEY,
+        help="GnuPG local-user (key id or email) used to sign the snapshots "
+        f"(default: {bootstrap.DEFAULT_SIGNING_KEY})",
+    )
+    parser_prepare_bootstrap.add_argument(
+        "--bootstrap-version",
+        default=None,
+        help="version tag used in the snapshot file names (default: v<current version>)",
+    )
+    parser_prepare_bootstrap.add_argument(
+        "--compression-level",
+        type=int,
+        default=bootstrap.DEFAULT_COMPRESSION_LEVEL,
+        help=f"zstd compression level (default: {bootstrap.DEFAULT_COMPRESSION_LEVEL})",
+    )
+    setup.add_config_arguments(parser_prepare_bootstrap, CONFIG_ARGS, configfile)
+
+    parser_backup_key = subparsers.add_parser(
+        "backup-bootstrap-key",
+        help="export the bootstrap signing key into a password-protected backup file",
+    )
+    parser_backup_key.add_argument(
+        "--output",
+        default=None,
+        help=f"path of the backup file to create (default: ./{bootstrap.DEFAULT_KEY_BACKUP_FILENAME})",
+    )
+    parser_backup_key.add_argument(
+        "--signing-key",
+        default=bootstrap.DEFAULT_SIGNING_KEY,
+        help=f"GnuPG key id or email to back up (default: {bootstrap.DEFAULT_SIGNING_KEY})",
+    )
+    setup.add_config_arguments(parser_backup_key, CONFIG_ARGS, configfile)
+
+    parser_restore_key = subparsers.add_parser(
+        "restore-bootstrap-key",
+        help="restore the bootstrap signing key from a password-protected backup file",
+    )
+    parser_restore_key.add_argument(
+        "backup_file", help="path to the backup file created by backup-bootstrap-key"
+    )
+    setup.add_config_arguments(parser_restore_key, CONFIG_ARGS, configfile)
+
     parser_checkdb = subparsers.add_parser("check-db", help="do an integrity check on the database")
     setup.add_config_arguments(parser_checkdb, CONFIG_ARGS, configfile)
 
@@ -578,6 +735,19 @@ def main():
     # Bootstrapping
     if args.action == "bootstrap":
         bootstrap.bootstrap(no_confirm=args.no_confirm, snapshot_url=args.bootstrap_url)
+
+    elif args.action == "prepare-bootstrap":
+        bootstrap.prepare_bootstrap(
+            signing_key=args.signing_key,
+            version=args.bootstrap_version,
+            compression_level=args.compression_level,
+        )
+
+    elif args.action == "backup-bootstrap-key":
+        bootstrap.backup_bootstrap_key(output_path=args.output, key=args.signing_key)
+
+    elif args.action == "restore-bootstrap-key":
+        bootstrap.restore_bootstrap_key(args.backup_file)
 
     # PARSING
     elif args.action == "reparse":

@@ -17,19 +17,19 @@ fn counterparty_rs(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add(
         "__version__",
-        PyString::new_bound(m.py(), env!("VERGEN_GIT_DESCRIBE")),
+        PyString::new(m.py(), env!("VERGEN_GIT_DESCRIBE")),
     )?;
     m.add(
         "__sha__",
-        PyString::new_bound(m.py(), env!("VERGEN_GIT_SHA")),
+        PyString::new(m.py(), env!("VERGEN_GIT_SHA")),
     )?;
     m.add(
         "__target__",
-        PyString::new_bound(m.py(), env!("VERGEN_CARGO_TARGET_TRIPLE")),
+        PyString::new(m.py(), env!("VERGEN_CARGO_TARGET_TRIPLE")),
     )?;
     m.add(
         "__build_date__",
-        PyString::new_bound(m.py(), env!("VERGEN_BUILD_DATE")),
+        PyString::new(m.py(), env!("VERGEN_BUILD_DATE")),
     )?;
     Ok(())
 }

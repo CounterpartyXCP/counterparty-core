@@ -2,3 +2,5 @@
 concurrency = multiprocessing,thread
 parallel = true
 sigterm = true
+omit =
+    */lib/monitors/memory_profiler.py

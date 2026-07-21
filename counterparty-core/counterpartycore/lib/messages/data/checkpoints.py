@@ -706,6 +706,26 @@ CHECKPOINTS_MAINNET = {
         "ledger_hash": "aa7a4b3080fe9d5fa1692816e9f8de2f7583132c92889d5542b405e46c1634a8",
         "txlist_hash": "8a0172a7433e5e2e4563596eac4fb976a2f28ccd1d085a7f4f6d1da139c8d4b0",
     },
+    911955: {
+        "ledger_hash": "6a4e17a0c12800d681c2dfd03391ce840fc788f5421216d4fcb734fb2946b0fe",
+        "txlist_hash": "a125a34048b2b2293a56b14f84321f859b31c92625b6ede18261fcf19d0b1d42",
+    },
+    932500: {
+        "ledger_hash": "45f8c64e2d160609c1c322b441aa6e43e6b83e05f8968831e56e4980547975e9",
+        "txlist_hash": "64b09d0b7cbe0d9361c69f2bebe1d84378fc8a8f67f96bd0a7c2b83c7c6c7f6e",
+    },
+    941017: {
+        "ledger_hash": "ab1c19f81bb42f5753c69c826f23938740d3498d39d7a8c562c1f92971aa80da",
+        "txlist_hash": "e2ba1ea850941913206dfff546bfb7e5888434fcd5f004b675104a8f6f233a67",
+    },
+    948435: {
+        "ledger_hash": "1ba321a1b83bca293e77fec9097a82ee252fe6c385171bedf76f45b1d8d0db9a",
+        "txlist_hash": "d02a9b82f13c6b58bf787ac0f404659adc7c3964226af25645367161f7131095",
+    },
+    956895: {
+        "ledger_hash": "50f6d80cf7bfb48cb660570acee0eacdef5ae411d03320e6068e69033dd0e648",
+        "txlist_hash": "27094cc108c55f8000aba276a7ffaf77565b49d86523ca5b4dc94605f2a2c254",
+    },
 }
 
 CONSENSUS_HASH_VERSION_TESTNET3 = 7
@@ -894,6 +914,34 @@ CHECKPOINTS_TESTNET4 = {
         "ledger_hash": "f36214245193fe4e2ff273afb9d9a09fd536bcd86f795782bd99026b54a66843",
         "txlist_hash": "17af3a72503c8911a047d370da48ccce881c8dffa558f6287cfccbcde7e45c2b",
     },
+    99290: {
+        "ledger_hash": "16c1a4f419279d1ea09e593afcd0e978e31800996979ff75771e46690443a2a3",
+        "txlist_hash": "2571d12f5be6ce7775224d60a3c245c93d6caf6956be0f9496ff89a8b3ff1f7b",
+    },
+    109600: {
+        "ledger_hash": "341e5cb3aacf04a4b8977e6392cb932a7954c1cb8bed650f117865847ac83e06",
+        "txlist_hash": "ee4e669100c63044d3cce6cba2c2d15329e5f9e987c2adff373de8475679a5b2",
+    },
+    109800: {
+        "ledger_hash": "b7c841dc78a1b7e10e2ee251ad3831f19fd854bff29cacf74c56591572d3562f",
+        "txlist_hash": "dea9e3f49daf7d48307ccf22f16529dec9a7838781f6fd21f169bd6a9fe4a522",
+    },
+    110000: {
+        "ledger_hash": "3e4f714be9b26028bab0b052eadff5975bf12dd1d1c54e04af3306f79bdbd10e",
+        "txlist_hash": "fed58a212202ee9ee5633968d73572ca799aa1db40adf3be8e43d5c5584cb6f2",
+    },
+    110176: {
+        "ledger_hash": "97d88875781180e9f55f01aae417cdfbe1d16963132181b9e0ef311b0fa96a3f",
+        "txlist_hash": "94991c58f798d66b3c94f7220bd96d6280bda04759364c2d7a5ab78fd519670e",
+    },
+    135609: {
+        "ledger_hash": "2e151bb3cef31ed91e78584ed4310b98b77d6411eb7adf0622b8a2d306835feb",
+        "txlist_hash": "e48b2953a75fe701b801137096dab8af5ad7e4e264eac4dfbc9f5c11302abae7",
+    },
+    143159: {
+        "ledger_hash": "bbe5848cf8d8fccf655d9e3e74873b3f0b1d85a7047f4d18441394770741e469",
+        "txlist_hash": "d61c88dd8147f567f15a3bd2dc8c652e7d48428ad50ed1714f7f700a123845fb",
+    },
 }
 
 CONSENSUS_HASH_VERSION_SIGNET = 1
@@ -901,5 +949,33 @@ CHECKPOINTS_SIGNET = {
     config.BLOCK_FIRST_SIGNET: {
         "ledger_hash": "33cf0669a0d309d7e6b1bf79494613b69262b58c0ea03c9c221d955eb4c84fe5",
         "txlist_hash": "33cf0669a0d309d7e6b1bf79494613b69262b58c0ea03c9c221d955eb4c84fe5",
+    },
+    266993: {
+        "ledger_hash": "9ea6fb6b6dbbd359a6e6e9a9448803584ee06d2c6ebe5e48d099ad713b40bc54",
+        "txlist_hash": "a6f8973fc062b0f7facba7d0d899ee4d5891f1529d6a017df8da6eeb194c9bf0",
+    },
+    277880: {
+        "ledger_hash": "58f59931694f3eaa9ce4117403957617b876b6c163b89abda593f8a6276f2f14",
+        "txlist_hash": "dd5d1979fc72137857337ce1f7b29907f9edd472bc4b21ed67a3f5384268cdbc",
+    },
+    278080: {
+        "ledger_hash": "30afa7901ed0117640f5525a1680234d866625fe5ea4a9ebd5720277df17470e",
+        "txlist_hash": "d67b167fd00d5a0d7383fadf26827bae1432f4f86cf8ffa74823e17831b1212b",
+    },
+    278280: {
+        "ledger_hash": "49d8bb403abb0fd240ec61b385fd5396e6cedb0152075bb7556f66a3298d9720",
+        "txlist_hash": "09f4279be9165674dbecfee448e7577280bfd09c39eb3bb54f529ec01e438de9",
+    },
+    278480: {
+        "ledger_hash": "e70b2d4c2edf2a49cc36500afc3385fc621d905014363f1e2cfaaed596c080c5",
+        "txlist_hash": "45142c022b420d114ae9b6139f7a080045637941d19a45af77d35fdcd7292378",
+    },
+    305052: {
+        "ledger_hash": "a69bb5ec7fc49b93ed8e5942e33071ddd79a55cdccd071124fff75b6616f7672",
+        "txlist_hash": "04636181c0122e624313c3d9beecc60d4b3511bea9ad03e1db90817002a64414",
+    },
+    311992: {
+        "ledger_hash": "e16c1efb0c0ebacce211751308d97bdd526f15f53d04cc2b2beea0281e90aea7",
+        "txlist_hash": "e49498ddd90ab80c5e59eb2ecb9540552bc8828e5ec5cdd453907e8df3f92d53",
     },
 }

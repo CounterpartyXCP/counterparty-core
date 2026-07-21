@@ -35,6 +35,10 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
         ):  # Protocol change.
             problems.append(f"cannot pay dividends to holders of {config.XCP}")
 
+    if not isinstance(quantity_per_unit, int):
+        problems.append("quantity_per_unit must be an integer")
+        return None, None, problems, 0
+
     if quantity_per_unit <= 0:
         problems.append("non‐positive quantity per unit")
 
@@ -72,6 +76,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
     outputs = []
     addresses = []
     dividend_total = 0
+    btc_dust_outputs_skipped = False
     for holder in asset_holders:
         if (
             not protocol.enabled("price_as_fraction") and not protocol.is_test_network()
@@ -94,6 +99,7 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
             dividend_quantity /= config.UNIT  # Pre-fix behaviour
 
         if dividend_asset == config.BTC and dividend_quantity < config.DEFAULT_MULTISIG_DUST_SIZE:
+            btc_dust_outputs_skipped = True
             continue  # A bit hackish.
         dividend_quantity = int(dividend_quantity)
 
@@ -108,7 +114,10 @@ def validate(db, source, quantity_per_unit, asset, dividend_asset, block_index):
         dividend_total += dividend_quantity
 
     if not dividend_total:
-        problems.append("zero dividend")
+        if dividend_asset == config.BTC and btc_dust_outputs_skipped:
+            problems.append("BTC dividend output below dust threshold")
+        else:
+            problems.append("zero dividend")
 
     if dividend_asset != config.BTC:
         dividend_balances = ledger.balances.get_balance(db, source, dividend_asset)
@@ -192,7 +201,10 @@ def compose(
 
 def unpack(db, message, block_index, return_dict=False):
     try:
-        if protocol.enabled("new_dividend_format") and len(message) == LENGTH_2:
+        if (
+            protocol.enabled("new_dividend_format", block_index=block_index)
+            and len(message) == LENGTH_2
+        ):
             quantity_per_unit, asset_id, dividend_asset_id = struct.unpack(FORMAT_2, message)
             asset = ledger.issuances.get_asset_name(db, asset_id)
             dividend_asset = ledger.issuances.get_asset_name(db, dividend_asset_id)

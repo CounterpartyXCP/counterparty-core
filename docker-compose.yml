@@ -6,7 +6,7 @@ x-bitcoind-common: &bitcoind-common
   restart: unless-stopped
 
 x-counterparty-common: &counterparty-common
-  image: counterparty/counterparty:v11.0.1
+  image: counterparty/counterparty:v11.2.0
   stop_grace_period: 1m
   volumes:
     - data:/root/.bitcoin
@@ -57,6 +57,7 @@ services:
     ports:
       - "4000:4000"                                        # API v2
       - "4100:4100"                                        # API v1
+      - "4002:4002"                                        # health check
     command:
       - start
       - "--backend-connect=bitcoind"
@@ -104,6 +105,7 @@ services:
     ports:
       - "14000:14000"                                      # API v2
       - "14100:14100"                                      # API v1
+      - "14002:14002"                                      # health check
     command:
       - start
       - "--testnet3"
@@ -152,6 +154,7 @@ services:
     ports:
       - "44000:44000"                                      # API v2
       - "44100:44100"                                      # API v1
+      - "44002:44002"                                      # health check
     command:
       - start
       - "--testnet4"
@@ -200,6 +203,7 @@ services:
     ports:
       - "34000:34000"                                      # API v2
       - "34100:34100"                                      # API v1
+      - "34002:34002"                                      # health check
     command:
       - start
       - "--signet"
@@ -248,6 +252,7 @@ services:
     ports:
       - "24000:24000"                                      # API v2
       - "24100:24100"                                      # API v1
+      - "24002:24002"                                      # health check
     command:
       - start
       - "--regtest"

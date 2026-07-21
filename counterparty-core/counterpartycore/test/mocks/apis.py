@@ -1,6 +1,9 @@
+import json
+
 import pytest
 from counterpartycore.lib import config
 from counterpartycore.lib.api import apiserver, apiv1
+from counterpartycore.lib.utils.database import LedgerDBConnectionPool, StateDBConnectionPool
 
 
 @pytest.fixture()
@@ -32,8 +35,6 @@ def apiv2_app(ledger_db, state_db, monkeypatch, current_block_index):
 
 
 def rpc_call(client, method, params):
-    import json
-
     headers = {"content-type": "application/json"}
     payload = {
         "method": method,
@@ -46,8 +47,18 @@ def rpc_call(client, method, params):
 
 @pytest.fixture()
 def apiv1_client(apiv1_app, ledger_db, state_db):
+    # Reopen the connection pools if they were closed by a previous test
+    ledger_pool = LedgerDBConnectionPool()
+    if ledger_pool.closed:
+        ledger_pool.closed = False
+    state_pool = StateDBConnectionPool()
+    if state_pool.closed:
+        state_pool.closed = False
+
+    client = apiv1_app.test_client()
+
     def call(method, params):
-        return rpc_call(apiv1_app.test_client(), method, params)
+        return rpc_call(client, method, params)
 
     return call
 

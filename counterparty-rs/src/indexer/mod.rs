@@ -22,6 +22,7 @@ use bitcoin::consensus::deserialize;
 use bitcoin::{blockdata::transaction::Transaction, Block};
 
 use pyo3::prelude::*;
+use pyo3::IntoPyObjectExt;
 use types::pipeline::ChanOut;
 
 use self::{
@@ -72,15 +73,14 @@ impl Indexer {
         )?)
     }
 
-    pub fn get_block(&self, py: Python<'_>) -> PyResult<PyObject> {
-        let block =
-            py.allow_threads(|| get_block::new(self.stopper.clone(), self.chan.1.clone()))?;
-        Ok(block.into_py(py))
+    pub fn get_block(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let block = py.detach(|| get_block::new(self.stopper.clone(), self.chan.1.clone()))?;
+        block.into_py_any(py)
     }
 
-    pub fn get_block_non_blocking(&self, py: Python<'_>) -> PyResult<PyObject> {
+    pub fn get_block_non_blocking(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let block = get_block::new_non_blocking(self.stopper.clone(), self.chan.1.clone())?;
-        Ok(block.map(|b| b.into_py(py)).into_py(py))
+        block.map(|b| *b).into_py_any(py)
     }
 
     pub fn get_version(&self) -> PyResult<String> {
@@ -106,7 +106,7 @@ impl Deserializer {
         height: u32,
         parse_vouts: bool,
         py: Python<'_>,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Py<PyAny>> {
         let decoded_tx = hex::decode(tx_hex).map_err(|_| {
             PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to decode hex transaction")
         })?;
@@ -120,7 +120,7 @@ impl Deserializer {
             height,
             parse_vouts,
         );
-        return Ok(deserialized_transaction.into_py(py));
+        return deserialized_transaction.into_py_any(py);
     }
 
     pub fn parse_block(
@@ -129,7 +129,7 @@ impl Deserializer {
         height: u32,
         parse_vouts: bool,
         py: Python<'_>,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Py<PyAny>> {
         let decoded_block = hex::decode(block_hex).map_err(|_| {
             PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to decode hex block")
         })?;
@@ -139,12 +139,12 @@ impl Deserializer {
 
         let deserialized_block =
             self::bitcoin_client::parse_block(block, &self.config, height, parse_vouts);
-        return Ok(deserialized_block?.into_py(py));
+        return deserialized_block?.into_py_any(py);
     }
 }
 
 pub fn register_indexer_module(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
-    let m = PyModule::new_bound(parent_module.py(), "indexer")?;
+    let m = PyModule::new(parent_module.py(), "indexer")?;
     m.add_class::<Indexer>()?;
     m.add_class::<Deserializer>()?;
     parent_module.add_submodule(&m)?;

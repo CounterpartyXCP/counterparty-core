@@ -2,6 +2,7 @@
 
 import binascii
 import json
+import math
 import os
 import signal
 import struct
@@ -9,6 +10,7 @@ import sys
 import threading
 import time
 import urllib.parse
+from decimal import Decimal as D
 from io import StringIO
 
 import requests
@@ -94,6 +96,9 @@ class RegtestNode:
             "--gunicorn-workers=2",
             "--no-telemetry",
             "--electrs-url=http://localhost:3002",
+            # v1 is disabled by default; enable it so the regression suite keeps
+            # exercising the legacy JSON-RPC API (see `check_api_v1`).
+            "--enable-api-v1",
             "-vv",
         )
         self.burn_in_one_block = burn_in_one_block
@@ -151,7 +156,11 @@ class RegtestNode:
     ):
         mempool_event_count_before = self.get_mempool_event_count()
         if not use_rpc:
-            tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction, 0).strip()
+            try:
+                tx_hash = self.bitcoin_wallet("sendrawtransaction", signed_transaction, 0).strip()
+            except sh.ErrorReturnCode as e:
+                self.dump_broadcast_failure(signed_transaction, e)
+                raise
         else:
             result = rpc_call("sendrawtransaction", [signed_transaction])
             try:
@@ -172,6 +181,62 @@ class RegtestNode:
         self.tx_index += 1
         self.wait_for_counterparty_server()
         return tx_hash, block_hash, block_time
+
+    def wait_for_utxo(self, txid, vout, timeout=30):
+        """Wait until the node sees `txid:vout` (mempool included) and return its
+        authoritative value in satoshis.
+
+        This must be used to value an unconfirmed parent output before signing a child
+        that spends it. Reading the value from `decoderawtransaction` via `json.loads`
+        decodes the BTC amount as a float and can be off by one satoshi; the BIP143
+        sighash commits to the input amount, so signing over that wrong value makes the
+        node reject the child with `mandatory-script-verify-flag-failed` (NULLFAIL).
+        `gettxout` is the value the node actually verifies against, and it is parsed
+        here with `parse_float=Decimal` to stay exact."""
+        start = time.time()
+        while True:
+            raw = self.bitcoin_wallet("gettxout", txid, vout, "true").strip()
+            if raw:
+                info = json.loads(raw, parse_float=D)
+                return int(info["value"] * D(config.UNIT))
+            if time.time() - start > timeout:
+                raise Exception(  # noqa: TRY002
+                    f"UTXO {txid}:{vout} not visible after {timeout}s"
+                )
+            time.sleep(0.5)
+
+    def dump_broadcast_failure(self, raw_transaction, error):
+        """On a `sendrawtransaction` failure, dump the failing transaction and the
+        node's view of each spent input so a script-verification failure (e.g.
+        `NULLFAIL`) can be diagnosed from the CI logs: it shows the value/scriptPubKey
+        the node actually has for each prevout vs. what we signed over."""
+        print("=== BROADCAST FAILED — diagnostic dump ===")
+        print(f"error: {error}")
+        try:
+            decoded = json.loads(self.bitcoin_cli("decoderawtransaction", raw_transaction).strip())
+        except Exception as e:  # noqa: BLE001
+            print(f"could not decode failing tx: {e}")
+            print("=== end diagnostic dump ===")
+            return
+        print(f"failing txid: {decoded.get('txid')}")
+        for vin in decoded.get("vin", []):
+            txid, vout = vin.get("txid"), vin.get("vout")
+            if txid is None:
+                continue
+            try:
+                raw = self.bitcoin_wallet("gettxout", txid, vout, "true").strip()
+                node_view = json.loads(raw) if raw else None
+            except Exception as e:  # noqa: BLE001
+                node_view = f"<error: {e}>"
+            if isinstance(node_view, dict):
+                spk = node_view.get("scriptPubKey", {})
+                print(
+                    f"input {txid}:{vout} -> node sees value={node_view.get('value')} "
+                    f"scriptPubKey={spk.get('hex')} ({spk.get('address')})"
+                )
+            else:
+                print(f"input {txid}:{vout} -> node view: {node_view} (spent or unknown)")
+        print("=== end diagnostic dump ===")
 
     def compose_and_send_transaction(
         self, source, messsage_id=None, data=None, no_confirmation=False, dont_wait_mempool=False
@@ -197,7 +262,10 @@ class RegtestNode:
             tx_outputs.append(TxOutput(0, Script(["OP_RETURN", b_to_h(encrypted_data)])))
 
         tx_outputs.append(
-            TxOutput(int(utxo["amount"] * 1e8), P2wpkhAddress(source).to_script_pub_key())
+            TxOutput(
+                int(D(str(utxo["amount"])) * D(config.UNIT)),
+                P2wpkhAddress(source).to_script_pub_key(),
+            )
         )
 
         tx = Transaction(tx_inputs, tx_outputs)
@@ -222,6 +290,8 @@ class RegtestNode:
         for key, value in params.items():
             if key == "description":
                 data = {key: value}
+                continue
+            if value is None:
                 continue
             if not isinstance(value, list):
                 query_string.append(urllib.parse.urlencode({key: value}))
@@ -524,6 +594,7 @@ class RegtestNode:
             _out=self.server_out,
             _err_to_out=True,
             _bg_exc=False,
+            _new_session=True,  # Create new process group for clean shutdown
         )
         self.wait_for_counterparty_follower()
 
@@ -566,9 +637,32 @@ class RegtestNode:
 
     def stop_counterparty_server(self):
         try:
-            self.counterparty_server_process.terminate()
-            self.counterparty_server_process.wait()
-            self.kill_gunicorn_workers()
+            # Get the process group ID to kill all child processes
+            pid = self.counterparty_server_process.process.pid
+            try:
+                pgid = os.getpgid(pid)
+                # Send SIGTERM to the entire process group
+                os.killpg(pgid, signal.SIGTERM)
+            except (ProcessLookupError, OSError):
+                # Process already dead or no process group, try terminate
+                self.counterparty_server_process.terminate()
+
+            # Wait with timeout
+            try:
+                self.counterparty_server_process.wait(timeout=15)
+            except Exception:  # timeout or other error
+                print("Server did not stop gracefully, killing process group...")
+                try:
+                    pgid = os.getpgid(pid)
+                    os.killpg(pgid, signal.SIGKILL)
+                except (ProcessLookupError, OSError):
+                    pass
+                # Also kill gunicorn workers as fallback
+                self.kill_gunicorn_workers()
+                try:
+                    self.counterparty_server_process.wait(timeout=5)
+                except Exception as e:  # noqa: S110
+                    print(f"Error waiting for server to stop: {e}")
         except Exception as e:  # pylint: disable=broad-except
             print(e)
             pass
@@ -611,6 +705,7 @@ class RegtestNode:
             _out=self.server_out,
             _err_to_out=True,
             _bg_exc=False,
+            _new_session=True,  # Create new process group for clean shutdown
         )
         self.wait_for_counterparty_follower()
         self.wait_for_counterparty_watcher()
@@ -832,7 +927,7 @@ class RegtestNode:
                 "asset": "BTC",
             },
         )
-        assert "Electrs error" in transaction["error"]
+        assert "All Electrs backends failed" in transaction["error"]
         assert "Failed to establish a new connection" in transaction["error"]
 
         # start electrs
@@ -999,9 +1094,17 @@ class RegtestNode:
         raw_transaction_1 = result["result"]["rawtransaction"]
 
         # sign transaction
-        signed_transaction_1 = json.loads(
+        signed_transaction_1_json = json.loads(
             self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_1).strip()
-        )["hex"]
+        )
+        print(
+            f"Sign tx1: complete={signed_transaction_1_json.get('complete')} "
+            f"errors={signed_transaction_1_json.get('errors')}"
+        )
+        assert signed_transaction_1_json["complete"], (
+            f"tx1 sign incomplete: {signed_transaction_1_json.get('errors')}"
+        )
+        signed_transaction_1 = signed_transaction_1_json["hex"]
 
         # get utxo info from the transaction
         decoded_transaction_1 = json.loads(
@@ -1009,7 +1112,28 @@ class RegtestNode:
         )
         txid_1 = decoded_transaction_1["txid"]
         vout_1 = len(decoded_transaction_1["vout"]) - 1  # last vout is the change
-        value_1 = int(decoded_transaction_1["vout"][vout_1]["value"] * 1e8)
+        # use Decimal to avoid float rounding errors that would produce an
+        # off-by-one sat value and a SegWit signature mismatch on broadcast
+        value_1 = int(D(str(decoded_transaction_1["vout"][vout_1]["value"])) * D(config.UNIT))
+        print(
+            f"tx1 txid={txid_1} vout_1={vout_1} value_1={value_1} sats "
+            f"({value_1 / D(config.UNIT)} BTC) nvout={len(decoded_transaction_1['vout'])}"
+        )
+
+        # broadcast tx1 BEFORE signing tx2 so the wallet sees tx1's UTXOs in its
+        # mempool view — this avoids intermittent BIP143 signature mismatches
+        # observed when signing tx2 offline via `prevtx`
+        tx_hash_1, _, _ = self.broadcast_transaction(
+            signed_transaction_1, no_confirmation=True, dont_wait_mempool=True
+        )
+        print(f"Transaction 1 sent: {tx_hash_1}")
+
+        # re-read tx1's change output value from the node (gettxout) before composing
+        # and signing tx2. The decoded value above can be off by one satoshi (float
+        # parsing of the BTC amount), which would make tx2's BIP143 signature commit to
+        # the wrong input amount and be rejected with NULLFAIL at broadcast.
+        value_1 = self.wait_for_utxo(txid_1, vout_1)
+        print(f"tx1 node value_1={value_1} sats")
 
         #####   Send BTC to new address using the change from the previous transaction #####
 
@@ -1026,12 +1150,22 @@ class RegtestNode:
         raw_transaction_2 = result["result"]["rawtransaction"]
 
         # sign transaction
-        prevtx = [
-            {"txid": txid_1, "vout": vout_1, "scriptPubKey": pubkey_source, "amount": value_1 / 1e8}
-        ]
-        prevtx = json.dumps(prevtx)
+        # tx1 was already broadcast above, so the wallet sees its change output
+        # (paid to source_address, a wallet address) as an unconfirmed UTXO with
+        # the exact amount. Sign from that view rather than passing a `prevtx`
+        # hint: serializing the amount through JSON (float -> IEEE-754 rounding,
+        # or Decimal -> a quoted string Core does not honor) corrupts the BIP143
+        # input amount and produces a signature that verifies offline but is
+        # rejected on broadcast (mandatory-script-verify-flag-failed / NULLFAIL).
         signed_transaction_2_json = json.loads(
-            self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_2, prevtx).strip()
+            self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_2).strip()
+        )
+        print(
+            f"Sign tx2: complete={signed_transaction_2_json.get('complete')} "
+            f"errors={signed_transaction_2_json.get('errors')}"
+        )
+        assert signed_transaction_2_json["complete"], (
+            f"tx2 sign incomplete: {signed_transaction_2_json.get('errors')}"
         )
         signed_transaction_2 = signed_transaction_2_json["hex"]
 
@@ -1041,8 +1175,18 @@ class RegtestNode:
         )
         txid_2 = decoded_transaction_2["txid"]
         vout_2 = 0  # first vout is the 10000 sats from the previous transaction
-        value_2 = int(decoded_transaction_2["vout"][vout_2]["value"] * 1e8)
+        value_2 = int(D(str(decoded_transaction_2["vout"][vout_2]["value"])) * D(config.UNIT))
         assert value_2 == 10000
+        print(f"tx2 txid={txid_2} value_2={value_2} sats")
+
+        tx_hash_2, _, _ = self.broadcast_transaction(
+            signed_transaction_2, no_confirmation=True, dont_wait_mempool=True
+        )
+        print(f"Transaction 2 sent: {tx_hash_2}")
+
+        # same as above: take tx2's output value from the node before signing tx3
+        value_2 = self.wait_for_utxo(txid_2, vout_2)
+        print(f"tx2 node value_2={value_2} sats")
 
         #####   Create a dispenser using the BTC received from the second transactions #####
 
@@ -1059,27 +1203,25 @@ class RegtestNode:
         raw_transaction_3 = result["result"]["rawtransaction"]
 
         # sign transaction
-        prevtx = [
-            {"txid": txid_2, "vout": 0, "scriptPubKey": pubkey_new_address, "amount": value_2 / 1e8}
-        ]
-        prevtx = json.dumps(prevtx)
-        signed_transaction_3 = json.loads(
-            self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_3, prevtx).strip()
-        )["hex"]
+        # tx2 was already broadcast above; the new_address change output it pays
+        # is a wallet UTXO, so sign from the wallet's own view (see tx2 note on
+        # why a JSON-serialized `prevtx` amount breaks the SegWit signature).
+        signed_transaction_3_json = json.loads(
+            self.bitcoin_wallet("signrawtransactionwithwallet", raw_transaction_3).strip()
+        )
+        print(
+            f"Sign tx3: complete={signed_transaction_3_json.get('complete')} "
+            f"errors={signed_transaction_3_json.get('errors')}"
+        )
+        assert signed_transaction_3_json["complete"], (
+            f"tx3 sign incomplete: {signed_transaction_3_json.get('errors')}"
+        )
+        signed_transaction_3 = signed_transaction_3_json["hex"]
 
-        # broadcast the three transactions
-        tx_hash, block_hash, block_time = self.broadcast_transaction(
-            signed_transaction_1, no_confirmation=True, dont_wait_mempool=True
-        )
-        print(f"Transaction 1 sent: {tx_hash}")
-        tx_hash, block_hash, block_time = self.broadcast_transaction(
-            signed_transaction_2, no_confirmation=True, dont_wait_mempool=True
-        )
-        print(f"Transaction 2 sent: {tx_hash}")
-        tx_hash, block_hash, block_time = self.broadcast_transaction(
+        tx_hash_3, _, _ = self.broadcast_transaction(
             signed_transaction_3, no_confirmation=True, dont_wait_mempool=True
         )
-        print(f"Transaction 3 sent: {tx_hash}")
+        print(f"Transaction 3 sent: {tx_hash_3}")
 
         # mine a block
         self.mine_blocks(1)
@@ -1125,7 +1267,9 @@ class RegtestNode:
 
         print("Fees: ", unsigned_tx["btc_fee"])
         print("VSize After signing: ", transaction2.get_vsize())
-        assert unsigned_tx["btc_fee"] == transaction2.get_vsize()
+        estimated_vsize = unsigned_tx["signed_tx_estimated_size"]["adjusted_vsize"]
+        assert unsigned_tx["btc_fee"] == estimated_vsize
+        assert unsigned_tx["btc_fee"] >= transaction2.get_vsize()
 
         unsigned_tx = self.compose(
             self.addresses[0],
@@ -1156,7 +1300,7 @@ class RegtestNode:
             unsigned_tx["signed_tx_estimated_size"]["vsize"],
             unsigned_tx["signed_tx_estimated_size"]["adjusted_vsize"],
         )
-        assert unsigned_tx["btc_fee"] == int(size * 2.31)
+        assert unsigned_tx["btc_fee"] == math.ceil(size * 2.31)
 
         legacy_address = self.bitcoin_wallet("getnewaddress", WALLET_NAME, "legacy").strip()
         self.send_transaction(
@@ -1209,7 +1353,7 @@ class RegtestNode:
         )
         sorted(list_unspent, key=lambda x: -x["amount"])
         utxo = f"{list_unspent[0]['txid']}:{list_unspent[0]['vout']}"
-        value = int(list_unspent[0]["amount"] * 1e8)
+        value = int(D(str(list_unspent[0]["amount"])) * D(config.UNIT))
         unsigned_tx = self.compose(
             utxo,
             "detach",

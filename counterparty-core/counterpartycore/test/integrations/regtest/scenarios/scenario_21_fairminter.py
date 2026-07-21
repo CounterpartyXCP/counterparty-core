@@ -118,6 +118,8 @@ SCENARIO = [
                             "max_mint_per_tx": 1100000000,
                             "max_mint_per_address": 0,
                             "minted_asset_commission_int": 20000000,
+                            "pool_quantity": 0,
+                            "lp_asset": None,
                             "pre_minted": True,
                             "premint_quantity": 10000000000,
                             "price": 0,
@@ -331,6 +333,8 @@ SCENARIO = [
                             "max_mint_per_tx": 0,
                             "max_mint_per_address": 0,
                             "minted_asset_commission_int": 20000000,
+                            "pool_quantity": 0,
+                            "lp_asset": None,
                             "pre_minted": False,
                             "premint_quantity": 0,
                             "price": 1,
@@ -574,6 +578,8 @@ SCENARIO = [
                             "max_mint_per_tx": 0,
                             "max_mint_per_address": 0,
                             "minted_asset_commission_int": 0,
+                            "pool_quantity": 0,
+                            "lp_asset": None,
                             "pre_minted": False,
                             "premint_quantity": 0,
                             "price": 99900000000,
@@ -612,7 +618,7 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "ASSET_ISSUANCE",
-                        "event_index": "$EVENT_INDEX_3",
+                        "event_index": "$EVENT_INDEX_6",
                         "params": {
                             "asset": "EXPANSIVE",
                             "asset_events": "close_fairminter",
@@ -642,7 +648,7 @@ SCENARIO = [
                     },
                     {
                         "event": "FAIRMINTER_UPDATE",
-                        "event_index": "$EVENT_INDEX_2",
+                        "event_index": "$EVENT_INDEX_5",
                         "params": {"status": "closed", "tx_hash": "$FAIRMINTER_EXPANSIVE_HASH"},
                         "tx_hash": None,
                     },
@@ -729,7 +735,7 @@ SCENARIO = [
                 "result": [
                     {
                         "event": "DEBIT",
-                        "event_index": "$EVENT_INDEX_9",
+                        "event_index": "$EVENT_INDEX_6",
                         "params": {
                             "action": "fairminter fee",
                             "address": "$ADDRESS_10",
@@ -745,7 +751,7 @@ SCENARIO = [
                     },
                     {
                         "event": "ASSET_ISSUANCE",
-                        "event_index": "$EVENT_INDEX_8",
+                        "event_index": "$EVENT_INDEX_5",
                         "params": {
                             "asset": "STARTNOW",
                             "asset_events": "open_fairminter",
@@ -773,7 +779,7 @@ SCENARIO = [
                     },
                     {
                         "event": "ASSET_CREATION",
-                        "event_index": "$EVENT_INDEX_7",
+                        "event_index": "$EVENT_INDEX_4",
                         "params": {
                             "asset_id": "150450094622",
                             "asset_longname": None,
@@ -784,7 +790,7 @@ SCENARIO = [
                     },
                     {
                         "event": "NEW_FAIRMINTER",
-                        "event_index": "$EVENT_INDEX_6",
+                        "event_index": "$EVENT_INDEX_3",
                         "params": {
                             "asset": "STARTNOW",
                             "asset_longname": None,
@@ -801,6 +807,8 @@ SCENARIO = [
                             "max_mint_per_tx": 0,
                             "max_mint_per_address": 0,
                             "minted_asset_commission_int": 0,
+                            "pool_quantity": 0,
+                            "lp_asset": None,
                             "pre_minted": False,
                             "premint_quantity": 0,
                             "price": 1,
@@ -976,6 +984,8 @@ SCENARIO = [
                             "max_mint_per_tx": 0,
                             "max_mint_per_address": 0,
                             "minted_asset_commission_int": 0,
+                            "pool_quantity": 0,
+                            "lp_asset": None,
                             "pre_minted": False,
                             "premint_quantity": 50,
                             "price": 1,

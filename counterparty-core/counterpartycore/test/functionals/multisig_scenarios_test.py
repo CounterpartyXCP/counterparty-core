@@ -1,3 +1,4 @@
+from counterpartycore.lib.utils import helpers
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled, run_scenario
 
 
@@ -84,9 +85,11 @@ def check_standard_scenario(
         ],
     )
 
-    order_match_id = empty_ledger_db.execute(
-        "SELECT id FROM order_matches ORDER BY rowid DESC"
-    ).fetchone()["id"]
+    order_match = empty_ledger_db.execute(
+        f"SELECT {helpers.MATCH_ID_SQL} AS id, tx0_index, tx1_index "  # noqa: S608
+        "FROM order_matches ORDER BY rowid DESC"
+    ).fetchone()
+    order_match_id = order_match["id"]
 
     run_scenario(
         empty_ledger_db,
@@ -330,7 +333,9 @@ def check_standard_scenario(
 
     assert (
         empty_ledger_db.execute(
-            "SELECT COUNT(*) AS count FROM btcpays WHERE order_match_id = ?", (order_match_id,)
+            "SELECT COUNT(*) AS count FROM btcpays "
+            "WHERE order_match_tx0_index = ? AND order_match_tx1_index = ?",
+            (order_match["tx0_index"], order_match["tx1_index"]),
         ).fetchone()["count"]
         == 1
     )

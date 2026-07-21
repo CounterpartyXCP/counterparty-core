@@ -7,7 +7,7 @@ UNIT = 100000000  # The same across assets.
 
 
 # Semantic Version
-__version__ = "11.0.1"  # for hatch
+__version__ = "11.2.0"  # for hatch
 VERSION_STRING = __version__
 version = VERSION_STRING.split("-", maxsplit=1)[0].split(".")
 VERSION_MAJOR = int(version[0])
@@ -15,10 +15,13 @@ VERSION_MINOR = int(version[1])
 VERSION_REVISION = int(version[2])
 VERSION_PRE_RELEASE = "-".join(VERSION_STRING.split("-")[1:])
 
-DEFAULT_ELECTRS_URL_MAINNET = "https://blockstream.info/api"
-DEFAULT_ELECTRS_URL_TESTNET3 = "https://blockstream.info/testnet/api"
-DEFAULT_ELECTRS_URL_TESTNET4 = "https://mempool.space/testnet4/api"
-DEFAULT_ELECTRS_URL_SIGNET = "https://mempool.space/signet/api"
+DEFAULT_ELECTRS_URLS_MAINNET = [
+    "https://blockstream.info/api",
+    "https://mempool.space/api",
+]
+DEFAULT_ELECTRS_URLS_TESTNET3 = ["https://blockstream.info/testnet/api"]
+DEFAULT_ELECTRS_URLS_TESTNET4 = ["https://mempool.space/testnet4/api"]
+DEFAULT_ELECTRS_URLS_SIGNET = ["https://mempool.space/signet/api"]
 
 
 UPGRADE_ACTIONS = {
@@ -33,6 +36,10 @@ UPGRADE_ACTIONS = {
         "11.0.0": [("refresh_state_db", 0)],
         "11.0.1": [("rollback", 902000)],
         "11.0.2": [("refresh_state_db", 0)],
+        "11.0.3": [("reparse", 911955)],
+        "11.0.4": [("rollback", 926807)],
+        "11.1.0": [("rollback", 941000)],
+        "11.2.0": [("refresh_state_db", 0)],
     },
     "testnet3": {
         "10.3.0": [("reparse", 0)],
@@ -46,15 +53,26 @@ UPGRADE_ACTIONS = {
         "11.0.0": [("refresh_state_db", 0)],
         "11.0.1": [("rollback", 4410000)],
         "11.0.2": [("refresh_state_db", 0)],
+        "11.0.3": [("reparse", 2820893)],
+        "11.0.4-alpha.1": [("reparse", 4017708)],
+        "11.0.4": [("reparse", 4017708)],
+        "11.1.0": [("refresh_state_db", 0)],
+        "11.2.0": [("refresh_state_db", 0)],
     },
     "testnet4": {
         "10.10.0": [("rollback", 64492)],
         "11.0.0": [("refresh_state_db", 0)],
         "11.0.1": [("rollback", 85000)],
         "11.0.2": [("refresh_state_db", 0)],
+        "11.0.3": [("reparse", 99290)],
+        "11.1.0": [("refresh_state_db", 0)],
+        "11.2.0": [("refresh_state_db", 0)],
     },
     "signet": {
         "11.0.2": [("refresh_state_db", 0)],
+        "11.0.3": [("reparse", 266993)],
+        "11.1.0": [("refresh_state_db", 0)],
+        "11.2.0": [("refresh_state_db", 0)],
     },
 }
 
@@ -124,6 +142,26 @@ DEFAULT_ZMQ_PUBLISHER_PORT_TESTNET4 = 44001
 DEFAULT_ZMQ_PUBLISHER_PORT_SIGNET = 34001
 DEFAULT_ZMQ_PUBLISHER_PORT = 4001
 
+# Dedicated health-check listener, isolated from the public API worker pool
+# (see issue #3460). API_PORT + 1 is taken by the ZMQ publisher, so use + 2.
+DEFAULT_HEALTHZ_PORT_REGTEST = 24002
+DEFAULT_HEALTHZ_PORT_TESTNET3 = 14002
+DEFAULT_HEALTHZ_PORT_TESTNET4 = 44002
+DEFAULT_HEALTHZ_PORT_SIGNET = 34002
+DEFAULT_HEALTHZ_PORT = 4002
+
+# Readiness is considered "caught up" when the last parsed block is within this
+# many blocks of the backend tip, or when it advanced within the recent window.
+DEFAULT_HEALTHZ_READY_LAG_BLOCKS = 1
+DEFAULT_HEALTHZ_READY_RECENT_PARSE_SECONDS = 120
+# Readiness reports "degraded" (503) only when the public worker pool has been
+# saturated (all threads busy AND a non-empty queue) for at least this long.
+# Set to 0 to disable the saturation axis of readiness entirely.
+DEFAULT_HEALTHZ_SATURATION_GRACE_SECONDS = 5
+# Liveness fails only if the health sampler heartbeat is staler than this (a
+# genuine deadlock of the health process), never on ledger lag or saturation.
+DEFAULT_HEALTHZ_LIVENESS_HEARTBEAT_TIMEOUT_SECONDS = 30
+
 UNSPENDABLE_REGTEST = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"
 UNSPENDABLE_TESTNET3 = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"
 UNSPENDABLE_TESTNET4 = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"
@@ -158,7 +196,8 @@ MAGIC_BYTES_SIGNET = b"\x0a\x03\xcf\x40"  # For bip-0010
 BLOCK_FIRST_TESTNET3 = 310000
 BLOCK_FIRST_TESTNET3_HASH = "000000001f605ec6ee8d2c0d21bf3d3ded0a31ca837acc98893876213828989d"
 BURN_START_TESTNET3 = 310000
-BURN_END_TESTNET3 = 4017708  # in a very long time...
+BURN_END_TESTNET3 = 99999999  # in a very long time...
+OLD_BURN_END_TESTNET3 = 4017708  # in a very long time...
 
 BLOCK_FIRST_TESTNET4 = 63240
 BLOCK_FIRST_TESTNET4_HASH = "00000000ffa7082b07d16d8ee02d275ad80a4450350e53835f0f264d72b36cd7"
@@ -201,6 +240,13 @@ DEFAULT_FEE_FRACTION_PROVIDED = 0.01  # 1.00%
 
 
 DEFAULT_REQUESTS_TIMEOUT = 20  # 20 seconds
+# Separate (shorter) TCP connect timeout so an unreachable/stalled backend
+# fails the connect quickly instead of hanging for the full read timeout.
+DEFAULT_BACKEND_CONNECT_TIMEOUT = 5  # 5 seconds
+# Jittered exponential backoff for the parser connection-retry loop, so many
+# nodes recovering from the same backend outage do not reconnect in lockstep.
+BACKEND_RETRY_BASE_SLEEP = 1  # 1 second
+BACKEND_RETRY_MAX_SLEEP = 30  # cap between retries
 DEFAULT_RPC_BATCH_SIZE = 20  # A 1 MB block can hold about 4200 transactions.
 MAX_RPC_BATCH_SIZE = 100  # Maximum number of transactions to send in a single RPC call.
 
@@ -219,54 +265,48 @@ OLD_STYLE_API = True
 
 API_LIMIT_ROWS = 1000
 
+# Max number of Bitcoin backend RPC calls a single API request may trigger before
+# it is rejected with a 400 (issue #3461). Bounds the getrawtransaction fan-out of
+# transaction-info and compose endpoints so one request cannot generate unbounded
+# backend work. 0 = unlimited (matches the API_LIMIT_ROWS convention).
+API_MAX_BACKEND_RPC_CALLS = 1000
+
 MPMA_LIMIT = 1000
 
 PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"
 # PROTOCOL_CHANGES_URL = "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/counterparty-core/counterpartycore/protocol_changes.json"
 
 
-BOOTSTRAP_URLS = {
-    "mainnet": [
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.db.latest.sig",
-        ),
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/state.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/state.db.latest.sig",
-        ),
-    ],
-    "testnet3": [
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet.db.latest.sig",
-        ),
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet.db.latest.sig",
-        ),
-    ],
-    "testnet4": [
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet4.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.testnet4.db.latest.sig",
-        ),
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet4.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/state.testnet4.db.latest.sig",
-        ),
-    ],
-    "signet": [
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.signet.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/counterparty.signet.db.latest.sig",
-        ),
-        (
-            "https://storage.googleapis.com/counterparty-bootstrap/state.signet.db.latest.zst",
-            "https://storage.googleapis.com/counterparty-bootstrap/state.signet.db.latest.sig",
-        ),
-    ],
+BOOTSTRAP_URL_BASE = "https://storage.googleapis.com/counterparty-bootstrap"
+# Version tag embedded in the bootstrap snapshot file names (e.g. "v11.2.0").
+# Versioned names let several releases coexist in the bucket and guarantee that a
+# node downloads the snapshot matching its own version.
+BOOTSTRAP_VERSION = f"v{VERSION_STRING}"
+
+# Ledger / state database base file names per network (as stored in the bucket).
+# testnet3 is intentionally absent: it is deprecated and no snapshots are produced
+# for it anymore (see `prepare-bootstrap`).
+_BOOTSTRAP_DB_NAMES = {
+    "mainnet": ("counterparty.db", "state.db"),
+    "testnet4": ("counterparty.testnet4.db", "state.testnet4.db"),
+    "signet": ("counterparty.signet.db", "state.signet.db"),
 }
+
+
+def _bootstrap_urls(bootstrap_version=BOOTSTRAP_VERSION):
+    urls = {}
+    for network, db_names in _BOOTSTRAP_DB_NAMES.items():
+        urls[network] = [
+            (
+                f"{BOOTSTRAP_URL_BASE}/{db_name}.{bootstrap_version}.zst",
+                f"{BOOTSTRAP_URL_BASE}/{db_name}.{bootstrap_version}.sig",
+            )
+            for db_name in db_names
+        ]
+    return urls
+
+
+BOOTSTRAP_URLS = _bootstrap_urls()
 
 API_MAX_LOG_SIZE = (
     10 * 1024 * 1024
@@ -285,6 +325,8 @@ INFLUX_DB_BUCKET = "node-telemetry"
 LOG_IN_CONSOLE = False
 
 DEFAULT_DB_CONNECTION_POOL_SIZE = 10
+# Maximum total connections across all threads (0 = unlimited)
+DEFAULT_DB_MAX_CONNECTIONS = 50
 
 DEFAULT_UTXO_VALUE = 546
 
@@ -297,3 +339,13 @@ PROFILE_INTERVAL_MINUTES = 15
 CURRENT_COMMIT = "Unknown"
 ENABLE_ALL_PROTOCOL_CHANGES = False
 DISABLE_API_CACHE = False
+# The legacy v1 JSON-RPC API (`/`, `/api/`, `/rpc/`, `/v1/`) is disabled by
+# default: cheap POST requests can trigger expensive database work and large
+# Bitcoin RPC fan-out, an outsized denial-of-service surface. Self-hosters who
+# still need it can opt back in with `--enable-api-v1` (see the startup warning).
+ENABLE_API_V1 = False
+API_CACHE_SIZE = 1000  # max entries in the API response cache (BLOCK_CACHE)
+# Total-rows budget for the API response cache (BLOCK_CACHE); 0 disables the row
+# bound (entry count still applies). Bounds cache memory while letting many small
+# entries stay cached. Worst single entry is API_LIMIT_ROWS rows.
+API_CACHE_MAX_ROWS = 50000

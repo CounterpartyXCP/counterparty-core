@@ -1,5 +1,6 @@
 import random
 
+import pytest
 from counterpartycore.lib.messages import gas
 
 
@@ -159,3 +160,46 @@ def test_calculate_fee(ledger_db):
         fee = gas.get_transaction_fee(ledger_db, TRANSACTION_ID, block_index)
         print(f'"{tx_count_per_period}": {fee},')
         assert fee == FEE_BY_TX_COUNT_PER_PERIOD[str(tx_count_per_period)]
+
+
+def test_calculate_fee_validation_errors():
+    """Test calculate_fee raises errors for invalid inputs."""
+    # Test negative x
+    with pytest.raises(ValueError, match="All inputs must be non-negative"):
+        gas.calculate_fee(x=-1, a=3, b=15, base_fee=100, k=1)
+
+    # Test negative a
+    with pytest.raises(ValueError, match="All inputs must be non-negative"):
+        gas.calculate_fee(x=10, a=-3, b=15, base_fee=100, k=1)
+
+    # Test negative b
+    with pytest.raises(ValueError, match="All inputs must be non-negative"):
+        gas.calculate_fee(x=10, a=3, b=-15, base_fee=100, k=1)
+
+    # Test negative base_fee
+    with pytest.raises(ValueError, match="All inputs must be non-negative"):
+        gas.calculate_fee(x=10, a=3, b=15, base_fee=-100, k=1)
+
+    # Test negative k
+    with pytest.raises(ValueError, match="All inputs must be non-negative"):
+        gas.calculate_fee(x=10, a=3, b=15, base_fee=100, k=-1)
+
+    # Test b <= a (upper threshold must be greater than lower threshold)
+    with pytest.raises(ValueError, match="Upper threshold must be greater than lower threshold"):
+        gas.calculate_fee(x=10, a=15, b=10, base_fee=100, k=1)
+
+    # Test b == a
+    with pytest.raises(ValueError, match="Upper threshold must be greater than lower threshold"):
+        gas.calculate_fee(x=10, a=10, b=10, base_fee=100, k=1)
+
+
+def test_get_transaction_fee_no_fee_params(ledger_db, monkeypatch):
+    """Test get_transaction_fee returns 0 when fee_params is None."""
+    # Monkeypatch protocol.get_value_by_block_index to return None
+    monkeypatch.setattr(
+        "counterpartycore.lib.messages.gas.protocol.get_value_by_block_index",
+        lambda *args: None,
+    )
+
+    # Should return 0 when fee_params is None
+    assert gas.get_transaction_fee(ledger_db, TRANSACTION_ID, 1000000) == 0

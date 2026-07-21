@@ -64,7 +64,9 @@ def compose(
                         return mpma.compose(
                             db,
                             source,
-                            helpers.flat(zip(asset, destination, quantity, memo, memo_is_hex)),
+                            helpers.flat(
+                                zip(asset, destination, quantity, memo, memo_is_hex, strict=True)
+                            ),
                             None,
                             None,
                             skip_validation,
@@ -93,7 +95,14 @@ def compose(
                             db,
                             source,
                             helpers.flat(
-                                zip(asset, destination, quantity, memo["list"], memo_is_hex["list"])
+                                zip(
+                                    asset,
+                                    destination,
+                                    quantity,
+                                    memo["list"],
+                                    memo_is_hex["list"],
+                                    strict=True,
+                                )
                             ),
                             memo["msg_wide"],
                             memo_is_hex["msg_wide"],
@@ -103,7 +112,7 @@ def compose(
                     return mpma.compose(
                         db,
                         source,
-                        helpers.flat(zip(asset, destination, quantity)),
+                        helpers.flat(zip(asset, destination, quantity, strict=True)),
                         memo,
                         memo_is_hex,
                         skip_validation,

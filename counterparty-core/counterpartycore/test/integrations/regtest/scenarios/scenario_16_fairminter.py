@@ -71,6 +71,8 @@ SCENARIO = [
                             "max_mint_per_tx": 0,
                             "max_mint_per_address": 0,
                             "minted_asset_commission_int": 0,
+                            "pool_quantity": 0,
+                            "lp_asset": None,
                             "pre_minted": False,
                             "premint_quantity": 0,
                             "price": 1,
@@ -264,5 +266,52 @@ SCENARIO = [
                 ],
             }
         ],
+    },
+    {
+        "title": "Create paid fairminter HARDCSOFT (hard cap before soft-cap deadline)",
+        "transaction": "fairminter",
+        "source": "$ADDRESS_1",
+        "params": {
+            "asset": "HARDCSOFT",
+            "lot_price": 1,
+            "hard_cap": 20 * 10**8,
+            "soft_cap": 10 * 10**8,
+            "soft_cap_deadline_block": "$CURRENT_BLOCK + 20",
+        },
+        "set_variables": {
+            "HARDCSOFT_TX_HASH": "$TX_HASH",
+        },
+        "controls": [],
+    },
+    {
+        "title": "Mint 10 HARDCSOFT with ADDRESS_2 (escrowed)",
+        "transaction": "fairmint",
+        "source": "$ADDRESS_2",
+        "params": {
+            "asset": "HARDCSOFT",
+            "quantity": 10 * 10**8,
+        },
+        "controls": [],
+    },
+    {
+        "title": "Mint 10 HARDCSOFT with ADDRESS_3 (hard cap reached before deadline)",
+        "transaction": "fairmint",
+        "source": "$ADDRESS_3",
+        "params": {
+            "asset": "HARDCSOFT",
+            "quantity": 10 * 10**8,
+        },
+        "controls": [],
+    },
+    {
+        "title": "Mint HARDCSOFT with ADDRESS_4 (fairminter already closed)",
+        "transaction": "fairmint",
+        "source": "$ADDRESS_4",
+        "params": {
+            "asset": "HARDCSOFT",
+            "quantity": 10 * 10**8,
+        },
+        "expected_error": ["fairminter is not open for asset: `HARDCSOFT`"],
+        "controls": [],
     },
 ]

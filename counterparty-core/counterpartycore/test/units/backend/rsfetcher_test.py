@@ -440,9 +440,8 @@ def test_prefetch_blocks_with_stopped_error_exception(rsfetcher_instance):
             except Exception as e:
                 if str(e) == "Stopped error":
                     rsfetcher_instance.stopped_event.wait(timeout=5)
-                    rsfetcher_instance.restart()
-
-            rsfetcher_instance.running = False
+                    rsfetcher_instance.running = False
+                    rsfetcher_instance.restart(no_wait=True)
 
         # Replace with test version
         rsfetcher_instance.prefetch_blocks = controlled_prefetch
@@ -453,7 +452,7 @@ def test_prefetch_blocks_with_stopped_error_exception(rsfetcher_instance):
         # Verify behavior
         fetcher_mock.get_block_non_blocking.assert_called_once()
         rsfetcher_instance.stopped_event.wait.assert_called_once_with(timeout=5)
-        restart_mock.assert_called_once()
+        restart_mock.assert_called_once_with(no_wait=True)
 
 
 def test_get_block_none_and_nonincremented_height(rsfetcher_instance):
@@ -630,6 +629,7 @@ def test_stop_resets_instance_attributes(rsfetcher_instance):
     # Set up initial state
     fetcher_mock = MagicMock()
     prefetch_task_mock = MagicMock()
+    prefetch_task_mock.result.return_value = None  # Task completes normally
     executor_mock = MagicMock()
 
     rsfetcher_instance.fetcher = fetcher_mock
@@ -645,7 +645,23 @@ def test_stop_resets_instance_attributes(rsfetcher_instance):
 
     # Verify the methods were called
     fetcher_mock.stop.assert_called_once()
-    executor_mock.shutdown.assert_called_once_with(wait=True)
+    prefetch_task_mock.result.assert_called_once_with(timeout=10)
+    executor_mock.shutdown.assert_called_once_with(wait=True, cancel_futures=True)
+
+
+def test_stop_no_wait_skips_waiting(rsfetcher_instance):
+    """Test that stop with no_wait skips waiting for executor shutdown"""
+    fetcher_mock = MagicMock()
+    executor_mock = MagicMock()
+
+    rsfetcher_instance.fetcher = fetcher_mock
+    rsfetcher_instance.executor = executor_mock
+
+    rsfetcher_instance.stop(no_wait=True)
+
+    executor_mock.shutdown.assert_called_once_with(wait=False, cancel_futures=True)
+    fetcher_mock.stop.assert_called_once()
+    assert rsfetcher_instance.executor is None
 
 
 def test_stop_with_stopped_error_exception(rsfetcher_instance):
@@ -653,9 +669,12 @@ def test_stop_with_stopped_error_exception(rsfetcher_instance):
     # Set up mocks
     fetcher_mock = MagicMock()
     fetcher_mock.stop.side_effect = Exception("Stopped error")
+    prefetch_task_mock = MagicMock()
+    prefetch_task_mock.result.return_value = None
     executor_mock = MagicMock()
 
     rsfetcher_instance.fetcher = fetcher_mock
+    rsfetcher_instance.prefetch_task = prefetch_task_mock
     rsfetcher_instance.executor = executor_mock
 
     # Call stop - should not raise since it's a "Stopped error"
@@ -671,9 +690,12 @@ def test_stop_with_other_exception(rsfetcher_instance):
     # Set up mocks
     fetcher_mock = MagicMock()
     fetcher_mock.stop.side_effect = Exception("Other error")
+    prefetch_task_mock = MagicMock()
+    prefetch_task_mock.result.return_value = None
     executor_mock = MagicMock()
 
     rsfetcher_instance.fetcher = fetcher_mock
+    rsfetcher_instance.prefetch_task = prefetch_task_mock
     rsfetcher_instance.executor = executor_mock
 
     # Call stop - should raise since it's not a "Stopped error"

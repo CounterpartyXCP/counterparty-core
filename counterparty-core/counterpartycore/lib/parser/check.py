@@ -13,14 +13,14 @@ logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def consensus_hash(db, field, previous_consensus_hash, content):
-    assert field in ("ledger_hash", "txlist_hash", "messages_hash")
+    assert field in ("ledger_hash", "txlist_hash", "messages_hash"), "Invalid field"
 
     cursor = db.cursor()
     block_index = CurrentState().current_block_index()
 
     # Initialise previous hash on first block.
     if block_index <= config.BLOCK_FIRST:
-        assert not previous_consensus_hash
+        assert not previous_consensus_hash, "Previous consensus hash is not None"
         previous_consensus_hash = dhash_string(checkpoints.CONSENSUS_HASH_SEED)
 
     # Get previous hash.
@@ -155,14 +155,30 @@ def software_version():
         TimeoutError,
         json.decoder.JSONDecodeError,
     ) as e:
-        logger.error(e, exc_info=True)
+        logger.error(
+            "Unable to check Counterparty version from %s: %s", config.PROTOCOL_CHANGES_URL, e
+        )
         raise exceptions.VersionCheckError(
-            "Unable to check Counterparty version. Use --force to ignore verfication."
+            f"Unable to check Counterparty version from {config.PROTOCOL_CHANGES_URL}: {e}. "
+            "Use --force to ignore verification."
         ) from e
 
-    for change_name in versions:
-        protocol_change = versions[change_name]
-        check_change(protocol_change, change_name)
+    # check_change reads dict keys ("minimum_version_major" etc.) and
+    # compares them with `<` to ints. A malformed upstream JSON (compromised
+    # counterparty.io / DNS poisoning / TLS-chain attack) where any of those
+    # values is a string or missing would raise TypeError/KeyError. That isn't
+    # in the except tuple above, so it would propagate through software_version
+    # -> follow.handle()'s broad except -> self.stop() and halt the watcher
+    # on a single bad upstream response.
+    try:
+        for change_name in versions:
+            protocol_change = versions[change_name]
+            check_change(protocol_change, change_name)
+    except (KeyError, TypeError, AttributeError) as e:
+        logger.error("Malformed protocol_changes.json from upstream: %s", e)
+        raise exceptions.VersionCheckError(
+            "Malformed Counterparty version response. Use --force to ignore verification."
+        ) from e
 
     logger.debug("Version check passed.")
     return True

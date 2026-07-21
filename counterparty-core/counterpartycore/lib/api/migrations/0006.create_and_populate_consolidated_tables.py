@@ -5,6 +5,11 @@ import logging
 import time
 
 from counterpartycore.lib import config
+from counterpartycore.lib.utils.database import (
+    ADDRESS_INDEX_COLUMN_NAMES,
+    ASSET_INDEX_COLUMN_NAMES,
+    text_affinitize_index_columns,
+)
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -13,15 +18,19 @@ __depends__ = {"0005.create_and_populate_events_count"}
 
 CONSOLIDATED_TABLES = {
     "fairminters": "tx_hash",
-    "balances": "address, utxo, asset",
+    # ``utxo`` is the compact ``(utxo_tx_hash, utxo_vout)`` ledger pair; group
+    # by both halves (the State DB stores the reconstructed ``utxo`` string).
+    "balances": "address, utxo_tx_hash, utxo_vout, asset",
     "addresses": "address",
     "dispensers": "source, asset, tx_hash",
-    "bet_matches": "id",
+    # match tables: the composite TEXT ``id`` was dropped; the match is keyed
+    # by the ``(tx0_index, tx1_index)`` pair (compact-hash storage migration).
+    "bet_matches": "tx0_index, tx1_index",
     "bets": "tx_hash",
-    "order_matches": "id",
+    "order_matches": "tx0_index, tx1_index",
     "orders": "tx_hash",
     "rps": "tx_hash",
-    "rps_matches": "id",
+    "rps_matches": "tx0_index, tx1_index",
 }
 
 ADDITONAL_COLUMNS = {
@@ -42,17 +51,20 @@ POST_QUERIES = {
             earned_quantity = (
                 SELECT SUM(earn_quantity) 
                 FROM fairmints 
-                WHERE fairmints.fairminter_tx_hash = fairminters.tx_hash
+                WHERE fairmints.fairminter_tx_index = fairminters.tx_index
+                AND fairmints.status = 'valid'
             ),
             paid_quantity = (
                 SELECT SUM(paid_quantity) 
                 FROM fairmints 
-                WHERE fairmints.fairminter_tx_hash = fairminters.tx_hash
+                WHERE fairmints.fairminter_tx_index = fairminters.tx_index
+                AND fairmints.status = 'valid'
             ),
             commission = (
                 SELECT SUM(commission) 
                 FROM fairmints 
-                WHERE fairmints.fairminter_tx_hash = fairminters.tx_hash
+                WHERE fairmints.fairminter_tx_index = fairminters.tx_index
+                AND fairmints.status = 'valid'
             );
         """,
     ],
@@ -74,7 +86,7 @@ POST_QUERIES = {
 
 def dict_factory(cursor, row):
     fields = [column[0] for column in cursor.description]
-    return dict(zip(fields, row))
+    return dict(zip(fields, row, strict=True))
 
 
 def build_consolidated_table(state_db, table_name):
@@ -95,7 +107,21 @@ def build_consolidated_table(state_db, table_name):
             sqls.append(sql["sql"])
 
     for sql in sqls:
-        state_db.execute(sql)
+        create_sql = sql
+        if table_name == "balances":
+            # The State DB keeps the ``utxo`` string (reconstructed below) rather
+            # than the compact ledger ``(utxo_tx_hash, utxo_vout)`` pair, so it
+            # can read its own rows without ``ledger_db`` attached.
+            create_sql = create_sql.replace("utxo_tx_hash BLOB,", "utxo TEXT,").replace(
+                "utxo_vout INTEGER,", ""
+            )
+        # The State DB stores the *decoded* asset name / address string in these
+        # columns (see the INSERT below), so retype them from the ledger's
+        # compact ``INTEGER`` to ``TEXT``. Without this the INTEGER affinity
+        # mismatches ``assets_info.asset`` (TEXT) in the ``orders_info`` join and
+        # dispenser price subquery and defeats the index -> full scans.
+        create_sql = text_affinitize_index_columns(create_sql)
+        state_db.execute(create_sql)
 
     state_db.execute(f"""
         CREATE TEMP TABLE latest_ids AS
@@ -108,9 +134,31 @@ def build_consolidated_table(state_db, table_name):
         CREATE INDEX temp.latest_ids_idx ON latest_ids(max_id)
     """)
 
-    columns = [
-        f"b.{column['name']}" for column in state_db.execute(f"PRAGMA table_info({table_name})")
-    ]
+    # The State DB stores asset *names* (it must read its own rows without the
+    # Ledger DB attached). Asset columns are stored as the compact
+    # ``asset_index`` in ``ledger_db``, so decode them back to names here while
+    # ``ledger_db`` is attached (the INSERT ... SELECT bypasses the rowtracer).
+    columns = []
+    for column in state_db.execute(f"PRAGMA table_info({table_name})"):
+        col = column["name"]
+        if col in ASSET_INDEX_COLUMN_NAMES:
+            columns.append(
+                f"(SELECT asset_name FROM ledger_db.assets WHERE asset_index = b.{col}) AS {col}"  # noqa: S608  # nosec B608
+            )
+        elif col in ADDRESS_INDEX_COLUMN_NAMES:
+            # decode the compact ``address_id`` back to the address string
+            columns.append(
+                f"(SELECT address FROM ledger_db.address_list WHERE address_id = b.{col}) AS {col}"  # noqa: S608  # nosec B608
+            )
+        elif col == "utxo" and table_name == "balances":
+            # reconstruct the ``tx_hash:vout`` string from the compact ledger
+            # ``(utxo_tx_hash, utxo_vout)`` pair (``lower(hex(...))`` yields the
+            # lowercase hex the utxo string used; a NULL tx_hash -> NULL utxo).
+            columns.append(
+                "lower(hex(b.utxo_tx_hash)) || ':' || b.utxo_vout AS utxo"  # noqa: S608  # nosec B608
+            )
+        else:
+            columns.append(f"b.{col}")
     select_fields = ", ".join(columns)
 
     state_db.execute(f"""
@@ -133,7 +181,13 @@ def build_consolidated_table(state_db, table_name):
             state_db.execute(post_query)
 
     for sql_index in indexes:
-        state_db.execute(sql_index)
+        index_sql = sql_index
+        if table_name == "balances":
+            # the State DB balances keeps a single ``utxo`` TEXT column, so the
+            # ledger's composite ``(utxo_tx_hash, utxo_vout)`` indexes map onto
+            # ``utxo``.
+            index_sql = index_sql.replace("utxo_tx_hash, utxo_vout", "utxo")
+        state_db.execute(index_sql)
     logger.debug(
         "Copied consolidated table `%s` in %.2f seconds", table_name, time.time() - start_time
     )

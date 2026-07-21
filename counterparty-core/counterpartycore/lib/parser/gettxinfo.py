@@ -10,6 +10,7 @@ from counterpartycore.lib.exceptions import BTCOnlyError, DecodeError
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import dispenser
 from counterpartycore.lib.parser import gettxinfolegacy, messagetype, p2sh, protocol
+from counterpartycore.lib.parser.known_sources import KNOWN_SOURCES
 from counterpartycore.lib.utils import base58, multisig, opcodes, script
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -267,7 +268,7 @@ def get_transaction_sources(decoded_tx):
                 raise DecodeError("data in source")
         elif asm[0] == opcodes.OP_HASH160 and asm[-1] == opcodes.OP_EQUAL and len(asm) == 3:  # noqa: F405
             new_source, new_data = decode_scripthash(asm)
-            assert not new_data and new_source
+            assert not new_data and new_source, "Invalid source"
         elif (protocol.enabled("segwit_support") and asm[0] == b"") or (
             protocol.enabled("taproot_support") and asm[0] == b"\x01"
         ):
@@ -279,7 +280,7 @@ def get_transaction_sources(decoded_tx):
 
         # old; append to sources, results in invalid addresses
         # new; first found source is source, the rest can be anything (to fund the TX for example)
-        if not (protocol.enabled("first_input_is_source") and len(sources)):
+        if not (protocol.enabled("first_input_is_source") and sources):
             # Collect unique sources.
             if new_source not in sources:
                 sources.append(new_source)
@@ -317,7 +318,7 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit):
         if new_source is not None:
             p2sh_encoding_source = new_source
 
-        assert not new_destination
+        assert not new_destination, "New destination is not None"
 
         data += new_data
 
@@ -427,10 +428,12 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     if not data and destinations != [
         config.UNSPENDABLE,
     ]:
-        assert protocol.enabled(
-            "dispensers", block_index
+        assert protocol.enabled("dispensers", block_index), (
+            "Dispenser protocol is not enabled"
         )  # else an exception would have been raised above
-        assert len(dispensers_outputs) > 0  # else an exception would have been raised above
+        assert len(dispensers_outputs) > 0, (
+            "No dispensers outputs"
+        )  # else an exception would have been raised above
         return get_dispensers_tx_info(sources, dispensers_outputs)
 
     destinations = "-".join(destinations)
@@ -517,12 +520,6 @@ def get_op_return_vout(decoded_tx):
         except DecodeError:
             pass
     return None
-
-
-KNOWN_SOURCES = {
-    "92ad58f5aa35c503489efbdd2a466e942baa9ac5cd67cb7544adf03e47a457d0": "a71da7169db3672408c7b25f84be425839548e63fa480c0478f91e3c2aa3ec67:0",
-    "c80143886181ebbc782d23a50acca0f5ea7ac005d3164d7c76fc5e14f72d47c8": "",
-}
 
 
 def get_utxos_info(db, decoded_tx):

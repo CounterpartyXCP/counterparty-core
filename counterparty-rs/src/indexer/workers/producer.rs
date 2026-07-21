@@ -1,6 +1,7 @@
 use std::{thread::sleep, time::Duration};
 
 use bitcoin::hashes::Hash;
+use bitcoin::BlockHash;
 use crossbeam_channel::{Receiver, Sender};
 use tracing::info;
 
@@ -15,6 +16,36 @@ use crate::indexer::{
     utils::{in_reorg_window, with_retry},
 };
 
+fn get_block_hash_with_retry<C, B>(
+    client: &C,
+    stopper: Stopper,
+    height: u32,
+) -> Result<BlockHash, Error>
+where
+    C: BitcoinRpc<B>,
+{
+    with_retry(
+        stopper,
+        || client.get_block_hash(height),
+        format!("Error fetching block hash for height {}", height),
+    )
+}
+
+fn get_block_with_retry<C, B>(
+    client: &C,
+    stopper: Stopper,
+    block_hash: &BlockHash,
+) -> Result<Box<B>, Error>
+where
+    C: BitcoinRpc<B>,
+{
+    with_retry(
+        stopper,
+        || client.get_block(block_hash),
+        format!("Error fetching block for hash {}", block_hash),
+    )
+}
+
 fn get_last_matching_height<C, D, B>(
     client: &C,
     db: &D,
@@ -27,8 +58,8 @@ where
     B: BlockHasPrevBlockHash,
 {
     for i in (1..=start_height).rev() {
-        let current_block_hash = client.get_block_hash(i)?;
-        let current_block = client.get_block(&current_block_hash)?;
+        let current_block_hash = get_block_hash_with_retry(client, stopper.clone(), i)?;
+        let current_block = get_block_with_retry(client, stopper.clone(), &current_block_hash)?;
         let expected_prev_block_hash = current_block
             .get_prev_block_hash()
             .to_raw_hash()

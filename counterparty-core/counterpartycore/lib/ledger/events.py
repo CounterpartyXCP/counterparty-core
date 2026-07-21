@@ -8,8 +8,240 @@ from counterpartycore.lib.cli import log
 from counterpartycore.lib.ledger.balances import get_balance
 from counterpartycore.lib.ledger.caches import AssetCache, UTXOBalancesCache
 from counterpartycore.lib.ledger.currentstate import ConsensusHashBuilder, CurrentState
+from counterpartycore.lib.ledger.migration_data.compact_hash_tables import (
+    ADDRESS_NAME_COLUMNS,
+    ASSET_NAME_COLUMNS,
+    UTXO_SPLIT_COLUMNS,
+)
 from counterpartycore.lib.parser import protocol, utxosinfo
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import database, hashcodec, helpers
+
+# Per-table list of BLOB hash columns that need automatic ``hex -> bytes``
+# normalization at insert time. The values are still passed around as hex
+# strings inside Python (consensus, API, tests); this mapping is consulted by
+# ``insert_record`` to write the binary form to disk.
+#
+# Tables not listed here either have no hash columns (e.g. ``balances``) or
+# their hash columns have been replaced by a ``tx_index`` FK and legacy
+# ``*_tx_hash`` bindings are *resolved* before insert; see
+# ``HASH_TO_TX_INDEX_FK`` below.
+HASH_COLUMNS_BY_TABLE = {
+    "blocks": [
+        "block_hash",
+        "previous_block_hash",
+        "ledger_hash",
+        "txlist_hash",
+        "messages_hash",
+    ],
+    "transactions": ["tx_hash"],
+    "mempool_transactions": ["tx_hash"],  # block_hash is TEXT sentinel "mempool", not a real hash
+    "mempool": ["tx_hash"],
+    "messages": ["event_hash"],
+    "transaction_outputs": [],
+    "orders": ["tx_hash"],
+    "order_matches": ["tx0_hash", "tx1_hash"],
+    "order_expirations": ["order_hash"],
+    "bets": ["tx_hash"],
+    "bet_matches": ["tx0_hash", "tx1_hash"],
+    "bet_expirations": ["bet_hash"],
+    "rps": ["tx_hash", "move_random_hash"],
+    "rps_matches": [
+        "tx0_hash",
+        "tx1_hash",
+        "tx0_move_random_hash",
+        "tx1_move_random_hash",
+    ],
+    "rps_expirations": ["rps_hash"],
+    "rpsresolves": ["tx_hash"],
+    "issuances": ["tx_hash"],
+    "broadcasts": ["tx_hash"],
+    "btcpays": ["tx_hash"],
+    "burns": ["tx_hash"],
+    "cancels": ["tx_hash"],
+    "dividends": ["tx_hash"],
+    "destructions": ["tx_hash"],
+    "sweeps": ["tx_hash"],
+    "sends": ["tx_hash"],
+    "dispensers": ["tx_hash", "last_status_tx_hash"],
+    "dispenses": ["tx_hash"],
+    "dispenser_refills": ["tx_hash"],
+    "fairminters": ["tx_hash"],
+    "fairmints": ["tx_hash"],
+    "pools": ["tx_hash"],
+    "pool_deposits": ["tx_hash"],
+    "pool_withdrawals": ["tx_hash"],
+    "pool_matches": ["tx_hash"],
+}
+
+
+# Legacy ``hex tx_hash`` columns that have been replaced by a ``tx_index``
+# FK in the optimized schema. ``insert_record`` resolves the hex value to
+# its tx_index via the ``transactions`` table just before issuing the
+# INSERT, so callers (message handlers) can keep using the legacy field
+# names without modification.
+#
+# Mapping: table -> {legacy_hex_column: new_index_column}
+HASH_TO_TX_INDEX_FK = {
+    "dispenses": {"dispenser_tx_hash": "dispenser_tx_index"},
+    "dispenser_refills": {"dispenser_tx_hash": "dispenser_tx_index"},
+    "fairmints": {"fairminter_tx_hash": "fairminter_tx_index"},
+    "pool_matches": {"order_tx_hash": "order_tx_index"},
+    "cancels": {"offer_hash": "offer_tx_index"},
+}
+
+
+# Match tables whose composite TEXT ``id`` (``tx0hash_tx1hash``) has been
+# dropped in the optimized schema: the match is keyed by the existing
+# ``(tx0_index, tx1_index)`` pair. ``insert_record`` strips the ``id`` binding
+# before INSERT; the journal keeps it (consensus-critical).
+MATCH_ID_TABLES = ("order_matches", "bet_matches", "rps_matches")
+
+
+# Tables that referenced a match through a single TEXT ``*_match_id`` column.
+# That column is replaced by a ``(*_tx0_index, *_tx1_index)`` integer pair;
+# ``insert_record`` splits the hex id and resolves each half to its tx_index
+# just before INSERT, so message handlers keep passing the legacy field.
+#
+# Mapping: table -> (legacy_id_column, tx0_index_column, tx1_index_column)
+MATCH_ID_TO_TX_INDEX_FK = {
+    "order_match_expirations": (
+        "order_match_id",
+        "order_match_tx0_index",
+        "order_match_tx1_index",
+    ),
+    "bet_match_expirations": ("bet_match_id", "bet_match_tx0_index", "bet_match_tx1_index"),
+    "rps_match_expirations": ("rps_match_id", "rps_match_tx0_index", "rps_match_tx1_index"),
+    "bet_match_resolutions": ("bet_match_id", "bet_match_tx0_index", "bet_match_tx1_index"),
+    "btcpays": ("order_match_id", "order_match_tx0_index", "order_match_tx1_index"),
+    "rpsresolves": ("rps_match_id", "rps_match_tx0_index", "rps_match_tx1_index"),
+}
+
+
+def _resolve_tx_index(db, tx_hash_hex):
+    """Look up ``tx_index`` for a hex ``tx_hash``. Returns ``None`` if the
+    value is ``None`` or the tx is not (yet) in the table; callers must
+    tolerate the latter (e.g. dispenser refresh references the dispenser's
+    own row inserted earlier in the same block)."""
+    if tx_hash_hex is None:
+        return None
+    blob = hashcodec.hash_to_db(tx_hash_hex)
+    cursor = db.cursor()
+    cursor.execute("SELECT tx_index FROM transactions WHERE tx_hash = ?", (blob,))
+    row = cursor.fetchone()
+    cursor.close()
+    if row is None:
+        return None
+    return row["tx_index"]
+
+
+def _resolve_match_indexes(db, match_id):
+    """Split a composite ``tx0hash_tx1hash`` match id and resolve each half to
+    its ``tx_index``. Returns ``(None, None)`` when the id is ``None`` or
+    malformed (mirrors the permissive ``_resolve_tx_index`` contract: an
+    unresolvable id -- e.g. an invalid btcpay -- yields NULL indexes)."""
+    if match_id is None:
+        return None, None
+    parts = match_id.split(helpers.ID_SEPARATOR)
+    if len(parts) != 2:
+        return None, None
+    return _resolve_tx_index(db, parts[0]), _resolve_tx_index(db, parts[1])
+
+
+def _address_id(db, address):
+    """Resolve an address string to its compact ``address_id``, creating the
+    ``address_list`` row first if needed. ``None`` (and any non-str) passes
+    through unchanged (e.g. the ``address`` column on a UTXO balance is NULL)."""
+    if address is None or not isinstance(address, str):
+        return address
+    # Fast path: an already-registered address resolves straight from the
+    # per-connection LRU (or a single SELECT), so skip the ``INSERT OR IGNORE``
+    # write entirely. Only register (and re-query) on a genuine first sighting.
+    # On a full reparse the same hot addresses recur on nearly every
+    # credit/debit/balance row, so this turns the common case from a write into
+    # a cache hit.
+    index = database.address_index_from_name(db, address)
+    if index is not None:
+        return index
+    ensure_address(db, address)
+    return database.address_index_from_name(db, address)
+
+
+def _split_utxo(utxo):
+    """Split a ``tx_hash:vout`` UTXO string into ``(utxo_tx_hash, utxo_vout)``
+    (BLOB tx_hash + int vout). Delegates to ``database.split_utxo`` (the single
+    shared choke point)."""
+    return database.split_utxo(utxo)
+
+
+def _prepare_record_for_insert(db, table_name, record):
+    """Return a copy of ``record`` with hash columns normalized to BLOB and
+    any legacy hash columns resolved to their new ``*_tx_index`` FK form."""
+    out = dict(record)
+
+    # Resolve legacy hex hash -> tx_index and drop the legacy field.
+    fk_map = HASH_TO_TX_INDEX_FK.get(table_name)
+    if fk_map:
+        for legacy_col, new_col in fk_map.items():
+            if legacy_col in out and new_col not in out:
+                out[new_col] = _resolve_tx_index(db, out.pop(legacy_col))
+            elif legacy_col in out and new_col in out:
+                out.pop(legacy_col)
+
+    # Drop the composite TEXT ``id`` on match tables (the match is keyed by
+    # the existing ``(tx0_index, tx1_index)`` pair, which the handlers already
+    # supply in the bindings).
+    if table_name in MATCH_ID_TABLES:
+        out.pop("id", None)
+
+    # Split the legacy composite ``*_match_id`` into its ``(tx0_index,
+    # tx1_index)`` pair on referencing tables.
+    match_fk = MATCH_ID_TO_TX_INDEX_FK.get(table_name)
+    if match_fk:
+        legacy_col, tx0_col, tx1_col = match_fk
+        if legacy_col in out:
+            tx0_index, tx1_index = _resolve_match_indexes(db, out.pop(legacy_col))
+            out.setdefault(tx0_col, tx0_index)
+            out.setdefault(tx1_col, tx1_index)
+
+    # Convert hex strings to BLOB for known hash columns. We tolerate
+    # both bytes (already converted) and None.
+    hash_cols = HASH_COLUMNS_BY_TABLE.get(table_name)
+    if hash_cols:
+        for col in hash_cols:
+            if col in out:
+                out[col] = hashcodec.hash_to_db(out[col])
+
+    # Convert asset *name* columns to the compact integer ``asset_index`` FK.
+    # The journal keeps the original ``record`` (names), so the consensus
+    # ``bindings_string`` stays name-based; only the stored row uses the index.
+    # An unregistered name (invalid record) resolves to NULL.
+    asset_cols = ASSET_NAME_COLUMNS.get(table_name)
+    if asset_cols:
+        for col in asset_cols:
+            if col in out and isinstance(out[col], str):
+                out[col] = database.asset_index_from_name(db, out[col])
+
+    # Convert address columns to the compact integer ``address_id`` FK. The
+    # address row is created first if needed (``ensure_address``); the journal
+    # keeps the original ``record`` (strings) so consensus is unchanged. A
+    # ``None`` address (e.g. the ``address`` column on a UTXO balance) stays
+    # NULL.
+    address_cols = ADDRESS_NAME_COLUMNS.get(table_name)
+    if address_cols:
+        for col in address_cols:
+            if col in out and isinstance(out[col], str):
+                out[col] = _address_id(db, out[col])
+
+    # Split the legacy ``utxo`` TEXT (``tx_hash:vout``) into the compact
+    # ``(utxo_tx_hash, utxo_vout)`` pair. The journal keeps the original
+    # ``utxo`` string, so consensus is unchanged.
+    utxo_split = UTXO_SPLIT_COLUMNS.get(table_name)
+    if utxo_split:
+        legacy_col, tx_hash_col, vout_col = utxo_split
+        if legacy_col in out:
+            out[tx_hash_col], out[vout_col] = _split_utxo(out.pop(legacy_col))
+
+    return out
 
 
 @contextmanager
@@ -21,13 +253,49 @@ def get_cursor(db):
         cursor.close()
 
 
+def ensure_asset(db, asset_id, asset_name, block_index, asset_longname):
+    """Create the ``assets`` row (DB only, no journal) if it does not exist
+    yet, so records inserted *before* their ``ASSET_CREATION`` event -- e.g. a
+    fairminter referencing the asset it is about to mint -- can still resolve
+    the compact ``asset_index``. The subsequent ``ASSET_CREATION`` insert is
+    idempotent (``INSERT OR IGNORE`` on ``assets``), so the consensus event
+    order is preserved while the storage row exists early."""
+    with get_cursor(db) as cursor:
+        cursor.execute(
+            "INSERT OR IGNORE INTO assets (asset_id, asset_name, block_index, asset_longname) "
+            "VALUES (?, ?, ?, ?)",
+            (str(asset_id), asset_name, block_index, asset_longname),
+        )
+
+
+def ensure_address(db, address):
+    """Create the ``address_list`` row (DB only, no journal) for ``address`` if
+    it does not exist yet, so the compact ``address_id`` always resolves at
+    write time. Addresses have no creation event -- they are first-seen-on-use
+    -- so this is called from the write path (``_address_id``) for every address
+    column just before INSERT. ``INSERT OR IGNORE`` keeps it idempotent and
+    monotonic (the ``address_id`` is assigned once, on first sighting)."""
+    if address is None:
+        return
+    with get_cursor(db) as cursor:
+        cursor.execute(
+            "INSERT OR IGNORE INTO address_list (address) VALUES (?)",
+            (address,),
+        )
+
+
 def insert_record(db, table_name, record, event, event_info=None):
-    fields = list(record.keys())
+    record_for_db = _prepare_record_for_insert(db, table_name, record)
+    fields = list(record_for_db.keys())
     placeholders = ", ".join(["?" for _ in fields])
-    query = f"INSERT INTO {table_name} ({', '.join(fields)}) VALUES ({placeholders})"  # noqa: S608 # nosec B608
+    # ``assets`` may have been pre-created (DB only) by ``ensure_asset`` so an
+    # earlier record could resolve its ``asset_index``; tolerate the duplicate
+    # while still emitting the ASSET_CREATION journal entry below.
+    or_ignore = "OR IGNORE " if table_name == "assets" else ""
+    query = f"INSERT {or_ignore}INTO {table_name} ({', '.join(fields)}) VALUES ({placeholders})"  # noqa: S608 # nosec B608
 
     with get_cursor(db) as cursor:
-        cursor.execute(query, list(record.values()))
+        cursor.execute(query, list(record_for_db.values()))
         if table_name in ["issuances", "destructions"] and not CurrentState().parsing_mempool():
             cursor.execute("SELECT last_insert_rowid() AS rowid")
             inserted_rowid = cursor.fetchone()["rowid"]
@@ -58,15 +326,45 @@ def insert_record(db, table_name, record, event, event_info=None):
 # order updates and retrieve the row with the current data.
 def insert_update(db, table_name, id_name, id_value, update_data, event, event_info=None):  # noqa: B006
     cursor = db.cursor()
-    # select records to update
-    select_query = f"""
-        SELECT *, rowid
-        FROM {table_name}
-        WHERE {id_name} = ?
-        ORDER BY rowid DESC
-        LIMIT 1
-    """  # nosec B608  # noqa: S608 # nosec B608
-    bindings = (id_value,)
+    # The id may be a hex hash and the underlying column may be BLOB; convert
+    # consistently so SQLite can match the at-rest representation.
+    # ``hash_to_db`` is permissive: it passes ``bytes``/``None`` through, hex
+    # strings -> BLOB(32), and non-hex strings -> UTF-8 bytes (consistent
+    # with INSERT paths for synthetic test fixtures). Only triggered for
+    # ``id_name``s that are actually hash columns; non-hash ids like
+    # ``rowid`` / ``id`` (composite text) / ``address`` are bound as-is.
+    if table_name in MATCH_ID_TABLES and id_name == "id":
+        # The composite TEXT ``id`` is no longer a stored column; match on the
+        # ``(tx0_index, tx1_index)`` pair resolved from the text id. The
+        # journal below still records the original text id (consensus).
+        tx0_index, tx1_index = _resolve_match_indexes(db, id_value)
+        select_query = f"""
+            SELECT *, rowid
+            FROM {table_name}
+            WHERE tx0_index = ? AND tx1_index = ?
+            ORDER BY rowid DESC
+            LIMIT 1
+        """  # nosec B608  # noqa: S608 # nosec B608
+        bindings = (tx0_index, tx1_index)
+    else:
+        if id_name in hashcodec.HASH_COLUMN_NAMES:
+            id_bind = hashcodec.hash_to_db(id_value)
+        elif id_name in database.ADDRESS_INDEX_COLUMN_NAMES:
+            # The matched column is now an ``address_id`` INTEGER FK (e.g. the
+            # ``addresses`` options table keyed on ``address``); resolve the
+            # string id to its compact index so the WHERE matches the at-rest
+            # representation.
+            id_bind = database.address_index_from_name(db, id_value)
+        else:
+            id_bind = id_value
+        select_query = f"""
+            SELECT *, rowid
+            FROM {table_name}
+            WHERE {id_name} = ?
+            ORDER BY rowid DESC
+            LIMIT 1
+        """  # nosec B608  # noqa: S608 # nosec B608
+        bindings = (id_bind,)
     need_update_record = cursor.execute(select_query, bindings).fetchone()
 
     # update record
@@ -83,6 +381,7 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
     # insert new record
     if "rowid" in new_record:
         del new_record["rowid"]
+    new_record = _prepare_record_for_insert(db, table_name, new_record)
     fields_name = ", ".join(new_record.keys())
     fields_values = ", ".join([f":{key}" for key in new_record.keys()])
     # no sql injection here
@@ -99,11 +398,14 @@ def insert_update(db, table_name, id_name, id_value, update_data, event, event_i
 
 
 def last_message(db):
-    """Return latest message from the db."""
+    """Return latest message from the db. Exposes the legacy ``tx_hash`` hex
+    string by joining on ``transactions`` (``messages.tx_index`` is the
+    storage column after the compact-hash migration)."""
     cursor = db.cursor()
     query = """
-        SELECT * FROM messages
-        WHERE message_index = (
+        SELECT m.*, (SELECT t.tx_hash FROM transactions t WHERE t.tx_index = m.tx_index) AS tx_hash
+        FROM messages m
+        WHERE m.message_index = (
             SELECT MAX(message_index) from messages
         )
     """
@@ -117,6 +419,26 @@ def last_message(db):
     return message
 
 
+def _previous_message_for_journal(db):
+    """Return only the ``message_index`` and ``event_hash`` of the latest
+    message. ``add_to_journal`` runs once per event (the hottest write path);
+    it needs nothing else, so this avoids the correlated ``tx_hash`` subquery
+    in ``last_message`` (whose result no caller actually consumes). Raises
+    ``exceptions.DatabaseError`` when the table is empty, matching
+    ``last_message`` so the caller's first-message handling is unchanged."""
+    cursor = db.cursor()
+    row = cursor.execute(
+        """
+        SELECT message_index, event_hash FROM messages
+        WHERE message_index = (SELECT MAX(message_index) FROM messages)
+        """
+    ).fetchone()
+    cursor.close()
+    if row is None:
+        raise exceptions.DatabaseError("No messages found.")
+    return row
+
+
 # we are using a function here for testing purposes
 def curr_time():
     return int(time.time())
@@ -125,13 +447,24 @@ def curr_time():
 def add_to_journal(db, block_index, command, category, event, bindings):
     # Get last message index.
     try:
-        previous_message = last_message(db)
+        previous_message = _previous_message_for_journal(db)
         message_index = previous_message["message_index"] + 1
-        previous_event_hash = previous_message["event_hash"] or ""
+        # The rowtracer already converts BLOB event_hash back to hex, but be
+        # defensive in case the row trace is bypassed somewhere.
+        prev_eh = previous_message["event_hash"]
+        previous_event_hash = (
+            hashcodec.hash_from_db(prev_eh) if isinstance(prev_eh, bytes) else (prev_eh or "")
+        )
     except exceptions.DatabaseError:
         message_index = 0
         previous_event_hash = ""
 
+    # The consensus-critical ``bindings_string`` JSON MUST stay byte-identical
+    # to the pre-optimization release: hashes (which the message handlers
+    # always pass as hex strings) must remain hex; ``bytes`` values found in
+    # ``data`` style fields must be hex-encoded; ``None`` stays None. The
+    # original implementation converts bytes -> hex which already covers both
+    # cases (BLOB hashes coming from row dicts and binary ``data`` payloads).
     items = {
         key: binascii.hexlify(value).decode("ascii") if isinstance(value, bytes) else value
         for key, value in bindings.items()
@@ -152,6 +485,19 @@ def add_to_journal(db, block_index, command, category, event, bindings):
         ]
     )
     event_hash = binascii.hexlify(helpers.dhash(event_hash_content)).decode("ascii")
+    # ``messages.tx_hash`` has been replaced by ``messages.tx_index``. The
+    # in-flight tx_index is carried on CurrentState alongside the tx_hash, so we
+    # avoid a per-event ``SELECT`` on ``transactions``. For block-level events
+    # (BLOCK_PARSED, EXPIRE_*) the tx context is None, so tx_index stays NULL.
+    # The ``_resolve_tx_index`` fallback only triggers if a caller set the
+    # tx_hash without the matching index, preserving the previous behaviour.
+    current_tx_hash_hex = CurrentState().current_tx_hash()
+    tx_index = None
+    if current_tx_hash_hex is not None:
+        tx_index = CurrentState().current_tx_index()
+        if tx_index is None:
+            tx_index = _resolve_tx_index(db, current_tx_hash_hex)
+    event_hash_blob = hashcodec.hash_to_db(event_hash)
     message_bindings = {
         "message_index": message_index,
         "block_index": block_index,
@@ -160,11 +506,11 @@ def add_to_journal(db, block_index, command, category, event, bindings):
         "bindings": bindings_string,
         "timestamp": current_time,
         "event": event,
-        "tx_hash": CurrentState().current_tx_hash(),
-        "event_hash": event_hash,
+        "tx_index": tx_index,
+        "event_hash": event_hash_blob,
     }
     query = """INSERT INTO messages (
-                message_index, block_index, command, category, bindings, timestamp, event, tx_hash, event_hash
+                message_index, block_index, command, category, bindings, timestamp, event, tx_index, event_hash
             ) VALUES (
                 :message_index,
                 :block_index,
@@ -173,7 +519,7 @@ def add_to_journal(db, block_index, command, category, event, bindings):
                 :bindings,
                 :timestamp,
                 :event,
-                :tx_hash,
+                :tx_index,
                 :event_hash
             )"""
     cursor = db.cursor()
@@ -211,18 +557,26 @@ def remove_from_balance(db, address, asset, quantity, tx_index, utxo_address=Non
             UTXOBalancesCache(db).remove_balance(utxo)
 
     if not no_balance:  # don't create balance if quantity is 0 and there is no balance
+        # ``balances`` is written with raw SQL (it bypasses
+        # ``_prepare_record_for_insert``), so resolve the address/utxo_address
+        # to ``address_id`` and split the ``utxo`` string into the BLOB
+        # tx_hash + vout pair here, mirroring the asset_index resolution.
+        utxo_tx_hash, utxo_vout = _split_utxo(utxo)
         bindings = {
             "quantity": balance,
-            "address": balance_address,
-            "utxo": utxo,
-            "utxo_address": utxo_address,
-            "asset": asset,
+            "address": _address_id(db, balance_address),
+            "utxo_tx_hash": utxo_tx_hash,
+            "utxo_vout": utxo_vout,
+            "utxo_address": _address_id(db, utxo_address),
+            # balances stores the compact ``asset_index``; the name always
+            # resolves here (a balance only exists for an issued asset).
+            "asset": database.asset_index_from_name(db, asset),
             "block_index": CurrentState().current_block_index(),
             "tx_index": tx_index,
         }
         query = """
-            INSERT INTO balances (address, asset, quantity, block_index, tx_index, utxo, utxo_address)
-            VALUES (:address, :asset, :quantity, :block_index, :tx_index, :utxo, :utxo_address)
+            INSERT INTO balances (address, asset, quantity, block_index, tx_index, utxo_tx_hash, utxo_vout, utxo_address)
+            VALUES (:address, :asset, :quantity, :block_index, :tx_index, :utxo_tx_hash, :utxo_vout, :utxo_address)
         """
         balance_cursor.execute(query, bindings)
 
@@ -293,18 +647,24 @@ def add_to_balance(db, address, asset, quantity, tx_index, utxo_address=None):
         if not CurrentState().parsing_mempool() and balance > 0:
             UTXOBalancesCache(db).add_balance(utxo)
 
+    # ``balances`` is written with raw SQL (it bypasses
+    # ``_prepare_record_for_insert``), so resolve the address/utxo_address to
+    # ``address_id`` and split the ``utxo`` string into the BLOB tx_hash + vout.
+    utxo_tx_hash, utxo_vout = _split_utxo(utxo)
     bindings = {
         "quantity": balance,
-        "address": balance_address,
-        "utxo": utxo,
-        "utxo_address": utxo_address,
-        "asset": asset,
+        "address": _address_id(db, balance_address),
+        "utxo_tx_hash": utxo_tx_hash,
+        "utxo_vout": utxo_vout,
+        "utxo_address": _address_id(db, utxo_address),
+        # balances stores the compact ``asset_index`` (resolved from the name).
+        "asset": database.asset_index_from_name(db, asset),
         "block_index": CurrentState().current_block_index(),
         "tx_index": tx_index,
     }
     query = """
-        INSERT INTO balances (address, asset, quantity, block_index, tx_index, utxo, utxo_address)
-        VALUES (:address, :asset, :quantity, :block_index, :tx_index, :utxo, :utxo_address)
+        INSERT INTO balances (address, asset, quantity, block_index, tx_index, utxo_tx_hash, utxo_vout, utxo_address)
+        VALUES (:address, :asset, :quantity, :block_index, :tx_index, :utxo_tx_hash, :utxo_vout, :utxo_address)
     """
     balance_cursor.execute(query, bindings)
 
@@ -361,21 +721,27 @@ def get_messages(db, block_index=None, block_index_in=None, message_index_in=Non
     where = []
     bindings = []
     if block_index is not None:
-        where.append("block_index = ?")
+        where.append("m.block_index = ?")
         bindings.append(block_index)
     if block_index_in is not None:
-        where.append(f"block_index IN ({','.join(['?' for e in range(0, len(block_index_in))])})")
+        where.append(f"m.block_index IN ({','.join(['?' for e in range(0, len(block_index_in))])})")
         bindings += block_index_in
     if message_index_in is not None:
         where.append(
-            f"message_index IN ({','.join(['?' for e in range(0, len(message_index_in))])})"
+            f"m.message_index IN ({','.join(['?' for e in range(0, len(message_index_in))])})"
         )
         bindings += message_index_in
-    # no sql injection here
+    # no sql injection here -- expose tx_hash via JOIN (messages.tx_hash
+    # was dropped in favour of an FK on transactions).
+    select = (
+        "SELECT m.*, "
+        "(SELECT t.tx_hash FROM transactions t WHERE t.tx_index = m.tx_index) AS tx_hash "
+        "FROM messages m"
+    )
     if len(where) == 0:
-        query = """SELECT * FROM messages ORDER BY message_index ASC LIMIT ?"""
+        query = f"""{select} ORDER BY m.message_index ASC LIMIT ?"""
     else:
-        query = f"""SELECT * FROM messages WHERE ({" AND ".join(where)}) ORDER BY message_index ASC LIMIT ?"""  # nosec B608  # noqa: S608 # nosec B608
+        query = f"""{select} WHERE ({" AND ".join(where)}) ORDER BY m.message_index ASC LIMIT ?"""  # nosec B608  # noqa: S608 # nosec B608
     bindings.append(limit)
     cursor.execute(query, tuple(bindings))
     return cursor.fetchall()

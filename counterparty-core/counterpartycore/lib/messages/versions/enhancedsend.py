@@ -107,8 +107,13 @@ def validate(db, destination, asset, quantity, memo_bytes):
         problems.append("destination is required")
 
     # check memo
-    if memo_bytes is not None and len(memo_bytes) > MAX_MEMO_LENGTH:
-        problems.append("memo is too long")
+    if memo_bytes is not None:
+        # CBOR-encoded messages can carry any type here; reject anything
+        # that is not bytes-like before calling len() on it.
+        if not isinstance(memo_bytes, (bytes, bytearray)):
+            problems.append("memo must be bytes")
+        elif len(memo_bytes) > MAX_MEMO_LENGTH:
+            problems.append("memo is too long")
 
     if protocol.enabled("options_require_memo"):
         cursor = db.cursor()
@@ -138,6 +143,11 @@ def compose(
     skip_validation: bool = False,
     no_dispense: bool = False,
 ):
+    send1.validate_compose_quantity(quantity)
+
+    if memo_is_hex and not isinstance(memo_is_hex, bool):
+        raise exceptions.ComposeError("`memo_is_hex` must be a boolean")
+
     cursor = db.cursor()
 
     # Just send BTC?
@@ -148,20 +158,22 @@ def compose(
     # resolve subassets
     asset = ledger.issuances.resolve_subasset_longname(db, asset)
 
-    # quantity must be in int satoshi (not float, string, etc)
-    if not isinstance(quantity, int):
-        raise exceptions.ComposeError("quantity must be an int (in satoshi)")
-
     # Only for outgoing (incoming will overburn).
     balance = ledger.balances.get_balance(db, source, asset)
     if balance < quantity and not skip_validation:
         raise exceptions.ComposeError("insufficient funds")
 
+    if memo is not None and not isinstance(memo, str):
+        raise exceptions.ComposeError("memo must be a string")
+
     # convert memo to memo_bytes based on memo_is_hex setting
     if memo is None:
         memo_bytes = b""
     elif memo_is_hex:
-        memo_bytes = bytes.fromhex(memo)
+        try:
+            memo_bytes = bytes.fromhex(memo)
+        except (TypeError, ValueError) as e:
+            raise exceptions.ComposeError("memo must be valid hexadecimal") from e
     else:
         memo_bytes = memo.encode("utf-8")
         memo_bytes = struct.pack(f">{len(memo_bytes)}s", memo_bytes)
@@ -202,7 +214,7 @@ def parse(db, tx, message):
 
     # Unpack message.
     try:
-        unpacked = unpack(message)
+        unpacked = unpack(message, block_index=tx["block_index"])
         asset, quantity, destination, memo_bytes = (
             unpacked["asset"],
             unpacked["quantity"],
@@ -220,8 +232,17 @@ def parse(db, tx, message):
         status = "invalid: could not unpack"
 
     if status == "valid":
+        # CBOR-encoded messages can carry any type for these fields;
+        # normalise unexpected types to None so downstream code (validate,
+        # logging, DB insert) never sees a non-int quantity or non-bytes
+        # memo. validate() will then mark the tx invalid.
+        if not isinstance(quantity, int):
+            quantity = None
+        if memo_bytes is not None and not isinstance(memo_bytes, (bytes, bytearray)):
+            memo_bytes = None
+
         # don't allow sends over MAX_INT at all
-        if quantity and quantity > config.MAX_INT:
+        if quantity is not None and quantity > config.MAX_INT:
             status = "invalid: quantity is too large"
             quantity = None
 

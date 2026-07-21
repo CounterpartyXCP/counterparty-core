@@ -1,5 +1,7 @@
 import binascii
+import math
 import re
+import threading
 from io import BytesIO
 
 import bitcoin
@@ -10,6 +12,7 @@ from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessI
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import composer
 from counterpartycore.lib.parser import deserialize
+from counterpartycore.lib.utils import script
 from counterpartycore.test.fixtures.defaults import DEFAULT_PARAMS as DEFAULTS
 
 PROVIDED_PUBKEYS = ",".join(
@@ -107,13 +110,22 @@ def test_dust_size(defaults):
     assert composer.regular_dust_size({}) == 546
     assert composer.regular_dust_size({"regular_dust_size": 666}) == 666
     assert composer.regular_dust_size({"regular_dust_size": None}) == 546
+    with pytest.raises(exceptions.ComposeError, match="Invalid regular_dust_size"):
+        composer.regular_dust_size({"regular_dust_size": -1})
     assert composer.multisig_dust_size({}) == 1000
     assert composer.multisig_dust_size({"multisig_dust_size": 666}) == 666
     assert composer.multisig_dust_size({"multisig_dust_size": None}) == 1000
+    with pytest.raises(exceptions.ComposeError, match="Invalid multisig_dust_size"):
+        composer.multisig_dust_size({"multisig_dust_size": -1})
+    assert composer.segwit_dust_size({}) == 330
+    assert composer.segwit_dust_size({"segwit_dust_size": 666}) == 666
+    assert composer.segwit_dust_size({"segwit_dust_size": None}) == 330
     assert composer.dust_size(defaults["addresses"][0], {}) == 546
     assert composer.dust_size(defaults["addresses"][0], {"regular_dust_size": 666}) == 666
     assert composer.dust_size(defaults["p2ms_addresses"][0], {}) == 1000
     assert composer.dust_size(defaults["p2ms_addresses"][0], {"multisig_dust_size": 666}) == 666
+    assert composer.dust_size(defaults["p2wpkh_addresses"][0], {}) == 330
+    assert composer.dust_size(defaults["p2wpkh_addresses"][0], {"segwit_dust_size": 666}) == 666
 
 
 def test_prepare_non_data_outputs(defaults):
@@ -143,6 +155,11 @@ def test_prepare_non_data_outputs(defaults):
             )
         ]
     )
+
+    # P2WPKH address
+    assert str(
+        composer.perpare_non_data_outputs([(defaults["p2wpkh_addresses"][0], 0)], [], {})
+    ) == str([TxOutput(330, P2wpkhAddress(defaults["p2wpkh_addresses"][0]).to_script_pub_key())])
 
     # Custom amount
     assert str(
@@ -461,6 +478,15 @@ def test_prepare_more_outputs(defaults):
         ]
     )
 
+    with pytest.raises(exceptions.ComposeError, match="Invalid value for output: -1:00aaff"):
+        composer.prepare_more_outputs("-1:00aaff", [], {})
+
+    too_large_value = 21_000_000 * config.UNIT + 1
+    with pytest.raises(
+        exceptions.ComposeError, match=f"Invalid value for output: {too_large_value}:00aaff"
+    ):
+        composer.prepare_more_outputs(f"{too_large_value}:00aaff", [], {})
+
 
 def test_prepare_outputs(ledger_db, defaults):
     # Test case 1 & 2: Simple OP_RETURN output
@@ -585,6 +611,27 @@ def test_prepare_inputs_set(defaults):
             "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:aa"
         )
 
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(
+            "invalid UTXOs: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:-1 (invalid value)"
+        ),
+    ):
+        composer.prepare_inputs_set(
+            "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:-1"
+        )
+
+    too_large_value = 21_000_000 * config.UNIT + 1
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(
+            f"invalid UTXOs: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:{too_large_value} (invalid value)"
+        ),
+    ):
+        composer.prepare_inputs_set(
+            f"ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:{too_large_value}"
+        )
+
     # Test case 5: Invalid script_pub_key
     with pytest.raises(
         exceptions.ComposeError,
@@ -594,6 +641,17 @@ def test_prepare_inputs_set(defaults):
     ):
         composer.prepare_inputs_set(
             "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aagh"
+        )
+
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(
+            "invalid UTXOs: ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aa00 (duplicate UTXO)"
+        ),
+    ):
+        composer.prepare_inputs_set(
+            "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aa00,"
+            "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:100:aa00"
         )
 
     # Test case 6: Valid single input
@@ -663,7 +721,7 @@ def test_ensure_utxo_is_first(defaults, monkeypatch):
 
 def test_filter_utxos_with_balances(ledger_db, defaults):
     utxo_with_balance = ledger_db.execute("""
-        SELECT utxo FROM balances WHERE quantity > 0 AND utxo IS NOT NULL ORDER BY rowid DESC LIMIT 1
+        SELECT utxo_tx_hash, utxo_vout FROM balances WHERE quantity > 0 AND utxo_tx_hash IS NOT NULL ORDER BY rowid DESC LIMIT 1
     """).fetchone()["utxo"]
     txid, vout = utxo_with_balance.split(":")
 
@@ -984,6 +1042,24 @@ def test_prepare_fee_parameters():
         1000,
     )
 
+    with pytest.raises(exceptions.ComposeError, match="Invalid exact_fee"):
+        composer.prepare_fee_parameters({"exact_fee": -1})
+
+    with pytest.raises(exceptions.ComposeError, match="Invalid sat_per_vbyte"):
+        composer.prepare_fee_parameters({"sat_per_vbyte": -0.1})
+
+    with pytest.raises(exceptions.ComposeError, match="Invalid max_fee"):
+        composer.prepare_fee_parameters({"max_fee": -1, "sat_per_vbyte": 1})
+
+    with pytest.raises(exceptions.ComposeError, match="Invalid confirmation_target"):
+        composer.prepare_fee_parameters({"confirmation_target": 0})
+
+    with pytest.raises(exceptions.ComposeError, match="Invalid confirmation_target"):
+        composer.prepare_fee_parameters({"confirmation_target": -1})
+
+    with pytest.raises(exceptions.ComposeError, match="Invalid confirmation_target"):
+        composer.prepare_fee_parameters({"confirmation_target": 1009})
+
 
 def test_prepare_unspent_list(ledger_db, defaults, monkeypatch):
     txs = {
@@ -997,7 +1073,18 @@ def test_prepare_unspent_list(ledger_db, defaults, monkeypatch):
                     },
                 }
             ]
-        }
+        },
+        "b5a7c328c75b122325d2e6ed64774e9b37cefbfca6370872931597368ff7cecd": {
+            "vout": [
+                {
+                    "n": 0,
+                    "value": 10,
+                    "scriptPubKey": {
+                        "hex": "76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+                    },
+                }
+            ]
+        },
     }
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.getrawtransaction_batch", lambda *args, **kwargs: txs
@@ -1031,7 +1118,7 @@ def test_prepare_unspent_list(ledger_db, defaults, monkeypatch):
         }
     ]
 
-    # Test case 3: With exclude_utxos parameter
+    # Test case 3: With exclude_utxos parameter (txid:vout format) - excludes all UTXOs
     with pytest.raises(
         exceptions.ComposeError,
         match=re.escape(
@@ -1044,6 +1131,74 @@ def test_prepare_unspent_list(ledger_db, defaults, monkeypatch):
             {"exclude_utxos": "676b03b94f43d4a23db55f2ac95e6aff6bfcbc4fdf855cbe3ee80d9a312e576a:0"},
         )
         print(result)
+
+    # Test case 3b: With exclude_utxos parameter (txid only format) - excludes all UTXOs
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(
+            f"No UTXOs found for {defaults['addresses'][0]}, provide UTXOs with the `inputs_set` parameter"
+        ),
+    ):
+        composer.prepare_unspent_list(
+            ledger_db,
+            defaults["addresses"][0],
+            {
+                "inputs_set": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0",
+                "exclude_utxos": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+            },
+        )
+
+    # Test case 3c: With exclude_utxos (txid:vout format) - partial exclusion with inputs_set
+    result = composer.prepare_unspent_list(
+        ledger_db,
+        defaults["addresses"][0],
+        {
+            "inputs_set": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0,b5a7c328c75b122325d2e6ed64774e9b37cefbfca6370872931597368ff7cecd:0",
+            "exclude_utxos": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0",
+        },
+    )
+    assert len(result) == 1
+    assert result[0]["txid"] == "b5a7c328c75b122325d2e6ed64774e9b37cefbfca6370872931597368ff7cecd"
+
+    # Test case 3d: With exclude_utxos (txid only format) - partial exclusion with inputs_set
+    result = composer.prepare_unspent_list(
+        ledger_db,
+        defaults["addresses"][0],
+        {
+            "inputs_set": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0,b5a7c328c75b122325d2e6ed64774e9b37cefbfca6370872931597368ff7cecd:0",
+            "exclude_utxos": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1",
+        },
+    )
+    assert len(result) == 1
+    assert result[0]["txid"] == "b5a7c328c75b122325d2e6ed64774e9b37cefbfca6370872931597368ff7cecd"
+
+    # Test case 3e: With exclude_utxos - mixed formats (txid and txid:vout) excludes all
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(
+            f"No UTXOs found for {defaults['addresses'][0]}, provide UTXOs with the `inputs_set` parameter"
+        ),
+    ):
+        composer.prepare_unspent_list(
+            ledger_db,
+            defaults["addresses"][0],
+            {
+                "inputs_set": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0,b5a7c328c75b122325d2e6ed64774e9b37cefbfca6370872931597368ff7cecd:0",
+                "exclude_utxos": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0,b5a7c328c75b122325d2e6ed64774e9b37cefbfca6370872931597368ff7cecd",
+            },
+        )
+
+    # Test case 3f: txid:vout format does NOT exclude different vout
+    result = composer.prepare_unspent_list(
+        ledger_db,
+        defaults["addresses"][0],
+        {
+            "inputs_set": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0",
+            "exclude_utxos": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:1",  # Different vout
+        },
+    )
+    assert len(result) == 1
+    assert result[0]["txid"] == "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1"
 
     # Test case 4: With unspent_tx_hash parameter
     with pytest.raises(
@@ -1404,7 +1559,27 @@ def test_check_transaction_sanity(defaults):
         {"exact_fee": 1000},
     )
 
-    # Test case 2: Invalid source address
+    # Test case 2: Valid segwit destination with automatic dust value
+    segwit_tx = Transaction(
+        [TxInput("62cfa1417799553e305c053c5c92a8bdcccfcf5ee01d2aeabf0450e06fcabd07", 0)],
+        [TxOutput(330, P2wpkhAddress(defaults["p2wpkh_addresses"][0]).to_script_pub_key())],
+    )
+    composer.check_transaction_sanity(
+        (defaults["addresses"][0], [(defaults["p2wpkh_addresses"][0], None)], None),
+        {
+            "btc_change": 0,
+            "btc_fee": 1000,
+            "btc_in": 1330,
+            "btc_out": 330,
+            "lock_scripts": [P2pkhAddress(defaults["addresses"][0]).to_script_pub_key().to_hex()],
+            "rawtransaction": segwit_tx.serialize(),
+            "inputs_values": [1330],
+        },
+        [],
+        {"exact_fee": 1000},
+    )
+
+    # Test case 3: Invalid source address
     with pytest.raises(
         exceptions.ComposeError,
         match="Sanity check error: source address does not match the first input address",
@@ -1425,7 +1600,7 @@ def test_check_transaction_sanity(defaults):
             {"exact_fee": 1000},
         )
 
-    # Test case 3: Invalid destination address
+    # Test case 4: Invalid destination address
     with pytest.raises(
         exceptions.ComposeError,
         match="Sanity check error: destination address does not match the output address",
@@ -1446,7 +1621,7 @@ def test_check_transaction_sanity(defaults):
             {"exact_fee": 1000},
         )
 
-    # Test case 4: Invalid destination value
+    # Test case 5: Invalid destination value
     with pytest.raises(
         exceptions.ComposeError,
         match="Sanity check error: destination value does not match the output value",
@@ -1467,7 +1642,7 @@ def test_check_transaction_sanity(defaults):
             {"exact_fee": 1000},
         )
 
-    # Test case 5: Invalid data
+    # Test case 6: Invalid data
     with pytest.raises(
         exceptions.ComposeError, match="Sanity check error: data does not match the output data"
     ):
@@ -1534,6 +1709,7 @@ def test_prepare_construct_params(defaults):
         "p2sh_pretx_txid": "aabbb",
         "segwit": True,
         "unspent_tx_hash": "aabbcc",
+        "custom_inputs": "ccddee:0",
     }
 
     expected_params = {
@@ -1548,6 +1724,7 @@ def test_prepare_construct_params(defaults):
         "p2sh_pretx_txid": "aabbb",
         "segwit": True,
         "unspent_tx_hash": "aabbcc",
+        "inputs_set": "ccddee:0",
     }
 
     expected_warnings = [
@@ -1562,6 +1739,7 @@ def test_prepare_construct_params(defaults):
         "The `p2sh_pretx_txid` parameter is ignored, p2sh disabled",
         "The `segwit` parameter is ignored, segwit automatically detected",
         "The `unspent_tx_hash` parameter is deprecated, use `inputs_set` instead",
+        "The `custom_inputs` parameter is deprecated, use `inputs_set` instead",
     ]
 
     result_params, result_warnings = composer.prepare_construct_params(params)
@@ -1581,6 +1759,7 @@ def test_prepare_construct_params(defaults):
         "p2sh_pretx_txid": "aabbb",
         "segwit": True,
         "unspent_tx_hash": "aabbcc",
+        "custom_inputs": "ccddee:0",
     }
 
     expected_params = {
@@ -1595,11 +1774,33 @@ def test_prepare_construct_params(defaults):
         "p2sh_pretx_txid": "aabbb",
         "segwit": True,
         "unspent_tx_hash": "aabbcc",
+        "inputs_set": "ccddee:0",
     }
 
     result_params, result_warnings = composer.prepare_construct_params(params)
     assert result_params == expected_params
     assert result_warnings == expected_warnings
+
+    # Test case 3: Explicit inputs_set takes precedence over custom_inputs
+    result_params, result_warnings = composer.prepare_construct_params(
+        {"inputs_set": "aabbcc:0", "custom_inputs": "ccddee:0"}
+    )
+    assert result_params["inputs_set"] == "aabbcc:0"
+    assert "custom_inputs" not in result_params
+    assert result_warnings == [
+        "The `custom_inputs` parameter is deprecated, use `inputs_set` instead"
+    ]
+
+    # Test case 4: message_only is a public alias for return_only_data
+    result_params, result_warnings = composer.prepare_construct_params({"message_only": True})
+    assert result_params == {"return_only_data": True}
+    assert result_warnings == []
+
+    result_params, result_warnings = composer.prepare_construct_params(
+        {"return_only_data": True, "message_only": False}
+    )
+    assert result_params == {"return_only_data": True}
+    assert result_warnings == []
 
 
 def test_compose_transaction(ledger_db, defaults, monkeypatch):
@@ -1639,6 +1840,16 @@ def test_compose_transaction(ledger_db, defaults, monkeypatch):
 
     result = composer.compose_transaction(ledger_db, "send", params, {})
     assert result == expected
+
+    message_only_result = composer.compose_transaction(
+        ledger_db, "send", params, {"message_only": True}
+    )
+    return_only_data_result = composer.compose_transaction(
+        ledger_db, "send", params, {"return_only_data": True}
+    )
+    assert message_only_result == return_only_data_result
+    assert message_only_result["data"].startswith(config.PREFIX)
+    assert "rawtransaction" not in message_only_result
 
     params = {
         "source": defaults["addresses"][0],
@@ -1895,7 +2106,7 @@ def test_compose_enhanced_send(ledger_db, defaults, monkeypatch):
 
 def test_compose_move(ledger_db, defaults):
     utxo_with_balance = ledger_db.execute("""
-        SELECT utxo FROM balances WHERE quantity > 0 AND utxo IS NOT NULL ORDER BY rowid DESC LIMIT 1
+        SELECT utxo_tx_hash, utxo_vout FROM balances WHERE quantity > 0 AND utxo_tx_hash IS NOT NULL ORDER BY rowid DESC LIMIT 1
     """).fetchone()["utxo"]
     # Test basic move
     params = {
@@ -2145,6 +2356,51 @@ def test_utxolocks(ledger_db):
     )
 
 
+def test_utxolocks_thread_safety():
+    """The mutex must serialise concurrent lock/locked calls so that two
+    threads cannot pick the same UTXO between filter_unspent_list and
+    lock_inputs."""
+    composer.UTXOLocks().init()
+    composer.UTXOLocks().set_limits(60, 2000)
+
+    # Concurrent lock/locked must not raise and must keep the singleton
+    # in a consistent state
+    errors = []
+
+    def hammer(prefix):
+        try:
+            for i in range(50):
+                utxo = f"tx_{prefix}_{i}:0"
+                composer.UTXOLocks().lock(utxo)
+                assert composer.UTXOLocks().locked(utxo) is True
+        except Exception as e:  # pylint: disable=broad-except
+            errors.append(e)
+
+    threads = [threading.Thread(target=hammer, args=(p,)) for p in ("a", "b", "c", "d")]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert errors == []
+
+
+def test_utxolocks_mutex_attribute_present():
+    """The UTXOLocks singleton must expose a `_mutex` attribute so that
+    lock() and locked() can serialise access; without it concurrent
+    compose_transaction calls in a single gunicorn worker can pick the
+    same UTXO and produce an unsignable second tx."""
+    composer.UTXOLocks().init()
+    assert hasattr(composer.UTXOLocks(), "_mutex")
+
+
+def test_get_output_type_aliases():
+    """get_output_type / is_segwit_output are now thin re-exports of the
+    `script` module helpers; this test pins the re-export so the alias
+    survives future refactors."""
+    assert composer.get_output_type is script.get_output_type
+    assert composer.is_segwit_output is script.is_segwit_output
+
+
 def test_utxolocks_custom_input(ledger_db):
     composer.UTXOLocks().init()
 
@@ -2184,7 +2440,7 @@ def test_utxolocks_custom_input(ledger_db):
 
 def test_compose_detach(ledger_db, defaults):
     utxo_with_balance = ledger_db.execute("""
-        SELECT utxo FROM balances WHERE quantity > 0 AND utxo IS NOT NULL ORDER BY rowid DESC LIMIT 1
+        SELECT utxo_tx_hash, utxo_vout FROM balances WHERE quantity > 0 AND utxo_tx_hash IS NOT NULL ORDER BY rowid DESC LIMIT 1
     """).fetchone()["utxo"]
     # Test basic move
     params = {
@@ -2270,6 +2526,20 @@ def test_compose_attach(ledger_db, defaults):
     )
     assert result == expected
 
+    result = composer.compose_transaction(
+        ledger_db,
+        "attach",
+        params,
+        {
+            "verbose": True,
+            "custom_inputs": "ae241be7be83ebb14902757ad94854f787d9730fc553d6f695346c9375c0d8c1:0:1052:76a9144838d8b3588c4c7ba7c1d06f866e9b3739c6303788ac",
+            "disable_utxo_locks": True,
+        },
+    )
+    assert result == expected | {
+        "warnings": ["The `custom_inputs` parameter is deprecated, use `inputs_set` instead"]
+    }
+
     with pytest.raises(
         exceptions.ComposeError, match="Insufficient funds for the target amount: 546 < 1052"
     ):
@@ -2332,3 +2602,75 @@ def test_compose_taproot(ledger_db, defaults):
         },
         "name": "send",
     }
+
+
+# =============================================================================
+# Sub-1 sat/vByte Fee Tests
+# =============================================================================
+
+
+def test_sub_sat_per_vbyte_fee_rounding():
+    """Test that sub-1 sat/vByte fees use math.ceil for proper rounding."""
+    test_cases = [
+        # (sat_per_vbyte, vsize, expected_fee)
+        (0.5, 101, 51),  # 50.5 -> ceil = 51
+        (0.1, 5, 1),  # 0.5 -> ceil = 1 (would be 0 with int())
+        (0.25, 3, 1),  # 0.75 -> ceil = 1
+        (1.5, 101, 152),  # 151.5 -> ceil = 152
+    ]
+
+    for sat_per_vbyte, vsize, expected_fee in test_cases:
+        assert math.ceil(sat_per_vbyte * vsize) == expected_fee
+
+
+def test_prepare_fee_parameters_accepts_sub_sat_per_vbyte():
+    """Test that prepare_fee_parameters accepts sub-1 sat/vByte values."""
+    for rate in [0.01, 0.1, 0.5]:
+        exact_fee, sat_per_vbyte, max_fee = composer.prepare_fee_parameters({"sat_per_vbyte": rate})
+        assert sat_per_vbyte == rate
+
+
+def test_fee_per_kb_to_sat_per_vbyte_conversion():
+    """Test that fee_per_kb converts to fractional sat/vByte correctly."""
+    assert composer.fee_per_kb_to_sat_per_vbyte(500) == 500 / 1024  # ~0.488 sat/vByte
+    assert composer.fee_per_kb_to_sat_per_vbyte(1024) == 1.0
+    assert composer.fee_per_kb_to_sat_per_vbyte(512) == 0.5
+
+
+@pytest.mark.parametrize("sat_per_vbyte", [0.1, 0.5, 0.9])
+def test_compose_transaction_sub_sat_per_vbyte(ledger_db, defaults, sat_per_vbyte):
+    """Test composing transactions with various sub-1 sat/vByte rates."""
+    params = {
+        "source": defaults["addresses"][0],
+        "destination": defaults["addresses"][1],
+        "asset": "XCP",
+        "quantity": defaults["small"],
+    }
+    result = composer.compose_transaction(
+        ledger_db, "send", params, {"sat_per_vbyte": sat_per_vbyte, "verbose": True}
+    )
+
+    # Verify transaction deserializes correctly
+    decoded_tx = deserialize.deserialize_tx(result["rawtransaction"], parse_vouts=True)
+    assert "vin" in decoded_tx and "vout" in decoded_tx
+
+    # Verify fee uses ceil rounding
+    vsize = result["signed_tx_estimated_size"]["adjusted_vsize"]
+    assert result["btc_fee"] >= math.ceil(sat_per_vbyte * vsize)
+    assert result["btc_in"] == result["btc_out"] + result["btc_change"] + result["btc_fee"]
+
+
+def test_compose_transaction_sub_sat_per_vbyte_with_max_fee(ledger_db, defaults):
+    """Test sub-1 sat/vByte respects max_fee constraint."""
+    params = {
+        "source": defaults["addresses"][0],
+        "destination": defaults["addresses"][1],
+        "asset": "XCP",
+        "quantity": defaults["small"],
+    }
+    result = composer.compose_transaction(
+        ledger_db, "send", params, {"sat_per_vbyte": 0.5, "max_fee": 100, "verbose": True}
+    )
+
+    assert result["btc_fee"] <= 100
+    assert result["btc_fee"] > 0

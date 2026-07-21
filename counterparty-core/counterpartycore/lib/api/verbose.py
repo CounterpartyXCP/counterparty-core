@@ -11,15 +11,16 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.api import compose
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import hashcodec, helpers
 
 D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
 
 
 def normalize_price(value, precision=16):
-    decimal.getcontext().prec = 32
-    return f"{D(value):.{precision}f}"
+    with decimal.localcontext() as ctx:
+        ctx.prec = 32
+        return f"{D(value):.{precision}f}"
 
 
 def inject_issuances_and_block_times(ledger_db, state_db, result_list):
@@ -30,11 +31,14 @@ def inject_issuances_and_block_times(ledger_db, state_db, result_list):
         "dividend_asset",
         "forward_asset",
         "backward_asset",
+        "asset_a",
+        "asset_b",
+        "lp_asset",
     ]
 
-    # gather asset list and block indexes
-    asset_list = []
-    block_indexes = []
+    # gather asset list and block indexes (use sets for O(1) deduplication)
+    asset_set = set()
+    block_indexes_set = set()
     for result_item in result_list:
         for field_name in [
             "block_index",
@@ -49,19 +53,14 @@ def inject_issuances_and_block_times(ledger_db, state_db, result_list):
                 and result_item["params"][field_name]
             ):
                 result_item["params"][field_name] = int(result_item["params"][field_name])
-            if (
-                field_name in result_item
-                and result_item[field_name] not in block_indexes
-                and result_item[field_name]
-            ):
-                block_indexes.append(result_item[field_name])
+            if field_name in result_item and result_item[field_name]:
+                block_indexes_set.add(result_item[field_name])
             if (
                 "params" in result_item
                 and field_name in result_item["params"]
-                and result_item["params"][field_name] not in block_indexes
                 and result_item["params"][field_name]
             ):
-                block_indexes.append(result_item["params"][field_name])
+                block_indexes_set.add(result_item["params"][field_name])
 
         if (
             "asset_longname" in result_item
@@ -88,17 +87,15 @@ def inject_issuances_and_block_times(ledger_db, state_db, result_list):
             if isinstance(item, list):
                 for sub_item in item:
                     if field_name in sub_item:
-                        if sub_item[field_name] not in asset_list:
-                            asset_list.append(sub_item[field_name])
+                        asset_set.add(sub_item[field_name])
             elif field_name in item:
-                if item[field_name] not in asset_list:
-                    asset_list.append(item[field_name])
+                asset_set.add(item[field_name])
 
-    # get asset issuances
-    issuance_by_asset = ledger.issuances.get_assets_last_issuance(state_db, asset_list)
+    # get asset issuances (convert set to list for function call)
+    issuance_by_asset = ledger.issuances.get_assets_last_issuance(state_db, list(asset_set))
 
-    # get block_time for each block_index
-    block_times = ledger.blocks.get_blocks_time(ledger_db, block_indexes)
+    # get block_time for each block_index (convert set to list for function call)
+    block_times = ledger.blocks.get_blocks_time(ledger_db, list(block_indexes_set))
 
     # inject issuance and block_time
     for result_item in result_list:
@@ -221,6 +218,16 @@ def inject_normalized_quantities(result_list):
         "get_price": {"asset_field": "get_asset_info", "divisible": None},
         "forward_price": {"asset_field": "forward_asset_info", "divisible": None},
         "backward_price": {"asset_field": "backward_asset_info", "divisible": None},
+        "reserve_a": {"asset_field": "asset_a_info", "divisible": None},
+        "reserve_b": {"asset_field": "asset_b_info", "divisible": None},
+        "quantity_a": {"asset_field": "asset_a_info", "divisible": None},
+        "quantity_b": {"asset_field": "asset_b_info", "divisible": None},
+        # LP tokens are always divisible (set in make_lp_issuance_bindings); the
+        # withdrawal/match tables don't carry lp_asset, so resolving lp_asset_info
+        # is unreliable. Hardcode divisible=True to ensure normalization always runs.
+        "quantity_minted": {"asset_field": None, "divisible": True},
+        "quantity_destroyed": {"asset_field": None, "divisible": True},
+        "fee_quantity": {"asset_field": "backward_asset_info", "divisible": None},
     }
 
     enriched_result_list = []
@@ -394,13 +401,27 @@ def inject_normalized_quantities(result_list):
 
         if "get_quantity" in item and "give_quantity" in item and "market_dir" in item:
             if item["market_dir"] == "SELL":
-                item["market_price"] = helpers.divide(
+                market_price = helpers.divide(
                     item["get_quantity_normalized"], item["give_quantity_normalized"]
                 )
             else:
-                item["market_price"] = helpers.divide(
+                market_price = helpers.divide(
                     item["give_quantity_normalized"], item["get_quantity_normalized"]
                 )
+            item["market_price"] = market_price
+            item["market_price_normalized"] = market_price
+
+        if "forward_quantity" in item and "backward_quantity" in item and "market_dir" in item:
+            if item["market_dir"] == "SELL":
+                market_price = helpers.divide(
+                    item["backward_quantity_normalized"], item["forward_quantity_normalized"]
+                )
+            else:
+                market_price = helpers.divide(
+                    item["forward_quantity_normalized"], item["backward_quantity_normalized"]
+                )
+            item["market_price"] = market_price
+            item["market_price_normalized"] = market_price
 
         enriched_result_list.append(item)
 
@@ -444,15 +465,14 @@ def inject_fiat_prices(ledger_db, result_list):
 
 
 def inject_dispensers(ledger_db, state_db, result_list):
-    # gather dispenser list
-    dispenser_list = []
+    # gather dispenser list (use set for O(1) deduplication)
+    dispenser_set = set()
     for result_item in result_list:
         if "dispenser_tx_hash" in result_item:
-            if result_item["dispenser_tx_hash"] not in dispenser_list:
-                dispenser_list.append(result_item["dispenser_tx_hash"])
+            dispenser_set.add(result_item["dispenser_tx_hash"])
 
-    # get dispenser info
-    dispenser_info = ledger.markets.get_dispensers_info(state_db, dispenser_list)
+    # get dispenser info (convert set to list for function call)
+    dispenser_info = ledger.markets.get_dispensers_info(state_db, list(dispenser_set))
 
     # inject dispenser info
     enriched_result_list = []
@@ -510,13 +530,21 @@ def inject_transactions_events(ledger_db, state_db, result_list):
         "INCREMENT_TRANSACTION_COUNT",
         "NEW_TRANSACTION_OUTPUT",
     ]
+    # ``messages.tx_hash`` was dropped in favour of a ``tx_index`` FK;
+    # resolve via ``transactions``. The result column is aliased ``tx_hash``,
+    # which is in ``hashcodec.HASH_COLUMN_NAMES`` so the connection rowtracer
+    # converts the BLOB to 64-char lowercase hex without a per-row Python
+    # UDF callback.
     sql = f"""
-        SELECT message_index AS event_index, event, bindings AS params, tx_hash, block_index 
-        FROM messages 
-        WHERE tx_hash IN ({",".join("?" * len(transaction_hashes))}) 
-        AND event NOT IN ({",".join("?" * len(exclude_events))})
+        SELECT m.message_index AS event_index, m.event, m.bindings AS params,
+               t.tx_hash AS tx_hash, m.block_index
+        FROM messages m
+        LEFT JOIN transactions t ON t.tx_index = m.tx_index
+        WHERE t.tx_hash IN ({",".join("?" * len(transaction_hashes))})
+        AND m.event NOT IN ({",".join("?" * len(exclude_events))})
     """  # noqa S608 # nosec B608
-    events = cursor.execute(sql, transaction_hashes + exclude_events).fetchall()
+    bindings = [hashcodec.hash_to_db(h) for h in transaction_hashes] + exclude_events
+    events = cursor.execute(sql, bindings).fetchall()
     for event in events:
         event["params"] = json.loads(event["params"])
 
@@ -576,7 +604,10 @@ def clean_dictionary(data):
         # Recursively clean nested structures
         cleaned_value = clean_api_result(value)
 
-        if key in {"divisible", "locked", "reset", "callable"}:
+        if (
+            key in {"divisible", "locked", "reset", "callable", "valid"}
+            and cleaned_value is not None
+        ):
             cleaned_value = bool(cleaned_value)
 
         cleaned[key] = cleaned_value
@@ -593,8 +624,7 @@ def clean_api_result(query_result):
     """
     if isinstance(query_result, dict):
         return clean_dictionary(query_result)
-    elif isinstance(query_result, list):
+    if isinstance(query_result, list):
         return [clean_api_result(item) for item in query_result]
-    else:
-        # Return primitive types as-is
-        return query_result
+    # Return primitive types as-is
+    return query_result

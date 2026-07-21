@@ -1,16 +1,19 @@
 import time
 from io import StringIO
 
+from counterpartycore.lib import config
 from counterpartycore.test.integrations import reparsetest
 from counterpartycore.test.integrations.locustrunner import run_locust
 
 
 def test_load():
-    sh_counterparty_server, db_file, _api_url = reparsetest.prepare("mainnet")
+    sh_counterparty_server, _server_args, db_file, _api_url = reparsetest.prepare("mainnet")
+    # Use the versioned counterparty ledger snapshot published in config
+    # (first entry of the (zst, sig) tuples), matching the running version.
     sh_counterparty_server(
         "bootstrap",
         "--bootstrap-url",
-        "https://storage.googleapis.com/counterparty-bootstrap/counterparty.db.v11.0.0.zst",
+        config.BOOTSTRAP_URLS["mainnet"][0][0],
     )
 
     try:
