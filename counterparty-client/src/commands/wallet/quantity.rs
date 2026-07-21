@@ -441,8 +441,10 @@ mod tests {
         assert!(convert_quantity("7.5", false).is_err());
     }
 
-    /// Full compose -> sign -> broadcast happy path against a **regtest**
-    /// counterparty-server. Ignored by default because it needs live services.
+    /// Integration check against a live **regtest** counterparty-server.
+    /// `#[ignore]`d so the normal `cargo test` stays hermetic; the
+    /// `Client Regtest E2E` CI workflow (`.github/workflows/client_regtest_test.yml`)
+    /// starts a regtest node via `regtestnode.py` and runs it with `--ignored`.
     ///
     /// Requirements to run:
     ///   * a regtest counterparty-server reachable at the client's regtest
@@ -516,16 +518,33 @@ mod tests {
             "unexpected scaled quantity for {asset}: {q}"
         );
 
-        // 3) Compose the send over real HTTP and confirm the endpoint is
-        //    reachable and returns a JSON object (a rawtransaction when funded,
-        //    or a friendly error otherwise).
+        // 3) A real divisibility lookup over HTTP: GET /v2/assets/XCP must report
+        //    XCP as divisible. This exercises the client's GET + JSON-parse path
+        //    against a live endpoint (works without electrs/funding) and validates
+        //    the host-root URL join (no `//v2/`).
+        let asset_info = api::perform_api_request(&config, "/v2/assets/XCP", &HashMap::new())
+            .await
+            .expect("GET /v2/assets/XCP over HTTP");
+        assert_eq!(
+            asset_info
+                .get("result")
+                .and_then(|r| r.get("divisible"))
+                .and_then(|d| d.as_bool()),
+            Some(true),
+            "XCP must be reported as divisible: {asset_info}"
+        );
+
+        // 4) Compose the send over real HTTP and confirm the endpoint is reachable
+        //    and returns a well-formed Counterparty response (a `result` when the
+        //    source is funded, or an `error` otherwise) — never an HTML/404 body,
+        //    which would indicate a broken request URL.
         let api_path = format!("/v2/addresses/{source}/compose/send");
         let result = api::perform_api_request(&config, &api_path, &divisible)
             .await
             .expect("compose_send over HTTP");
         assert!(
-            result.is_object(),
-            "compose response should be a JSON object: {result}"
+            result.get("result").is_some() || result.get("error").is_some(),
+            "compose response should be a well-formed Counterparty response: {result}"
         );
     }
 }
