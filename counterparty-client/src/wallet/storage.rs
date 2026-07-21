@@ -195,3 +195,94 @@ impl WalletStorage {
         self.password_manager.clear_password()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    //! `WalletStorage::save`/`load_addresses` are wired to the OS keyring via
+    //! `PasswordManager`, so they cannot be exercised end-to-end without a
+    //! keyring and an interactive password prompt. These tests instead cover the
+    //! lowest-level seam those methods rely on: the `cocoon` encrypt -> decrypt
+    //! round-trip of the JSON-serialized address map, given a supplied password.
+    //! This is exactly the crypto/serde path `save`/`load_addresses` use, minus
+    //! the keyring.
+
+    use super::*;
+    use secrecy::{ExposeSecret, Secret};
+
+    fn sample_map() -> AddressMap {
+        let mut m = AddressMap::new();
+        m.insert(
+            "bcrt1qexampleaddress".to_string(),
+            super::super::types::AddressInfo {
+                public_key: "02aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899"
+                    .to_string(),
+                private_key: Secret::new("cVwifKeyExampleValue".to_string()),
+                label: "test-label".to_string(),
+                address_type: "bech32".to_string(),
+            },
+        );
+        m
+    }
+
+    #[test]
+    fn cocoon_encrypt_decrypt_roundtrip_preserves_address_map() {
+        let addresses = sample_map();
+        let password = "correct horse battery staple";
+
+        // Encrypt (mirrors WalletStorage::save).
+        let json_data = serde_json::to_string(&addresses).unwrap();
+        let plaintext = json_data.clone().into_bytes();
+        let mut data = plaintext.clone();
+        let mut cocoon = Cocoon::new(password.as_bytes());
+        let prefix = cocoon.encrypt(&mut data).unwrap();
+        assert_ne!(data, plaintext, "ciphertext must differ from plaintext");
+
+        // Decrypt (mirrors WalletStorage::load_addresses).
+        let cocoon = Cocoon::new(password.as_bytes());
+        cocoon.decrypt(&mut data, &prefix).unwrap();
+        let recovered = String::from_utf8(data).unwrap();
+        let recovered_map: AddressMap = serde_json::from_str(&recovered).unwrap();
+
+        assert_eq!(recovered_map.len(), 1);
+        let info = recovered_map.get("bcrt1qexampleaddress").unwrap();
+        assert_eq!(
+            info.public_key,
+            "02aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899"
+        );
+        assert_eq!(info.private_key.expose_secret(), "cVwifKeyExampleValue");
+        assert_eq!(info.label, "test-label");
+        assert_eq!(info.address_type, "bech32");
+    }
+
+    #[test]
+    fn cocoon_decrypt_fails_with_wrong_password() {
+        let addresses = sample_map();
+        let json_data = serde_json::to_string(&addresses).unwrap();
+        let mut data = json_data.into_bytes();
+
+        let mut cocoon = Cocoon::new(b"right-password");
+        let prefix = cocoon.encrypt(&mut data).unwrap();
+
+        let cocoon = Cocoon::new(b"wrong-password");
+        assert!(cocoon.decrypt(&mut data, &prefix).is_err());
+    }
+
+    #[test]
+    fn address_info_json_roundtrips_secret_private_key() {
+        // Guards the `serde_secret` (de)serialization used inside the wallet DB.
+        let addresses = sample_map();
+        let json = serde_json::to_string(&addresses).unwrap();
+        assert!(
+            json.contains("cVwifKeyExampleValue"),
+            "private key is serialized in the wallet DB payload"
+        );
+        let back: AddressMap = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            back.get("bcrt1qexampleaddress")
+                .unwrap()
+                .private_key
+                .expose_secret(),
+            "cVwifKeyExampleValue"
+        );
+    }
+}

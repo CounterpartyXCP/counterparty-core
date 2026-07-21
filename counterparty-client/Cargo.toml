@@ -32,6 +32,9 @@ clap_complete = "4.5.47"
 zeroize = { version = "1.8.1", features = ["derive"] }
 rust_decimal = "1.37.1"
 
+[dev-dependencies]
+tempfile = "3"
+
 [[bin]]
 name = "xcp"
 path = "src/main.rs"

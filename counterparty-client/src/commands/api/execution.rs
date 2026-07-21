@@ -171,3 +171,118 @@ pub fn parse_json_body(body: &str, status: StatusCode, url: &str) -> Result<Valu
         )
     })
 }
+
+#[cfg(test)]
+mod tests {
+    // Private items (`parse_insufficient_funds`) are visible here because this
+    // module is nested inside their defining module.
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn parse_insufficient_funds_matches_exact_composer_string() {
+        // The exact string produced by counterparty-core's composer.
+        let msg = "Insufficient funds for the target amount: 30000 < 157696";
+        assert_eq!(parse_insufficient_funds(msg), Some((30000, 157696)));
+    }
+
+    #[test]
+    fn parse_insufficient_funds_tolerates_whitespace() {
+        let msg = "Insufficient funds for the target amount:   30000   <   157696  ";
+        assert_eq!(parse_insufficient_funds(msg), Some((30000, 157696)));
+    }
+
+    #[test]
+    fn parse_insufficient_funds_returns_none_for_unrelated_strings() {
+        assert_eq!(parse_insufficient_funds("some other error"), None);
+        // Right prefix but non-numeric operands.
+        assert_eq!(
+            parse_insufficient_funds("Insufficient funds for the target amount: abc < def"),
+            None
+        );
+        // Missing the `<` separator.
+        assert_eq!(
+            parse_insufficient_funds("Insufficient funds for the target amount: 30000"),
+            None
+        );
+        // A negative "have" won't parse as u64.
+        assert_eq!(
+            parse_insufficient_funds("Insufficient funds for the target amount: -1 < 5"),
+            None
+        );
+    }
+
+    #[test]
+    fn friendly_api_error_produces_insufficient_btc_message() {
+        let err = friendly_api_error(&json!(
+            "Insufficient funds for the target amount: 30000 < 157696"
+        ));
+        let s = err.to_string();
+        assert!(s.contains("Insufficient BTC"), "got: {s}");
+        assert!(s.contains("30000"), "got: {s}");
+        assert!(s.contains("157696"), "got: {s}");
+    }
+
+    #[test]
+    fn friendly_api_error_generic_string_payload() {
+        let err = friendly_api_error(&json!("boom"));
+        assert_eq!(err.to_string(), "API error: boom");
+    }
+
+    #[test]
+    fn friendly_api_error_non_string_payload() {
+        // Non-string payloads are stringified via `to_string()`.
+        let err = friendly_api_error(&json!({"code": 42, "message": "nope"}));
+        let s = err.to_string();
+        assert!(s.starts_with("API error: "), "got: {s}");
+        assert!(s.contains("42"), "got: {s}");
+        assert!(s.contains("nope"), "got: {s}");
+    }
+
+    #[test]
+    fn parse_json_body_ok_for_valid_json() {
+        let v = parse_json_body(r#"{"a":1,"b":[2,3]}"#, StatusCode::OK, "http://x").unwrap();
+        assert_eq!(v["a"], 1);
+        assert_eq!(v["b"][1], 3);
+    }
+
+    #[test]
+    fn parse_json_body_err_for_html_body_mentions_status_and_snippet() {
+        let err = parse_json_body(
+            "<html>502 Bad Gateway</html>",
+            StatusCode::BAD_GATEWAY,
+            "http://proxy/api",
+        )
+        .unwrap_err();
+        let s = err.to_string();
+        assert!(s.contains("502"), "should mention the HTTP status: {s}");
+        assert!(
+            s.contains("http://proxy/api"),
+            "should mention the url: {s}"
+        );
+        assert!(
+            s.contains("Bad Gateway"),
+            "should include a body snippet: {s}"
+        );
+    }
+
+    #[test]
+    fn parse_json_body_err_for_empty_body() {
+        let err = parse_json_body("", StatusCode::OK, "http://x").unwrap_err();
+        let s = err.to_string();
+        assert!(
+            s.contains("<empty response body>"),
+            "empty body should be described: {s}"
+        );
+    }
+
+    #[test]
+    fn parse_json_body_truncates_long_snippets() {
+        // A long non-JSON body is truncated to 200 chars with an ellipsis.
+        let body = "x".repeat(500);
+        let err =
+            parse_json_body(&body, StatusCode::INTERNAL_SERVER_ERROR, "http://x").unwrap_err();
+        let s = err.to_string();
+        assert!(s.contains('…'), "long snippet should be truncated: {s}");
+    }
+}

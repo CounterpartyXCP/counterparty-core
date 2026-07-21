@@ -25,3 +25,9 @@ jobs:
         run: |
           cd counterparty-rs
           cargo test
+
+      - name: Build and test counterparty-client
+        run: |
+          cd counterparty-client
+          cargo build
+          cargo test

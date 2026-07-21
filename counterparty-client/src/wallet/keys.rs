@@ -193,3 +193,148 @@ pub fn create_bitcoin_address(
         Ok(Address::p2pkh(pub_key, network))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bitcoin::secp256k1::Secp256k1;
+    use bitcoin::Network;
+
+    // The canonical BIP39 test mnemonic. Combined with the default BIP84/BIP86/
+    // BIP44 paths it yields the well-known reference addresses asserted below.
+    const MNEMONIC: &str = "abandon abandon abandon abandon abandon abandon \
+         abandon abandon abandon abandon abandon about";
+
+    #[test]
+    fn mnemonic_derivation_is_deterministic() {
+        let secp = Secp256k1::new();
+        let a =
+            generate_keys_from_mnemonic(MNEMONIC, None, "bech32", Network::Bitcoin, &secp).unwrap();
+        let b =
+            generate_keys_from_mnemonic(MNEMONIC, None, "bech32", Network::Bitcoin, &secp).unwrap();
+
+        assert_eq!(a.public_key.to_string(), b.public_key.to_string());
+        assert_eq!(a.private_key.to_string(), b.private_key.to_string());
+
+        let addr_a = create_bitcoin_address(&a.public_key, "bech32", Network::Bitcoin).unwrap();
+        let addr_b = create_bitcoin_address(&b.public_key, "bech32", Network::Bitcoin).unwrap();
+        assert_eq!(addr_a.to_string(), addr_b.to_string());
+    }
+
+    // Known BIP84 first receive address for the reference mnemonic (m/84'/0'/0'/0/0).
+    #[test]
+    fn bech32_matches_bip84_reference_vector() {
+        let secp = Secp256k1::new();
+        let k =
+            generate_keys_from_mnemonic(MNEMONIC, None, "bech32", Network::Bitcoin, &secp).unwrap();
+        let addr = create_bitcoin_address(&k.public_key, "bech32", Network::Bitcoin).unwrap();
+        assert_eq!(
+            addr.to_string(),
+            "bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu"
+        );
+    }
+
+    // Known BIP86 first receive address for the reference mnemonic (m/86'/0'/0'/0/0).
+    #[test]
+    fn taproot_matches_bip86_reference_vector() {
+        let secp = Secp256k1::new();
+        let k = generate_keys_from_mnemonic(MNEMONIC, None, "taproot", Network::Bitcoin, &secp)
+            .unwrap();
+        let addr = create_bitcoin_address(&k.public_key, "taproot", Network::Bitcoin).unwrap();
+        assert_eq!(
+            addr.to_string(),
+            "bc1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqkedrcr"
+        );
+    }
+
+    // Each address type produces the right human-readable prefix on mainnet vs
+    // regtest.
+    #[test]
+    fn address_prefixes_per_type_and_network() {
+        let secp = Secp256k1::new();
+        let k =
+            generate_keys_from_mnemonic(MNEMONIC, None, "bech32", Network::Bitcoin, &secp).unwrap();
+
+        // bech32 / P2WPKH
+        assert!(
+            create_bitcoin_address(&k.public_key, "bech32", Network::Bitcoin)
+                .unwrap()
+                .to_string()
+                .starts_with("bc1q")
+        );
+        assert!(
+            create_bitcoin_address(&k.public_key, "bech32", Network::Regtest)
+                .unwrap()
+                .to_string()
+                .starts_with("bcrt1q")
+        );
+
+        // p2pkh
+        assert!(
+            create_bitcoin_address(&k.public_key, "p2pkh", Network::Bitcoin)
+                .unwrap()
+                .to_string()
+                .starts_with('1')
+        );
+        let regtest_p2pkh = create_bitcoin_address(&k.public_key, "p2pkh", Network::Regtest)
+            .unwrap()
+            .to_string();
+        assert!(regtest_p2pkh.starts_with('m') || regtest_p2pkh.starts_with('n'));
+
+        // taproot / P2TR
+        assert!(
+            create_bitcoin_address(&k.public_key, "taproot", Network::Bitcoin)
+                .unwrap()
+                .to_string()
+                .starts_with("bc1p")
+        );
+        assert!(
+            create_bitcoin_address(&k.public_key, "taproot", Network::Regtest)
+                .unwrap()
+                .to_string()
+                .starts_with("bcrt1p")
+        );
+    }
+
+    // An explicit derivation path overrides the address-type default.
+    #[test]
+    fn explicit_derivation_path_is_used() {
+        let secp = Secp256k1::new();
+        let default_path =
+            generate_keys_from_mnemonic(MNEMONIC, None, "bech32", Network::Bitcoin, &secp).unwrap();
+        let explicit = generate_keys_from_mnemonic(
+            MNEMONIC,
+            Some("m/84'/0'/0'/0/1"),
+            "bech32",
+            Network::Bitcoin,
+            &secp,
+        )
+        .unwrap();
+        // A different index must yield a different key.
+        assert_ne!(
+            default_path.public_key.to_string(),
+            explicit.public_key.to_string()
+        );
+    }
+
+    #[test]
+    fn invalid_mnemonic_is_rejected() {
+        let secp = Secp256k1::new();
+        let err = generate_keys_from_mnemonic(
+            "not a valid mnemonic phrase at all",
+            None,
+            "bech32",
+            Network::Bitcoin,
+            &secp,
+        );
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn generate_new_keys_yields_valid_address() {
+        let secp = Secp256k1::new();
+        let k = generate_new_keys("bech32", Network::Regtest, &secp).unwrap();
+        let addr = create_bitcoin_address(&k.public_key, "bech32", Network::Regtest).unwrap();
+        assert!(addr.to_string().starts_with("bcrt1q"));
+    }
+}

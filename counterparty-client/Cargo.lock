@@ -793,6 +793,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "syntect",
+ "tempfile",
  "termcolor",
  "thiserror 1.0.69",
  "tokio",

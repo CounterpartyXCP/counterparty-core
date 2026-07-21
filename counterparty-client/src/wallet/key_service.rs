@@ -73,3 +73,56 @@ impl KeyService {
         Ok(public_key)
     }*/
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bitcoin::secp256k1::{Message, Secp256k1};
+    use bitcoin::PrivateKey;
+
+    // Build a deterministic WIF for a fixed 32-byte secret plus its expected
+    // compressed public key string.
+    fn fixed_wif(network: Network) -> (String, String) {
+        let secp = Secp256k1::new();
+        let sk = SecretKey::from_slice(&[0x11u8; 32]).unwrap();
+        let pk = PrivateKey::new(sk, network);
+        let public = PublicKey::from_private_key(&secp, &pk);
+        (pk.to_wif(), public.to_string())
+    }
+
+    #[test]
+    fn sign_with_key_exposes_matching_public_key() {
+        let (wif, expected_pub) = fixed_wif(Network::Bitcoin);
+        let secret = Secret::new(wif);
+
+        let got =
+            KeyService::sign_with_key(&secret, Network::Bitcoin, |_sk, pk| Ok(pk.to_string()))
+                .unwrap();
+
+        assert_eq!(got, expected_pub);
+    }
+
+    #[test]
+    fn sign_with_key_can_sign_and_verify() {
+        let (wif, _) = fixed_wif(Network::Bitcoin);
+        let secret = Secret::new(wif);
+        let secp = Secp256k1::new();
+        let msg = Message::from_digest_slice(&[7u8; 32]).unwrap();
+
+        let verified = KeyService::sign_with_key(&secret, Network::Bitcoin, |sk, pk| {
+            let sig = secp.sign_ecdsa(&msg, sk);
+            Ok(secp.verify_ecdsa(&msg, &sig, &pk.inner).is_ok())
+        })
+        .unwrap();
+
+        assert!(verified);
+    }
+
+    #[test]
+    fn sign_with_key_rejects_invalid_wif() {
+        let secret = Secret::new("this-is-not-a-wif".to_string());
+        let result: Result<()> =
+            KeyService::sign_with_key(&secret, Network::Bitcoin, |_sk, _pk| Ok(()));
+        assert!(result.is_err());
+    }
+}

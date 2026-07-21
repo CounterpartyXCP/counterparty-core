@@ -252,3 +252,226 @@ impl AppConfig {
         self.get_active_network_config().data_dir
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // All four networks are populated by `new()` with the expected HTTPS
+    // host-root api_url and `<api_url>/v2/routes` endpoints_url.
+    #[test]
+    fn new_populates_all_networks() {
+        let cfg = AppConfig::new();
+
+        for net in [
+            Network::Mainnet,
+            Network::Signet,
+            Network::Testnet4,
+            Network::Regtest,
+        ] {
+            assert!(
+                cfg.network_configs.contains_key(&net),
+                "missing network config for {net:?}"
+            );
+        }
+
+        let m = &cfg.network_configs[&Network::Mainnet];
+        assert_eq!(m.api_url, "https://api.counterparty.io:4000");
+        assert_eq!(
+            m.endpoints_url,
+            "https://api.counterparty.io:4000/v2/routes"
+        );
+
+        let s = &cfg.network_configs[&Network::Signet];
+        assert_eq!(s.api_url, "https://signet.counterparty.io:34000");
+        assert_eq!(
+            s.endpoints_url,
+            "https://signet.counterparty.io:34000/v2/routes"
+        );
+
+        let t = &cfg.network_configs[&Network::Testnet4];
+        assert_eq!(t.api_url, "https://testnet4.counterparty.io:44000");
+        assert_eq!(
+            t.endpoints_url,
+            "https://testnet4.counterparty.io:44000/v2/routes"
+        );
+
+        let r = &cfg.network_configs[&Network::Regtest];
+        assert_eq!(r.api_url, "http://localhost:24000");
+        assert_eq!(r.endpoints_url, "http://localhost:24000/v2/routes");
+    }
+
+    // Each network's endpoints_url is exactly its api_url plus `/v2/routes`.
+    #[test]
+    fn endpoints_url_is_api_url_plus_v2_routes() {
+        let cfg = AppConfig::new();
+        for net in [
+            Network::Mainnet,
+            Network::Signet,
+            Network::Testnet4,
+            Network::Regtest,
+        ] {
+            let nc = &cfg.network_configs[&net];
+            assert_eq!(nc.endpoints_url, format!("{}/v2/routes", nc.api_url));
+        }
+    }
+
+    // Default network is Mainnet and the root config mirrors the mainnet config.
+    #[test]
+    fn default_network_is_mainnet_and_root_mirrors_mainnet() {
+        assert_eq!(Network::default(), Network::Mainnet);
+
+        let cfg = AppConfig::new();
+        assert_eq!(cfg.network, Network::Mainnet);
+
+        let mainnet = &cfg.network_configs[&Network::Mainnet];
+        assert_eq!(cfg.api_url, mainnet.api_url);
+        assert_eq!(cfg.endpoints_url, mainnet.endpoints_url);
+        assert_eq!(cfg.cache_file, mainnet.cache_file);
+        assert_eq!(cfg.data_dir, mainnet.data_dir);
+    }
+
+    // `get_api_url`/`get_endpoints_url` follow `set_network`.
+    #[test]
+    fn get_api_url_switches_per_network() {
+        let mut cfg = AppConfig::new();
+        assert_eq!(cfg.get_api_url(), "https://api.counterparty.io:4000");
+
+        cfg.set_network(Network::Signet);
+        assert_eq!(cfg.get_api_url(), "https://signet.counterparty.io:34000");
+        assert_eq!(
+            cfg.get_endpoints_url(),
+            "https://signet.counterparty.io:34000/v2/routes"
+        );
+
+        cfg.set_network(Network::Testnet4);
+        assert_eq!(cfg.get_api_url(), "https://testnet4.counterparty.io:44000");
+
+        cfg.set_network(Network::Regtest);
+        assert_eq!(cfg.get_api_url(), "http://localhost:24000");
+    }
+
+    // `merge_from` overrides only non-empty root fields; `network` is always
+    // taken from the incoming (file) config.
+    #[test]
+    fn merge_from_overrides_only_non_empty_fields() {
+        let mut base = AppConfig::new();
+        let original_endpoints = base.endpoints_url.clone();
+        let original_data_dir = base.data_dir.clone();
+
+        let partial = AppConfig {
+            api_url: "https://custom.example:5000".to_string(),
+            endpoints_url: String::new(),
+            cache_file: PathBuf::new(),
+            data_dir: PathBuf::new(),
+            network_configs: HashMap::new(),
+            network: Network::Regtest,
+        };
+        base.merge_from(partial);
+
+        // Non-empty api_url overrides.
+        assert_eq!(base.api_url, "https://custom.example:5000");
+        // Empty fields do NOT override.
+        assert_eq!(base.endpoints_url, original_endpoints);
+        assert_eq!(base.data_dir, original_data_dir);
+        // `network` is taken from the incoming config unconditionally.
+        assert_eq!(base.network, Network::Regtest);
+        // Empty incoming network_configs leaves the existing ones in place.
+        assert_eq!(base.network_configs.len(), 4);
+    }
+
+    // `merge_from` inserts/overrides per-network configs supplied by the file.
+    #[test]
+    fn merge_from_inserts_network_configs() {
+        let mut base = AppConfig::new();
+        let mut incoming_networks = HashMap::new();
+        incoming_networks.insert(
+            Network::Regtest,
+            NetworkConfig {
+                api_url: "http://127.0.0.1:9999".to_string(),
+                endpoints_url: "http://127.0.0.1:9999/v2/routes".to_string(),
+                cache_file: PathBuf::from("/tmp/cache.json"),
+                data_dir: PathBuf::from("/tmp/data"),
+            },
+        );
+        let partial = AppConfig {
+            api_url: String::new(),
+            endpoints_url: String::new(),
+            cache_file: PathBuf::new(),
+            data_dir: PathBuf::new(),
+            network_configs: incoming_networks,
+            network: Network::Regtest,
+        };
+        base.merge_from(partial);
+
+        assert_eq!(base.get_api_url(), "http://127.0.0.1:9999");
+        // The three untouched networks keep their defaults.
+        assert_eq!(
+            base.network_configs[&Network::Mainnet].api_url,
+            "https://api.counterparty.io:4000"
+        );
+    }
+
+    // `load_from_file` on a missing path writes a TOML file that round-trips
+    // back through `try_deserialize` to an equivalent config. Uses a tempdir so
+    // the user's real config directory is never touched.
+    #[test]
+    fn load_from_file_writes_and_roundtrips_toml() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("nested/config.toml");
+
+        let mut cfg = AppConfig::new();
+        assert!(!path.exists());
+        cfg.load_from_file(&path).unwrap();
+        assert!(
+            path.exists(),
+            "load_from_file should create the config file when missing"
+        );
+
+        // Read the written TOML back the same way the app does on start-up.
+        use ::config::{Config, File};
+        let settings = Config::builder()
+            .add_source(File::from(path.clone()))
+            .build()
+            .unwrap();
+        let parsed: AppConfig = settings.try_deserialize().unwrap();
+
+        assert_eq!(parsed.network, cfg.network);
+        assert_eq!(parsed.api_url, cfg.api_url);
+        assert_eq!(parsed.endpoints_url, cfg.endpoints_url);
+
+        for net in [
+            Network::Mainnet,
+            Network::Signet,
+            Network::Testnet4,
+            Network::Regtest,
+        ] {
+            let a = &cfg.network_configs[&net];
+            let b = parsed
+                .network_configs
+                .get(&net)
+                .unwrap_or_else(|| panic!("network {net:?} missing after round-trip"));
+            assert_eq!(a.api_url, b.api_url);
+            assert_eq!(a.endpoints_url, b.endpoints_url);
+        }
+    }
+
+    // A second `load_from_file` call on an existing file merges its values back
+    // in (round-trips through the real merge path, not just the writer).
+    #[test]
+    fn load_from_file_existing_merges_values() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+
+        // First call writes the default (mainnet) config.
+        let mut writer = AppConfig::new();
+        writer.load_from_file(&path).unwrap();
+
+        // A fresh config that starts on Regtest should be pulled back to the
+        // network stored in the file (Mainnet) after loading it.
+        let mut loader = AppConfig::new();
+        loader.set_network(Network::Regtest);
+        loader.load_from_file(&path).unwrap();
+        assert_eq!(loader.network, Network::Mainnet);
+    }
+}
