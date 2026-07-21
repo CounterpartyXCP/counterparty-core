@@ -180,3 +180,50 @@ pub fn print_error(text: &str, more_text: Option<&str>) {
 pub fn print_warning(text: &str, more_text: Option<&str>) {
     print_colored(text, Color::Yellow, more_text)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn colored_json_renders_nested_object() {
+        print_colored_json(&json!({
+            "name": "John",
+            "age": 30,
+            "nested": {"a": [1, 2, 3], "b": true}
+        }))
+        .unwrap();
+    }
+
+    #[test]
+    fn colored_json_list_renders_as_array() {
+        let items = vec![json!({"a": 1}), json!({"b": 2})];
+        print_colored_json_list(&items).unwrap();
+    }
+
+    #[test]
+    fn colored_json_handles_scalars_and_null() {
+        print_colored_json(&json!("hello")).unwrap();
+        print_colored_json(&json!(42)).unwrap();
+        print_colored_json(&json!(null)).unwrap();
+        // An empty list still round-trips through the YAML highlighter.
+        print_colored_json_list(&[]).unwrap();
+    }
+
+    #[test]
+    fn colored_status_helpers_do_not_panic() {
+        print_success("Success:", Some("all good"));
+        print_success("Success:", None);
+        print_error("Error:", Some("something broke"));
+        print_error("Error:", None);
+        print_warning("Warning:", Some("careful"));
+        print_warning("Warning:", None);
+    }
+
+    #[test]
+    fn spinner_starts_and_stops() {
+        let spinner = print_loading("working...");
+        spinner.stop();
+    }
+}

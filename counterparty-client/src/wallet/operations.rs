@@ -220,3 +220,189 @@ impl BitcoinWallet {
         self.storage.clear_password()
     }
 }
+
+#[cfg(test)]
+impl BitcoinWallet {
+    /// Test-only: build a wallet backed by a temp `data_dir` with its password
+    /// seeded into the in-memory cache, so `add_address`/`save` work without the
+    /// OS keyring or an interactive prompt.
+    pub(crate) fn new_for_test<P: AsRef<Path>>(data_dir: P, network: config::Network) -> Self {
+        let (storage, addresses) =
+            WalletStorage::new_for_test(&data_dir, network, "test-pass-123456");
+        BitcoinWallet {
+            storage,
+            addresses,
+            network: to_bitcoin_network(network),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Network;
+
+    // The canonical all-zero BIP39 test vector; derives deterministic addresses.
+    const TEST_MNEMONIC: &str =
+        "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+
+    fn wallet() -> (BitcoinWallet, tempfile::TempDir) {
+        let dir = tempfile::tempdir().unwrap();
+        let w = BitcoinWallet::new_for_test(dir.path(), Network::Regtest);
+        (w, dir)
+    }
+
+    /// A deterministic regtest WIF, derived from a fixed secret.
+    fn regtest_wif(seed: u8) -> String {
+        let sk = bitcoin::secp256k1::SecretKey::from_slice(&[seed; 32]).unwrap();
+        bitcoin::PrivateKey::new(sk, bitcoin::Network::Regtest).to_wif()
+    }
+
+    #[test]
+    fn add_random_bech32_address_returns_mnemonic_and_persists() {
+        let (mut w, _dir) = wallet();
+        let (addr, mnemonic) = w.add_address(None, None, None, None, None).unwrap();
+
+        assert!(
+            addr.starts_with("bcrt1q"),
+            "expected regtest p2wpkh, got {addr}"
+        );
+        // A fresh random key surfaces its backup mnemonic exactly once.
+        assert!(mnemonic.is_some());
+
+        let list = w.list_addresses().unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0]["address"], addr);
+        assert_eq!(list[0]["address_type"], "bech32");
+        assert_eq!(list[0]["network"], "regtest");
+        // Auto-generated label when none supplied.
+        assert_eq!(list[0]["label"], "address1");
+    }
+
+    #[test]
+    fn add_random_p2pkh_and_taproot_addresses() {
+        let (mut w, _dir) = wallet();
+
+        let (p2pkh, _) = w
+            .add_address(None, None, None, Some("legacy"), Some("p2pkh"))
+            .unwrap();
+        // Regtest legacy addresses start with m or n.
+        assert!(
+            p2pkh.starts_with('m') || p2pkh.starts_with('n'),
+            "expected regtest p2pkh, got {p2pkh}"
+        );
+
+        let (taproot, _) = w
+            .add_address(None, None, None, Some("tr"), Some("taproot"))
+            .unwrap();
+        assert!(
+            taproot.starts_with("bcrt1p"),
+            "expected regtest p2tr, got {taproot}"
+        );
+    }
+
+    #[test]
+    fn import_from_private_key_has_no_mnemonic() {
+        let (mut w, _dir) = wallet();
+        let (addr, mnemonic) = w
+            .add_address(Some(&regtest_wif(7)), None, None, None, None)
+            .unwrap();
+        assert!(addr.starts_with("bcrt1q"), "got {addr}");
+        // Imported keys never echo a mnemonic back.
+        assert!(mnemonic.is_none());
+    }
+
+    #[test]
+    fn passing_a_mnemonic_as_a_private_key_is_rejected() {
+        // The mnemonic must go through the dedicated `mnemonic` parameter; it is
+        // not a valid WIF and must not be silently accepted as a private key.
+        let (mut w, _dir) = wallet();
+        assert!(w
+            .add_address(Some(TEST_MNEMONIC), None, None, None, None)
+            .is_err());
+    }
+
+    #[test]
+    fn import_from_mnemonic_is_deterministic_and_has_no_mnemonic() {
+        let (mut w1, _d1) = wallet();
+        let (a1, m1) = w1
+            .add_address(None, Some(TEST_MNEMONIC), None, None, None)
+            .unwrap();
+        // The user already holds this seed; it is not echoed back.
+        assert!(m1.is_none());
+
+        // The same mnemonic in a fresh wallet yields the same address.
+        let (mut w2, _d2) = wallet();
+        let (a2, _) = w2
+            .add_address(None, Some(TEST_MNEMONIC), None, None, None)
+            .unwrap();
+        assert_eq!(a1, a2);
+    }
+
+    #[test]
+    fn labels_default_incrementally_and_respect_overrides() {
+        let (mut w, _dir) = wallet();
+        w.add_address(None, None, None, None, None).unwrap();
+        w.add_address(None, None, None, Some("savings"), None)
+            .unwrap();
+        w.add_address(None, None, None, None, None).unwrap();
+
+        let labels: Vec<String> = w
+            .list_addresses()
+            .unwrap()
+            .iter()
+            .map(|e| e["label"].as_str().unwrap().to_string())
+            .collect();
+        assert!(labels.contains(&"address1".to_string()));
+        assert!(labels.contains(&"savings".to_string()));
+        // The third address is numbered by the current wallet size (3).
+        assert!(labels.contains(&"address3".to_string()));
+    }
+
+    #[test]
+    fn show_address_hides_private_key_by_default_and_reveals_on_request() {
+        let (mut w, _dir) = wallet();
+        let (addr, _) = w.add_address(None, None, None, None, None).unwrap();
+
+        let public = w.show_address(&addr, None).unwrap();
+        assert_eq!(public["address"], addr);
+        assert_eq!(public["network"], "regtest");
+        assert!(public.get("private_key").is_none());
+
+        let private = w.show_address(&addr, Some(true)).unwrap();
+        assert!(private["private_key"].as_str().unwrap().len() > 0);
+    }
+
+    #[test]
+    fn show_address_unknown_returns_not_found() {
+        let (w, _dir) = wallet();
+        let err = w.show_address("bcrt1qdoesnotexist", None).unwrap_err();
+        assert!(matches!(err, WalletError::AddressNotFound(_)));
+    }
+
+    #[test]
+    fn add_address_persists_encrypted_wallet_to_disk() {
+        // NB: the reload/decrypt path is exercised in `storage.rs`; here we stay
+        // keyring-free (the whole suite must run on headless Linux CI, which has
+        // no Secret Service) and only assert that `add_address` -> `save` wrote
+        // an encrypted store to disk.
+        let dir = tempfile::tempdir().unwrap();
+        let mut w = BitcoinWallet::new_for_test(dir.path(), Network::Regtest);
+        w.add_address(None, None, None, Some("keep"), None).unwrap();
+
+        let bytes = std::fs::read(dir.path().join("wallet.db")).unwrap();
+        assert!(!bytes.is_empty(), "wallet file should have been written");
+        // A cocoon container is binary, not the plaintext JSON address map.
+        assert!(
+            !bytes.starts_with(b"{"),
+            "wallet file must be encrypted, not plaintext JSON"
+        );
+    }
+
+    #[test]
+    fn sign_transaction_rejects_garbage_hex() {
+        let (w, _dir) = wallet();
+        let utxos = bitcoinsigner::UTXOList::new();
+        assert!(w.sign_transaction("not-hex", &utxos).is_err());
+    }
+}

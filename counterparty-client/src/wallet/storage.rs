@@ -200,6 +200,35 @@ impl WalletStorage {
     }
 }
 
+#[cfg(test)]
+impl WalletStorage {
+    /// Build storage at `data_dir` with `password` seeded into the in-memory
+    /// password cache and an empty encrypted wallet written to disk. No keyring
+    /// access and no prompts, so higher-level wallet operations can be exercised
+    /// in tests. Returns the storage plus the (empty) address map.
+    pub(crate) fn new_for_test<P: AsRef<Path>>(
+        data_dir: P,
+        network: config::Network,
+        password: &str,
+    ) -> (Self, AddressMap) {
+        let network_dir = data_dir.as_ref().to_path_buf();
+        fs::create_dir_all(&network_dir).unwrap();
+        let wallet_file = network_dir.join("wallet.db");
+        let wallet_name = network_dir.to_string_lossy().to_string();
+        let password_manager = PasswordManager::new(network, &wallet_name);
+        password_manager.cache_for_test(password);
+        let storage = WalletStorage {
+            wallet_file,
+            password_manager,
+        };
+        let addresses = AddressMap::new();
+        storage
+            .write_encrypted(&addresses, &SecretString::from(password.to_string()))
+            .unwrap();
+        (storage, addresses)
+    }
+}
+
 /// Write `data` to `path` atomically: write to a sibling temp file, flush, then
 /// rename over the target (rename is atomic on the same filesystem).
 fn atomic_write(path: &Path, data: &[u8]) -> Result<()> {
@@ -388,6 +417,35 @@ mod tests {
         assert!(!prefix_file.exists(), "legacy prefix must be removed");
         let reloaded = storage.decrypt_addresses(&password).unwrap();
         assert_eq!(reloaded.len(), 1);
+    }
+
+    #[test]
+    fn save_uses_cached_password_and_roundtrips() {
+        // `save` pulls the password from `cached_or_stored`. Seeding only the
+        // in-memory cache keeps this off the OS keyring (required for headless
+        // CI) while still exercising the real `save` -> `write_encrypted` path.
+        let dir = tempfile::tempdir().unwrap();
+        let wallet_file = dir.path().join("wallet.db");
+        let pm = PasswordManager::new(config::Network::Regtest, "save-roundtrip");
+        pm.cache_for_test("cachedpassw0rd");
+        let storage = WalletStorage {
+            wallet_file: wallet_file.clone(),
+            password_manager: pm,
+        };
+
+        let addresses = sample_map();
+        storage.save(&addresses).unwrap();
+        assert!(wallet_file.exists());
+
+        // The saved file decrypts with the cached password.
+        let loaded = storage
+            .decrypt_addresses(&SecretString::from("cachedpassw0rd".to_string()))
+            .unwrap();
+        assert_eq!(loaded.len(), 1);
+        assert_eq!(
+            loaded.get("bcrt1qexampleaddress").unwrap().label,
+            "test-label"
+        );
     }
 
     #[test]

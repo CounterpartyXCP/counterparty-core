@@ -141,6 +141,102 @@ impl AsRef<[UTXO]> for UTXOList {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn keys(
+        seed: u8,
+    ) -> (
+        bitcoin::PublicKey,
+        bitcoin::secp256k1::Secp256k1<bitcoin::secp256k1::All>,
+    ) {
+        let secp = bitcoin::secp256k1::Secp256k1::new();
+        let sk = bitcoin::secp256k1::SecretKey::from_slice(&[seed; 32]).unwrap();
+        let pk = bitcoin::PrivateKey::new(sk, bitcoin::Network::Regtest);
+        (bitcoin::PublicKey::from_private_key(&secp, &pk), secp)
+    }
+
+    fn p2wpkh_spk(seed: u8) -> ScriptBuf {
+        let (public, _) = keys(seed);
+        let cpk = bitcoin::CompressedPublicKey::from_slice(&public.to_bytes()).unwrap();
+        bitcoin::Address::p2wpkh(&cpk, bitcoin::Network::Regtest).script_pubkey()
+    }
+
+    fn p2pkh_spk(seed: u8) -> ScriptBuf {
+        let (public, _) = keys(seed);
+        bitcoin::Address::p2pkh(public, bitcoin::Network::Regtest).script_pubkey()
+    }
+
+    fn p2tr_spk(seed: u8) -> ScriptBuf {
+        let (public, secp) = keys(seed);
+        let (xonly, _) = public.inner.x_only_public_key();
+        bitcoin::Address::p2tr(&secp, xonly, None, bitcoin::Network::Regtest).script_pubkey()
+    }
+
+    #[test]
+    fn from_str_maps_every_alias_and_defaults_to_unknown() {
+        assert_eq!(UTXOType::from_str("p2pkh").unwrap(), UTXOType::P2PKH);
+        assert_eq!(UTXOType::from_str("P2PKH").unwrap(), UTXOType::P2PKH);
+        assert_eq!(UTXOType::from_str("p2sh").unwrap(), UTXOType::P2SH);
+        assert_eq!(UTXOType::from_str("p2wpkh").unwrap(), UTXOType::P2WPKH);
+        assert_eq!(UTXOType::from_str("bech32").unwrap(), UTXOType::P2WPKH);
+        assert_eq!(UTXOType::from_str("p2wsh").unwrap(), UTXOType::P2WSH);
+        assert_eq!(UTXOType::from_str("p2tr").unwrap(), UTXOType::P2TRKPS);
+        assert_eq!(UTXOType::from_str("p2tr-kps").unwrap(), UTXOType::P2TRKPS);
+        assert_eq!(UTXOType::from_str("p2tr-sps").unwrap(), UTXOType::P2TRSPS);
+        assert_eq!(UTXOType::from_str("nonsense").unwrap(), UTXOType::Unknown);
+    }
+
+    #[test]
+    fn get_type_classifies_by_script_and_optional_fields() {
+        // Native script types inferred from the scriptPubKey.
+        assert_eq!(UTXO::new(1, p2wpkh_spk(1)).get_type(), UTXOType::P2WPKH);
+        assert_eq!(UTXO::new(1, p2pkh_spk(2)).get_type(), UTXOType::P2PKH);
+        assert_eq!(UTXO::new(1, p2tr_spk(3)).get_type(), UTXOType::P2TRKPS);
+
+        // A witness_script forces P2WSH regardless of the scriptPubKey.
+        let mut wsh = UTXO::new(1, p2wpkh_spk(4));
+        wsh.witness_script = Some(ScriptBuf::new());
+        assert_eq!(wsh.get_type(), UTXOType::P2WSH);
+
+        // A redeem_script (without a witness_script) forces P2SH.
+        let mut sh = UTXO::new(1, p2pkh_spk(5));
+        sh.redeem_script = Some(ScriptBuf::new());
+        assert_eq!(sh.get_type(), UTXOType::P2SH);
+
+        // leaf_script + source_address => taproot script path.
+        let mut sps = UTXO::new(1, p2tr_spk(6));
+        sps.leaf_script = Some(ScriptBuf::new());
+        sps.source_address = Some("bcrt1p...".to_string());
+        assert_eq!(sps.get_type(), UTXOType::P2TRSPS);
+
+        // An unrecognised scriptPubKey is Unknown.
+        assert_eq!(
+            UTXO::new(1, ScriptBuf::from_bytes(vec![0x51])).get_type(),
+            UTXOType::Unknown
+        );
+    }
+
+    #[test]
+    fn utxolist_new_add_get_and_conversions() {
+        let mut list = UTXOList::new();
+        assert_eq!(list.len(), 0);
+        assert!(list.get(0).is_none());
+
+        list.add(UTXO::new(100, p2wpkh_spk(1)));
+        assert_eq!(list.len(), 1);
+        assert_eq!(list.get(0).unwrap().amount, 100);
+        assert!(list.get(1).is_none());
+
+        // From<Vec<UTXO>> and AsRef<[UTXO]>.
+        let from_vec: UTXOList = vec![UTXO::new(5, p2pkh_spk(2))].into();
+        let slice: &[UTXO] = from_vec.as_ref();
+        assert_eq!(slice.len(), 1);
+        assert_eq!(slice[0].amount, 5);
+    }
+}
+
 /// Trait for implementation of various transaction input signers
 /// This provides a common interface for all address types
 pub trait InputSigner {

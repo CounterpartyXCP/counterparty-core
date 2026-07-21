@@ -989,3 +989,689 @@ pub async fn handle_broadcast_command(config: &AppConfig, sub_matches: &ArgMatch
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{AppConfig, Network};
+    use serde_json::json;
+
+    // ---- test helpers ----
+
+    /// A regtest bech32 (P2WPKH) address + its script_pubkey, derived from a
+    /// fixed secret so the value is deterministic.
+    fn p2wpkh_addr_and_script(seed: u8) -> (String, bitcoin::ScriptBuf) {
+        let secp = bitcoin::secp256k1::Secp256k1::new();
+        let sk = bitcoin::secp256k1::SecretKey::from_slice(&[seed; 32]).unwrap();
+        let pk = bitcoin::PrivateKey::new(sk, bitcoin::Network::Regtest);
+        let public = bitcoin::PublicKey::from_private_key(&secp, &pk);
+        let cpk = bitcoin::CompressedPublicKey::from_slice(&public.to_bytes()).unwrap();
+        let addr = bitcoin::Address::p2wpkh(&cpk, bitcoin::Network::Regtest);
+        (addr.to_string(), addr.script_pubkey())
+    }
+
+    fn p2pkh_script(seed: u8) -> bitcoin::ScriptBuf {
+        let secp = bitcoin::secp256k1::Secp256k1::new();
+        let sk = bitcoin::secp256k1::SecretKey::from_slice(&[seed; 32]).unwrap();
+        let pk = bitcoin::PrivateKey::new(sk, bitcoin::Network::Regtest);
+        let public = bitcoin::PublicKey::from_private_key(&secp, &pk);
+        bitcoin::Address::p2pkh(public, bitcoin::Network::Regtest).script_pubkey()
+    }
+
+    /// An OP_RETURN script carrying `data` (short push form).
+    fn op_return_script(data: &[u8]) -> bitcoin::ScriptBuf {
+        let mut raw = vec![0x6a, data.len() as u8];
+        raw.extend_from_slice(data);
+        bitcoin::ScriptBuf::from_bytes(raw)
+    }
+
+    /// Build a raw transaction hex with the given outputs and a single dummy input.
+    fn raw_tx_hex(outputs: Vec<bitcoin::TxOut>) -> String {
+        use bitcoin::hashes::Hash;
+        let tx = bitcoin::Transaction {
+            version: bitcoin::transaction::Version::TWO,
+            lock_time: bitcoin::absolute::LockTime::ZERO,
+            input: vec![bitcoin::TxIn {
+                previous_output: bitcoin::OutPoint {
+                    txid: bitcoin::Txid::all_zeros(),
+                    vout: 0,
+                },
+                script_sig: bitcoin::ScriptBuf::new(),
+                sequence: bitcoin::Sequence::MAX,
+                witness: bitcoin::Witness::new(),
+            }],
+            output: outputs,
+        };
+        bitcoin::consensus::encode::serialize_hex(&tx)
+    }
+
+    fn config_for(server: &mockito::ServerGuard) -> AppConfig {
+        let mut config = AppConfig::new();
+        config.set_network(Network::Regtest);
+        let nc = config.network_configs.get_mut(&Network::Regtest).unwrap();
+        nc.api_url = server.url();
+        nc.endpoints_url = format!("{}/v2/routes", server.url());
+        config
+    }
+
+    // ---- get_explorer_url ----
+
+    #[test]
+    fn explorer_url_per_network() {
+        assert_eq!(
+            get_explorer_url(Network::Mainnet, "abc"),
+            "https://mempool.space/tx/abc"
+        );
+        assert_eq!(
+            get_explorer_url(Network::Signet, "abc"),
+            "https://mempool.space/signet/tx/abc"
+        );
+        assert_eq!(
+            get_explorer_url(Network::Testnet4, "abc"),
+            "https://mempool.space/testnet4/tx/abc"
+        );
+        assert_eq!(
+            get_explorer_url(Network::Regtest, "abc"),
+            "Transaction ID: abc"
+        );
+    }
+
+    // ---- get_script_type ----
+
+    #[test]
+    fn script_type_detection() {
+        let (_, wpkh) = p2wpkh_addr_and_script(1);
+        assert_eq!(get_script_type(&wpkh), "P2WPKH");
+        assert_eq!(get_script_type(&p2pkh_script(2)), "P2PKH");
+        assert_eq!(get_script_type(&op_return_script(b"CNTRPRTY")), "OP_RETURN");
+        // An arbitrary non-standard script is UNKNOWN.
+        assert_eq!(
+            get_script_type(&bitcoin::ScriptBuf::from_bytes(vec![0x51])),
+            "UNKNOWN"
+        );
+    }
+
+    // ---- extract_op_return_data ----
+
+    #[test]
+    fn op_return_data_extraction() {
+        assert_eq!(extract_op_return_data(&op_return_script(b"hello")), "hello");
+        // Not an OP_RETURN.
+        assert_eq!(
+            extract_op_return_data(&p2pkh_script(3)),
+            "<not an OP_RETURN>"
+        );
+        // Bare OP_RETURN with no push.
+        assert_eq!(
+            extract_op_return_data(&bitcoin::ScriptBuf::from_bytes(vec![0x6a])),
+            "<no data>"
+        );
+        // OP_PUSHDATA1 form: 0x6a 0x4c <len> <data>.
+        let mut raw = vec![0x6a, 0x4c, 0x03];
+        raw.extend_from_slice(b"abc");
+        assert_eq!(
+            extract_op_return_data(&bitcoin::ScriptBuf::from_bytes(raw)),
+            "abc"
+        );
+    }
+
+    // ---- script_to_address ----
+
+    #[test]
+    fn script_to_address_roundtrips_and_none_on_unknown() {
+        let (addr, wpkh) = p2wpkh_addr_and_script(4);
+        assert_eq!(script_to_address(&wpkh, Network::Regtest), Some(addr));
+        // A bare/non-standard script has no address.
+        assert_eq!(
+            script_to_address(
+                &bitcoin::ScriptBuf::from_bytes(vec![0x51]),
+                Network::Regtest
+            ),
+            None
+        );
+    }
+
+    // ---- calculate_transaction_fee ----
+
+    #[test]
+    fn fee_is_inputs_minus_outputs_or_none() {
+        let (_, spk) = p2wpkh_addr_and_script(5);
+        let tx_hex = raw_tx_hex(vec![bitcoin::TxOut {
+            value: bitcoin::Amount::from_sat(900),
+            script_pubkey: spk.clone(),
+        }]);
+        let tx_bytes = hex::decode(&tx_hex).unwrap();
+        let tx: bitcoin::Transaction = bitcoin::consensus::deserialize(&tx_bytes).unwrap();
+
+        let mut list = bitcoinsigner::UTXOList::new();
+        list.add(bitcoinsigner::UTXO::new(1000, spk.clone()));
+        assert_eq!(calculate_transaction_fee(&tx, &list), Some(100));
+
+        // Outputs > inputs -> None.
+        let mut small = bitcoinsigner::UTXOList::new();
+        small.add(bitcoinsigner::UTXO::new(500, spk));
+        assert_eq!(calculate_transaction_fee(&tx, &small), None);
+    }
+
+    // ---- decode_script / build_utxo_list ----
+
+    #[test]
+    fn decode_script_ok_and_err() {
+        assert!(decode_script("51").is_ok());
+        assert!(decode_script("zz").is_err());
+    }
+
+    #[test]
+    fn build_utxo_list_ok_and_bad_hex() {
+        let (_, spk) = p2wpkh_addr_and_script(6);
+        let hexs = hex::encode(spk.as_bytes());
+        let list = build_utxo_list(vec![(hexs.as_str(), 1234)]).unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list.get(0).unwrap().amount, 1234);
+
+        assert!(build_utxo_list(vec![("zz", 1)]).is_err());
+    }
+
+    // ---- build_reveal_utxo_list ----
+
+    #[test]
+    fn build_reveal_utxo_list_uses_first_output() {
+        let (_, spk) = p2wpkh_addr_and_script(7);
+        let commit_hex = raw_tx_hex(vec![
+            bitcoin::TxOut {
+                value: bitcoin::Amount::from_sat(4321),
+                script_pubkey: spk.clone(),
+            },
+            bitcoin::TxOut {
+                value: bitcoin::Amount::from_sat(1),
+                script_pubkey: spk,
+            },
+        ]);
+        let list = build_reveal_utxo_list(&commit_hex).unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list.get(0).unwrap().amount, 4321);
+
+        // Bad hex and no-output cases are errors.
+        assert!(build_reveal_utxo_list("zz").is_err());
+        let no_out = raw_tx_hex(vec![]);
+        assert!(build_reveal_utxo_list(&no_out).is_err());
+    }
+
+    // ---- parse_utxos_from_json ----
+
+    #[test]
+    fn parse_utxos_from_json_full_and_errors() {
+        let (_, spk) = p2wpkh_addr_and_script(8);
+        let spk_hex = hex::encode(spk.as_bytes());
+        let good = format!(
+            r#"[{{"scriptPubKey":"{spk_hex}","amount":5000,"redeemScript":"51","witnessScript":"52","leafScript":"53","sourceAddress":"bcrt1qexample"}}]"#
+        );
+        let list = parse_utxos_from_json(&good).unwrap();
+        assert_eq!(list.len(), 1);
+        let u = list.get(0).unwrap();
+        assert_eq!(u.amount, 5000);
+        assert!(u.redeem_script.is_some());
+        assert!(u.witness_script.is_some());
+        assert!(u.leaf_script.is_some());
+        assert_eq!(u.source_address.as_deref(), Some("bcrt1qexample"));
+
+        // Not an array.
+        assert!(parse_utxos_from_json("{}").is_err());
+        // Not valid JSON.
+        assert!(parse_utxos_from_json("not json").is_err());
+        // Element not an object.
+        assert!(parse_utxos_from_json("[1]").is_err());
+        // Missing scriptPubKey.
+        assert!(parse_utxos_from_json(r#"[{"amount":1}]"#).is_err());
+        // Missing amount.
+        assert!(parse_utxos_from_json(r#"[{"scriptPubKey":"51"}]"#).is_err());
+        // Bad scriptPubKey hex.
+        assert!(parse_utxos_from_json(r#"[{"scriptPubKey":"zz","amount":1}]"#).is_err());
+    }
+
+    // ---- extract_transaction_details ----
+
+    #[test]
+    fn extract_transaction_details_full() {
+        let result = json!({
+            "rawtransaction": "deadbeef",
+            "inputs_values": [1000, 2000],
+            "lock_scripts": ["51", "52"],
+            "name": "send",
+            "params": {"asset": "XCP", "asset_info": {"divisible": true}, "quantity": 5}
+        });
+        let (raw, utxos, name, params) = extract_transaction_details(&result).unwrap();
+        assert_eq!(raw, "deadbeef");
+        assert_eq!(utxos, vec![("51", 1000u64), ("52", 2000u64)]);
+        assert_eq!(name, Some("send"));
+        let params = params.unwrap();
+        // asset_info is stripped, other params kept.
+        assert!(params.get("asset_info").is_none());
+        assert_eq!(params.get("asset").unwrap(), "XCP");
+    }
+
+    #[test]
+    fn extract_transaction_details_errors() {
+        // Missing rawtransaction.
+        assert!(extract_transaction_details(&json!({
+            "inputs_values": [1], "lock_scripts": ["51"]
+        }))
+        .is_err());
+        // Missing inputs_values.
+        assert!(extract_transaction_details(&json!({
+            "rawtransaction": "aa", "lock_scripts": ["51"]
+        }))
+        .is_err());
+        // Missing lock_scripts.
+        assert!(extract_transaction_details(&json!({
+            "rawtransaction": "aa", "inputs_values": [1]
+        }))
+        .is_err());
+        // Mismatched lengths.
+        assert!(extract_transaction_details(&json!({
+            "rawtransaction": "aa", "inputs_values": [1, 2], "lock_scripts": ["51"]
+        }))
+        .is_err());
+    }
+
+    #[test]
+    fn extract_transaction_details_optional_fields_absent() {
+        let result = json!({
+            "rawtransaction": "aa",
+            "inputs_values": [1],
+            "lock_scripts": ["51"]
+        });
+        let (_, _, name, params) = extract_transaction_details(&result).unwrap();
+        assert_eq!(name, None);
+        assert!(params.is_none());
+    }
+
+    // ---- extract_reveal_transaction_info ----
+
+    #[test]
+    fn reveal_info_present_and_absent() {
+        let with = json!({"signed_reveal_rawtransaction": "cafe"});
+        assert_eq!(
+            extract_reveal_transaction_info(&with).unwrap().signed_tx,
+            "cafe"
+        );
+        let without = json!({"rawtransaction": "aa"});
+        assert!(extract_reveal_transaction_info(&without).is_none());
+    }
+
+    // ---- find_compose_endpoint ----
+
+    fn endpoint_with_args(function: &str, args: &[&str]) -> ApiEndpoint {
+        ApiEndpoint {
+            function: function.to_string(),
+            description: String::new(),
+            args: args
+                .iter()
+                .map(|a| ApiEndpointArg {
+                    name: a.to_string(),
+                    required: false,
+                    arg_type: "string".to_string(),
+                    description: None,
+                    default: None,
+                    members: None,
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn find_compose_endpoint_adds_address_when_missing() {
+        let mut endpoints = HashMap::new();
+        endpoints.insert(
+            "/v2/addresses/<address>/compose/burn".to_string(),
+            endpoint_with_args("compose_burn", &["quantity"]),
+        );
+        let (_, ep) = find_compose_endpoint(&endpoints, "burn").unwrap();
+        assert!(ep.args.iter().any(|a| a.name == "address"));
+    }
+
+    #[test]
+    fn find_compose_endpoint_keeps_existing_source() {
+        let mut endpoints = HashMap::new();
+        endpoints.insert(
+            "/v2/addresses/<address>/compose/send".to_string(),
+            endpoint_with_args("compose_send", &["source", "quantity"]),
+        );
+        let (_, ep) = find_compose_endpoint(&endpoints, "send").unwrap();
+        // No extra address arg added (source already present).
+        assert_eq!(ep.args.iter().filter(|a| a.name == "address").count(), 0);
+    }
+
+    #[test]
+    fn find_compose_endpoint_unknown_errs() {
+        let endpoints: HashMap<String, ApiEndpoint> = HashMap::new();
+        assert!(find_compose_endpoint(&endpoints, "nope").is_err());
+    }
+
+    // ---- extract_parameters_from_matches ----
+
+    #[test]
+    fn extract_parameters_from_matches_reads_registered_args() {
+        use clap::{Arg, Command};
+        let tx_name = "cov_extract_params_tx";
+        let internal_id: &'static str = "__transaction_cov_extract_params_tx_arg_0_quantity";
+        ID_ARG_MAP
+            .lock()
+            .unwrap()
+            .insert(format!("{tx_name}:{internal_id}"), "quantity".to_string());
+
+        let ep = endpoint_with_args("compose_send", &["quantity"]);
+        let cmd = Command::new(tx_name).arg(Arg::new(internal_id).long("quantity"));
+        let matches = cmd.get_matches_from(vec![tx_name, "--quantity", "42"]);
+
+        let params = extract_parameters_from_matches(&ep, tx_name, &matches);
+        assert_eq!(params.get("quantity").map(String::as_str), Some("42"));
+        // verbose is always added.
+        assert_eq!(params.get("verbose").map(String::as_str), Some("true"));
+    }
+
+    // ---- display_transaction_summary (smoke: must not error) ----
+
+    #[test]
+    fn display_transaction_summary_renders() {
+        let (_, spk) = p2wpkh_addr_and_script(9);
+        let tx_hex = raw_tx_hex(vec![
+            bitcoin::TxOut {
+                value: bitcoin::Amount::from_sat(800),
+                script_pubkey: spk.clone(),
+            },
+            bitcoin::TxOut {
+                value: bitcoin::Amount::from_sat(0),
+                script_pubkey: op_return_script(b"CNTRPRTY0"),
+            },
+        ]);
+        let mut list = bitcoinsigner::UTXOList::new();
+        let mut u = bitcoinsigner::UTXO::new(1000, spk);
+        u.source_address = Some("bcrt1qsource".to_string());
+        list.add(u);
+        assert!(display_transaction_summary(&tx_hex, &list, Network::Regtest).is_ok());
+    }
+
+    // ---- async HTTP paths via mockito ----
+
+    #[tokio::test]
+    async fn broadcast_transaction_success_error_and_unexpected() {
+        let mut server = mockito::Server::new_async().await;
+
+        let ok = server
+            .mock("POST", "/v2/bitcoin/transactions")
+            .with_status(200)
+            .with_body(r#"{"result":"txid-123"}"#)
+            .create_async()
+            .await;
+        let config = config_for(&server);
+        assert_eq!(
+            broadcast_transaction(&config, "aabb").await.unwrap(),
+            "txid-123"
+        );
+        ok.assert_async().await;
+
+        // Error payload -> Err.
+        let mut server2 = mockito::Server::new_async().await;
+        server2
+            .mock("POST", "/v2/bitcoin/transactions")
+            .with_status(400)
+            .with_body(r#"{"error":"bad tx"}"#)
+            .create_async()
+            .await;
+        let config2 = config_for(&server2);
+        assert!(broadcast_transaction(&config2, "aabb").await.is_err());
+
+        // Neither result nor error -> Err.
+        let mut server3 = mockito::Server::new_async().await;
+        server3
+            .mock("POST", "/v2/bitcoin/transactions")
+            .with_status(200)
+            .with_body(r#"{"other":1}"#)
+            .create_async()
+            .await;
+        let config3 = config_for(&server3);
+        assert!(broadcast_transaction(&config3, "aabb").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn call_compose_api_result_error_unexpected() {
+        let ep = endpoint_with_args("compose_send", &[]);
+
+        let mut server = mockito::Server::new_async().await;
+        server
+            .mock("GET", mockito::Matcher::Any)
+            .with_status(200)
+            .with_body(r#"{"result":{"rawtransaction":"aa"}}"#)
+            .create_async()
+            .await;
+        let config = config_for(&server);
+        let mut params = HashMap::new();
+        let out = call_compose_api(&config, "/v2/compose", &ep, &mut params)
+            .await
+            .unwrap();
+        assert_eq!(out.get("rawtransaction").unwrap(), "aa");
+
+        let mut server2 = mockito::Server::new_async().await;
+        server2
+            .mock("GET", mockito::Matcher::Any)
+            .with_status(400)
+            .with_body(r#"{"error":"nope"}"#)
+            .create_async()
+            .await;
+        let config2 = config_for(&server2);
+        let mut p2 = HashMap::new();
+        assert!(call_compose_api(&config2, "/v2/compose", &ep, &mut p2)
+            .await
+            .is_err());
+    }
+
+    #[tokio::test]
+    async fn get_utxos_from_api_builds_list() {
+        // A tx spending outpoint <zeros>:0 -> the API returns that prevout's vout 0.
+        let (_, spk) = p2wpkh_addr_and_script(10);
+        let spk_hex = hex::encode(spk.as_bytes());
+        let tx_hex = raw_tx_hex(vec![bitcoin::TxOut {
+            value: bitcoin::Amount::from_sat(1),
+            script_pubkey: spk,
+        }]);
+
+        let mut server = mockito::Server::new_async().await;
+        let body = format!(
+            r#"{{"result":{{"vout":[{{"n":0,"value":0.0001,"scriptPubKey":{{"hex":"{spk_hex}"}}}}]}}}}"#
+        );
+        server
+            .mock("GET", mockito::Matcher::Any)
+            .with_status(200)
+            .with_body(body)
+            .create_async()
+            .await;
+        let config = config_for(&server);
+
+        let list = get_utxos_from_api(&config, &tx_hex).await.unwrap();
+        assert_eq!(list.len(), 1);
+        // 0.0001 BTC == 10_000 sats.
+        assert_eq!(list.get(0).unwrap().amount, 10_000);
+    }
+
+    #[tokio::test]
+    async fn get_utxos_from_api_reports_api_error() {
+        let (_, spk) = p2wpkh_addr_and_script(11);
+        let tx_hex = raw_tx_hex(vec![bitcoin::TxOut {
+            value: bitcoin::Amount::from_sat(1),
+            script_pubkey: spk,
+        }]);
+        let mut server = mockito::Server::new_async().await;
+        server
+            .mock("GET", mockito::Matcher::Any)
+            .with_status(200)
+            .with_body(r#"{"error":"not found"}"#)
+            .create_async()
+            .await;
+        let config = config_for(&server);
+        assert!(get_utxos_from_api(&config, &tx_hex).await.is_err());
+    }
+
+    // ---- get_address_and_public_key ----
+
+    #[test]
+    fn get_address_and_public_key_prefers_source_then_address() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut w = BitcoinWallet::new_for_test(dir.path(), Network::Regtest);
+        let (addr, _) = w.add_address(None, None, None, None, None).unwrap();
+
+        let mut via_source = HashMap::new();
+        via_source.insert("source".to_string(), addr.clone());
+        assert!(!get_address_and_public_key(&via_source, &w)
+            .unwrap()
+            .is_empty());
+
+        let mut via_address = HashMap::new();
+        via_address.insert("address".to_string(), addr);
+        assert!(!get_address_and_public_key(&via_address, &w)
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
+    fn get_address_and_public_key_errors_on_missing_or_unknown() {
+        let dir = tempfile::tempdir().unwrap();
+        let w = BitcoinWallet::new_for_test(dir.path(), Network::Regtest);
+
+        // No address parameter at all.
+        assert!(get_address_and_public_key(&HashMap::new(), &w).is_err());
+
+        // Present, but not a wallet address.
+        let mut params = HashMap::new();
+        params.insert("source".to_string(), "bcrt1qnotinwallet".to_string());
+        assert!(get_address_and_public_key(&params, &w).is_err());
+    }
+
+    // ---- broadcast_transactions (mockito POST) ----
+
+    #[tokio::test]
+    async fn broadcast_transactions_single_and_with_reveal() {
+        let mut server = mockito::Server::new_async().await;
+        server
+            .mock("POST", "/v2/bitcoin/transactions")
+            .with_status(200)
+            .with_body(r#"{"result":"txid-abc"}"#)
+            .create_async()
+            .await;
+        let config = config_for(&server);
+
+        // Single transaction, then commit + reveal (two broadcasts).
+        broadcast_transactions(&config, "deadbeef", None)
+            .await
+            .unwrap();
+        broadcast_transactions(&config, "deadbeef", Some("cafebabe"))
+            .await
+            .unwrap();
+    }
+
+    // ---- handle_sign_command ----
+
+    fn sign_matches(raw: &str, utxos: Option<&str>) -> ArgMatches {
+        let cmd = clap::Command::new("sign")
+            .arg(clap::Arg::new("rawtransaction").long("rawtransaction"))
+            .arg(clap::Arg::new("utxos").long("utxos"));
+        let mut argv = vec![
+            "sign".to_string(),
+            "--rawtransaction".to_string(),
+            raw.to_string(),
+        ];
+        if let Some(u) = utxos {
+            argv.push("--utxos".to_string());
+            argv.push(u.to_string());
+        }
+        cmd.try_get_matches_from(argv).unwrap()
+    }
+
+    #[tokio::test]
+    async fn handle_sign_command_signs_p2wpkh_with_provided_utxos() {
+        // A wallet holding the P2WPKH key for seed 0x11, signing a tx that spends
+        // that key's output. UTXOs are supplied inline, so there is no network.
+        let dir = tempfile::tempdir().unwrap();
+        let mut w = BitcoinWallet::new_for_test(dir.path(), Network::Regtest);
+        let sk = bitcoin::secp256k1::SecretKey::from_slice(&[0x11u8; 32]).unwrap();
+        let wif = bitcoin::PrivateKey::new(sk, bitcoin::Network::Regtest).to_wif();
+        let (addr, _) = w.add_address(Some(&wif), None, None, None, None).unwrap();
+
+        let (_, spk) = p2wpkh_addr_and_script(0x11);
+        let spk_hex = hex::encode(spk.as_bytes());
+        let raw = raw_tx_hex(vec![bitcoin::TxOut {
+            value: bitcoin::Amount::from_sat(99_000),
+            script_pubkey: bitcoin::ScriptBuf::new_op_return([]),
+        }]);
+        let utxos =
+            format!(r#"[{{"scriptPubKey":"{spk_hex}","amount":100000,"sourceAddress":"{addr}"}}]"#);
+
+        let mut config = AppConfig::new();
+        config.set_network(Network::Regtest);
+        handle_sign_command(&config, &sign_matches(&raw, Some(&utxos)), &w)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn handle_sign_command_errors_when_signing_key_absent() {
+        let dir = tempfile::tempdir().unwrap();
+        let w = BitcoinWallet::new_for_test(dir.path(), Network::Regtest);
+        let (_, spk) = p2wpkh_addr_and_script(0x22);
+        let spk_hex = hex::encode(spk.as_bytes());
+        let raw = raw_tx_hex(vec![bitcoin::TxOut {
+            value: bitcoin::Amount::from_sat(1),
+            script_pubkey: bitcoin::ScriptBuf::new_op_return([]),
+        }]);
+        let utxos = format!(r#"[{{"scriptPubKey":"{spk_hex}","amount":100000}}]"#);
+        let config = AppConfig::new();
+        assert!(
+            handle_sign_command(&config, &sign_matches(&raw, Some(&utxos)), &w)
+                .await
+                .is_err()
+        );
+    }
+
+    // ---- handle_broadcast_command (aborts at the stdin confirm under `cargo test`) ----
+
+    fn broadcast_matches(raw: &str) -> ArgMatches {
+        clap::Command::new("broadcast")
+            .arg(clap::Arg::new("rawtransaction").long("rawtransaction"))
+            .try_get_matches_from(["broadcast", "--rawtransaction", raw])
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn handle_broadcast_command_previews_then_aborts_at_confirm() {
+        // The single input's prevout resolves, so the summary preview runs; then
+        // `confirm_broadcast` reads EOF (no TTY under test) -> aborts -> Ok.
+        let (_, spk) = p2wpkh_addr_and_script(7);
+        let spk_hex = hex::encode(spk.as_bytes());
+        let raw = raw_tx_hex(vec![bitcoin::TxOut {
+            value: bitcoin::Amount::from_sat(50_000),
+            script_pubkey: spk,
+        }]);
+        let mut server = mockito::Server::new_async().await;
+        server
+            .mock("GET", mockito::Matcher::Any)
+            .with_status(200)
+            .with_body(format!(
+                r#"{{"result":{{"vout":[{{"n":0,"value":0.001,"scriptPubKey":{{"hex":"{spk_hex}"}}}}]}}}}"#
+            ))
+            .create_async()
+            .await;
+        let config = config_for(&server);
+        handle_broadcast_command(&config, &broadcast_matches(&raw))
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn handle_broadcast_command_warns_when_inputs_unresolvable() {
+        // Invalid tx hex -> input preview fails -> warning branch -> abort -> Ok.
+        let config = AppConfig::new();
+        handle_broadcast_command(&config, &broadcast_matches("not-hex"))
+            .await
+            .unwrap();
+    }
+}

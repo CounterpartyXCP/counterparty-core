@@ -83,3 +83,60 @@ pub async fn execute_command(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Network;
+
+    fn wallet() -> (BitcoinWallet, tempfile::TempDir) {
+        let dir = tempfile::tempdir().unwrap();
+        (
+            BitcoinWallet::new_for_test(dir.path(), Network::Regtest),
+            dir,
+        )
+    }
+
+    /// Dispatch `args` through the full wallet command tree (built with the
+    /// `transaction` subcommand so that arm is reachable) against a hermetic
+    /// wallet and empty endpoint set. Returns nothing on success.
+    async fn dispatch(args: &[&str]) {
+        let config = AppConfig::new();
+        let endpoints: HashMap<String, ApiEndpoint> = HashMap::new();
+        let (mut w, _dir) = wallet();
+        let tree = add_broadcast_commands(build_command(), &endpoints);
+        let matches = tree.try_get_matches_from(args.iter().copied()).unwrap();
+        execute_command(&config, &matches, &endpoints, &mut w)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn dispatches_new_address() {
+        dispatch(&["wallet", "new_address"]).await;
+    }
+
+    #[tokio::test]
+    async fn dispatches_list_addresses() {
+        dispatch(&["wallet", "list_addresses"]).await;
+    }
+
+    #[tokio::test]
+    async fn dispatches_import_address() {
+        let wif = {
+            let sk = bitcoin::secp256k1::SecretKey::from_slice(&[3u8; 32]).unwrap();
+            bitcoin::PrivateKey::new(sk, bitcoin::Network::Regtest).to_wif()
+        };
+        dispatch(&["wallet", "import_address", "--private-key", wif.as_str()]).await;
+    }
+
+    #[tokio::test]
+    async fn transaction_without_subcommand_prints_help() {
+        dispatch(&["wallet", "transaction"]).await;
+    }
+
+    #[tokio::test]
+    async fn no_subcommand_prints_wallet_help() {
+        dispatch(&["wallet"]).await;
+    }
+}

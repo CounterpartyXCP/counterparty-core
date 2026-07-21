@@ -185,3 +185,65 @@ impl PasswordManager {
         Ok(SecretString::from(password))
     }
 }
+
+#[cfg(test)]
+impl PasswordManager {
+    /// Test-only: seed the in-memory password cache so higher-level wallet
+    /// operations (`save`, decrypt-on-load) work without the OS keyring or an
+    /// interactive prompt. Never touches the keyring.
+    pub(crate) fn cache_for_test(&self, password: &str) {
+        self.set_to_cache(&SecretString::from(password.to_string()));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! These tests deliberately exercise only the in-memory cache paths (never
+    //! the OS keyring), so they run identically on macOS/Linux/headless CI.
+    //! Each test uses a unique wallet name so the process-global cache can't
+    //! leak state between tests.
+    use super::*;
+    use crate::config::Network;
+
+    #[test]
+    fn cache_key_combines_service_and_username() {
+        let pm = PasswordManager::new(Network::Regtest, "wallet-ck");
+        assert_eq!(
+            pm.cache_key(),
+            "counterparty-client-wallet-Regtest:wallet-ck"
+        );
+    }
+
+    #[test]
+    fn set_get_remove_cache_roundtrip() {
+        let pm = PasswordManager::new(Network::Signet, "wallet-sgr");
+        assert!(pm.get_from_cache().is_none());
+
+        pm.set_to_cache(&SecretString::from("hunter2xx".to_string()));
+        assert_eq!(pm.get_from_cache().unwrap().expose_secret(), "hunter2xx");
+
+        pm.remove_from_cache();
+        assert!(pm.get_from_cache().is_none());
+    }
+
+    #[test]
+    fn distinct_wallets_do_not_share_cache() {
+        let a = PasswordManager::new(Network::Regtest, "wallet-iso-a");
+        let b = PasswordManager::new(Network::Regtest, "wallet-iso-b");
+        a.set_to_cache(&SecretString::from("secretaaa".to_string()));
+        // Different username -> different cache key -> isolated.
+        assert!(b.get_from_cache().is_none());
+        // Different network is also a different key for the same username.
+        let c = PasswordManager::new(Network::Signet, "wallet-iso-a");
+        assert!(c.get_from_cache().is_none());
+    }
+
+    #[test]
+    fn cached_or_stored_returns_cache_hit_without_touching_keyring() {
+        let pm = PasswordManager::new(Network::Testnet4, "wallet-cos");
+        pm.cache_for_test("cachedpw12");
+        // A cache hit short-circuits before any keyring access.
+        let got = pm.cached_or_stored().unwrap().unwrap();
+        assert_eq!(got.expose_secret(), "cachedpw12");
+    }
+}

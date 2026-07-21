@@ -201,6 +201,13 @@ pub fn convert_quantity(value: &str, divisible: bool) -> Result<String> {
     Ok(satoshis.to_string())
 }
 
+// The live regtest integration test lives in a `*tests.rs` file so it is
+// excluded from unit coverage (it needs a running counterparty-server and only
+// runs under `--ignored`); see `quantity_regtest_tests.rs`.
+#[cfg(test)]
+#[path = "quantity_regtest_tests.rs"]
+mod quantity_regtest_tests;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -458,110 +465,151 @@ mod tests {
         assert!(convert_quantity("7.5", false).is_err());
     }
 
-    /// Integration check against a live **regtest** counterparty-server.
-    /// `#[ignore]`d so the normal `cargo test` stays hermetic; the
-    /// `Client Regtest E2E` CI workflow (`.github/workflows/client_regtest_test.yml`)
-    /// starts a regtest node via `regtestnode.py` and runs it with `--ignored`.
-    ///
-    /// Requirements to run:
-    ///   * a regtest counterparty-server reachable at the client's regtest
-    ///     endpoint `http://localhost:24000` (see
-    ///     `AppConfig::create_regtest_config`). The counterparty-core regtest
-    ///     harness that spins up bitcoind + counterparty-server lives at
-    ///     `counterpartycore/counterpartycore/test/integrations/regtest`.
-    ///   * a funded source address for the compose step (fund the address this
-    ///     test derives, or set `CP_REGTEST_ASSET` to a real asset name).
-    ///
-    /// Run with:
-    ///   cargo test --manifest-path counterparty-client/Cargo.toml \
-    ///       -- --ignored full_compose_send_scales_quantity_regtest
-    ///
-    /// What this DOES exercise over real HTTP:
-    ///   * divisibility resolution via `GET /v2/assets/<asset>` (for a non-XCP
-    ///     asset supplied through `CP_REGTEST_ASSET`);
-    ///   * that `normalize_quantities` scales a divisible amount by 1e8 and
-    ///     leaves an indivisible amount whole;
-    ///   * that the compose endpoint is reachable and accepts the scaled params.
-    ///
-    /// What it does NOT do automatically (be honest): fund the source address,
-    /// sign with a real wallet key (that needs the OS keyring / an interactive
-    /// password), or broadcast. Complete those with the `xcp wallet` CLI once
-    /// composed. The unit-level sign path is covered hermetically in
-    /// `bitcoinsigner::tests`.
-    #[tokio::test]
-    #[ignore]
-    async fn full_compose_send_scales_quantity_regtest() {
-        // A temp wallet dir, as the integration flow would use. Full wallet init
-        // (BitcoinWallet::init) needs the OS keyring, so here we derive the
-        // source address directly instead of going through the wallet.
-        let wallet_dir = tempfile::tempdir().unwrap();
-        let _ = wallet_dir.path();
+    // ---- network-backed divisibility resolution (hermetic via mockito) ----
 
+    fn config_for(server: &mockito::ServerGuard) -> AppConfig {
         let mut config = AppConfig::new();
         config.set_network(crate::config::Network::Regtest);
-        assert_eq!(config.get_api_url(), "http://localhost:24000");
+        let nc = config
+            .network_configs
+            .get_mut(&crate::config::Network::Regtest)
+            .unwrap();
+        nc.api_url = server.url();
+        nc.endpoints_url = format!("{}/v2/routes", server.url());
+        config
+    }
 
-        // Deterministic regtest source address (bech32 / P2WPKH).
-        let secp = bitcoin::secp256k1::Secp256k1::new();
-        let sk = bitcoin::secp256k1::SecretKey::from_slice(&[0x22u8; 32]).unwrap();
-        let pk = bitcoin::PrivateKey::new(sk, bitcoin::Network::Regtest);
-        let public = bitcoin::PublicKey::from_private_key(&secp, &pk);
-        let cpk = bitcoin::CompressedPublicKey::from_slice(&public.to_bytes()).unwrap();
-        let source = bitcoin::Address::p2wpkh(&cpk, bitcoin::Network::Regtest).to_string();
+    #[tokio::test]
+    async fn fetch_asset_divisible_shortcuts_btc_and_xcp_without_network() {
+        // BTC and XCP are hard-coded divisible; no server is contacted.
+        let config = AppConfig::new();
+        assert_eq!(
+            fetch_asset_divisible(&config, "BTC").await.unwrap(),
+            Some(true)
+        );
+        assert_eq!(
+            fetch_asset_divisible(&config, "XCP").await.unwrap(),
+            Some(true)
+        );
+    }
 
-        // 1) Divisible asset (XCP): 2 units must scale to 200_000_000 sats.
-        let mut divisible = HashMap::new();
-        divisible.insert("asset".to_string(), "XCP".to_string());
-        divisible.insert("quantity".to_string(), "2".to_string());
-        divisible.insert("destination".to_string(), source.clone());
-        normalize_quantities(&config, "send", &mut divisible)
-            .await
-            .expect("normalize XCP send (is the regtest server running?)");
-        assert_eq!(divisible.get("quantity").unwrap(), "200000000");
+    #[tokio::test]
+    async fn fetch_asset_divisible_reads_flag_from_api() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/v2/assets/RARE")
+            .with_status(200)
+            .with_body(r#"{"result":{"asset":"RARE","divisible":false}}"#)
+            .create_async()
+            .await;
+        let config = config_for(&server);
+        assert_eq!(
+            fetch_asset_divisible(&config, "RARE").await.unwrap(),
+            Some(false)
+        );
+    }
 
-        // 2) Real network divisibility lookup for a developer-supplied asset.
-        //    XCP -> scaled; an indivisible asset -> left whole.
-        let asset = std::env::var("CP_REGTEST_ASSET").unwrap_or_else(|_| "XCP".to_string());
+    #[tokio::test]
+    async fn fetch_asset_divisible_returns_none_when_asset_absent() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/v2/assets/GHOST")
+            .with_status(200)
+            .with_body(r#"{"result":null}"#)
+            .create_async()
+            .await;
+        let config = config_for(&server);
+        assert_eq!(fetch_asset_divisible(&config, "GHOST").await.unwrap(), None);
+    }
+
+    #[tokio::test]
+    async fn normalize_quantities_scales_divisible_api_asset() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/v2/assets/PEPECASH")
+            .with_status(200)
+            .with_body(r#"{"result":{"divisible":true}}"#)
+            .create_async()
+            .await;
+        let config = config_for(&server);
         let mut params = HashMap::new();
-        params.insert("asset".to_string(), asset.clone());
-        params.insert("quantity".to_string(), "3".to_string());
-        params.insert("destination".to_string(), source.clone());
+        params.insert("asset".to_string(), "PEPECASH".to_string());
+        params.insert("quantity".to_string(), "2".to_string());
         normalize_quantities(&config, "send", &mut params)
             .await
-            .expect("normalize send against the live regtest API");
-        let q = params.get("quantity").unwrap();
-        assert!(
-            q == "300000000" || q == "3",
-            "unexpected scaled quantity for {asset}: {q}"
-        );
+            .unwrap();
+        assert_eq!(params.get("quantity").unwrap(), "200000000");
+    }
 
-        // 3) A real divisibility lookup over HTTP: GET /v2/assets/XCP must report
-        //    XCP as divisible. This exercises the client's GET + JSON-parse path
-        //    against a live endpoint (works without electrs/funding) and validates
-        //    the host-root URL join (no `//v2/`).
-        let asset_info = api::perform_api_request(&config, "/v2/assets/XCP", &HashMap::new())
+    #[tokio::test]
+    async fn normalize_quantities_leaves_indivisible_api_asset_whole() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/v2/assets/RAREPEPE")
+            .with_status(200)
+            .with_body(r#"{"result":{"divisible":false}}"#)
+            .create_async()
+            .await;
+        let config = config_for(&server);
+        let mut params = HashMap::new();
+        params.insert("asset".to_string(), "RAREPEPE".to_string());
+        params.insert("quantity".to_string(), "5".to_string());
+        normalize_quantities(&config, "send", &mut params)
             .await
-            .expect("GET /v2/assets/XCP over HTTP");
-        assert_eq!(
-            asset_info
-                .get("result")
-                .and_then(|r| r.get("divisible"))
-                .and_then(|d| d.as_bool()),
-            Some(true),
-            "XCP must be reported as divisible: {asset_info}"
-        );
+            .unwrap();
+        assert_eq!(params.get("quantity").unwrap(), "5");
+    }
 
-        // 4) Compose the send over real HTTP and confirm the endpoint is reachable
-        //    and returns a well-formed Counterparty response (a `result` when the
-        //    source is funded, or an `error` otherwise) — never an HTML/404 body,
-        //    which would indicate a broken request URL.
-        let api_path = format!("/v2/addresses/{source}/compose/send");
-        let result = api::perform_api_request(&config, &api_path, &divisible)
+    #[tokio::test]
+    async fn normalize_quantities_errors_when_asset_unknown() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/v2/assets/NOPE")
+            .with_status(200)
+            .with_body(r#"{"result":null}"#)
+            .create_async()
+            .await;
+        let config = config_for(&server);
+        let mut params = HashMap::new();
+        params.insert("asset".to_string(), "NOPE".to_string());
+        params.insert("quantity".to_string(), "1".to_string());
+        let err = normalize_quantities(&config, "send", &mut params)
             .await
-            .expect("compose_send over HTTP");
-        assert!(
-            result.get("result").is_some() || result.get("error").is_some(),
-            "compose response should be a well-formed Counterparty response: {result}"
-        );
+            .unwrap_err();
+        assert!(err.to_string().contains("not found"), "got: {err}");
+    }
+
+    #[tokio::test]
+    async fn normalize_quantities_issuance_prefers_onchain_divisibility() {
+        // Reissuing an existing indivisible asset: the on-chain divisibility
+        // (false) overrides the issuance `--divisible` default (true).
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/v2/assets/EXISTING")
+            .with_status(200)
+            .with_body(r#"{"result":{"divisible":false}}"#)
+            .create_async()
+            .await;
+        let config = config_for(&server);
+        let mut params = HashMap::new();
+        params.insert("asset".to_string(), "EXISTING".to_string());
+        params.insert("quantity".to_string(), "7".to_string());
+        normalize_quantities(&config, "issuance", &mut params)
+            .await
+            .unwrap();
+        assert_eq!(params.get("quantity").unwrap(), "7");
+    }
+
+    #[tokio::test]
+    async fn normalize_quantities_warns_and_passes_through_unmapped_quantity() {
+        // A `*quantity*` param on a transaction with no denomination mapping is
+        // passed through unchanged (with a warning), never silently scaled.
+        let config = AppConfig::new();
+        let mut params = HashMap::new();
+        params.insert("quantity".to_string(), "123".to_string());
+        normalize_quantities(&config, "mpma", &mut params)
+            .await
+            .unwrap();
+        assert_eq!(params.get("quantity").unwrap(), "123");
     }
 }

@@ -159,3 +159,160 @@ fn build_disconnect_command() -> Command {
     Command::new("disconnect")
         .about("Clear the wallet password from the system keyring and memory cache")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn subcommand_names(cmd: &Command) -> Vec<String> {
+        cmd.get_subcommands()
+            .map(|c| c.get_name().to_string())
+            .collect()
+    }
+
+    #[test]
+    fn build_command_wires_all_subcommands() {
+        let cmd = build_command();
+        assert_eq!(cmd.get_name(), "wallet");
+        let names = subcommand_names(&cmd);
+        for expected in [
+            "new_address",
+            "import_address",
+            "export_address",
+            "list_addresses",
+            "address_balances",
+            "change_password",
+            "sign",
+            "broadcast",
+            "disconnect",
+        ] {
+            assert!(
+                names.contains(&expected.to_string()),
+                "missing subcommand {expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn send_transaction_command_name() {
+        assert_eq!(build_send_transaction_command().get_name(), "transaction");
+    }
+
+    #[test]
+    fn new_address_defaults_to_bech32_and_validates_type() {
+        let m = build_new_address_command()
+            .try_get_matches_from(["new_address"])
+            .unwrap();
+        assert_eq!(
+            m.get_one::<String>("address_type").map(String::as_str),
+            Some("bech32")
+        );
+
+        // An explicit valid type is accepted; an invalid one is rejected.
+        assert!(build_new_address_command()
+            .try_get_matches_from(["new_address", "--address-type", "taproot"])
+            .is_ok());
+        assert!(build_new_address_command()
+            .try_get_matches_from(["new_address", "--address-type", "nonsense"])
+            .is_err());
+    }
+
+    #[test]
+    fn new_address_accepts_label() {
+        let m = build_new_address_command()
+            .try_get_matches_from(["new_address", "--label", "cold"])
+            .unwrap();
+        assert_eq!(
+            m.get_one::<String>("label").map(String::as_str),
+            Some("cold")
+        );
+    }
+
+    #[test]
+    fn import_address_parses_key_mnemonic_and_path() {
+        let m = build_import_address_command()
+            .try_get_matches_from([
+                "import_address",
+                "--private-key",
+                "cKey",
+                "--path",
+                "m/84'/1'/0'/0/0",
+                "--address-type",
+                "p2pkh",
+            ])
+            .unwrap();
+        assert_eq!(
+            m.get_one::<String>("private_key").map(String::as_str),
+            Some("cKey")
+        );
+        assert_eq!(
+            m.get_one::<String>("path").map(String::as_str),
+            Some("m/84'/1'/0'/0/0")
+        );
+    }
+
+    #[test]
+    fn export_address_requires_address_and_has_yes_flag() {
+        // --address is required.
+        assert!(build_export_address_command()
+            .try_get_matches_from(["export_address"])
+            .is_err());
+
+        let m = build_export_address_command()
+            .try_get_matches_from(["export_address", "--address", "bcrt1qx", "--yes"])
+            .unwrap();
+        assert_eq!(
+            m.get_one::<String>("address").map(String::as_str),
+            Some("bcrt1qx")
+        );
+        assert!(m.get_flag("yes"));
+
+        // Short form -y also sets the flag.
+        let m2 = build_export_address_command()
+            .try_get_matches_from(["export_address", "--address", "bcrt1qx", "-y"])
+            .unwrap();
+        assert!(m2.get_flag("yes"));
+    }
+
+    #[test]
+    fn sign_command_requires_rawtransaction_and_utxos_optional() {
+        assert!(build_sign_command().try_get_matches_from(["sign"]).is_err());
+
+        let m = build_sign_command()
+            .try_get_matches_from(["sign", "--rawtransaction", "0200"])
+            .unwrap();
+        assert_eq!(
+            m.get_one::<String>("rawtransaction").map(String::as_str),
+            Some("0200")
+        );
+        assert!(m.get_one::<String>("utxos").is_none());
+    }
+
+    #[test]
+    fn broadcast_command_requires_rawtransaction() {
+        assert!(build_broadcast_command()
+            .try_get_matches_from(["broadcast"])
+            .is_err());
+        let m = build_broadcast_command()
+            .try_get_matches_from(["broadcast", "--rawtransaction", "deadbeef"])
+            .unwrap();
+        assert_eq!(
+            m.get_one::<String>("rawtransaction").map(String::as_str),
+            Some("deadbeef")
+        );
+    }
+
+    #[test]
+    fn address_balances_requires_address() {
+        assert!(build_address_balances_command()
+            .try_get_matches_from(["address_balances"])
+            .is_err());
+        let m = build_address_balances_command()
+            .try_get_matches_from(["address_balances", "--address", "bcrt1qx"])
+            .unwrap();
+        assert_eq!(
+            m.get_one::<String>("address").map(String::as_str),
+            Some("bcrt1qx")
+        );
+    }
+}

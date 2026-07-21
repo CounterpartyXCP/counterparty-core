@@ -306,4 +306,137 @@ mod tests {
         let endpoints: HashMap<String, ApiEndpoint> = HashMap::new();
         assert!(find_matching_endpoint(&endpoints, "nope").is_err());
     }
+
+    #[test]
+    fn deduplicate_endpoint_functions_collapses_routes_by_function() {
+        let mut endpoints = HashMap::new();
+        endpoints.insert(
+            "/v2/addresses/<address>".to_string(),
+            endpoint("get_address", &["address"]),
+        );
+        endpoints.insert(
+            "/v2/addresses/<address>/options".to_string(),
+            endpoint("get_address", &["address"]),
+        );
+        endpoints.insert(
+            "/v2/blocks/<int:block_index>".to_string(),
+            endpoint("get_block", &["block_index"]),
+        );
+
+        let deduped = deduplicate_endpoint_functions(&endpoints);
+        // Two distinct functions, despite three routes.
+        assert_eq!(deduped.len(), 2);
+        assert!(deduped.contains_key("get_address"));
+        assert!(deduped.contains_key("get_block"));
+    }
+
+    #[test]
+    fn group_endpoints_orders_compose_then_get_then_other_each_sorted() {
+        let mut endpoints = HashMap::new();
+        endpoints.insert("/a".to_string(), endpoint("get_block", &[]));
+        endpoints.insert("/b".to_string(), endpoint("compose_send", &[]));
+        endpoints.insert("/c".to_string(), endpoint("unpack", &[]));
+        endpoints.insert("/d".to_string(), endpoint("compose_issuance", &[]));
+        endpoints.insert("/e".to_string(), endpoint("get_asset", &[]));
+
+        let grouped = group_endpoints_by_type(&endpoints);
+        let order: Vec<&str> = grouped.iter().map(|(n, _)| n.as_str()).collect();
+        // compose_* (sorted), then get_* (sorted), then other.
+        assert_eq!(
+            order,
+            vec![
+                "compose_issuance",
+                "compose_send",
+                "get_asset",
+                "get_block",
+                "unpack"
+            ]
+        );
+    }
+
+    #[test]
+    fn build_command_creates_api_root_with_all_functions() {
+        let mut endpoints = HashMap::new();
+        endpoints.insert(
+            "/a".to_string(),
+            endpoint("compose_send", &["address", "asset"]),
+        );
+        endpoints.insert("/b".to_string(), endpoint("get_block", &["block_index"]));
+
+        let cmd = build_command(&endpoints);
+        assert_eq!(cmd.get_name(), "api");
+        let names: Vec<String> = cmd
+            .get_subcommands()
+            .map(|c| c.get_name().to_string())
+            .collect();
+        assert!(names.contains(&"compose_send".to_string()));
+        assert!(names.contains(&"get_block".to_string()));
+    }
+
+    #[test]
+    fn build_request_parameters_reads_values_via_id_map() {
+        // Build the real command tree (this registers the ID_ARG_MAP entries),
+        // then parse and extract parameters the way execution.rs does.
+        //
+        // `build_request_parameters` scans the *process-global* ID_ARG_MAP for
+        // every entry whose key is prefixed by this endpoint's function, and
+        // calls `matches.get_one` on each internal id it finds. To keep the test
+        // hermetic against other tests that also register `compose_*`/`get_*`
+        // functions into that shared map, use a function name unique to this
+        // test so only its own (fully-defined) arg ids are ever looked up.
+        let ep = endpoint("compose_uniqbrp", &["asset", "quantity"]);
+        let mut endpoints = HashMap::new();
+        endpoints.insert(
+            "/v2/addresses/<address>/compose/uniqbrp".to_string(),
+            ep.clone(),
+        );
+
+        let cmd = build_command(&endpoints);
+        let matches = cmd
+            .try_get_matches_from([
+                "api",
+                "compose_uniqbrp",
+                "--asset",
+                "XCP",
+                "--quantity",
+                "100",
+            ])
+            .unwrap();
+        let (_, sub) = matches.subcommand().unwrap();
+
+        let params = build_request_parameters(&ep, sub);
+        assert_eq!(params.get("asset").map(String::as_str), Some("XCP"));
+        assert_eq!(params.get("quantity").map(String::as_str), Some("100"));
+    }
+
+    #[test]
+    fn add_command_argument_bool_parser_normalises_and_rejects() {
+        let mut used = HashSet::new();
+        let cmd = Command::new("get_x");
+        let cmd = add_command_argument(
+            cmd,
+            &ApiEndpointArg {
+                name: "verbose".to_string(),
+                required: false,
+                arg_type: "bool".to_string(),
+                description: None,
+                default: None,
+                members: None,
+            },
+            0,
+            "get_x",
+            &mut used,
+        );
+        // "0" normalises to "false"; "nope" is rejected.
+        let ok = cmd
+            .clone()
+            .try_get_matches_from(["get_x", "--verbose", "0"])
+            .unwrap();
+        let id = "__api_get_x_arg_0_verbose";
+        assert_eq!(ok.get_one::<String>(id).map(String::as_str), Some("false"));
+        assert!(cmd
+            .clone()
+            .try_get_matches_from(["get_x", "--verbose", "nope"])
+            .is_err());
+    }
 }

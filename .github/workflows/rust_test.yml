@@ -17,22 +17,43 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
+          # `llvm-tools-preview` provides the instrumentation runtime used by
+          # cargo-llvm-cov to produce the client coverage report.
+          components: rustfmt, clippy, llvm-tools-preview
 
       - uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
 
       - name: Run tests
         run: |
           cd counterparty-rs
           cargo test
 
-      - name: Lint and test counterparty-client
+      - name: Lint counterparty-client
         run: |
           cd counterparty-client
           cargo fmt --check
           cargo clippy --all-targets -- -D warnings
-          cargo build
-          cargo test
+
+      - name: Test counterparty-client with coverage
+        # `cargo llvm-cov` builds and runs the unit tests with instrumentation and
+        # emits an lcov report. The CLI entrypoint (`main.rs`, exercised by the
+        # regtest integration test) and test-only files are excluded so the
+        # report reflects unit-testable library coverage.
+        run: |
+          cd counterparty-client
+          cargo llvm-cov --lcov --output-path lcov.info \
+            --ignore-filename-regex '(src/main\.rs$|tests\.rs$)'
+
+      - name: Upload client coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: CounterpartyXCP/counterparty-core
+          files: counterparty-client/lcov.info
+          flags: client
 
   # The wallet depends on the OS-specific `keyring` backend, so build and test
   # the client on macOS and Windows too (Linux is covered by the Cargo job).

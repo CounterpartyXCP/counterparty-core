@@ -163,3 +163,145 @@ pub fn add_broadcast_commands(cmd: Command, endpoints: &HashMap<String, ApiEndpo
 
     wallet_cmd
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Command;
+
+    fn arg(name: &str, arg_type: &str) -> ApiEndpointArg {
+        ApiEndpointArg {
+            name: name.to_string(),
+            required: false,
+            arg_type: arg_type.to_string(),
+            description: Some(format!("the {name}")),
+            default: None,
+            members: None,
+        }
+    }
+
+    fn endpoint(function: &str, description: &str, args: Vec<ApiEndpointArg>) -> ApiEndpoint {
+        ApiEndpoint {
+            function: function.to_string(),
+            description: description.to_string(),
+            args,
+        }
+    }
+
+    fn long_flags(cmd: &Command) -> Vec<String> {
+        cmd.get_arguments()
+            .filter_map(|a| a.get_long().map(|s| s.to_string()))
+            .collect()
+    }
+
+    fn find_sub<'a>(cmd: &'a Command, name: &str) -> &'a Command {
+        cmd.get_subcommands()
+            .find(|c| c.get_name() == name)
+            .unwrap_or_else(|| panic!("missing subcommand {name}"))
+    }
+
+    #[test]
+    fn filter_compose_endpoints_keeps_only_compose_sorted() {
+        let mut endpoints = HashMap::new();
+        endpoints.insert(
+            "/v2/addresses/<address>/compose/send".to_string(),
+            endpoint("compose_send", "Composes a send", vec![]),
+        );
+        endpoints.insert(
+            "/v2/blocks/<int:block_index>".to_string(),
+            endpoint("get_block", "Gets a block", vec![]),
+        );
+        endpoints.insert(
+            "/v2/addresses/<address>/compose/issuance".to_string(),
+            endpoint("compose_issuance", "Composes an issuance", vec![]),
+        );
+
+        let filtered = filter_compose_endpoints(&endpoints);
+        let names: Vec<&str> = filtered.iter().map(|(n, _)| n.as_str()).collect();
+        // Only compose_* survive, and they are sorted lexicographically.
+        assert_eq!(names, vec!["compose_issuance", "compose_send"]);
+    }
+
+    #[test]
+    fn create_transaction_command_strips_prefix_and_rewrites_description() {
+        let ep = endpoint("compose_send", "Composes a send transaction", vec![]);
+        let (name, cmd) = create_transaction_command("compose_send", &ep);
+        assert_eq!(name, "send");
+        assert_eq!(cmd.get_name(), "send");
+        // "Composes a " is rewritten to "Send a ".
+        let about = cmd.get_about().unwrap().to_string();
+        assert_eq!(about, "Send a send transaction");
+    }
+
+    #[test]
+    fn add_argument_to_command_dedups_repeated_names() {
+        let mut used = HashSet::new();
+        let cmd = Command::new("send");
+        let cmd = add_argument_to_command(cmd, &arg("asset", "string"), 0, "send", &mut used);
+        // A second arg with the same long name is skipped.
+        let cmd = add_argument_to_command(cmd, &arg("asset", "string"), 1, "send", &mut used);
+        assert_eq!(long_flags(&cmd).iter().filter(|f| *f == "asset").count(), 1);
+    }
+
+    #[test]
+    fn add_argument_to_command_bool_accepts_true_false_variants() {
+        let mut used = HashSet::new();
+        let cmd = Command::new("x").arg(clap::Arg::new("dummy").long("dummy"));
+        let cmd = add_argument_to_command(
+            cmd,
+            &arg("allow_unconfirmed_inputs", "bool"),
+            0,
+            "x",
+            &mut used,
+        );
+        // The bool value_parser normalises 1/0 to true/false and rejects garbage.
+        assert!(cmd
+            .clone()
+            .try_get_matches_from(["x", "--allow_unconfirmed_inputs", "1"])
+            .is_ok());
+        assert!(cmd
+            .clone()
+            .try_get_matches_from(["x", "--allow_unconfirmed_inputs", "maybe"])
+            .is_err());
+    }
+
+    #[test]
+    fn add_broadcast_commands_builds_transaction_tree_and_injects_address() {
+        let mut endpoints = HashMap::new();
+        endpoints.insert(
+            "/v2/addresses/<address>/compose/send".to_string(),
+            endpoint(
+                "compose_send",
+                "Composes a send",
+                vec![
+                    arg("address", "string"),
+                    arg("asset", "string"),
+                    arg("quantity", "string"),
+                ],
+            ),
+        );
+        endpoints.insert(
+            "/v2/compose/burn".to_string(),
+            // No `address` arg -> the builder must inject one.
+            endpoint(
+                "compose_burn",
+                "Composes a burn",
+                vec![arg("quantity", "string")],
+            ),
+        );
+
+        let wallet = add_broadcast_commands(Command::new("wallet"), &endpoints);
+        let tx = find_sub(&wallet, "transaction");
+
+        let send = find_sub(tx, "send");
+        let burn = find_sub(tx, "burn");
+
+        // send already declares address; it must appear exactly once.
+        let send_flags = long_flags(send);
+        assert_eq!(send_flags.iter().filter(|f| *f == "address").count(), 1);
+        assert!(send_flags.contains(&"asset".to_string()));
+
+        // burn had no address arg; the builder injects a required --address.
+        assert!(long_flags(burn).contains(&"address".to_string()));
+    }
+}

@@ -305,4 +305,114 @@ mod tests {
         let s = err.to_string();
         assert!(s.contains('…'), "long snippet should be truncated: {s}");
     }
+
+    // ---- command execution over HTTP (hermetic via mockito) ----
+
+    use crate::config::Network;
+
+    fn config_for(server: &mockito::ServerGuard) -> AppConfig {
+        let mut config = AppConfig::new();
+        config.set_network(Network::Regtest);
+        let nc = config.network_configs.get_mut(&Network::Regtest).unwrap();
+        nc.api_url = server.url();
+        nc.endpoints_url = format!("{}/v2/routes", server.url());
+        config
+    }
+
+    fn endpoint(function: &str, args: &[&str]) -> crate::api::models::ApiEndpoint {
+        crate::api::models::ApiEndpoint {
+            function: function.to_string(),
+            description: "desc".to_string(),
+            args: args
+                .iter()
+                .map(|a| crate::api::models::ApiEndpointArg {
+                    name: a.to_string(),
+                    required: false,
+                    arg_type: "string".to_string(),
+                    description: None,
+                    default: None,
+                    members: None,
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn http_client_builds_with_timeouts() {
+        // Just exercises the builder; the fallback branch is only hit on TLS
+        // init failure, which we cannot force here.
+        let _client = http_client();
+    }
+
+    #[tokio::test]
+    async fn execute_command_without_subcommand_is_ok() {
+        // No subcommand -> prints guidance and returns Ok (no network).
+        let config = AppConfig::new();
+        let endpoints: HashMap<String, crate::api::models::ApiEndpoint> = HashMap::new();
+        let matches = clap::Command::new("api")
+            .subcommand(clap::Command::new("noop"))
+            .try_get_matches_from(["api"])
+            .unwrap();
+        execute_command(&config, &endpoints, &matches)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn execute_command_runs_get_endpoint_over_http() {
+        let mut server = mockito::Server::new_async().await;
+        // Path param <asset> is substituted into the route.
+        let _m = server
+            .mock("GET", "/v2/execcmd/XCP")
+            .with_status(200)
+            .match_query(mockito::Matcher::Any)
+            .with_body(r#"{"result":{"ok":true}}"#)
+            .create_async()
+            .await;
+
+        let config = config_for(&server);
+        // Unique function name keeps the process-global ID_ARG_MAP lookups
+        // hermetic against other tests (see api/commands.rs note).
+        let mut endpoints = HashMap::new();
+        endpoints.insert(
+            "/v2/execcmd/<asset>".to_string(),
+            endpoint("get_execcmd", &["asset"]),
+        );
+
+        let cmd = crate::api::commands::build_command(&endpoints);
+        let matches = cmd
+            .try_get_matches_from(["api", "get_execcmd", "--asset", "XCP"])
+            .unwrap();
+        execute_command(&config, &endpoints, &matches)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn execute_command_propagates_api_error_as_nonzero() {
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/v2/execerr/XCP")
+            .with_status(200)
+            .match_query(mockito::Matcher::Any)
+            .with_body(r#"{"error":"nope"}"#)
+            .create_async()
+            .await;
+
+        let config = config_for(&server);
+        let mut endpoints = HashMap::new();
+        endpoints.insert(
+            "/v2/execerr/<asset>".to_string(),
+            endpoint("get_execerr", &["asset"]),
+        );
+
+        let cmd = crate::api::commands::build_command(&endpoints);
+        let matches = cmd
+            .try_get_matches_from(["api", "get_execerr", "--asset", "XCP"])
+            .unwrap();
+        // An `error` payload must surface as a non-Ok result for scripts.
+        assert!(execute_command(&config, &endpoints, &matches)
+            .await
+            .is_err());
+    }
 }

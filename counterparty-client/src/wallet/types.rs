@@ -78,3 +78,57 @@ impl std::fmt::Debug for AddressInfo {
 
 /// Address collection type
 pub type AddressMap = HashMap<String, AddressInfo>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use secrecy::ExposeSecret;
+
+    fn sample() -> AddressInfo {
+        AddressInfo {
+            public_key: "02aabb".to_string(),
+            private_key: SecretString::from("cWifSecretValue".to_string()),
+            label: "primary".to_string(),
+            address_type: "bech32".to_string(),
+        }
+    }
+
+    #[test]
+    fn debug_redacts_private_key() {
+        let dbg = format!("{:?}", sample());
+        assert!(dbg.contains("[REDACTED]"), "debug output: {dbg}");
+        assert!(!dbg.contains("cWifSecretValue"), "secret leaked: {dbg}");
+        // Non-secret fields are still shown.
+        assert!(dbg.contains("primary"));
+    }
+
+    #[test]
+    fn serde_roundtrip_preserves_all_fields_including_secret() {
+        let json = serde_json::to_string(&sample()).unwrap();
+        // The WIF is serialized in clear (the file as a whole is encrypted at rest).
+        assert!(json.contains("cWifSecretValue"));
+
+        let back: AddressInfo = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.public_key, "02aabb");
+        assert_eq!(back.label, "primary");
+        assert_eq!(back.address_type, "bech32");
+        assert_eq!(back.private_key.expose_secret(), "cWifSecretValue");
+    }
+
+    #[test]
+    fn wallet_error_display_messages() {
+        // The user-facing Display strings are part of the CLI's error UX.
+        assert_eq!(
+            WalletError::AddressNotFound("bcrt1qx".to_string()).to_string(),
+            "Address not found: bcrt1qx"
+        );
+        assert_eq!(
+            WalletError::BitcoinError("boom".to_string()).to_string(),
+            "Bitcoin error: boom"
+        );
+        assert_eq!(
+            WalletError::KeyringError("no service".to_string()).to_string(),
+            "Keyring error: no service"
+        );
+    }
+}

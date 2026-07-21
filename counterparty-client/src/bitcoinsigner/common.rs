@@ -239,3 +239,161 @@ pub fn create_and_verify_ecdsa_signature(
 pub fn bitcoin_err<S: Into<String>>(msg: S) -> WalletError {
     WalletError::BitcoinError(msg.into())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bitcoin::{absolute, transaction, OutPoint, Sequence, TxIn, TxOut, Witness};
+
+    fn keypair(seed: u8) -> (SecretKey, PublicKey) {
+        let secp = Secp256k1::new();
+        let sk = SecretKey::from_slice(&[seed; 32]).unwrap();
+        let pk = bitcoin::PrivateKey::new(sk, bitcoin::Network::Regtest);
+        (sk, PublicKey::from_private_key(&secp, &pk))
+    }
+
+    fn one_input_tx() -> Transaction {
+        Transaction {
+            version: transaction::Version::TWO,
+            lock_time: absolute::LockTime::ZERO,
+            input: vec![TxIn {
+                previous_output: OutPoint::null(),
+                script_sig: ScriptBuf::new(),
+                sequence: Sequence::MAX,
+                witness: Witness::new(),
+            }],
+            output: vec![TxOut {
+                value: Amount::from_sat(1000),
+                script_pubkey: ScriptBuf::new(),
+            }],
+        }
+    }
+
+    #[test]
+    fn to_push_bytes_roundtrips() {
+        assert_eq!(to_push_bytes(&[1, 2, 3]).unwrap().as_bytes(), &[1, 2, 3]);
+    }
+
+    #[test]
+    fn create_message_from_hash_requires_32_bytes() {
+        assert!(create_message_from_hash(&[0u8; 32]).is_ok());
+        assert!(create_message_from_hash(&[0u8; 31]).is_err());
+    }
+
+    #[test]
+    fn empty_script_sig_is_empty() {
+        assert!(create_empty_script_sig().is_empty());
+    }
+
+    #[test]
+    fn ecdsa_sighash_type_defaults_to_all_and_reads_explicit() {
+        let mut input = PsbtInput::default();
+        assert_eq!(get_ecdsa_sighash_type(&input), EcdsaSighashType::All);
+        input.sighash_type = Some(EcdsaSighashType::All.into());
+        assert_eq!(get_ecdsa_sighash_type(&input), EcdsaSighashType::All);
+    }
+
+    #[test]
+    fn tap_sighash_type_defaults_to_all_and_reads_explicit() {
+        let mut input = PsbtInput::default();
+        assert_eq!(get_tap_sighash_type(&input), TapSighashType::All);
+        input.sighash_type = Some(TapSighashType::All.into());
+        assert_eq!(get_tap_sighash_type(&input), TapSighashType::All);
+    }
+
+    #[test]
+    fn xonly_and_compressed_pubkey_conversions_succeed() {
+        let (_, public) = keypair(0x11);
+        assert!(get_xonly_pubkey(&public).is_ok());
+        assert!(get_compressed_pubkey(&public).is_ok());
+    }
+
+    #[test]
+    fn sign_message_ecdsa_produces_der_with_trailing_sighash_flag() {
+        let (sk, public) = keypair(0x11);
+        let secp = Secp256k1::new();
+        let msg = create_message_from_hash(&[7u8; 32]).unwrap();
+        let sig = sign_message_ecdsa(&secp, &msg, &sk, &public, EcdsaSighashType::All).unwrap();
+        assert_eq!(sig[0], 0x30, "DER signatures start with 0x30");
+        assert_eq!(*sig.last().unwrap(), EcdsaSighashType::All as u8);
+    }
+
+    #[test]
+    fn encode_ecdsa_signature_appends_sighash_flag() {
+        let (sk, _) = keypair(0x11);
+        let secp = Secp256k1::new();
+        let msg = create_message_from_hash(&[9u8; 32]).unwrap();
+        let raw = secp.sign_ecdsa(&msg, &sk);
+        let encoded = encode_ecdsa_signature(&raw, EcdsaSighashType::None);
+        assert_eq!(*encoded.last().unwrap(), EcdsaSighashType::None as u8);
+    }
+
+    #[test]
+    fn bitcoin_err_wraps_message() {
+        let e = bitcoin_err("boom");
+        assert!(matches!(e, WalletError::BitcoinError(_)));
+        assert!(e.to_string().contains("boom"));
+    }
+
+    #[test]
+    fn create_and_verify_ecdsa_requires_amount_for_segwit() {
+        let tx = one_input_tx();
+        let mut cache = SighashCache::new(&tx);
+        let (sk, public) = keypair(0x11);
+        let mut input = PsbtInput::default();
+        // P2WPKH with no amount is a clean error, not a panic.
+        let res = create_and_verify_ecdsa_signature(
+            &mut cache,
+            0,
+            &ScriptBuf::new(),
+            None,
+            UTXOType::P2WPKH,
+            &sk,
+            &public,
+            &mut input,
+        );
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn create_and_verify_ecdsa_rejects_unsupported_type() {
+        let tx = one_input_tx();
+        let mut cache = SighashCache::new(&tx);
+        let (sk, public) = keypair(0x11);
+        let mut input = PsbtInput::default();
+        // Taproot key-path is not ECDSA-signable here.
+        let res = create_and_verify_ecdsa_signature(
+            &mut cache,
+            0,
+            &ScriptBuf::new(),
+            Some(1000),
+            UTXOType::P2TRKPS,
+            &sk,
+            &public,
+            &mut input,
+        );
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn create_and_verify_ecdsa_signs_p2pkh_input() {
+        // Exercises the legacy sighash + ECDSA sign/verify path end-to-end.
+        let (sk, public) = keypair(0x11);
+        let spk = bitcoin::Address::p2pkh(public, bitcoin::Network::Regtest).script_pubkey();
+        let tx = one_input_tx();
+        let mut cache = SighashCache::new(&tx);
+        let mut input = PsbtInput::default();
+        let sig = create_and_verify_ecdsa_signature(
+            &mut cache,
+            0,
+            &spk,
+            None,
+            UTXOType::P2PKH,
+            &sk,
+            &public,
+            &mut input,
+        )
+        .unwrap();
+        assert_eq!(sig[0], 0x30);
+    }
+}

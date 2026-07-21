@@ -255,3 +255,225 @@ pub async fn handle_address_balances(config: &AppConfig, sub_matches: &ArgMatche
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Network;
+    use clap::{Arg, ArgAction, Command};
+
+    fn wallet() -> (BitcoinWallet, tempfile::TempDir) {
+        let dir = tempfile::tempdir().unwrap();
+        (
+            BitcoinWallet::new_for_test(dir.path(), Network::Regtest),
+            dir,
+        )
+    }
+
+    fn config_for(server: &mockito::ServerGuard) -> AppConfig {
+        let mut config = AppConfig::new();
+        config.set_network(Network::Regtest);
+        let nc = config.network_configs.get_mut(&Network::Regtest).unwrap();
+        nc.api_url = server.url();
+        nc.endpoints_url = format!("{}/v2/routes", server.url());
+        config
+    }
+
+    fn regtest_wif(seed: u8) -> String {
+        let sk = bitcoin::secp256k1::SecretKey::from_slice(&[seed; 32]).unwrap();
+        bitcoin::PrivateKey::new(sk, bitcoin::Network::Regtest).to_wif()
+    }
+
+    // ---- new_address ----
+
+    fn new_address_cmd() -> Command {
+        Command::new("new_address")
+            .arg(Arg::new("label").long("label"))
+            .arg(Arg::new("address_type").long("address-type"))
+    }
+
+    #[test]
+    fn handle_new_address_with_flags_generates_and_stores() {
+        let (mut w, _dir) = wallet();
+        let m = new_address_cmd()
+            .try_get_matches_from([
+                "new_address",
+                "--label",
+                "cold",
+                "--address-type",
+                "taproot",
+            ])
+            .unwrap();
+        handle_new_address(&mut w, &m).unwrap();
+        let list = w.list_addresses().unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0]["label"], "cold");
+    }
+
+    #[test]
+    fn handle_new_address_without_flags_uses_defaults() {
+        let (mut w, _dir) = wallet();
+        let m = new_address_cmd()
+            .try_get_matches_from(["new_address"])
+            .unwrap();
+        handle_new_address(&mut w, &m).unwrap();
+        assert_eq!(w.list_addresses().unwrap().len(), 1);
+    }
+
+    // ---- import_address ----
+
+    fn import_cmd() -> Command {
+        Command::new("import_address")
+            .arg(Arg::new("private_key").long("private-key"))
+            .arg(Arg::new("mnemonic").long("mnemonic"))
+            .arg(Arg::new("path").long("path"))
+            .arg(Arg::new("label").long("label"))
+            .arg(Arg::new("address_type").long("address-type"))
+    }
+
+    #[test]
+    fn handle_import_address_requires_key_or_mnemonic() {
+        let (mut w, _dir) = wallet();
+        let m = import_cmd()
+            .try_get_matches_from(["import_address"])
+            .unwrap();
+        let err = handle_import_address(&mut w, &m).unwrap_err();
+        assert!(err.to_string().contains("private-key"), "got: {err}");
+    }
+
+    #[test]
+    fn handle_import_address_with_private_key_stores_it() {
+        let (mut w, _dir) = wallet();
+        let wif = regtest_wif(9);
+        let m = import_cmd()
+            .try_get_matches_from(["import_address", "--private-key", &wif, "--label", "imp"])
+            .unwrap();
+        handle_import_address(&mut w, &m).unwrap();
+        assert_eq!(w.list_addresses().unwrap().len(), 1);
+    }
+
+    // ---- export_address ----
+
+    fn export_cmd() -> Command {
+        Command::new("export_address")
+            .arg(Arg::new("address").long("address"))
+            .arg(Arg::new("yes").long("yes").action(ArgAction::SetTrue))
+    }
+
+    #[test]
+    fn handle_export_address_with_yes_reveals_details() {
+        let (mut w, _dir) = wallet();
+        let (addr, _) = w.add_address(None, None, None, None, None).unwrap();
+        let m = export_cmd()
+            .try_get_matches_from(["export_address", "--address", &addr, "--yes"])
+            .unwrap();
+        handle_export_address(&w, &m).unwrap();
+    }
+
+    #[test]
+    fn handle_export_address_unknown_address_errors() {
+        let (w, _dir) = wallet();
+        let m = export_cmd()
+            .try_get_matches_from(["export_address", "--address", "bcrt1qmissing", "--yes"])
+            .unwrap();
+        assert!(handle_export_address(&w, &m).is_err());
+    }
+
+    // ---- list_addresses ----
+
+    #[test]
+    fn handle_list_addresses_runs() {
+        let (mut w, _dir) = wallet();
+        w.add_address(None, None, None, None, None).unwrap();
+        handle_list_addresses(&w).unwrap();
+    }
+
+    // ---- address_balances (async, hermetic via mockito) ----
+
+    fn balances_cmd(addr: &str) -> ArgMatches {
+        Command::new("address_balances")
+            .arg(Arg::new("address").long("address"))
+            .try_get_matches_from(["address_balances", "--address", addr])
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn handle_address_balances_combines_btc_and_token_array() {
+        let mut server = mockito::Server::new_async().await;
+        let addr = "bcrt1qbal";
+        let _utxos = server
+            .mock(
+                "GET",
+                format!("/v2/bitcoin/addresses/{addr}/utxos").as_str(),
+            )
+            .with_status(200)
+            .with_body(r#"{"result":[{"value":100000000},{"value":50000000}]}"#)
+            .create_async()
+            .await;
+        let _bal = server
+            .mock("GET", format!("/v2/addresses/{addr}/balances").as_str())
+            .match_query(mockito::Matcher::Any)
+            .with_status(200)
+            .with_body(
+                r#"{"result":[{"asset":"XCP","asset_longname":null,"asset_info":{"divisible":true},"quantity_normalized":"1.5"}]}"#,
+            )
+            .create_async()
+            .await;
+
+        let config = config_for(&server);
+        handle_address_balances(&config, &balances_cmd(addr))
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn handle_address_balances_reports_api_error() {
+        let mut server = mockito::Server::new_async().await;
+        let addr = "bcrt1qerr";
+        let _utxos = server
+            .mock(
+                "GET",
+                format!("/v2/bitcoin/addresses/{addr}/utxos").as_str(),
+            )
+            .with_body(r#"{"result":[]}"#)
+            .create_async()
+            .await;
+        let _bal = server
+            .mock("GET", format!("/v2/addresses/{addr}/balances").as_str())
+            .match_query(mockito::Matcher::Any)
+            .with_body(r#"{"error":"boom"}"#)
+            .create_async()
+            .await;
+
+        let config = config_for(&server);
+        // The handler surfaces the API error to the user but still returns Ok.
+        handle_address_balances(&config, &balances_cmd(addr))
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn handle_address_balances_handles_non_array_result() {
+        let mut server = mockito::Server::new_async().await;
+        let addr = "bcrt1qobj";
+        let _utxos = server
+            .mock(
+                "GET",
+                format!("/v2/bitcoin/addresses/{addr}/utxos").as_str(),
+            )
+            .with_body(r#"{"result":[{"value":42}]}"#)
+            .create_async()
+            .await;
+        let _bal = server
+            .mock("GET", format!("/v2/addresses/{addr}/balances").as_str())
+            .match_query(mockito::Matcher::Any)
+            .with_body(r#"{"result":{"XCP":"1"}}"#)
+            .create_async()
+            .await;
+
+        let config = config_for(&server);
+        handle_address_balances(&config, &balances_cmd(addr))
+            .await
+            .unwrap();
+    }
+}
