@@ -364,7 +364,7 @@ fn confirm_broadcast() -> Result<bool> {
 
 /// Broadcast a signed transaction to the network
 async fn broadcast_transaction(config: &AppConfig, signed_tx: &str) -> Result<String> {
-    let client = api::http_client();
+    let client = api::http_client(config.require_https());
     let api_url = config.get_api_url();
 
     // Broadcast endpoint. The signed hex goes in the POST body only (not the
@@ -671,6 +671,18 @@ pub async fn handle_transaction_command(
     // Extract transaction details from the result
     let (raw_tx_hex, utxos, tx_name, tx_params) = extract_transaction_details(&api_result)?;
 
+    // H1: independently verify that the transaction the server composed actually
+    // encodes what the user requested (asset / quantity / destination), before
+    // signing or broadcasting anything. Aborts on a proven mismatch; warns
+    // loudly when the type/encoding cannot be independently verified.
+    verify_composed_transaction_or_abort(
+        config,
+        transaction_name,
+        &requested_params,
+        &params,
+        raw_tx_hex,
+    )?;
+
     // Show the client's own request first as a trust anchor: the "Transaction:"
     // block below echoes the *server's* view of the composed transaction, which
     // a hostile or buggy server could misreport.
@@ -754,6 +766,80 @@ pub async fn handle_transaction_command(
 
     // Broadcast the transaction(s)
     broadcast_transactions(config, &signed_tx, signed_reveal_tx.as_deref()).await
+}
+
+/// Independently verify a server-composed transaction against the user's request
+/// (closes review finding H1). The composed Counterparty payload — asset,
+/// quantity and destination — is decoded straight from the transaction (see
+/// [`crate::counterparty`]) and compared with what the user typed.
+///
+/// * **Match** — print a short confirmation and continue.
+/// * **Mismatch** — return an error so nothing is signed or broadcast. This is
+///   the protection against a malicious/compromised/MITM'd server.
+/// * **Unverifiable** — the transaction type or encoding is outside the client's
+///   independent decoder; warn prominently and continue, so the normal broadcast
+///   confirmation still gates it (and `--yes` remains an explicit opt-in to trust
+///   the server for that transaction).
+fn verify_composed_transaction_or_abort(
+    config: &AppConfig,
+    tx_type: &str,
+    requested_params: &std::collections::BTreeMap<String, String>,
+    normalized_params: &HashMap<String, String>,
+    raw_tx_hex: &str,
+) -> Result<()> {
+    use crate::counterparty::{self, Verification};
+
+    let network = match config.network {
+        crate::config::Network::Mainnet => bitcoin::Network::Bitcoin,
+        crate::config::Network::Signet => bitcoin::Network::Signet,
+        crate::config::Network::Testnet4 => bitcoin::Network::Testnet,
+        crate::config::Network::Regtest => bitcoin::Network::Regtest,
+    };
+
+    let intent = counterparty::Intent {
+        // Resolved offline from the asset name, so a lying server cannot spoof it.
+        asset_id: requested_params
+            .get("asset")
+            .and_then(|a| counterparty::asset_id_for_name(a)),
+        // The quantity already converted to base units in the compose path.
+        quantity: normalized_params
+            .get("quantity")
+            .and_then(|q| q.parse::<u64>().ok()),
+        // The destination the user requested (labels already resolved to addresses).
+        destination: requested_params.get("destination").cloned(),
+    };
+
+    match counterparty::verify_composed_transaction(raw_tx_hex, tx_type, &intent, network) {
+        Verification::Match => {
+            helpers::print_success(
+                "\u{2713} Verified: the composed transaction matches your request.",
+                None,
+            );
+            Ok(())
+        }
+        Verification::Mismatch {
+            field,
+            requested,
+            composed,
+        } => Err(anyhow!(
+            "SECURITY: the server-composed transaction does not match your request.\n  \
+             field:     {field}\n  \
+             you asked: {requested}\n  \
+             composed:  {composed}\n\
+             Refusing to sign or broadcast. The API server may be malfunctioning or malicious — \
+             do not retry against the same server without investigating."
+        )),
+        Verification::Unverifiable { reason } => {
+            helpers::print_warning(
+                "\u{26A0} Could not independently verify this transaction.",
+                Some(&format!(
+                    "{reason}. You are trusting the API server for its contents; \
+                     review the details below before confirming."
+                )),
+            );
+            Ok(())
+        }
+    }
 }
 
 /// Handle sign command by parsing UTXOs and signing the transaction
@@ -1742,5 +1828,93 @@ mod tests {
         handle_broadcast_command(&config, &broadcast_matches("not-hex"))
             .await
             .unwrap();
+    }
+
+    // ---- H1: verify_composed_transaction_or_abort ----
+
+    fn wpkh_address(seed: u8) -> bitcoin::Address {
+        let wp = bitcoin::WitnessProgram::new(bitcoin::WitnessVersion::V0, &[seed; 20]).unwrap();
+        bitcoin::Address::from_witness_program(wp, bitcoin::Network::Regtest)
+    }
+
+    fn regtest_config() -> AppConfig {
+        let mut config = AppConfig::new();
+        config.set_network(crate::config::Network::Regtest);
+        config
+    }
+
+    fn intent_params(
+        asset: &str,
+        destination: &str,
+        quantity: &str,
+    ) -> (
+        std::collections::BTreeMap<String, String>,
+        HashMap<String, String>,
+    ) {
+        let requested = [
+            ("asset".to_string(), asset.to_string()),
+            ("destination".to_string(), destination.to_string()),
+        ]
+        .into_iter()
+        .collect();
+        let normalized = [("quantity".to_string(), quantity.to_string())]
+            .into_iter()
+            .collect();
+        (requested, normalized)
+    }
+
+    #[test]
+    fn verify_or_abort_refuses_a_swapped_destination() {
+        // The server composed an enhanced_send to `attacker` while the user asked
+        // for `victim`: the flow must refuse (Err) so nothing is broadcast.
+        let victim = wpkh_address(0x11);
+        let attacker = wpkh_address(0x22);
+        let raw =
+            crate::counterparty::build_test_enhanced_send_tx_hex([0x11; 32], 1, 2500, &attacker);
+        let (requested, normalized) = intent_params("XCP", &victim.to_string(), "2500");
+
+        let err = verify_composed_transaction_or_abort(
+            &regtest_config(),
+            "enhanced_send",
+            &requested,
+            &normalized,
+            &raw,
+        )
+        .unwrap_err();
+        assert!(err.to_string().contains("SECURITY"), "got: {err}");
+    }
+
+    #[test]
+    fn verify_or_abort_accepts_a_matching_transaction() {
+        let dest = wpkh_address(0x11);
+        let raw = crate::counterparty::build_test_enhanced_send_tx_hex([0x11; 32], 1, 2500, &dest);
+        let (requested, normalized) = intent_params("XCP", &dest.to_string(), "2500");
+
+        assert!(verify_composed_transaction_or_abort(
+            &regtest_config(),
+            "enhanced_send",
+            &requested,
+            &normalized,
+            &raw,
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn verify_or_abort_allows_but_warns_on_unverifiable_type() {
+        // A non-transfer command cannot be independently verified -> Ok (warn),
+        // so the normal broadcast confirmation still gates it.
+        let dest = wpkh_address(0x11);
+        let raw = crate::counterparty::build_test_enhanced_send_tx_hex([0x11; 32], 1, 2500, &dest);
+        let (requested, normalized) = intent_params("XCP", &dest.to_string(), "2500");
+
+        assert!(verify_composed_transaction_or_abort(
+            &regtest_config(),
+            "issuance",
+            &requested,
+            &normalized,
+            &raw,
+        )
+        .is_ok());
     }
 }

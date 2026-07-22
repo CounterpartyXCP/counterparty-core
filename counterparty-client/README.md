@@ -85,6 +85,25 @@ the file off shared/multi-user machines. Your private keys never leave the
 machine: they are used to sign transactions locally and are never sent to the API
 server.
 
+**Transaction verification.** The server composes each transaction, but you sign
+it locally — so for `send`, `enhanced_send` and `sweep` the client independently
+decodes the transaction it is about to sign (straight from the raw bytes, not the
+server's summary) and checks that the **asset, quantity and destination** match
+what you asked for, **refusing to sign or broadcast on any mismatch**. This makes
+those transfers safe even against a malfunctioning, compromised, or
+man-in-the-middled API server. Other transaction types (issuance, order,
+dispenser, …), and the rare payload encodings the client does not yet decode
+(bare-multisig, taproot-envelope, and the pre-`taproot_support` legacy encoding),
+**cannot** be independently verified: the client warns you clearly and falls back
+to the normal confirmation prompt, so review those carefully before confirming.
+Sub-asset names are also not checked (they need the on-chain registry).
+
+**Transport.** On any public network the client **refuses a cleartext `http://`
+API URL** and pins its HTTP client to HTTPS (so a redirect cannot downgrade the
+scheme), because a network attacker able to read or *alter* the compose response
+could otherwise change the transaction you sign. Only regtest (localhost) may use
+`http://`.
+
 ## Wallet
 
 ```sh

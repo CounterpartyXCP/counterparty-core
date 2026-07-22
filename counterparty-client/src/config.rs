@@ -266,6 +266,14 @@ impl AppConfig {
         self.get_active_network_config().api_url
     }
 
+    /// Whether the active network must use TLS. Every public network requires
+    /// `https://`; only local regtest is exempt (it talks to `localhost`). Used
+    /// to build an `https_only` HTTP client and to hard-fail a cleartext API URL
+    /// before any request is sent.
+    pub fn require_https(&self) -> bool {
+        self.network != Network::Regtest
+    }
+
     /// The active network's endpoint-manifest URL.
     pub fn get_endpoints_url(&self) -> String {
         self.get_active_network_config().endpoints_url

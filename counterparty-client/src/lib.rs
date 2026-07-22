@@ -28,6 +28,7 @@ use tokio as _;
 pub mod bitcoinsigner;
 pub mod commands;
 pub mod config;
+pub mod counterparty;
 pub mod helpers;
 pub mod wallet;
 
@@ -47,6 +48,24 @@ fn get_binary_name() -> String {
                 .to_string()
         })
         .unwrap_or_else(|| "counterparty-client".to_string())
+}
+
+/// Reject a cleartext `http://` API URL on a public network (finding H2): a
+/// network attacker could read or *alter* the composed transaction the client is
+/// about to sign. Regtest talks to localhost and is exempt (see
+/// [`AppConfig::require_https`]). Returns an error so the run aborts before any
+/// request is sent.
+fn ensure_secure_transport(config: &AppConfig) -> Result<()> {
+    if config.require_https() && config.get_api_url().starts_with("http://") {
+        return Err(anyhow!(
+            "Refusing to use a cleartext http:// API URL for network {:?} ({}). \
+             Amounts and addresses would be sent unencrypted and could be altered in transit. \
+             Repoint the API URL to https:// in your config, or use --regtest for local testing.",
+            config.network,
+            config.get_api_url()
+        ));
+    }
+    Ok(())
 }
 
 // Generate default config path
@@ -667,17 +686,9 @@ pub async fn run() -> Result<()> {
         config.set_network(network);
     }
 
-    // Cleartext-transport guard: on a public network a plain `http://` API URL
-    // sends amounts and addresses (never private keys, which stay local) in the
-    // clear, where they can be intercepted or altered. Regtest is local, so it is
-    // exempt. Printed to stderr so it never pollutes `--json` stdout.
-    if config.network != Network::Regtest && config.get_api_url().starts_with("http://") {
-        eprintln!(
-            "Warning: the API URL for this network is cleartext http:// ({}). Amounts and \
-             addresses are sent unencrypted and can be intercepted or altered — prefer https://.",
-            config.get_api_url()
-        );
-    }
+    // Cleartext-transport guard (H2): abort before any request if a public
+    // network is pointed at a plain `http://` API URL.
+    ensure_secure_transport(&config)?;
 
     // Step 6: Load endpoints
     let endpoints = api::load_or_fetch_endpoints(&config).await?;
@@ -833,6 +844,33 @@ mod tests {
         assert_eq!(network_from_args(&[s("--regtest")]), Some(Network::Regtest));
         // No network flag among unrelated args.
         assert_eq!(network_from_args(&[s("wallet"), s("list_addresses")]), None);
+    }
+
+    #[test]
+    fn ensure_secure_transport_rejects_cleartext_public_network() {
+        // Point mainnet at a cleartext URL and select it: must be refused (H2).
+        let mut config = AppConfig::new();
+        config.network_configs.insert(
+            Network::Mainnet,
+            crate::config::NetworkConfig {
+                api_url: "http://evil.example".to_string(),
+                endpoints_url: "http://evil.example/v2/routes".to_string(),
+                cache_file: PathBuf::new(),
+                data_dir: PathBuf::new(),
+            },
+        );
+        config.set_network(Network::Mainnet);
+        assert!(ensure_secure_transport(&config).is_err());
+    }
+
+    #[test]
+    fn ensure_secure_transport_allows_https_and_regtest_http() {
+        let mut config = AppConfig::new();
+        // Default mainnet endpoint is https:// -> allowed.
+        assert!(ensure_secure_transport(&config).is_ok());
+        // Regtest legitimately uses http://localhost -> exempt.
+        config.set_network(Network::Regtest);
+        assert!(ensure_secure_transport(&config).is_ok());
     }
 
     #[test]

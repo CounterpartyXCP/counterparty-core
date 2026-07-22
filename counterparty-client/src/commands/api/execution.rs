@@ -14,12 +14,16 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
 /// Connection-establishment timeout.
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 
-/// A `reqwest::Client` with sane timeouts. Falling back to the default client is
-/// only reached if the TLS backend fails to initialise.
-pub fn http_client() -> Client {
+/// A `reqwest::Client` with sane timeouts. When `https_only` is set, the client
+/// refuses any non-`https://` URL, which also blocks a redirect from silently
+/// downgrading the scheme to cleartext. Callers pass [`AppConfig::require_https`]
+/// so only local regtest is allowed to use `http://`. Falling back to the default
+/// client is only reached if the TLS backend fails to initialise.
+pub fn http_client(https_only: bool) -> Client {
     Client::builder()
         .timeout(REQUEST_TIMEOUT)
         .connect_timeout(CONNECT_TIMEOUT)
+        .https_only(https_only)
         .build()
         .unwrap_or_else(|_| Client::new())
 }
@@ -87,7 +91,7 @@ pub async fn perform_api_request(
     let spinner = helpers::print_loading(format!("Loading {}", full_url).as_str());
 
     // Make the API request
-    let client = http_client();
+    let client = http_client(config.require_https());
     let response = send_api_request(&client, &full_url, params).await;
 
     spinner.stop();
@@ -340,8 +344,9 @@ mod tests {
     #[test]
     fn http_client_builds_with_timeouts() {
         // Just exercises the builder; the fallback branch is only hit on TLS
-        // init failure, which we cannot force here.
-        let _client = http_client();
+        // init failure, which we cannot force here. Both https_only modes build.
+        let _plain = http_client(false);
+        let _strict = http_client(true);
     }
 
     #[tokio::test]
