@@ -20,11 +20,16 @@ use clap_complete::{generate, Shell};
 use std::fs::File;
 use std::io;
 
-mod bitcoinsigner;
-mod commands;
-mod config;
-mod helpers;
-mod wallet;
+// `tokio` is the async runtime the `xcp`/`counterparty-client` binaries start
+// via `#[tokio::main]`; the library's async fns run on it but never name it
+// directly, so mark the dependency as used for `unused_crate_dependencies`.
+use tokio as _;
+
+pub mod bitcoinsigner;
+pub mod commands;
+pub mod config;
+pub mod helpers;
+pub mod wallet;
 
 use crate::commands::api;
 use crate::commands::wallet as wallet_commands;
@@ -573,8 +578,10 @@ fn positional_args() -> Vec<String> {
     positional
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+/// Run the command-line client: parse arguments, load config and endpoints,
+/// and dispatch to the API or wallet subcommands. The thin `xcp` and
+/// `counterparty-client` binaries just call this.
+pub async fn run() -> Result<()> {
     // Fast path: `--version`/`-V` must never require config, network access or a
     // wallet password. Handle it before any of the heavy setup below.
     if std::env::args().any(|a| a == "--version" || a == "-V") {
@@ -762,4 +769,67 @@ async fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn network_from_args_maps_each_flag() {
+        let s = |v: &str| v.to_string();
+        assert_eq!(network_from_args(&[s("--mainnet")]), Some(Network::Mainnet));
+        assert_eq!(network_from_args(&[s("--signet")]), Some(Network::Signet));
+        assert_eq!(
+            network_from_args(&[s("--testnet4")]),
+            Some(Network::Testnet4)
+        );
+        assert_eq!(network_from_args(&[s("--regtest")]), Some(Network::Regtest));
+        // No network flag among unrelated args.
+        assert_eq!(network_from_args(&[s("wallet"), s("list_addresses")]), None);
+    }
+
+    #[test]
+    fn should_support_file_reference_matches_secret_bearing_args() {
+        assert!(should_support_file_reference("private_key"));
+        assert!(should_support_file_reference("mnemonic"));
+        assert!(should_support_file_reference(
+            "__transaction_broadcast_arg_0_text"
+        ));
+        assert!(should_support_file_reference("description"));
+        assert!(!should_support_file_reference("address"));
+        assert!(!should_support_file_reference("quantity"));
+    }
+
+    #[test]
+    fn get_shell_config_instruction_is_non_empty_per_shell() {
+        let path = Path::new("/tmp/completions/xcp");
+        for shell in [Shell::Bash, Shell::Zsh, Shell::Fish, Shell::PowerShell] {
+            assert!(!get_shell_config_instruction(shell, path).is_empty());
+        }
+    }
+
+    #[test]
+    fn process_file_reference_passes_through_non_references() {
+        // A value without the `@` prefix is returned unchanged.
+        assert_eq!(
+            process_file_reference("plain-value").unwrap(),
+            "plain-value"
+        );
+    }
+
+    #[test]
+    fn process_file_reference_reads_and_trims_file_contents() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("secret.txt");
+        std::fs::write(&path, "  abc123\n").unwrap();
+        let value = format!("@{}", path.display());
+        assert_eq!(process_file_reference(&value).unwrap(), "abc123");
+    }
+
+    #[test]
+    fn process_file_reference_errors_on_missing_file() {
+        let err = process_file_reference("@/no/such/file/xcp-test").unwrap_err();
+        assert!(err.to_string().contains("File not found"), "got: {err}");
+    }
 }

@@ -82,17 +82,51 @@ pub async fn update_cache(config: &AppConfig) -> Result<()> {
     Ok(())
 }
 
+/// How long a cached endpoint manifest is considered fresh before a refresh is
+/// attempted. Endpoints change rarely, so a day balances staleness against
+/// per-startup network calls; `xcp --update-cache` forces an immediate refresh.
+const CACHE_TTL: std::time::Duration = std::time::Duration::from_secs(24 * 60 * 60);
+
+/// Whether the cache file's age is within [`CACHE_TTL`]. A missing file, an
+/// unreadable mtime, or a clock that moved backwards all count as *not* fresh so
+/// the endpoints are refreshed.
+fn cache_is_fresh(cache_file: &Path) -> bool {
+    let Ok(meta) = fs::metadata(cache_file) else {
+        return false;
+    };
+    let Ok(mtime) = meta.modified() else {
+        return false;
+    };
+    matches!(mtime.elapsed(), Ok(age) if age < CACHE_TTL)
+}
+
 // Loads endpoints from cache or fetches them if needed
 pub async fn load_or_fetch_endpoints(config: &AppConfig) -> Result<HashMap<String, ApiEndpoint>> {
     let cache_file = config.get_cache_file();
 
-    if cache_file.exists() {
+    // Fresh cache: use it, refreshing only if it fails to parse.
+    if cache_file.exists() && cache_is_fresh(&cache_file) {
         match load_cached_api_endpoints(config) {
-            Ok(endpoints) => Ok(endpoints),
-            Err(_) => fetch_api_endpoints(config).await,
+            Ok(endpoints) => return Ok(endpoints),
+            Err(_) => return fetch_api_endpoints(config).await,
         }
-    } else {
-        fetch_api_endpoints(config).await
+    }
+
+    // Missing or stale cache: refresh from the API, but fall back to the stale
+    // cache when the network is unavailable so the client still works offline.
+    match fetch_api_endpoints(config).await {
+        Ok(endpoints) => Ok(endpoints),
+        Err(fetch_err) => {
+            if cache_file.exists() {
+                if let Ok(endpoints) = load_cached_api_endpoints(config) {
+                    eprintln!(
+                        "Note: could not refresh API endpoints ({fetch_err}); using the cached copy."
+                    );
+                    return Ok(endpoints);
+                }
+            }
+            Err(fetch_err)
+        }
     }
 }
 
@@ -245,6 +279,17 @@ mod tests {
         let loaded = load_or_fetch_endpoints(&config).await.unwrap();
         assert_eq!(loaded.len(), 2);
         m.assert_async().await;
+    }
+
+    #[test]
+    fn cache_is_fresh_for_new_file_and_stale_for_missing() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("endpoints.json");
+        fs::write(&path, "{}").unwrap();
+        // A file just written is within the TTL.
+        assert!(cache_is_fresh(&path));
+        // A missing file is never fresh (forces a refresh).
+        assert!(!cache_is_fresh(&dir.path().join("absent.json")));
     }
 
     #[tokio::test]

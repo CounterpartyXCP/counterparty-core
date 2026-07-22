@@ -58,12 +58,13 @@ component_management:
 comment:
   layout: "reach, diff, flags, components, files"
 
-# The CLI entrypoint (argument wiring + interactive stdin prompts) is exercised
-# end-to-end by the regtest integration test, not by unit tests, so it is
-# excluded from the unit-coverage denominator. Test-only files — anything ending
-# in `tests.rs`, including the `#[ignore]`d live-regtest integration tests that
-# only run under `--ignored` — are excluded too, matching the CI's
-# `--ignore-filename-regex 'tests\.rs$'`.
+# The CLI entrypoint (argument wiring + interactive stdin prompts) lives in
+# `src/lib.rs` and the thin `src/bin/*` wrappers; it is exercised end-to-end by
+# the regtest integration test, not by unit tests, so it is excluded from the
+# unit-coverage denominator. Test-only files — anything ending in `tests.rs`,
+# including the `#[ignore]`d live-regtest integration tests that only run under
+# `--ignored` — are excluded too, matching the CI's `--ignore-filename-regex`.
 ignore:
-  - "counterparty-client/src/main.rs"
+  - "counterparty-client/src/lib.rs"
+  - "counterparty-client/src/bin/**"
   - "counterparty-client/src/**/*tests.rs"

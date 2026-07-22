@@ -1,6 +1,6 @@
 [package]
 name = "counterparty-client"
-version = "11.2.0"
+version = "11.2.1"
 edition = "2021"
 
 [dependencies]
@@ -23,7 +23,6 @@ bitcoin = "0.32.5"
 bip39 = { version = "2.2", features = ["zeroize"] }
 cocoon = "0.4"
 thiserror = "2.0"
-lazy_static = "1.5"
 # serde_yaml is deprecated/unmaintained; serde_yaml_ng is the maintained fork
 # with a compatible API.
 serde_yaml_ng = "0.10"
@@ -44,7 +43,6 @@ rpassword = "7.5"
 # keyring 4's default `v1` feature ships the v1-compatible API plus native
 # backends (apple-keychain, windows, zbus secret-service).
 keyring = "4"
-once_cell = "1.21"
 secrecy = "0.10"
 indicatif = "0.18"
 clap_complete = "4.6"
@@ -57,10 +55,7 @@ tempfile = "3"
 # code paths without reaching a real Counterparty server.
 mockito = "1"
 
-[[bin]]
-name = "xcp"
-path = "src/main.rs"
-
-[[bin]]
-name = "counterparty-client"
-path = "src/main.rs"
+# The library holds all the logic (`src/lib.rs`); `src/bin/xcp.rs` and
+# `src/bin/counterparty-client.rs` are thin wrappers auto-detected by cargo.
+# Building via a shared lib means the unit tests compile and run only once
+# (two bins pointing at one `main.rs` previously ran the whole suite twice).

@@ -768,7 +768,7 @@ checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
 name = "counterparty-client"
-version = "11.2.0"
+version = "11.2.1"
 dependencies = [
  "anyhow",
  "bip39",
@@ -780,9 +780,7 @@ dependencies = [
  "hex",
  "indicatif",
  "keyring",
- "lazy_static",
  "mockito",
- "once_cell",
  "rand 0.10.2",
  "reqwest",
  "rpassword",
@@ -1632,12 +1630,6 @@ checksum = "fb1e621458ca9c51aa110bd0339d4751a056b9576bf1253aee1aa560dda0fc9d"
 dependencies = [
  "log",
 ]
-
-[[package]]
-name = "lazy_static"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
 name = "libc"

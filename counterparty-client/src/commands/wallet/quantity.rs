@@ -31,6 +31,39 @@ enum Denomination {
     Btc,
 }
 
+/// Divisibility-sensitive compose parameter names, mirroring the keys of
+/// `quantity_fields` in counterparty-core's `api/verbose.py`. This is only a
+/// safety net: any parameter listed here that `denomination` does *not* map for
+/// the current transaction still triggers the "sent as satoshis" warning, so a
+/// divisibility-governed value can never be silently passed through unconverted.
+const KNOWN_QUANTITY_FIELDS: &[&str] = &[
+    "quantity",
+    "give_quantity",
+    "get_quantity",
+    "escrow_quantity",
+    "dispense_quantity",
+    "quantity_per_unit",
+    "supply",
+    "price",
+    "hard_cap",
+    "soft_cap",
+    "quantity_by_price",
+    "max_mint_per_tx",
+    "max_mint_per_address",
+    "premint_quantity",
+    "pool_quantity",
+    "give_price",
+    "get_price",
+    "quantity_a",
+    "quantity_b",
+    "reserve_a",
+    "reserve_b",
+    "mainchainrate",
+    "satoshirate",
+    "fee_required",
+    "fee_provided",
+];
+
 /// Map a `(transaction, parameter)` pair to what governs its divisibility.
 /// Returns `None` for parameters that must be passed through unchanged. The
 /// mapping mirrors `quantity_fields` in counterparty-core's `api/verbose.py`.
@@ -47,8 +80,23 @@ fn denomination(transaction_name: &str, param: &str) -> Option<Denomination> {
         ("dispenser", "mainchainrate") => Denomination::Btc,
         ("order", "give_quantity") => Denomination::Asset("give_asset"),
         ("order", "get_quantity") => Denomination::Asset("get_asset"),
+        // Order match fees are paid in BTC (always divisible).
+        ("order", "fee_required") => Denomination::Btc,
+        ("order", "fee_provided") => Denomination::Btc,
         ("dispense", "quantity") => Denomination::Btc,
         ("burn", "quantity") => Denomination::Btc,
+        // Fairminter: every cap/mint quantity is denominated in the fairminted
+        // asset (divisibility from `--divisible`, or the on-chain value when the
+        // asset already exists). `price` is the XCP paid per `quantity_by_price`
+        // units, and XCP is always divisible.
+        ("fairminter", "hard_cap") => Denomination::IssuedAsset,
+        ("fairminter", "soft_cap") => Denomination::IssuedAsset,
+        ("fairminter", "premint_quantity") => Denomination::IssuedAsset,
+        ("fairminter", "max_mint_per_tx") => Denomination::IssuedAsset,
+        ("fairminter", "max_mint_per_address") => Denomination::IssuedAsset,
+        ("fairminter", "quantity_by_price") => Denomination::IssuedAsset,
+        ("fairminter", "pool_quantity") => Denomination::IssuedAsset,
+        ("fairminter", "price") => Denomination::Btc,
         _ => return None,
     };
     Some(denom)
@@ -75,9 +123,10 @@ pub async fn normalize_quantities(
                     .map_err(|e| anyhow!("Invalid value for '--{}': {}", name, e))?;
                 conversions.push((name.clone(), converted));
             }
-            None if name.contains("quantity") => {
-                // Advanced transaction types (e.g. fairminter, AMM pools, mpma)
-                // are not auto-converted; be explicit rather than silently wrong.
+            None if name.contains("quantity") || KNOWN_QUANTITY_FIELDS.contains(&name.as_str()) => {
+                // A divisibility-sensitive parameter we do not auto-convert for
+                // this transaction (e.g. an as-yet-unmapped AMM/mpma field): warn
+                // rather than silently treat the human amount as satoshis.
                 helpers::print_warning(
                     &format!(
                         "Note: '--{name}' is sent as satoshis; no automatic divisibility conversion for '{transaction_name}'."
@@ -262,7 +311,19 @@ mod tests {
             denomination("issuance", "quantity"),
             Some(Denomination::IssuedAsset)
         ));
-        assert!(denomination("fairminter", "hard_cap").is_none());
+        // Fairminter caps are denominated in the fairminted asset; `price` is XCP.
+        assert!(matches!(
+            denomination("fairminter", "hard_cap"),
+            Some(Denomination::IssuedAsset)
+        ));
+        assert!(matches!(
+            denomination("fairminter", "price"),
+            Some(Denomination::Btc)
+        ));
+        assert!(matches!(
+            denomination("order", "fee_required"),
+            Some(Denomination::Btc)
+        ));
     }
 
     #[test]
@@ -411,10 +472,24 @@ mod tests {
         // Wrong parameter name for the transaction.
         assert!(denomination("dispenser", "quantity").is_none());
         assert!(denomination("dividend", "quantity").is_none());
-        // Transactions with no auto-conversion at all.
-        assert!(denomination("fairminter", "hard_cap").is_none());
+        // Non-quantity fairminter params (block heights, description) and the
+        // fairmint-only `quantity` name are not mapped for fairminter.
+        assert!(denomination("fairminter", "start_block").is_none());
         assert!(denomination("fairminter", "quantity").is_none());
         assert!(denomination("unknown_tx", "quantity").is_none());
+    }
+
+    #[test]
+    fn known_quantity_fields_guard_catches_unmapped_fairminter_and_amm() {
+        // These divisibility-sensitive fields are not mapped by `denomination`
+        // for every transaction, so the safety-net set must list them to force a
+        // warning instead of a silent satoshi pass-through.
+        for field in ["hard_cap", "soft_cap", "price", "reserve_a", "quantity_a"] {
+            assert!(
+                KNOWN_QUANTITY_FIELDS.contains(&field),
+                "'{field}' must be in the quantity-field guard"
+            );
+        }
     }
 
     // ---- E2: compose-path quantity math (hermetic, no network) ----
@@ -598,6 +673,61 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(params.get("quantity").unwrap(), "7");
+    }
+
+    #[tokio::test]
+    async fn normalize_quantities_fairminter_scales_new_divisible_asset() {
+        // A brand-new fairminter asset (absent on-chain) takes divisibility from
+        // the `--divisible` default (true), so its caps are scaled by 1e8. This is
+        // the HIGH-severity regression: these fields used to be sent as satoshis
+        // with no conversion and no warning.
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/v2/assets/NEWTOKEN")
+            .with_status(200)
+            .with_body(r#"{"result":null}"#)
+            .create_async()
+            .await;
+        let config = config_for(&server);
+        let mut params = HashMap::new();
+        params.insert("asset".to_string(), "NEWTOKEN".to_string());
+        params.insert("hard_cap".to_string(), "1000".to_string());
+        params.insert("soft_cap".to_string(), "500".to_string());
+        // `price` is XCP (always divisible), converted independently of the asset.
+        params.insert("price".to_string(), "0.5".to_string());
+
+        normalize_quantities(&config, "fairminter", &mut params)
+            .await
+            .unwrap();
+
+        assert_eq!(params.get("hard_cap").unwrap(), "100000000000");
+        assert_eq!(params.get("soft_cap").unwrap(), "50000000000");
+        assert_eq!(params.get("price").unwrap(), "50000000");
+    }
+
+    #[tokio::test]
+    async fn normalize_quantities_fairminter_existing_indivisible_asset_keeps_caps_whole() {
+        // Fairminting more of an existing indivisible asset: the on-chain
+        // divisibility (false) governs the caps, so they stay whole.
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/v2/assets/HARDTOKEN")
+            .with_status(200)
+            .with_body(r#"{"result":{"divisible":false}}"#)
+            .create_async()
+            .await;
+        let config = config_for(&server);
+        let mut params = HashMap::new();
+        params.insert("asset".to_string(), "HARDTOKEN".to_string());
+        params.insert("hard_cap".to_string(), "1000".to_string());
+        params.insert("max_mint_per_tx".to_string(), "10".to_string());
+
+        normalize_quantities(&config, "fairminter", &mut params)
+            .await
+            .unwrap();
+
+        assert_eq!(params.get("hard_cap").unwrap(), "1000");
+        assert_eq!(params.get("max_mint_per_tx").unwrap(), "10");
     }
 
     #[tokio::test]

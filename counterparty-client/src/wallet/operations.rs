@@ -11,6 +11,7 @@ use bitcoin::Network;
 use secrecy::{ExposeSecret, SecretString};
 use serde_json::{self, json, Value};
 use std::path::Path;
+use zeroize::Zeroizing;
 
 use super::keys::{self, create_bitcoin_address};
 use super::storage::WalletStorage;
@@ -64,10 +65,10 @@ impl BitcoinWallet {
     ///
     /// # Returns
     ///
-    /// * `Result<(String, Option<String>)>` - The Bitcoin address created, plus
-    ///   the freshly generated BIP39 mnemonic when the key was randomly generated
-    ///   (so the caller can show it to the user for backup); `None` for imported
-    ///   keys.
+    /// * `Result<(String, Option<Zeroizing<String>>)>` - The Bitcoin address
+    ///   created, plus the freshly generated BIP39 mnemonic when the key was
+    ///   randomly generated (so the caller can show it to the user for backup);
+    ///   `None` for imported keys. The mnemonic is zeroized on drop.
     pub fn add_address(
         &mut self,
         private_key: Option<&str>,
@@ -75,14 +76,21 @@ impl BitcoinWallet {
         path: Option<&str>,
         label: Option<&str>,
         address_type: Option<&str>,
-    ) -> Result<(String, Option<String>)> {
+    ) -> Result<(String, Option<Zeroizing<String>>)> {
         let secp = Secp256k1::new();
 
-        // Determine address type (bech32/p2wpkh by default)
+        // Determine the address type. An unrecognised value is rejected rather
+        // than silently coerced to bech32, so a typo (e.g. "segwit", "P2PKH")
+        // never yields a different address type than intended.
         let addr_type = match address_type {
+            None | Some("bech32") => "bech32",
             Some("p2pkh") => "p2pkh",
-            Some("taproot") => "taproot", // Support for taproot addresses
-            _ => "bech32",                // By default, we use bech32
+            Some("taproot") => "taproot",
+            Some(other) => {
+                return Err(WalletError::BitcoinError(format!(
+                    "Unknown address type '{other}'. Use one of: bech32, p2pkh, taproot."
+                )));
+            }
         };
 
         // Generate keys based on provided parameters
@@ -299,6 +307,21 @@ mod tests {
             taproot.starts_with("bcrt1p"),
             "expected regtest p2tr, got {taproot}"
         );
+    }
+
+    #[test]
+    fn add_address_rejects_unknown_address_type() {
+        let (mut w, _dir) = wallet();
+        // A typo must be rejected, not silently coerced to bech32.
+        let err = w
+            .add_address(None, None, None, None, Some("segwit"))
+            .unwrap_err();
+        assert!(
+            err.to_string().contains("Unknown address type"),
+            "got: {err}"
+        );
+        // Nothing was persisted.
+        assert_eq!(w.list_addresses().unwrap().len(), 0);
     }
 
     #[test]

@@ -465,21 +465,30 @@ fn extract_transaction_details(
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow!("Missing rawtransaction in API response"))?;
 
+    // Error (rather than silently drop with `filter_map`) on any non-conforming
+    // element: dropping a malformed entry from each array could leave them the
+    // same length but misaligned, producing a wrong UTXO set for signing.
     let inputs_values = api_result
         .get("inputs_values")
         .and_then(|v| v.as_array())
         .ok_or_else(|| anyhow!("Missing inputs_values in API response"))?
         .iter()
-        .filter_map(|v| v.as_u64())
-        .collect::<Vec<_>>();
+        .map(|v| {
+            v.as_u64()
+                .ok_or_else(|| anyhow!("inputs_values contains a non-integer value"))
+        })
+        .collect::<Result<Vec<_>>>()?;
 
     let lock_scripts = api_result
         .get("lock_scripts")
         .and_then(|v| v.as_array())
         .ok_or_else(|| anyhow!("Missing lock_scripts in API response"))?
         .iter()
-        .filter_map(|v| v.as_str())
-        .collect::<Vec<_>>();
+        .map(|v| {
+            v.as_str()
+                .ok_or_else(|| anyhow!("lock_scripts contains a non-string value"))
+        })
+        .collect::<Result<Vec<_>>>()?;
 
     // Check that inputs_values and lock_scripts have the same length
     if inputs_values.len() != lock_scripts.len() {
@@ -641,6 +650,13 @@ pub async fn handle_transaction_command(
     // Extract parameters from command line arguments
     let mut params = extract_parameters_from_matches(&endpoint, transaction_name, sub_matches);
 
+    // Snapshot the user's own inputs (human-readable, before satoshi
+    // normalization and before internal fields like `multisig_pubkey` are added)
+    // so the confirmation can show what *they* requested — a trust anchor
+    // independent of the server's (untrusted) echo of the composed transaction.
+    let requested_params: std::collections::BTreeMap<String, String> =
+        params.clone().into_iter().collect();
+
     // Convert human-readable quantities to raw satoshis based on each asset's
     // divisibility (the compose API expects satoshi integers).
     super::quantity::normalize_quantities(config, transaction_name, &mut params).await?;
@@ -654,6 +670,17 @@ pub async fn handle_transaction_command(
 
     // Extract transaction details from the result
     let (raw_tx_hex, utxos, tx_name, tx_params) = extract_transaction_details(&api_result)?;
+
+    // Show the client's own request first as a trust anchor: the "Transaction:"
+    // block below echoes the *server's* view of the composed transaction, which
+    // a hostile or buggy server could misreport.
+    if !requested_params.is_empty() {
+        helpers::print_success("Requested (your inputs):", None);
+        if let Ok(requested_json) = serde_json::to_value(&requested_params) {
+            let _ = helpers::print_colored_json(&requested_json);
+        }
+        println!();
+    }
 
     // Display transaction name and parameters before signing
     if tx_name.is_some() || tx_params.is_some() {
@@ -883,19 +910,24 @@ async fn get_utxos_from_api(
                     .find(|output| output.get("n").and_then(|n| n.as_u64()) == Some(vout as u64))
                     .ok_or_else(|| anyhow!("Vout {} not found in transaction {}", vout, txid))?;
 
-                // Extract amount (in BTC, need to convert to satoshis)
-                let amount_btc = output
-                    .get("value")
-                    .and_then(|v| v.as_f64())
-                    .ok_or_else(|| {
-                        anyhow!("Missing or invalid amount for input {}:{}", txid, vout)
-                    })?;
+                // Extract the BTC amount as an exact decimal (never via f64,
+                // which the signer's sighash then commits to). A JSON number's
+                // string form parses losslessly; a string value is also accepted.
+                let amount_value = output.get("value").ok_or_else(|| {
+                    anyhow!("Missing or invalid amount for input {}:{}", txid, vout)
+                })?;
+                let amount_btc = match amount_value {
+                    serde_json::Value::String(s) => Decimal::from_str(s.trim()),
+                    serde_json::Value::Number(n) => Decimal::from_str(&n.to_string()),
+                    _ => return Err(anyhow!("Invalid amount type for input {}:{}", txid, vout)),
+                }
+                .map_err(|_| anyhow!("Invalid amount for input {}:{}", txid, vout))?;
 
                 // Convert to satoshis (multiply by 10^8)
-                let amount = Decimal::from_str(&amount_btc.to_string())?
+                let amount = amount_btc
                     .checked_mul(Decimal::from(100_000_000))
                     .and_then(|d| d.to_u64())
-                    .ok_or_else(|| anyhow::anyhow!("Conversion error"))?;
+                    .ok_or_else(|| anyhow!("Amount out of range for input {}:{}", txid, vout))?;
 
                 // Extract scriptPubKey
                 let script_pubkey_obj = output
@@ -921,6 +953,20 @@ async fn get_utxos_from_api(
                 })?;
 
                 let script_pubkey = bitcoin::ScriptBuf::from_bytes(script_pubkey_bytes);
+
+                // The API prevout carries only the scriptPubKey, which is not
+                // enough to sign P2SH/P2WSH inputs (they also need the
+                // redeem/witness script). Fail with an actionable message rather
+                // than a later generic "could not sign inputs" error.
+                if script_pubkey.is_p2sh() || script_pubkey.is_p2wsh() {
+                    return Err(anyhow!(
+                        "Input {}:{} is a P2SH/P2WSH output; signing it needs its redeem/witness \
+                         script, which the API prevout does not provide. Re-run with \
+                         `--utxos <json>` supplying them.",
+                        txid,
+                        vout
+                    ));
+                }
 
                 // Create UTXO
                 let utxo = bitcoinsigner::UTXO::new(amount, script_pubkey);
@@ -1270,6 +1316,17 @@ mod tests {
         // Mismatched lengths.
         assert!(extract_transaction_details(&json!({
             "rawtransaction": "aa", "inputs_values": [1, 2], "lock_scripts": ["51"]
+        }))
+        .is_err());
+        // A non-integer inputs_values element is an error, not a silent drop
+        // (which could leave the two arrays length-matched but misaligned).
+        assert!(extract_transaction_details(&json!({
+            "rawtransaction": "aa", "inputs_values": [1, "oops"], "lock_scripts": ["51", "52"]
+        }))
+        .is_err());
+        // A non-string lock_scripts element is likewise an error.
+        assert!(extract_transaction_details(&json!({
+            "rawtransaction": "aa", "inputs_values": [1, 2], "lock_scripts": ["51", 52]
         }))
         .is_err());
     }

@@ -10,13 +10,15 @@
 //!   * the resulting PSBT is finalized (script_sig and/or witness present), and
 //!   * the transaction re-serializes and re-parses cleanly.
 //!
-//! For the two single-key ECDSA cases (P2PKH, P2WPKH) we additionally
-//! *independently* re-derive the sighash from the signed transaction and verify
-//! the produced signature against the input's script/pubkey with `secp256k1`.
+//! For the single-key ECDSA cases (P2PKH, P2WPKH, both P2WSH shapes, legacy
+//! P2SH, nested P2SH-P2WSH) we additionally *independently* re-derive the
+//! sighash from the signed transaction and verify the produced signature against
+//! the input's script/pubkey with `secp256k1`.
 //!
-//! Coverage: P2PKH, P2WPKH, P2SH (legacy), P2SH-P2WPKH, P2WSH, P2TR key-path,
-//! P2TR script-path. See the module-level notes in the workstream report for the
-//! (none) deferred script types.
+//! Coverage: P2PKH, P2WPKH, P2SH (legacy), P2SH-P2WPKH, P2SH-P2WSH (nested),
+//! P2WSH (pay-to-pubkey and pay-to-pubkey-hash), P2TR key-path, P2TR script-path,
+//! plus multi-input (two taproot key-path, two taproot script-path) and
+//! mixed-input (taproot + P2WPKH) transactions.
 
 use std::collections::HashMap;
 
@@ -92,6 +94,33 @@ fn unsigned_tx() -> Transaction {
         }],
         output: vec![TxOut {
             value: Amount::from_sat(UTXO_AMOUNT - 1_000),
+            script_pubkey: ScriptBuf::new_op_return([]),
+        }],
+    }
+}
+
+/// An unsigned transaction with `n` distinct inputs and a single OP_RETURN
+/// output. Distinct outpoints (same null txid, increasing vout) keep the inputs
+/// unique without needing real prevout txids.
+fn unsigned_tx_n(n: usize) -> Transaction {
+    let input = (0..n)
+        .map(|i| {
+            let mut previous_output = OutPoint::null();
+            previous_output.vout = i as u32;
+            TxIn {
+                previous_output,
+                script_sig: ScriptBuf::new(),
+                sequence: Sequence::MAX,
+                witness: Witness::new(),
+            }
+        })
+        .collect();
+    Transaction {
+        version: transaction::Version::TWO,
+        lock_time: absolute::LockTime::ZERO,
+        input,
+        output: vec![TxOut {
+            value: Amount::from_sat(UTXO_AMOUNT),
             script_pubkey: ScriptBuf::new_op_return([]),
         }],
     }
@@ -218,7 +247,7 @@ fn signs_p2sh_legacy_input() {
     let addr = Address::from_script(&spk, NETWORK).unwrap().to_string();
 
     let mut utxo = UTXO::new(UTXO_AMOUNT, spk);
-    utxo.redeem_script = Some(redeem);
+    utxo.redeem_script = Some(redeem.clone());
     let mut utxos = UTXOList::new();
     utxos.add(utxo);
 
@@ -227,11 +256,95 @@ fn signs_p2sh_legacy_input() {
     let signed = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap();
 
     let parsed = parse_signed(&signed);
-    assert!(
-        !parsed.input[0].script_sig.is_empty(),
-        "P2SH-legacy must produce a scriptSig"
-    );
     assert!(parsed.input[0].witness.is_empty());
+    // Redeem `<pubkey> OP_CHECKSIG` embeds the pubkey, so the scriptSig is
+    // `<sig> <redeemScript>` (no separate pubkey push) — the regression being
+    // that the old signer always pushed the pubkey.
+    let script_pushes: Vec<Vec<u8>> = parsed.input[0]
+        .script_sig
+        .instructions()
+        .filter_map(|i| match i {
+            Ok(Instruction::PushBytes(b)) => Some(b.as_bytes().to_vec()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(script_pushes.len(), 2, "scriptSig = <sig> <redeemScript>");
+    assert_eq!(
+        script_pushes[1],
+        redeem.as_bytes(),
+        "last push is the redeem script"
+    );
+
+    // Independent spendability check: legacy sighash over the redeem script.
+    let secp = Secp256k1::new();
+    let cache = SighashCache::new(&parsed);
+    let sighash = cache
+        .legacy_signature_hash(0, &redeem, EcdsaSighashType::All as u32)
+        .unwrap();
+    let msg = Message::from_digest_slice(sighash.as_ref()).unwrap();
+    let sig_bytes = &script_pushes[0];
+    let sig =
+        bitcoin::secp256k1::ecdsa::Signature::from_der(&sig_bytes[..sig_bytes.len() - 1]).unwrap();
+    assert!(secp.verify_ecdsa(&msg, &sig, &k.public_key.inner).is_ok());
+}
+
+#[test]
+fn signs_p2sh_p2wsh_nested_input() {
+    let k = test_key();
+    // Nested P2SH-P2WSH: scriptPubKey is P2SH, redeem script is the P2WSH
+    // program, and the inner witness script is `<pubkey> OP_CHECKSIG`. Before the
+    // fix `get_type` misrouted this to the native-P2WSH signer (empty scriptSig),
+    // producing an unspendable input.
+    let witness_script = single_key_script(&k.public_key);
+    let redeem = ScriptBuf::new_p2wsh(&witness_script.wscript_hash());
+    let spk = ScriptBuf::new_p2sh(&redeem.script_hash());
+    let addr = Address::from_script(&spk, NETWORK).unwrap().to_string();
+
+    let mut utxo = UTXO::new(UTXO_AMOUNT, spk);
+    utxo.redeem_script = Some(redeem.clone());
+    utxo.witness_script = Some(witness_script.clone());
+    let mut utxos = UTXOList::new();
+    utxos.add(utxo);
+
+    let tx = unsigned_tx();
+    let addresses = address_map(&addr, &k.wif, "p2sh", &k.public_key.to_string());
+    let signed = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap();
+
+    let parsed = parse_signed(&signed);
+    // scriptSig pushes the redeem (witness program); witness = <sig> <witnessScript>.
+    let script_pushes: Vec<Vec<u8>> = parsed.input[0]
+        .script_sig
+        .instructions()
+        .filter_map(|i| match i {
+            Ok(Instruction::PushBytes(b)) => Some(b.as_bytes().to_vec()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(script_pushes.len(), 1, "scriptSig pushes the redeem script");
+    assert_eq!(script_pushes[0], redeem.as_bytes());
+    let witness: Vec<&[u8]> = parsed.input[0].witness.iter().collect();
+    assert_eq!(
+        witness.len(),
+        2,
+        "pay-to-pubkey witness = <sig> <witnessScript>"
+    );
+
+    // Independent spendability check: BIP143 P2WSH sighash over the inner script.
+    let secp = Secp256k1::new();
+    let mut cache = SighashCache::new(&parsed);
+    let sighash = cache
+        .p2wsh_signature_hash(
+            0,
+            &witness_script,
+            Amount::from_sat(UTXO_AMOUNT),
+            EcdsaSighashType::All,
+        )
+        .unwrap();
+    let msg = Message::from_digest_slice(sighash.as_ref()).unwrap();
+    let sig_bytes = witness[0];
+    let sig =
+        bitcoin::secp256k1::ecdsa::Signature::from_der(&sig_bytes[..sig_bytes.len() - 1]).unwrap();
+    assert!(secp.verify_ecdsa(&msg, &sig, &k.public_key.inner).is_ok());
 }
 
 #[test]
@@ -263,9 +376,63 @@ fn signs_p2sh_p2wpkh_input() {
 }
 
 #[test]
-fn signs_p2wsh_input() {
+fn signs_p2wsh_pay_to_pubkey_input() {
     let k = test_key();
+    // `<pubkey> OP_CHECKSIG` already embeds the pubkey, so the witness must NOT
+    // push a separate pubkey — otherwise it stays on the stack and CHECKSIG
+    // fails. This is the regression: the old signer always pushed the pubkey.
     let witness_script = single_key_script(&k.public_key);
+    let spk = ScriptBuf::new_p2wsh(&witness_script.wscript_hash());
+    let addr = Address::from_script(&spk, NETWORK).unwrap().to_string();
+
+    let mut utxo = UTXO::new(UTXO_AMOUNT, spk);
+    utxo.witness_script = Some(witness_script.clone());
+    let mut utxos = UTXOList::new();
+    utxos.add(utxo);
+
+    let tx = unsigned_tx();
+    let addresses = address_map(&addr, &k.wif, "p2wsh", &k.public_key.to_string());
+    let signed = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap();
+
+    let parsed = parse_signed(&signed);
+    assert!(parsed.input[0].script_sig.is_empty());
+    let witness: Vec<&[u8]> = parsed.input[0].witness.iter().collect();
+    assert_eq!(
+        witness.len(),
+        2,
+        "pay-to-pubkey witness = <sig> <witnessScript>"
+    );
+    assert_eq!(
+        witness[1],
+        witness_script.as_bytes(),
+        "last element is the script"
+    );
+
+    // Independent spendability check: recompute the BIP143 P2WSH sighash and
+    // verify the signature against the pubkey embedded in the witness script.
+    let secp = Secp256k1::new();
+    let mut cache = SighashCache::new(&parsed);
+    let sighash = cache
+        .p2wsh_signature_hash(
+            0,
+            &witness_script,
+            Amount::from_sat(UTXO_AMOUNT),
+            EcdsaSighashType::All,
+        )
+        .unwrap();
+    let msg = Message::from_digest_slice(sighash.as_ref()).unwrap();
+    let sig_bytes = witness[0];
+    let sig =
+        bitcoin::secp256k1::ecdsa::Signature::from_der(&sig_bytes[..sig_bytes.len() - 1]).unwrap();
+    assert!(secp.verify_ecdsa(&msg, &sig, &k.public_key.inner).is_ok());
+}
+
+#[test]
+fn signs_p2wsh_pay_to_pubkey_hash_input() {
+    let k = test_key();
+    // A P2PKH-style witness script commits to the pubkey *hash*, so the witness
+    // must carry the pubkey: <sig> <pubkey> <witnessScript>.
+    let witness_script = ScriptBuf::new_p2pkh(&k.public_key.pubkey_hash());
     let spk = ScriptBuf::new_p2wsh(&witness_script.wscript_hash());
     let addr = Address::from_script(&spk, NETWORK).unwrap().to_string();
 
@@ -279,10 +446,13 @@ fn signs_p2wsh_input() {
     let signed = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap();
 
     let parsed = parse_signed(&signed);
-    assert!(parsed.input[0].script_sig.is_empty());
     let witness: Vec<&[u8]> = parsed.input[0].witness.iter().collect();
-    // signer pushes <sig> <pubkey> <witness_script>.
     assert_eq!(witness.len(), 3, "witness = <sig> <pubkey> <witnessScript>");
+    assert_eq!(
+        witness[1],
+        k.public_key.to_bytes(),
+        "middle element is the pubkey"
+    );
 }
 
 #[test]
@@ -348,6 +518,122 @@ fn signs_p2tr_script_path_input() {
         3,
         "script-path witness = <sig> <script> <control block>"
     );
+}
+
+/// Regression test for the multi-input Taproot key-path sighash. A BIP341
+/// sighash commits to *every* input's prevout, so signing a taproot input in a
+/// 2-input transaction must feed the signer both prevouts. Before the fix this
+/// returned a `PrevoutsSizeError` and aborted the whole signing.
+#[test]
+fn signs_multi_input_p2tr_key_path() {
+    let k = test_key();
+    let secp = Secp256k1::new();
+    let spk = ScriptBuf::new_p2tr(&secp, k.xonly, None);
+    let addr = Address::from_script(&spk, NETWORK).unwrap().to_string();
+
+    // Two taproot UTXOs spent by the same address.
+    let mut utxos = UTXOList::new();
+    utxos.add(UTXO::new(UTXO_AMOUNT, spk.clone()));
+    utxos.add(UTXO::new(UTXO_AMOUNT, spk));
+
+    let tx = unsigned_tx_n(2);
+    let addresses = address_map(&addr, &k.wif, "taproot", &k.public_key.to_string());
+    let signed = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap();
+
+    let parsed = parse_signed(&signed);
+    assert_eq!(parsed.input.len(), 2);
+    for input in &parsed.input {
+        let witness: Vec<&[u8]> = input.witness.iter().collect();
+        assert_eq!(witness.len(), 1, "each key-path input has one Schnorr sig");
+        assert!(matches!(witness[0].len(), 64 | 65));
+    }
+}
+
+/// Regression test for the multi-input Taproot script-path sighash (same
+/// `Prevouts::All` requirement as the key-path case, exercised through the
+/// script-path signer).
+#[test]
+fn signs_multi_input_p2tr_script_path() {
+    let k = test_key();
+    let secp = Secp256k1::new();
+    let leaf_script = single_key_tapscript(&k.xonly);
+    let spend_info = TaprootBuilder::new()
+        .add_leaf(0, leaf_script.clone())
+        .unwrap()
+        .finalize(&secp, k.xonly)
+        .unwrap();
+    let spk = ScriptBuf::new_p2tr_tweaked(spend_info.output_key());
+
+    let source_address = "p2tr-script-path-source".to_string();
+    let make_utxo = || {
+        let mut u = UTXO::new(UTXO_AMOUNT, spk.clone());
+        u.leaf_script = Some(leaf_script.clone());
+        u.source_address = Some(source_address.clone());
+        u
+    };
+    let mut utxos = UTXOList::new();
+    utxos.add(make_utxo());
+    utxos.add(make_utxo());
+
+    let tx = unsigned_tx_n(2);
+    let addresses = address_map(
+        &source_address,
+        &k.wif,
+        "taproot",
+        &k.public_key.to_string(),
+    );
+    let signed = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap();
+
+    let parsed = parse_signed(&signed);
+    assert_eq!(parsed.input.len(), 2);
+    for input in &parsed.input {
+        assert_eq!(
+            input.witness.len(),
+            3,
+            "script-path witness = <sig> <script> <control block>"
+        );
+    }
+}
+
+/// Mixed multi-input regression: a taproot input alongside a P2WPKH input. The
+/// taproot sighash still needs *all* prevouts even though only one input is
+/// taproot.
+#[test]
+fn signs_mixed_taproot_and_p2wpkh_inputs() {
+    let k = test_key();
+    let secp = Secp256k1::new();
+
+    let tr_spk = ScriptBuf::new_p2tr(&secp, k.xonly, None);
+    let tr_addr = Address::from_script(&tr_spk, NETWORK).unwrap().to_string();
+
+    let cpk = CompressedPublicKey::from_slice(&k.public_key.to_bytes()).unwrap();
+    let wpkh_spk = ScriptBuf::new_p2wpkh(&cpk.wpubkey_hash());
+    let wpkh_addr = Address::from_script(&wpkh_spk, NETWORK)
+        .unwrap()
+        .to_string();
+
+    // Input 0 = taproot, input 1 = P2WPKH.
+    let mut utxos = UTXOList::new();
+    utxos.add(UTXO::new(UTXO_AMOUNT, tr_spk));
+    utxos.add(UTXO::new(UTXO_AMOUNT, wpkh_spk));
+
+    let tx = unsigned_tx_n(2);
+    let mut addresses = address_map(&tr_addr, &k.wif, "taproot", &k.public_key.to_string());
+    addresses.extend(address_map(
+        &wpkh_addr,
+        &k.wif,
+        "bech32",
+        &k.public_key.to_string(),
+    ));
+    let signed = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap();
+
+    let parsed = parse_signed(&signed);
+    assert_eq!(parsed.input.len(), 2);
+    // Taproot input: single Schnorr sig; P2WPKH input: <sig> <pubkey>.
+    assert_eq!(parsed.input[0].witness.len(), 1);
+    assert_eq!(parsed.input[1].witness.len(), 2);
+    assert!(parsed.input[0].script_sig.is_empty());
+    assert!(parsed.input[1].script_sig.is_empty());
 }
 
 #[test]

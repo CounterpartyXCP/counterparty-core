@@ -2,59 +2,42 @@ use bitcoin::blockdata::witness::Witness;
 use bitcoin::psbt::Input as PsbtInput;
 use bitcoin::secp256k1::SecretKey;
 use bitcoin::sighash::SighashCache;
-use bitcoin::{PublicKey, ScriptBuf, Transaction};
+use bitcoin::{PublicKey, ScriptBuf, Transaction, TxOut};
 
-use super::common::{create_and_verify_ecdsa_signature, create_empty_script_sig};
+use super::common::{
+    create_and_verify_ecdsa_signature, create_empty_script_sig, is_pubkey_in_script,
+};
 use super::types::{InputSigner, Result, UTXOType, UTXO};
 use crate::wallet::WalletError;
 
-/// Checks if a public key is used in a witness script
-fn is_pubkey_in_witness_script(witness_script: &ScriptBuf, public_key: &PublicKey) -> Result<bool> {
-    // Convert the public key to serialized format
-    let pubkey_bytes = public_key.to_bytes();
-
-    // Parse the script into instructions
-    let iter = witness_script.instructions_minimal();
-
-    // Iterate through all successfully parsed instructions
-    for instruction in iter.flatten() {
-        if let bitcoin::blockdata::script::Instruction::PushBytes(bytes) = instruction {
-            // Check if this pushed data is a public key
-            if bytes.len() == pubkey_bytes.len() && bytes.as_bytes() == pubkey_bytes.as_slice() {
-                return Ok(true);
-            }
-        }
-    }
-
-    Ok(false)
-}
-
-/// Adds a signature to a P2WSH input.
+/// Adds a signature to a single-key P2WSH input.
 ///
-/// The witness is built as `<sig> <pubkey> <witnessScript>`, which suits witness
-/// scripts that consume a signature and a public key. It is not correct for
-/// scripts that consume only a signature (e.g. a bare `<pubkey> OP_CHECKSIG`) or
-/// for multisig (which needs the `OP_CHECKMULTISIG` dummy element and N
-/// signatures). The wallet never generates P2WSH addresses itself, so this path
-/// is only reachable via `sign --utxos` with a caller-supplied witness script.
+/// The witness stack is `[<sig>, (<pubkey>)?, <witnessScript>]`. The public key
+/// is pushed only when the witness script does not already carry it: a
+/// P2PKH-style script (`OP_DUP OP_HASH160 <hash> OP_EQUALVERIFY OP_CHECKSIG`)
+/// commits to the *hash*, so the pubkey must be supplied on the stack; a
+/// pay-to-pubkey script (`<pubkey> OP_CHECKSIG`) already contains it and needs
+/// only the signature. Multisig (which needs the `OP_CHECKMULTISIG` dummy
+/// element and N signatures) is still unsupported; the wallet never generates
+/// P2WSH addresses itself, so this path is only reachable via `sign --utxos`
+/// with a caller-supplied witness script.
 fn add_signature(
     input: &mut PsbtInput,
     signature: Vec<u8>,
     pubkey: Vec<u8>,
+    pubkey_in_script: bool,
     witness_script: &ScriptBuf,
 ) -> Result<()> {
     // Create the witness stack
     let mut witness = Witness::new();
 
-    // First item is empty for multisig (OP_CHECKMULTISIG bug workaround)
-    // Uncomment if needed for multisig scripts
-    // witness.push(&[]);
-
     // Add signature
     witness.push(signature);
 
-    // Add public key
-    witness.push(pubkey);
+    // Add the public key only when the script consumes it (P2PKH-style).
+    if !pubkey_in_script {
+        witness.push(pubkey);
+    }
 
     // Add the witness script
     witness.push(witness_script.as_bytes());
@@ -76,6 +59,7 @@ impl InputSigner for P2WSHSigner {
         sighash_cache: &mut SighashCache<&Transaction>,
         input: &mut PsbtInput,
         input_index: usize,
+        _all_prevouts: &[TxOut],
         secret_key: &SecretKey,
         public_key: &PublicKey,
         utxo: &UTXO,
@@ -85,12 +69,9 @@ impl InputSigner for P2WSHSigner {
             WalletError::BitcoinError("Missing witness script for P2WSH input".to_string())
         })?;
 
-        // Check if the public key is in the witness script
-        if !is_pubkey_in_witness_script(witness_script, public_key)? {
-            return Err(WalletError::BitcoinError(
-                "Public key not found in witness script".to_string(),
-            ));
-        }
+        // Whether the script embeds the raw public key (pay-to-pubkey) or only
+        // its hash (P2PKH-style) decides whether the witness must also carry it.
+        let pubkey_in_script = is_pubkey_in_script(witness_script, public_key);
 
         // Create and verify the signature
         let signature = create_and_verify_ecdsa_signature(
@@ -105,6 +86,12 @@ impl InputSigner for P2WSHSigner {
         )?;
 
         // Add the signature to the input
-        add_signature(input, signature, public_key.to_bytes(), witness_script)
+        add_signature(
+            input,
+            signature,
+            public_key.to_bytes(),
+            pubkey_in_script,
+            witness_script,
+        )
     }
 }

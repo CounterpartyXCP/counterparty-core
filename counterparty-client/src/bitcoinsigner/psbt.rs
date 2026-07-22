@@ -33,7 +33,16 @@ pub fn init_sighash_cache(tx: &Transaction) -> SighashCache<&Transaction> {
     SighashCache::new(tx)
 }
 
-/// Add witness UTXO to PSBT input
+/// Add witness UTXO to PSBT input.
+///
+/// This is set for *every* input, including legacy (P2PKH / legacy-P2SH) ones.
+/// A BIP341 taproot sighash commits to the prevout of every input, so signing a
+/// taproot input in a mixed transaction needs each input's `TxOut` — and
+/// `witness_utxo` is where the signer reads them from (`sign_transaction`
+/// collects the full prevout set here). It is technically PSBT-noncompliant to
+/// put a `witness_utxo` on a legacy input, but this PSBT is finalized and
+/// extracted in-process and never exported, so no external consumer sees it, and
+/// we do not have the full previous transaction required for `non_witness_utxo`.
 fn add_witness_utxo(
     psbt: &mut Psbt,
     index: usize,

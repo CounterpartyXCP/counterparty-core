@@ -46,8 +46,9 @@ impl WalletStorage {
     ) -> Result<(Self, AddressMap)> {
         let network_dir = data_dir.as_ref().to_path_buf();
 
-        // Create the wallet directory (0700 on Unix) if it doesn't exist.
-        fs::create_dir_all(&network_dir)?;
+        // Create the wallet directory (0700 on Unix, from creation) if it
+        // doesn't exist, then tighten an already-existing one as a fallback.
+        create_private_dir_all(&network_dir)?;
         restrict_dir_permissions(&network_dir);
 
         let wallet_file = network_dir.join("wallet.db");
@@ -88,14 +89,21 @@ impl WalletStorage {
     /// decrypting. A cached/keyring password that fails to decrypt is forgotten
     /// so it can never lock the CLI out of an intact wallet.
     fn load_with_retry(&self) -> Result<AddressMap> {
-        // 1) Try a non-interactive password (cache or keyring) once.
-        if let Some(password) = self.password_manager.cached_or_stored()? {
-            match self.decrypt_addresses(&password) {
+        // 1) Try a non-interactive password (cache or keyring) once. A keyring
+        // that is unavailable (e.g. no Secret Service on a headless server) must
+        // not block loading an intact wallet: warn and fall through to the
+        // interactive prompt instead of propagating the error.
+        match self.password_manager.cached_or_stored() {
+            Ok(Some(password)) => match self.decrypt_addresses(&password) {
                 Ok(addresses) => {
                     self.password_manager.persist(&password)?;
                     return Ok(addresses);
                 }
                 Err(_) => self.password_manager.forget(),
+            },
+            Ok(None) => {}
+            Err(e) => {
+                eprintln!("Note: {e} Falling back to a password prompt.");
             }
         }
 
@@ -229,37 +237,77 @@ impl WalletStorage {
     }
 }
 
-/// Write `data` to `path` atomically: write to a sibling temp file, flush, then
-/// rename over the target (rename is atomic on the same filesystem).
+/// Write `data` to `path` atomically: write to a randomly-named sibling temp
+/// file (exclusively created, owner-only), flush, then rename over the target
+/// (rename is atomic on the same filesystem).
 fn atomic_write(path: &Path, data: &[u8]) -> Result<()> {
-    let tmp = path.with_extension("db.tmp");
+    // A unique, unpredictable temp name plus exclusive creation means we never
+    // write *through* a pre-existing path — a crash-leftover temp or a planted
+    // symlink — the way a fixed `wallet.db.tmp` with create/truncate would.
+    let tmp = temp_path_for(path);
     {
         use std::io::Write;
-        let mut file = create_private_file(&tmp)?;
+        let mut file = create_private_file_exclusive(&tmp)?;
         file.write_all(data)?;
         file.flush()?;
         file.sync_all()?;
     }
-    fs::rename(&tmp, path)?;
+    if let Err(e) = fs::rename(&tmp, path) {
+        let _ = fs::remove_file(&tmp);
+        return Err(e.into());
+    }
     Ok(())
 }
 
-/// Create (or truncate) a file, restricting it to owner-only (0600) on Unix.
-fn create_private_file(path: &Path) -> Result<fs::File> {
+/// A sibling temp path with a random suffix, e.g.
+/// `wallet.db.tmp-1a2b3c4d5e6f7890`.
+fn temp_path_for(path: &Path) -> PathBuf {
+    use rand::{rng, RngExt};
+    let mut suffix = [0u8; 8];
+    rng().fill(&mut suffix);
+    let mut file_name = path.file_name().unwrap_or_default().to_os_string();
+    file_name.push(format!(".tmp-{}", hex::encode(suffix)));
+    path.with_file_name(file_name)
+}
+
+/// Exclusively create a new file (fails if it already exists), owner-only (0600)
+/// on Unix. `create_new` never opens an existing path, so a planted symlink or a
+/// leftover temp cannot be followed or written through.
+fn create_private_file_exclusive(path: &Path) -> Result<fs::File> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::OpenOptionsExt;
         Ok(fs::OpenOptions::new()
             .write(true)
-            .create(true)
-            .truncate(true)
+            .create_new(true)
             .mode(0o600)
             .open(path)?)
     }
     #[cfg(not(unix))]
     {
-        Ok(fs::File::create(path)?)
+        Ok(fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(path)?)
     }
+}
+
+/// Create `dir` and any missing parents, owner-only (0700) on Unix *from
+/// creation* so the directory is never briefly world-accessible.
+fn create_private_dir_all(dir: &Path) -> Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(dir)?;
+    }
+    #[cfg(not(unix))]
+    {
+        fs::create_dir_all(dir)?;
+    }
+    Ok(())
 }
 
 /// Restrict a directory to owner-only (0700) on Unix. Best-effort.
@@ -454,10 +502,14 @@ mod tests {
         let path = dir.path().join("wallet.db");
         atomic_write(&path, b"ciphertext").unwrap();
         assert_eq!(fs::read(&path).unwrap(), b"ciphertext");
-        assert!(
-            !path.with_extension("db.tmp").exists(),
-            "temp file must be renamed away"
-        );
+
+        // No randomly-named temp sibling (`wallet.db.tmp-<hex>`) is left behind.
+        let leftovers: Vec<_> = fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name().to_string_lossy().contains(".tmp-"))
+            .collect();
+        assert!(leftovers.is_empty(), "temp file must be renamed away");
 
         #[cfg(unix)]
         {
@@ -465,5 +517,27 @@ mod tests {
             let mode = fs::metadata(&path).unwrap().permissions().mode();
             assert_eq!(mode & 0o777, 0o600, "wallet file must be owner-only");
         }
+    }
+
+    #[test]
+    fn atomic_write_refuses_to_follow_a_preexisting_temp() {
+        // A distinct temp name per call plus O_EXCL means overwriting works
+        // repeatedly and never fails on a stale temp.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("wallet.db");
+        atomic_write(&path, b"first").unwrap();
+        atomic_write(&path, b"second").unwrap();
+        assert_eq!(fs::read(&path).unwrap(), b"second");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn create_private_dir_all_is_owner_only() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let nested = dir.path().join("counterparty-client/mainnet");
+        create_private_dir_all(&nested).unwrap();
+        let mode = fs::metadata(&nested).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o700, "wallet dir must be owner-only");
     }
 }

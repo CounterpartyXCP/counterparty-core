@@ -1,6 +1,6 @@
 // Declare submodules
 pub mod args;
-mod broadcast;
+mod command_tree;
 mod commands;
 mod handlers;
 mod quantity;
@@ -8,7 +8,7 @@ mod transaction;
 pub mod utils;
 
 // Re-export public functions and types
-pub use broadcast::add_broadcast_commands;
+pub use command_tree::add_broadcast_commands;
 pub use commands::build_command;
 
 use anyhow::Result;

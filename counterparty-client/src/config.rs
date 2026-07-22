@@ -3,53 +3,71 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-// Define supported Bitcoin networks
+/// A Bitcoin network the client can target. The default is [`Network::Mainnet`].
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
 #[derive(Default)]
 pub enum Network {
+    /// Bitcoin mainnet.
     #[default]
     Mainnet,
+    /// Signet.
     Signet,
+    /// Testnet4.
     Testnet4,
+    /// Local regtest.
     Regtest,
 }
 
-// Default implementation for Network
-
-// Network-specific configuration
+/// Per-network endpoints and on-disk locations.
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct NetworkConfig {
+    /// Base Counterparty API URL (e.g. `https://api.counterparty.io:4000`).
     pub api_url: String,
+    /// URL of the API's route manifest (`<api_url>/v2/routes`).
     pub endpoints_url: String,
+    /// Path of the cached endpoint manifest for this network.
     pub cache_file: PathBuf,
+    /// Per-network data directory (holds the encrypted wallet).
     pub data_dir: PathBuf,
 }
 
+/// The client's full configuration: per-network endpoints plus the active
+/// network. Serialized to `config.toml` on first run.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AppConfig {
-    // Default values for backward compatibility
+    /// Fallback API URL used when the active network has no entry.
     #[serde(default)]
     pub api_url: String,
+    /// Fallback endpoints URL used when the active network has no entry.
     #[serde(default)]
     pub endpoints_url: String,
+    /// Fallback endpoint-cache path.
     #[serde(default)]
     pub cache_file: PathBuf,
+    /// Fallback data directory.
     #[serde(default)]
     pub data_dir: PathBuf,
 
-    // Network-specific configurations
+    /// Endpoints/paths for each supported network.
     #[serde(default)]
     pub network_configs: HashMap<Network, NetworkConfig>,
 
-    // Active network, defaults to Mainnet (see Network::default)
+    /// The active network. Defaults to [`Network::Mainnet`].
     #[serde(default)]
     pub network: Network,
 }
 
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // Implement methods for AppConfig
 impl AppConfig {
-    // Create a new AppConfig with default values
+    /// Build a config with the built-in per-network defaults; the active network
+    /// is mainnet.
     pub fn new() -> Self {
         // Get application directories
         let (app_cache, app_data) = Self::get_app_directories();
@@ -143,7 +161,8 @@ impl AppConfig {
         }
     }
 
-    // Merge values from another configuration into this one
+    /// Overlay non-empty values (and every network entry) from a parsed config
+    /// file onto `self`, adopting the file's active network.
     pub fn merge_from(&mut self, file_config: AppConfig) {
         // Update root-level configurations if they are non-empty
         if !file_config.api_url.is_empty() {
@@ -168,7 +187,12 @@ impl AppConfig {
         self.network = file_config.network;
     }
 
-    // Load configuration from file and merge with current config
+    /// Load configuration from `config_path`, creating it with defaults on first
+    /// run, and merge it into `self`.
+    ///
+    /// A config file that exists but cannot be read or parsed is a hard error:
+    /// silently falling back to the built-in (mainnet) defaults could send a
+    /// signed transaction to the wrong network.
     pub fn load_from_file(&mut self, config_path: &PathBuf) -> anyhow::Result<()> {
         use anyhow::Context;
         use std::fs;
@@ -182,9 +206,15 @@ impl AppConfig {
                 fs::create_dir_all(parent)?;
             }
 
-            // Serialize the configuration to TOML
-            let config_toml =
-                toml::to_string(self).context("Failed to serialize config to TOML")?;
+            // Persist the *default* active network, not whatever `--mainnet`/
+            // `--signet`/... flag was passed on this first run: the flag still
+            // takes effect for this invocation, but a one-off flag must not
+            // silently become the stored default for later bare commands.
+            let selected_network = self.network;
+            self.network = Network::default();
+            let config_toml = toml::to_string(self).context("Failed to serialize config to TOML");
+            self.network = selected_network;
+            let config_toml = config_toml?;
 
             // Write to the file
             let mut file = fs::File::create(config_path)?;
@@ -193,19 +223,24 @@ impl AppConfig {
             return Ok(());
         }
 
-        // Load configuration from the specified file. A malformed or unreadable
-        // config is ignored (we keep the current in-memory defaults), matching
-        // the previous best-effort behaviour.
-        if let Ok(contents) = fs::read_to_string(config_path) {
-            if let Ok(file_config) = toml::from_str::<AppConfig>(&contents) {
-                self.merge_from(file_config);
-            }
-        }
+        // Load configuration from the specified file. Read/parse failures are
+        // surfaced rather than swallowed: a malformed config must never quietly
+        // revert to the mainnet defaults for a tool that signs and broadcasts.
+        let contents = fs::read_to_string(config_path)
+            .with_context(|| format!("Failed to read config file {}", config_path.display()))?;
+        let file_config: AppConfig = toml::from_str(&contents).with_context(|| {
+            format!(
+                "Config file {} is not valid TOML — fix it or pass --config-file",
+                config_path.display()
+            )
+        })?;
+        self.merge_from(file_config);
 
         Ok(())
     }
 
-    // Get the active network config, falling back to default values if not specified
+    /// The [`NetworkConfig`] for the active network, or the root fallback values
+    /// when the active network has no dedicated entry.
     pub fn get_active_network_config(&self) -> NetworkConfig {
         self.network_configs
             .get(&self.network)
@@ -221,27 +256,27 @@ impl AppConfig {
             })
     }
 
-    // Set the active network
+    /// Set the active network.
     pub fn set_network(&mut self, network: Network) {
         self.network = network;
     }
 
-    // Get current network's API URL
+    /// The active network's base API URL.
     pub fn get_api_url(&self) -> String {
         self.get_active_network_config().api_url
     }
 
-    // Get current network's endpoints URL
+    /// The active network's endpoint-manifest URL.
     pub fn get_endpoints_url(&self) -> String {
         self.get_active_network_config().endpoints_url
     }
 
-    // Get current network's cache file
+    /// The active network's endpoint-cache path.
     pub fn get_cache_file(&self) -> PathBuf {
         self.get_active_network_config().cache_file
     }
 
-    // Get current network's data directory
+    /// The active network's data directory.
     pub fn get_data_dir(&self) -> PathBuf {
         self.get_active_network_config().data_dir
     }
@@ -463,5 +498,40 @@ mod tests {
         loader.set_network(Network::Regtest);
         loader.load_from_file(&path).unwrap();
         assert_eq!(loader.network, Network::Mainnet);
+    }
+
+    // A one-off `--signet` flag on first run applies to that invocation but must
+    // NOT be baked into the persisted config as the new default network.
+    #[test]
+    fn load_from_file_first_run_persists_default_network_not_flag() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+
+        let mut cfg = AppConfig::new();
+        cfg.set_network(Network::Signet);
+        cfg.load_from_file(&path).unwrap();
+
+        // The flag still applies to this run...
+        assert_eq!(cfg.network, Network::Signet);
+        // ...but the file stores the default (mainnet), so later bare commands
+        // don't silently inherit the one-off flag.
+        let written: AppConfig = toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(written.network, Network::Mainnet);
+    }
+
+    // A config file that exists but is not valid TOML is a hard error, never a
+    // silent fall-back to the mainnet defaults.
+    #[test]
+    fn load_from_file_malformed_toml_is_an_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(&path, "this = is = not valid = toml ][").unwrap();
+
+        let mut cfg = AppConfig::new();
+        let err = cfg.load_from_file(&path).unwrap_err();
+        assert!(
+            err.to_string().contains("not valid TOML"),
+            "expected a TOML parse error, got: {err}"
+        );
     }
 }

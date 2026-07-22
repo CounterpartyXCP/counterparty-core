@@ -33,7 +33,7 @@ pub fn handle_new_address(wallet: &mut BitcoinWallet, sub_matches: &ArgMatches) 
             "Write down this recovery phrase now — it is shown only once and is NOT stored:",
             None,
         );
-        println!("{phrase}");
+        println!("{}", phrase.as_str());
     }
     Ok(())
 }

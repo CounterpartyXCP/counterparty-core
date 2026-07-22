@@ -3,7 +3,7 @@ use bitcoin::key::{Keypair, TapTweak};
 use bitcoin::psbt::Input as PsbtInput;
 use bitcoin::secp256k1::{Secp256k1, SecretKey};
 use bitcoin::sighash::{Prevouts, SighashCache};
-use bitcoin::{PublicKey, Transaction};
+use bitcoin::{PublicKey, Transaction, TxOut};
 
 use super::common::{
     create_empty_script_sig, create_message_from_tap_sighash, get_tap_sighash_type,
@@ -17,22 +17,16 @@ fn compute_signature(
     sighash_cache: &mut SighashCache<&Transaction>,
     input_index: usize,
     input: &PsbtInput,
+    all_prevouts: &[TxOut],
     secret_key: &SecretKey,
 ) -> Result<Vec<u8>> {
     // Get the sighash type
     let sighash_type = get_tap_sighash_type(input);
 
-    // Get witness UTXO
-    let witness_utxo = input.witness_utxo.as_ref().ok_or_else(|| {
-        WalletError::BitcoinError(format!(
-            "Missing witness UTXO for Taproot input at index {}",
-            input_index
-        ))
-    })?;
-
-    // Create Prevouts for the sighash calculation
-    let utxos = [witness_utxo.clone()];
-    let prevouts = Prevouts::All(&utxos);
+    // A BIP341 key-spend sighash commits to the prevouts of *every* input, so
+    // the full set is required — using only this input's prevout produces a
+    // `PrevoutsSizeError` for any transaction with more than one input.
+    let prevouts = Prevouts::All(all_prevouts);
 
     // Compute the sighash
     let sighash = sighash_cache
@@ -95,15 +89,23 @@ impl InputSigner for P2TRKPSSigner {
         sighash_cache: &mut SighashCache<&Transaction>,
         input: &mut PsbtInput,
         input_index: usize,
+        all_prevouts: &[TxOut],
         secret_key: &SecretKey,
         _public_key: &PublicKey,
         _utxo: &UTXO,
     ) -> Result<()> {
-        // Create a secp256k1 context
-        let secp = Secp256k1::new();
+        // Use the shared secp256k1 context
+        let secp = super::common::secp();
 
         // Compute signature for key path spending
-        let signature = compute_signature(&secp, sighash_cache, input_index, input, secret_key)?;
+        let signature = compute_signature(
+            secp,
+            sighash_cache,
+            input_index,
+            input,
+            all_prevouts,
+            secret_key,
+        )?;
 
         // Add witness data
         add_witness(input, signature)

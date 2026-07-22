@@ -23,8 +23,9 @@ pub struct KeyData {
     pub public_key: PublicKey,
     /// The BIP39 mnemonic, when the key was freshly generated (so the caller can
     /// show it to the user for backup). `None` for imported keys, where the
-    /// user already holds the seed/WIF.
-    pub mnemonic: Option<String>,
+    /// user already holds the seed/WIF. Wrapped in [`Zeroizing`] so the seed
+    /// copy is wiped from memory when dropped.
+    pub mnemonic: Option<Zeroizing<String>>,
 }
 
 /// Generate key data from an existing private key
@@ -101,8 +102,9 @@ pub fn generate_new_keys(
         private_key,
         public_key,
         // Surface the seed phrase once so the user can back it up; it is not
-        // persisted anywhere (the wallet stores only the derived WIF).
-        mnemonic: Some(mnemonic.to_string()),
+        // persisted anywhere (the wallet stores only the derived WIF). Kept in
+        // `Zeroizing` so the copy is wiped when the caller is done with it.
+        mnemonic: Some(Zeroizing::new(mnemonic.to_string())),
     })
 }
 

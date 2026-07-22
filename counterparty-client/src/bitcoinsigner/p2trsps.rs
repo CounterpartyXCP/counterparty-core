@@ -1,11 +1,9 @@
-use bitcoin::amount::Amount;
-use bitcoin::blockdata::transaction::TxOut;
 use bitcoin::blockdata::witness::Witness;
 use bitcoin::psbt::Input as PsbtInput;
 use bitcoin::secp256k1::{Keypair, Secp256k1, SecretKey};
 use bitcoin::sighash::{Prevouts, SighashCache};
-use bitcoin::taproot::{LeafVersion, TapLeafHash, TapNodeHash, TaprootBuilder, TaprootSpendInfo};
-use bitcoin::{PublicKey, ScriptBuf, Transaction, XOnlyPublicKey};
+use bitcoin::taproot::{ControlBlock, LeafVersion, TapLeafHash, TaprootBuilder, TaprootSpendInfo};
+use bitcoin::{PublicKey, ScriptBuf, Transaction, TxOut, XOnlyPublicKey};
 
 use super::common::{
     create_empty_script_sig, create_message_from_tap_sighash, get_tap_sighash_type,
@@ -14,55 +12,17 @@ use super::common::{
 use super::types::{InputSigner, Result, UTXO};
 use crate::wallet::WalletError;
 
-/// Control block for script path spending
-pub struct TaprootControlBlock {
-    pub leaf_version: LeafVersion,
-    pub parity: bool,
-    pub internal_key: XOnlyPublicKey,
-    pub merkle_proof: Vec<TapNodeHash>,
-}
-
-impl TaprootControlBlock {
-    /// Create a new control block
-    pub fn new(internal_key: XOnlyPublicKey, parity: bool, merkle_proof: Vec<TapNodeHash>) -> Self {
-        Self {
-            leaf_version: LeafVersion::TapScript,
-            parity,
-            internal_key,
-            merkle_proof,
-        }
-    }
-
-    /// Serialize the control block to bytes
-    pub fn serialize(&self) -> Vec<u8> {
-        let mut bytes = Vec::new();
-
-        // Control byte: leaf version (0xc0) + parity bit
-        let control_byte = self.leaf_version.to_consensus() | if self.parity { 1 } else { 0 };
-        bytes.push(control_byte);
-
-        // Internal key (32 bytes)
-        bytes.extend_from_slice(&self.internal_key.serialize());
-
-        // Merkle proof elements (if any)
-        for node in &self.merkle_proof {
-            bytes.extend_from_slice(node.as_ref());
-        }
-
-        bytes
-    }
-}
-
 /// Generate a TapLeafHash from a script
 fn taproot_leaf_hash(script: &ScriptBuf) -> TapLeafHash {
     TapLeafHash::from_script(script, LeafVersion::TapScript)
 }
 
-/// Create a basic TaprootBuilder with a single script
+/// Create a single-leaf TaprootBuilder for the given script.
 fn create_taproot_builder(script: &ScriptBuf) -> TaprootBuilder {
+    // Adding one leaf at depth 0 to a fresh builder cannot fail.
     TaprootBuilder::new()
         .add_leaf(0, script.clone())
-        .expect("Valid leaf addition")
+        .expect("adding a single depth-0 leaf never fails")
 }
 
 /// Generate Taproot spending information
@@ -78,35 +38,23 @@ fn generate_spend_info(
     })
 }
 
-/// Create control block for script path spending
+/// Create the control block for script-path spending.
+///
+/// The `bitcoin` crate derives the parity, internal key and merkle branch and
+/// serialises them in consensus order, so there is no need to assemble the
+/// control block by hand (the previous hand-rolled version was untested for
+/// multi-leaf trees).
 fn create_control_block(
     secp: &Secp256k1<bitcoin::secp256k1::All>,
     internal_key: &XOnlyPublicKey,
     leaf_script: &ScriptBuf,
-) -> Result<TaprootControlBlock> {
-    // Get the Taproot spend info which contains path information
+) -> Result<ControlBlock> {
     let spend_info = generate_spend_info(secp, internal_key, leaf_script)?;
 
-    // Try to create a control block for this script
     let script_ver = (leaf_script.clone(), LeafVersion::TapScript);
-    let control_block = spend_info
+    spend_info
         .control_block(&script_ver)
-        .ok_or_else(|| WalletError::BitcoinError("Failed to create control block".to_string()))?;
-
-    // Extract merkle proof
-    let merkle_proof: Vec<TapNodeHash> = match &control_block.merkle_branch {
-        branch if !branch.is_empty() => branch.iter().cloned().collect(),
-        _ => Vec::new(),
-    };
-
-    // Get parity from the spend info
-    let parity = spend_info.output_key_parity() == bitcoin::key::Parity::Odd;
-
-    Ok(TaprootControlBlock::new(
-        *internal_key,
-        parity,
-        merkle_proof,
-    ))
+        .ok_or_else(|| WalletError::BitcoinError("Failed to create control block".to_string()))
 }
 
 /// Compute signature for script path spending
@@ -115,26 +63,20 @@ fn compute_signature(
     sighash_cache: &mut SighashCache<&Transaction>,
     input_index: usize,
     input: &PsbtInput,
+    all_prevouts: &[TxOut],
     leaf_script: &ScriptBuf,
     secret_key: &SecretKey,
 ) -> Result<Vec<u8>> {
     // Get the sighash type
     let sighash_type = get_tap_sighash_type(input);
 
-    // Get witness UTXO
-    let witness_utxo = input.witness_utxo.as_ref().ok_or_else(|| {
-        WalletError::BitcoinError(format!(
-            "Missing witness UTXO for Taproot input at index {}",
-            input_index
-        ))
-    })?;
-
     // Get the leaf hash
     let leaf_hash = taproot_leaf_hash(leaf_script);
 
-    // Create Prevouts for the sighash calculation
-    let utxos = [witness_utxo.clone()];
-    let prevouts = Prevouts::All(&utxos);
+    // A BIP341 script-spend sighash commits to the prevouts of *every* input, so
+    // the full set is required — using only this input's prevout produces a
+    // `PrevoutsSizeError` for any transaction with more than one input.
+    let prevouts = Prevouts::All(all_prevouts);
 
     // Compute the sighash
     let sighash = sighash_cache
@@ -176,31 +118,19 @@ fn compute_signature(
     Ok(signature.to_vec())
 }
 
-/// Add witness for script path spending
+/// Add the script-path witness stack: `<signature> <script> <control block>`.
 fn add_witness(
     input: &mut PsbtInput,
     signature: Vec<u8>,
     leaf_script: &ScriptBuf,
-    control_block: &TaprootControlBlock,
+    control_block: &ControlBlock,
 ) -> Result<()> {
-    // Create witness manually without using Witness::push
-    // which can add unwanted length prefixes
-
-    // Build witness directly as a series of elements
-    // Element 1: Signature
-    let mut witness_elements = vec![signature];
-
-    // Element 2: Script
-    witness_elements.push(leaf_script.as_bytes().to_vec());
-
-    // Element 3: Control block
-    witness_elements.push(control_block.serialize());
-
-    // Create witness from elements
-    let witness = Witness::from_slice(&witness_elements);
-
-    // Set witness data
-    input.final_script_witness = Some(witness);
+    let witness_elements = [
+        signature,
+        leaf_script.as_bytes().to_vec(),
+        control_block.serialize(),
+    ];
+    input.final_script_witness = Some(Witness::from_slice(&witness_elements));
 
     // Set empty script_sig (required for SegWit)
     input.final_script_sig = Some(create_empty_script_sig());
@@ -216,12 +146,13 @@ impl InputSigner for P2TRSPSSigner {
         sighash_cache: &mut SighashCache<&Transaction>,
         input: &mut PsbtInput,
         input_index: usize,
+        all_prevouts: &[TxOut],
         secret_key: &SecretKey,
         public_key: &PublicKey,
         utxo: &UTXO,
     ) -> Result<()> {
-        // Create a secp256k1 context
-        let secp = bitcoin::key::Secp256k1::new();
+        // Use the shared secp256k1 context
+        let secp = super::common::secp();
 
         // Get XOnly pubkey from the source public key
         let xonly_pubkey = get_xonly_pubkey(public_key)?;
@@ -233,21 +164,16 @@ impl InputSigner for P2TRSPSSigner {
             )
         })?;
 
-        // Use the script_pubkey from the UTXO
-        input.witness_utxo = Some(TxOut {
-            value: Amount::from_sat(utxo.amount),
-            script_pubkey: utxo.script_pubkey.clone(),
-        });
-
         // Create control block for witness data
-        let control_block = create_control_block(&secp, &xonly_pubkey, leaf_script)?;
+        let control_block = create_control_block(secp, &xonly_pubkey, leaf_script)?;
 
         // Compute signature
         let signature = compute_signature(
-            &secp,
+            secp,
             sighash_cache,
             input_index,
             input,
+            all_prevouts,
             leaf_script,
             secret_key,
         )?;

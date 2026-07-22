@@ -1,5 +1,5 @@
 use bitcoin::secp256k1::SecretKey;
-use bitcoin::Network;
+use bitcoin::{Network, TxOut};
 use std::collections::HashMap;
 
 use super::common::bitcoin_err;
@@ -15,11 +15,15 @@ use super::psbt::{
 use super::types::{InputSigner, Result, UTXOList, UTXOType, UTXO};
 use crate::wallet::{AddressInfo, KeyService, WalletError};
 
-/// Sign a specific PSBT input using the appropriate InputSigner
+/// Sign a specific PSBT input using the appropriate InputSigner.
+///
+/// `all_prevouts` is the previous output of every input in the transaction, in
+/// input order (required by the taproot signers for the BIP341 sighash).
 fn sign_input_by_type(
     sighash_cache: &mut bitcoin::sighash::SighashCache<&bitcoin::Transaction>,
     psbt: &mut bitcoin::psbt::Psbt,
     input_index: usize,
+    all_prevouts: &[TxOut],
     secret_key: &SecretKey,
     public_key: &bitcoin::PublicKey,
     utxo: &UTXO,
@@ -34,6 +38,7 @@ fn sign_input_by_type(
                 sighash_cache,
                 input,
                 input_index,
+                all_prevouts,
                 secret_key,
                 public_key,
                 utxo,
@@ -45,6 +50,7 @@ fn sign_input_by_type(
                 sighash_cache,
                 input,
                 input_index,
+                all_prevouts,
                 secret_key,
                 public_key,
                 utxo,
@@ -56,6 +62,7 @@ fn sign_input_by_type(
                 sighash_cache,
                 input,
                 input_index,
+                all_prevouts,
                 secret_key,
                 public_key,
                 utxo,
@@ -67,6 +74,7 @@ fn sign_input_by_type(
                 sighash_cache,
                 input,
                 input_index,
+                all_prevouts,
                 secret_key,
                 public_key,
                 utxo,
@@ -78,6 +86,7 @@ fn sign_input_by_type(
                 sighash_cache,
                 input,
                 input_index,
+                all_prevouts,
                 secret_key,
                 public_key,
                 utxo,
@@ -89,6 +98,7 @@ fn sign_input_by_type(
                 sighash_cache,
                 input,
                 input_index,
+                all_prevouts,
                 secret_key,
                 public_key,
                 utxo,
@@ -159,6 +169,20 @@ pub fn sign_transaction(
     // Create PSBT from raw transaction
     let mut psbt = create_psbt_from_raw(raw_tx_hex, utxos)?;
 
+    // Collect every input's previous output, in input order. Taproot (BIP341)
+    // sighashes commit to *all* input prevouts, so a taproot input in a
+    // multi-input transaction must be signed against the full set, not just its
+    // own prevout. `create_psbt_from_raw` sets `witness_utxo` on every input.
+    let all_prevouts: Vec<TxOut> = psbt
+        .inputs
+        .iter()
+        .map(|input| {
+            input.witness_utxo.clone().ok_or_else(|| {
+                bitcoin_err("Internal error: missing prevout while preparing signing context")
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+
     // Initialize the signature cache
     let tx_clone = psbt.unsigned_tx.clone();
     let mut sighash_cache = init_sighash_cache(&tx_clone);
@@ -189,6 +213,7 @@ pub fn sign_transaction(
                             &mut sighash_cache,
                             &mut psbt,
                             input_index,
+                            &all_prevouts,
                             secret_key,
                             public_key,
                             utxo,

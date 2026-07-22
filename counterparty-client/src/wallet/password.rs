@@ -7,25 +7,36 @@
 //! of an intact wallet.
 
 use keyring::{Entry, Error as KeyringError};
-use once_cell::sync::OnceCell;
 use secrecy::ExposeSecret;
 use secrecy::SecretString;
 use std::collections::HashMap;
 use std::io::{self, Write};
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 
 use super::types::{Result, WalletError};
 use crate::config;
 
-/// Minimum length enforced for a new wallet password.
-const MIN_PASSWORD_LEN: usize = 8;
+/// Minimum length enforced for a new wallet password. `cocoon` derives the
+/// file-encryption key with a fixed PBKDF2 work factor, so passphrase length is
+/// the main defence for a stolen `wallet.db`; require a reasonably long one.
+const MIN_PASSWORD_LEN: usize = 12;
 
 // In-memory password cache, keyed by wallet (service + username) so distinct
 // wallets/networks in the same process never share a password.
-static PASSWORD_CACHE: OnceCell<Mutex<HashMap<String, SecretString>>> = OnceCell::new();
+static PASSWORD_CACHE: OnceLock<Mutex<HashMap<String, SecretString>>> = OnceLock::new();
 
 fn cache() -> &'static Mutex<HashMap<String, SecretString>> {
     PASSWORD_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Reject a new password that is shorter than [`MIN_PASSWORD_LEN`] characters.
+fn check_password_strength(password: &SecretString) -> Result<()> {
+    if password.expose_secret().chars().count() < MIN_PASSWORD_LEN {
+        return Err(WalletError::BitcoinError(format!(
+            "Password too short: use at least {MIN_PASSWORD_LEN} characters."
+        )));
+    }
+    Ok(())
 }
 
 /// Secure password manager
@@ -68,12 +79,9 @@ impl PasswordManager {
     /// initial encrypted write succeeds.
     pub fn prompt_new_password(&self) -> Result<SecretString> {
         let password = self.prompt_password("Enter new wallet password: ")?;
-
-        if password.expose_secret().chars().count() < MIN_PASSWORD_LEN {
-            return Err(WalletError::BitcoinError(format!(
-                "Password too short: use at least {MIN_PASSWORD_LEN} characters."
-            )));
-        }
+        // Check strength before asking to confirm, so a too-short password fails
+        // fast.
+        check_password_strength(&password)?;
 
         let confirmation = self.prompt_password("Confirm wallet password: ")?;
         if password.expose_secret() != confirmation.expose_secret() {
@@ -85,10 +93,19 @@ impl PasswordManager {
         Ok(password)
     }
 
-    /// Persist a verified password to the keyring and the in-memory cache.
+    /// Persist a verified password to the in-memory cache and (best-effort) the
+    /// system keyring.
+    ///
+    /// The cache always succeeds and covers the rest of this run. Storing in the
+    /// keyring is a cross-run convenience, so a keyring that is unavailable (e.g.
+    /// no Secret Service on a headless server) is reported but does not fail the
+    /// operation — otherwise an intact wallet could not be created or unlocked
+    /// there at all.
     pub fn persist(&self, password: &SecretString) -> Result<()> {
-        self.set_to_keyring(password)?;
         self.set_to_cache(password);
+        if let Err(e) = self.set_to_keyring(password) {
+            eprintln!("Note: could not save the wallet password to the system keyring ({e}). It is kept in memory for this session only.");
+        }
         Ok(())
     }
 
@@ -241,9 +258,17 @@ mod tests {
     #[test]
     fn cached_or_stored_returns_cache_hit_without_touching_keyring() {
         let pm = PasswordManager::new(Network::Testnet4, "wallet-cos");
-        pm.cache_for_test("cachedpw12");
+        pm.cache_for_test("cachedpw123");
         // A cache hit short-circuits before any keyring access.
         let got = pm.cached_or_stored().unwrap().unwrap();
-        assert_eq!(got.expose_secret(), "cachedpw12");
+        assert_eq!(got.expose_secret(), "cachedpw123");
+    }
+
+    #[test]
+    fn password_strength_enforces_minimum_length() {
+        // 11 chars: below the 12-char minimum.
+        assert!(check_password_strength(&SecretString::from("short-pass1".to_string())).is_err());
+        // Exactly 12 chars: accepted.
+        assert!(check_password_strength(&SecretString::from("twelve-chars".to_string())).is_ok());
     }
 }

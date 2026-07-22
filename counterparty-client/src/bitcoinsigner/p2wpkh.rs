@@ -2,7 +2,7 @@ use bitcoin::blockdata::witness::Witness;
 use bitcoin::psbt::Input as PsbtInput;
 use bitcoin::secp256k1::SecretKey;
 use bitcoin::sighash::SighashCache;
-use bitcoin::{PublicKey, Transaction};
+use bitcoin::{PublicKey, Transaction, TxOut};
 
 use super::common::{create_and_verify_ecdsa_signature, create_empty_script_sig};
 use super::types::{InputSigner, Result, UTXOType, UTXO};
@@ -31,6 +31,7 @@ impl InputSigner for P2WPKHSigner {
         sighash_cache: &mut SighashCache<&Transaction>,
         input: &mut PsbtInput,
         input_index: usize,
+        _all_prevouts: &[TxOut],
         secret_key: &SecretKey,
         public_key: &PublicKey,
         utxo: &UTXO,

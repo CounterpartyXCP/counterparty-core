@@ -39,13 +39,14 @@ jobs:
 
       - name: Test counterparty-client with coverage
         # `cargo llvm-cov` builds and runs the unit tests with instrumentation and
-        # emits an lcov report. The CLI entrypoint (`main.rs`, exercised by the
-        # regtest integration test) and test-only files are excluded so the
-        # report reflects unit-testable library coverage.
+        # emits an lcov report. The CLI entrypoint (`src/lib.rs`'s `run()` plus the
+        # thin `src/bin/*` wrappers, exercised by the regtest integration test) and
+        # test-only files are excluded so the report reflects unit-testable
+        # library coverage.
         run: |
           cd counterparty-client
           cargo llvm-cov --lcov --output-path lcov.info \
-            --ignore-filename-regex '(src/main\.rs$|tests\.rs$)'
+            --ignore-filename-regex '(src/lib\.rs$|src/bin/|tests\.rs$)'
 
       - name: Upload client coverage to Codecov
         uses: codecov/codecov-action@v5

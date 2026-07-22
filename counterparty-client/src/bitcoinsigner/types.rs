@@ -2,7 +2,7 @@ use bitcoin::psbt::Input as PsbtInput;
 use bitcoin::secp256k1::SecretKey;
 use bitcoin::sighash::SighashCache;
 use bitcoin::ScriptBuf;
-use bitcoin::{PublicKey, Transaction};
+use bitcoin::{PublicKey, Transaction, TxOut};
 use std::str::FromStr;
 
 type WalletError = crate::wallet::WalletError;
@@ -83,6 +83,15 @@ impl UTXO {
             return UTXOType::P2TRKPS;
         }
 
+        // A redeem script *and* a witness script together denote a nested
+        // P2SH-P2WSH input: the scriptPubKey is P2SH, so it must be routed to the
+        // P2SH signer (which pushes the redeem script in the scriptSig). Checking
+        // `witness_script` first here would misroute it to the native-P2WSH
+        // signer and produce an unspendable (empty-scriptSig) input.
+        if self.redeem_script.is_some() && self.witness_script.is_some() {
+            return UTXOType::P2SH;
+        }
+
         if self.witness_script.is_some() {
             return UTXOType::P2WSH;
         }
@@ -123,9 +132,20 @@ impl UTXOList {
         self.0.len()
     }
 
+    /// Returns true when the list holds no UTXOs.
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
     /// Gets a UTXO at the specified index
     pub fn get(&self, index: usize) -> Option<&UTXO> {
         self.0.get(index)
+    }
+}
+
+impl Default for UTXOList {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -144,11 +164,17 @@ impl AsRef<[UTXO]> for UTXOList {
 /// Trait for implementation of various transaction input signers
 /// This provides a common interface for all address types
 pub trait InputSigner {
-    /// Sign a specific input in a PSBT
+    /// Sign a specific input in a PSBT.
+    ///
+    /// `all_prevouts` holds the previous output (`TxOut`) of *every* input in the
+    /// transaction, in input order. Taproot (BIP341) sighashes commit to all
+    /// input amounts and scriptPubKeys, so the whole slice is required; the
+    /// legacy/SegWit-v0 signers only need the current input and ignore it.
     fn sign_input(
         sighash_cache: &mut SighashCache<&Transaction>,
         input: &mut PsbtInput,
         input_index: usize,
+        all_prevouts: &[TxOut],
         secret_key: &SecretKey,
         public_key: &PublicKey,
         utxo: &UTXO,
@@ -218,6 +244,13 @@ mod tests {
         let mut sh = UTXO::new(1, p2pkh_spk(5));
         sh.redeem_script = Some(ScriptBuf::new());
         assert_eq!(sh.get_type(), UTXOType::P2SH);
+
+        // redeem_script + witness_script together => nested P2SH-P2WSH, routed to
+        // the P2SH signer (not the native-P2WSH signer).
+        let mut nested = UTXO::new(1, p2pkh_spk(7));
+        nested.redeem_script = Some(ScriptBuf::new());
+        nested.witness_script = Some(ScriptBuf::new());
+        assert_eq!(nested.get_type(), UTXOType::P2SH);
 
         // leaf_script + source_address => taproot script path.
         let mut sps = UTXO::new(1, p2tr_spk(6));

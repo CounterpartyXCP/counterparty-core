@@ -42,7 +42,8 @@ impl Spinner {
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
+/// use counterparty_client::helpers::print_loading;
 /// let spinner = print_loading("Loading data...");
 /// // Do some work
 /// spinner.stop();
@@ -59,7 +60,8 @@ pub fn print_loading(message: &str) -> Spinner {
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
+/// use counterparty_client::helpers::print_colored_json;
 /// let json = serde_json::json!({"name": "John", "age": 30});
 /// print_colored_json(&json).unwrap();
 /// ```
@@ -121,7 +123,8 @@ pub fn print_colored_json(json_value: &Value) -> Result<()> {
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
+/// use counterparty_client::helpers::print_colored_json_list;
 /// let json_vec = vec![
 ///     serde_json::json!({"name": "John", "age": 30}),
 ///     serde_json::json!({"name": "Jane", "age": 25})

@@ -1,5 +1,7 @@
 // Common utility functions for transaction signing across different address types
 
+use std::sync::LazyLock;
+
 use bitcoin::amount::Amount;
 use bitcoin::blockdata::script::PushBytesBuf;
 use bitcoin::psbt::Input as PsbtInput;
@@ -9,6 +11,24 @@ use bitcoin::{CompressedPublicKey, PublicKey, ScriptBuf, TapSighash, Transaction
 
 use super::types::{Result, UTXOType};
 use crate::wallet::WalletError;
+
+/// Process-wide secp256k1 context. Constructing a context randomizes it for
+/// side-channel hardening and is comparatively expensive, so every signer shares
+/// this one rather than building a fresh context per signature.
+static SECP: LazyLock<Secp256k1<bitcoin::secp256k1::All>> = LazyLock::new(Secp256k1::new);
+
+/// Borrow the shared secp256k1 context.
+pub fn secp() -> &'static Secp256k1<bitcoin::secp256k1::All> {
+    &SECP
+}
+
+/// Copy a 32-byte hash (any sighash) into a fixed array. Sighashes are always
+/// 32 bytes, so the slice index never panics.
+fn hash32(hash: impl AsRef<[u8]>) -> [u8; 32] {
+    let mut bytes = [0u8; 32];
+    bytes.copy_from_slice(&hash.as_ref()[..32]);
+    bytes
+}
 
 /// Convert script bytes to PushBytesBuf for script building
 pub fn to_push_bytes(bytes: &[u8]) -> Result<PushBytesBuf> {
@@ -23,10 +43,7 @@ pub fn create_message_from_hash(hash: &[u8]) -> Result<Message> {
 }
 
 pub fn create_message_from_tap_sighash(sighash: TapSighash) -> Result<Message> {
-    let mut sighash_bytes = [0u8; 32];
-    let hash_bytes: &[u8] = sighash.as_ref();
-    sighash_bytes.copy_from_slice(&hash_bytes[0..32]);
-    create_message_from_hash(&sighash_bytes)
+    create_message_from_hash(&hash32(sighash))
 }
 
 /// Create an empty script signature (used in SegWit)
@@ -58,6 +75,24 @@ pub fn encode_ecdsa_signature(
     let mut sig_bytes = sig.serialize_der().to_vec();
     sig_bytes.push(sighash_type as u8);
     sig_bytes
+}
+
+/// Returns true when the raw (serialized) public key appears as a data push in
+/// `script`.
+///
+/// This decides whether a witness/scriptSig must also supply the public key: a
+/// pay-to-pubkey script (`<pubkey> OP_CHECKSIG`) already carries it, whereas a
+/// P2PKH-style script commits only to the pubkey *hash* and needs it on the
+/// stack. Unparsable instructions are skipped (they cannot be the pubkey push).
+pub fn is_pubkey_in_script(script: &ScriptBuf, public_key: &PublicKey) -> bool {
+    let pubkey_bytes = public_key.to_bytes();
+    script.instructions_minimal().flatten().any(|instruction| {
+        matches!(
+            instruction,
+            bitcoin::blockdata::script::Instruction::PushBytes(bytes)
+                if bytes.as_bytes() == pubkey_bytes.as_slice()
+        )
+    })
 }
 
 /// Get an xonly public key from a standard public key
@@ -109,11 +144,7 @@ pub fn compute_legacy_sighash(
             WalletError::BitcoinError(format!("Failed to compute signature hash: {}", e))
         })?;
 
-    // Convert sighash to [u8; 32]
-    let mut bytes = [0u8; 32];
-    let hash_bytes: &[u8] = sighash.as_ref();
-    bytes.copy_from_slice(&hash_bytes[0..32]);
-    Ok(bytes)
+    Ok(hash32(sighash))
 }
 
 /// Computes the signature hash for SegWit inputs (P2WPKH or P2SH-P2WPKH)
@@ -131,11 +162,7 @@ pub fn compute_segwit_sighash(
             WalletError::BitcoinError(format!("Failed to compute signature hash: {}", e))
         })?;
 
-    // Convert sighash to [u8; 32]
-    let mut bytes = [0u8; 32];
-    let hash_bytes: &[u8] = sighash.as_ref();
-    bytes.copy_from_slice(&hash_bytes[0..32]);
-    Ok(bytes)
+    Ok(hash32(sighash))
 }
 
 /// Computes the signature hash for P2WSH inputs
@@ -153,11 +180,7 @@ pub fn compute_p2wsh_sighash(
             WalletError::BitcoinError(format!("Failed to compute signature hash: {}", e))
         })?;
 
-    // Convert sighash to [u8; 32]
-    let mut bytes = [0u8; 32];
-    let hash_bytes: &[u8] = sighash.as_ref();
-    bytes.copy_from_slice(&hash_bytes[0..32]);
-    Ok(bytes)
+    Ok(hash32(sighash))
 }
 
 /// Common function to handle ECDSA signature creation across different address types
@@ -228,11 +251,8 @@ pub fn create_and_verify_ecdsa_signature(
     // Create a message from the sighash
     let message = create_message_from_hash(&sighash)?;
 
-    // Create a secp256k1 context
-    let secp = Secp256k1::new();
-
-    // Sign the message
-    sign_message_ecdsa(&secp, &message, secret_key, public_key, sighash_type)
+    // Sign the message using the shared secp256k1 context
+    sign_message_ecdsa(secp(), &message, secret_key, public_key, sighash_type)
 }
 
 /// Helper to create a Bitcoin error with formatted message
