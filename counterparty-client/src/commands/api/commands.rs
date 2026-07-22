@@ -53,17 +53,47 @@ fn group_endpoints_by_type(endpoints: &HashMap<String, ApiEndpoint>) -> Vec<(Str
     all_commands
 }
 
-// Creates a deduplicated map of function names to endpoints
+/// Order two routes serving the same function so the most "base" one wins:
+/// fewest path segments, then shortest, then lexicographic. Shared by the
+/// CLI-build-time dedup and the execution-time [`find_matching_endpoint`] so
+/// both always pick the *same* route for a function.
+fn route_preference(a: &str, b: &str) -> std::cmp::Ordering {
+    let segments = |p: &str| p.split('/').filter(|s| !s.is_empty()).count();
+    segments(a)
+        .cmp(&segments(b))
+        .then(a.len().cmp(&b.len()))
+        .then(a.cmp(b))
+}
+
+// Creates a deduplicated map of function names to endpoints.
+//
+// A function can be served under several routes with *different* argument sets
+// (e.g. one route in `ROUTE_CATEGORIES_WITHOUT_VERBOSE` omits `verbose`). The
+// CLI arguments for a function are built from whichever route wins here, so it
+// must pick the same base route the request is later executed against
+// (`find_matching_endpoint`) — otherwise which flags exist for a command would
+// flip run-to-run with `HashMap` iteration order.
 fn deduplicate_endpoint_functions(
     endpoints: &HashMap<String, ApiEndpoint>,
 ) -> HashMap<String, ApiEndpoint> {
-    let mut functions = HashMap::new();
+    let mut chosen: HashMap<String, (&String, &ApiEndpoint)> = HashMap::new();
 
-    for endpoint in endpoints.values() {
-        functions.insert(endpoint.function.clone(), endpoint.clone());
+    for (path, endpoint) in endpoints {
+        chosen
+            .entry(endpoint.function.clone())
+            .and_modify(|(best_path, best_ep)| {
+                if route_preference(path, best_path) == std::cmp::Ordering::Less {
+                    *best_path = path;
+                    *best_ep = endpoint;
+                }
+            })
+            .or_insert((path, endpoint));
     }
 
-    functions
+    chosen
+        .into_iter()
+        .map(|(func, (_, endpoint))| (func, endpoint.clone()))
+        .collect()
 }
 
 // Adds a subcommand to the API command
@@ -82,6 +112,40 @@ fn add_subcommand(cmd: Command, func_name: String, endpoint: ApiEndpoint) -> Com
     }
 
     cmd.subcommand(subcmd)
+}
+
+/// Render a JSON scalar (string/number/bool) as the string form the API
+/// expects, or `None` for null / composite values (which have no CLI default).
+fn json_scalar_to_string(value: &serde_json::Value) -> Option<String> {
+    match value {
+        serde_json::Value::String(s) => Some(s.clone()),
+        serde_json::Value::Number(n) => Some(n.to_string()),
+        serde_json::Value::Bool(b) => Some(b.to_string()),
+        _ => None,
+    }
+}
+
+/// The comma-separated allowed values for an enum-style argument (`members`),
+/// or `None` when the argument has no enumerated members.
+fn enum_choices(arg: &ApiEndpointArg) -> Option<String> {
+    let members = arg.members.as_ref()?;
+    let rendered: Vec<String> = members.iter().filter_map(json_scalar_to_string).collect();
+    if rendered.is_empty() {
+        None
+    } else {
+        Some(rendered.join(", "))
+    }
+}
+
+/// Append `note` to a help string in parentheses, e.g. `... (default: true)`.
+fn push_help_note(help: &mut String, note: &str) {
+    if help.is_empty() {
+        help.push_str(note);
+    } else {
+        help.push_str(" (");
+        help.push_str(note);
+        help.push(')');
+    }
 }
 
 // Adds an argument to a command with unique internal ID to prevent name conflicts
@@ -114,13 +178,19 @@ fn add_command_argument(
         .unwrap()
         .insert(id_map_key, arg.name.clone());
 
-    let static_help: &'static str = Box::leak(
-        arg.description
-            .as_deref()
-            .unwrap_or("")
-            .to_string()
-            .into_boxed_str(),
-    );
+    // Surface the server-provided allowed values and default in `--help` (this
+    // metadata was previously parsed but ignored). Kept in the help text rather
+    // than as clap value-parsers so it can't collide with the file-reference /
+    // label-resolution parsers applied later, nor reject an already-valid
+    // server default.
+    let mut help_text = arg.description.as_deref().unwrap_or("").to_string();
+    if let Some(choices) = enum_choices(arg) {
+        push_help_note(&mut help_text, &format!("possible values: {choices}"));
+    }
+    if let Some(default) = arg.default.as_ref().and_then(json_scalar_to_string) {
+        push_help_note(&mut help_text, &format!("default: {default}"));
+    }
+    let static_help: &'static str = Box::leak(help_text.into_boxed_str());
 
     let mut cmd_arg = Arg::new(static_internal_id)
         .long(static_long_flag)
@@ -129,6 +199,12 @@ fn add_command_argument(
     if arg.required {
         cmd_arg = cmd_arg.required(true);
     }
+    // The server default is shown in `--help` above but deliberately NOT wired
+    // in as a clap `default_value`: doing so would make an omitted optional flag
+    // always transmit the default, changing which parameters reach the API
+    // (today an omitted flag is simply not sent, and the server applies its own
+    // default). Surfacing it is a documentation win; forcing it is a behaviour
+    // change.
 
     if arg.arg_type == "bool" {
         // Modified to accept values for boolean arguments
@@ -172,13 +248,7 @@ pub fn find_matching_endpoint<'a>(
         anyhow::bail!("Unknown command: {}", command);
     }
 
-    matching_endpoints.sort_by(|(a, _), (b, _)| {
-        let segments = |p: &str| p.split('/').filter(|s| !s.is_empty()).count();
-        segments(a)
-            .cmp(&segments(b))
-            .then(a.len().cmp(&b.len()))
-            .then(a.as_str().cmp(b.as_str()))
-    });
+    matching_endpoints.sort_by(|(a, _), (b, _)| route_preference(a, b));
 
     Ok(matching_endpoints[0])
 }
@@ -341,6 +411,34 @@ mod tests {
         assert_eq!(deduped.len(), 2);
         assert!(deduped.contains_key("get_address"));
         assert!(deduped.contains_key("get_block"));
+    }
+
+    #[test]
+    fn deduplicate_endpoint_functions_picks_the_same_base_route_as_execution() {
+        // The same function under two routes with *different* arg sets: the base
+        // (fewest-segment) route wins the CLI-build here, matching the route
+        // `find_matching_endpoint` resolves at execution time — so which flags a
+        // command exposes no longer flips with HashMap iteration order. Repeated
+        // to shake out any residual order-dependence.
+        for _ in 0..20 {
+            let mut endpoints = HashMap::new();
+            endpoints.insert(
+                "/v2/transactions/<tx_hash>/info".to_string(),
+                endpoint("info_by_tx_hash", &["tx_hash", "verbose"]),
+            );
+            endpoints.insert(
+                "/v2/bitcoin/transactions/<tx_hash>/info".to_string(),
+                endpoint("info_by_tx_hash", &["tx_hash"]),
+            );
+
+            let deduped = deduplicate_endpoint_functions(&endpoints);
+            let built = &deduped["info_by_tx_hash"];
+            let (exec_path, _) = find_matching_endpoint(&endpoints, "info_by_tx_hash").unwrap();
+            // The CLI-build route and the execution route agree, and it is the
+            // one that carries `verbose`.
+            assert_eq!(exec_path, "/v2/transactions/<tx_hash>/info");
+            assert!(built.args.iter().any(|a| a.name == "verbose"));
+        }
     }
 
     #[test]

@@ -3,12 +3,13 @@ use bitcoin::secp256k1::SecretKey;
 use bitcoin::sighash::SighashCache;
 use bitcoin::ScriptBuf;
 use bitcoin::{PublicKey, Transaction, TxOut};
-use std::str::FromStr;
 
 type WalletError = crate::wallet::WalletError;
 pub type Result<T> = std::result::Result<T, WalletError>;
 
-/// Types of Bitcoin UTXO/addresses supported
+/// Types of Bitcoin UTXO/addresses supported. The live type is inferred from a
+/// UTXO's scriptPubKey and optional scripts via [`UTXO::get_type`]; there is no
+/// string-to-type parsing (the wallet never takes a type name as input).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UTXOType {
     /// Pay to Public Key Hash (legacy addresses)
@@ -25,22 +26,6 @@ pub enum UTXOType {
     P2TRSPS,
     /// Unknown address type
     Unknown,
-}
-
-impl FromStr for UTXOType {
-    type Err = ();
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "p2pkh" => Ok(UTXOType::P2PKH),
-            "p2sh" => Ok(UTXOType::P2SH),
-            "p2wpkh" | "bech32" => Ok(UTXOType::P2WPKH),
-            "p2wsh" => Ok(UTXOType::P2WSH),
-            "p2tr" | "p2tr-kps" => Ok(UTXOType::P2TRKPS),
-            "p2tr-sps" => Ok(UTXOType::P2TRSPS),
-            _ => Ok(UTXOType::Unknown),
-        }
-    }
 }
 
 /// UTXO (Unspent Transaction Output) represents a spendable output
@@ -212,20 +197,6 @@ mod tests {
         let (public, secp) = keys(seed);
         let (xonly, _) = public.inner.x_only_public_key();
         bitcoin::Address::p2tr(&secp, xonly, None, bitcoin::Network::Regtest).script_pubkey()
-    }
-
-    #[test]
-    fn from_str_maps_every_alias_and_defaults_to_unknown() {
-        assert_eq!(UTXOType::from_str("p2pkh").unwrap(), UTXOType::P2PKH);
-        assert_eq!(UTXOType::from_str("P2PKH").unwrap(), UTXOType::P2PKH);
-        assert_eq!(UTXOType::from_str("p2sh").unwrap(), UTXOType::P2SH);
-        assert_eq!(UTXOType::from_str("p2wpkh").unwrap(), UTXOType::P2WPKH);
-        assert_eq!(UTXOType::from_str("bech32").unwrap(), UTXOType::P2WPKH);
-        assert_eq!(UTXOType::from_str("p2wsh").unwrap(), UTXOType::P2WSH);
-        assert_eq!(UTXOType::from_str("p2tr").unwrap(), UTXOType::P2TRKPS);
-        assert_eq!(UTXOType::from_str("p2tr-kps").unwrap(), UTXOType::P2TRKPS);
-        assert_eq!(UTXOType::from_str("p2tr-sps").unwrap(), UTXOType::P2TRSPS);
-        assert_eq!(UTXOType::from_str("nonsense").unwrap(), UTXOType::Unknown);
     }
 
     #[test]

@@ -10,7 +10,7 @@ use super::p2trsps::P2TRSPSSigner;
 use super::p2wpkh::P2WPKHSigner;
 use super::p2wsh::P2WSHSigner;
 use super::psbt::{
-    create_psbt_from_raw, extract_transaction, init_sighash_cache, is_psbt_finalized,
+    create_psbt_from_raw, extract_transaction, init_sighash_cache, input_mut, is_psbt_finalized,
 };
 use super::types::{InputSigner, Result, UTXOList, UTXOType, UTXO};
 use crate::wallet::{AddressInfo, KeyService, WalletError};
@@ -55,7 +55,7 @@ fn sign_input_by_type(
         Some(sign) => {
             sign(
                 sighash_cache,
-                &mut psbt.inputs[input_index],
+                input_mut(psbt, input_index)?,
                 input_index,
                 all_prevouts,
                 secret_key,

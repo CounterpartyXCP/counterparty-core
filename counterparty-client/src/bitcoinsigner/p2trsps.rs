@@ -7,7 +7,7 @@ use bitcoin::{PublicKey, ScriptBuf, Transaction, TxOut, XOnlyPublicKey};
 
 use super::common::{
     create_empty_script_sig, create_message_from_tap_sighash, get_tap_sighash_type,
-    get_xonly_pubkey,
+    get_xonly_pubkey, sign_and_verify_schnorr,
 };
 use super::types::{InputSigner, Result, UTXO};
 use crate::wallet::WalletError;
@@ -81,32 +81,12 @@ fn compute_signature(
 
     // Create a keypair from the secret key (script-path signs with the untweaked
     // key — the tweak lives in the control block, not the signature).
-    let mut keypair = Keypair::from_secret_key(secp, secret_key);
-
-    // Sign with Schnorr (no tweaking for script path)
-    let schnorr_sig = secp.sign_schnorr_no_aux_rand(&message, &keypair);
-
-    // Verify signature locally against the (untweaked) internal key.
+    let keypair = Keypair::from_secret_key(secp, secret_key);
     let xonly_pubkey = XOnlyPublicKey::from_keypair(&keypair).0;
-    let verified = secp
-        .verify_schnorr(&schnorr_sig, &message, &xonly_pubkey)
-        .is_ok();
 
-    // Best-effort wipe of the local secret copy (see the note in `p2trkps`).
-    keypair.non_secure_erase();
-
-    if !verified {
-        return Err(WalletError::SignatureVerificationFailed);
-    }
-
-    // Add sighash type to the signature
-    let signature = bitcoin::taproot::Signature {
-        signature: schnorr_sig,
-        sighash_type,
-    }
-    .serialize();
-
-    Ok(signature.to_vec())
+    // Sign (with aux-rand) against the untweaked internal key, verify, and wipe
+    // the keypair — all in the shared helper.
+    sign_and_verify_schnorr(secp, &message, keypair, &xonly_pubkey, sighash_type)
 }
 
 /// Add the script-path witness stack: `<signature> <script> <control block>`.

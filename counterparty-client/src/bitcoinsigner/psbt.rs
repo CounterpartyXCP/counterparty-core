@@ -35,7 +35,7 @@ pub fn init_sighash_cache(tx: &Transaction) -> SighashCache<&Transaction> {
 
 /// Mutably borrow a PSBT input by index, mapping an out-of-bounds index to a
 /// typed error instead of panicking.
-fn input_mut(psbt: &mut Psbt, index: usize) -> Result<&mut bitcoin::psbt::Input> {
+pub(super) fn input_mut(psbt: &mut Psbt, index: usize) -> Result<&mut bitcoin::psbt::Input> {
     psbt.inputs
         .get_mut(index)
         .ok_or(WalletError::PsbtInputOutOfBounds(index))

@@ -42,6 +42,11 @@ use bitcoin::consensus::deserialize;
 use bitcoin::Network;
 use bitcoin::Transaction;
 
+/// Numeric Counterparty asset ids for the two special assets, mirroring
+/// `ledger.issuances.generate_asset_id`.
+const BTC_ASSET_ID: u64 = 0;
+const XCP_ASSET_ID: u64 = 1;
+
 /// The user's request, resolved to the values the composed transaction must
 /// encode. A `None` field is simply not checked — e.g. the asset name could not
 /// be resolved to an id, or the transaction type carries no single quantity.
@@ -159,12 +164,9 @@ fn unpack_message_type(message: &[u8]) -> Option<(u32, &[u8])> {
 /// is algorithmic, the resulting check does not depend on (and cannot be spoofed
 /// by) the API server.
 pub fn asset_id_for_name(name: &str) -> Option<u64> {
-    const BTC_ID: u64 = 0;
-    const XCP_ID: u64 = 1;
-
     match name {
-        "BTC" => return Some(BTC_ID),
-        "XCP" => return Some(XCP_ID),
+        "BTC" => return Some(BTC_ASSET_ID),
+        "XCP" => return Some(XCP_ASSET_ID),
         _ => {}
     }
 
@@ -318,6 +320,45 @@ pub(crate) fn build_test_classic_send_tx_hex(
     hex::encode(bitcoin::consensus::serialize(&tx))
 }
 
+/// Test-only builder: a plain BTC transfer with **no** Counterparty data
+/// output at all, exactly as `compose_send_btc` produces for a non-dispenser
+/// destination (`data = None`, output = `[(destination, quantity), (change,
+/// source)]`).
+#[cfg(test)]
+pub(crate) fn build_test_plain_btc_send_tx_hex(
+    destination: &bitcoin::Address,
+    quantity: u64,
+    source: &bitcoin::Address,
+    change: u64,
+) -> String {
+    use bitcoin::hashes::Hash as _;
+
+    let tx = Transaction {
+        version: bitcoin::transaction::Version::TWO,
+        lock_time: bitcoin::absolute::LockTime::ZERO,
+        input: vec![bitcoin::TxIn {
+            previous_output: bitcoin::OutPoint {
+                txid: bitcoin::Txid::all_zeros(),
+                vout: 0,
+            },
+            script_sig: bitcoin::ScriptBuf::new(),
+            sequence: bitcoin::Sequence::MAX,
+            witness: bitcoin::Witness::new(),
+        }],
+        output: vec![
+            bitcoin::TxOut {
+                value: bitcoin::Amount::from_sat(quantity),
+                script_pubkey: destination.script_pubkey(),
+            },
+            bitcoin::TxOut {
+                value: bitcoin::Amount::from_sat(change),
+                script_pubkey: source.script_pubkey(),
+            },
+        ],
+    };
+    hex::encode(bitcoin::consensus::serialize(&tx))
+}
+
 /// Test-only builder: a composed-transaction hex carrying a `sweep` (type 4),
 /// obfuscated exactly as the server composer does (RC4 over `CNTRPRTY`, the type
 /// byte `0x04`, and CBOR `[packed_destination, flags, memo]`, keyed by the first
@@ -420,6 +461,14 @@ pub fn verify_composed_transaction(
             }
         }
     };
+
+    // A plain BTC transfer (`asset == "BTC"`) is not a Counterparty message at
+    // all — see `decode::verify_btc_send`. Without this, `extract_message`
+    // reports "no data output found" and the caller (which treats `send` as a
+    // verifiable type) would hard-refuse every ordinary BTC send.
+    if tx_type == "send" && intent.asset_id == Some(BTC_ASSET_ID) {
+        return decode::verify_btc_send(&tx, intent, network);
+    }
 
     let message = match extract::extract_message(&tx) {
         extract::Extracted::Message(m) => m,
@@ -719,6 +768,51 @@ mod tests {
             verify_composed_transaction(&hex, "sweep", &intent, NET),
             Verification::Match
         );
+    }
+
+    // ---- HIGH regression: a plain BTC send must never be hard-refused ----
+
+    #[test]
+    fn plain_btc_send_with_no_data_output_verifies_instead_of_being_refused() {
+        // Before the fix, `send --asset BTC` (no dispenser) always produced a
+        // transaction with no OP_RETURN, which `extract_message` reported as
+        // `Unsupported`, and since "send" is a verifiable type the caller would
+        // hard-refuse to sign — every plain BTC send was broken.
+        let dest = wpkh_addr(0x11);
+        let source = wpkh_addr(0x33);
+        let hex = build_test_plain_btc_send_tx_hex(&dest, 5000, &source, 9000);
+        let intent = Intent {
+            asset_id: Some(0), // BTC
+            quantity: Some(5000),
+            destination: Some(dest.to_string()),
+            source: Some(source.to_string()),
+            flags: None,
+        };
+        assert_eq!(
+            verify_composed_transaction(&hex, "send", &intent, NET),
+            Verification::Match
+        );
+    }
+
+    #[test]
+    fn plain_btc_send_wrong_amount_is_a_mismatch_not_unverifiable() {
+        let dest = wpkh_addr(0x11);
+        let attacker_amount_source = wpkh_addr(0x33);
+        let hex = build_test_plain_btc_send_tx_hex(&dest, 1, &attacker_amount_source, 9000);
+        let intent = Intent {
+            asset_id: Some(0),
+            quantity: Some(5000),
+            destination: Some(dest.to_string()),
+            source: Some(attacker_amount_source.to_string()),
+            flags: None,
+        };
+        assert!(matches!(
+            verify_composed_transaction(&hex, "send", &intent, NET),
+            Verification::Mismatch {
+                field: "destination",
+                ..
+            }
+        ));
     }
 
     #[test]

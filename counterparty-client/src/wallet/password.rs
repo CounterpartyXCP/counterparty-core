@@ -164,10 +164,16 @@ impl PasswordManager {
         let _ = self.delete_from_keyring();
     }
 
-    /// Clear the password from the keyring and cache
+    /// Clear the password from the keyring and cache. Used by `wallet
+    /// disconnect`, which must always succeed — so, like [`forget`](Self::forget),
+    /// the in-memory cache is cleared first (infallible) and the keyring delete
+    /// is best-effort. A keyring backend that is unavailable (e.g. no Secret
+    /// Service on a headless server — exactly the situation `disconnect` is
+    /// more likely to be reached for) must not turn "disconnect" into a
+    /// reported failure.
     pub fn clear_password(&self) -> Result<()> {
-        self.delete_from_keyring()?;
         self.remove_from_cache();
+        let _ = self.delete_from_keyring();
         Ok(())
     }
 
@@ -343,6 +349,19 @@ mod tests {
         // A non-empty value is taken verbatim.
         let got = password_from_env_value(Some("correct horse battery".to_string())).unwrap();
         assert_eq!(got.expose_secret(), "correct horse battery");
+    }
+
+    #[test]
+    fn clear_password_empties_cache_and_returns_ok() {
+        // Cache-only mode can't simulate a *real* keyring deletion failure (see
+        // the module note above), but this still guards the ordering fix: the
+        // cache must be cleared (and `Ok` returned) unconditionally, not only
+        // when the keyring delete happens to succeed.
+        let pm = PasswordManager::new_cache_only(Network::Regtest, "wallet-clear");
+        pm.cache_for_test("somepassword1");
+        assert!(pm.is_cached());
+        assert!(pm.clear_password().is_ok());
+        assert!(!pm.is_cached());
     }
 
     #[test]

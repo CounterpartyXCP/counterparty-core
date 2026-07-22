@@ -1,7 +1,7 @@
-// Module for Bitcoin transaction signing
-//
-// This module provides functionality for signing Bitcoin transactions
-// using various address types (P2PKH, P2WPKH, P2SH, P2WSH, P2TR)
+//! Module for Bitcoin transaction signing
+//!
+//! This module provides functionality for signing Bitcoin transactions
+//! using various address types (P2PKH, P2WPKH, P2SH, P2WSH, P2TR)
 
 pub mod common;
 pub mod p2pkh;

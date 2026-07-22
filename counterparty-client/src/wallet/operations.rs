@@ -116,6 +116,22 @@ impl BitcoinWallet {
             None => format!("address{}", self.addresses.len() + 1),
         };
 
+        // Labels double as `--address`/`--destination` aliases, so they must be
+        // unambiguous: reject a label already used by a different address rather
+        // than let it resolve to a HashMap-iteration-order-dependent (i.e.
+        // non-deterministic) address on a later command. Re-importing the *same*
+        // address keeps its existing label, so that is not a collision.
+        if let Some((existing_addr, _)) = self
+            .addresses
+            .iter()
+            .find(|(addr, info)| info.label == final_label && *addr != &address_str)
+        {
+            return Err(WalletError::Validation(format!(
+                "label '{final_label}' is already used by address {existing_addr}; \
+                 choose a different --label."
+            )));
+        }
+
         // Store the address information
         let address_info = AddressInfo {
             public_key: key_data.public_key.to_string(),
@@ -380,6 +396,32 @@ mod tests {
         assert!(labels.contains(&"savings".to_string()));
         // The third address is numbered by the current wallet size (3).
         assert!(labels.contains(&"address3".to_string()));
+    }
+
+    #[test]
+    fn duplicate_label_on_a_different_address_is_rejected() {
+        let (mut w, _dir) = wallet();
+        w.add_address(None, None, None, Some("cold"), None).unwrap();
+        // A second, different address reusing the same label must be refused, so
+        // `--address cold` can never resolve ambiguously.
+        let err = w
+            .add_address(None, None, None, Some("cold"), None)
+            .unwrap_err();
+        assert!(err.to_string().contains("already used"), "got: {err}");
+        // Only the first address was stored.
+        assert_eq!(w.list_addresses().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn reimporting_the_same_address_keeps_its_label_without_a_collision() {
+        // Re-importing the identical key/label is idempotent, not a collision.
+        let (mut w, _dir) = wallet();
+        let wif = regtest_wif(3);
+        w.add_address(Some(&wif), None, None, Some("savings"), None)
+            .unwrap();
+        w.add_address(Some(&wif), None, None, Some("savings"), None)
+            .unwrap();
+        assert_eq!(w.list_addresses().unwrap().len(), 1);
     }
 
     #[test]

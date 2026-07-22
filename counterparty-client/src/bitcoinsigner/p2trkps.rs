@@ -7,7 +7,7 @@ use bitcoin::{PublicKey, ScriptBuf, Transaction, TxOut};
 
 use super::common::{
     create_empty_script_sig, create_message_from_tap_sighash, get_tap_sighash_type,
-    get_xonly_pubkey,
+    get_xonly_pubkey, sign_and_verify_schnorr,
 };
 use super::types::{InputSigner, Result, UTXO};
 use crate::wallet::WalletError;
@@ -64,37 +64,31 @@ fn compute_signature(
     let message = create_message_from_tap_sighash(sighash)?;
 
     // Create a keypair from the secret key and apply the BIP341 key-path tweak
-    // (empty merkle root, matching `ensure_keypath_output_matches`).
-    let keypair = Keypair::from_secret_key(secp, secret_key);
+    // (empty merkle root, matching `ensure_keypath_output_matches`). `Keypair`
+    // is `Copy`, so `tap_tweak` copies it in and leaves `keypair` valid — we
+    // wipe that untweaked copy below; the helper wipes the signing copy.
+    let mut keypair = Keypair::from_secret_key(secp, secret_key);
     let tweaked_keypair = keypair.tap_tweak(secp, None);
-    let mut signing_keypair = tweaked_keypair.to_keypair();
-
-    // Sign with Schnorr
-    let schnorr_sig = secp.sign_schnorr_no_aux_rand(&message, &signing_keypair);
-
-    // Verify the signature against the tweaked output key before returning.
+    let signing_keypair = tweaked_keypair.to_keypair();
     let (output_key, _) = tweaked_keypair.public_parts();
-    let verified = secp
-        .verify_schnorr(&schnorr_sig, &message, &output_key.to_x_only_public_key())
-        .is_ok();
 
-    // Best-effort wipe of the local secret copy. secp256k1's `Keypair` is `Copy`
-    // and not zeroize-on-drop, so this only clears the stack copies we hold here;
-    // transient copies made inside signing are out of reach.
-    signing_keypair.non_secure_erase();
-
-    if !verified {
-        return Err(WalletError::SignatureVerificationFailed);
-    }
-
-    // Add sighash type
-    let taproot_signature = bitcoin::taproot::Signature {
-        signature: schnorr_sig,
+    // Sign (with aux-rand), verify against the tweaked output key, and wipe the
+    // signing keypair — all in the shared helper.
+    let signature = sign_and_verify_schnorr(
+        secp,
+        &message,
+        signing_keypair,
+        &output_key.to_x_only_public_key(),
         sighash_type,
-    }
-    .serialize();
+    );
 
-    Ok(taproot_signature.to_vec())
+    // Best-effort wipe of the remaining local secret copy (the untweaked
+    // keypair). secp256k1's `Keypair` is `Copy` and not zeroize-on-drop, so this
+    // clears the stack copies we hold; transient copies inside signing are out
+    // of reach.
+    keypair.non_secure_erase();
+
+    signature
 }
 
 /// Add key path spending witness

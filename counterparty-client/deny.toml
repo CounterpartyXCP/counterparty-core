@@ -42,6 +42,15 @@ multiple-versions = "warn"
 # A `*` version requirement pins nothing and lets an unvetted release in on the
 # next update; there are none today, so fail the build if one ever appears.
 wildcards = "deny"
+# The "no OpenSSL/native-tls" supply-chain guarantee (see reqwest's
+# `default-features = false` + `rustls` in Cargo.toml) is otherwise only
+# enforced by feature selection, which a future dependency bump could silently
+# undo. Fail the build outright if any of these ever re-enter the tree.
+deny = [
+    { name = "openssl" },
+    { name = "openssl-sys" },
+    { name = "native-tls" },
+]
 
 [sources]
 # Only crates.io is an allowed source; an unexpected git or alternate registry

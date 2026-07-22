@@ -6,7 +6,7 @@ use bitcoin::amount::Amount;
 use bitcoin::blockdata::script::{Builder, PushBytesBuf};
 use bitcoin::opcodes::all::OP_CHECKSIG;
 use bitcoin::psbt::Input as PsbtInput;
-use bitcoin::secp256k1::{Message, Secp256k1, SecretKey};
+use bitcoin::secp256k1::{Keypair, Message, Secp256k1, SecretKey};
 use bitcoin::sighash::{EcdsaSighashType, SighashCache, TapSighashType};
 use bitcoin::{CompressedPublicKey, PublicKey, ScriptBuf, TapSighash, Transaction, XOnlyPublicKey};
 
@@ -148,6 +148,44 @@ pub fn get_xonly_pubkey(public_key: &PublicKey) -> Result<XOnlyPublicKey> {
 pub fn get_compressed_pubkey(public_key: &PublicKey) -> Result<CompressedPublicKey> {
     CompressedPublicKey::from_slice(&public_key.to_bytes())
         .map_err(|e| WalletError::BitcoinError(format!("Invalid public key: {}", e)))
+}
+
+/// Produce a BIP340 Schnorr signature for a taproot input: sign `message` with
+/// `signing_keypair`, verify it against `verify_xonly` before returning, and
+/// best-effort wipe the signing keypair. Shared by the key-path and script-path
+/// signers so the sign/verify/erase/serialize sequence lives in one place.
+///
+/// Uses randomized aux-rand (`sign_schnorr`, requires the `rand-std` feature):
+/// BIP340 mixes auxiliary randomness into nonce generation as defense in depth
+/// against fault-injection and RNG-failure attacks. The nonce is still bound to
+/// (key, message), so there is no cross-message nonce reuse regardless.
+pub fn sign_and_verify_schnorr(
+    secp: &Secp256k1<bitcoin::secp256k1::All>,
+    message: &Message,
+    mut signing_keypair: Keypair,
+    verify_xonly: &XOnlyPublicKey,
+    sighash_type: TapSighashType,
+) -> Result<Vec<u8>> {
+    let schnorr_sig = secp.sign_schnorr(message, &signing_keypair);
+
+    let verified = secp
+        .verify_schnorr(&schnorr_sig, message, verify_xonly)
+        .is_ok();
+
+    // Wipe the local secret copy before returning (best-effort; see the module
+    // note in the taproot signers).
+    signing_keypair.non_secure_erase();
+
+    if !verified {
+        return Err(WalletError::SignatureVerificationFailed);
+    }
+
+    let taproot_signature = bitcoin::taproot::Signature {
+        signature: schnorr_sig,
+        sighash_type,
+    }
+    .serialize();
+    Ok(taproot_signature.to_vec())
 }
 
 /// Signs a message with ECDSA and returns the signature bytes

@@ -301,10 +301,13 @@ fn create_private_file_exclusive(path: &Path) -> Result<fs::File> {
     }
     #[cfg(not(unix))]
     {
-        Ok(fs::OpenOptions::new()
+        let file = fs::OpenOptions::new()
             .write(true)
             .create_new(true)
-            .open(path)?)
+            .open(path)?;
+        #[cfg(windows)]
+        restrict_to_current_user(path);
+        Ok(file)
     }
 }
 
@@ -322,21 +325,56 @@ fn create_private_dir_all(dir: &Path) -> Result<()> {
     #[cfg(not(unix))]
     {
         fs::create_dir_all(dir)?;
+        #[cfg(windows)]
+        restrict_to_current_user(dir);
     }
     Ok(())
 }
 
-/// Restrict a directory to owner-only (0700) on Unix. Best-effort.
+/// Restrict a directory to owner-only on Unix (0700) or the current user on
+/// Windows. Best-effort.
 fn restrict_dir_permissions(dir: &Path) {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         let _ = fs::set_permissions(dir, fs::Permissions::from_mode(0o700));
     }
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    {
+        restrict_to_current_user(dir);
+    }
+    #[cfg(not(any(unix, windows)))]
     {
         let _ = dir;
     }
+}
+
+/// Best-effort: restrict `path` (a file or directory) to the current user
+/// only, mirroring the Unix 0600/0700 hardening applied elsewhere in this
+/// module. Shells out to `icacls` (bundled with every supported Windows
+/// release) rather than hand-rolling the Win32 ACL APIs:
+/// `/inheritance:r` strips inherited ACEs and `/grant:r <user>:(F)` grants full
+/// control to the current user only.
+///
+/// Unlike the Unix path (which creates the file/directory with the final mode
+/// atomically via `O_EXCL`/`DirBuilder::mode`), this necessarily runs *after*
+/// creation — a plain `OpenOptions`/`create_dir_all` has no Windows equivalent
+/// of a create-time ACL — so it narrows the default inherited ACL rather than
+/// guaranteeing no broader-permission window ever existed. Never fails the
+/// caller: a missing `icacls` or an ACL error just means this extra hardening
+/// did not apply, same as before it existed.
+#[cfg(windows)]
+fn restrict_to_current_user(path: &Path) {
+    let username = match std::env::var("USERNAME") {
+        Ok(u) if !u.is_empty() => u,
+        _ => return,
+    };
+    let _ = std::process::Command::new("icacls")
+        .arg(path)
+        .arg("/inheritance:r")
+        .arg("/grant:r")
+        .arg(format!("{username}:(F)"))
+        .output();
 }
 
 #[cfg(test)]

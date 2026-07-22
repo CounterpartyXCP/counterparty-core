@@ -22,7 +22,11 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.44", features = ["full"] }
 hex = "0.4.3"
-bitcoin = "0.32.5"
+# `rand-std` makes the shared secp256k1 context (bitcoinsigner/common.rs)
+# actually randomized against side-channel attacks (Secp256k1::new()'s
+# randomization branch is otherwise compiled out), and unlocks BIP340
+# aux-rand for Schnorr signing (see the taproot signers).
+bitcoin = { version = "0.32.5", features = ["rand-std"] }
 bip39 = { version = "2.2", features = ["zeroize"] }
 cocoon = "0.4"
 thiserror = "2.0"

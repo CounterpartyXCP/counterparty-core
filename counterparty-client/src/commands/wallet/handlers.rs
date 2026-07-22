@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use clap::ArgMatches;
+use zeroize::Zeroizing;
 
 use std::collections::HashMap;
 use std::io::{self, IsTerminal, Write};
@@ -38,11 +39,23 @@ pub fn handle_new_address(wallet: &mut BitcoinWallet, sub_matches: &ArgMatches) 
     Ok(())
 }
 
+/// A private key (WIF) or mnemonic to import, held in a [`Zeroizing`] buffer so
+/// our owned copy is wiped from memory when dropped rather than lingering on the
+/// heap. (A value supplied via a plain `--private-key`/`--mnemonic` flag still
+/// also lives in clap's `ArgMatches` for the process lifetime and in the shell
+/// history / process list — prefer the `@<file>` form or the no-echo prompt.)
+type Secret = Zeroizing<String>;
+
 /// Handle the import_address subcommand - imports an existing key
 pub fn handle_import_address(wallet: &mut BitcoinWallet, sub_matches: &ArgMatches) -> Result<()> {
-    // Extract parameters. The secret flags support the safe `@<file>` form.
-    let flag_private_key = sub_matches.get_one::<String>("private_key").cloned();
-    let flag_mnemonic = sub_matches.get_one::<String>("mnemonic").cloned();
+    // Extract parameters. The secret flags support the safe `@<file>` form; wrap
+    // our copy in `Zeroizing` so it is scrubbed on drop.
+    let flag_private_key = sub_matches
+        .get_one::<String>("private_key")
+        .map(|s| Zeroizing::new(s.clone()));
+    let flag_mnemonic = sub_matches
+        .get_one::<String>("mnemonic")
+        .map(|s| Zeroizing::new(s.clone()));
     let path = sub_matches.get_one::<String>("path").map(|s| s.as_str());
     let label = sub_matches.get_one::<String>("label").map(|s| s.as_str());
     let address_type = sub_matches
@@ -55,11 +68,12 @@ pub fn handle_import_address(wallet: &mut BitcoinWallet, sub_matches: &ArgMatche
     let (private_key, mnemonic) =
         resolve_import_secret(flag_private_key, flag_mnemonic, io::stdin().is_terminal())?;
 
-    // Call the wallet function (imported keys never return a mnemonic).
+    // Call the wallet function (imported keys never return a mnemonic). The
+    // secrets stay in their `Zeroizing` buffers until dropped at end of scope.
     let (address, _) = wallet
         .add_address(
-            private_key.as_deref(),
-            mnemonic.as_deref(),
+            private_key.as_ref().map(|s| s.as_str()),
+            mnemonic.as_ref().map(|s| s.as_str()),
             path,
             label,
             address_type,
@@ -76,10 +90,10 @@ pub fn handle_import_address(wallet: &mut BitcoinWallet, sub_matches: &ArgMatche
 /// clear error instead. `interactive` is threaded in (rather than read here) so
 /// this is unit-testable without depending on the ambient terminal.
 fn resolve_import_secret(
-    flag_private_key: Option<String>,
-    flag_mnemonic: Option<String>,
+    flag_private_key: Option<Secret>,
+    flag_mnemonic: Option<Secret>,
     interactive: bool,
-) -> Result<(Option<String>, Option<String>)> {
+) -> Result<(Option<Secret>, Option<Secret>)> {
     match (flag_private_key, flag_mnemonic) {
         (None, None) => {
             if interactive {
@@ -97,8 +111,9 @@ fn resolve_import_secret(
 
 /// Prompt (without echo) for a private key or mnemonic to import. A value with
 /// whitespace is treated as a BIP39 mnemonic; a single token as a WIF private
-/// key. Returns `(private_key, mnemonic)` for `add_address`.
-fn prompt_import_secret() -> Result<(Option<String>, Option<String>)> {
+/// key. Returns `(private_key, mnemonic)` for `add_address`, each in a
+/// [`Zeroizing`] buffer.
+fn prompt_import_secret() -> Result<(Option<Secret>, Option<Secret>)> {
     helpers::print_warning(
         "Enter a private key (WIF) or a BIP39 mnemonic phrase. Input is hidden.",
         None,
@@ -106,10 +121,14 @@ fn prompt_import_secret() -> Result<(Option<String>, Option<String>)> {
     print!("Secret: ");
     io::stdout().flush().ok();
 
-    let secret = rpassword::read_password()
-        .map_err(|e| anyhow!("Failed to read secret: {}", e))?
-        .trim()
-        .to_string();
+    // `rpassword` returns a plain `String`; move it straight into a `Zeroizing`
+    // buffer and trim in place so the untrimmed copy is scrubbed too.
+    let secret = Zeroizing::new(
+        rpassword::read_password()
+            .map_err(|e| anyhow!("Failed to read secret: {}", e))?
+            .trim()
+            .to_string(),
+    );
 
     if secret.is_empty() {
         return Err(anyhow!("No secret entered"));
@@ -308,9 +327,13 @@ pub async fn handle_address_balances(config: &AppConfig, sub_matches: &ArgMatche
             helpers::print_colored_json(&serde_json::Value::Object(combined_result))?;
         }
     } else if let Some(error) = cp_result.get("error") {
-        helpers::print_error("API error:", Some(&error.to_string()));
+        // Surface as a returned error (non-zero exit), matching
+        // `execute_api_command`'s convention, instead of printing and
+        // returning `Ok` — otherwise a script checking `$?` after
+        // `wallet address_balances` cannot detect a failed lookup.
+        return Err(anyhow!("API error: {}", error));
     } else {
-        helpers::print_error("Unexpected API response format", None);
+        return Err(anyhow!("Unexpected API response format"));
     }
 
     Ok(())
@@ -402,14 +425,20 @@ mod tests {
     fn resolve_import_secret_passes_flags_through() {
         // A supplied flag is returned as-is and never triggers a prompt (so this
         // is safe to run even with `interactive = true`).
-        let (pk, mn) = resolve_import_secret(Some("cWifValue".to_string()), None, true).unwrap();
-        assert_eq!(pk.as_deref(), Some("cWifValue"));
+        let (pk, mn) =
+            resolve_import_secret(Some(Zeroizing::new("cWifValue".to_string())), None, true)
+                .unwrap();
+        assert_eq!(pk.as_ref().map(|s| s.as_str()), Some("cWifValue"));
         assert!(mn.is_none());
 
-        let (pk2, mn2) =
-            resolve_import_secret(None, Some("word word word".to_string()), true).unwrap();
+        let (pk2, mn2) = resolve_import_secret(
+            None,
+            Some(Zeroizing::new("word word word".to_string())),
+            true,
+        )
+        .unwrap();
         assert!(pk2.is_none());
-        assert_eq!(mn2.as_deref(), Some("word word word"));
+        assert_eq!(mn2.as_ref().map(|s| s.as_str()), Some("word word word"));
     }
 
     #[test]
@@ -517,10 +546,11 @@ mod tests {
             .await;
 
         let config = config_for(&server);
-        // The handler surfaces the API error to the user but still returns Ok.
-        handle_address_balances(&config, &balances_cmd(addr))
+        // The handler surfaces the API error as a returned `Err` (non-zero
+        // exit), not a silent `Ok`.
+        assert!(handle_address_balances(&config, &balances_cmd(addr))
             .await
-            .unwrap();
+            .is_err());
     }
 
     #[tokio::test]

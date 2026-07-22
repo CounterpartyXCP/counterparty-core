@@ -110,11 +110,23 @@ pub fn print_colored_json(json_value: &Value) -> Result<()> {
         .find_syntax_by_extension("yaml")
         .unwrap_or_else(|| syntax_set.find_syntax_plain_text());
 
-    // Use the first available theme or fallback to a default
+    // Use the first available theme, falling back to whatever else is bundled.
     let theme = theme_set
         .themes
         .get("InspiredGitHub")
-        .unwrap_or_else(|| theme_set.themes.get("Solarized (dark)").unwrap());
+        .or_else(|| theme_set.themes.get("Solarized (dark)"))
+        .or_else(|| theme_set.themes.values().next());
+
+    let Some(theme) = theme else {
+        // No bundled theme at all (unreachable with syntect's default theme
+        // set today, but a future syntect bump could change that) — degrade to
+        // uncoloured output rather than panicking.
+        let mut stdout = StandardStream::stdout(stdout_color_choice());
+        for line in yaml_str.lines() {
+            let _ = writeln!(stdout, "{}", line);
+        }
+        return Ok(());
+    };
 
     let mut highlighter = HighlightLines::new(syntax, theme);
 

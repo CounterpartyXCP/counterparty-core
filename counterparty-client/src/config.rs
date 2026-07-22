@@ -3,6 +3,39 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+/// Whether `url`'s host is a loopback address (`localhost`, `127.0.0.0/8`, or
+/// `[::1]`), so the cleartext-HTTP exemption for regtest applies only to a
+/// genuinely local endpoint. Anything else — including a URL that fails to
+/// parse a host — is treated as non-local (fail safe: require TLS).
+fn is_local_url(url: &str) -> bool {
+    // Strip scheme, then any userinfo, then take the authority up to the first
+    // '/', '?' or '#'.
+    let after_scheme = url.split("://").nth(1).unwrap_or(url);
+    let authority = after_scheme
+        .split(['/', '?', '#'])
+        .next()
+        .unwrap_or(after_scheme);
+    let host_port = authority.rsplit('@').next().unwrap_or(authority);
+
+    // IPv6 literal: `[::1]:port`.
+    let host = if let Some(rest) = host_port.strip_prefix('[') {
+        match rest.split_once(']') {
+            Some((h, _)) => h,
+            None => return false,
+        }
+    } else {
+        host_port.split(':').next().unwrap_or(host_port)
+    };
+
+    if host.eq_ignore_ascii_case("localhost") || host == "::1" {
+        return true;
+    }
+    match host.parse::<std::net::IpAddr>() {
+        Ok(ip) => ip.is_loopback(),
+        Err(_) => false,
+    }
+}
+
 /// A Bitcoin network the client can target. The default is [`Network::Mainnet`].
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
@@ -267,11 +300,19 @@ impl AppConfig {
     }
 
     /// Whether the active network must use TLS. Every public network requires
-    /// `https://`; only local regtest is exempt (it talks to `localhost`). Used
-    /// to build an `https_only` HTTP client and to hard-fail a cleartext API URL
-    /// before any request is sent.
+    /// `https://`. Regtest is exempt *only* while it actually talks to a local
+    /// host — the exemption is keyed on the configured API/endpoints host, not
+    /// on the network name, so a `config.toml` that repoints regtest at a remote
+    /// `http://` host is still forced onto TLS (closing the MITM hole for a
+    /// repointed regtest, the same one `ensure_secure_transport` closes for the
+    /// public networks). Used to build an `https_only` HTTP client and to
+    /// hard-fail a cleartext API URL before any request is sent.
     pub fn require_https(&self) -> bool {
-        self.network != Network::Regtest
+        if self.network != Network::Regtest {
+            return true;
+        }
+        // Regtest, but only exempt if both URLs are local.
+        !(is_local_url(&self.get_api_url()) && is_local_url(&self.get_endpoints_url()))
     }
 
     /// The active network's endpoint-manifest URL.
@@ -525,6 +566,39 @@ mod tests {
         // don't silently inherit the one-off flag.
         let written: AppConfig = toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
         assert_eq!(written.network, Network::Mainnet);
+    }
+
+    #[test]
+    fn is_local_url_recognises_loopback_hosts_only() {
+        assert!(is_local_url("http://localhost:24000"));
+        assert!(is_local_url("http://localhost:24000/v2/routes"));
+        assert!(is_local_url("http://127.0.0.1:24000"));
+        assert!(is_local_url("http://127.5.6.7:24000")); // 127.0.0.0/8 loopback
+        assert!(is_local_url("http://[::1]:24000/v2/routes"));
+        assert!(is_local_url("https://LOCALHOST:24000"));
+        // Non-loopback hosts are not local.
+        assert!(!is_local_url("http://evil.example:24000"));
+        assert!(!is_local_url("http://10.0.0.5:24000"));
+        assert!(!is_local_url("http://127.0.0.1.evil.com:24000"));
+        assert!(!is_local_url("http://user@evil.example/localhost"));
+    }
+
+    #[test]
+    fn require_https_regtest_exemption_is_keyed_on_a_local_host() {
+        let mut cfg = AppConfig::new();
+        // Default regtest points at localhost -> exempt.
+        cfg.set_network(Network::Regtest);
+        assert!(!cfg.require_https());
+
+        // Repoint regtest at a remote cleartext host -> TLS is required again.
+        let nc = cfg.network_configs.get_mut(&Network::Regtest).unwrap();
+        nc.api_url = "http://evil.example:24000".to_string();
+        nc.endpoints_url = "http://evil.example:24000/v2/routes".to_string();
+        assert!(cfg.require_https());
+
+        // Public networks always require TLS regardless of host.
+        cfg.set_network(Network::Mainnet);
+        assert!(cfg.require_https());
     }
 
     // A config file that exists but is not valid TOML is a hard error, never a

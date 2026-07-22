@@ -177,6 +177,35 @@ pub fn verify_btc_recipients(tx: &Transaction, intent: &Intent, network: Network
     Verification::Match
 }
 
+/// A plain BTC transfer (`wallet transaction send --asset BTC`) carries no
+/// Counterparty payload at all: `compose_send`'s `compose_send_btc` path
+/// produces either an ordinary Bitcoin transaction with no data output, or —
+/// when the destination is a live dispenser — one with a dispense-trigger
+/// data output that itself carries no asset/quantity/destination fields.
+/// Verify the requested destination/quantity directly against the
+/// transaction's outputs instead of expecting a `send`/`enhanced_send`/`sweep`
+/// message, which would otherwise either refuse every plain BTC send outright
+/// (no data output to decode) or reject a legitimate dispense trigger as a
+/// message-type mismatch (its type is neither 0, 2 nor 4).
+pub fn verify_btc_send(tx: &Transaction, intent: &Intent, network: Network) -> Verification {
+    if let (Some(dest), Some(qty)) = (&intent.destination, intent.quantity) {
+        let want = normalize_address(dest, network);
+        let paid = tx.output.iter().any(|out| {
+            !out.script_pubkey.is_op_return()
+                && out.value.to_sat() == qty
+                && output_address(out, network).as_deref() == Some(want.as_str())
+        });
+        if !paid {
+            return Verification::Mismatch {
+                field: "destination",
+                requested: format!("{qty} sats to {want}"),
+                composed: "no output pays this address the requested amount".to_string(),
+            };
+        }
+    }
+    verify_btc_recipients(tx, intent, network)
+}
+
 /// `enhanced_send` (type 2), modern CBOR form:
 /// `[asset_id, quantity, packed_destination, memo]`.
 pub fn verify_enhanced_send(body: &[u8], intent: &Intent, network: Network) -> Verification {
@@ -584,6 +613,94 @@ mod tests {
         };
         assert!(matches!(
             verify_btc_recipients(&tx, &intent, NET),
+            Verification::Mismatch {
+                field: "btc_output",
+                ..
+            }
+        ));
+    }
+
+    // ---- verify_btc_send (plain BTC transfer, no Counterparty payload) ----
+
+    #[test]
+    fn btc_send_matches_a_plain_transfer_with_no_data_output() {
+        // No OP_RETURN at all: exactly what `compose_send_btc` produces for a
+        // non-dispenser destination. Must verify, not be treated as
+        // unverifiable/refused.
+        let dest = wpkh_addr(0x11);
+        let source = wpkh_addr(0x33);
+        let tx = tx_with_outputs(vec![
+            value_output(&dest, 5000),
+            value_output(&source, 9000), // change
+        ]);
+        let intent = Intent {
+            quantity: Some(5000),
+            destination: Some(dest.to_string()),
+            source: Some(source.to_string()),
+            ..Default::default()
+        };
+        assert_eq!(verify_btc_send(&tx, &intent, NET), Verification::Match);
+    }
+
+    #[test]
+    fn btc_send_matches_a_dispense_trigger_with_a_data_output() {
+        // A BTC send to a live dispenser carries a dispense-trigger OP_RETURN
+        // that is not a `send`/`enhanced_send`/`sweep` payload; `verify_btc_send`
+        // must still verify the BTC flow without trying to decode it.
+        let dest = wpkh_addr(0x11);
+        let source = wpkh_addr(0x33);
+        let tx = tx_with_outputs(vec![
+            value_output(&dest, 5000),
+            op_return_output(),
+            value_output(&source, 9000),
+        ]);
+        let intent = Intent {
+            quantity: Some(5000),
+            destination: Some(dest.to_string()),
+            source: Some(source.to_string()),
+            ..Default::default()
+        };
+        assert_eq!(verify_btc_send(&tx, &intent, NET), Verification::Match);
+    }
+
+    #[test]
+    fn btc_send_detects_wrong_amount() {
+        let dest = wpkh_addr(0x11);
+        let source = wpkh_addr(0x33);
+        let tx = tx_with_outputs(vec![value_output(&dest, 1), value_output(&source, 9000)]);
+        let intent = Intent {
+            quantity: Some(5000), // requested 5000, paid 1
+            destination: Some(dest.to_string()),
+            source: Some(source.to_string()),
+            ..Default::default()
+        };
+        assert!(matches!(
+            verify_btc_send(&tx, &intent, NET),
+            Verification::Mismatch {
+                field: "destination",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn btc_send_detects_diverted_change() {
+        // Correct destination/amount, but the change leaks to a third party.
+        let dest = wpkh_addr(0x11);
+        let source = wpkh_addr(0x33);
+        let attacker = wpkh_addr(0x44);
+        let tx = tx_with_outputs(vec![
+            value_output(&dest, 5000),
+            value_output(&attacker, 9000),
+        ]);
+        let intent = Intent {
+            quantity: Some(5000),
+            destination: Some(dest.to_string()),
+            source: Some(source.to_string()),
+            ..Default::default()
+        };
+        assert!(matches!(
+            verify_btc_send(&tx, &intent, NET),
             Verification::Mismatch {
                 field: "btc_output",
                 ..

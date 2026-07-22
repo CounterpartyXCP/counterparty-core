@@ -11,9 +11,9 @@
 //!   * the transaction re-serializes and re-parses cleanly.
 //!
 //! For the single-key ECDSA cases (P2PKH, P2WPKH, both P2WSH shapes, legacy
-//! P2SH, nested P2SH-P2WSH) we additionally *independently* re-derive the
-//! sighash from the signed transaction and verify the produced signature against
-//! the input's script/pubkey with `secp256k1`.
+//! P2SH, nested P2SH-P2WSH, and P2SH-P2WPKH) we additionally *independently*
+//! re-derive the sighash from the signed transaction and verify the produced
+//! signature against the input's script/pubkey with `secp256k1`.
 //!
 //! Coverage: P2PKH, P2WPKH, P2SH (legacy), P2SH-P2WPKH, P2SH-P2WSH (nested),
 //! P2WSH (pay-to-pubkey and pay-to-pubkey-hash), P2TR key-path, P2TR script-path,
@@ -374,6 +374,26 @@ fn signs_p2sh_p2wpkh_input() {
     );
     let witness: Vec<&[u8]> = parsed.input[0].witness.iter().collect();
     assert_eq!(witness.len(), 2, "witness = <sig> <pubkey>");
+
+    // Independent spendability check: BIP143 sighash over the P2WPKH redeem
+    // program (the wrapped witness program), verified against the pushed pubkey.
+    let redeem = ScriptBuf::new_p2wpkh(&cpk.wpubkey_hash());
+    let (sig_bytes, pk_bytes) = (witness[0], witness[1]);
+    let secp = Secp256k1::new();
+    let mut cache = SighashCache::new(&parsed);
+    let sighash = cache
+        .p2wpkh_signature_hash(
+            0,
+            &redeem,
+            Amount::from_sat(UTXO_AMOUNT),
+            EcdsaSighashType::All,
+        )
+        .unwrap();
+    let msg = Message::from_digest_slice(sighash.as_ref()).unwrap();
+    let sig =
+        bitcoin::secp256k1::ecdsa::Signature::from_der(&sig_bytes[..sig_bytes.len() - 1]).unwrap();
+    let pubkey = PublicKey::from_slice(pk_bytes).unwrap();
+    assert!(secp.verify_ecdsa(&msg, &sig, &pubkey.inner).is_ok());
 }
 
 #[test]
@@ -454,6 +474,26 @@ fn signs_p2wsh_pay_to_pubkey_hash_input() {
         k.public_key.to_bytes(),
         "middle element is the pubkey"
     );
+
+    // Independent spendability check: BIP143 P2WSH sighash over the P2PKH-style
+    // witness script, verified against the pubkey carried in the witness.
+    let witness_script = ScriptBuf::new_p2pkh(&k.public_key.pubkey_hash());
+    let secp = Secp256k1::new();
+    let mut cache = SighashCache::new(&parsed);
+    let sighash = cache
+        .p2wsh_signature_hash(
+            0,
+            &witness_script,
+            Amount::from_sat(UTXO_AMOUNT),
+            EcdsaSighashType::All,
+        )
+        .unwrap();
+    let msg = Message::from_digest_slice(sighash.as_ref()).unwrap();
+    let sig_bytes = witness[0];
+    let sig =
+        bitcoin::secp256k1::ecdsa::Signature::from_der(&sig_bytes[..sig_bytes.len() - 1]).unwrap();
+    let pubkey = PublicKey::from_slice(witness[1]).unwrap();
+    assert!(secp.verify_ecdsa(&msg, &sig, &pubkey.inner).is_ok());
 }
 
 #[test]

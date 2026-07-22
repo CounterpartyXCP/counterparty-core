@@ -17,7 +17,6 @@ use zeroize::Zeroizing;
 use super::types::{Result, WalletError};
 
 /// Structure to hold generated key data
-#[derive(Debug)]
 pub struct KeyData {
     pub private_key: PrivateKey,
     pub public_key: PublicKey,
@@ -26,6 +25,21 @@ pub struct KeyData {
     /// user already holds the seed/WIF. Wrapped in [`Zeroizing`] so the seed
     /// copy is wiped from memory when dropped.
     pub mnemonic: Option<Zeroizing<String>>,
+}
+
+// Manual `Debug`: `Zeroizing<T>` guarantees zero-on-drop but its derived
+// `Debug` forwards straight to the wrapped value, so a plain `#[derive(Debug)]`
+// here would print the raw BIP39 seed phrase in the clear on any `{:?}`
+// formatting. `PrivateKey`/`PublicKey`'s own `Debug` impls are already safe
+// (secp256k1's `SecretKey` prints a tagged hash digest, never raw bytes).
+impl std::fmt::Debug for KeyData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KeyData")
+            .field("private_key", &self.private_key)
+            .field("public_key", &self.public_key)
+            .field("mnemonic", &self.mnemonic.as_ref().map(|_| "[REDACTED]"))
+            .finish()
+    }
 }
 
 /// Generate key data from an existing private key
@@ -337,6 +351,16 @@ mod tests {
         assert!(addr.to_string().starts_with("bcrt1q"));
         // A freshly generated key must surface its mnemonic for backup.
         assert!(k.mnemonic.is_some(), "new keys must return a mnemonic");
+    }
+
+    #[test]
+    fn debug_redacts_the_mnemonic() {
+        let secp = Secp256k1::new();
+        let k = generate_new_keys("bech32", Network::Regtest, &secp).unwrap();
+        let phrase = k.mnemonic.as_ref().unwrap().to_string();
+        let dbg = format!("{:?}", k);
+        assert!(dbg.contains("[REDACTED]"), "debug output: {dbg}");
+        assert!(!dbg.contains(&phrase), "mnemonic leaked in Debug: {dbg}");
     }
 
     // Signet and regtest must derive at test-network coin type 1' (like testnet),

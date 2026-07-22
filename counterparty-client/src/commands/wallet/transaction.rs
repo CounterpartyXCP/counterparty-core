@@ -851,7 +851,9 @@ pub async fn handle_transaction_command(
     // Variable to store signed reveal transaction if needed
     let mut signed_reveal_tx = None;
 
-    // Handle reveal transaction if present
+    // Handle reveal transaction if present. Only the decoded, human-readable
+    // summary is shown here — the raw signed hex itself is withheld until after
+    // the user confirms below (see the note there).
     if let Some(reveal_tx_info) = extract_reveal_transaction_info(&api_result) {
         let reveal_hex = reveal_tx_info.signed_tx;
 
@@ -862,24 +864,16 @@ pub async fn handle_transaction_command(
         // could hand back a "reveal" that spends some other wallet UTXO.
         ensure_reveal_spends_commit_first_output(&signed_tx, reveal_hex)?;
 
-        helpers::print_success("Commit transaction signed:", None);
-        println!("{}\n", signed_tx);
-
-        // Display transaction summary
+        helpers::print_success("Commit transaction summary:", None);
         display_transaction_summary(&signed_tx, &utxo_list, config.network)?;
 
         signed_reveal_tx = Some(reveal_hex.to_string());
 
-        helpers::print_success("Reveal transaction signed:", None);
-        println!("{}\n", reveal_hex);
-
-        // Display transaction summary
+        helpers::print_success("Reveal transaction summary:", None);
         let reveal_utxo_list = build_reveal_utxo_list(&signed_tx)?;
         display_transaction_summary(reveal_hex, &reveal_utxo_list, config.network)?;
     } else {
-        helpers::print_success("Transaction signed:", None);
-        println!("{}\n", signed_tx);
-        // Display transaction summary
+        helpers::print_success("Transaction summary:", None);
         display_transaction_summary(&signed_tx, &utxo_list, config.network)?;
     }
 
@@ -905,6 +899,18 @@ pub async fn handle_transaction_command(
             helpers::print_error("Transaction aborted", None);
             return Ok(());
         }
+    }
+
+    // Only now — after the broadcast has been confirmed — reveal the signed
+    // hex(es). A signed transaction is a valid, immediately-broadcastable
+    // bearer instrument; printing it before confirmation would mean declining
+    // the prompt does not prevent it from having already been exposed via
+    // terminal scrollback, session logging, or CI log capture.
+    helpers::print_success("Transaction signed:", None);
+    println!("{}\n", signed_tx);
+    if let Some(reveal_hex) = signed_reveal_tx.as_deref() {
+        helpers::print_success("Reveal transaction signed:", None);
+        println!("{}\n", reveal_hex);
     }
 
     // Broadcast the transaction(s)
