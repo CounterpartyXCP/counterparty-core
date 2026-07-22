@@ -24,10 +24,11 @@ use std::collections::HashMap;
 
 use bitcoin::blockdata::script::{Builder, Instruction};
 use bitcoin::consensus::encode::{deserialize, serialize};
-use bitcoin::opcodes::all::OP_CHECKSIG;
+use bitcoin::key::TapTweak;
+use bitcoin::opcodes::all::{OP_CHECKMULTISIG, OP_CHECKSIG, OP_PUSHNUM_1};
 use bitcoin::secp256k1::{Message, Secp256k1, SecretKey};
-use bitcoin::sighash::{EcdsaSighashType, SighashCache};
-use bitcoin::taproot::TaprootBuilder;
+use bitcoin::sighash::{EcdsaSighashType, Prevouts, SighashCache, TapSighashType};
+use bitcoin::taproot::{LeafVersion, TapLeafHash, TaprootBuilder};
 use bitcoin::{
     absolute, transaction, Address, Amount, CompressedPublicKey, Network, OutPoint, PrivateKey,
     PublicKey, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Witness, XOnlyPublicKey,
@@ -682,4 +683,198 @@ fn sign_transaction_errors_when_no_address_matches() {
     let tx = unsigned_tx();
     let result = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK);
     assert!(result.is_err(), "signing must fail without a matching key");
+}
+
+/// Independent Taproot key-path verification: re-derive the BIP341 key-spend
+/// sighash from the signed transaction and verify the produced Schnorr signature
+/// against the *tweaked output key* committed by the scriptPubKey (not just its
+/// own key), and assert the signature is the standard 64-byte SIGHASH_DEFAULT
+/// form.
+#[test]
+fn p2tr_key_path_signature_verifies_against_output_key() {
+    let k = test_key();
+    let secp = Secp256k1::new();
+    let spk = ScriptBuf::new_p2tr(&secp, k.xonly, None);
+    let addr = Address::from_script(&spk, NETWORK).unwrap().to_string();
+
+    let mut utxos = UTXOList::new();
+    utxos.add(UTXO::new(UTXO_AMOUNT, spk.clone()));
+    let tx = unsigned_tx();
+    let addresses = address_map(&addr, &k.wif, "taproot", &k.public_key.to_string());
+    let signed = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap();
+    let parsed = parse_signed(&signed);
+
+    let witness: Vec<&[u8]> = parsed.input[0].witness.iter().collect();
+    assert_eq!(witness.len(), 1);
+    let sig_bytes = witness[0];
+    assert_eq!(
+        sig_bytes.len(),
+        64,
+        "taproot must use SIGHASH_DEFAULT (64-byte signature)"
+    );
+
+    let prevouts = vec![TxOut {
+        value: Amount::from_sat(UTXO_AMOUNT),
+        script_pubkey: spk,
+    }];
+    let mut cache = SighashCache::new(&parsed);
+    let sighash = cache
+        .taproot_key_spend_signature_hash(0, &Prevouts::All(&prevouts), TapSighashType::Default)
+        .unwrap();
+    let msg = Message::from_digest_slice(sighash.as_ref()).unwrap();
+    let sig = bitcoin::secp256k1::schnorr::Signature::from_slice(sig_bytes).unwrap();
+
+    // Output key = internal key tweaked with an empty merkle root (BIP86).
+    let (output_key, _) = k.xonly.tap_tweak(&secp, None);
+    assert!(secp
+        .verify_schnorr(&sig, &msg, &output_key.to_x_only_public_key())
+        .is_ok());
+}
+
+/// Independent Taproot script-path verification: re-derive the tapscript sighash
+/// and verify the Schnorr signature against the leaf's internal key.
+#[test]
+fn p2tr_script_path_signature_verifies_against_internal_key() {
+    let k = test_key();
+    let secp = Secp256k1::new();
+    let leaf_script = single_key_tapscript(&k.xonly);
+    let spend_info = TaprootBuilder::new()
+        .add_leaf(0, leaf_script.clone())
+        .unwrap()
+        .finalize(&secp, k.xonly)
+        .unwrap();
+    let spk = ScriptBuf::new_p2tr_tweaked(spend_info.output_key());
+
+    let source_address = "p2tr-sps-verify".to_string();
+    let mut utxo = UTXO::new(UTXO_AMOUNT, spk.clone());
+    utxo.leaf_script = Some(leaf_script.clone());
+    utxo.source_address = Some(source_address.clone());
+    let mut utxos = UTXOList::new();
+    utxos.add(utxo);
+
+    let tx = unsigned_tx();
+    let addresses = address_map(
+        &source_address,
+        &k.wif,
+        "taproot",
+        &k.public_key.to_string(),
+    );
+    let signed = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap();
+    let parsed = parse_signed(&signed);
+
+    let witness: Vec<&[u8]> = parsed.input[0].witness.iter().collect();
+    let sig_bytes = witness[0];
+    assert_eq!(sig_bytes.len(), 64, "SIGHASH_DEFAULT 64-byte signature");
+
+    let leaf_hash = TapLeafHash::from_script(&leaf_script, LeafVersion::TapScript);
+    let prevouts = vec![TxOut {
+        value: Amount::from_sat(UTXO_AMOUNT),
+        script_pubkey: spk,
+    }];
+    let mut cache = SighashCache::new(&parsed);
+    let sighash = cache
+        .taproot_script_spend_signature_hash(
+            0,
+            &Prevouts::All(&prevouts),
+            leaf_hash,
+            TapSighashType::Default,
+        )
+        .unwrap();
+    let msg = Message::from_digest_slice(sighash.as_ref()).unwrap();
+    let sig = bitcoin::secp256k1::schnorr::Signature::from_slice(sig_bytes).unwrap();
+    assert!(secp.verify_schnorr(&sig, &msg, &k.xonly).is_ok());
+}
+
+/// Regression for the removed absurd-fee-rate guard (M-4): a large input swept
+/// into a tiny OP_RETURN output has a fee rate far above rust-bitcoin's default
+/// 25 000 sat/vB limit, yet signing must still succeed.
+#[test]
+fn signs_high_fee_rate_transaction() {
+    let k = test_key();
+    let cpk = CompressedPublicKey::from_slice(&k.public_key.to_bytes()).unwrap();
+    let spk = ScriptBuf::new_p2wpkh(&cpk.wpubkey_hash());
+    let addr = Address::from_script(&spk, NETWORK).unwrap().to_string();
+
+    let big_input = 100_000_000u64; // 1 BTC
+    let mut utxos = UTXOList::new();
+    utxos.add(UTXO::new(big_input, spk));
+
+    let tx = Transaction {
+        version: transaction::Version::TWO,
+        lock_time: absolute::LockTime::ZERO,
+        input: vec![TxIn {
+            previous_output: OutPoint::null(),
+            script_sig: ScriptBuf::new(),
+            sequence: Sequence::MAX,
+            witness: Witness::new(),
+        }],
+        output: vec![TxOut {
+            // ~1 BTC fee over a ~110 vB tx => ~900k sat/vB, far above 25k.
+            value: Amount::from_sat(1_000),
+            script_pubkey: ScriptBuf::new_op_return([]),
+        }],
+    };
+    let addresses = address_map(&addr, &k.wif, "bech32", &k.public_key.to_string());
+    let signed = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap();
+    assert!(!signed.is_empty());
+}
+
+/// A multisig witness script is a valid script the single-key signer cannot
+/// spend; it must be rejected with an "unsupported script" error rather than
+/// silently emitting a malformed `[<sig>, <script>]` witness (M-5).
+#[test]
+fn rejects_multisig_witness_script() {
+    let k = test_key();
+    // 1-of-1 multisig: OP_1 <pubkey> OP_1 OP_CHECKMULTISIG.
+    let multisig = Builder::new()
+        .push_opcode(OP_PUSHNUM_1)
+        .push_key(&k.public_key)
+        .push_opcode(OP_PUSHNUM_1)
+        .push_opcode(OP_CHECKMULTISIG)
+        .into_script();
+    let spk = ScriptBuf::new_p2wsh(&multisig.wscript_hash());
+    let addr = Address::from_script(&spk, NETWORK).unwrap().to_string();
+
+    let mut utxo = UTXO::new(UTXO_AMOUNT, spk);
+    utxo.witness_script = Some(multisig);
+    let mut utxos = UTXOList::new();
+    utxos.add(utxo);
+
+    let tx = unsigned_tx();
+    let addresses = address_map(&addr, &k.wif, "p2wsh", &k.public_key.to_string());
+    let err = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap_err();
+    assert!(
+        err.to_string().contains("Unsupported script"),
+        "expected unsupported-script error, got: {err}"
+    );
+}
+
+/// A taproot output that commits to a script tree (non-empty merkle root) cannot
+/// be key-path-spent with the wallet's empty-tree tweak; routing it to the
+/// key-path signer must error instead of producing an invalid signature (M-2/M-6).
+#[test]
+fn rejects_key_path_spend_of_output_with_script_tree() {
+    let k = test_key();
+    let secp = Secp256k1::new();
+    let leaf = single_key_tapscript(&k.xonly);
+    let spend_info = TaprootBuilder::new()
+        .add_leaf(0, leaf)
+        .unwrap()
+        .finalize(&secp, k.xonly)
+        .unwrap();
+    // Output key commits to the script tree, so it differs from the empty-tree
+    // key-path output for the same internal key.
+    let spk = ScriptBuf::new_p2tr_tweaked(spend_info.output_key());
+    let addr = Address::from_script(&spk, NETWORK).unwrap().to_string();
+
+    // No leaf_script/source_address => classified as key-path.
+    let mut utxos = UTXOList::new();
+    utxos.add(UTXO::new(UTXO_AMOUNT, spk));
+    let tx = unsigned_tx();
+    let addresses = address_map(&addr, &k.wif, "taproot", &k.public_key.to_string());
+    let err = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap_err();
+    assert!(
+        err.to_string().contains("Unsupported script"),
+        "expected unsupported-script error, got: {err}"
+    );
 }

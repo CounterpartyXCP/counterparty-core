@@ -3,7 +3,8 @@
 use std::sync::LazyLock;
 
 use bitcoin::amount::Amount;
-use bitcoin::blockdata::script::PushBytesBuf;
+use bitcoin::blockdata::script::{Builder, PushBytesBuf};
+use bitcoin::opcodes::all::OP_CHECKSIG;
 use bitcoin::psbt::Input as PsbtInput;
 use bitcoin::secp256k1::{Message, Secp256k1, SecretKey};
 use bitcoin::sighash::{EcdsaSighashType, SighashCache, TapSighashType};
@@ -59,11 +60,15 @@ pub fn get_ecdsa_sighash_type(input: &PsbtInput) -> EcdsaSighashType {
     }
 }
 
-/// Determine the sighash type for Taproot signatures based on input data
+/// Determine the sighash type for Taproot signatures based on input data.
+///
+/// Defaults to [`TapSighashType::Default`] (BIP341 `SIGHASH_DEFAULT`, value 0),
+/// which yields the standard 64-byte Schnorr signature with no trailing sighash
+/// byte — not `All` (0x01), which would add a byte to every taproot witness.
 pub fn get_tap_sighash_type(input: &PsbtInput) -> TapSighashType {
     match input.sighash_type {
-        Some(s) => s.taproot_hash_ty().unwrap_or(TapSighashType::All),
-        None => TapSighashType::All,
+        Some(s) => s.taproot_hash_ty().unwrap_or(TapSighashType::Default),
+        None => TapSighashType::Default,
     }
 }
 
@@ -77,22 +82,60 @@ pub fn encode_ecdsa_signature(
     sig_bytes
 }
 
-/// Returns true when the raw (serialized) public key appears as a data push in
-/// `script`.
+/// The two single-key witness/redeem script shapes the ECDSA signer supports.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SingleKeyScript {
+    /// `<pubkey> OP_CHECKSIG` — the script already carries the key, so the
+    /// witness/scriptSig supplies only the signature.
+    PayToPubkey,
+    /// `OP_DUP OP_HASH160 <hash> OP_EQUALVERIFY OP_CHECKSIG` — the script commits
+    /// to the key *hash*, so the witness/scriptSig must also supply the key.
+    PayToPubkeyHash,
+}
+
+impl SingleKeyScript {
+    /// Whether the witness/scriptSig must push the public key (true only for the
+    /// hash-committing P2PKH shape).
+    pub fn needs_pubkey_push(self) -> bool {
+        matches!(self, SingleKeyScript::PayToPubkeyHash)
+    }
+}
+
+/// Classify a witness/redeem script as one of the supported single-key shapes,
+/// or reject it.
 ///
-/// This decides whether a witness/scriptSig must also supply the public key: a
-/// pay-to-pubkey script (`<pubkey> OP_CHECKSIG`) already carries it, whereas a
-/// P2PKH-style script commits only to the pubkey *hash* and needs it on the
-/// stack. Unparsable instructions are skipped (they cannot be the pubkey push).
-pub fn is_pubkey_in_script(script: &ScriptBuf, public_key: &PublicKey) -> bool {
-    let pubkey_bytes = public_key.to_bytes();
-    script.instructions_minimal().flatten().any(|instruction| {
-        matches!(
-            instruction,
-            bitcoin::blockdata::script::Instruction::PushBytes(bytes)
-                if bytes.as_bytes() == pubkey_bytes.as_slice()
-        )
-    })
+/// The check is by exact equality against the two canonical single-key scripts
+/// for *this* public key. That does double duty: it identifies the shape (which
+/// decides whether the witness must also carry the key) **and** proves the
+/// script actually commits to our key, so a signature we produce will satisfy
+/// it. Anything else — multisig, a script built around a different key, or any
+/// other template — returns [`WalletError::UnsupportedScript`] instead of
+/// silently producing a malformed/unspendable witness. This path is only
+/// reachable via `sign --utxos` with a caller-supplied script; the wallet never
+/// generates P2SH/P2WSH addresses itself.
+pub fn classify_single_key_script(
+    script: &ScriptBuf,
+    public_key: &PublicKey,
+) -> Result<SingleKeyScript> {
+    let p2pk = Builder::new()
+        .push_key(public_key)
+        .push_opcode(OP_CHECKSIG)
+        .into_script();
+    if script == &p2pk {
+        return Ok(SingleKeyScript::PayToPubkey);
+    }
+
+    let p2pkh = ScriptBuf::new_p2pkh(&public_key.pubkey_hash());
+    if script == &p2pkh {
+        return Ok(SingleKeyScript::PayToPubkeyHash);
+    }
+
+    Err(WalletError::UnsupportedScript(
+        "witness/redeem script is not a supported single-key script for this key \
+         (only P2PK `<pubkey> OP_CHECKSIG` and P2PKH are supported; multisig and \
+         other script types are not)"
+            .to_string(),
+    ))
 }
 
 /// Get an xonly public key from a standard public key
@@ -122,9 +165,7 @@ pub fn sign_message_ecdsa(
         .verify_ecdsa(message, &signature, &public_key.inner)
         .is_err()
     {
-        return Err(WalletError::BitcoinError(
-            "Generated signature failed verification".to_string(),
-        ));
+        return Err(WalletError::SignatureVerificationFailed);
     }
 
     // Encode the signature with sighash type
@@ -183,6 +224,12 @@ pub fn compute_p2wsh_sighash(
     Ok(hash32(sighash))
 }
 
+/// The error returned when a SegWit (BIP143) sighash is requested without the
+/// input amount it commits to.
+fn amount_required() -> WalletError {
+    WalletError::BitcoinError("Amount required for SegWit inputs".to_string())
+}
+
 /// Common function to handle ECDSA signature creation across different address types
 pub fn create_and_verify_ecdsa_signature(
     sighash_cache: &mut SighashCache<&Transaction>,
@@ -201,9 +248,7 @@ pub fn create_and_verify_ecdsa_signature(
             compute_legacy_sighash(sighash_cache, input_index, script_code, sighash_type)?
         }
         UTXOType::P2WPKH => {
-            let amount = amount.ok_or_else(|| {
-                WalletError::BitcoinError("Amount required for SegWit inputs".to_string())
-            })?;
+            let amount = amount.ok_or_else(amount_required)?;
             compute_segwit_sighash(
                 sighash_cache,
                 input_index,
@@ -213,9 +258,7 @@ pub fn create_and_verify_ecdsa_signature(
             )?
         }
         UTXOType::P2WSH => {
-            let amount = amount.ok_or_else(|| {
-                WalletError::BitcoinError("Amount required for SegWit inputs".to_string())
-            })?;
+            let amount = amount.ok_or_else(amount_required)?;
             compute_p2wsh_sighash(
                 sighash_cache,
                 input_index,
@@ -227,9 +270,7 @@ pub fn create_and_verify_ecdsa_signature(
         UTXOType::P2SH => {
             // For P2SH, need to determine if it's wrapping P2WPKH or legacy
             if script_code.is_p2wpkh() {
-                let amount = amount.ok_or_else(|| {
-                    WalletError::BitcoinError("Amount required for SegWit inputs".to_string())
-                })?;
+                let amount = amount.ok_or_else(amount_required)?;
                 compute_segwit_sighash(
                     sighash_cache,
                     input_index,
@@ -314,9 +355,11 @@ mod tests {
     }
 
     #[test]
-    fn tap_sighash_type_defaults_to_all_and_reads_explicit() {
+    fn tap_sighash_type_defaults_to_default_and_reads_explicit() {
         let mut input = PsbtInput::default();
-        assert_eq!(get_tap_sighash_type(&input), TapSighashType::All);
+        // No sighash type set => BIP341 SIGHASH_DEFAULT (standard 64-byte sig).
+        assert_eq!(get_tap_sighash_type(&input), TapSighashType::Default);
+        // An explicitly-set type is still honoured.
         input.sighash_type = Some(TapSighashType::All.into());
         assert_eq!(get_tap_sighash_type(&input), TapSighashType::All);
     }

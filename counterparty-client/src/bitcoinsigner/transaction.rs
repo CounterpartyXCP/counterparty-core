@@ -28,15 +28,34 @@ fn sign_input_by_type(
     public_key: &bitcoin::PublicKey,
     utxo: &UTXO,
 ) -> Result<bool> {
-    let utxo_type = utxo.get_type();
-    let input = &mut psbt.inputs[input_index];
+    // Map the UTXO type to its signer. All `InputSigner::sign_input`
+    // implementations share one signature, so a function pointer collapses the
+    // otherwise-identical per-type arms. `Unknown` has no signer and is skipped.
+    type SignerFn = fn(
+        &mut bitcoin::sighash::SighashCache<&bitcoin::Transaction>,
+        &mut bitcoin::psbt::Input,
+        usize,
+        &[TxOut],
+        &SecretKey,
+        &bitcoin::PublicKey,
+        &UTXO,
+    ) -> Result<()>;
 
-    // Use the appropriate signer based on UTXO type
-    match utxo_type {
-        UTXOType::P2PKH => {
-            P2PKHSigner::sign_input(
+    let signer: Option<SignerFn> = match utxo.get_type() {
+        UTXOType::P2PKH => Some(P2PKHSigner::sign_input),
+        UTXOType::P2WPKH => Some(P2WPKHSigner::sign_input),
+        UTXOType::P2SH => Some(P2SHSigner::sign_input),
+        UTXOType::P2WSH => Some(P2WSHSigner::sign_input),
+        UTXOType::P2TRKPS => Some(P2TRKPSSigner::sign_input),
+        UTXOType::P2TRSPS => Some(P2TRSPSSigner::sign_input),
+        UTXOType::Unknown => None,
+    };
+
+    match signer {
+        Some(sign) => {
+            sign(
                 sighash_cache,
-                input,
+                &mut psbt.inputs[input_index],
                 input_index,
                 all_prevouts,
                 secret_key,
@@ -45,70 +64,7 @@ fn sign_input_by_type(
             )?;
             Ok(true)
         }
-        UTXOType::P2WPKH => {
-            P2WPKHSigner::sign_input(
-                sighash_cache,
-                input,
-                input_index,
-                all_prevouts,
-                secret_key,
-                public_key,
-                utxo,
-            )?;
-            Ok(true)
-        }
-        UTXOType::P2SH => {
-            P2SHSigner::sign_input(
-                sighash_cache,
-                input,
-                input_index,
-                all_prevouts,
-                secret_key,
-                public_key,
-                utxo,
-            )?;
-            Ok(true)
-        }
-        UTXOType::P2WSH => {
-            P2WSHSigner::sign_input(
-                sighash_cache,
-                input,
-                input_index,
-                all_prevouts,
-                secret_key,
-                public_key,
-                utxo,
-            )?;
-            Ok(true)
-        }
-        UTXOType::P2TRKPS => {
-            P2TRKPSSigner::sign_input(
-                sighash_cache,
-                input,
-                input_index,
-                all_prevouts,
-                secret_key,
-                public_key,
-                utxo,
-            )?;
-            Ok(true)
-        }
-        UTXOType::P2TRSPS => {
-            P2TRSPSSigner::sign_input(
-                sighash_cache,
-                input,
-                input_index,
-                all_prevouts,
-                secret_key,
-                public_key,
-                utxo,
-            )?;
-            Ok(true)
-        }
-        UTXOType::Unknown => {
-            // Skip unknown UTXO types
-            Ok(false)
-        }
+        None => Ok(false),
     }
 }
 
@@ -137,15 +93,11 @@ fn find_address_for_utxo<'a>(
 
     let address_str = address.to_string();
 
-    // Look for this address in our wallet
-    for (addr_str, addr_info) in addresses {
-        if addr_str == &address_str {
-            return Ok((addr_str, addr_info));
-        }
+    // Look for this address in our wallet (O(1)).
+    match addresses.get_key_value(&address_str) {
+        Some((addr_str, addr_info)) => Ok((addr_str, addr_info)),
+        None => Err(WalletError::AddressNotFound(address_str)),
     }
-
-    // No matching address found
-    Err(WalletError::AddressNotFound(address_str))
 }
 
 /// Sign a transaction using wallet addresses

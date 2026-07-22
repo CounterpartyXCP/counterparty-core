@@ -28,6 +28,32 @@ pub enum WalletError {
 
     #[error("Address not found: {0}")]
     AddressNotFound(String),
+
+    /// User- or file-supplied input that failed a validation check (password
+    /// strength/confirmation, malformed wallet contents, unknown address type…).
+    /// Distinct from [`BitcoinError`](Self::BitcoinError), which wraps failures
+    /// coming out of the `bitcoin` crate itself.
+    #[error("{0}")]
+    Validation(String),
+
+    /// A witness/redeem/leaf script the signer requires was not supplied.
+    #[error("Missing {0} script")]
+    MissingScript(&'static str),
+
+    /// A script the single-key signer cannot spend (e.g. multisig, or any shape
+    /// other than P2PK / P2PKH). Returned instead of silently emitting a
+    /// malformed witness.
+    #[error("Unsupported script: {0}")]
+    UnsupportedScript(String),
+
+    /// A PSBT was indexed out of bounds while preparing signing data.
+    #[error("PSBT input index {0} out of bounds")]
+    PsbtInputOutOfBounds(usize),
+
+    /// A freshly produced signature failed to verify against its own key — an
+    /// internal invariant breach, never expected in practice.
+    #[error("Generated signature failed verification")]
+    SignatureVerificationFailed,
 }
 
 /// Type alias for our result type

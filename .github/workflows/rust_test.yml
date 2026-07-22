@@ -55,6 +55,9 @@ jobs:
           slug: CounterpartyXCP/counterparty-core
           files: counterparty-client/lcov.info
           flags: client
+          # Don't silently swallow a failed upload — the coverage floors in
+          # codecov.yml only bite if the report actually lands.
+          fail_ci_if_error: true
 
   # The wallet depends on the OS-specific `keyring` backend, so build and test
   # the client on macOS and Windows too (Linux is covered by the Cargo job).
@@ -80,19 +83,25 @@ jobs:
           cargo build
           cargo test
 
-  # Surface known-vulnerable dependencies in the wallet's dependency tree.
-  # Informational for now (several advisories come from deep transitive deps
-  # such as syntect/indicatif/tokio and need triaging or upstream bumps); it is
-  # `continue-on-error` so it reports without blocking merges. Tighten to a hard
-  # gate — or add an ignore list for triaged advisories — once the tree is clean.
+  # Dependency-hygiene gate for the wallet: security advisories, licenses,
+  # banned/duplicate crates, and crate sources. Blocking — a newly-introduced
+  # vulnerable, wrongly-licensed, or unexpected-source dependency fails CI.
+  # Triaged advisories are ignored explicitly (cargo-audit `--ignore` below and
+  # `counterparty-client/deny.toml`), so the gate stays meaningful without
+  # flapping on the one known-unmaintained transitive crate.
   Audit:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
-      - name: Audit counterparty-client dependencies
+      - name: Install cargo-audit and cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit,cargo-deny
+      - name: Audit dependencies for security advisories
         run: |
           cd counterparty-client
-          cargo audit
+          cargo audit --deny warnings --ignore RUSTSEC-2025-0141
+      - name: Check licenses, bans, and sources
+        run: |
+          cd counterparty-client
+          cargo deny check

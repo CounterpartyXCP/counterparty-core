@@ -16,7 +16,7 @@ The crate builds two identical binaries: **`xcp`** (short) and
 
 There are no pre-built binaries yet — build from this repository.
 
-Requires a recent stable [Rust toolchain](https://rustup.rs).
+Requires Rust **1.80 or newer** (stable) — see [rustup.rs](https://rustup.rs).
 
 ```sh
 git clone https://github.com/CounterpartyXCP/counterparty-core.git
@@ -68,6 +68,15 @@ it is verified, so it is only cached once it actually unlocks the wallet.
 wallet can't be unlocked). On a headless Linux server you need a running Secret
 Service provider (e.g. `gnome-keyring`) for the keyring to work.
 
+**Password & at-rest protection.** A new wallet password must be **at least 12
+characters**. Encryption at rest uses `cocoon` (ChaCha20-Poly1305 with a PBKDF2
+key derivation): it protects a *stolen* `wallet.db` against offline password
+guessing, with the length of your passphrase as the main defence — so choose a
+long one. It is **not** a substitute for OS-level disk encryption or for keeping
+the file off shared/multi-user machines. Your private keys never leave the
+machine: they are used to sign transactions locally and are never sent to the API
+server.
+
 ## Wallet
 
 ```sh
@@ -75,8 +84,10 @@ Service provider (e.g. `gnome-keyring`) for the keyring to work.
 # This prints a BIP39 recovery phrase ONCE — write it down (see Backups).
 xcp wallet new_address --label savings --address-type bech32
 
-# Import an existing key or BIP39 mnemonic (use @file to read from a file)
+# Import an existing key or BIP39 mnemonic. Omit both secret flags to be
+# prompted without echo, or read from a file with the @file form (recommended).
 xcp wallet import_address --mnemonic "@/path/to/seed.txt" --address-type taproot
+xcp wallet import_address --address-type taproot   # prompts for the secret
 
 xcp wallet list_addresses
 xcp wallet address_balances --address <address>
@@ -89,8 +100,9 @@ xcp wallet disconnect
 ```
 
 > 🔒 Passing a secret directly (`--private-key <key>`, `--mnemonic <phrase>`)
-> leaks it into your shell history and process list. Prefer the `@file` form,
-> which reads the secret from a file.
+> exposes it in your shell history and process list. Prefer the `@file` form
+> (reads the secret from a file), or omit both flags to be prompted for the
+> secret without echo.
 
 ### Backups
 
@@ -140,7 +152,14 @@ Every API route is available under `api`. Use `api --help` to list them.
 ```sh
 xcp api get_asset_info --asset XCP
 xcp --testnet4 api get_block_by_height --block_index 100000
+
+# --json emits plain JSON on stdout (no colour, no YAML) for piping into jq etc.
+xcp --json api get_block_by_height --block_index 100000 | jq .result.block_hash
 ```
+
+Output is coloured YAML by default, but only when stdout is a terminal — piped or
+redirected output is plain (no ANSI). Pass the global `--json` flag for
+machine-readable JSON on stdout (status messages then go to stderr).
 
 > Note: raw `api compose_*` commands are the expert path and expect **quantities
 > in satoshis** (they are sent to the API verbatim). Use `wallet transaction …`

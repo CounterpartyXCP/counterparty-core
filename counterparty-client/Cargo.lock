@@ -781,6 +781,7 @@ dependencies = [
  "indicatif",
  "keyring",
  "mockito",
+ "percent-encoding",
  "rand 0.10.2",
  "reqwest",
  "rpassword",

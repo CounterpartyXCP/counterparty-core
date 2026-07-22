@@ -2,6 +2,9 @@
 name = "counterparty-client"
 version = "11.2.1"
 edition = "2021"
+license = "MIT"
+# MSRV: the client uses `std::sync::LazyLock`, stabilised in Rust 1.80.
+rust-version = "1.80"
 
 [dependencies]
 anyhow = "1.0.104"
@@ -48,6 +51,7 @@ indicatif = "0.18"
 clap_complete = "4.6"
 zeroize = { version = "1.9", features = ["derive"] }
 rust_decimal = "1.42"
+percent-encoding = "2.3"
 
 [dev-dependencies]
 tempfile = "3"

@@ -1,11 +1,37 @@
 use anyhow::Result;
 use indicatif::{ProgressBar, ProgressStyle};
 use serde_json::Value;
-use std::io::Write;
+use std::io::{IsTerminal, Write};
+use std::sync::atomic::{AtomicBool, Ordering};
 use syntect::easy::HighlightLines;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+
+/// When true, structured output is emitted as plain JSON (no colour, no YAML)
+/// and human status lines go to stderr, so stdout is machine-parseable.
+static JSON_OUTPUT: AtomicBool = AtomicBool::new(false);
+
+/// Enable or disable raw-JSON output mode. Set once at start-up from the global
+/// `--json` flag.
+pub fn set_json_output(enabled: bool) {
+    JSON_OUTPUT.store(enabled, Ordering::Relaxed);
+}
+
+/// Whether raw-JSON output mode is active.
+pub fn json_output() -> bool {
+    JSON_OUTPUT.load(Ordering::Relaxed)
+}
+
+/// Colour choice for stdout: never colour in JSON mode or when stdout is not a
+/// terminal (piped/redirected), so captured output is free of ANSI escapes.
+fn stdout_color_choice() -> ColorChoice {
+    if json_output() || !std::io::stdout().is_terminal() {
+        ColorChoice::Never
+    } else {
+        ColorChoice::Auto
+    }
+}
 
 /// A wrapper around ProgressBar that provides a stop() method
 pub struct Spinner {
@@ -66,6 +92,12 @@ pub fn print_loading(message: &str) -> Spinner {
 /// print_colored_json(&json).unwrap();
 /// ```
 pub fn print_colored_json(json_value: &Value) -> Result<()> {
+    // Machine-readable mode: emit plain, pretty JSON that pipes cleanly.
+    if json_output() {
+        println!("{}", serde_json::to_string_pretty(json_value)?);
+        return Ok(());
+    }
+
     // Load default syntax and theme sets
     let syntax_set = SyntaxSet::load_defaults_newlines();
     let theme_set = ThemeSet::load_defaults();
@@ -86,8 +118,8 @@ pub fn print_colored_json(json_value: &Value) -> Result<()> {
 
     let mut highlighter = HighlightLines::new(syntax, theme);
 
-    // Prepare colored output stream
-    let mut stdout = StandardStream::stdout(ColorChoice::Always);
+    // Prepare colored output stream (no colour when piped/redirected).
+    let mut stdout = StandardStream::stdout(stdout_color_choice());
 
     // Highlight and print each line
     for line in yaml_str.lines() {
@@ -151,22 +183,28 @@ pub fn print_colored_json_list(json_values: &[Value]) -> Result<()> {
 ///
 /// * `Result<()>` - Ok if successful, Err otherwise
 fn print_colored(text: &str, color: Color, more_text: Option<&str>) {
-    let mut stdout = StandardStream::stdout(ColorChoice::Always);
+    // In JSON mode, human status lines must not pollute the parseable stdout, so
+    // route them to stderr instead.
+    let mut stream = if json_output() {
+        StandardStream::stderr(ColorChoice::Never)
+    } else {
+        StandardStream::stdout(stdout_color_choice())
+    };
 
     // Configure and print the colored text
     let mut color_spec = ColorSpec::new();
     color_spec.set_fg(Some(color));
-    let _ = stdout.set_color(&color_spec);
-    let _ = write!(stdout, "{}", text);
+    let _ = stream.set_color(&color_spec);
+    let _ = write!(stream, "{}", text);
 
     // Reset color and print additional text if provided
-    let _ = stdout.reset();
+    let _ = stream.reset();
     if let Some(additional) = more_text {
-        let _ = write!(stdout, " {}", additional);
+        let _ = write!(stream, " {}", additional);
     }
 
     // Add a newline at the end
-    let _ = writeln!(stdout);
+    let _ = writeln!(stream);
 }
 
 /// Prints a success message in green, with optional additional text in default color
@@ -174,7 +212,7 @@ pub fn print_success(text: &str, more_text: Option<&str>) {
     print_colored(text, Color::Green, more_text)
 }
 
-/// Prints an error message in red, with optional additional text in default color`
+/// Prints an error message in red, with optional additional text in default color
 pub fn print_error(text: &str, more_text: Option<&str>) {
     print_colored(text, Color::Red, more_text)
 }

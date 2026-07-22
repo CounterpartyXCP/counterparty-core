@@ -7,7 +7,6 @@ use bitcoin::secp256k1::{Secp256k1, SecretKey};
 use bitcoin::{Network, PrivateKey, PublicKey};
 use secrecy::{ExposeSecret, SecretString};
 use std::str::FromStr;
-use zeroize::Zeroize;
 
 use super::types::{Result, WalletError};
 
@@ -28,30 +27,29 @@ impl KeyService {
         let private_key = PrivateKey::from_str(private_key_str.expose_secret())
             .map_err(|e| WalletError::BitcoinError(format!("Invalid private key: {:?}", e)))?;
 
-        // Create a new private key with the correct network
+        // Re-key to the target network. This only affects WIF encoding, not the
+        // secret bytes or the derived public key.
         let pk = PrivateKey {
             compressed: private_key.compressed,
             network: network.into(),
             inner: private_key.inner,
         };
 
-        // Convert to rust-bitcoin's SecretKey
-        let mut secret_bytes = [0u8; 32];
-        secret_bytes.copy_from_slice(&pk.inner[..]);
-        let secret_key = SecretKey::from_slice(&secret_bytes)
-            .map_err(|e| WalletError::BitcoinError(format!("Invalid secret key: {}", e)))?;
+        // `PrivateKey::inner` is already a secp256k1 `SecretKey`; use it directly
+        // rather than round-tripping through a raw byte buffer.
+        let mut secret_key = pk.inner;
 
         // Get the public key
         let secp = Secp256k1::new();
         let public_key = PublicKey::from_private_key(&secp, &pk);
 
-        // Perform the actual operation
-        let result = operation(&secret_key, &public_key)?;
+        // Perform the actual operation, then best-effort wipe our copy of the
+        // secret before returning (secp256k1's `SecretKey` is `Copy` and not
+        // zeroize-on-drop, so this clears the local binding only).
+        let result = operation(&secret_key, &public_key);
+        secret_key.non_secure_erase();
 
-        // Clean up secret key material
-        secret_bytes.zeroize();
-
-        Ok(result)
+        result
     }
 }
 

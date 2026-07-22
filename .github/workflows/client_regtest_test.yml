@@ -1,4 +1,9 @@
-name: Client Regtest E2E
+# Integration check against a live regtest counterparty-server: divisibility
+# lookup, quantity scaling and compose reachability. It deliberately does NOT
+# sign or broadcast — the signing path is covered hermetically in
+# `bitcoinsigner::tests` (including independent taproot signature verification).
+# A full fund → compose → sign → broadcast → accept E2E is a tracked follow-up.
+name: Client Regtest Integration
 
 on:
   push:
@@ -9,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ClientRegtestE2E:
-    name: Client Regtest E2E
+  ClientRegtestIntegration:
+    name: Client Regtest Integration
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4

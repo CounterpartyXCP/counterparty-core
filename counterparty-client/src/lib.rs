@@ -59,6 +59,12 @@ fn get_default_config_path() -> PathBuf {
 
 // Function to process file references
 fn process_file_reference(value: &str) -> Result<String> {
+    // `@@…` escapes a literal leading `@`, so a value that genuinely starts with
+    // `@` (e.g. a description "@everyone") can be written "@@everyone".
+    if let Some(rest) = value.strip_prefix("@@") {
+        return Ok(format!("@{rest}"));
+    }
+
     if let Some(path) = value.strip_prefix('@') {
         // Remove @ prefix
 
@@ -350,6 +356,14 @@ fn add_common_cli_args(command: Command) -> Command {
                 .conflicts_with("signet")
                 .display_order(999999),
         )
+        .arg(
+            Arg::new("json")
+                .long("json")
+                .help("Emit machine-readable JSON on stdout (no colour, no YAML)")
+                .action(ArgAction::SetTrue)
+                .global(true)
+                .display_order(999999),
+        )
 }
 
 // Function to determine if an argument should have file reference support
@@ -477,8 +491,8 @@ fn header_message(config: &AppConfig, command_name: &str, config_path: &Path) {
     let dashes_suffix = "-".repeat(total_dashes - total_dashes / 2);
     let separator = format!("{}{}{}", dashes_prefix, command_name, dashes_suffix);
 
-    // Print the header with just two colors
-    let mut stdout = StandardStream::stdout(ColorChoice::Always);
+    // Print the header with just two colors (no colour when piped/redirected).
+    let mut stdout = StandardStream::stdout(ColorChoice::Auto);
 
     // Define colors for keys and values
     let mut key_color = ColorSpec::new();
@@ -541,6 +555,15 @@ fn detect_wallet_action() -> Option<String> {
     } else {
         None
     }
+}
+
+/// Whether the raw arguments request help (`--help`/`-h`). Used to skip wallet
+/// initialisation: `xcp wallet --help` (and `xcp wallet <cmd> --help`) must print
+/// help without prompting for — or creating — a wallet. clap prints the help and
+/// exits during `get_matches`, so the only thing that would otherwise run first
+/// is the wallet init below.
+fn wants_help() -> bool {
+    std::env::args().any(|a| a == "--help" || a == "-h")
 }
 
 /// The network selected by a `--mainnet`/`--signet`/`--testnet4`/`--regtest`
@@ -644,6 +667,18 @@ pub async fn run() -> Result<()> {
         config.set_network(network);
     }
 
+    // Cleartext-transport guard: on a public network a plain `http://` API URL
+    // sends amounts and addresses (never private keys, which stay local) in the
+    // clear, where they can be intercepted or altered. Regtest is local, so it is
+    // exempt. Printed to stderr so it never pollutes `--json` stdout.
+    if config.network != Network::Regtest && config.get_api_url().starts_with("http://") {
+        eprintln!(
+            "Warning: the API URL for this network is cleartext http:// ({}). Amounts and \
+             addresses are sent unencrypted and can be intercepted or altered — prefer https://.",
+            config.get_api_url()
+        );
+    }
+
     // Step 6: Load endpoints
     let endpoints = api::load_or_fetch_endpoints(&config).await?;
 
@@ -654,7 +689,9 @@ pub async fn run() -> Result<()> {
     // when the wallet can't be decrypted, so it never triggers a full init.
     let is_disconnect = matches!(detect_subcommand().as_deref(), Some("wallet"))
         && detect_wallet_action().as_deref() == Some("disconnect");
-    let needs_wallet = matches!(detect_subcommand().as_deref(), Some("wallet")) && !is_disconnect;
+    // `--help`/`-h` must print help without initialising (or creating) a wallet.
+    let needs_wallet =
+        matches!(detect_subcommand().as_deref(), Some("wallet")) && !is_disconnect && !wants_help();
     let mut wallet: Option<crate::wallet::BitcoinWallet> = if needs_wallet {
         Some(wallet_commands::utils::init_wallet(&config)?)
     } else {
@@ -686,6 +723,11 @@ pub async fn run() -> Result<()> {
     // Step 11: Parse final command line arguments with the complete command structure
     let final_matches = app.clone().get_matches();
 
+    // Machine-readable output mode: emit plain JSON and suppress the decorative
+    // header so stdout stays parseable.
+    let json_mode = final_matches.get_flag("json");
+    helpers::set_json_output(json_mode);
+
     // Step 12: Handle special update-cache flag
     if final_matches.get_flag("update-cache") {
         api::update_cache(&config).await?;
@@ -697,16 +739,20 @@ pub async fn run() -> Result<()> {
     match final_matches.subcommand() {
         Some(("api", sub_matches)) => {
             let cmd_name = sub_matches.subcommand_name().unwrap_or("api");
-            header_message(&config, &format!(" API {} ", cmd_name), &config_file_path);
+            if !json_mode {
+                header_message(&config, &format!(" API {} ", cmd_name), &config_file_path);
+            }
             api::execute_command(&config, &endpoints, sub_matches).await?;
         }
         Some(("wallet", sub_matches)) => {
             let cmd_name = sub_matches.subcommand_name().unwrap_or("wallet");
-            header_message(
-                &config,
-                &format!(" Wallet {} ", cmd_name),
-                &config_file_path,
-            );
+            if !json_mode {
+                header_message(
+                    &config,
+                    &format!(" Wallet {} ", cmd_name),
+                    &config_file_path,
+                );
+            }
             // `disconnect` never loads the wallet: just clear the stored password.
             if sub_matches.subcommand_name() == Some("disconnect") {
                 wallet_commands::utils::disconnect_wallet(&config)?;
@@ -831,5 +877,12 @@ mod tests {
     fn process_file_reference_errors_on_missing_file() {
         let err = process_file_reference("@/no/such/file/xcp-test").unwrap_err();
         assert!(err.to_string().contains("File not found"), "got: {err}");
+    }
+
+    #[test]
+    fn process_file_reference_double_at_is_a_literal_escape() {
+        // `@@x` is a literal `@x`, not a file reference.
+        assert_eq!(process_file_reference("@@everyone").unwrap(), "@everyone");
+        assert_eq!(process_file_reference("@@").unwrap(), "@");
     }
 }

@@ -209,6 +209,18 @@ pub fn build_request_parameters(
     params
 }
 
+/// Characters percent-encoded when substituting a value into a URL *path*
+/// segment. Real asset names / addresses / hashes are already safe, but a stray
+/// `/`, `?`, `#` or `%` in an odd value would otherwise corrupt the path or spill
+/// into the query. `.`, `-`, `_` (used in subasset longnames) are left intact.
+const PATH_SEGMENT: &percent_encoding::AsciiSet = &percent_encoding::CONTROLS
+    .add(b'/')
+    .add(b'?')
+    .add(b'#')
+    .add(b'%')
+    .add(b' ')
+    .add(b'&');
+
 // Builds the API path with path parameters substituted, removing those
 // parameters from `params` so they are not *also* sent as duplicate query
 // parameters.
@@ -221,14 +233,15 @@ pub fn build_api_path(
 
     for arg in &endpoint.args {
         if let Some(value) = params.get(&arg.name).cloned() {
+            let encoded = percent_encoding::utf8_percent_encode(&value, PATH_SEGMENT).to_string();
             let int_placeholder = format!("<int:{}>", arg.name);
             let simple_placeholder = format!("<{}>", arg.name);
 
             if api_path.contains(&int_placeholder) {
-                api_path = api_path.replace(&int_placeholder, &value);
+                api_path = api_path.replace(&int_placeholder, &encoded);
                 params.remove(&arg.name);
             } else if api_path.contains(&simple_placeholder) {
-                api_path = api_path.replace(&simple_placeholder, &value);
+                api_path = api_path.replace(&simple_placeholder, &encoded);
                 params.remove(&arg.name);
             }
         }

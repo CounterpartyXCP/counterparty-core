@@ -64,6 +64,20 @@ const KNOWN_QUANTITY_FIELDS: &[&str] = &[
     "fee_provided",
 ];
 
+/// Whether a parameter name looks like a divisibility-governed amount, used only
+/// for the safety-net warning on parameters the divisibility map does not
+/// explicitly cover. Kept deliberately broad (amount-like roots *plus* the
+/// explicit [`KNOWN_QUANTITY_FIELDS`] list) so that if counterparty-core adds a
+/// new quantity field before this client's map catches up, the value is flagged
+/// as "sent as satoshis" rather than silently passed through unconverted.
+///
+/// The roots are chosen not to match known *non*-amount parameters (`asset`,
+/// `address`, `value`, `fee_fraction`, `text`, …).
+fn looks_like_amount(name: &str) -> bool {
+    const AMOUNT_ROOTS: &[&str] = &["quantity", "amount", "supply", "reserve", "cap", "price"];
+    AMOUNT_ROOTS.iter().any(|root| name.contains(root)) || KNOWN_QUANTITY_FIELDS.contains(&name)
+}
+
 /// Map a `(transaction, parameter)` pair to what governs its divisibility.
 /// Returns `None` for parameters that must be passed through unchanged. The
 /// mapping mirrors `quantity_fields` in counterparty-core's `api/verbose.py`.
@@ -80,9 +94,8 @@ fn denomination(transaction_name: &str, param: &str) -> Option<Denomination> {
         ("dispenser", "mainchainrate") => Denomination::Btc,
         ("order", "give_quantity") => Denomination::Asset("give_asset"),
         ("order", "get_quantity") => Denomination::Asset("get_asset"),
-        // Order match fees are paid in BTC (always divisible).
+        // Order match fee is paid in BTC (always divisible).
         ("order", "fee_required") => Denomination::Btc,
-        ("order", "fee_provided") => Denomination::Btc,
         ("dispense", "quantity") => Denomination::Btc,
         ("burn", "quantity") => Denomination::Btc,
         // Fairminter: every cap/mint quantity is denominated in the fairminted
@@ -123,7 +136,7 @@ pub async fn normalize_quantities(
                     .map_err(|e| anyhow!("Invalid value for '--{}': {}", name, e))?;
                 conversions.push((name.clone(), converted));
             }
-            None if name.contains("quantity") || KNOWN_QUANTITY_FIELDS.contains(&name.as_str()) => {
+            None if looks_like_amount(name) => {
                 // A divisibility-sensitive parameter we do not auto-convert for
                 // this transaction (e.g. an as-yet-unmapped AMM/mpma field): warn
                 // rather than silently treat the human amount as satoshis.

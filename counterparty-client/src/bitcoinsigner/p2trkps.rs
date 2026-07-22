@@ -1,15 +1,40 @@
 use bitcoin::blockdata::witness::Witness;
-use bitcoin::key::{Keypair, TapTweak};
+use bitcoin::key::TapTweak;
 use bitcoin::psbt::Input as PsbtInput;
-use bitcoin::secp256k1::{Secp256k1, SecretKey};
+use bitcoin::secp256k1::{Keypair, Secp256k1, SecretKey};
 use bitcoin::sighash::{Prevouts, SighashCache};
-use bitcoin::{PublicKey, Transaction, TxOut};
+use bitcoin::{PublicKey, ScriptBuf, Transaction, TxOut};
 
 use super::common::{
     create_empty_script_sig, create_message_from_tap_sighash, get_tap_sighash_type,
+    get_xonly_pubkey,
 };
 use super::types::{InputSigner, Result, UTXO};
 use crate::wallet::WalletError;
+
+/// Guard: this key-path signer always tweaks with an empty merkle root (BIP86,
+/// which is how every taproot address the wallet generates is built). Verify
+/// that the wallet key plus an empty script tree actually reconstructs the
+/// prevout's taproot output key. If it doesn't, the output commits to a script
+/// tree (non-empty merkle root) and cannot be key-path-spent with this tweak —
+/// signing anyway would silently produce an invalid signature, so reject it
+/// explicitly instead.
+fn ensure_keypath_output_matches(
+    secp: &Secp256k1<bitcoin::secp256k1::All>,
+    public_key: &PublicKey,
+    script_pubkey: &ScriptBuf,
+) -> Result<()> {
+    let internal_key = get_xonly_pubkey(public_key)?;
+    let expected = ScriptBuf::new_p2tr(secp, internal_key, None);
+    if &expected != script_pubkey {
+        return Err(WalletError::UnsupportedScript(
+            "taproot output does not correspond to this wallet key with an empty script tree; \
+             key-path spending an output that commits to a script tree is not supported"
+                .to_string(),
+        ));
+    }
+    Ok(())
+}
 
 /// Compute signature for key path spending
 fn compute_signature(
@@ -38,13 +63,29 @@ fn compute_signature(
     // Create a message from the sighash
     let message = create_message_from_tap_sighash(sighash)?;
 
-    // Create a keypair from the secret key
+    // Create a keypair from the secret key and apply the BIP341 key-path tweak
+    // (empty merkle root, matching `ensure_keypath_output_matches`).
     let keypair = Keypair::from_secret_key(secp, secret_key);
-    let merkle_root = None;
-    let tweaked_keypair = keypair.tap_tweak(secp, merkle_root);
+    let tweaked_keypair = keypair.tap_tweak(secp, None);
+    let mut signing_keypair = tweaked_keypair.to_keypair();
 
     // Sign with Schnorr
-    let schnorr_sig = secp.sign_schnorr_no_aux_rand(&message, &tweaked_keypair.to_keypair());
+    let schnorr_sig = secp.sign_schnorr_no_aux_rand(&message, &signing_keypair);
+
+    // Verify the signature against the tweaked output key before returning.
+    let (output_key, _) = tweaked_keypair.public_parts();
+    let verified = secp
+        .verify_schnorr(&schnorr_sig, &message, &output_key.to_x_only_public_key())
+        .is_ok();
+
+    // Best-effort wipe of the local secret copy. secp256k1's `Keypair` is `Copy`
+    // and not zeroize-on-drop, so this only clears the stack copies we hold here;
+    // transient copies made inside signing are out of reach.
+    signing_keypair.non_secure_erase();
+
+    if !verified {
+        return Err(WalletError::SignatureVerificationFailed);
+    }
 
     // Add sighash type
     let taproot_signature = bitcoin::taproot::Signature {
@@ -52,17 +93,6 @@ fn compute_signature(
         sighash_type,
     }
     .serialize();
-
-    // Verify signature
-    let (xonly_pubkey, _) = tweaked_keypair.public_parts();
-    if secp
-        .verify_schnorr(&schnorr_sig, &message, &xonly_pubkey.to_x_only_public_key())
-        .is_err()
-    {
-        return Err(WalletError::BitcoinError(
-            "Generated Schnorr signature failed verification".to_string(),
-        ));
-    }
 
     Ok(taproot_signature.to_vec())
 }
@@ -91,11 +121,14 @@ impl InputSigner for P2TRKPSSigner {
         input_index: usize,
         all_prevouts: &[TxOut],
         secret_key: &SecretKey,
-        _public_key: &PublicKey,
-        _utxo: &UTXO,
+        public_key: &PublicKey,
+        utxo: &UTXO,
     ) -> Result<()> {
         // Use the shared secp256k1 context
         let secp = super::common::secp();
+
+        // Reject outputs this key-path tweak cannot spend before signing.
+        ensure_keypath_output_matches(secp, public_key, &utxo.script_pubkey)?;
 
         // Compute signature for key path spending
         let signature = compute_signature(

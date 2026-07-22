@@ -87,7 +87,7 @@ impl BitcoinWallet {
             Some("p2pkh") => "p2pkh",
             Some("taproot") => "taproot",
             Some(other) => {
-                return Err(WalletError::BitcoinError(format!(
+                return Err(WalletError::Validation(format!(
                     "Unknown address type '{other}'. Use one of: bech32, p2pkh, taproot."
                 )));
             }

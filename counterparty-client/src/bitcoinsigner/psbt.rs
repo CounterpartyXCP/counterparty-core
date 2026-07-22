@@ -33,6 +33,14 @@ pub fn init_sighash_cache(tx: &Transaction) -> SighashCache<&Transaction> {
     SighashCache::new(tx)
 }
 
+/// Mutably borrow a PSBT input by index, mapping an out-of-bounds index to a
+/// typed error instead of panicking.
+fn input_mut(psbt: &mut Psbt, index: usize) -> Result<&mut bitcoin::psbt::Input> {
+    psbt.inputs
+        .get_mut(index)
+        .ok_or(WalletError::PsbtInputOutOfBounds(index))
+}
+
 /// Add witness UTXO to PSBT input.
 ///
 /// This is set for *every* input, including legacy (P2PKH / legacy-P2SH) ones.
@@ -49,51 +57,27 @@ fn add_witness_utxo(
     script_pubkey: ScriptBuf,
     amount: u64,
 ) -> Result<()> {
-    if let Some(input) = psbt.inputs.get_mut(index) {
-        input.witness_utxo = Some(TxOut {
-            value: Amount::from_sat(amount),
-            script_pubkey,
-        });
-
-        // Set default sighash type if not already set
-        if input.sighash_type.is_none() {
-            input.sighash_type = Some(bitcoin::sighash::EcdsaSighashType::All.into());
-        }
-    } else {
-        return Err(WalletError::BitcoinError(format!(
-            "PSBT input index {} out of bounds",
-            index
-        )));
-    }
-
+    // The per-input sighash type is intentionally left unset: the signers read it
+    // via `get_ecdsa_sighash_type` / `get_tap_sighash_type`, which default to
+    // `SIGHASH_ALL` for ECDSA and `SIGHASH_DEFAULT` for taproot. Seeding it to
+    // `EcdsaSighashType::All` here would force taproot inputs onto `All` (0x01)
+    // and produce non-standard 65-byte Schnorr signatures.
+    input_mut(psbt, index)?.witness_utxo = Some(TxOut {
+        value: Amount::from_sat(amount),
+        script_pubkey,
+    });
     Ok(())
 }
 
 /// Add redeem script to PSBT input
 fn add_redeem_script(psbt: &mut Psbt, index: usize, redeem_script: &ScriptBuf) -> Result<()> {
-    if let Some(input) = psbt.inputs.get_mut(index) {
-        input.redeem_script = Some(redeem_script.clone());
-    } else {
-        return Err(WalletError::BitcoinError(format!(
-            "PSBT input index {} out of bounds",
-            index
-        )));
-    }
-
+    input_mut(psbt, index)?.redeem_script = Some(redeem_script.clone());
     Ok(())
 }
 
 /// Add witness script to PSBT input
 fn add_witness_script(psbt: &mut Psbt, index: usize, witness_script: &ScriptBuf) -> Result<()> {
-    if let Some(input) = psbt.inputs.get_mut(index) {
-        input.witness_script = Some(witness_script.clone());
-    } else {
-        return Err(WalletError::BitcoinError(format!(
-            "PSBT input index {} out of bounds",
-            index
-        )));
-    }
-
+    input_mut(psbt, index)?.witness_script = Some(witness_script.clone());
     Ok(())
 }
 
@@ -141,16 +125,18 @@ pub fn create_psbt_from_raw(raw_tx_hex: &str, utxos: &UTXOList) -> Result<Psbt> 
     Ok(psbt)
 }
 
-/// Extract the final transaction from a PSBT and serialize it to hex
+/// Extract the final transaction from a PSBT and serialize it to hex.
+///
+/// Uses `extract_tx_unchecked_fee_rate`, which does *not* enforce rust-bitcoin's
+/// default 25 000 sat/vB "absurd fee rate" guard. This client only finalizes a
+/// transaction the composer already built, and the user reviews the decoded
+/// outputs and fee before broadcasting; enforcing the broadcast-safety heuristic
+/// here would turn a legitimate high-fee-rate signing request (e.g. a large
+/// input swept into a tiny OP_RETURN) into an opaque `AbsurdFeeRate` failure.
 pub fn extract_transaction(psbt: Psbt) -> Result<String> {
-    let tx = psbt.extract_tx().map_err(|e| {
-        WalletError::BitcoinError(format!("Failed to extract transaction: {:?}", e))
-    })?;
-
+    let tx = psbt.extract_tx_unchecked_fee_rate();
     let tx_bytes = serialize(&tx);
-    let tx_hex = hex::encode(tx_bytes);
-
-    Ok(tx_hex)
+    Ok(hex::encode(tx_bytes))
 }
 
 /// Check if a PSBT has all inputs finalized

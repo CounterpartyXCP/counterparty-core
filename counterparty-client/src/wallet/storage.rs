@@ -89,22 +89,9 @@ impl WalletStorage {
     /// decrypting. A cached/keyring password that fails to decrypt is forgotten
     /// so it can never lock the CLI out of an intact wallet.
     fn load_with_retry(&self) -> Result<AddressMap> {
-        // 1) Try a non-interactive password (cache or keyring) once. A keyring
-        // that is unavailable (e.g. no Secret Service on a headless server) must
-        // not block loading an intact wallet: warn and fall through to the
-        // interactive prompt instead of propagating the error.
-        match self.password_manager.cached_or_stored() {
-            Ok(Some(password)) => match self.decrypt_addresses(&password) {
-                Ok(addresses) => {
-                    self.password_manager.persist(&password)?;
-                    return Ok(addresses);
-                }
-                Err(_) => self.password_manager.forget(),
-            },
-            Ok(None) => {}
-            Err(e) => {
-                eprintln!("Note: {e} Falling back to a password prompt.");
-            }
+        // 1) Try a non-interactive password (cache or keyring) once.
+        if let Some(addresses) = self.try_noninteractive_load()? {
+            return Ok(addresses);
         }
 
         // 2) Prompt interactively, with a bounded number of retries.
@@ -127,6 +114,35 @@ impl WalletStorage {
 
         Err(last_err
             .unwrap_or_else(|| WalletError::CocoonError("Failed to decrypt wallet".to_string())))
+    }
+
+    /// Try the non-interactive password sources (cache, then keyring), verifying
+    /// each by actually decrypting the wallet.
+    ///
+    /// * A correct password is persisted and the decrypted map returned.
+    /// * A *wrong* cached/keyring password is [`forget`](PasswordManager::forget)
+    ///   so it can never lock the CLI out of an intact wallet, and `Ok(None)` is
+    ///   returned so the caller falls through to prompting.
+    /// * A keyring that is unavailable (e.g. no Secret Service on a headless
+    ///   server) is a warning, not an error — it also returns `Ok(None)`.
+    fn try_noninteractive_load(&self) -> Result<Option<AddressMap>> {
+        match self.password_manager.cached_or_stored() {
+            Ok(Some(password)) => match self.decrypt_addresses(&password) {
+                Ok(addresses) => {
+                    self.password_manager.persist(&password)?;
+                    Ok(Some(addresses))
+                }
+                Err(_) => {
+                    self.password_manager.forget();
+                    Ok(None)
+                }
+            },
+            Ok(None) => Ok(None),
+            Err(e) => {
+                eprintln!("Note: {e} Falling back to a password prompt.");
+                Ok(None)
+            }
+        }
     }
 
     /// Decrypt the wallet file with the given password and parse the address map.
@@ -158,7 +174,7 @@ impl WalletStorage {
 
         let json = Zeroizing::new(
             String::from_utf8(plaintext.to_vec())
-                .map_err(|_| WalletError::BitcoinError("Invalid UTF-8 in wallet file".into()))?,
+                .map_err(|_| WalletError::Validation("Invalid UTF-8 in wallet file".into()))?,
         );
         Ok(serde_json::from_str(&json)?)
     }
@@ -223,7 +239,7 @@ impl WalletStorage {
         fs::create_dir_all(&network_dir).unwrap();
         let wallet_file = network_dir.join("wallet.db");
         let wallet_name = network_dir.to_string_lossy().to_string();
-        let password_manager = PasswordManager::new(network, &wallet_name);
+        let password_manager = PasswordManager::new_cache_only(network, &wallet_name);
         password_manager.cache_for_test(password);
         let storage = WalletStorage {
             wallet_file,
@@ -340,7 +356,7 @@ mod tests {
     fn storage_at(path: &Path) -> WalletStorage {
         WalletStorage {
             wallet_file: path.to_path_buf(),
-            password_manager: PasswordManager::new(config::Network::Regtest, "test"),
+            password_manager: PasswordManager::new_cache_only(config::Network::Regtest, "test"),
         }
     }
 
@@ -474,7 +490,7 @@ mod tests {
         // CI) while still exercising the real `save` -> `write_encrypted` path.
         let dir = tempfile::tempdir().unwrap();
         let wallet_file = dir.path().join("wallet.db");
-        let pm = PasswordManager::new(config::Network::Regtest, "save-roundtrip");
+        let pm = PasswordManager::new_cache_only(config::Network::Regtest, "save-roundtrip");
         pm.cache_for_test("cachedpassw0rd");
         let storage = WalletStorage {
             wallet_file: wallet_file.clone(),
@@ -528,6 +544,57 @@ mod tests {
         atomic_write(&path, b"first").unwrap();
         atomic_write(&path, b"second").unwrap();
         assert_eq!(fs::read(&path).unwrap(), b"second");
+    }
+
+    #[test]
+    fn try_noninteractive_load_returns_map_for_correct_cached_password() {
+        // Cache holds the right password (no keyring, no prompt).
+        let dir = tempfile::tempdir().unwrap();
+        let wallet_file = dir.path().join("wallet.db");
+        let pm = PasswordManager::new_cache_only(config::Network::Regtest, "noninteractive-ok");
+        pm.cache_for_test("rightpassw0rd");
+        let storage = WalletStorage {
+            wallet_file,
+            password_manager: pm,
+        };
+        storage
+            .write_encrypted(
+                &sample_map(),
+                &SecretString::from("rightpassw0rd".to_string()),
+            )
+            .unwrap();
+
+        let loaded = storage.try_noninteractive_load().unwrap();
+        assert_eq!(loaded.map(|m| m.len()), Some(1));
+    }
+
+    #[test]
+    fn try_noninteractive_load_forgets_a_wrong_cached_password() {
+        // The cache holds a WRONG password; the wallet is encrypted with another.
+        // The wrong password must be forgotten so it can't lock the CLI out on a
+        // later run — the persist-after-verify security property.
+        let dir = tempfile::tempdir().unwrap();
+        let wallet_file = dir.path().join("wallet.db");
+        let pm = PasswordManager::new_cache_only(config::Network::Regtest, "noninteractive-wrong");
+        pm.cache_for_test("wrong-password");
+        let storage = WalletStorage {
+            wallet_file,
+            password_manager: pm,
+        };
+        storage
+            .write_encrypted(
+                &sample_map(),
+                &SecretString::from("the-real-password".to_string()),
+            )
+            .unwrap();
+
+        // Wrong password fails to decrypt => fall through to prompting...
+        assert!(storage.try_noninteractive_load().unwrap().is_none());
+        // ...and it was forgotten from the cache.
+        assert!(
+            !storage.password_manager.is_cached(),
+            "a wrong cached password must be forgotten"
+        );
     }
 
     #[cfg(unix)]

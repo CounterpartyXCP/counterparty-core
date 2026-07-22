@@ -5,7 +5,8 @@ use bitcoin::sighash::SighashCache;
 use bitcoin::{PublicKey, ScriptBuf, Transaction, TxOut};
 
 use super::common::{
-    create_and_verify_ecdsa_signature, create_empty_script_sig, is_pubkey_in_script,
+    classify_single_key_script, create_and_verify_ecdsa_signature, create_empty_script_sig,
+    SingleKeyScript,
 };
 use super::types::{InputSigner, Result, UTXOType, UTXO};
 use crate::wallet::WalletError;
@@ -65,13 +66,16 @@ impl InputSigner for P2WSHSigner {
         utxo: &UTXO,
     ) -> Result<()> {
         // Get the witness script
-        let witness_script = utxo.witness_script.as_ref().ok_or_else(|| {
-            WalletError::BitcoinError("Missing witness script for P2WSH input".to_string())
-        })?;
+        let witness_script = utxo
+            .witness_script
+            .as_ref()
+            .ok_or(WalletError::MissingScript("witness"))?;
 
-        // Whether the script embeds the raw public key (pay-to-pubkey) or only
-        // its hash (P2PKH-style) decides whether the witness must also carry it.
-        let pubkey_in_script = is_pubkey_in_script(witness_script, public_key);
+        // Classify the script (rejecting anything but the two supported single-key
+        // shapes). Pay-to-pubkey embeds the key, so the witness must NOT re-push
+        // it; P2PKH-style commits only to the hash and must supply it.
+        let pubkey_in_script =
+            classify_single_key_script(witness_script, public_key)? == SingleKeyScript::PayToPubkey;
 
         // Create and verify the signature
         let signature = create_and_verify_ecdsa_signature(

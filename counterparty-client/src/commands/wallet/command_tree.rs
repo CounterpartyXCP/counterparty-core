@@ -128,7 +128,13 @@ pub fn add_broadcast_commands(cmd: Command, endpoints: &HashMap<String, ApiEndpo
             tx_cmd = add_argument_to_command(tx_cmd, arg, idx, &tx_name, &mut used_long_names);
         }
 
-        let has_address = endpoint.args.iter().any(|arg| arg.name == "address");
+        // A compose endpoint that already exposes the funding address does so as
+        // `address` or `source`; match both so we never inject a duplicate
+        // `--address` (mirrors `find_compose_endpoint` in `transaction.rs`).
+        let has_address = endpoint
+            .args
+            .iter()
+            .any(|arg| arg.name == "address" || arg.name == "source");
 
         // Check if address parameter exists already
         // Add address argument if needed

@@ -80,13 +80,21 @@ fn build_import_address_command() -> Command {
         .arg(
             Arg::new("private_key")
                 .long("private-key")
-                .help("Existing private key to import. Use @ prefix to read from a file.")
+                .help(
+                    "Private key (WIF) to import. Prefer `@<file>` — passing the value \
+                     directly exposes it in your shell history and process list. Omit both \
+                     secret flags to be prompted without echo.",
+                )
                 .value_name("PRIVATE_KEY"),
         )
         .arg(
             Arg::new("mnemonic")
                 .long("mnemonic")
-                .help("BIP39 mnemonic phrase. Use @ prefix to read from a file.")
+                .help(
+                    "BIP39 mnemonic to import. Prefer `@<file>` — passing the phrase directly \
+                     exposes it in your shell history and process list. Omit both secret flags \
+                     to be prompted without echo.",
+                )
                 .value_name("MNEMONIC"),
         )
         .arg(

@@ -1,0 +1,48 @@
+# cargo-deny configuration for the Counterparty client.
+#
+# Checked in CI (`cargo deny check`) to gate the Rust wallet's dependency tree on
+# security advisories, licenses, banned/duplicate crates, and crate sources.
+
+[advisories]
+# Fail on any security vulnerability. Unmaintained/notice advisories are also
+# surfaced; the single known one below is triaged and ignored explicitly.
+ignore = [
+    # bincode 1.3.3 is pulled in transitively by syntect (JSON->YAML output
+    # highlighting) and is flagged unmaintained. No security impact; tracked for
+    # removal by dropping/replacing syntect's default feature set.
+    "RUSTSEC-2025-0141",
+]
+
+[licenses]
+# Permissive licenses present in the dependency tree. Anything outside this set
+# fails the build so a copyleft/unknown license can never slip in unnoticed.
+allow = [
+    "MIT",
+    "MIT-0",
+    "MITNFA",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "BSL-1.0",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+# Skip license evaluation for our own (unpublished-shape) workspace crate.
+private = { ignore = true }
+
+[bans]
+# The tree legitimately carries a few duplicate versions (e.g. rand 0.8/0.9/0.10
+# via transitive deps), so duplicates are a warning, not a hard failure.
+multiple-versions = "warn"
+wildcards = "warn"
+
+[sources]
+# Only crates.io is an allowed source; an unexpected git or alternate registry
+# dependency fails the build.
+unknown-registry = "deny"
+unknown-git = "deny"

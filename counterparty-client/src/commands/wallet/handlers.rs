@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use clap::ArgMatches;
 
 use std::collections::HashMap;
-use std::io::{self, Write};
+use std::io::{self, IsTerminal, Write};
 
 use crate::commands::api;
 use crate::config::AppConfig;
@@ -40,33 +40,87 @@ pub fn handle_new_address(wallet: &mut BitcoinWallet, sub_matches: &ArgMatches) 
 
 /// Handle the import_address subcommand - imports an existing key
 pub fn handle_import_address(wallet: &mut BitcoinWallet, sub_matches: &ArgMatches) -> Result<()> {
-    // Extract parameters
-    let private_key = sub_matches
-        .get_one::<String>("private_key")
-        .map(|s| s.as_str());
-    let mnemonic = sub_matches
-        .get_one::<String>("mnemonic")
-        .map(|s| s.as_str());
+    // Extract parameters. The secret flags support the safe `@<file>` form.
+    let flag_private_key = sub_matches.get_one::<String>("private_key").cloned();
+    let flag_mnemonic = sub_matches.get_one::<String>("mnemonic").cloned();
     let path = sub_matches.get_one::<String>("path").map(|s| s.as_str());
     let label = sub_matches.get_one::<String>("label").map(|s| s.as_str());
     let address_type = sub_matches
         .get_one::<String>("address_type")
         .map(|s| s.as_str());
 
-    // Validate that either private key or mnemonic is provided
-    if private_key.is_none() && mnemonic.is_none() {
-        return Err(anyhow!(
-            "Either --private-key or --mnemonic must be provided"
-        ));
-    }
+    // Resolve the secret. When neither flag is supplied, prompt without echo
+    // (interactive sessions only) so the private key / mnemonic never lands in
+    // the shell history or process list — the safest way to import.
+    let (private_key, mnemonic) =
+        resolve_import_secret(flag_private_key, flag_mnemonic, io::stdin().is_terminal())?;
 
     // Call the wallet function (imported keys never return a mnemonic).
     let (address, _) = wallet
-        .add_address(private_key, mnemonic, path, label, address_type)
+        .add_address(
+            private_key.as_deref(),
+            mnemonic.as_deref(),
+            path,
+            label,
+            address_type,
+        )
         .map_err(|e| anyhow!("Failed to import address: {}", e))?;
 
     helpers::print_success("Address imported successfully:", Some(&address));
     Ok(())
+}
+
+/// Decide which secret to import: the supplied flags (which support `@<file>`)
+/// if present, otherwise prompt without echo — but only when `interactive`. In a
+/// non-interactive context (a script, a pipe) prompting would hang, so return a
+/// clear error instead. `interactive` is threaded in (rather than read here) so
+/// this is unit-testable without depending on the ambient terminal.
+fn resolve_import_secret(
+    flag_private_key: Option<String>,
+    flag_mnemonic: Option<String>,
+    interactive: bool,
+) -> Result<(Option<String>, Option<String>)> {
+    match (flag_private_key, flag_mnemonic) {
+        (None, None) => {
+            if interactive {
+                prompt_import_secret()
+            } else {
+                Err(anyhow!(
+                    "Provide --private-key or --mnemonic (use the @<file> form to keep the \
+                     secret out of your shell history), or run interactively to be prompted."
+                ))
+            }
+        }
+        (pk, mn) => Ok((pk, mn)),
+    }
+}
+
+/// Prompt (without echo) for a private key or mnemonic to import. A value with
+/// whitespace is treated as a BIP39 mnemonic; a single token as a WIF private
+/// key. Returns `(private_key, mnemonic)` for `add_address`.
+fn prompt_import_secret() -> Result<(Option<String>, Option<String>)> {
+    helpers::print_warning(
+        "Enter a private key (WIF) or a BIP39 mnemonic phrase. Input is hidden.",
+        None,
+    );
+    print!("Secret: ");
+    io::stdout().flush().ok();
+
+    let secret = rpassword::read_password()
+        .map_err(|e| anyhow!("Failed to read secret: {}", e))?
+        .trim()
+        .to_string();
+
+    if secret.is_empty() {
+        return Err(anyhow!("No secret entered"));
+    }
+
+    // A BIP39 mnemonic is multiple space-separated words; a WIF is a single token.
+    if secret.split_whitespace().count() > 1 {
+        Ok((None, Some(secret)))
+    } else {
+        Ok((Some(secret), None))
+    }
 }
 
 /// Handle the export_address subcommand
@@ -332,13 +386,24 @@ mod tests {
     }
 
     #[test]
-    fn handle_import_address_requires_key_or_mnemonic() {
-        let (mut w, _dir) = wallet();
-        let m = import_cmd()
-            .try_get_matches_from(["import_address"])
-            .unwrap();
-        let err = handle_import_address(&mut w, &m).unwrap_err();
+    fn resolve_import_secret_non_interactive_requires_a_flag() {
+        // Non-interactive + no flags => a clear error (never a hanging prompt).
+        let err = resolve_import_secret(None, None, false).unwrap_err();
         assert!(err.to_string().contains("private-key"), "got: {err}");
+    }
+
+    #[test]
+    fn resolve_import_secret_passes_flags_through() {
+        // A supplied flag is returned as-is and never triggers a prompt (so this
+        // is safe to run even with `interactive = true`).
+        let (pk, mn) = resolve_import_secret(Some("cWifValue".to_string()), None, true).unwrap();
+        assert_eq!(pk.as_deref(), Some("cWifValue"));
+        assert!(mn.is_none());
+
+        let (pk2, mn2) =
+            resolve_import_secret(None, Some("word word word".to_string()), true).unwrap();
+        assert!(pk2.is_none());
+        assert_eq!(mn2.as_deref(), Some("word word word"));
     }
 
     #[test]

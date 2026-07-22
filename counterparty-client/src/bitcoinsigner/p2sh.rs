@@ -6,7 +6,8 @@ use bitcoin::sighash::SighashCache;
 use bitcoin::{PublicKey, ScriptBuf, Transaction, TxOut};
 
 use super::common::{
-    create_and_verify_ecdsa_signature, get_compressed_pubkey, is_pubkey_in_script, to_push_bytes,
+    classify_single_key_script, create_and_verify_ecdsa_signature, get_compressed_pubkey,
+    to_push_bytes, SingleKeyScript,
 };
 use super::types::{InputSigner, Result, UTXOType, UTXO};
 use crate::wallet::WalletError;
@@ -104,10 +105,12 @@ fn sign_p2sh_p2wsh(
     let redeem_push = to_push_bytes(&redeem.to_bytes())?;
     input.final_script_sig = Some(Builder::new().push_slice(&redeem_push).into_script());
 
-    // Witness stack: <sig> (<pubkey>)? <witnessScript>.
+    // Witness stack: <sig> (<pubkey>)? <witnessScript>. The classifier both
+    // rejects unsupported (e.g. multisig) inner scripts and decides the push.
+    let shape = classify_single_key_script(witness_script, public_key)?;
     let mut witness = Witness::new();
     witness.push(signature);
-    if !is_pubkey_in_script(witness_script, public_key) {
+    if shape.needs_pubkey_push() {
         witness.push(public_key.to_bytes());
     }
     witness.push(witness_script.as_bytes());
@@ -143,9 +146,10 @@ impl InputSigner for P2SHSigner {
         }
 
         // Otherwise a redeem script is required.
-        let redeem_script = utxo.redeem_script.as_ref().ok_or_else(|| {
-            WalletError::BitcoinError("Missing redeem script for P2SH input".to_string())
-        })?;
+        let redeem_script = utxo
+            .redeem_script
+            .as_ref()
+            .ok_or(WalletError::MissingScript("redeem"))?;
 
         if redeem_script.is_p2wpkh() {
             // P2SH-P2WPKH: BIP143 sighash, redeem script in scriptSig, sig+pubkey
@@ -162,7 +166,11 @@ impl InputSigner for P2SHSigner {
             )?;
             add_p2sh_p2wpkh_signature(input, signature, public_key.to_bytes())
         } else {
-            // Legacy P2SH: legacy sighash and an all-in-scriptSig spend.
+            // Legacy P2SH: legacy sighash and an all-in-scriptSig spend. The
+            // classifier rejects unsupported redeem scripts (e.g. multisig) and
+            // decides whether the pubkey must be pushed.
+            let pubkey_in_script = classify_single_key_script(redeem_script, public_key)?
+                == SingleKeyScript::PayToPubkey;
             let signature = create_and_verify_ecdsa_signature(
                 sighash_cache,
                 input_index,
@@ -173,7 +181,6 @@ impl InputSigner for P2SHSigner {
                 public_key,
                 input,
             )?;
-            let pubkey_in_script = is_pubkey_in_script(redeem_script, public_key);
             add_legacy_signature(
                 input,
                 signature,

@@ -32,7 +32,7 @@ fn cache() -> &'static Mutex<HashMap<String, SecretString>> {
 /// Reject a new password that is shorter than [`MIN_PASSWORD_LEN`] characters.
 fn check_password_strength(password: &SecretString) -> Result<()> {
     if password.expose_secret().chars().count() < MIN_PASSWORD_LEN {
-        return Err(WalletError::BitcoinError(format!(
+        return Err(WalletError::Validation(format!(
             "Password too short: use at least {MIN_PASSWORD_LEN} characters."
         )));
     }
@@ -43,6 +43,10 @@ fn check_password_strength(password: &SecretString) -> Result<()> {
 pub struct PasswordManager {
     service_name: String,
     username: String,
+    /// Whether the OS keyring may be touched. Always `true` in production; unit
+    /// tests build a cache-only manager so they never pop a keychain dialog or
+    /// depend on a Secret Service being present.
+    use_keyring: bool,
 }
 
 impl PasswordManager {
@@ -55,6 +59,7 @@ impl PasswordManager {
         PasswordManager {
             service_name,
             username,
+            use_keyring: true,
         }
     }
 
@@ -85,7 +90,7 @@ impl PasswordManager {
 
         let confirmation = self.prompt_password("Confirm wallet password: ")?;
         if password.expose_secret() != confirmation.expose_secret() {
-            return Err(WalletError::BitcoinError(
+            return Err(WalletError::Validation(
                 "Passwords do not match".to_string(),
             ));
         }
@@ -142,6 +147,9 @@ impl PasswordManager {
 
     /// Read the stored password, returning `Ok(None)` when there is no entry.
     fn get_from_keyring(&self) -> Result<Option<SecretString>> {
+        if !self.use_keyring {
+            return Ok(None);
+        }
         let entry = self.get_entry()?;
         match entry.get_password() {
             Ok(p) => Ok(Some(SecretString::from(p))),
@@ -153,6 +161,9 @@ impl PasswordManager {
     }
 
     fn set_to_keyring(&self, password: &SecretString) -> Result<()> {
+        if !self.use_keyring {
+            return Ok(());
+        }
         let entry = self.get_entry()?;
         entry.set_password(password.expose_secret()).map_err(|e| {
             WalletError::KeyringError(format!("Failed to store password in keyring: {e}"))
@@ -160,6 +171,9 @@ impl PasswordManager {
     }
 
     fn delete_from_keyring(&self) -> Result<()> {
+        if !self.use_keyring {
+            return Ok(());
+        }
         let entry = self.get_entry()?;
         match entry.delete_credential() {
             Ok(()) | Err(KeyringError::NoEntry) => Ok(()),
@@ -194,7 +208,7 @@ impl PasswordManager {
             rpassword::read_password().map_err(|e| WalletError::IoError(io::Error::other(e)))?;
 
         if password.is_empty() {
-            return Err(WalletError::BitcoinError(
+            return Err(WalletError::Validation(
                 "Password cannot be empty".to_string(),
             ));
         }
@@ -205,11 +219,27 @@ impl PasswordManager {
 
 #[cfg(test)]
 impl PasswordManager {
+    /// Test-only: a password manager that never touches the OS keyring, so unit
+    /// tests exercising `persist`/`forget`/`load_with_retry` run without popping a
+    /// keychain dialog (macOS) or needing a Secret Service (headless Linux).
+    pub(crate) fn new_cache_only(network: config::Network, wallet_name: &str) -> Self {
+        let mut pm = Self::new(network, wallet_name);
+        pm.use_keyring = false;
+        pm
+    }
+
     /// Test-only: seed the in-memory password cache so higher-level wallet
     /// operations (`save`, decrypt-on-load) work without the OS keyring or an
     /// interactive prompt. Never touches the keyring.
     pub(crate) fn cache_for_test(&self, password: &str) {
         self.set_to_cache(&SecretString::from(password.to_string()));
+    }
+
+    /// Test-only: whether this wallet currently has a password in the in-memory
+    /// cache. Lets other modules assert cache state (e.g. that a wrong password
+    /// was forgotten) without touching the OS keyring.
+    pub(crate) fn is_cached(&self) -> bool {
+        self.get_from_cache().is_some()
     }
 }
 
@@ -224,7 +254,7 @@ mod tests {
 
     #[test]
     fn cache_key_combines_service_and_username() {
-        let pm = PasswordManager::new(Network::Regtest, "wallet-ck");
+        let pm = PasswordManager::new_cache_only(Network::Regtest, "wallet-ck");
         assert_eq!(
             pm.cache_key(),
             "counterparty-client-wallet-Regtest:wallet-ck"
@@ -233,7 +263,7 @@ mod tests {
 
     #[test]
     fn set_get_remove_cache_roundtrip() {
-        let pm = PasswordManager::new(Network::Signet, "wallet-sgr");
+        let pm = PasswordManager::new_cache_only(Network::Signet, "wallet-sgr");
         assert!(pm.get_from_cache().is_none());
 
         pm.set_to_cache(&SecretString::from("hunter2xx".to_string()));
@@ -245,19 +275,19 @@ mod tests {
 
     #[test]
     fn distinct_wallets_do_not_share_cache() {
-        let a = PasswordManager::new(Network::Regtest, "wallet-iso-a");
-        let b = PasswordManager::new(Network::Regtest, "wallet-iso-b");
+        let a = PasswordManager::new_cache_only(Network::Regtest, "wallet-iso-a");
+        let b = PasswordManager::new_cache_only(Network::Regtest, "wallet-iso-b");
         a.set_to_cache(&SecretString::from("secretaaa".to_string()));
         // Different username -> different cache key -> isolated.
         assert!(b.get_from_cache().is_none());
         // Different network is also a different key for the same username.
-        let c = PasswordManager::new(Network::Signet, "wallet-iso-a");
+        let c = PasswordManager::new_cache_only(Network::Signet, "wallet-iso-a");
         assert!(c.get_from_cache().is_none());
     }
 
     #[test]
     fn cached_or_stored_returns_cache_hit_without_touching_keyring() {
-        let pm = PasswordManager::new(Network::Testnet4, "wallet-cos");
+        let pm = PasswordManager::new_cache_only(Network::Testnet4, "wallet-cos");
         pm.cache_for_test("cachedpw123");
         // A cache hit short-circuits before any keyring access.
         let got = pm.cached_or_stored().unwrap().unwrap();

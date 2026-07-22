@@ -25,7 +25,14 @@ fn create_taproot_builder(script: &ScriptBuf) -> TaprootBuilder {
         .expect("adding a single depth-0 leaf never fails")
 }
 
-/// Generate Taproot spending information
+/// Generate Taproot spending information for a single-leaf tree with
+/// `internal_key` as the internal key.
+///
+/// This is the only tree shape the client supports: one script leaf, internal
+/// key equal to the signer's key. `sign_input` verifies the resulting output key
+/// matches the prevout before using it, so a UTXO built from any other tree
+/// (multiple leaves, a different internal key) is rejected rather than signed
+/// into an unspendable input.
 fn generate_spend_info(
     secp: &Secp256k1<bitcoin::secp256k1::All>,
     internal_key: &XOnlyPublicKey,
@@ -36,25 +43,6 @@ fn generate_spend_info(
     builder.finalize(secp, *internal_key).map_err(|e| {
         WalletError::BitcoinError(format!("Failed to create Taproot spend info: {:?}", e))
     })
-}
-
-/// Create the control block for script-path spending.
-///
-/// The `bitcoin` crate derives the parity, internal key and merkle branch and
-/// serialises them in consensus order, so there is no need to assemble the
-/// control block by hand (the previous hand-rolled version was untested for
-/// multi-leaf trees).
-fn create_control_block(
-    secp: &Secp256k1<bitcoin::secp256k1::All>,
-    internal_key: &XOnlyPublicKey,
-    leaf_script: &ScriptBuf,
-) -> Result<ControlBlock> {
-    let spend_info = generate_spend_info(secp, internal_key, leaf_script)?;
-
-    let script_ver = (leaf_script.clone(), LeafVersion::TapScript);
-    spend_info
-        .control_block(&script_ver)
-        .ok_or_else(|| WalletError::BitcoinError("Failed to create control block".to_string()))
 }
 
 /// Compute signature for script path spending
@@ -91,11 +79,25 @@ fn compute_signature(
     // Convert sighash to bytes and create message
     let message = create_message_from_tap_sighash(sighash)?;
 
-    // Create a keypair from the secret key
-    let keypair = Keypair::from_secret_key(secp, secret_key);
+    // Create a keypair from the secret key (script-path signs with the untweaked
+    // key — the tweak lives in the control block, not the signature).
+    let mut keypair = Keypair::from_secret_key(secp, secret_key);
 
     // Sign with Schnorr (no tweaking for script path)
     let schnorr_sig = secp.sign_schnorr_no_aux_rand(&message, &keypair);
+
+    // Verify signature locally against the (untweaked) internal key.
+    let xonly_pubkey = XOnlyPublicKey::from_keypair(&keypair).0;
+    let verified = secp
+        .verify_schnorr(&schnorr_sig, &message, &xonly_pubkey)
+        .is_ok();
+
+    // Best-effort wipe of the local secret copy (see the note in `p2trkps`).
+    keypair.non_secure_erase();
+
+    if !verified {
+        return Err(WalletError::SignatureVerificationFailed);
+    }
 
     // Add sighash type to the signature
     let signature = bitcoin::taproot::Signature {
@@ -103,17 +105,6 @@ fn compute_signature(
         sighash_type,
     }
     .serialize();
-
-    // Verify signature locally
-    let xonly_pubkey = XOnlyPublicKey::from_keypair(&keypair).0;
-    if secp
-        .verify_schnorr(&schnorr_sig, &message, &xonly_pubkey)
-        .is_err()
-    {
-        return Err(WalletError::BitcoinError(
-            "Generated Schnorr signature failed verification".to_string(),
-        ));
-    }
 
     Ok(signature.to_vec())
 }
@@ -158,14 +149,35 @@ impl InputSigner for P2TRSPSSigner {
         let xonly_pubkey = get_xonly_pubkey(public_key)?;
 
         // Get leaf script
-        let leaf_script = utxo.leaf_script.as_ref().ok_or_else(|| {
-            WalletError::BitcoinError(
-                "Missing leaf script for P2TR script path spending".to_string(),
-            )
-        })?;
+        let leaf_script = utxo
+            .leaf_script
+            .as_ref()
+            .ok_or(WalletError::MissingScript("leaf"))?;
 
-        // Create control block for witness data
-        let control_block = create_control_block(secp, &xonly_pubkey, leaf_script)?;
+        // Reconstruct the single-leaf taproot tree once, and derive both the
+        // control block and the committed output key from it.
+        let spend_info = generate_spend_info(secp, &xonly_pubkey, leaf_script)?;
+
+        // Verify the reconstructed output key matches the prevout. If it does
+        // not, the UTXO was built from a tree this client cannot reproduce
+        // (multiple leaves, or a different internal key), so signing would emit
+        // an invalid control block; reject it explicitly.
+        let expected_spk = ScriptBuf::new_p2tr_tweaked(spend_info.output_key());
+        if expected_spk != utxo.script_pubkey {
+            return Err(WalletError::UnsupportedScript(
+                "leaf script and internal key do not reconstruct this taproot output; only \
+                 single-leaf script trees with the internal key equal to the signer key are \
+                 supported"
+                    .to_string(),
+            ));
+        }
+
+        // Control block for the witness data.
+        let control_block = spend_info
+            .control_block(&(leaf_script.clone(), LeafVersion::TapScript))
+            .ok_or_else(|| {
+                WalletError::BitcoinError("Failed to create control block".to_string())
+            })?;
 
         // Compute signature
         let signature = compute_signature(
