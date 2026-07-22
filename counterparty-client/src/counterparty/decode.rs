@@ -220,7 +220,12 @@ pub fn verify_enhanced_send(body: &[u8], intent: &Intent, network: Network) -> V
 }
 
 /// `sweep` (type 4), modern CBOR form: `[packed_destination, flags, memo]`.
-/// A sweep moves *all* assets, so only the destination is checked.
+///
+/// A sweep moves *everything* the source owns to the destination, so the
+/// destination is the primary check. The `flags` OR-mask
+/// (`FLAG_BALANCES=1`, `FLAG_OWNERSHIP=2`, `FLAG_BINARY_MEMO=4`) is also verified:
+/// a server that flips `FLAG_OWNERSHIP` on could hand away irreversible asset
+/// *issuer rights* the user never asked to transfer.
 pub fn verify_sweep(body: &[u8], intent: &Intent, network: Network) -> Verification {
     let Some(items) = cbor_array(body) else {
         return Verification::Unverifiable {
@@ -242,15 +247,26 @@ pub fn verify_sweep(body: &[u8], intent: &Intent, network: Network) -> Verificat
             reason: "could not decode sweep destination address".to_string(),
         };
     };
+    // The flags must decode to an integer; a non-integer here means an encoding
+    // this client does not model, so degrade to Unverifiable rather than skip the
+    // check silently.
+    let Some(flags) = cbor_u64(&items[1]) else {
+        return Verification::Unverifiable {
+            reason: "sweep CBOR flags have an unexpected type".to_string(),
+        };
+    };
 
-    combine([check(
-        "destination",
-        &intent
-            .destination
-            .as_ref()
-            .map(|d| normalize_address(d, network)),
-        destination,
-    )])
+    combine([
+        check(
+            "destination",
+            &intent
+                .destination
+                .as_ref()
+                .map(|d| normalize_address(d, network)),
+            destination,
+        ),
+        check("sweep flags", &intent.flags, flags),
+    ])
 }
 
 #[cfg(test)]

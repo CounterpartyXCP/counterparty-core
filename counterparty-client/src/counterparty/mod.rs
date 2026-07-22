@@ -58,6 +58,11 @@ pub struct Intent {
     /// the source as change rather than being siphoned to a third party. `None`
     /// skips the BTC-flow check (the wallet path always supplies it).
     pub source: Option<String>,
+    /// Expected `sweep` flags OR-mask (`FLAG_BALANCES=1`, `FLAG_OWNERSHIP=2`,
+    /// `FLAG_BINARY_MEMO=4`). `None` skips the check. A sweep with a different
+    /// flag mask than requested can transfer asset *ownership* the user did not
+    /// intend, so it must be verified for a `sweep` command.
+    pub flags: Option<u64>,
 }
 
 /// Outcome of checking a composed transaction against the user's [`Intent`].
@@ -85,6 +90,40 @@ pub enum Verification {
 /// is refused, never trusted — see `verify_composed_transaction_or_abort`).
 pub fn is_verifiable_type(tx_type: &str) -> bool {
     matches!(tx_type, "send" | "enhanced_send" | "sweep")
+}
+
+/// The Counterparty message type id(s) a verifiable command may legitimately
+/// compose to. A composed transaction whose embedded type is **not** in this set
+/// is a type mismatch and must be refused.
+///
+/// This binding is the load-bearing defence against a message-type-confusion
+/// attack: the per-type verifiers check *disjoint* field sets (a `sweep` payload
+/// carries no asset or quantity, so [`decode::verify_sweep`] only checks the
+/// destination). Dispatching on the composed type alone — without confirming it
+/// matches the command the user ran — would let a hostile server compose a
+/// balance-and-ownership-draining `sweep` (type 4) to the user's intended
+/// destination in response to a bounded `send 10 XCP` and have it pass as a
+/// "verified" match. `compose_send` yields classic `send` (0) or `enhanced_send`
+/// (2) for a single destination (multi-destination MPMA (3) is not in this set,
+/// so it degrades to `Unverifiable` and is refused for a verifiable command).
+fn expected_message_types(tx_type: &str) -> &'static [u32] {
+    match tx_type {
+        "send" => &[0, 2],
+        "enhanced_send" => &[2],
+        "sweep" => &[4],
+        _ => &[],
+    }
+}
+
+/// Human-readable name for a Counterparty message type id, for error messages.
+fn message_type_name(type_id: u32) -> &'static str {
+    match type_id {
+        0 => "send",
+        2 => "enhanced_send",
+        3 => "mpma_send",
+        4 => "sweep",
+        _ => "unknown",
+    }
 }
 
 /// Split a de-obfuscated Counterparty message into `(type_id, body)`, mirroring
@@ -279,6 +318,75 @@ pub(crate) fn build_test_classic_send_tx_hex(
     hex::encode(bitcoin::consensus::serialize(&tx))
 }
 
+/// Test-only builder: a composed-transaction hex carrying a `sweep` (type 4),
+/// obfuscated exactly as the server composer does (RC4 over `CNTRPRTY`, the type
+/// byte `0x04`, and CBOR `[packed_destination, flags, memo]`, keyed by the first
+/// input's txid in display order). Its only value output is change back to
+/// `source`, mirroring a real sweep (the destination is carried in the payload,
+/// not as a BTC output).
+#[cfg(test)]
+pub(crate) fn build_test_sweep_tx_hex(
+    txid_display: [u8; 32],
+    destination: &bitcoin::Address,
+    flags: u64,
+    source: &bitcoin::Address,
+) -> String {
+    use bitcoin::hashes::Hash as _;
+    use ciborium::value::Value;
+
+    let wp = destination
+        .witness_program()
+        .expect("test destination must be a witness address");
+    let mut packed = vec![0x03, wp.version() as u8];
+    packed.extend_from_slice(wp.program().as_bytes());
+
+    let mut cbor = Vec::new();
+    ciborium::into_writer(
+        &Value::Array(vec![
+            Value::Bytes(packed),
+            Value::Integer(flags.into()),
+            Value::Bytes(vec![]),
+        ]),
+        &mut cbor,
+    )
+    .unwrap();
+
+    let mut payload = b"CNTRPRTY".to_vec();
+    payload.push(0x04); // sweep type id
+    payload.extend_from_slice(&cbor);
+    arc4::decrypt(&txid_display, &mut payload); // obfuscate (RC4 is symmetric)
+
+    let mut internal = txid_display;
+    internal.reverse();
+    let push = bitcoin::script::PushBytesBuf::try_from(payload).unwrap();
+    let tx = Transaction {
+        version: bitcoin::transaction::Version::TWO,
+        lock_time: bitcoin::absolute::LockTime::ZERO,
+        input: vec![bitcoin::TxIn {
+            previous_output: bitcoin::OutPoint {
+                txid: bitcoin::Txid::from_byte_array(internal),
+                vout: 0,
+            },
+            script_sig: bitcoin::ScriptBuf::new(),
+            sequence: bitcoin::Sequence::MAX,
+            witness: bitcoin::Witness::new(),
+        }],
+        output: vec![
+            bitcoin::TxOut {
+                value: bitcoin::Amount::ZERO,
+                script_pubkey: bitcoin::ScriptBuf::new_op_return(&push),
+            },
+            // Change back to the source (a real sweep pays no BTC to the payload
+            // destination), so `verify_btc_recipients` would pass on its own.
+            bitcoin::TxOut {
+                value: bitcoin::Amount::from_sat(1000),
+                script_pubkey: source.script_pubkey(),
+            },
+        ],
+    };
+    hex::encode(bitcoin::consensus::serialize(&tx))
+}
+
 /// Verify a server-composed transaction against the user's request.
 ///
 /// * `raw_tx_hex` — the composed (unsigned or signed; outputs are identical)
@@ -322,16 +430,31 @@ pub fn verify_composed_transaction(
         }
     };
 
-    // Dispatch on the *actual* Counterparty message type embedded in the
-    // transaction, not the command name — this catches a server that composed a
-    // different message type than the command implies. The type prefix is
-    // decoded exactly as consensus packs it (1 or 4 bytes; see
+    // Decode the *actual* Counterparty message type embedded in the transaction.
+    // The type prefix is decoded exactly as consensus packs it (1 or 4 bytes; see
     // `unpack_message_type`).
     let Some((type_id, body)) = unpack_message_type(&message) else {
         return Verification::Unverifiable {
             reason: "empty or truncated Counterparty message".to_string(),
         };
     };
+
+    // Bind the composed type to the command the user ran. Without this, a server
+    // handed a `send` command could compose a `sweep` (which the destination-only
+    // `verify_sweep` would happily "match") and drain the whole wallet. A type
+    // the command should never produce is a hard mismatch, not a soft
+    // `Unverifiable` — the caller refuses to sign either way, but a mismatch
+    // states plainly *why*.
+    if !expected_message_types(tx_type).contains(&type_id) {
+        return Verification::Mismatch {
+            field: "message type",
+            requested: format!("a '{tx_type}' transaction"),
+            composed: format!(
+                "a '{}' transaction (message type {type_id})",
+                message_type_name(type_id)
+            ),
+        };
+    }
 
     let payload = match type_id {
         0 => decode::verify_classic_send(body, &tx, intent, network),
@@ -478,6 +601,7 @@ mod tests {
             quantity: Some(2500),
             destination: Some(victim.to_string()),
             source: Some(victim.to_string()),
+            flags: None,
         };
         assert!(matches!(
             verify_composed_transaction(&hex, "send", &intent, NET),
@@ -499,6 +623,7 @@ mod tests {
             quantity: Some(2500),
             destination: Some(dest.to_string()),
             source: Some(source.to_string()),
+            flags: None,
         };
         assert_eq!(
             verify_composed_transaction(&hex, "send", &intent, NET),
@@ -519,11 +644,101 @@ mod tests {
             quantity: Some(2500),
             destination: Some(dest.to_string()),
             source: Some(source.to_string()),
+            flags: None,
         };
         assert!(matches!(
             verify_composed_transaction(&hex, "send", &intent, NET),
             Verification::Mismatch {
                 field: "btc_output",
+                ..
+            }
+        ));
+    }
+
+    // ---- message-type confusion: a `send` must never verify as a `sweep` ----
+
+    #[test]
+    fn send_command_composed_as_sweep_is_a_type_mismatch() {
+        // The user ran `send 2500 of asset 1 -> dest`, but the server composed a
+        // type-4 *sweep* to that same destination. `verify_sweep` only checks the
+        // destination, so without the command<->type binding this would pass as a
+        // Match and drain the whole wallet. It must be a hard type Mismatch.
+        let dest = wpkh_addr(0x11);
+        let source = wpkh_addr(0x33);
+        let hex = build_test_sweep_tx_hex([0x11; 32], &dest, 1, &source);
+        let intent = Intent {
+            asset_id: Some(1),
+            quantity: Some(2500),
+            destination: Some(dest.to_string()),
+            source: Some(source.to_string()),
+            flags: None,
+        };
+        assert!(matches!(
+            verify_composed_transaction(&hex, "send", &intent, NET),
+            Verification::Mismatch {
+                field: "message type",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn sweep_command_composed_as_send_is_a_type_mismatch() {
+        // The mirror case: a `sweep` command must not be silently verified as a
+        // classic send (which checks a different, non-overlapping field set).
+        let dest = wpkh_addr(0x11);
+        let hex = build_test_classic_send_tx_hex([0x11; 32], 1, 2500, &dest, &[]);
+        let intent = Intent {
+            destination: Some(dest.to_string()),
+            flags: Some(1),
+            ..Default::default()
+        };
+        assert!(matches!(
+            verify_composed_transaction(&hex, "sweep", &intent, NET),
+            Verification::Mismatch {
+                field: "message type",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn matching_sweep_command_verifies_end_to_end() {
+        // A genuine sweep to the requested destination with the requested flags
+        // still verifies cleanly (the binding does not over-reject).
+        let dest = wpkh_addr(0x11);
+        let source = wpkh_addr(0x33);
+        let hex = build_test_sweep_tx_hex([0x11; 32], &dest, 3, &source);
+        let intent = Intent {
+            destination: Some(dest.to_string()),
+            source: Some(source.to_string()),
+            flags: Some(3),
+            ..Default::default()
+        };
+        assert_eq!(
+            verify_composed_transaction(&hex, "sweep", &intent, NET),
+            Verification::Match
+        );
+    }
+
+    #[test]
+    fn sweep_with_unrequested_ownership_flag_is_a_mismatch() {
+        // The user asked to sweep balances only (flags = FLAG_BALANCES = 1) but the
+        // server flipped FLAG_OWNERSHIP on (flags = 3), which would hand away asset
+        // issuer rights. That must be refused.
+        let dest = wpkh_addr(0x11);
+        let source = wpkh_addr(0x33);
+        let hex = build_test_sweep_tx_hex([0x11; 32], &dest, 3, &source);
+        let intent = Intent {
+            destination: Some(dest.to_string()),
+            source: Some(source.to_string()),
+            flags: Some(1),
+            ..Default::default()
+        };
+        assert!(matches!(
+            verify_composed_transaction(&hex, "sweep", &intent, NET),
+            Verification::Mismatch {
+                field: "sweep flags",
                 ..
             }
         ));

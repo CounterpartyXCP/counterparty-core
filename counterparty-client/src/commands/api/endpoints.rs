@@ -19,7 +19,7 @@ pub async fn fetch_api_endpoints(config: &AppConfig) -> Result<HashMap<String, A
 
 // Retrieves endpoints from the API
 async fn fetch_endpoints_from_api(config: &AppConfig) -> Result<HashMap<String, ApiEndpoint>> {
-    let client = super::execution::http_client(config.require_https());
+    let client = super::execution::http_client(config.require_https())?;
     let endpoints_url = config.get_endpoints_url();
 
     let response_json = fetch_json_response(&client, &endpoints_url).await?;

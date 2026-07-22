@@ -19,4 +19,4 @@ mod tests;
 
 // Re-export the main API functions and types
 pub use transaction::sign_transaction;
-pub use types::{UTXOList, UTXO};
+pub use types::{UTXOList, UTXOType, UTXO};

@@ -207,7 +207,7 @@ async fn fetch_asset_divisible(config: &AppConfig, asset: &str) -> Result<Option
     }
 
     let url = format!("{}/v2/assets/{}", config.get_api_url(), asset);
-    let response = api::http_client(config.require_https())
+    let response = api::http_client(config.require_https())?
         .get(&url)
         .send()
         .await

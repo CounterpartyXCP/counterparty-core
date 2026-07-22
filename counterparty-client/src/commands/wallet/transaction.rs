@@ -30,13 +30,25 @@ struct RevealTransactionInfo<'a> {
 const MAX_REASONABLE_FEE_SAT: u64 = 1_000_000;
 
 /// Refuse to sign a transaction whose miner fee exceeds [`MAX_REASONABLE_FEE_SAT`].
+///
+/// The fee is derived from the *server-reported* input values. Two ways that can
+/// be gamed are surfaced instead of silently trusted:
+///
+/// * a legacy (P2PKH) input's amount is not committed by its signature (BIP143
+///   covers segwit only), so a server can under-report it to hide an inflated
+///   real fee — a warning is printed when such an input is present;
+/// * if the reported inputs are not greater than the outputs the fee cannot be
+///   computed at all (`calculate_transaction_fee` returns `None`), which is
+///   exactly the shape of an under-reporting server — this now warns loudly
+///   rather than passing the cap silently (the previous fail-*open* behaviour).
 fn ensure_fee_within_limit(raw_tx_hex: &str, utxo_list: &bitcoinsigner::UTXOList) -> Result<()> {
     let tx_bytes =
         hex::decode(raw_tx_hex).map_err(|e| anyhow!("Failed to decode transaction hex: {}", e))?;
     let tx: bitcoin::Transaction = bitcoin::consensus::deserialize(&tx_bytes)
         .map_err(|e| anyhow!("Failed to parse transaction: {}", e))?;
-    if let Some(fee) = calculate_transaction_fee(&tx, utxo_list) {
-        if fee > MAX_REASONABLE_FEE_SAT {
+
+    match calculate_transaction_fee(&tx, utxo_list) {
+        Some(fee) if fee > MAX_REASONABLE_FEE_SAT => {
             return Err(anyhow!(
                 "SECURITY: the composed transaction pays a miner fee of {} sats ({:.8} BTC), above \
                  the client's {} sat safety limit. Refusing to sign. If this is intentional, use the \
@@ -46,7 +58,28 @@ fn ensure_fee_within_limit(raw_tx_hex: &str, utxo_list: &bitcoinsigner::UTXOList
                 MAX_REASONABLE_FEE_SAT
             ));
         }
+        Some(_) => {}
+        None => {
+            helpers::print_warning(
+                "\u{26A0} Could not verify the miner fee: the server-reported input values are not \
+                 greater than the outputs, so the fee safety limit could not be enforced.",
+                Some("Check the fee shown in the summary below before confirming."),
+            );
+        }
     }
+
+    if utxo_list
+        .as_ref()
+        .iter()
+        .any(|u| u.get_type() == bitcoinsigner::UTXOType::P2PKH)
+    {
+        helpers::print_warning(
+            "\u{26A0} This transaction spends a legacy (P2PKH) input whose amount the signature does \
+             not commit to, so the miner-fee safety limit cannot be guaranteed for it.",
+            Some("Prefer segwit/taproot addresses; verify the fee in the summary below."),
+        );
+    }
+
     Ok(())
 }
 
@@ -407,7 +440,7 @@ fn confirm_broadcast() -> Result<bool> {
 
 /// Broadcast a signed transaction to the network
 async fn broadcast_transaction(config: &AppConfig, signed_tx: &str) -> Result<String> {
-    let client = api::http_client(config.require_https());
+    let client = api::http_client(config.require_https())?;
     let api_url = config.get_api_url();
 
     // Broadcast endpoint. The signed hex goes in the POST body only (not the
@@ -686,6 +719,42 @@ fn build_reveal_utxo_list(commit_tx_hex: &str) -> Result<bitcoinsigner::UTXOList
     Ok(utxo_list)
 }
 
+/// Verify a server-supplied, pre-signed reveal transaction spends **only** the
+/// commit transaction's first output (`commit_txid:0`) — the dust envelope the
+/// user just reviewed and signed for. The reveal is broadcast verbatim, so this
+/// bounds its exposure: it confirms a hostile server cannot return a "reveal"
+/// that instead spends some other wallet UTXO. `signed_commit_hex` is the
+/// locally-signed commit; its txid is final for segwit/taproot funding inputs
+/// (whose witness is excluded from the txid), and a legacy-funded commit whose
+/// txid changed on signing correctly fails this check (its pre-signed reveal
+/// would be invalid on-chain anyway).
+fn ensure_reveal_spends_commit_first_output(
+    signed_commit_hex: &str,
+    reveal_hex: &str,
+) -> Result<()> {
+    let commit_bytes = hex::decode(signed_commit_hex)
+        .map_err(|e| anyhow!("Failed to decode commit transaction hex: {}", e))?;
+    let commit: bitcoin::Transaction = bitcoin::consensus::deserialize(&commit_bytes)
+        .map_err(|e| anyhow!("Failed to parse commit transaction: {}", e))?;
+    let commit_txid = commit.compute_txid();
+
+    let reveal_bytes = hex::decode(reveal_hex)
+        .map_err(|e| anyhow!("Failed to decode reveal transaction hex: {}", e))?;
+    let reveal: bitcoin::Transaction = bitcoin::consensus::deserialize(&reveal_bytes)
+        .map_err(|e| anyhow!("Failed to parse reveal transaction: {}", e))?;
+
+    let expected = bitcoin::OutPoint::new(commit_txid, 0);
+    let ok = reveal.input.len() == 1 && reveal.input[0].previous_output == expected;
+    if !ok {
+        return Err(anyhow!(
+            "SECURITY: the server-supplied reveal transaction does not spend only the commit's \
+             first output ({expected}). Refusing to broadcast it. The API server may be \
+             malfunctioning or malicious."
+        ));
+    }
+    Ok(())
+}
+
 /// Handle transaction command by calling the corresponding compose API function
 pub async fn handle_transaction_command(
     config: &AppConfig,
@@ -725,7 +794,7 @@ pub async fn handle_transaction_command(
     // encodes what the user requested (asset / quantity / destination), before
     // signing or broadcasting anything. Aborts on a proven mismatch; warns
     // loudly when the type/encoding cannot be independently verified.
-    verify_composed_transaction_or_abort(
+    let verify_outcome = verify_composed_transaction_or_abort(
         config,
         transaction_name,
         &requested_params,
@@ -784,25 +853,29 @@ pub async fn handle_transaction_command(
 
     // Handle reveal transaction if present
     if let Some(reveal_tx_info) = extract_reveal_transaction_info(&api_result) {
+        let reveal_hex = reveal_tx_info.signed_tx;
+
+        // The reveal is composed AND signed by the server and broadcast verbatim.
+        // Its exposure is only bounded if it spends nothing but the commit's first
+        // output (the dust envelope the user just reviewed and signed for), so
+        // assert exactly that before trusting it — otherwise a hostile server
+        // could hand back a "reveal" that spends some other wallet UTXO.
+        ensure_reveal_spends_commit_first_output(&signed_tx, reveal_hex)?;
+
         helpers::print_success("Commit transaction signed:", None);
         println!("{}\n", signed_tx);
 
         // Display transaction summary
         display_transaction_summary(&signed_tx, &utxo_list, config.network)?;
 
-        // Use the already signed reveal transaction directly
-        signed_reveal_tx = Some(reveal_tx_info.signed_tx.to_string());
+        signed_reveal_tx = Some(reveal_hex.to_string());
 
         helpers::print_success("Reveal transaction signed:", None);
-        println!("{}\n", signed_reveal_tx.as_ref().unwrap());
+        println!("{}\n", reveal_hex);
 
         // Display transaction summary
         let reveal_utxo_list = build_reveal_utxo_list(&signed_tx)?;
-        display_transaction_summary(
-            signed_reveal_tx.as_ref().unwrap(),
-            &reveal_utxo_list,
-            config.network,
-        )?;
+        display_transaction_summary(reveal_hex, &reveal_utxo_list, config.network)?;
     } else {
         helpers::print_success("Transaction signed:", None);
         println!("{}\n", signed_tx);
@@ -810,16 +883,51 @@ pub async fn handle_transaction_command(
         display_transaction_summary(&signed_tx, &utxo_list, config.network)?;
     }
 
-    // Ask for confirmation before broadcasting, unless `--yes` was given (for
-    // automation / CI / headless use).
-    let skip_confirm = sub_matches.get_flag("yes");
-    if !skip_confirm && !confirm_broadcast()? {
-        helpers::print_error("Transaction aborted", None);
-        return Ok(());
+    // Ask for confirmation before broadcasting. `--yes` auto-confirms for
+    // automation / CI, but ONLY when the client independently verified the
+    // transaction. An `Unverified` type (one the client cannot decode) is
+    // vouched for solely by the server, so it must never be broadcast without a
+    // human looking at the outputs — `--yes` is deliberately overridden here so a
+    // hostile server cannot slip a siphon output past unattended automation.
+    let yes = sub_matches.get_flag("yes");
+    let skip_confirm = yes && verify_outcome != VerifyOutcome::Unverified;
+    if !skip_confirm {
+        if yes && verify_outcome == VerifyOutcome::Unverified {
+            helpers::print_warning(
+                "\u{26A0} --yes does not auto-confirm a transaction this client could not independently verify.",
+                Some(
+                    "Review the inputs and outputs above and confirm manually (or use the expert \
+                     `api compose_*` path). In a non-interactive session this aborts safely.",
+                ),
+            );
+        }
+        if !confirm_broadcast()? {
+            helpers::print_error("Transaction aborted", None);
+            return Ok(());
+        }
     }
 
     // Broadcast the transaction(s)
     broadcast_transactions(config, &signed_tx, signed_reveal_tx.as_deref()).await
+}
+
+/// How confidently the client independently verified the composed transaction.
+/// Drives both the on-screen banner and whether `--yes` may skip the human
+/// confirmation before broadcasting.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum VerifyOutcome {
+    /// Every independently-checkable field matched (asset, quantity, destination,
+    /// BTC routing) against a client-side trust anchor. `--yes` may auto-confirm.
+    Verified,
+    /// Matched, but at least one field was taken on trust from the server — the
+    /// asset name could not be resolved offline, or the quantity's decimal scale
+    /// came from the server's reported divisibility. `--yes` may still
+    /// auto-confirm, but the user is told what was trusted.
+    PartiallyVerified,
+    /// The transaction type or encoding is outside the client's independent
+    /// decoder; only the server vouches for its contents. `--yes` MUST NOT skip
+    /// the human review for this outcome.
+    Unverified,
 }
 
 /// Independently verify a server-composed transaction against the user's request
@@ -840,7 +948,7 @@ fn verify_composed_transaction_or_abort(
     requested_params: &std::collections::BTreeMap<String, String>,
     normalized_params: &HashMap<String, String>,
     raw_tx_hex: &str,
-) -> Result<()> {
+) -> Result<VerifyOutcome> {
     use crate::counterparty::{self, Verification};
 
     let network = match config.network {
@@ -872,7 +980,18 @@ fn verify_composed_transaction_or_abort(
             .get("source")
             .or_else(|| requested_params.get("address"))
             .cloned(),
+        // The requested `sweep` flags, so a server cannot silently flip
+        // FLAG_OWNERSHIP on. Not a quantity, so it is read from the raw inputs.
+        flags: requested_params.get("flags").and_then(|f| f.parse().ok()),
     };
+
+    // For a non-BTC/XCP asset, the ×1e8 scale applied to `--quantity` came from
+    // the server's reported divisibility (`quantity::resolve_divisibility`), and
+    // the verifier compares two identically-scaled numbers — so a lying
+    // divisibility flag would still "match". When a quantity was checked for such
+    // an asset, its *magnitude* was taken on trust and the banner must say so.
+    let quantity_scale_trusted = intent.quantity.is_some()
+        && matches!(asset_requested.map(String::as_str), Some(a) if a != "BTC" && a != "XCP");
 
     match counterparty::verify_composed_transaction(raw_tx_hex, tx_type, &intent, network) {
         Verification::Match if asset_unchecked => {
@@ -886,14 +1005,29 @@ fn verify_composed_transaction_or_abort(
                     asset_requested.map(String::as_str).unwrap_or("?"),
                 )),
             );
-            Ok(())
+            Ok(VerifyOutcome::PartiallyVerified)
+        }
+        Verification::Match if quantity_scale_trusted => {
+            // Asset, destination and BTC routing matched, but the decimal scale of
+            // the quantity rests on the server's divisibility answer for this
+            // asset — surface that rather than claim an unqualified match.
+            helpers::print_warning(
+                "\u{26A0} Partially verified: asset, destination and BTC change match your request.",
+                Some(&format!(
+                    "The decimal scale of the quantity was taken from the server's reported \
+                     divisibility for '{}', which this client cannot verify offline. Confirm the \
+                     amount below is what you intended before continuing.",
+                    asset_requested.map(String::as_str).unwrap_or("?"),
+                )),
+            );
+            Ok(VerifyOutcome::PartiallyVerified)
         }
         Verification::Match => {
             helpers::print_success(
                 "\u{2713} Verified: the composed transaction matches your request.",
                 None,
             );
-            Ok(())
+            Ok(VerifyOutcome::Verified)
         }
         Verification::Mismatch {
             field,
@@ -927,7 +1061,7 @@ fn verify_composed_transaction_or_abort(
                      review the details below before confirming."
                 )),
             );
-            Ok(())
+            Ok(VerifyOutcome::Unverified)
         }
     }
 }
@@ -1382,6 +1516,120 @@ mod tests {
         let mut small = bitcoinsigner::UTXOList::new();
         small.add(bitcoinsigner::UTXO::new(500, spk));
         assert_eq!(calculate_transaction_fee(&tx, &small), None);
+    }
+
+    // ---- ensure_fee_within_limit (the anti-fee-theft cap) ----
+
+    #[test]
+    fn ensure_fee_within_limit_refuses_above_cap_allows_at_and_below() {
+        let (_, spk) = p2wpkh_addr_and_script(5);
+        // Single output of 900 sats; fee = reported input value - 900.
+        let tx_hex = raw_tx_hex(vec![bitcoin::TxOut {
+            value: bitcoin::Amount::from_sat(900),
+            script_pubkey: spk.clone(),
+        }]);
+
+        let utxos = |input_value: u64| {
+            let mut list = bitcoinsigner::UTXOList::new();
+            list.add(bitcoinsigner::UTXO::new(input_value, spk.clone()));
+            list
+        };
+
+        // Fee one sat above the cap -> refuse.
+        assert!(
+            ensure_fee_within_limit(&tx_hex, &utxos(900 + MAX_REASONABLE_FEE_SAT + 1)).is_err()
+        );
+        // Fee exactly at the cap -> allowed (comparison is strictly-greater).
+        assert!(ensure_fee_within_limit(&tx_hex, &utxos(900 + MAX_REASONABLE_FEE_SAT)).is_ok());
+        // A normal small fee -> allowed.
+        assert!(ensure_fee_within_limit(&tx_hex, &utxos(1000)).is_ok());
+        // Reported inputs <= outputs: the fee is uncomputable. This must not fail
+        // *open* silently (it now warns and returns Ok), and must not error out.
+        assert!(ensure_fee_within_limit(&tx_hex, &utxos(500)).is_ok());
+    }
+
+    #[test]
+    fn ensure_fee_within_limit_allows_legacy_input_with_a_reasonable_fee() {
+        // A P2PKH input triggers the "amount not committed" warning branch; a
+        // reasonable fee is still allowed (the warning is advisory, not a refusal).
+        let spk = p2pkh_script(6);
+        let tx_hex = raw_tx_hex(vec![bitcoin::TxOut {
+            value: bitcoin::Amount::from_sat(900),
+            script_pubkey: spk.clone(),
+        }]);
+        let mut list = bitcoinsigner::UTXOList::new();
+        list.add(bitcoinsigner::UTXO::new(1200, spk));
+        assert!(ensure_fee_within_limit(&tx_hex, &list).is_ok());
+    }
+
+    // ---- ensure_reveal_spends_commit_first_output ----
+
+    #[test]
+    fn reveal_must_spend_only_the_commit_first_output() {
+        use bitcoin::hashes::Hash as _;
+        let (_, spk) = p2wpkh_addr_and_script(9);
+
+        // A commit transaction; its txid is deterministic from its contents.
+        let commit = bitcoin::Transaction {
+            version: bitcoin::transaction::Version::TWO,
+            lock_time: bitcoin::absolute::LockTime::ZERO,
+            input: vec![bitcoin::TxIn {
+                previous_output: bitcoin::OutPoint {
+                    txid: bitcoin::Txid::all_zeros(),
+                    vout: 3,
+                },
+                script_sig: bitcoin::ScriptBuf::new(),
+                sequence: bitcoin::Sequence::MAX,
+                witness: bitcoin::Witness::new(),
+            }],
+            output: vec![bitcoin::TxOut {
+                value: bitcoin::Amount::from_sat(1000),
+                script_pubkey: spk.clone(),
+            }],
+        };
+        let commit_hex = hex::encode(bitcoin::consensus::serialize(&commit));
+        let commit_txid = commit.compute_txid();
+
+        let reveal_spending = |inputs: Vec<bitcoin::OutPoint>| {
+            let tx = bitcoin::Transaction {
+                version: bitcoin::transaction::Version::TWO,
+                lock_time: bitcoin::absolute::LockTime::ZERO,
+                input: inputs
+                    .into_iter()
+                    .map(|previous_output| bitcoin::TxIn {
+                        previous_output,
+                        script_sig: bitcoin::ScriptBuf::new(),
+                        sequence: bitcoin::Sequence::MAX,
+                        witness: bitcoin::Witness::new(),
+                    })
+                    .collect(),
+                output: vec![bitcoin::TxOut {
+                    value: bitcoin::Amount::from_sat(500),
+                    script_pubkey: spk.clone(),
+                }],
+            };
+            hex::encode(bitcoin::consensus::serialize(&tx))
+        };
+
+        // Spends exactly commit:0 -> accepted.
+        let good = reveal_spending(vec![bitcoin::OutPoint::new(commit_txid, 0)]);
+        assert!(ensure_reveal_spends_commit_first_output(&commit_hex, &good).is_ok());
+
+        // Wrong vout (commit:1) -> refused.
+        let wrong_vout = reveal_spending(vec![bitcoin::OutPoint::new(commit_txid, 1)]);
+        assert!(ensure_reveal_spends_commit_first_output(&commit_hex, &wrong_vout).is_err());
+
+        // A different txid entirely -> refused.
+        let elsewhere =
+            reveal_spending(vec![bitcoin::OutPoint::new(bitcoin::Txid::all_zeros(), 0)]);
+        assert!(ensure_reveal_spends_commit_first_output(&commit_hex, &elsewhere).is_err());
+
+        // Spends commit:0 PLUS another UTXO -> refused (would siphon the extra input).
+        let extra = reveal_spending(vec![
+            bitcoin::OutPoint::new(commit_txid, 0),
+            bitcoin::OutPoint::new(bitcoin::Txid::all_zeros(), 7),
+        ]);
+        assert!(ensure_reveal_spends_commit_first_output(&commit_hex, &extra).is_err());
     }
 
     // ---- decode_script / build_utxo_list ----
@@ -1985,32 +2233,70 @@ mod tests {
         let raw = crate::counterparty::build_test_enhanced_send_tx_hex([0x11; 32], 1, 2500, &dest);
         let (requested, normalized) = intent_params("XCP", &dest.to_string(), "2500");
 
-        assert!(verify_composed_transaction_or_abort(
-            &regtest_config(),
-            "enhanced_send",
-            &requested,
-            &normalized,
-            &raw,
-        )
-        .is_ok());
+        // XCP is hard-coded divisible, so the quantity scale is not server-trusted
+        // here -> a full Verified, not PartiallyVerified.
+        assert_eq!(
+            verify_composed_transaction_or_abort(
+                &regtest_config(),
+                "enhanced_send",
+                &requested,
+                &normalized,
+                &raw,
+            )
+            .unwrap(),
+            VerifyOutcome::Verified
+        );
     }
 
     #[test]
     fn verify_or_abort_allows_but_warns_on_unverifiable_type() {
         // A non-transfer command cannot be independently verified -> Ok (warn),
-        // so the normal broadcast confirmation still gates it.
+        // so the normal broadcast confirmation still gates it. This outcome must
+        // never allow `--yes` to skip that confirmation (see the call site).
         let dest = wpkh_address(0x11);
         let raw = crate::counterparty::build_test_enhanced_send_tx_hex([0x11; 32], 1, 2500, &dest);
         let (requested, normalized) = intent_params("XCP", &dest.to_string(), "2500");
 
-        assert!(verify_composed_transaction_or_abort(
-            &regtest_config(),
-            "issuance",
-            &requested,
-            &normalized,
-            &raw,
-        )
-        .is_ok());
+        assert_eq!(
+            verify_composed_transaction_or_abort(
+                &regtest_config(),
+                "issuance",
+                &requested,
+                &normalized,
+                &raw,
+            )
+            .unwrap(),
+            VerifyOutcome::Unverified
+        );
+    }
+
+    #[test]
+    fn verify_or_abort_partially_verified_when_quantity_scale_is_server_sourced() {
+        // H1: for any asset other than BTC/XCP, the ×1e8 scale applied to
+        // `--quantity` came from the server's own divisibility answer
+        // (`quantity::resolve_divisibility`), so a lying divisibility flag would
+        // still "match" here. The banner must say "partially", not "Verified".
+        // "FOOBAR" resolves offline to asset id 66051301 (golden value asserted in
+        // `counterparty::tests::asset_id_resolves_specials_numeric_and_base26`), so
+        // this exercises the quantity-scale branch specifically, not the
+        // asset-name-unresolvable one (that name always resolves).
+        let dest = wpkh_address(0x11);
+        let raw = crate::counterparty::build_test_enhanced_send_tx_hex(
+            [0x11; 32], 66_051_301, 2500, &dest,
+        );
+        let (requested, normalized) = intent_params("FOOBAR", &dest.to_string(), "2500");
+
+        assert_eq!(
+            verify_composed_transaction_or_abort(
+                &regtest_config(),
+                "enhanced_send",
+                &requested,
+                &normalized,
+                &raw,
+            )
+            .unwrap(),
+            VerifyOutcome::PartiallyVerified
+        );
     }
 
     #[test]
@@ -2046,13 +2332,16 @@ mod tests {
         let raw = crate::counterparty::build_test_enhanced_send_tx_hex([0x11; 32], 5, 2500, &dest);
         let (requested, normalized) = intent_params("PARENT.child", &dest.to_string(), "2500");
 
-        assert!(verify_composed_transaction_or_abort(
-            &regtest_config(),
-            "enhanced_send",
-            &requested,
-            &normalized,
-            &raw,
-        )
-        .is_ok());
+        assert_eq!(
+            verify_composed_transaction_or_abort(
+                &regtest_config(),
+                "enhanced_send",
+                &requested,
+                &normalized,
+                &raw,
+            )
+            .unwrap(),
+            VerifyOutcome::PartiallyVerified
+        );
     }
 }
