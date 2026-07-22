@@ -1,4 +1,4 @@
-use clap::{Arg, Command};
+use clap::{Arg, ArgAction, Command};
 use std::collections::{HashMap, HashSet};
 
 use crate::commands::api::{ApiEndpoint, ApiEndpointArg};
@@ -161,6 +161,19 @@ pub fn add_broadcast_commands(cmd: Command, endpoints: &HashMap<String, ApiEndpo
             );
         }
 
+        // Non-interactive broadcast: `--yes`/`-y` skips the y/N confirmation
+        // prompt (for automation / CI / headless use). Mirrors the flag on
+        // `export_address`. Its id is fixed and is never registered in
+        // `ID_ARG_MAP`, so `extract_parameters_from_matches` never forwards it
+        // to the compose API.
+        tx_cmd = tx_cmd.arg(
+            Arg::new("yes")
+                .long("yes")
+                .short('y')
+                .help("Skip the broadcast confirmation prompt")
+                .action(ArgAction::SetTrue),
+        );
+
         send_transaction_cmd = send_transaction_cmd.subcommand(tx_cmd);
     }
 
@@ -309,5 +322,24 @@ mod tests {
 
         // burn had no address arg; the builder injects a required --address.
         assert!(long_flags(burn).contains(&"address".to_string()));
+
+        // Every transaction subcommand carries the non-interactive `--yes`/`-y`
+        // broadcast flag, and it is not forwarded as a compose parameter.
+        assert!(long_flags(send).contains(&"yes".to_string()));
+        assert!(long_flags(burn).contains(&"yes".to_string()));
+        let m = send
+            .clone()
+            .try_get_matches_from([
+                "send",
+                "--address",
+                "a",
+                "--asset",
+                "XCP",
+                "--quantity",
+                "1",
+                "-y",
+            ])
+            .unwrap();
+        assert!(m.get_flag("yes"));
     }
 }

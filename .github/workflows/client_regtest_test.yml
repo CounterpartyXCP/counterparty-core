@@ -1,8 +1,11 @@
-# Integration check against a live regtest counterparty-server: divisibility
-# lookup, quantity scaling and compose reachability. It deliberately does NOT
-# sign or broadcast — the signing path is covered hermetically in
-# `bitcoinsigner::tests` (including independent taproot signature verification).
-# A full fund → compose → sign → broadcast → accept E2E is a tracked follow-up.
+# Integration checks against a live regtest counterparty-server:
+#   1. divisibility lookup, quantity scaling and compose reachability
+#      (`full_compose_send_scales_quantity_regtest`, a library test);
+#   2. a full fund → compose → sign → broadcast → accept end-to-end cycle that
+#      drives the compiled `xcp` binary and signs with the client's *own* signer
+#      — not Bitcoin Core's wallet — so the Rust signer is confronted with real
+#      bitcoind consensus and real Counterparty parsing
+#      (`full_fund_compose_sign_broadcast_accept_regtest`, `tests/e2e_regtest.rs`).
 name: Client Regtest Integration
 
 on:
@@ -80,6 +83,15 @@ jobs:
         run: |
           cd counterparty-client
           cargo test -- --ignored full_compose_send_scales_quantity_regtest
+
+      # Full black-box E2E: import a key into an isolated `xcp` wallet, fund it
+      # from Bitcoin Core's regtest wallet, then burn → send XCP by composing via
+      # the API, signing locally with the client's own signer, and broadcasting —
+      # asserting over the v2 API that the destination is credited.
+      - name: Run the client regtest end-to-end test
+        run: |
+          cd counterparty-client
+          cargo test --test e2e_regtest -- --ignored full_fund_compose_sign_broadcast_accept_regtest
 
       - name: Show the regtest server log on failure
         if: failure()

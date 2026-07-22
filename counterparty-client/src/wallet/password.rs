@@ -21,6 +21,35 @@ use crate::config;
 /// the main defence for a stolen `wallet.db`; require a reasonably long one.
 const MIN_PASSWORD_LEN: usize = 12;
 
+/// Environment variable that supplies the wallet password non-interactively.
+///
+/// Intended for automation, CI and headless servers where neither an
+/// interactive prompt nor an OS keyring is available. The value is still
+/// verified against the wallet before it is cached, exactly like a keyring
+/// value, and a new wallet's password must still meet [`MIN_PASSWORD_LEN`].
+///
+/// Prefer the OS keyring for interactive use: an environment variable is
+/// visible to other processes running as the same user (e.g.
+/// `/proc/<pid>/environ` on Linux) and can leak into shell history, CI logs or
+/// crash dumps.
+const PASSWORD_ENV_VAR: &str = "XCP_WALLET_PASSWORD";
+
+/// Parse a candidate password from the raw environment value. An unset or empty
+/// variable yields `None` so an exported-but-empty `XCP_WALLET_PASSWORD` falls
+/// back to the keyring or a prompt rather than being treated as an empty
+/// password.
+fn password_from_env_value(raw: Option<String>) -> Option<SecretString> {
+    match raw {
+        Some(v) if !v.is_empty() => Some(SecretString::from(v)),
+        _ => None,
+    }
+}
+
+/// The password from [`PASSWORD_ENV_VAR`], if set and non-empty.
+fn password_from_env() -> Option<SecretString> {
+    password_from_env_value(std::env::var(PASSWORD_ENV_VAR).ok())
+}
+
 // In-memory password cache, keyed by wallet (service + username) so distinct
 // wallets/networks in the same process never share a password.
 static PASSWORD_CACHE: OnceLock<Mutex<HashMap<String, SecretString>>> = OnceLock::new();
@@ -64,12 +93,16 @@ impl PasswordManager {
     }
 
     /// Return a non-interactive password for an existing wallet: the cached
-    /// value, else the keyring value, else `None`. Never prompts and never
-    /// persists — the caller verifies it decrypts the wallet before calling
+    /// value, else the [`PASSWORD_ENV_VAR`] environment variable, else the
+    /// keyring value, else `None`. Never prompts and never persists — the caller
+    /// verifies it decrypts the wallet before calling
     /// [`persist`](Self::persist).
     pub fn cached_or_stored(&self) -> Result<Option<SecretString>> {
         if let Some(cached) = self.get_from_cache() {
             return Ok(Some(cached));
+        }
+        if let Some(env_password) = password_from_env() {
+            return Ok(Some(env_password));
         }
         self.get_from_keyring()
     }
@@ -83,6 +116,14 @@ impl PasswordManager {
     /// strength check). Not persisted here — the caller persists after the
     /// initial encrypted write succeeds.
     pub fn prompt_new_password(&self) -> Result<SecretString> {
+        // Non-interactive path (automation / CI / headless): take the password
+        // from the environment instead of prompting. It must still clear the
+        // minimum-strength bar so a new wallet is never created with a weak one.
+        if let Some(env_password) = password_from_env() {
+            check_password_strength(&env_password)?;
+            return Ok(env_password);
+        }
+
         let password = self.prompt_password("Enter new wallet password: ")?;
         // Check strength before asking to confirm, so a too-short password fails
         // fast.
@@ -292,6 +333,16 @@ mod tests {
         // A cache hit short-circuits before any keyring access.
         let got = pm.cached_or_stored().unwrap().unwrap();
         assert_eq!(got.expose_secret(), "cachedpw123");
+    }
+
+    #[test]
+    fn password_from_env_value_ignores_unset_and_empty() {
+        // Unset -> None; exported-but-empty -> None (never an empty password).
+        assert!(password_from_env_value(None).is_none());
+        assert!(password_from_env_value(Some(String::new())).is_none());
+        // A non-empty value is taken verbatim.
+        let got = password_from_env_value(Some("correct horse battery".to_string())).unwrap();
+        assert_eq!(got.expose_secret(), "correct horse battery");
     }
 
     #[test]

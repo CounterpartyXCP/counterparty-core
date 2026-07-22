@@ -68,6 +68,14 @@ it is verified, so it is only cached once it actually unlocks the wallet.
 wallet can't be unlocked). On a headless Linux server you need a running Secret
 Service provider (e.g. `gnome-keyring`) for the keyring to work.
 
+**Non-interactive password (`XCP_WALLET_PASSWORD`).** For automation, CI or a
+headless server without a keyring, set the `XCP_WALLET_PASSWORD` environment
+variable: it is used to create and unlock the wallet without a prompt (it must
+still meet the 12-character minimum for a new wallet, and is verified before
+use). Prefer the OS keyring for interactive use — an environment variable is
+visible to other processes running as the same user (e.g. `/proc/<pid>/environ`
+on Linux) and can leak into shell history, CI logs or crash dumps.
+
 **Password & at-rest protection.** A new wallet password must be **at least 12
 characters**. Encryption at rest uses `cocoon` (ChaCha20-Poly1305 with a PBKDF2
 key derivation): it protects a *stolen* `wallet.db` against offline password
@@ -120,7 +128,9 @@ Each address is an **independent key**; there is no single wallet-wide seed.
 
 `wallet transaction <type>` composes via the API, signs locally, shows a summary,
 asks for confirmation, then broadcasts. One subcommand exists per `compose_*` API
-function (`send`, `issuance`, `order`, `dispenser`, `dividend`, …).
+function (`send`, `issuance`, `order`, `dispenser`, `dividend`, …). Pass
+`-y`/`--yes` to skip the broadcast confirmation prompt (for scripting; the same
+flag works on `wallet broadcast`).
 
 ```sh
 # Send 10 units of a divisible asset
@@ -179,8 +189,13 @@ cargo test                                   # unit + integration tests
 cargo clippy --all-targets -- -D warnings
 cargo fmt --check
 
-# An HTTP integration test (divisibility lookup + compose reachability against a
-# live regtest counterparty-server at http://localhost:24000). It does not sign
-# or broadcast — the sign path is covered hermetically in bitcoinsigner::tests.
+# Regtest integration tests (require a live counterparty-server at
+# http://localhost:24000, plus bitcoin-cli on PATH for the E2E). These are
+# #[ignore]d so a plain `cargo test` skips them:
+#   * full_compose_send_scales_quantity_regtest — divisibility lookup + compose
+#     reachability over HTTP (no signing/broadcasting);
+#   * full_fund_compose_sign_broadcast_accept_regtest — a full black-box
+#     fund → compose → sign → broadcast → accept cycle through the `xcp` binary,
+#     signing with the client's own signer (tests/e2e_regtest.rs).
 cargo test -- --ignored
 ```

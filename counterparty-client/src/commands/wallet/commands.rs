@@ -51,6 +51,13 @@ pub fn build_broadcast_command() -> Command {
                 .required(true)
                 .value_name("HEX"),
         )
+        .arg(
+            Arg::new("yes")
+                .long("yes")
+                .short('y')
+                .help("Skip the broadcast confirmation prompt")
+                .action(ArgAction::SetTrue),
+        )
 }
 
 /// Builds the new_address subcommand for generating a random address
@@ -308,6 +315,12 @@ mod tests {
             m.get_one::<String>("rawtransaction").map(String::as_str),
             Some("deadbeef")
         );
+        // `--yes` defaults to false and is set by `-y`.
+        assert!(!m.get_flag("yes"));
+        let m2 = build_broadcast_command()
+            .try_get_matches_from(["broadcast", "--rawtransaction", "deadbeef", "-y"])
+            .unwrap();
+        assert!(m2.get_flag("yes"));
     }
 
     #[test]

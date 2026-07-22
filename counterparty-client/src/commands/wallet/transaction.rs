@@ -744,8 +744,10 @@ pub async fn handle_transaction_command(
         display_transaction_summary(&signed_tx, &utxo_list, config.network)?;
     }
 
-    // Ask for confirmation before broadcasting
-    if !confirm_broadcast()? {
+    // Ask for confirmation before broadcasting, unless `--yes` was given (for
+    // automation / CI / headless use).
+    let skip_confirm = sub_matches.get_flag("yes");
+    if !skip_confirm && !confirm_broadcast()? {
         helpers::print_error("Transaction aborted", None);
         return Ok(());
     }
@@ -1020,8 +1022,10 @@ pub async fn handle_broadcast_command(config: &AppConfig, sub_matches: &ArgMatch
         }
     }
 
-    // Ask for confirmation before broadcasting
-    if !confirm_broadcast()? {
+    // Ask for confirmation before broadcasting, unless `--yes` was given (for
+    // automation / CI / headless use).
+    let skip_confirm = sub_matches.get_flag("yes");
+    if !skip_confirm && !confirm_broadcast()? {
         helpers::print_error("Transaction broadcast aborted", None);
         return Ok(());
     }
@@ -1694,6 +1698,14 @@ mod tests {
     fn broadcast_matches(raw: &str) -> ArgMatches {
         clap::Command::new("broadcast")
             .arg(clap::Arg::new("rawtransaction").long("rawtransaction"))
+            // Mirror the real command's `--yes` flag so `handle_broadcast_command`
+            // can read it; omitting it here would panic on `get_flag("yes")`.
+            .arg(
+                clap::Arg::new("yes")
+                    .long("yes")
+                    .short('y')
+                    .action(clap::ArgAction::SetTrue),
+            )
             .try_get_matches_from(["broadcast", "--rawtransaction", raw])
             .unwrap()
     }
