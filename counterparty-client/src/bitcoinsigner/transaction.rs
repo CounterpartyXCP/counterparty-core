@@ -1,8 +1,8 @@
 use bitcoin::secp256k1::SecretKey;
-use bitcoin::{Network, TxOut};
+use bitcoin::{Network, PublicKey, ScriptBuf, TxOut};
 use std::collections::HashMap;
 
-use super::common::bitcoin_err;
+use super::common::{bitcoin_err, get_compressed_pubkey};
 use super::p2pkh::P2PKHSigner;
 use super::p2sh::P2SHSigner;
 use super::p2trkps::P2TRKPSSigner;
@@ -66,6 +66,55 @@ fn sign_input_by_type(
         }
         None => Ok(false),
     }
+}
+
+/// Defense-in-depth guard, run before signing each ECDSA input: confirm the
+/// wallet key and any caller-supplied redeem/witness script actually
+/// reconstruct the input's `scriptPubKey`. The taproot signers already verify
+/// their own output key, so only the ECDSA types are covered here. Without this,
+/// a mismatched `sign --utxos` script — or a wrong `source_address` pointing at
+/// the wrong wallet key — would still produce a validly signed but unspendable
+/// transaction; this fails loudly (and early) instead.
+fn verify_input_spk_matches(utxo: &UTXO, public_key: &PublicKey) -> Result<()> {
+    let expected: Option<ScriptBuf> = match utxo.get_type() {
+        UTXOType::P2PKH => Some(ScriptBuf::new_p2pkh(&public_key.pubkey_hash())),
+        UTXOType::P2WPKH => Some(ScriptBuf::new_p2wpkh(
+            &get_compressed_pubkey(public_key)?.wpubkey_hash(),
+        )),
+        UTXOType::P2SH => {
+            // Nested P2SH-P2WSH (witness_script present) or legacy / P2SH-P2WPKH
+            // (redeem_script present); in both, scriptPubKey = P2SH(redeem).
+            let redeem = if let Some(ws) = utxo.witness_script.as_ref() {
+                ScriptBuf::new_p2wsh(&ws.wscript_hash())
+            } else if let Some(rs) = utxo.redeem_script.as_ref() {
+                rs.clone()
+            } else {
+                return Err(WalletError::MissingScript("redeem"));
+            };
+            Some(ScriptBuf::new_p2sh(&redeem.script_hash()))
+        }
+        UTXOType::P2WSH => {
+            let ws = utxo
+                .witness_script
+                .as_ref()
+                .ok_or(WalletError::MissingScript("witness"))?;
+            Some(ScriptBuf::new_p2wsh(&ws.wscript_hash()))
+        }
+        // Taproot signers verify their own reconstructed output key; Unknown has
+        // no signer and is skipped upstream.
+        UTXOType::P2TRKPS | UTXOType::P2TRSPS | UTXOType::Unknown => None,
+    };
+
+    if let Some(expected) = expected {
+        if expected != utxo.script_pubkey {
+            return Err(WalletError::UnsupportedScript(format!(
+                "input scriptPubKey {} does not match the signing key/script (would produce {})",
+                hex::encode(utxo.script_pubkey.as_bytes()),
+                hex::encode(expected.as_bytes()),
+            )));
+        }
+    }
+    Ok(())
 }
 
 /// Find matching address info from the wallet for a specific UTXO
@@ -160,6 +209,9 @@ pub fn sign_transaction(
                     &addr_info.private_key,
                     network,
                     |secret_key, public_key| {
+                        // Fail loudly if the key/scripts don't reconstruct this
+                        // input's scriptPubKey (parity with the taproot signers).
+                        verify_input_spk_matches(utxo, public_key)?;
                         // Sign the input within the closure
                         sign_input_by_type(
                             &mut sighash_cache,
@@ -210,4 +262,44 @@ pub fn sign_transaction(
 
     // Extract and serialize the final transaction
     extract_transaction(psbt)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bitcoin::secp256k1::{Secp256k1, SecretKey};
+
+    fn pubkey(seed: u8) -> PublicKey {
+        let secp = Secp256k1::new();
+        let sk = SecretKey::from_slice(&[seed; 32]).unwrap();
+        PublicKey::from_private_key(&secp, &bitcoin::PrivateKey::new(sk, Network::Regtest))
+    }
+
+    #[test]
+    fn spk_guard_accepts_matching_key_and_rejects_a_wrong_key() {
+        let pk = pubkey(1);
+        let cpk = get_compressed_pubkey(&pk).unwrap();
+        let utxo = UTXO::new(1000, ScriptBuf::new_p2wpkh(&cpk.wpubkey_hash()));
+        // The key that hashes to this scriptPubKey is accepted.
+        assert!(verify_input_spk_matches(&utxo, &pk).is_ok());
+        // A different wallet key does not, so signing is refused up front.
+        assert!(verify_input_spk_matches(&utxo, &pubkey(2)).is_err());
+    }
+
+    #[test]
+    fn spk_guard_rejects_a_redeem_script_that_does_not_hash_to_the_scriptpubkey() {
+        let pk = pubkey(1);
+        let redeem_a = ScriptBuf::new_p2pkh(&pk.pubkey_hash());
+        let redeem_b = ScriptBuf::new_p2pkh(&pubkey(2).pubkey_hash());
+        // scriptPubKey commits to redeem A.
+        let mut utxo = UTXO::new(1000, ScriptBuf::new_p2sh(&redeem_a.script_hash()));
+
+        // Correct redeem script: accepted.
+        utxo.redeem_script = Some(redeem_a);
+        assert!(verify_input_spk_matches(&utxo, &pk).is_ok());
+
+        // A redeem script that does not hash to the scriptPubKey: rejected.
+        utxo.redeem_script = Some(redeem_b);
+        assert!(verify_input_spk_matches(&utxo, &pk).is_err());
+    }
 }

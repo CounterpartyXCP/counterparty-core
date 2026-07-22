@@ -256,10 +256,13 @@ pub fn convert_quantity(value: &str, divisible: bool) -> Result<String> {
         amount
     };
 
-    let satoshis = satoshis
-        .trunc()
-        .to_i128()
-        .ok_or_else(|| anyhow!("quantity '{value}' is too large"))?;
+    // Counterparty quantities are unsigned 64-bit satoshi integers. Reject
+    // anything that does not fit: besides being invalid for the API, a value
+    // above u64::MAX would make the independent verifier silently skip the
+    // quantity check (its `parse::<u64>()` returns None).
+    let satoshis = satoshis.trunc().to_u64().ok_or_else(|| {
+        anyhow!("quantity '{value}' is out of range (must fit in a u64 of satoshis)")
+    })?;
     Ok(satoshis.to_string())
 }
 
@@ -304,6 +307,13 @@ mod tests {
     fn rejects_negative_and_garbage() {
         assert!(convert_quantity("-1", true).is_err());
         assert!(convert_quantity("abc", true).is_err());
+    }
+
+    #[test]
+    fn rejects_amount_above_u64_max() {
+        // 2e11 units * 1e8 = 2e19 sats, above u64::MAX (~1.84e19): must error, not
+        // truncate (a truncated value would make the verifier skip the check).
+        assert!(convert_quantity("200000000000", true).is_err());
     }
 
     #[test]
@@ -374,11 +384,12 @@ mod tests {
     }
 
     #[test]
-    fn divisible_very_large_value_is_scaled() {
-        // 1e20 units * 1e8 = 1e28 sats (within Decimal/i128 range).
+    fn divisible_large_but_in_range_value_is_scaled() {
+        // Largest whole-unit divisible amount whose satoshi value still fits u64:
+        // 184_467_440_737 * 1e8 = 18_446_744_073_700_000_000 < u64::MAX.
         assert_eq!(
-            convert_quantity("100000000000000000000", true).unwrap(),
-            "10000000000000000000000000000"
+            convert_quantity("184467440737", true).unwrap(),
+            "18446744073700000000"
         );
     }
 
@@ -395,10 +406,12 @@ mod tests {
     }
 
     #[test]
-    fn indivisible_very_large_value_is_unchanged() {
-        // The largest integer Decimal can represent (2^96 - 1).
-        let big = "79228162514264337593543950335";
-        assert_eq!(convert_quantity(big, false).unwrap(), big);
+    fn indivisible_max_u64_is_unchanged_and_beyond_is_rejected() {
+        // Counterparty quantities are u64: u64::MAX passes unchanged...
+        let max = "18446744073709551615";
+        assert_eq!(convert_quantity(max, false).unwrap(), max);
+        // ...and anything above it is rejected (never truncated/wrapped).
+        assert!(convert_quantity("18446744073709551616", false).is_err());
     }
 
     #[test]

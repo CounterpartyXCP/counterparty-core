@@ -88,15 +88,34 @@ server.
 **Transaction verification.** The server composes each transaction, but you sign
 it locally — so for `send`, `enhanced_send` and `sweep` the client independently
 decodes the transaction it is about to sign (straight from the raw bytes, not the
-server's summary) and checks that the **asset, quantity and destination** match
-what you asked for, **refusing to sign or broadcast on any mismatch**. This makes
-those transfers safe even against a malfunctioning, compromised, or
-man-in-the-middled API server. Other transaction types (issuance, order,
-dispenser, …), and the rare payload encodings the client does not yet decode
-(bare-multisig, taproot-envelope, and the pre-`taproot_support` legacy encoding),
-**cannot** be independently verified: the client warns you clearly and falls back
-to the normal confirmation prompt, so review those carefully before confirming.
-Sub-asset names are also not checked (they need the on-chain registry).
+server's summary) and checks that:
+
+- the **asset, quantity and destination** in the Counterparty payload match what
+  you asked for; and
+- the transaction's **BTC** goes only back to your source address (change) or to
+  the requested destination — never to a third-party output — and the **miner fee**
+  is below a sanity limit.
+
+It **refuses to sign or broadcast on any mismatch**, which makes those transfers
+safe even against a malfunctioning, compromised, or man-in-the-middled API server.
+If a `send`/`enhanced_send`/`sweep` comes back in a form the client cannot decode,
+that is **also** refused (fail-closed) — `--yes` does not override it.
+
+Some things still rest on the server and are called out at run time:
+
+- **Other transaction types** (issuance, order, dispenser, …) and the rare
+  payload encodings the client does not decode (bare-multisig, taproot-envelope,
+  pre-`taproot_support` legacy) **cannot** be independently verified: the client
+  warns and falls back to the confirmation prompt — review them before confirming.
+- **Sub-asset / non-standard asset names** cannot be resolved offline (they need
+  the on-chain registry), so the *asset* field goes unchecked; the client says so
+  explicitly (destination, quantity and BTC routing are still verified).
+- **Divisibility** is looked up from the server, and human `--quantity` conversion
+  depends on it, so a server that lies about an asset's divisibility could mis-size
+  the amount — always to *your* requested destination, never to a third party.
+- **Legacy (P2PKH) inputs**: the legacy signature does not commit the input amount,
+  so the displayed fee relies on the server-reported input values for those inputs.
+  Prefer bech32/taproot addresses, whose signatures commit the amount.
 
 **Transport.** On any public network the client **refuses a cleartext `http://`
 API URL** and pins its HTTP client to HTTPS (so a redirect cannot downgrade the

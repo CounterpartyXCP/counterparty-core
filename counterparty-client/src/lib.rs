@@ -56,14 +56,25 @@ fn get_binary_name() -> String {
 /// [`AppConfig::require_https`]). Returns an error so the run aborts before any
 /// request is sent.
 fn ensure_secure_transport(config: &AppConfig) -> Result<()> {
-    if config.require_https() && config.get_api_url().starts_with("http://") {
-        return Err(anyhow!(
-            "Refusing to use a cleartext http:// API URL for network {:?} ({}). \
-             Amounts and addresses would be sent unencrypted and could be altered in transit. \
-             Repoint the API URL to https:// in your config, or use --regtest for local testing.",
-            config.network,
-            config.get_api_url()
-        ));
+    if !config.require_https() {
+        return Ok(());
+    }
+    // Both the API base URL and the endpoints-manifest URL are fetched over the
+    // network, so both must be TLS on a public network (the `https_only` client
+    // would reject a cleartext one anyway, but with a less actionable error).
+    for (label, url) in [
+        ("API", config.get_api_url()),
+        ("endpoints", config.get_endpoints_url()),
+    ] {
+        if url.starts_with("http://") {
+            return Err(anyhow!(
+                "Refusing to use a cleartext http:// {label} URL for network {:?} ({}). \
+                 Amounts and addresses would be sent unencrypted and could be altered in transit. \
+                 Repoint the URL to https:// in your config, or use --regtest for local testing.",
+                config.network,
+                url
+            ));
+        }
     }
     Ok(())
 }

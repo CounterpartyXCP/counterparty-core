@@ -8,8 +8,11 @@
 //! could return a transaction that spends to a different destination or asset
 //! than requested, and the user — who only sees an unreadable obfuscated
 //! `OP_RETURN` — would sign it. This module re-derives the Counterparty payload
-//! **from the composed transaction itself** and compares the three fields that
-//! matter for a transfer.
+//! **from the composed transaction itself** and compares the fields that matter
+//! for a transfer (asset, quantity, destination). It then also confirms the
+//! transaction's **BTC** outputs only pay the source (change) or the destination
+//! ([`decode::verify_btc_recipients`]) — a matching payload alone does not stop a
+//! hostile server from routing the change to an attacker.
 //!
 //! ## Scope and safe degradation
 //!
@@ -50,6 +53,11 @@ pub struct Intent {
     pub quantity: Option<u64>,
     /// Expected destination address (already label-resolved). `None` skips it.
     pub destination: Option<String>,
+    /// The wallet source address that funds and signs the transaction (already
+    /// label-resolved). Used to confirm the transaction's BTC value returns to
+    /// the source as change rather than being siphoned to a third party. `None`
+    /// skips the BTC-flow check (the wallet path always supplies it).
+    pub source: Option<String>,
 }
 
 /// Outcome of checking a composed transaction against the user's [`Intent`].
@@ -72,8 +80,30 @@ pub enum Verification {
 
 /// Transaction-type command names this client can independently verify today.
 /// A command outside this set degrades safely to [`Verification::Unverifiable`].
-fn is_verifiable_type(tx_type: &str) -> bool {
+/// For a command *inside* this set, an `Unverifiable` outcome is treated as a
+/// hard failure by the caller (a server that a verifiable command cannot decode
+/// is refused, never trusted — see `verify_composed_transaction_or_abort`).
+pub fn is_verifiable_type(tx_type: &str) -> bool {
     matches!(tx_type, "send" | "enhanced_send" | "sweep")
+}
+
+/// Split a de-obfuscated Counterparty message into `(type_id, body)`, mirroring
+/// `counterpartycore/lib/parser/messagetype.unpack`: the type id is a single
+/// byte when that byte is non-zero (the `short_tx_type_id` form, active on every
+/// live network), otherwise a 4-byte big-endian id. Classic `send` has id `0`,
+/// so it is 4-byte-prefixed on-chain — reading a single byte here (as a naive
+/// `split_first` would) misparses it and silently disables its verification.
+fn unpack_message_type(message: &[u8]) -> Option<(u32, &[u8])> {
+    // Matches the consensus `len > 1` / `len > 4` guards: there must be at least
+    // one byte of body after the type prefix.
+    if message.len() > 1 && message[0] > 0 {
+        return Some((u32::from(message[0]), &message[1..]));
+    }
+    if message.len() > 4 {
+        let id = u32::from_be_bytes(message[0..4].try_into().ok()?);
+        return Some((id, &message[4..]));
+    }
+    None
 }
 
 /// Resolve a Counterparty asset *name* to its numeric id **offline**, mirroring
@@ -187,6 +217,68 @@ pub(crate) fn build_test_enhanced_send_tx_hex(
     hex::encode(bitcoin::consensus::serialize(&tx))
 }
 
+/// Test-only builder: a composed-transaction hex carrying a classic `send`
+/// (type 0), obfuscated exactly as the server composer does. Type 0 is
+/// **4-byte-prefixed** on-chain (`\x00\x00\x00\x00`), followed by `>QQ`
+/// (asset id, quantity). Outputs are `[dust→destination, OP_RETURN, extra…]`,
+/// so the destination sits before the OP_RETURN (the consensus position) and
+/// `extra_outputs` model change/attacker outputs for the BTC-flow checks.
+#[cfg(test)]
+pub(crate) fn build_test_classic_send_tx_hex(
+    txid_display: [u8; 32],
+    asset_id: u64,
+    quantity: u64,
+    destination: &bitcoin::Address,
+    extra_outputs: &[(bitcoin::Address, u64)],
+) -> String {
+    use bitcoin::hashes::Hash as _;
+
+    let mut message = vec![0x00u8, 0x00, 0x00, 0x00]; // type 0, 4-byte prefix
+    message.extend_from_slice(&asset_id.to_be_bytes());
+    message.extend_from_slice(&quantity.to_be_bytes());
+
+    let mut payload = b"CNTRPRTY".to_vec();
+    payload.extend_from_slice(&message);
+    arc4::decrypt(&txid_display, &mut payload); // obfuscate (RC4 is symmetric)
+
+    let mut internal = txid_display;
+    internal.reverse();
+    let push = bitcoin::script::PushBytesBuf::try_from(payload).unwrap();
+
+    let mut output = vec![
+        bitcoin::TxOut {
+            value: bitcoin::Amount::from_sat(546),
+            script_pubkey: destination.script_pubkey(),
+        },
+        bitcoin::TxOut {
+            value: bitcoin::Amount::ZERO,
+            script_pubkey: bitcoin::ScriptBuf::new_op_return(&push),
+        },
+    ];
+    for (addr, value) in extra_outputs {
+        output.push(bitcoin::TxOut {
+            value: bitcoin::Amount::from_sat(*value),
+            script_pubkey: addr.script_pubkey(),
+        });
+    }
+
+    let tx = Transaction {
+        version: bitcoin::transaction::Version::TWO,
+        lock_time: bitcoin::absolute::LockTime::ZERO,
+        input: vec![bitcoin::TxIn {
+            previous_output: bitcoin::OutPoint {
+                txid: bitcoin::Txid::from_byte_array(internal),
+                vout: 0,
+            },
+            script_sig: bitcoin::ScriptBuf::new(),
+            sequence: bitcoin::Sequence::MAX,
+            witness: bitcoin::Witness::new(),
+        }],
+        output,
+    };
+    hex::encode(bitcoin::consensus::serialize(&tx))
+}
+
 /// Verify a server-composed transaction against the user's request.
 ///
 /// * `raw_tx_hex` — the composed (unsigned or signed; outputs are identical)
@@ -232,20 +324,32 @@ pub fn verify_composed_transaction(
 
     // Dispatch on the *actual* Counterparty message type embedded in the
     // transaction, not the command name — this catches a server that composed a
-    // different message type than the command implies.
-    let Some((type_id, body)) = message.split_first() else {
+    // different message type than the command implies. The type prefix is
+    // decoded exactly as consensus packs it (1 or 4 bytes; see
+    // `unpack_message_type`).
+    let Some((type_id, body)) = unpack_message_type(&message) else {
         return Verification::Unverifiable {
-            reason: "empty Counterparty message".to_string(),
+            reason: "empty or truncated Counterparty message".to_string(),
         };
     };
 
-    match type_id {
+    let payload = match type_id {
         0 => decode::verify_classic_send(body, &tx, intent, network),
         2 => decode::verify_enhanced_send(body, intent, network),
         4 => decode::verify_sweep(body, intent, network),
-        other => Verification::Unverifiable {
-            reason: format!("composed message type {other} is not independently verified"),
-        },
+        other => {
+            return Verification::Unverifiable {
+                reason: format!("composed message type {other} is not independently verified"),
+            }
+        }
+    };
+
+    // The Counterparty payload (asset/quantity/destination) matched; now confirm
+    // the *BTC* flows don't siphon funds — a matching payload does not stop a
+    // hostile server from routing the change output to an attacker address.
+    match payload {
+        Verification::Match => decode::verify_btc_recipients(&tx, intent, network),
+        other => other,
     }
 }
 
@@ -294,6 +398,7 @@ mod tests {
             asset_id: Some(7),
             quantity: Some(2500),
             destination: Some(dest.to_string()),
+            ..Default::default()
         };
         assert_eq!(
             verify_composed_transaction(&hex, "enhanced_send", &intent, NET),
@@ -311,6 +416,7 @@ mod tests {
             asset_id: Some(7),
             quantity: Some(2500),
             destination: Some(dest.to_string()),
+            ..Default::default()
         };
         assert!(matches!(
             verify_composed_transaction(&hex, "enhanced_send", &intent, NET),
@@ -338,6 +444,88 @@ mod tests {
         assert!(matches!(
             verify_composed_transaction("not-hex", "send", &Intent::default(), NET),
             Verification::Unverifiable { .. }
+        ));
+    }
+
+    // ---- H1: classic send (type 0) is 4-byte-prefixed and now verified ----
+
+    #[test]
+    fn unpack_message_type_matches_consensus_widths() {
+        // Non-zero first byte -> 1-byte type id; leading zero -> 4-byte id.
+        assert_eq!(
+            unpack_message_type(&[2, 0xaa, 0xbb]),
+            Some((2, &[0xaa, 0xbb][..]))
+        );
+        assert_eq!(
+            unpack_message_type(&[0, 0, 0, 0, 0xcc]),
+            Some((0, &[0xcc][..]))
+        );
+        // Too short to carry a type prefix plus a body.
+        assert_eq!(unpack_message_type(&[0, 0, 0, 0]), None);
+        assert_eq!(unpack_message_type(&[]), None);
+    }
+
+    #[test]
+    fn classic_send_type0_wrong_destination_is_a_mismatch_not_unverifiable() {
+        // Regression: the type-0 4-byte prefix used to be mis-parsed as one byte,
+        // so classic-send verification silently never ran (returned Unverifiable).
+        // A send paying the attacker must now be a hard destination Mismatch.
+        let victim = wpkh_addr(0x11);
+        let attacker = wpkh_addr(0x22);
+        let hex = build_test_classic_send_tx_hex([0x11; 32], 1, 2500, &attacker, &[]);
+        let intent = Intent {
+            asset_id: Some(1),
+            quantity: Some(2500),
+            destination: Some(victim.to_string()),
+            source: Some(victim.to_string()),
+        };
+        assert!(matches!(
+            verify_composed_transaction(&hex, "send", &intent, NET),
+            Verification::Mismatch {
+                field: "destination",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn classic_send_type0_matches_a_correct_transaction() {
+        let dest = wpkh_addr(0x11);
+        let source = wpkh_addr(0x33);
+        let hex =
+            build_test_classic_send_tx_hex([0x11; 32], 1, 2500, &dest, &[(source.clone(), 9000)]);
+        let intent = Intent {
+            asset_id: Some(1),
+            quantity: Some(2500),
+            destination: Some(dest.to_string()),
+            source: Some(source.to_string()),
+        };
+        assert_eq!(
+            verify_composed_transaction(&hex, "send", &intent, NET),
+            Verification::Match
+        );
+    }
+
+    #[test]
+    fn rejects_diverted_btc_change_to_a_third_party() {
+        // The Counterparty payload (asset/quantity/destination) is correct, but
+        // the BTC change is routed to an attacker output -> refuse despite Match.
+        let dest = wpkh_addr(0x11);
+        let source = wpkh_addr(0x33);
+        let attacker = wpkh_addr(0x44);
+        let hex = build_test_classic_send_tx_hex([0x11; 32], 1, 2500, &dest, &[(attacker, 9000)]);
+        let intent = Intent {
+            asset_id: Some(1),
+            quantity: Some(2500),
+            destination: Some(dest.to_string()),
+            source: Some(source.to_string()),
+        };
+        assert!(matches!(
+            verify_composed_transaction(&hex, "send", &intent, NET),
+            Verification::Mismatch {
+                field: "btc_output",
+                ..
+            }
         ));
     }
 }

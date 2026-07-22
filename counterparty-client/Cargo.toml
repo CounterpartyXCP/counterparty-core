@@ -65,6 +65,13 @@ tempfile = "3"
 # code paths without reaching a real Counterparty server.
 mockito = "1"
 
+# Defense-in-depth for a wallet: keep arithmetic overflow checks on in release
+# builds too (they are off by default), so an unexpected overflow in amount/fee
+# handling panics loudly instead of silently wrapping. The hot path is a
+# one-shot CLI, so the check has no meaningful performance cost here.
+[profile.release]
+overflow-checks = true
+
 # The library holds all the logic (`src/lib.rs`); `src/bin/xcp.rs` and
 # `src/bin/counterparty-client.rs` are thin wrappers auto-detected by cargo.
 # Building via a shared lib means the unit tests compile and run only once

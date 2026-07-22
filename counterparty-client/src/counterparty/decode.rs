@@ -78,6 +78,13 @@ fn combine(checks: impl IntoIterator<Item = Option<Verification>>) -> Verificati
         .unwrap_or(Verification::Match)
 }
 
+/// The address paid by an output, canonicalised for `network`, if it resolves.
+fn output_address(out: &bitcoin::TxOut, network: Network) -> Option<String> {
+    Address::from_script(&out.script_pubkey, network)
+        .ok()
+        .map(|a| a.to_string())
+}
+
 /// Classic `send` (type 0): payload is `>QQ` (asset id, quantity); the
 /// destination is a regular transaction output, not part of the payload.
 pub fn verify_classic_send(
@@ -99,25 +106,75 @@ pub fn verify_classic_send(
         check("quantity", &intent.quantity, quantity),
     ];
 
-    // The destination must be paid by one of the transaction's outputs.
+    // The destination is the output **immediately before** the OP_RETURN data
+    // output — this mirrors consensus (`gettxinfo`), which treats outputs after
+    // the data output as change. Checking that *some* output pays the address
+    // would let a hostile server pay the requested address from a change-position
+    // output while making an earlier output (the real destination) go elsewhere.
     if let Some(dest) = &intent.destination {
         let want = normalize_address(dest, network);
-        let paid = tx.output.iter().any(|o| {
-            Address::from_script(&o.script_pubkey, network)
-                .map(|a| a.to_string())
-                .map(|a| a == want)
-                .unwrap_or(false)
-        });
+        let op_return_idx = tx
+            .output
+            .iter()
+            .position(|o| o.script_pubkey.is_op_return());
+        let paid = match op_return_idx {
+            Some(idx) if idx > 0 => {
+                output_address(&tx.output[idx - 1], network).as_deref() == Some(want.as_str())
+            }
+            _ => false,
+        };
         if !paid {
             checks.push(Some(Verification::Mismatch {
                 field: "destination",
                 requested: want,
-                composed: "not paid by any transaction output".to_string(),
+                composed: "the output before the OP_RETURN does not pay this address".to_string(),
             }));
         }
     }
 
     combine(checks)
+}
+
+/// Confirm that every BTC-bearing output pays either the source (change) or the
+/// requested destination — nothing to a third party. A matching Counterparty
+/// payload (asset/quantity/destination) does **not** by itself stop a hostile
+/// server from routing the transaction's change to an attacker output; this is
+/// the check that does. Skipped when the source is unknown (the wallet path
+/// always supplies it).
+pub fn verify_btc_recipients(tx: &Transaction, intent: &Intent, network: Network) -> Verification {
+    let Some(source) = intent.source.as_ref() else {
+        return Verification::Match;
+    };
+    let source = normalize_address(source, network);
+    let destination = intent
+        .destination
+        .as_ref()
+        .map(|d| normalize_address(d, network));
+
+    for out in &tx.output {
+        // Data outputs carry no spendable value to a recipient.
+        if out.script_pubkey.is_op_return() {
+            continue;
+        }
+        match output_address(out, network) {
+            Some(addr) if addr == source || Some(&addr) == destination.as_ref() => {}
+            Some(addr) => {
+                return Verification::Mismatch {
+                    field: "btc_output",
+                    requested: format!("BTC only to source ({source}) or the destination"),
+                    composed: format!("{} sats to {addr}", out.value.to_sat()),
+                };
+            }
+            None => {
+                return Verification::Mismatch {
+                    field: "btc_output",
+                    requested: format!("BTC only to source ({source}) or the destination"),
+                    composed: "an output pays a script that resolves to no address".to_string(),
+                };
+            }
+        }
+    }
+    Verification::Match
 }
 
 /// `enhanced_send` (type 2), modern CBOR form:
@@ -254,6 +311,16 @@ mod tests {
         }
     }
 
+    // A minimal OP_RETURN data output, so classic-send tests exercise the
+    // positional "destination is the output before the OP_RETURN" check.
+    fn op_return_output() -> TxOut {
+        let data = bitcoin::script::PushBytesBuf::try_from(vec![0xccu8]).unwrap();
+        TxOut {
+            value: Amount::ZERO,
+            script_pubkey: ScriptBuf::new_op_return(&data),
+        }
+    }
+
     fn tx_with_outputs(outputs: Vec<TxOut>) -> Transaction {
         Transaction {
             version: Version::TWO,
@@ -279,11 +346,12 @@ mod tests {
         let mut body = Vec::new();
         body.extend_from_slice(&42u64.to_be_bytes()); // asset id
         body.extend_from_slice(&1000u64.to_be_bytes()); // quantity
-        let tx = tx_with_outputs(vec![output_to(&dest)]);
+        let tx = tx_with_outputs(vec![output_to(&dest), op_return_output()]);
         let intent = Intent {
             asset_id: Some(42),
             quantity: Some(1000),
             destination: Some(dest.to_string()),
+            ..Default::default()
         };
         assert_eq!(
             verify_classic_send(&body, &tx, &intent, NET),
@@ -297,11 +365,12 @@ mod tests {
         let mut body = Vec::new();
         body.extend_from_slice(&42u64.to_be_bytes());
         body.extend_from_slice(&999u64.to_be_bytes()); // composed 999
-        let tx = tx_with_outputs(vec![output_to(&dest)]);
+        let tx = tx_with_outputs(vec![output_to(&dest), op_return_output()]);
         let intent = Intent {
             asset_id: Some(42),
             quantity: Some(1000), // requested 1000
             destination: Some(dest.to_string()),
+            ..Default::default()
         };
         assert!(matches!(
             verify_classic_send(&body, &tx, &intent, NET),
@@ -319,12 +388,13 @@ mod tests {
         let mut body = Vec::new();
         body.extend_from_slice(&42u64.to_be_bytes());
         body.extend_from_slice(&1000u64.to_be_bytes());
-        // Transaction pays a different address than requested.
-        let tx = tx_with_outputs(vec![output_to(&other)]);
+        // The output before the OP_RETURN pays a different address than requested.
+        let tx = tx_with_outputs(vec![output_to(&other), op_return_output()]);
         let intent = Intent {
             asset_id: Some(42),
             quantity: Some(1000),
             destination: Some(requested.to_string()),
+            ..Default::default()
         };
         assert!(matches!(
             verify_classic_send(&body, &tx, &intent, NET),
@@ -350,6 +420,7 @@ mod tests {
             asset_id: Some(7),
             quantity: Some(2500),
             destination: Some(dest.to_string()),
+            ..Default::default()
         };
         assert_eq!(
             verify_enhanced_send(&body, &intent, NET),
@@ -372,6 +443,7 @@ mod tests {
             asset_id: Some(7),
             quantity: Some(2500),
             destination: Some(requested.to_string()),
+            ..Default::default()
         };
         assert!(matches!(
             verify_enhanced_send(&body, &intent, NET),
@@ -395,6 +467,7 @@ mod tests {
             asset_id: Some(7), // requested asset 7
             quantity: Some(2500),
             destination: Some(dest.to_string()),
+            ..Default::default()
         };
         assert!(matches!(
             verify_enhanced_send(&body, &intent, NET),
@@ -453,5 +526,64 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    // ---- verify_btc_recipients (H2) ----
+
+    fn value_output(addr: &Address, sats: u64) -> TxOut {
+        TxOut {
+            value: Amount::from_sat(sats),
+            script_pubkey: addr.script_pubkey(),
+        }
+    }
+
+    #[test]
+    fn btc_recipients_allows_change_to_source_and_dust_to_destination() {
+        let source = wpkh_addr(0x33);
+        let dest = wpkh_addr(0x11);
+        let tx = tx_with_outputs(vec![
+            value_output(&dest, 546),
+            op_return_output(),
+            value_output(&source, 9000),
+        ]);
+        let intent = Intent {
+            destination: Some(dest.to_string()),
+            source: Some(source.to_string()),
+            ..Default::default()
+        };
+        assert_eq!(
+            verify_btc_recipients(&tx, &intent, NET),
+            Verification::Match
+        );
+    }
+
+    #[test]
+    fn btc_recipients_rejects_a_third_party_output() {
+        let source = wpkh_addr(0x33);
+        let attacker = wpkh_addr(0x44);
+        let tx = tx_with_outputs(vec![op_return_output(), value_output(&attacker, 9000)]);
+        let intent = Intent {
+            source: Some(source.to_string()),
+            ..Default::default()
+        };
+        assert!(matches!(
+            verify_btc_recipients(&tx, &intent, NET),
+            Verification::Mismatch {
+                field: "btc_output",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn btc_recipients_skipped_when_source_unknown() {
+        // Without a source the change/siphon distinction can't be made; the check
+        // is skipped (the wallet path always supplies the source).
+        let attacker = wpkh_addr(0x44);
+        let tx = tx_with_outputs(vec![value_output(&attacker, 9000)]);
+        assert_eq!(
+            verify_btc_recipients(&tx, &Intent::default(), NET),
+            Verification::Match
+        );
     }
 }

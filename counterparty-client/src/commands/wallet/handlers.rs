@@ -199,13 +199,19 @@ pub async fn handle_address_balances(config: &AppConfig, sub_matches: &ArgMatche
     let btc_api_path = format!("/v2/bitcoin/addresses/{}/utxos", address);
     let btc_result = api::perform_api_request(config, &btc_api_path, &HashMap::new()).await?;
 
-    // Calculate total BTC balance
+    // Calculate total BTC balance. Error (rather than silently skip) on a UTXO
+    // whose `value` is missing or not an integer number of satoshis, so a format
+    // change can never quietly undercount the balance; guard the sum against
+    // overflow (release builds do not check arithmetic overflow).
     let mut btc_balance: u64 = 0;
     if let Some(utxos) = btc_result.get("result").and_then(|r| r.as_array()) {
         for utxo in utxos {
-            if let Some(value) = utxo.get("value").and_then(|v| v.as_u64()) {
-                btc_balance += value;
-            }
+            let value = utxo.get("value").and_then(|v| v.as_u64()).ok_or_else(|| {
+                anyhow!("a UTXO 'value' from the API is missing or not an integer of satoshis")
+            })?;
+            btc_balance = btc_balance
+                .checked_add(value)
+                .ok_or_else(|| anyhow!("BTC balance sum overflowed u64"))?;
         }
     }
 

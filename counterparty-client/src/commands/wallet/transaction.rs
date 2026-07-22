@@ -21,6 +21,35 @@ struct RevealTransactionInfo<'a> {
     signed_tx: &'a str,
 }
 
+/// Absolute ceiling on the miner fee the client will sign without complaint
+/// (0.01 BTC). A composed transfer is a small transaction, so a fee above this
+/// signals either a server bug or a hostile server inflating/burning BTC to
+/// fees. The fee is derived from the server-reported input values; for legacy
+/// (P2PKH) inputs those amounts are not committed by the signature, so this
+/// bound is a safety net, not a guarantee — prefer segwit/taproot addresses.
+const MAX_REASONABLE_FEE_SAT: u64 = 1_000_000;
+
+/// Refuse to sign a transaction whose miner fee exceeds [`MAX_REASONABLE_FEE_SAT`].
+fn ensure_fee_within_limit(raw_tx_hex: &str, utxo_list: &bitcoinsigner::UTXOList) -> Result<()> {
+    let tx_bytes =
+        hex::decode(raw_tx_hex).map_err(|e| anyhow!("Failed to decode transaction hex: {}", e))?;
+    let tx: bitcoin::Transaction = bitcoin::consensus::deserialize(&tx_bytes)
+        .map_err(|e| anyhow!("Failed to parse transaction: {}", e))?;
+    if let Some(fee) = calculate_transaction_fee(&tx, utxo_list) {
+        if fee > MAX_REASONABLE_FEE_SAT {
+            return Err(anyhow!(
+                "SECURITY: the composed transaction pays a miner fee of {} sats ({:.8} BTC), above \
+                 the client's {} sat safety limit. Refusing to sign. If this is intentional, use the \
+                 expert `api compose_*` path.",
+                fee,
+                fee as f64 / 100_000_000.0,
+                MAX_REASONABLE_FEE_SAT
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// Find the corresponding compose endpoint for a transaction command
 /// If the endpoint doesn't have an 'address' or 'source' parameter, add one
 fn find_compose_endpoint<'a>(
@@ -140,6 +169,16 @@ fn get_script_type(script: &bitcoin::ScriptBuf) -> &'static str {
     }
 }
 
+/// The stream for human-facing transaction output: stdout normally, but stderr
+/// (uncoloured) in `--json` mode so machine-readable stdout stays clean.
+fn summary_stream() -> StandardStream {
+    if helpers::json_output() {
+        StandardStream::stderr(ColorChoice::Never)
+    } else {
+        StandardStream::stdout(ColorChoice::Always)
+    }
+}
+
 /// Parse a signed transaction and display inputs, outputs, and fees
 /// Shows addresses instead of raw scripts and decodes OP_RETURN data
 fn display_transaction_summary(
@@ -162,8 +201,9 @@ fn display_transaction_summary(
     let input_count = tx.input.len();
     let output_count = tx.output.len();
 
-    // Create colored output stream
-    let mut stdout = StandardStream::stdout(ColorChoice::Always);
+    // Human-facing summary: keep stdout clean for `--json` by routing it to
+    // stderr (uncoloured) in JSON mode, exactly like `helpers::print_*`.
+    let mut stdout = summary_stream();
 
     // Define colors (without bold)
     let mut title_color = ColorSpec::new();
@@ -314,8 +354,11 @@ fn extract_op_return_data(script: &bitcoin::ScriptBuf) -> String {
         _ => &raw[2..],
     };
 
-    // For display, use the raw bytes directly
-    String::from_utf8_lossy(data).to_string()
+    // Hex-encode rather than rendering the raw bytes as text. The OP_RETURN
+    // payload is server-controlled (and, for Counterparty, RC4-obfuscated random
+    // bytes), so a text rendering could smuggle ANSI/terminal escape sequences
+    // into the pre-broadcast summary and rewrite what the user reviews.
+    hex::encode(data)
 }
 
 /// Convert a script to a Bitcoin address based on the network
@@ -339,8 +382,8 @@ fn script_to_address(
 
 /// Ask for user confirmation before broadcasting
 fn confirm_broadcast() -> Result<bool> {
-    // Create colored output stream
-    let mut stdout = StandardStream::stdout(ColorChoice::Always);
+    // Prompt on the human stream (stderr in --json mode) so stdout stays clean.
+    let mut stdout = summary_stream();
 
     // Define green bold color
     let mut prompt_color = ColorSpec::new();
@@ -529,7 +572,14 @@ fn extract_transaction_details(
     Ok((raw_tx_hex, utxos, name, params))
 }
 
-/// Extract reveal transaction information if present
+/// Extract reveal transaction information if present.
+///
+/// For commit/reveal (taproot-envelope) composes the server returns an already
+/// signed reveal transaction, which is broadcast verbatim. Its fund exposure is
+/// bounded: the reveal can only spend the commit's first output — a dust amount
+/// the user already reviewed and signed for in the commit transaction — so it
+/// cannot move any other UTXO. The commit itself still goes through the normal
+/// verification, summary and confirmation gate above.
 fn extract_reveal_transaction_info(
     api_result: &serde_json::Value,
 ) -> Option<RevealTransactionInfo<'_>> {
@@ -720,6 +770,10 @@ pub async fn handle_transaction_command(
     // Build the UTXOList for the main transaction
     let utxo_list = build_utxo_list(utxos)?;
 
+    // H2: reject an absurd miner fee before signing (defense against a server
+    // that inflates the fee or burns the user's BTC to fees).
+    ensure_fee_within_limit(raw_tx_hex, &utxo_list)?;
+
     // Sign the transaction using sign_transaction2
     let signed_tx = wallet
         .sign_transaction(raw_tx_hex, &utxo_list)
@@ -796,20 +850,44 @@ fn verify_composed_transaction_or_abort(
         crate::config::Network::Regtest => bitcoin::Network::Regtest,
     };
 
+    let asset_requested = requested_params.get("asset");
+    // Resolved offline from the asset name, so a lying server cannot spoof it.
+    let asset_id = asset_requested.and_then(|a| counterparty::asset_id_for_name(a));
+    // The user asked for an asset the client cannot resolve offline (a sub-asset
+    // longname or a non-standard name) — the asset field then goes unchecked, so
+    // we must not claim a full match below.
+    let asset_unchecked = asset_requested.is_some() && asset_id.is_none();
+
     let intent = counterparty::Intent {
-        // Resolved offline from the asset name, so a lying server cannot spoof it.
-        asset_id: requested_params
-            .get("asset")
-            .and_then(|a| counterparty::asset_id_for_name(a)),
+        asset_id,
         // The quantity already converted to base units in the compose path.
         quantity: normalized_params
             .get("quantity")
             .and_then(|q| q.parse::<u64>().ok()),
         // The destination the user requested (labels already resolved to addresses).
         destination: requested_params.get("destination").cloned(),
+        // The source address that funds/signs, so we can confirm the change
+        // returns to it rather than being siphoned (labels already resolved).
+        source: requested_params
+            .get("source")
+            .or_else(|| requested_params.get("address"))
+            .cloned(),
     };
 
     match counterparty::verify_composed_transaction(raw_tx_hex, tx_type, &intent, network) {
+        Verification::Match if asset_unchecked => {
+            // Destination, quantity and BTC routing matched, but the asset name
+            // could not be resolved offline, so it was not independently checked.
+            helpers::print_warning(
+                "\u{26A0} Partially verified: destination, quantity and BTC change match your request.",
+                Some(&format!(
+                    "The asset '{}' could not be resolved offline (sub-asset or non-standard name), \
+                     so it was NOT independently checked. Confirm the asset yourself before continuing.",
+                    asset_requested.map(String::as_str).unwrap_or("?"),
+                )),
+            );
+            Ok(())
+        }
         Verification::Match => {
             helpers::print_success(
                 "\u{2713} Verified: the composed transaction matches your request.",
@@ -829,6 +907,18 @@ fn verify_composed_transaction_or_abort(
              Refusing to sign or broadcast. The API server may be malfunctioning or malicious — \
              do not retry against the same server without investigating."
         )),
+        // A command whose type the client *can* independently verify, yet whose
+        // composed form it could not decode, is refused (fail closed) — a
+        // verifiable `send`/`sweep` that comes back undecodable is exactly the
+        // shape a hostile server would use to escape the payload check. `--yes`
+        // does not override this.
+        Verification::Unverifiable { reason } if counterparty::is_verifiable_type(tx_type) => {
+            Err(anyhow!(
+                "SECURITY: could not independently verify this '{tx_type}' transaction ({reason}). \
+                 Refusing to sign or broadcast a verifiable transaction type the client cannot decode. \
+                 The API server may be malfunctioning or malicious."
+            ))
+        }
         Verification::Unverifiable { reason } => {
             helpers::print_warning(
                 "\u{26A0} Could not independently verify this transaction.",
@@ -1231,7 +1321,12 @@ mod tests {
 
     #[test]
     fn op_return_data_extraction() {
-        assert_eq!(extract_op_return_data(&op_return_script(b"hello")), "hello");
+        // Data is hex-encoded (never rendered as text) to avoid smuggling
+        // terminal escape sequences from server-controlled OP_RETURN bytes.
+        assert_eq!(
+            extract_op_return_data(&op_return_script(b"hello")),
+            hex::encode(b"hello")
+        );
         // Not an OP_RETURN.
         assert_eq!(
             extract_op_return_data(&p2pkh_script(3)),
@@ -1247,7 +1342,7 @@ mod tests {
         raw.extend_from_slice(b"abc");
         assert_eq!(
             extract_op_return_data(&bitcoin::ScriptBuf::from_bytes(raw)),
-            "abc"
+            hex::encode(b"abc")
         );
     }
 
@@ -1911,6 +2006,49 @@ mod tests {
         assert!(verify_composed_transaction_or_abort(
             &regtest_config(),
             "issuance",
+            &requested,
+            &normalized,
+            &raw,
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn verify_or_abort_fails_closed_on_unverifiable_verifiable_type() {
+        // M1: a `send` whose composed form the client cannot decode (here a tx
+        // with no Counterparty OP_RETURN) must be refused (Err), not warned —
+        // even the fail-open under `--yes` is closed.
+        let (_, spk) = p2wpkh_addr_and_script(9);
+        let raw = raw_tx_hex(vec![bitcoin::TxOut {
+            value: bitcoin::Amount::from_sat(50_000),
+            script_pubkey: spk,
+        }]);
+        let dest = wpkh_address(0x11);
+        let (requested, normalized) = intent_params("XCP", &dest.to_string(), "2500");
+
+        let err = verify_composed_transaction_or_abort(
+            &regtest_config(),
+            "send",
+            &requested,
+            &normalized,
+            &raw,
+        )
+        .unwrap_err();
+        assert!(err.to_string().contains("SECURITY"), "got: {err}");
+    }
+
+    #[test]
+    fn verify_or_abort_partial_when_asset_name_unresolvable() {
+        // M2: a sub-asset send — destination/quantity/BTC match but the asset name
+        // cannot be resolved offline, so the flow returns Ok (partial) without
+        // ever claiming a full "Verified".
+        let dest = wpkh_address(0x11);
+        let raw = crate::counterparty::build_test_enhanced_send_tx_hex([0x11; 32], 5, 2500, &dest);
+        let (requested, normalized) = intent_params("PARENT.child", &dest.to_string(), "2500");
+
+        assert!(verify_composed_transaction_or_abort(
+            &regtest_config(),
+            "enhanced_send",
             &requested,
             &normalized,
             &raw,

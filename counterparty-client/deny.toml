@@ -39,7 +39,9 @@ private = { ignore = true }
 # The tree legitimately carries a few duplicate versions (e.g. rand 0.8/0.9/0.10
 # via transitive deps), so duplicates are a warning, not a hard failure.
 multiple-versions = "warn"
-wildcards = "warn"
+# A `*` version requirement pins nothing and lets an unvetted release in on the
+# next update; there are none today, so fail the build if one ever appears.
+wildcards = "deny"
 
 [sources]
 # Only crates.io is an allowed source; an unexpected git or alternate registry

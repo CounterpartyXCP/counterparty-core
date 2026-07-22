@@ -24,12 +24,12 @@ impl KeyService {
         F: FnOnce(&SecretKey, &PublicKey) -> Result<R>,
     {
         // Parse the private key inside this controlled scope
-        let private_key = PrivateKey::from_str(private_key_str.expose_secret())
+        let mut private_key = PrivateKey::from_str(private_key_str.expose_secret())
             .map_err(|e| WalletError::BitcoinError(format!("Invalid private key: {:?}", e)))?;
 
         // Re-key to the target network. This only affects WIF encoding, not the
         // secret bytes or the derived public key.
-        let pk = PrivateKey {
+        let mut pk = PrivateKey {
             compressed: private_key.compressed,
             network: network.into(),
             inner: private_key.inner,
@@ -43,11 +43,14 @@ impl KeyService {
         let secp = Secp256k1::new();
         let public_key = PublicKey::from_private_key(&secp, &pk);
 
-        // Perform the actual operation, then best-effort wipe our copy of the
-        // secret before returning (secp256k1's `SecretKey` is `Copy` and not
-        // zeroize-on-drop, so this clears the local binding only).
+        // Perform the actual operation, then best-effort wipe *every* stack copy
+        // of the secret we made. secp256k1's `SecretKey` is `Copy` and not
+        // zeroize-on-drop, so each binding must be erased explicitly (the
+        // base58-decode temporaries inside `from_str` remain unreachable here).
         let result = operation(&secret_key, &public_key);
         secret_key.non_secure_erase();
+        pk.inner.non_secure_erase();
+        private_key.inner.non_secure_erase();
 
         result
     }
