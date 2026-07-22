@@ -181,9 +181,23 @@ fn first_balance_quantity(balances: &serde_json::Value) -> i64 {
         .unwrap_or(0)
 }
 
-/// Wait until the Counterparty server is ready and has parsed up to the current
-/// backend tip, so a just-mined block's events are queryable.
-async fn wait_for_counterparty(client: &reqwest::Client) {
+/// The current bitcoind block height.
+fn chain_height() -> i64 {
+    bitcoin_cli(&["getblockcount"])
+        .parse()
+        .expect("parse getblockcount output")
+}
+
+/// Wait until the Counterparty server is ready and has parsed up to at least
+/// `target` (a concrete bitcoind height).
+///
+/// Waiting on an explicit height — rather than `counterparty_height >=
+/// backend_height` — avoids a race right after mining, when the server can still
+/// report the *pre-mine* backend height and so look "caught up" before it has
+/// parsed the block we just mined. Mirrors the Python harness's
+/// `wait_for_counterparty_server`, which waits for `counterparty_height >=
+/// target_block`.
+async fn wait_for_height(client: &reqwest::Client, target: i64) {
     for _ in 0..180 {
         let v = api_get(client, "").await;
         if let Some(r) = v.get("result") {
@@ -195,17 +209,21 @@ async fn wait_for_counterparty(client: &reqwest::Client) {
                 .get("counterparty_height")
                 .and_then(|n| n.as_i64())
                 .unwrap_or(-1);
-            let backend = r
-                .get("backend_height")
-                .and_then(|n| n.as_i64())
-                .unwrap_or(i64::MAX);
-            if ready && cp >= 0 && cp >= backend {
+            if ready && cp >= target {
                 return;
             }
         }
         tokio::time::sleep(Duration::from_secs(1)).await;
     }
-    panic!("counterparty-server did not reach the chain tip within the timeout");
+    panic!("counterparty-server did not reach height {target} within the timeout");
+}
+
+/// Mine `n` blocks to `address`, then block until the Counterparty server has
+/// parsed up to the new tip — so the just-mined transactions' ledger effects
+/// (burns, sends) are queryable over the API.
+async fn mine_and_sync(client: &reqwest::Client, n: u32, address: &str) {
+    mine(n, address);
+    wait_for_height(client, chain_height()).await;
 }
 
 #[tokio::test]
@@ -214,7 +232,7 @@ async fn full_fund_compose_sign_broadcast_accept_regtest() {
     let client = reqwest::Client::new();
     let home = tempfile::tempdir().expect("temp wallet home");
 
-    wait_for_counterparty(&client).await;
+    wait_for_height(&client, chain_height()).await;
 
     // A wallet address to mine coinbase rewards to (Bitcoin Core's own wallet).
     let mining_addr = bitcoin_wallet(&["getnewaddress"]);
@@ -245,8 +263,7 @@ async fn full_fund_compose_sign_broadcast_accept_regtest() {
     //    build `inputs_set` without an on-chain (float) value lookup.
     let burn_fund_txid = bitcoin_wallet(&["sendtoaddress", &a_addr, "1.0"]); // 1.00000000 BTC
     let send_fund_txid = bitcoin_wallet(&["sendtoaddress", &a_addr, "0.01"]); // 0.01000000 BTC
-    mine(1, &mining_addr);
-    wait_for_counterparty(&client).await;
+    mine_and_sync(&client, 1, &mining_addr).await;
 
     let burn_inputs = format!(
         "{burn_fund_txid}:{}:100000000:{a_spk}",
@@ -282,8 +299,7 @@ async fn full_fund_compose_sign_broadcast_accept_regtest() {
         ],
     );
     assert_xcp_ok(&out, "transaction burn");
-    mine(1, &mining_addr);
-    wait_for_counterparty(&client).await;
+    mine_and_sync(&client, 1, &mining_addr).await;
 
     // The burn must have credited `a` with XCP.
     let a_balances = api_get(&client, &format!("addresses/{a_addr}/balances/XCP")).await;
@@ -323,8 +339,7 @@ async fn full_fund_compose_sign_broadcast_accept_regtest() {
         ],
     );
     assert_xcp_ok(&out, "transaction send");
-    mine(1, &mining_addr);
-    wait_for_counterparty(&client).await;
+    mine_and_sync(&client, 1, &mining_addr).await;
 
     // 5) Accept: the ledger credited `b` with exactly the 1 sat of XCP we sent —
     //    end-to-end proof the composed, locally-signed, broadcast transaction was
