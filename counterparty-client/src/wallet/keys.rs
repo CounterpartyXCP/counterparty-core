@@ -1,0 +1,411 @@
+//! Key generation and management functionality for Bitcoin wallets.
+//!
+//! This module handles:
+//! - Generation of keys from private keys, mnemonics, or randomly
+//! - Derivation of key pairs from seeds
+//! - Creation of Bitcoin addresses
+
+use bip39::Mnemonic;
+use bitcoin::bip32::{DerivationPath, Xpriv};
+use bitcoin::key::{CompressedPublicKey, XOnlyPublicKey};
+use bitcoin::secp256k1::{All, Secp256k1};
+use bitcoin::{Address, Network, PrivateKey, PublicKey};
+use rand::{rng, RngExt};
+use std::str::FromStr;
+use zeroize::Zeroizing;
+
+use super::types::{Result, WalletError};
+
+/// Structure to hold generated key data
+pub struct KeyData {
+    pub private_key: PrivateKey,
+    pub public_key: PublicKey,
+    /// The BIP39 mnemonic, when the key was freshly generated (so the caller can
+    /// show it to the user for backup). `None` for imported keys, where the
+    /// user already holds the seed/WIF. Wrapped in [`Zeroizing`] so the seed
+    /// copy is wiped from memory when dropped.
+    pub mnemonic: Option<Zeroizing<String>>,
+}
+
+// Manual `Debug`: `Zeroizing<T>` guarantees zero-on-drop but its derived
+// `Debug` forwards straight to the wrapped value, so a plain `#[derive(Debug)]`
+// here would print the raw BIP39 seed phrase in the clear on any `{:?}`
+// formatting. `PrivateKey`/`PublicKey`'s own `Debug` impls are already safe
+// (secp256k1's `SecretKey` prints a tagged hash digest, never raw bytes).
+impl std::fmt::Debug for KeyData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KeyData")
+            .field("private_key", &self.private_key)
+            .field("public_key", &self.public_key)
+            .field("mnemonic", &self.mnemonic.as_ref().map(|_| "[REDACTED]"))
+            .finish()
+    }
+}
+
+/// Generate key data from an existing private key
+pub fn generate_keys_from_private_key(
+    pk_str: &str,
+    network: Network,
+    secp: &Secp256k1<All>,
+) -> Result<KeyData> {
+    // The parse error is derived from the secret WIF the user supplied, so use a
+    // fixed message rather than interpolate it (keeps key-shaped bytes out of
+    // logs / terminal scrollback).
+    let mut parsed = PrivateKey::from_str(pk_str)
+        .map_err(|_| WalletError::BitcoinError("Invalid private key (WIF).".to_string()))?;
+
+    // Create a new private key with the correct network
+    let pk = PrivateKey {
+        compressed: parsed.compressed,
+        network: network.into(),
+        inner: parsed.inner,
+    };
+
+    // Wipe the parsed copy's secret bytes. `SecretKey` is `Copy` and not
+    // zeroize-on-drop, so shadowing `parsed` would otherwise leave its raw bytes
+    // on the stack after this function returns (matches `derive_key_pair`).
+    parsed.inner.non_secure_erase();
+
+    let public_key = PublicKey::from_private_key(secp, &pk);
+
+    Ok(KeyData {
+        private_key: pk,
+        public_key,
+        mnemonic: None,
+    })
+}
+
+/// Generate key data from a mnemonic phrase
+pub fn generate_keys_from_mnemonic(
+    mnemonic_str: &str,
+    path_str: Option<&str>,
+    addr_type: &str,
+    network: Network,
+    secp: &Secp256k1<All>,
+) -> Result<KeyData> {
+    let mnemonic = Mnemonic::parse_normalized(mnemonic_str)
+        .map_err(|e| WalletError::Bip39Error(format!("Invalid mnemonic: {}", e)))?;
+
+    let seed = Zeroizing::new(mnemonic.to_seed(""));
+
+    // Determine derivation path based on address type
+    let derivation_path = get_derivation_path(path_str, addr_type, network);
+
+    let (private_key, public_key) = derive_key_pair(&seed[..], derivation_path, network, secp)?;
+
+    Ok(KeyData {
+        private_key,
+        public_key,
+        // The user already holds this mnemonic; no need to echo it back.
+        mnemonic: None,
+    })
+}
+
+/// Generate new random key data
+pub fn generate_new_keys(
+    addr_type: &str,
+    network: Network,
+    secp: &Secp256k1<All>,
+) -> Result<KeyData> {
+    let mut entropy = Zeroizing::new([0u8; 16]);
+    rng().fill(entropy.as_mut_slice());
+
+    let mnemonic = Mnemonic::from_entropy(entropy.as_slice())
+        .map_err(|e| WalletError::Bip39Error(format!("Failed to generate mnemonic: {}", e)))?;
+
+    let seed = Zeroizing::new(mnemonic.to_seed(""));
+
+    // Determine derivation path based on address type
+    let derivation_path = get_derivation_path(None, addr_type, network);
+
+    let (private_key, public_key) = derive_key_pair(&seed[..], derivation_path, network, secp)?;
+
+    Ok(KeyData {
+        private_key,
+        public_key,
+        // Surface the seed phrase once so the user can back it up; it is not
+        // persisted anywhere (the wallet stores only the derived WIF). Kept in
+        // `Zeroizing` so the copy is wiped when the caller is done with it.
+        mnemonic: Some(Zeroizing::new(mnemonic.to_string())),
+    })
+}
+
+/// Get the appropriate derivation path based on address type
+fn get_derivation_path<'a>(path: Option<&'a str>, addr_type: &'a str, network: Network) -> &'a str {
+    // Coin type `0'` is mainnet; every test network (testnet, signet, regtest)
+    // uses `1'` per SLIP-0044, matching Bitcoin Core / Electrum / Sparrow so the
+    // same mnemonic recovers the same addresses across wallets.
+    let is_mainnet = network == Network::Bitcoin;
+    match path {
+        Some(p) => p,
+        None => match addr_type {
+            // BIP86 for taproot
+            "taproot" if is_mainnet => "m/86'/0'/0'/0/0",
+            "taproot" => "m/86'/1'/0'/0/0",
+            // BIP84 for native Bech32/SegWit
+            "bech32" if is_mainnet => "m/84'/0'/0'/0/0",
+            "bech32" => "m/84'/1'/0'/0/0",
+            // BIP44 for legacy P2PKH
+            _ if is_mainnet => "m/44'/0'/0'/0/0",
+            _ => "m/44'/1'/0'/0/0",
+        },
+    }
+}
+
+/// Derive a key pair from a seed using the specified derivation path
+fn derive_key_pair(
+    seed: &[u8],
+    derivation_path: &str,
+    network: Network,
+    secp: &Secp256k1<All>,
+) -> Result<(PrivateKey, PublicKey)> {
+    let path = DerivationPath::from_str(derivation_path)
+        .map_err(|e| WalletError::BitcoinError(format!("Invalid derivation path: {}", e)))?;
+
+    let mut master_key = Xpriv::new_master(network, seed)
+        .map_err(|e| WalletError::BitcoinError(format!("Failed to generate master key: {}", e)))?;
+
+    let mut derived_key = master_key
+        .derive_priv(secp, &path)
+        .map_err(|e| WalletError::BitcoinError(format!("Failed to derive private key: {}", e)))?;
+
+    let mut derived_priv = derived_key.to_priv();
+    let private_key = PrivateKey {
+        compressed: true,
+        network: network.into(),
+        inner: derived_priv.inner,
+    };
+
+    let public_key = PublicKey::from_private_key(secp, &private_key);
+
+    // Best-effort wipe of the intermediate extended-key secrets: `Xpriv` holds a
+    // `secp256k1::SecretKey`, which is `Copy` and not zeroize-on-drop, so the raw
+    // bytes would otherwise linger after this function returns. This covers the
+    // master key, the derived extended key, and the `to_priv()` copy taken from it
+    // just above. The derived secret deliberately lives on — copied into
+    // `private_key`, the caller's return value.
+    master_key.private_key.non_secure_erase();
+    derived_key.private_key.non_secure_erase();
+    derived_priv.inner.non_secure_erase();
+
+    Ok((private_key, public_key))
+}
+
+/// Create a Bitcoin address from a public key based on the address type
+pub fn create_bitcoin_address(
+    pub_key: &PublicKey,
+    addr_type: &str,
+    network: Network,
+) -> Result<Address> {
+    if addr_type == "taproot" {
+        // Create a taproot address (P2TR)
+        // Convert PublicKey to XOnlyPublicKey (taking the x coordinate only)
+        let pub_key_bytes = pub_key.to_bytes();
+        let x_only_pubkey = XOnlyPublicKey::from_slice(&pub_key_bytes[1..33]).map_err(|e| {
+            WalletError::BitcoinError(format!("Failed to create x-only public key: {}", e))
+        })?;
+
+        // Create a P2TR address with the key and no script tree (None)
+        Ok(Address::p2tr(
+            &Secp256k1::new(),
+            x_only_pubkey,
+            None,
+            network,
+        ))
+    } else if addr_type == "bech32" {
+        // Create a Bech32 address (P2WPKH)
+        let compressed_pubkey =
+            CompressedPublicKey::from_slice(&pub_key.to_bytes()).map_err(|e| {
+                WalletError::BitcoinError(format!("Failed to create compressed public key: {}", e))
+            })?;
+
+        Ok(Address::p2wpkh(&compressed_pubkey, network))
+    } else {
+        // Create a traditional P2PKH address
+        Ok(Address::p2pkh(pub_key, network))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bitcoin::secp256k1::Secp256k1;
+    use bitcoin::Network;
+
+    // The canonical BIP39 test mnemonic. Combined with the default BIP84/BIP86/
+    // BIP44 paths it yields the well-known reference addresses asserted below.
+    const MNEMONIC: &str = "abandon abandon abandon abandon abandon abandon \
+         abandon abandon abandon abandon abandon about";
+
+    #[test]
+    fn mnemonic_derivation_is_deterministic() {
+        let secp = Secp256k1::new();
+        let a =
+            generate_keys_from_mnemonic(MNEMONIC, None, "bech32", Network::Bitcoin, &secp).unwrap();
+        let b =
+            generate_keys_from_mnemonic(MNEMONIC, None, "bech32", Network::Bitcoin, &secp).unwrap();
+
+        assert_eq!(a.public_key.to_string(), b.public_key.to_string());
+        assert_eq!(a.private_key.to_string(), b.private_key.to_string());
+
+        let addr_a = create_bitcoin_address(&a.public_key, "bech32", Network::Bitcoin).unwrap();
+        let addr_b = create_bitcoin_address(&b.public_key, "bech32", Network::Bitcoin).unwrap();
+        assert_eq!(addr_a.to_string(), addr_b.to_string());
+    }
+
+    // Known BIP84 first receive address for the reference mnemonic (m/84'/0'/0'/0/0).
+    #[test]
+    fn bech32_matches_bip84_reference_vector() {
+        let secp = Secp256k1::new();
+        let k =
+            generate_keys_from_mnemonic(MNEMONIC, None, "bech32", Network::Bitcoin, &secp).unwrap();
+        let addr = create_bitcoin_address(&k.public_key, "bech32", Network::Bitcoin).unwrap();
+        assert_eq!(
+            addr.to_string(),
+            "bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu"
+        );
+    }
+
+    // Known BIP86 first receive address for the reference mnemonic (m/86'/0'/0'/0/0).
+    #[test]
+    fn taproot_matches_bip86_reference_vector() {
+        let secp = Secp256k1::new();
+        let k = generate_keys_from_mnemonic(MNEMONIC, None, "taproot", Network::Bitcoin, &secp)
+            .unwrap();
+        let addr = create_bitcoin_address(&k.public_key, "taproot", Network::Bitcoin).unwrap();
+        assert_eq!(
+            addr.to_string(),
+            "bc1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqkedrcr"
+        );
+    }
+
+    // Each address type produces the right human-readable prefix on mainnet vs
+    // regtest.
+    #[test]
+    fn address_prefixes_per_type_and_network() {
+        let secp = Secp256k1::new();
+        let k =
+            generate_keys_from_mnemonic(MNEMONIC, None, "bech32", Network::Bitcoin, &secp).unwrap();
+
+        // bech32 / P2WPKH
+        assert!(
+            create_bitcoin_address(&k.public_key, "bech32", Network::Bitcoin)
+                .unwrap()
+                .to_string()
+                .starts_with("bc1q")
+        );
+        assert!(
+            create_bitcoin_address(&k.public_key, "bech32", Network::Regtest)
+                .unwrap()
+                .to_string()
+                .starts_with("bcrt1q")
+        );
+
+        // p2pkh
+        assert!(
+            create_bitcoin_address(&k.public_key, "p2pkh", Network::Bitcoin)
+                .unwrap()
+                .to_string()
+                .starts_with('1')
+        );
+        let regtest_p2pkh = create_bitcoin_address(&k.public_key, "p2pkh", Network::Regtest)
+            .unwrap()
+            .to_string();
+        assert!(regtest_p2pkh.starts_with('m') || regtest_p2pkh.starts_with('n'));
+
+        // taproot / P2TR
+        assert!(
+            create_bitcoin_address(&k.public_key, "taproot", Network::Bitcoin)
+                .unwrap()
+                .to_string()
+                .starts_with("bc1p")
+        );
+        assert!(
+            create_bitcoin_address(&k.public_key, "taproot", Network::Regtest)
+                .unwrap()
+                .to_string()
+                .starts_with("bcrt1p")
+        );
+    }
+
+    // An explicit derivation path overrides the address-type default.
+    #[test]
+    fn explicit_derivation_path_is_used() {
+        let secp = Secp256k1::new();
+        let default_path =
+            generate_keys_from_mnemonic(MNEMONIC, None, "bech32", Network::Bitcoin, &secp).unwrap();
+        let explicit = generate_keys_from_mnemonic(
+            MNEMONIC,
+            Some("m/84'/0'/0'/0/1"),
+            "bech32",
+            Network::Bitcoin,
+            &secp,
+        )
+        .unwrap();
+        // A different index must yield a different key.
+        assert_ne!(
+            default_path.public_key.to_string(),
+            explicit.public_key.to_string()
+        );
+    }
+
+    #[test]
+    fn invalid_mnemonic_is_rejected() {
+        let secp = Secp256k1::new();
+        let err = generate_keys_from_mnemonic(
+            "not a valid mnemonic phrase at all",
+            None,
+            "bech32",
+            Network::Bitcoin,
+            &secp,
+        );
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn generate_new_keys_yields_valid_address() {
+        let secp = Secp256k1::new();
+        let k = generate_new_keys("bech32", Network::Regtest, &secp).unwrap();
+        let addr = create_bitcoin_address(&k.public_key, "bech32", Network::Regtest).unwrap();
+        assert!(addr.to_string().starts_with("bcrt1q"));
+        // A freshly generated key must surface its mnemonic for backup.
+        assert!(k.mnemonic.is_some(), "new keys must return a mnemonic");
+    }
+
+    #[test]
+    fn debug_redacts_the_mnemonic() {
+        let secp = Secp256k1::new();
+        let k = generate_new_keys("bech32", Network::Regtest, &secp).unwrap();
+        let phrase = k.mnemonic.as_ref().unwrap().to_string();
+        let dbg = format!("{:?}", k);
+        assert!(dbg.contains("[REDACTED]"), "debug output: {dbg}");
+        assert!(!dbg.contains(&phrase), "mnemonic leaked in Debug: {dbg}");
+    }
+
+    // Signet and regtest must derive at test-network coin type 1' (like testnet),
+    // not mainnet 0', so the same mnemonic recovers the same key across wallets.
+    #[test]
+    fn test_networks_use_coin_type_one() {
+        assert_eq!(
+            get_derivation_path(None, "bech32", Network::Testnet),
+            "m/84'/1'/0'/0/0"
+        );
+        assert_eq!(
+            get_derivation_path(None, "bech32", Network::Signet),
+            "m/84'/1'/0'/0/0"
+        );
+        assert_eq!(
+            get_derivation_path(None, "taproot", Network::Regtest),
+            "m/86'/1'/0'/0/0"
+        );
+        assert_eq!(
+            get_derivation_path(None, "p2pkh", Network::Regtest),
+            "m/44'/1'/0'/0/0"
+        );
+        // Mainnet stays on coin type 0'.
+        assert_eq!(
+            get_derivation_path(None, "bech32", Network::Bitcoin),
+            "m/84'/0'/0'/0/0"
+        );
+    }
+}

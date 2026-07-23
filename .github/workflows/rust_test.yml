@@ -3,6 +3,10 @@ name: Rust Test
 on:
   push:
     branches: "**"
+  # Also run on pull requests so PRs opened from forks (which never push into the
+  # base repo) are still gated by the lint/coverage/audit jobs below. The Codecov
+  # upload already degrades gracefully when the token is absent on a fork.
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,13 +19,134 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          profile: minimal
-          default: true
+          # `llvm-tools-preview` provides the instrumentation runtime used by
+          # cargo-llvm-cov to produce the client coverage report.
+          components: rustfmt, clippy, llvm-tools-preview
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
 
       - name: Run tests
         run: |
           cd counterparty-rs
           cargo test
+
+      - name: Lint counterparty-client
+        run: |
+          cd counterparty-client
+          cargo fmt --check
+          cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Test counterparty-client with coverage
+        # `cargo llvm-cov` builds and runs the unit tests with instrumentation and
+        # emits an lcov report. The CLI entrypoint (`src/lib.rs`'s `run()` plus the
+        # thin `src/bin/*` wrappers, exercised by the regtest integration test) and
+        # test-only files are excluded so the report reflects unit-testable
+        # library coverage.
+        run: |
+          cd counterparty-client
+          cargo llvm-cov --locked --lcov --output-path lcov.info \
+            --ignore-filename-regex '(src/lib\.rs$|src/bin/|tests\.rs$)'
+
+      # Determine Codecov availability without exposing the token to the
+      # dependency-heavy build/test steps above: a malicious build script in the
+      # crate tree could read a job-level secret while `cargo llvm-cov` runs. Only
+      # this trivial check and the upload step below ever see the token.
+      - name: Check for Codecov token
+        id: codecov_token
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          if [ -n "$CODECOV_TOKEN" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload client coverage to Codecov
+        # Skip when no token is configured (e.g. a fork), so the core job is not
+        # failed by a Codecov upload it could never authenticate. When the token
+        # IS present, `fail_ci_if_error` still guards against a silently-dropped
+        # report (the coverage floors in codecov.yml only bite if it lands).
+        if: ${{ steps.codecov_token.outputs.present == 'true' }}
+        uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          token: ${{ env.CODECOV_TOKEN }}
+          slug: CounterpartyXCP/counterparty-core
+          files: counterparty-client/lcov.info
+          flags: client
+          fail_ci_if_error: true
+
+  # Enforce the advertised MSRV (`rust-version` in counterparty-client/Cargo.toml,
+  # and the README). Pinned to the exact minimum so a dependency bump that raises
+  # it fails here instead of silently invalidating the claim. `cargo check` is
+  # enough to catch an MSRV violation and is far cheaper than a full build+test.
+  MSRV:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the MSRV toolchain
+        uses: dtolnay/rust-toolchain@1.88.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: counterparty-client
+      - name: Check the client builds on the MSRV
+        run: |
+          cd counterparty-client
+          cargo check --locked --all-targets
+
+  # The wallet depends on the OS-specific `keyring` backend, so build and test
+  # the client on macOS and Windows too (Linux is covered by the Cargo job).
+  Client:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: counterparty-client
+
+      - name: Build and test counterparty-client
+        run: |
+          cd counterparty-client
+          cargo build --locked
+          cargo test --locked
+
+  # Dependency-hygiene gate for the wallet: security advisories, licenses,
+  # banned/duplicate crates, and crate sources. Blocking — a newly-introduced
+  # vulnerable, wrongly-licensed, or unexpected-source dependency fails CI.
+  # Triaged advisories are ignored explicitly (cargo-audit `--ignore` below and
+  # `counterparty-client/deny.toml`), so the gate stays meaningful without
+  # flapping on the one known-unmaintained transitive crate.
+  Audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cargo-audit and cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit,cargo-deny
+      - name: Audit dependencies for security advisories
+        # The ignore list lives in counterparty-client/.cargo/audit.toml (the
+        # single source of truth for cargo-audit), so it cannot drift from this
+        # invocation. deny.toml carries the equivalent ignore for cargo-deny.
+        run: |
+          cd counterparty-client
+          cargo audit --deny warnings
+      - name: Check licenses, bans, and sources
+        run: |
+          cd counterparty-client
+          cargo deny check

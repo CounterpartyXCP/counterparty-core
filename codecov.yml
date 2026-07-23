@@ -1,3 +1,19 @@
+# Codecov configuration.
+#
+# Two coverage sources feed this repo:
+#   * `core`   — Python coverage for `counterparty-core/` (uploaded by the
+#                Pytest workflow via pytest-cov).
+#   * `client` — Rust coverage for `counterparty-client/` (uploaded by the
+#                Rust Test workflow via cargo-llvm-cov).
+#
+# Each source is uploaded under its own flag so the two never clobber each
+# other. The repo-wide project gate stays at 90%; the **patch** (diff-coverage)
+# gate is split per flag so a client-only PR is judged against the client target,
+# not the 90% default — some client lines (OS keyring, interactive stdin) can
+# only be covered by the macOS/Windows and regtest jobs, never by the hermetic
+# Linux unit run that feeds the `client` flag. `component_management` adds a
+# dedicated project gate for the Rust client (see below).
+
 coverage:
   status:
     project:
@@ -5,6 +21,62 @@ coverage:
         target: 90%
         threshold: 1%
     patch:
-      default:
+      # No untyped `default`: each upload is flagged (core / client), so scoping
+      # the patch gate per flag avoids the repo-wide 90% biting a client-only
+      # diff whose hard-to-cover lines the unit run cannot reach.
+      core:
+        flags:
+          - core
         target: 90%
         threshold: 1%
+      client:
+        flags:
+          - client
+        target: 88%
+        threshold: 1%
+
+flags:
+  core:
+    paths:
+      - counterparty-core/
+    carryforward: true
+  client:
+    paths:
+      - counterparty-client/
+    carryforward: true
+
+component_management:
+  individual_components:
+    - component_id: counterparty-client
+      name: counterparty-client
+      paths:
+        - counterparty-client/**
+      statuses:
+        # Enforce a strong floor for the Rust client. The target sits a little
+        # below the achieved unit coverage (~90%) on purpose: a slice of the
+        # client (OS-keyring access and interactive stdin password prompts) can
+        # only be exercised by the macOS/Windows `Client` job and the `--ignored`
+        # regtest integration test, never by the hermetic Linux unit run that
+        # feeds this flag. The 1% threshold keeps normal PR variance from
+        # flapping the gate red.
+        - type: project
+          target: 88%
+          threshold: 1%
+    - component_id: counterparty-core
+      name: counterparty-core
+      paths:
+        - counterparty-core/**
+
+comment:
+  layout: "reach, diff, flags, components, files"
+
+# The CLI entrypoint (argument wiring + interactive stdin prompts) lives in
+# `src/lib.rs` and the thin `src/bin/*` wrappers; it is exercised end-to-end by
+# the regtest integration test, not by unit tests, so it is excluded from the
+# unit-coverage denominator. Test-only files — anything ending in `tests.rs`,
+# including the `#[ignore]`d live-regtest integration tests that only run under
+# `--ignored` — are excluded too, matching the CI's `--ignore-filename-regex`.
+ignore:
+  - "counterparty-client/src/lib.rs"
+  - "counterparty-client/src/bin/**"
+  - "counterparty-client/src/**/*tests.rs"
