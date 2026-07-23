@@ -1180,6 +1180,16 @@ pub async fn handle_sign_command(
     sub_matches: &ArgMatches,
     wallet: &BitcoinWallet,
 ) -> Result<()> {
+    // `wallet sign` is the expert escape hatch: unlike `wallet transaction
+    // <type>`, it performs NO independent verification of what it signs — it
+    // signs exactly the raw transaction handed to it. Say so, so a user pasting a
+    // `compose_*` result here knows the fund-safety net is off.
+    helpers::print_warning(
+        "wallet sign does not independently verify this transaction; it signs exactly the \
+         raw transaction you provide.",
+        Some("Use `wallet transaction <type>` to compose, verify and sign in one step."),
+    );
+
     // Get raw transaction hex from arguments
     let raw_tx_hex = sub_matches
         .get_one::<String>("rawtransaction")
@@ -1415,6 +1425,14 @@ async fn get_utxos_from_api(
 
 /// Handle broadcast command to send a signed transaction to the network
 pub async fn handle_broadcast_command(config: &AppConfig, sub_matches: &ArgMatches) -> Result<()> {
+    // Like `wallet sign`, this expert command performs NO independent
+    // verification: it broadcasts exactly the signed transaction handed to it.
+    helpers::print_warning(
+        "wallet broadcast does not independently verify this transaction; it broadcasts exactly \
+         the signed transaction you provide.",
+        Some("Use `wallet transaction <type>` to compose, verify, sign and broadcast in one step."),
+    );
+
     // Get raw transaction hex from arguments
     let signed_tx_hex = sub_matches
         .get_one::<String>("rawtransaction")

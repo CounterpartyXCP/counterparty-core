@@ -19,14 +19,16 @@
 //! pre-stretch is what actually bounds an offline attack on a stolen file; the
 //! passphrase-length floor (see [`super::password`]) remains the other half.
 //!
-//! Two older formats are still read transparently and upgraded to v2 on the next
-//! save: a bare `cocoon` container keyed on the raw password (v1), and an even
-//! earlier detached-prefix pair (`wallet.db` + `wallet.prefix`).
+//! Two older formats are still read transparently and upgraded to v2 — opportunistically
+//! on load (best-effort) and on the next save: a bare `cocoon` container keyed
+//! on the raw password (v1), and an even earlier detached-prefix pair
+//! (`wallet.db` + `wallet.prefix`).
 
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
-use argon2::Argon2;
+use argon2::{Algorithm, Argon2, Params, Version};
 use cocoon::Cocoon;
 use secrecy::ExposeSecret;
 use secrecy::SecretString;
@@ -48,14 +50,38 @@ const ARGON2_SALT_LEN: usize = 16;
 /// Length of the key Argon2id derives (then handed to cocoon as its password).
 const ARGON2_KEY_LEN: usize = 32;
 
+/// Pinned Argon2id cost parameters: memory (KiB), iterations, parallelism. These
+/// match the `argon2` crate's current defaults (OWASP's second recommended
+/// Argon2id preset), but are fixed explicitly — rather than relying on
+/// `Argon2::default()` — so a future dependency bump cannot silently weaken (or
+/// unexpectedly change) the wallet KDF without a deliberate edit here. A change
+/// to any of these values re-derives every wallet key, so an existing file
+/// only stays readable because each write re-stretches with the current params.
+/// Asserted by `argon2_params_are_pinned`.
+const ARGON2_M_COST_KIB: u32 = 19_456;
+const ARGON2_T_COST: u32 = 2;
+const ARGON2_P_COST: u32 = 1;
+
+/// The wallet's Argon2id hasher, configured with the pinned parameters above.
+fn wallet_argon2() -> Result<Argon2<'static>> {
+    let params = Params::new(
+        ARGON2_M_COST_KIB,
+        ARGON2_T_COST,
+        ARGON2_P_COST,
+        Some(ARGON2_KEY_LEN),
+    )
+    .map_err(|e| WalletError::CocoonError(format!("invalid Argon2 parameters: {e}")))?;
+    Ok(Argon2::new(Algorithm::Argon2id, Version::V0x13, params))
+}
+
 /// Derive the cocoon key from the user's password with Argon2id (memory-hard)
 /// over `salt`. This closes the gap left by cocoon's fixed PBKDF2 KDF against
 /// offline brute-forcing of a stolen wallet file. cocoon still applies its own
 /// PBKDF2 to this output — harmless defense in depth; the Argon2id memory cost is
-/// the real barrier. Uses the `argon2` crate defaults (Argon2id, 19 MiB, t=2).
+/// the real barrier.
 fn derive_wallet_key(password: &SecretString, salt: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
     let mut key = Zeroizing::new(vec![0u8; ARGON2_KEY_LEN]);
-    Argon2::default()
+    wallet_argon2()?
         .hash_password_into(
             password.expose_secret().as_bytes(),
             salt,
@@ -69,9 +95,27 @@ fn derive_wallet_key(password: &SecretString, salt: &[u8]) -> Result<Zeroizing<V
 pub struct WalletStorage {
     wallet_file: PathBuf,
     password_manager: PasswordManager,
+    /// The exact `wallet.db` bytes this process observed when it loaded the
+    /// wallet (or last wrote it). Used to detect a concurrent writer before a
+    /// `save`/`change_password` overwrites the file: a `save` reloads the wallet
+    /// map, mutates it in memory and writes the whole file back, so a second
+    /// `xcp` process doing the same between our load and our write would be
+    /// silently discarded (last-writer-wins) — including a private key it just
+    /// generated. `None` until the first successful load/write (and in the
+    /// pure-crypto unit tests that never call `save`).
+    loaded_bytes: Mutex<Option<Vec<u8>>>,
 }
 
 impl WalletStorage {
+    /// Assemble a `WalletStorage` with an empty concurrent-write baseline.
+    fn from_parts(wallet_file: PathBuf, password_manager: PasswordManager) -> Self {
+        WalletStorage {
+            wallet_file,
+            password_manager,
+            loaded_bytes: Mutex::new(None),
+        }
+    }
+
     /// Initialize wallet storage
     ///
     /// Creates a new wallet or loads an existing one. `data_dir` is the
@@ -94,13 +138,19 @@ impl WalletStorage {
         let wallet_name = network_dir.to_string_lossy().to_string();
         let password_manager = PasswordManager::new(network, &wallet_name);
 
-        let storage = WalletStorage {
-            wallet_file,
-            password_manager,
-        };
+        let storage = WalletStorage::from_parts(wallet_file, password_manager);
 
         if storage.wallet_file.exists() {
             let addresses = storage.load_with_retry()?;
+            // Record the on-disk bytes as the concurrent-write baseline: a later
+            // `save` compares against these to refuse clobbering a change another
+            // process made in the meantime.
+            storage.record_loaded_state();
+            // A wallet still in a legacy (pre-Argon2id) format would otherwise
+            // only be upgraded on the next *write*, leaving a read-only session
+            // (e.g. `list`) on the weaker KDF indefinitely. Upgrade it now,
+            // best-effort.
+            storage.upgrade_format_if_legacy(&addresses);
             Ok((storage, addresses))
         } else {
             // New wallet: prompt for a password, write the empty wallet, then
@@ -266,6 +316,11 @@ impl WalletStorage {
 
         atomic_write(&self.wallet_file, &file_bytes)?;
 
+        // These bytes are now the on-disk state; adopt them as the
+        // concurrent-write baseline so a subsequent `save` in this same session
+        // is compared against what we actually wrote.
+        self.set_loaded_bytes(Some(file_bytes));
+
         // The wallet is now stored single-file; drop the obsolete legacy prefix.
         let prefix_file = self.wallet_file.with_extension("prefix");
         if prefix_file.exists() {
@@ -274,8 +329,71 @@ impl WalletStorage {
         Ok(())
     }
 
+    /// Overwrite the concurrent-write baseline (poison-tolerant).
+    fn set_loaded_bytes(&self, bytes: Option<Vec<u8>>) {
+        *self.loaded_bytes.lock().unwrap_or_else(|e| e.into_inner()) = bytes;
+    }
+
+    /// Snapshot the current `wallet.db` bytes as the concurrent-write baseline.
+    fn record_loaded_state(&self) {
+        self.set_loaded_bytes(fs::read(&self.wallet_file).ok());
+    }
+
+    /// If the wallet on disk predates the v2 (Argon2id) format, opportunistically
+    /// re-save it in v2 using the already-verified password. Best-effort: a
+    /// read-only session must still succeed if this write can't happen (password
+    /// not cached, read-only filesystem, a concurrent writer), so any error is a
+    /// note, not a failure — the wallet stays readable and upgrades on the next
+    /// explicit change.
+    fn upgrade_format_if_legacy(&self, addresses: &AddressMap) {
+        // Unreadable here: don't attempt and don't warn (load already succeeded).
+        let is_legacy = match fs::read(&self.wallet_file) {
+            Ok(bytes) => !bytes.starts_with(WALLET_MAGIC_V2),
+            Err(_) => return,
+        };
+        if !is_legacy {
+            return;
+        }
+        if let Err(e) = self.save(addresses) {
+            eprintln!(
+                "Note: could not upgrade the wallet to the hardened at-rest format now ({e}); \
+                 it stays readable and will upgrade on the next change."
+            );
+        }
+    }
+
+    /// Refuse to overwrite the wallet if it changed on disk since this process
+    /// loaded (or last wrote) it — almost always a second `xcp` writing
+    /// concurrently. A `save` reloads nothing: it writes this process's
+    /// in-memory map back over the whole file, so without this check the other
+    /// process's change (e.g. a key it just generated) would be silently lost.
+    /// A missing/unreadable file is not treated as a conflict — a delete is not
+    /// the silent-key-loss case this guards, and the atomic write recreates it.
+    fn check_not_modified_since_load(&self) -> Result<()> {
+        let expected = self
+            .loaded_bytes
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone();
+        if let Some(expected) = expected {
+            if let Ok(current) = fs::read(&self.wallet_file) {
+                if current != expected {
+                    return Err(WalletError::ConcurrentModification(
+                        "wallet.db changed on disk since it was loaded (another xcp process?); \
+                         refusing to overwrite it. Re-run the command to load the latest wallet \
+                         and try again."
+                            .to_string(),
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Saves the wallet addresses to the encrypted file using the current password.
     pub fn save(&self, addresses: &AddressMap) -> Result<()> {
+        // Refuse to clobber a concurrent writer (see the method doc).
+        self.check_not_modified_since_load()?;
         let password = self
             .password_manager
             .cached_or_stored()?
@@ -293,6 +411,9 @@ impl WalletStorage {
     /// silently rotate the wallet to the same (or an unintended) value.
     pub fn change_password(&self, addresses: &AddressMap) -> Result<()> {
         let new_password = self.password_manager.prompt_new_password_interactive()?;
+        // Refuse to clobber a concurrent writer: re-encrypting our (possibly
+        // stale) in-memory map would drop a key another process just added.
+        self.check_not_modified_since_load()?;
         self.write_encrypted(addresses, &new_password)?;
         self.password_manager.persist(&new_password)?;
         Ok(())
@@ -321,10 +442,7 @@ impl WalletStorage {
         let wallet_name = network_dir.to_string_lossy().to_string();
         let password_manager = PasswordManager::new_cache_only(network, &wallet_name);
         password_manager.cache_for_test(password);
-        let storage = WalletStorage {
-            wallet_file,
-            password_manager,
-        };
+        let storage = WalletStorage::from_parts(wallet_file, password_manager);
         let addresses = AddressMap::new();
         storage
             .write_encrypted(&addresses, &SecretString::from(password.to_string()))
@@ -466,6 +584,9 @@ fn restrict_to_current_user(path: &Path) {
         .arg("/inheritance:r")
         .arg("/grant:r")
         .arg(format!("{username}:(F)"))
+        // Don't hand the wallet password to a child process: `Command` inherits
+        // the parent environment by default, and `icacls` has no need for it.
+        .env_remove(super::password::PASSWORD_ENV_VAR)
         .output();
 }
 
@@ -484,10 +605,10 @@ mod tests {
     /// Build a `WalletStorage` pointing at `path` without touching the keyring
     /// (the `PasswordManager` is only used by methods we don't call here).
     fn storage_at(path: &Path) -> WalletStorage {
-        WalletStorage {
-            wallet_file: path.to_path_buf(),
-            password_manager: PasswordManager::new_cache_only(config::Network::Regtest, "test"),
-        }
+        WalletStorage::from_parts(
+            path.to_path_buf(),
+            PasswordManager::new_cache_only(config::Network::Regtest, "test"),
+        )
     }
 
     fn sample_map() -> AddressMap {
@@ -612,6 +733,61 @@ mod tests {
     }
 
     #[test]
+    fn argon2_params_are_pinned() {
+        // Tripwire: these are the exact values the wallet KDF must use. A change
+        // re-derives every wallet key, so it must be a deliberate edit (that also
+        // updates this test), never an accidental drift from a dependency's
+        // default.
+        assert_eq!(ARGON2_M_COST_KIB, 19_456);
+        assert_eq!(ARGON2_T_COST, 2);
+        assert_eq!(ARGON2_P_COST, 1);
+
+        let argon2 = wallet_argon2().unwrap();
+        assert_eq!(argon2.params().m_cost(), 19_456);
+        assert_eq!(argon2.params().t_cost(), 2);
+        assert_eq!(argon2.params().p_cost(), 1);
+    }
+
+    #[test]
+    fn legacy_wallet_is_upgraded_on_load_not_just_next_write() {
+        // The opportunistic on-load upgrade must rewrite a legacy container in v2
+        // without any explicit mutation, so a read-only session (e.g. `list`)
+        // doesn't stay on the weaker KDF.
+        let dir = tempfile::tempdir().unwrap();
+        let wallet_file = dir.path().join("wallet.db");
+        let password = "pw pw pw pw pw";
+
+        // A legacy v1 container: bare cocoon keyed on the raw password.
+        let json = serde_json::to_string(&sample_map()).unwrap();
+        let mut cocoon = Cocoon::new(password.as_bytes());
+        let container = cocoon.wrap(json.as_bytes()).unwrap();
+        fs::write(&wallet_file, &container).unwrap();
+
+        let pm = PasswordManager::new_cache_only(config::Network::Regtest, "legacy-upgrade");
+        pm.cache_for_test(password);
+        let storage = WalletStorage::from_parts(wallet_file.clone(), pm);
+        storage.record_loaded_state();
+
+        let loaded = storage
+            .decrypt_addresses(&SecretString::from(password.to_string()))
+            .unwrap();
+        storage.upgrade_format_if_legacy(&loaded);
+
+        assert!(
+            fs::read(&wallet_file).unwrap().starts_with(WALLET_MAGIC_V2),
+            "loading a legacy wallet must upgrade it in place to v2"
+        );
+        // Still decrypts, and now via the v2 (Argon2id) path.
+        assert_eq!(
+            storage
+                .decrypt_addresses(&SecretString::from(password.to_string()))
+                .unwrap()
+                .len(),
+            1
+        );
+    }
+
+    #[test]
     fn legacy_v1_single_file_is_read_then_upgraded_to_v2() {
         let dir = tempfile::tempdir().unwrap();
         let wallet_file = dir.path().join("wallet.db");
@@ -695,10 +871,7 @@ mod tests {
         let wallet_file = dir.path().join("wallet.db");
         let pm = PasswordManager::new_cache_only(config::Network::Regtest, "save-roundtrip");
         pm.cache_for_test("cachedpassw0rd");
-        let storage = WalletStorage {
-            wallet_file: wallet_file.clone(),
-            password_manager: pm,
-        };
+        let storage = WalletStorage::from_parts(wallet_file.clone(), pm);
 
         let addresses = sample_map();
         storage.save(&addresses).unwrap();
@@ -713,6 +886,51 @@ mod tests {
             loaded.get("bcrt1qexampleaddress").unwrap().label,
             "test-label"
         );
+    }
+
+    #[test]
+    fn save_refuses_to_clobber_a_concurrent_writer() {
+        // Model two `xcp` processes: this one loads+saves, another writes the
+        // file in between. The second save must abort rather than silently
+        // discarding the other process's change (e.g. a freshly generated key).
+        let dir = tempfile::tempdir().unwrap();
+        let wallet_file = dir.path().join("wallet.db");
+        let pm = PasswordManager::new_cache_only(config::Network::Regtest, "concurrent");
+        pm.cache_for_test("cachedpassw0rd");
+        let storage = WalletStorage::from_parts(wallet_file.clone(), pm);
+
+        // First save establishes the on-disk baseline.
+        storage.save(&sample_map()).unwrap();
+
+        // Another process rewrites the file after we loaded/saved it.
+        let other_bytes = b"another process wrote this".to_vec();
+        fs::write(&wallet_file, &other_bytes).unwrap();
+
+        // Our next save must refuse, and must NOT overwrite the other bytes.
+        let err = storage.save(&sample_map()).unwrap_err();
+        assert!(
+            matches!(err, WalletError::ConcurrentModification(_)),
+            "expected a concurrent-modification error, got {err:?}"
+        );
+        assert_eq!(
+            fs::read(&wallet_file).unwrap(),
+            other_bytes,
+            "the concurrent writer's file must be left intact"
+        );
+    }
+
+    #[test]
+    fn consecutive_saves_in_one_session_succeed() {
+        // The baseline is refreshed after each write, so a second save by the
+        // same process (no external change) is not a false positive.
+        let dir = tempfile::tempdir().unwrap();
+        let wallet_file = dir.path().join("wallet.db");
+        let pm = PasswordManager::new_cache_only(config::Network::Regtest, "consecutive");
+        pm.cache_for_test("cachedpassw0rd");
+        let storage = WalletStorage::from_parts(wallet_file, pm);
+
+        storage.save(&sample_map()).unwrap();
+        storage.save(&sample_map()).unwrap();
     }
 
     #[test]
@@ -756,10 +974,7 @@ mod tests {
         let wallet_file = dir.path().join("wallet.db");
         let pm = PasswordManager::new_cache_only(config::Network::Regtest, "noninteractive-ok");
         pm.cache_for_test("rightpassw0rd");
-        let storage = WalletStorage {
-            wallet_file,
-            password_manager: pm,
-        };
+        let storage = WalletStorage::from_parts(wallet_file, pm);
         storage
             .write_encrypted(
                 &sample_map(),
@@ -780,10 +995,7 @@ mod tests {
         let wallet_file = dir.path().join("wallet.db");
         let pm = PasswordManager::new_cache_only(config::Network::Regtest, "noninteractive-wrong");
         pm.cache_for_test("wrong-password");
-        let storage = WalletStorage {
-            wallet_file,
-            password_manager: pm,
-        };
+        let storage = WalletStorage::from_parts(wallet_file, pm);
         storage
             .write_encrypted(
                 &sample_map(),

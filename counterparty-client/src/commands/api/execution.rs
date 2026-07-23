@@ -373,6 +373,39 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn https_only_client_refuses_a_cleartext_http_url() {
+        // Regression: `https_only(true)` is the single switch that blocks both an
+        // initial `http://` request AND a redirect that downgrades the scheme to
+        // cleartext. Assert the real `http_client` builder actually enforces it,
+        // so dropping `.https_only(...)` (or a reqwest change that ignores it) is
+        // caught here rather than silently re-opening a MITM/downgrade hole.
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/v2/routes")
+            .with_status(200)
+            .with_body("{}")
+            .create_async()
+            .await;
+        // mockito serves cleartext http://127.0.0.1:<port>.
+        let url = format!("{}/v2/routes", server.url());
+
+        // Permissive client (regtest/local): the cleartext request is allowed.
+        let permissive = http_client(false).unwrap();
+        assert!(
+            permissive.get(&url).send().await.is_ok(),
+            "https_only=false must allow a cleartext local URL (regtest)"
+        );
+
+        // Strict client (every public network): the same cleartext URL is refused
+        // by reqwest before any bytes leave the process.
+        let strict = http_client(true).unwrap();
+        assert!(
+            strict.get(&url).send().await.is_err(),
+            "https_only=true must refuse a cleartext http:// URL"
+        );
+    }
+
+    #[tokio::test]
     async fn execute_command_without_subcommand_is_ok() {
         // No subcommand -> prints guidance and returns Ok (no network).
         let config = AppConfig::new();

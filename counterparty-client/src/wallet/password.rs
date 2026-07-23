@@ -41,7 +41,7 @@ const MIN_PASSWORD_DISTINCT_CHARS: usize = 5;
 /// visible to other processes running as the same user (e.g.
 /// `/proc/<pid>/environ` on Linux) and can leak into shell history, CI logs or
 /// crash dumps.
-const PASSWORD_ENV_VAR: &str = "XCP_WALLET_PASSWORD";
+pub(crate) const PASSWORD_ENV_VAR: &str = "XCP_WALLET_PASSWORD";
 
 /// Parse a candidate password from the raw environment value. An unset or empty
 /// variable yields `None` so an exported-but-empty `XCP_WALLET_PASSWORD` falls

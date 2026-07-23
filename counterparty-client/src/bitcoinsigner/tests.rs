@@ -1000,6 +1000,126 @@ fn signs_p2pkh_with_uncompressed_key() {
     assert!(secp.verify_ecdsa(&msg, &sig, &public_key.inner).is_ok());
 }
 
+/// Regression: a P2WPKH spend with a wallet key imported from an *uncompressed*
+/// WIF must still push the 33-byte compressed pubkey in the witness. A SegWit v0
+/// scriptPubKey commits to `hash160(compressed)`, so pushing the 65-byte
+/// uncompressed form would produce an unspendable, non-standard witness
+/// (`WITNESS_PUBKEYTYPE`) that the signer previously emitted with `Ok(..)`.
+#[test]
+fn p2wpkh_with_uncompressed_wif_pushes_compressed_pubkey() {
+    let secp = Secp256k1::new();
+    let sk = SecretKey::from_slice(&[0x11u8; 32]).unwrap();
+    let uncompressed = PrivateKey {
+        compressed: false,
+        network: NETWORK.into(),
+        inner: sk,
+    };
+    let public_key = PublicKey::from_private_key(&secp, &uncompressed);
+    assert_eq!(
+        public_key.to_bytes().len(),
+        65,
+        "wallet key is uncompressed"
+    );
+
+    // The bech32 address the wallet holds is always derived from the compressed
+    // key hash, so the scriptPubKey commits to `hash160(compressed)`.
+    let cpk = CompressedPublicKey::from_slice(&public_key.to_bytes()).unwrap();
+    let spk = ScriptBuf::new_p2wpkh(&cpk.wpubkey_hash());
+    let addr = Address::from_script(&spk, NETWORK).unwrap().to_string();
+
+    let mut utxos = UTXOList::new();
+    utxos.add(UTXO::new(UTXO_AMOUNT, spk.clone()));
+    let tx = unsigned_tx();
+    let addresses = address_map(
+        &addr,
+        &uncompressed.to_wif(),
+        "bech32",
+        &public_key.to_string(),
+    );
+    let signed = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap();
+    let parsed = parse_signed(&signed);
+
+    let witness: Vec<&[u8]> = parsed.input[0].witness.iter().collect();
+    assert_eq!(witness.len(), 2, "witness = <sig> <pubkey>");
+    assert_eq!(
+        witness[1],
+        cpk.to_bytes(),
+        "the witness must push the 33-byte compressed key the scriptPubKey commits to"
+    );
+
+    // The compressed witness key hashes to the committed program (spendable).
+    let mut cache = SighashCache::new(&parsed);
+    let sighash = cache
+        .p2wpkh_signature_hash(
+            0,
+            &spk,
+            Amount::from_sat(UTXO_AMOUNT),
+            EcdsaSighashType::All,
+        )
+        .unwrap();
+    let msg = Message::from_digest_slice(sighash.as_ref()).unwrap();
+    let sig = bitcoin::secp256k1::ecdsa::Signature::from_der(&witness[0][..witness[0].len() - 1])
+        .unwrap();
+    assert!(secp.verify_ecdsa(&msg, &sig, &public_key.inner).is_ok());
+}
+
+/// Regression: the same defect on the nested P2SH-P2WPKH path — the witness must
+/// carry the 33-byte compressed key the redeem's `hash160(compressed)` commits
+/// to, not the imported uncompressed WIF's 65-byte form.
+#[test]
+fn p2sh_p2wpkh_with_uncompressed_wif_pushes_compressed_pubkey() {
+    let secp = Secp256k1::new();
+    let sk = SecretKey::from_slice(&[0x11u8; 32]).unwrap();
+    let uncompressed = PrivateKey {
+        compressed: false,
+        network: NETWORK.into(),
+        inner: sk,
+    };
+    let public_key = PublicKey::from_private_key(&secp, &uncompressed);
+    let cpk = CompressedPublicKey::from_slice(&public_key.to_bytes()).unwrap();
+
+    let redeem = ScriptBuf::new_p2wpkh(&cpk.wpubkey_hash());
+    let spk = ScriptBuf::new_p2sh(&redeem.script_hash());
+    let addr = Address::from_script(&spk, NETWORK).unwrap().to_string();
+
+    let mut utxo = UTXO::new(UTXO_AMOUNT, spk);
+    utxo.redeem_script = Some(redeem.clone());
+    let mut utxos = UTXOList::new();
+    utxos.add(utxo);
+
+    let tx = unsigned_tx();
+    let addresses = address_map(
+        &addr,
+        &uncompressed.to_wif(),
+        "p2sh",
+        &public_key.to_string(),
+    );
+    let signed = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap();
+    let parsed = parse_signed(&signed);
+
+    let witness: Vec<&[u8]> = parsed.input[0].witness.iter().collect();
+    assert_eq!(witness.len(), 2, "witness = <sig> <pubkey>");
+    assert_eq!(
+        witness[1],
+        cpk.to_bytes(),
+        "the witness must push the 33-byte compressed key the redeem commits to"
+    );
+
+    let mut cache = SighashCache::new(&parsed);
+    let sighash = cache
+        .p2wpkh_signature_hash(
+            0,
+            &redeem,
+            Amount::from_sat(UTXO_AMOUNT),
+            EcdsaSighashType::All,
+        )
+        .unwrap();
+    let msg = Message::from_digest_slice(sighash.as_ref()).unwrap();
+    let sig = bitcoin::secp256k1::ecdsa::Signature::from_der(&witness[0][..witness[0].len() - 1])
+        .unwrap();
+    assert!(secp.verify_ecdsa(&msg, &sig, &public_key.inner).is_ok());
+}
+
 /// The P2SH scriptPubKey only commits to `hash160(redeem)`. A hostile server
 /// could supply a P2SH-P2WPKH redeem program committing to a *different* key than
 /// the wallet's; signing it would yield a validly-signed-but-unspendable input.

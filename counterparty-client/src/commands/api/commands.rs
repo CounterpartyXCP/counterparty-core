@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{ArgMatches, Command};
 use std::collections::HashMap;
 use std::collections::HashSet;
 
@@ -148,42 +148,9 @@ pub(crate) fn push_help_note(help: &mut String, note: &str) {
     }
 }
 
-/// Long flags the top-level CLI reserves (its `.global(true)` flags, plus clap's
-/// auto-generated `help`/`version`). A manifest arg whose name collides with one
-/// of these would define a conflicting `--<flag>` on a subcommand that already
-/// inherits the global, which clap rejects when the whole command tree is built
-/// (a panic in debug, a hard error in release) — bricking *every* invocation
-/// until the endpoint cache is refreshed. The endpoint manifest is fetched from
-/// the API server (or read from a locally-writable cache), i.e. not fully
-/// trusted, so such a name is skipped rather than leaked into clap.
-const RESERVED_LONG_FLAGS: &[&str] = &[
-    "help",
-    "version",
-    "config-file",
-    "mainnet",
-    "signet",
-    "testnet4",
-    "regtest",
-    "json",
-    "update-cache",
-];
-
-/// Whether a manifest-supplied argument name is safe to register as a clap
-/// `--long` flag. Rejects an empty or over-long name, a collision with a
-/// [`RESERVED_LONG_FLAGS`] entry, and any name that is not a conventional long
-/// flag (ASCII alphanumerics plus `-`/`_`, not starting with `-`) — all shapes a
-/// hostile or corrupted manifest could otherwise use to brick command building.
-fn is_valid_arg_name(name: &str) -> bool {
-    !name.is_empty()
-        && name.len() <= 64
-        && !name.starts_with('-')
-        && !RESERVED_LONG_FLAGS.contains(&name)
-        && name
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
-}
-
-// Adds an argument to a command with unique internal ID to prevent name conflicts
+// Adds an argument to a command with a unique internal ID to prevent name
+// conflicts, delegating to the shared builder in `wallet::args` (which also
+// applies the reserved-name / malformed-name guard).
 fn add_command_argument(
     cmd: Command,
     arg: &ApiEndpointArg,
@@ -191,70 +158,14 @@ fn add_command_argument(
     command_name: &str,
     used_long_names: &mut HashSet<String>,
 ) -> Command {
-    // Skip an unsafe manifest arg name rather than let it brick command building
-    // (see `is_valid_arg_name`). Skipping only drops that one CLI flag; the
-    // command — and every other invocation — keeps working.
-    if !is_valid_arg_name(&arg.name) {
-        return cmd;
-    }
-
-    // Skip this argument if the long name is already used
-    if used_long_names.contains(&arg.name) {
-        return cmd;
-    }
-
-    // Mark this argument name as used
-    used_long_names.insert(arg.name.clone());
-
-    // Create unique internal ID
     let internal_id = format!("__api_{}_arg_{}_{}", command_name, idx, arg.name);
-    let static_internal_id: &'static str = Box::leak(internal_id.into_boxed_str());
-
-    // Use original argument name as long flag
-    let static_long_flag: &'static str = Box::leak(arg.name.clone().into_boxed_str());
-
-    // Store mapping for later retrieval
-    let id_map_key = format!("{}:{}", command_name, static_internal_id);
-    crate::commands::wallet::args::id_arg_map().insert(id_map_key, arg.name.clone());
-
-    // Surface the server-provided allowed values and default in `--help` (this
-    // metadata was previously parsed but ignored). Kept in the help text rather
-    // than as clap value-parsers so it can't collide with the file-reference /
-    // label-resolution parsers applied later, nor reject an already-valid
-    // server default.
-    let mut help_text = arg.description.as_deref().unwrap_or("").to_string();
-    if let Some(choices) = enum_choices(arg) {
-        push_help_note(&mut help_text, &format!("possible values: {choices}"));
-    }
-    if let Some(default) = arg.default.as_ref().and_then(json_scalar_to_string) {
-        push_help_note(&mut help_text, &format!("default: {default}"));
-    }
-    let static_help: &'static str = Box::leak(help_text.into_boxed_str());
-
-    let mut cmd_arg = Arg::new(static_internal_id)
-        .long(static_long_flag)
-        .help(static_help);
-
-    if arg.required {
-        cmd_arg = cmd_arg.required(true);
-    }
-    // The server default is shown in `--help` above but deliberately NOT wired
-    // in as a clap `default_value`: doing so would make an omitted optional flag
-    // always transmit the default, changing which parameters reach the API
-    // (today an omitted flag is simply not sent, and the server applies its own
-    // default). Surfacing it is a documentation win; forcing it is a behaviour
-    // change.
-
-    if arg.arg_type == "bool" {
-        // Accept a value for boolean flags (--flag true/false/1/0).
-        cmd_arg = cmd_arg
-            .value_name("BOOL")
-            .value_parser(crate::commands::wallet::args::parse_bool_flag);
-    } else {
-        cmd_arg = cmd_arg.value_name("VALUE");
-    }
-
-    cmd.arg(cmd_arg)
+    crate::commands::wallet::args::add_manifest_argument(
+        cmd,
+        arg,
+        internal_id,
+        command_name,
+        used_long_names,
+    )
 }
 
 // Finds a matching endpoint for the given command.
@@ -423,31 +334,6 @@ mod tests {
     fn find_matching_endpoint_errors_on_unknown() {
         let endpoints: HashMap<String, ApiEndpoint> = HashMap::new();
         assert!(find_matching_endpoint(&endpoints, "nope").is_err());
-    }
-
-    #[test]
-    fn is_valid_arg_name_accepts_real_params_and_rejects_reserved_or_malformed() {
-        // Real compose parameter names pass.
-        assert!(is_valid_arg_name("asset"));
-        assert!(is_valid_arg_name("give_quantity"));
-        assert!(is_valid_arg_name("quantity_by_price"));
-        // Reserved global / clap-auto flags are rejected.
-        for reserved in [
-            "json",
-            "mainnet",
-            "regtest",
-            "config-file",
-            "help",
-            "version",
-        ] {
-            assert!(!is_valid_arg_name(reserved), "{reserved} must be reserved");
-        }
-        // Malformed / injection-ish names are rejected.
-        assert!(!is_valid_arg_name(""));
-        assert!(!is_valid_arg_name("--json"));
-        assert!(!is_valid_arg_name("bad name"));
-        assert!(!is_valid_arg_name("weird=val"));
-        assert!(!is_valid_arg_name(&"x".repeat(65)));
     }
 
     #[test]

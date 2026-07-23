@@ -1,7 +1,6 @@
 use clap::{Arg, ArgAction, Command};
 use std::collections::{HashMap, HashSet};
 
-use crate::commands::api::commands::{enum_choices, json_scalar_to_string, push_help_note};
 use crate::commands::api::{ApiEndpoint, ApiEndpointArg};
 use crate::commands::wallet::args;
 use crate::commands::wallet::commands;
@@ -50,7 +49,9 @@ fn create_transaction_command(func_name: &str, endpoint: &ApiEndpoint) -> (Strin
     (static_tx_name.to_string(), cmd)
 }
 
-/// Add a single argument to a command
+/// Add a single argument to a transaction command, delegating to the shared
+/// builder in `wallet::args` (which applies the reserved-name / malformed-name
+/// guard the `api <fn>` builder also uses, so the two cannot drift).
 fn add_argument_to_command(
     cmd: Command,
     arg: &ApiEndpointArg,
@@ -58,57 +59,8 @@ fn add_argument_to_command(
     command_name: &str,
     used_long_names: &mut HashSet<String>,
 ) -> Command {
-    // Skip this argument if the long name is already used
-    if used_long_names.contains(&arg.name) {
-        return cmd;
-    }
-
-    // Mark this argument name as used
-    used_long_names.insert(arg.name.clone());
-
-    // Create unique internal ID
     let internal_id = format!("__transaction_{}_arg_{}_{}", command_name, idx, arg.name);
-    let static_internal_id: &'static str = Box::leak(internal_id.into_boxed_str());
-
-    // Use original argument name as long flag
-    let static_long_flag: &'static str = Box::leak(arg.name.clone().into_boxed_str());
-
-    // Store mapping for later
-    let id_map_key = format!("{}:{}", command_name, static_internal_id);
-    args::id_arg_map().insert(id_map_key, arg.name.clone());
-
-    // Surface the server-provided allowed values and default in `--help`, exactly
-    // like the `api <fn>` builder does, so `wallet transaction <x> --help` is as
-    // informative as `api compose_<x> --help` (they used to drift). Kept in the
-    // help text, not as clap value-parsers, so it can't collide with the
-    // file-reference / label-resolution parsers applied later.
-    let mut help_text = arg.description.as_deref().unwrap_or("").to_string();
-    if let Some(choices) = enum_choices(arg) {
-        push_help_note(&mut help_text, &format!("possible values: {choices}"));
-    }
-    if let Some(default) = arg.default.as_ref().and_then(json_scalar_to_string) {
-        push_help_note(&mut help_text, &format!("default: {default}"));
-    }
-    let static_help: &'static str = Box::leak(help_text.into_boxed_str());
-
-    let mut cmd_arg = Arg::new(static_internal_id)
-        .long(static_long_flag)
-        .help(static_help);
-
-    if arg.required {
-        cmd_arg = cmd_arg.required(true);
-    }
-
-    if arg.arg_type == "bool" {
-        // Accept a value for boolean flags (--flag true/false/1/0).
-        cmd_arg = cmd_arg
-            .value_name("BOOL")
-            .value_parser(args::parse_bool_flag);
-    } else {
-        cmd_arg = cmd_arg.value_name("VALUE");
-    }
-
-    cmd.arg(cmd_arg)
+    args::add_manifest_argument(cmd, arg, internal_id, command_name, used_long_names)
 }
 
 /// Add send_transaction command to the wallet command based on compose API endpoints
@@ -135,10 +87,14 @@ pub fn add_broadcast_commands(cmd: Command, endpoints: &HashMap<String, ApiEndpo
         // A compose endpoint that already exposes the funding address does so as
         // `address` or `source`; match both so we never inject a duplicate
         // `--address` (mirrors `find_compose_endpoint` in `transaction.rs`).
+        // Also skip injection if a manifest arg literally named `address` was
+        // already registered above — otherwise clap would see a duplicate
+        // `--address` and brick the whole tree (a hostile/corrupt manifest).
         let has_address = endpoint
             .args
             .iter()
-            .any(|arg| arg.name == "address" || arg.name == "source");
+            .any(|arg| arg.name == "address" || arg.name == "source")
+            || used_long_names.contains("address");
 
         // Check if address parameter exists already
         // Add address argument if needed
@@ -340,6 +296,49 @@ mod tests {
                 "1",
                 "-y",
             ])
+            .unwrap();
+        assert!(m.get_flag("yes"));
+    }
+
+    #[test]
+    fn hostile_manifest_arg_names_do_not_brick_the_transaction_tree() {
+        // A corrupted/hostile compose manifest naming args after the injected
+        // `--yes`/`--address` flags or a reserved global flag must not produce a
+        // duplicate-flag clap panic when the tree is built (it previously would:
+        // the transaction builder lacked the `api` builder's guard).
+        let mut endpoints = HashMap::new();
+        endpoints.insert(
+            "/v2/addresses/<address>/compose/evil".to_string(),
+            endpoint(
+                "compose_evil",
+                "Composes an evil",
+                vec![
+                    arg("yes", "string"),     // collides with injected --yes
+                    arg("json", "string"),    // reserved global flag
+                    arg("address", "string"), // would double-inject --address
+                    arg("asset", "string"),   // the one legitimate arg
+                ],
+            ),
+        );
+
+        // Building must not panic, and each flag appears exactly once.
+        let wallet = add_broadcast_commands(Command::new("wallet"), &endpoints);
+        let tx = find_sub(&wallet, "transaction");
+        let evil = find_sub(tx, "evil");
+        let flags = long_flags(&evil.clone());
+
+        assert_eq!(flags.iter().filter(|f| *f == "yes").count(), 1);
+        assert_eq!(flags.iter().filter(|f| *f == "address").count(), 1);
+        assert!(
+            !flags.contains(&"json".to_string()),
+            "reserved flag dropped"
+        );
+        assert!(flags.contains(&"asset".to_string()), "valid arg kept");
+
+        // `--yes` is still the confirmation-skip flag, not a forwarded param.
+        let m = evil
+            .clone()
+            .try_get_matches_from(["evil", "--address", "a", "--asset", "XCP", "-y"])
             .unwrap();
         assert!(m.get_flag("yes"));
     }

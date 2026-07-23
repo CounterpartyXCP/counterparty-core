@@ -4,10 +4,17 @@ use bitcoin::secp256k1::SecretKey;
 use bitcoin::sighash::SighashCache;
 use bitcoin::{PublicKey, Transaction, TxOut};
 
-use super::common::{create_and_verify_ecdsa_signature, create_empty_script_sig};
+use super::common::{
+    create_and_verify_ecdsa_signature, create_empty_script_sig, get_compressed_pubkey,
+};
 use super::types::{InputSigner, Result, UTXOType, UTXO};
 
-/// Adds a signature to a P2WPKH input
+/// Adds a signature to a P2WPKH input.
+///
+/// `pubkey` must be the 33-byte compressed serialization: a SegWit v0
+/// scriptPubKey commits to `hash160(compressed_pubkey)`, so pushing an
+/// uncompressed key would fail script verification (wrong hash) and is a BIP141
+/// `WITNESS_PUBKEYTYPE` violation. The caller passes the compressed form.
 fn add_p2wpkh_signature(input: &mut PsbtInput, signature: Vec<u8>, pubkey: Vec<u8>) -> Result<()> {
     // Create a witness stack with the signature and public key
     let mut witness = Witness::new();
@@ -48,7 +55,10 @@ impl InputSigner for P2WPKHSigner {
             input,
         )?;
 
-        // Add the signature to the input
-        add_p2wpkh_signature(input, signature, public_key.to_bytes())
+        // Push the compressed key: the SegWit v0 scriptPubKey commits to
+        // hash160(compressed), so an uncompressed key (from an imported legacy
+        // WIF) would otherwise produce an unspendable, non-standard witness.
+        let compressed_pubkey = get_compressed_pubkey(public_key)?.to_bytes().to_vec();
+        add_p2wpkh_signature(input, signature, compressed_pubkey)
     }
 }

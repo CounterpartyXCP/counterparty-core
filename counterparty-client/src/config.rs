@@ -65,21 +65,16 @@ pub struct NetworkConfig {
 
 /// The client's full configuration: per-network endpoints plus the active
 /// network. Serialized to `config.toml` on first run.
+///
+/// All endpoints/paths live under [`network_configs`](Self::network_configs),
+/// one entry per network — that is the only place a user repoints the client at
+/// their own server (edit `[network_configs.<network>]`). There are deliberately
+/// no root-level `api_url`/`data_dir`/... fields: earlier revisions had them as
+/// an unreachable fallback, which was a footgun (editing them looked effective
+/// but changed nothing). A `config.toml` that still carries such stray keys is
+/// harmless — serde ignores unknown fields.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AppConfig {
-    /// Fallback API URL used when the active network has no entry.
-    #[serde(default)]
-    pub api_url: String,
-    /// Fallback endpoints URL used when the active network has no entry.
-    #[serde(default)]
-    pub endpoints_url: String,
-    /// Fallback endpoint-cache path.
-    #[serde(default)]
-    pub cache_file: PathBuf,
-    /// Fallback data directory.
-    #[serde(default)]
-    pub data_dir: PathBuf,
-
     /// Endpoints/paths for each supported network.
     #[serde(default)]
     pub network_configs: HashMap<Network, NetworkConfig>,
@@ -100,42 +95,33 @@ impl AppConfig {
     /// Build a config with the built-in per-network defaults; the active network
     /// is mainnet.
     pub fn new() -> Self {
-        // Get application directories
-        let (app_cache, app_data) = Self::get_app_directories();
-
-        // Create network configurations
         let mut network_configs = HashMap::new();
-
-        // Add mainnet config
-        let mainnet_config = Self::create_mainnet_config(&app_cache, &app_data);
-        network_configs.insert(Network::Mainnet, mainnet_config.clone());
-
-        // Add signet config
-        network_configs.insert(
+        for network in [
+            Network::Mainnet,
             Network::Signet,
-            Self::create_signet_config(&app_cache, &app_data),
-        );
-
-        // Add testnet4 config
-        network_configs.insert(
             Network::Testnet4,
-            Self::create_testnet4_config(&app_cache, &app_data),
-        );
-
-        // Add regtest config
-        network_configs.insert(
             Network::Regtest,
-            Self::create_regtest_config(&app_cache, &app_data),
-        );
+        ] {
+            network_configs.insert(network, Self::default_network_config(network));
+        }
 
-        // Use mainnet values for the root config (default network)
         AppConfig {
-            api_url: mainnet_config.api_url.clone(),
-            endpoints_url: mainnet_config.endpoints_url.clone(),
-            cache_file: mainnet_config.cache_file.clone(),
-            data_dir: mainnet_config.data_dir.clone(),
             network_configs,
             network: Network::Mainnet,
+        }
+    }
+
+    /// The built-in default endpoints/paths for `network`. Also the fallback
+    /// used by [`get_active_network_config`](Self::get_active_network_config)
+    /// when a loaded config somehow lacks an entry for the active network — so
+    /// the fallback is the correct network's defaults, never an unrelated one.
+    fn default_network_config(network: Network) -> NetworkConfig {
+        let (app_cache, app_data) = Self::get_app_directories();
+        match network {
+            Network::Mainnet => Self::create_mainnet_config(&app_cache, &app_data),
+            Network::Signet => Self::create_signet_config(&app_cache, &app_data),
+            Network::Testnet4 => Self::create_testnet4_config(&app_cache, &app_data),
+            Network::Regtest => Self::create_regtest_config(&app_cache, &app_data),
         }
     }
 
@@ -192,23 +178,10 @@ impl AppConfig {
         }
     }
 
-    /// Overlay non-empty values (and every network entry) from a parsed config
-    /// file onto `self`, adopting the file's active network.
+    /// Overlay every network entry from a parsed config file onto `self`,
+    /// adopting the file's active network. A network the file does not mention
+    /// keeps its built-in default (populated by [`new`](Self::new)).
     pub fn merge_from(&mut self, file_config: AppConfig) {
-        // Update root-level configurations if they are non-empty
-        if !file_config.api_url.is_empty() {
-            self.api_url = file_config.api_url;
-        }
-        if !file_config.endpoints_url.is_empty() {
-            self.endpoints_url = file_config.endpoints_url;
-        }
-        if file_config.cache_file != PathBuf::new() {
-            self.cache_file = file_config.cache_file;
-        }
-        if file_config.data_dir != PathBuf::new() {
-            self.data_dir = file_config.data_dir;
-        }
-
         // Merge network configurations
         for (network, net_config) in file_config.network_configs {
             self.network_configs.insert(network, net_config);
@@ -270,21 +243,13 @@ impl AppConfig {
         Ok(())
     }
 
-    /// The [`NetworkConfig`] for the active network, or the root fallback values
-    /// when the active network has no dedicated entry.
+    /// The [`NetworkConfig`] for the active network, falling back to that
+    /// network's built-in defaults if a loaded config lacks an entry for it.
     pub fn get_active_network_config(&self) -> NetworkConfig {
         self.network_configs
             .get(&self.network)
             .cloned()
-            .unwrap_or_else(|| {
-                // Fallback to default values
-                NetworkConfig {
-                    api_url: self.api_url.clone(),
-                    endpoints_url: self.endpoints_url.clone(),
-                    cache_file: self.cache_file.clone(),
-                    data_dir: self.data_dir.clone(),
-                }
-            })
+            .unwrap_or_else(|| Self::default_network_config(self.network))
     }
 
     /// Set the active network.
@@ -426,19 +391,34 @@ mod tests {
         }
     }
 
-    // Default network is Mainnet and the root config mirrors the mainnet config.
+    // The default active network is Mainnet, and its config resolves to the
+    // mainnet defaults.
     #[test]
-    fn default_network_is_mainnet_and_root_mirrors_mainnet() {
+    fn default_network_is_mainnet() {
         assert_eq!(Network::default(), Network::Mainnet);
 
         let cfg = AppConfig::new();
         assert_eq!(cfg.network, Network::Mainnet);
+        assert_eq!(
+            cfg.get_active_network_config().api_url,
+            "https://api.counterparty.io:4000"
+        );
+    }
 
-        let mainnet = &cfg.network_configs[&Network::Mainnet];
-        assert_eq!(cfg.api_url, mainnet.api_url);
-        assert_eq!(cfg.endpoints_url, mainnet.endpoints_url);
-        assert_eq!(cfg.cache_file, mainnet.cache_file);
-        assert_eq!(cfg.data_dir, mainnet.data_dir);
+    // The fallback for a missing active-network entry is *that* network's own
+    // defaults, never an unrelated network's (a repointed-network mix-up would
+    // be a fund-safety bug: signing for the wrong chain).
+    #[test]
+    fn active_config_falls_back_to_the_correct_networks_defaults() {
+        let mut cfg = AppConfig::new();
+        cfg.set_network(Network::Signet);
+        // Simulate a hand-edited file that dropped the signet entry.
+        cfg.network_configs.remove(&Network::Signet);
+        assert_eq!(
+            cfg.get_active_network_config().api_url,
+            "https://signet.counterparty.io:34000",
+            "fallback must be signet's defaults, not mainnet's"
+        );
     }
 
     // `get_api_url`/`get_endpoints_url` follow `set_network`.
@@ -461,33 +441,27 @@ mod tests {
         assert_eq!(cfg.get_api_url(), "http://localhost:24000");
     }
 
-    // `merge_from` overrides only non-empty root fields; `network` is always
-    // taken from the incoming (file) config.
+    // `merge_from` adopts the incoming network and leaves networks the file does
+    // not mention on their existing defaults.
     #[test]
-    fn merge_from_overrides_only_non_empty_fields() {
+    fn merge_from_adopts_network_and_keeps_unmentioned_configs() {
         let mut base = AppConfig::new();
-        let original_endpoints = base.endpoints_url.clone();
-        let original_data_dir = base.data_dir.clone();
+        let original_signet = base.network_configs[&Network::Signet].api_url.clone();
 
         let partial = AppConfig {
-            api_url: "https://custom.example:5000".to_string(),
-            endpoints_url: String::new(),
-            cache_file: PathBuf::new(),
-            data_dir: PathBuf::new(),
             network_configs: HashMap::new(),
             network: Network::Regtest,
         };
         base.merge_from(partial);
 
-        // Non-empty api_url overrides.
-        assert_eq!(base.api_url, "https://custom.example:5000");
-        // Empty fields do NOT override.
-        assert_eq!(base.endpoints_url, original_endpoints);
-        assert_eq!(base.data_dir, original_data_dir);
         // `network` is taken from the incoming config unconditionally.
         assert_eq!(base.network, Network::Regtest);
-        // Empty incoming network_configs leaves the existing ones in place.
+        // An empty incoming network_configs leaves the existing ones in place.
         assert_eq!(base.network_configs.len(), 4);
+        assert_eq!(
+            base.network_configs[&Network::Signet].api_url,
+            original_signet
+        );
     }
 
     // `merge_from` inserts/overrides per-network configs supplied by the file.
@@ -505,10 +479,6 @@ mod tests {
             },
         );
         let partial = AppConfig {
-            api_url: String::new(),
-            endpoints_url: String::new(),
-            cache_file: PathBuf::new(),
-            data_dir: PathBuf::new(),
             network_configs: incoming_networks,
             network: Network::Regtest,
         };
@@ -543,8 +513,6 @@ mod tests {
         let parsed: AppConfig = toml::from_str(&contents).unwrap();
 
         assert_eq!(parsed.network, cfg.network);
-        assert_eq!(parsed.api_url, cfg.api_url);
-        assert_eq!(parsed.endpoints_url, cfg.endpoints_url);
 
         for net in [
             Network::Mainnet,

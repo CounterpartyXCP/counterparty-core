@@ -66,10 +66,12 @@ fn add_p2sh_p2wpkh_signature(
     // Set the script_sig
     input.final_script_sig = Some(script_sig);
 
-    // Set the witness stack
+    // Set the witness stack. Push the compressed key: the nested P2WPKH redeem
+    // commits to hash160(compressed), so an uncompressed key would produce an
+    // unspendable, non-standard witness.
     let mut witness = Witness::new();
     witness.push(signature);
-    witness.push(pubkey);
+    witness.push(compressed_pubkey.to_bytes());
     input.final_script_witness = Some(witness);
 
     Ok(())

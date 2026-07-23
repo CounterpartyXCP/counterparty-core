@@ -48,7 +48,9 @@ Pick the network with a global flag; the default is **mainnet**.
 | `--regtest`  | Regtest  | `http://localhost:24000`                    |
 
 These defaults, and per-network paths, are written to a config file on first run
-(see below); edit it to point at your own Counterparty API server.
+(see below). To point the client at your own Counterparty API server, edit the
+relevant `[network_configs.<network>]` table (e.g. `[network_configs.mainnet]`)
+— that per-network table is the only thing that takes effect.
 
 ## Files
 

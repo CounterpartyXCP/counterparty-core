@@ -54,6 +54,13 @@ pub enum WalletError {
     /// internal invariant breach, never expected in practice.
     #[error("Generated signature failed verification")]
     SignatureVerificationFailed,
+
+    /// The wallet file changed on disk between the moment this process loaded it
+    /// and the moment it tried to save — almost always a second `xcp` process
+    /// writing concurrently. Overwriting would silently discard that other
+    /// process's change (e.g. a freshly generated key), so the save is refused.
+    #[error("{0}")]
+    ConcurrentModification(String),
 }
 
 /// Type alias for our result type

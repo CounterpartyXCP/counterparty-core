@@ -80,13 +80,21 @@ fn compute_signature(
     let message = create_message_from_tap_sighash(sighash)?;
 
     // Create a keypair from the secret key (script-path signs with the untweaked
-    // key — the tweak lives in the control block, not the signature).
-    let keypair = Keypair::from_secret_key(secp, secret_key);
+    // key — the tweak lives in the control block, not the signature). `Keypair`
+    // is `Copy`, so passing it to the helper by value wipes only the helper's
+    // copy; this binding stays live and is wiped explicitly below (parity with
+    // the key-path signer).
+    let mut keypair = Keypair::from_secret_key(secp, secret_key);
     let xonly_pubkey = XOnlyPublicKey::from_keypair(&keypair).0;
 
     // Sign (with aux-rand) against the untweaked internal key, verify, and wipe
-    // the keypair — all in the shared helper.
-    sign_and_verify_schnorr(secp, &message, keypair, &xonly_pubkey, sighash_type)
+    // the helper's copy of the keypair.
+    let signature = sign_and_verify_schnorr(secp, &message, keypair, &xonly_pubkey, sighash_type);
+
+    // Best-effort wipe of this frame's secret copy.
+    keypair.non_secure_erase();
+
+    signature
 }
 
 /// Add the script-path witness stack: `<signature> <script> <control block>`.
