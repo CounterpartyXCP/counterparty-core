@@ -5,35 +5,33 @@ use std::path::{Path, PathBuf};
 
 /// Whether `url`'s host is a loopback address (`localhost`, `127.0.0.0/8`, or
 /// `[::1]`), so the cleartext-HTTP exemption for regtest applies only to a
-/// genuinely local endpoint. Anything else — including a URL that fails to
-/// parse a host — is treated as non-local (fail safe: require TLS).
+/// genuinely local endpoint. Anything else — including a URL that fails to parse
+/// or has no host — is treated as non-local (fail safe: require TLS).
+///
+/// Parsing goes through the same WHATWG URL parser reqwest uses to dial the
+/// connection (`reqwest::Url` is `url::Url`), so the locality decision cannot
+/// diverge from the host that is actually connected to — a hand-rolled parser
+/// could disagree on authority/userinfo edge cases and re-open a cleartext hole.
 fn is_local_url(url: &str) -> bool {
-    // Strip scheme, then any userinfo, then take the authority up to the first
-    // '/', '?' or '#'.
-    let after_scheme = url.split("://").nth(1).unwrap_or(url);
-    let authority = after_scheme
-        .split(['/', '?', '#'])
-        .next()
-        .unwrap_or(after_scheme);
-    let host_port = authority.rsplit('@').next().unwrap_or(authority);
-
-    // IPv6 literal: `[::1]:port`.
-    let host = if let Some(rest) = host_port.strip_prefix('[') {
-        match rest.split_once(']') {
-            Some((h, _)) => h,
-            None => return false,
-        }
-    } else {
-        host_port.split(':').next().unwrap_or(host_port)
+    let Ok(parsed) = reqwest::Url::parse(url) else {
+        return false;
     };
+    let Some(host) = parsed.host_str() else {
+        return false;
+    };
+    // `host_str` keeps the brackets on an IPv6 literal (`[::1]`); strip them
+    // before the IP parse.
+    let host = host
+        .strip_prefix('[')
+        .and_then(|h| h.strip_suffix(']'))
+        .unwrap_or(host);
 
-    if host.eq_ignore_ascii_case("localhost") || host == "::1" {
+    if host.eq_ignore_ascii_case("localhost") {
         return true;
     }
-    match host.parse::<std::net::IpAddr>() {
-        Ok(ip) => ip.is_loopback(),
-        Err(_) => false,
-    }
+    host.parse::<std::net::IpAddr>()
+        .map(|ip| ip.is_loopback())
+        .unwrap_or(false)
 }
 
 /// A Bitcoin network the client can target. The default is [`Network::Mainnet`].

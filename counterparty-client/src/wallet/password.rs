@@ -67,9 +67,43 @@ fn cache() -> &'static Mutex<HashMap<String, SecretString>> {
     PASSWORD_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-/// Reject a new password that is too short or too repetitive. Passphrase
-/// strength is the primary defence for a stolen `wallet.db` (see
-/// [`MIN_PASSWORD_LEN`] / [`MIN_PASSWORD_DISTINCT_CHARS`]).
+/// A small blocklist of the most common weak password *bases*. This is a
+/// pragmatic floor, not a real strength estimator (a full one would pull in a
+/// large wordlist / a zxcvbn-style crate); it just rejects the handful of
+/// passwords that clear the length + distinct-character gates yet sit at the top
+/// of every cracking wordlist (e.g. `password1234`, `qwertyuiop12`). Combined
+/// with the memory-hard Argon2id at-rest KDF (see [`super::storage`]), it raises
+/// the bar on an offline dictionary attack against a stolen wallet file.
+const COMMON_WEAK_BASES: &[&str] = &[
+    "password",
+    "passwd",
+    "passw0rd",
+    "qwerty",
+    "qwertyuiop",
+    "azerty",
+    "letmein",
+    "welcome",
+    "iloveyou",
+    "adminadmin",
+    "monkey",
+    "dragon",
+    "sunshine",
+    "princess",
+    "football",
+    "baseball",
+    "superman",
+    "batman",
+    "master",
+    "shadow",
+    "michael",
+    "changeme",
+    "whatever",
+    "trustno",
+];
+
+/// Reject a new password that is too short, too repetitive, all-numeric, or a
+/// well-known weak password. Passphrase strength is the primary defence for a
+/// stolen `wallet.db` (see [`MIN_PASSWORD_LEN`] / [`MIN_PASSWORD_DISTINCT_CHARS`]).
 fn check_password_strength(password: &SecretString) -> Result<()> {
     let secret = password.expose_secret();
     if secret.chars().count() < MIN_PASSWORD_LEN {
@@ -87,7 +121,37 @@ fn check_password_strength(password: &SecretString) -> Result<()> {
              characters. Passphrase strength is the main defence for a stolen wallet file."
         )));
     }
+
+    let lower = secret.to_ascii_lowercase();
+    // An all-digit password (a numeric PIN, however long) is trivially weak.
+    if !lower.is_empty() && lower.chars().all(|c| c.is_ascii_digit()) {
+        return Err(WalletError::Validation(
+            "Password must not be all digits; use a longer, less predictable passphrase."
+                .to_string(),
+        ));
+    }
+    // Reject a common weak base optionally followed by digits (`password1234`,
+    // `letmein12345`, `qwertyuiop12`, …).
+    let base = lower.trim_end_matches(|c: char| c.is_ascii_digit());
+    if COMMON_WEAK_BASES.contains(&base) {
+        return Err(WalletError::Validation(
+            "Password is a well-known weak password; choose a longer, less predictable passphrase."
+                .to_string(),
+        ));
+    }
     Ok(())
+}
+
+/// Where a non-interactive password came from, so a failed decrypt forgets only
+/// that source (see [`PasswordManager::forget_source`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PasswordSource {
+    /// The in-process in-memory cache.
+    Cache,
+    /// The `XCP_WALLET_PASSWORD` environment variable.
+    Env,
+    /// The OS keyring.
+    Keyring,
 }
 
 /// Secure password manager
@@ -120,13 +184,22 @@ impl PasswordManager {
     /// verifies it decrypts the wallet before calling
     /// [`persist`](Self::persist).
     pub fn cached_or_stored(&self) -> Result<Option<SecretString>> {
+        Ok(self.cached_or_stored_with_source()?.map(|(p, _)| p))
+    }
+
+    /// Like [`cached_or_stored`](Self::cached_or_stored), but also reports *which*
+    /// source produced the password, so a caller that finds it does not decrypt
+    /// the wallet can forget only that source (see [`forget_source`](Self::forget_source)).
+    pub fn cached_or_stored_with_source(&self) -> Result<Option<(SecretString, PasswordSource)>> {
         if let Some(cached) = self.get_from_cache() {
-            return Ok(Some(cached));
+            return Ok(Some((cached, PasswordSource::Cache)));
         }
         if let Some(env_password) = password_from_env() {
-            return Ok(Some(env_password));
+            return Ok(Some((env_password, PasswordSource::Env)));
         }
-        self.get_from_keyring()
+        Ok(self
+            .get_from_keyring()?
+            .map(|p| (p, PasswordSource::Keyring)))
     }
 
     /// Prompt the user for an existing wallet's password. Not persisted here.
@@ -193,22 +266,35 @@ impl PasswordManager {
         Ok(())
     }
 
-    /// Forget a password after a failed decrypt so the next attempt re-prompts
-    /// instead of reusing the bad value.
-    pub fn forget(&self) {
-        self.remove_from_cache();
-        // Best-effort: drop the keyring entry too, so a stale/wrong stored
-        // password cannot brick subsequent runs.
-        let _ = self.delete_from_keyring();
+    /// Forget the password from the specific source that produced a failed
+    /// decrypt, so the next attempt re-prompts instead of reusing the bad value —
+    /// **without** discarding a possibly-correct credential from a *different*
+    /// source. In particular, a wrong `XCP_WALLET_PASSWORD` must not delete a
+    /// correct keyring entry (`cached_or_stored` prefers the env var over the
+    /// keyring, so the failing password can be the env one while the keyring is
+    /// fine). The wallet file itself is never touched, so no funds are at risk
+    /// either way.
+    pub fn forget_source(&self, source: PasswordSource) {
+        match source {
+            PasswordSource::Cache => self.remove_from_cache(),
+            // The env var is external to us; there is nothing to forget (and
+            // clobbering the keyring for it is exactly the bug this avoids). The
+            // caller falls through to an interactive prompt.
+            PasswordSource::Env => {}
+            PasswordSource::Keyring => {
+                // Best-effort: drop the stale/wrong stored password so it cannot
+                // brick subsequent runs.
+                let _ = self.delete_from_keyring();
+            }
+        }
     }
 
     /// Clear the password from the keyring and cache. Used by `wallet
-    /// disconnect`, which must always succeed — so, like [`forget`](Self::forget),
-    /// the in-memory cache is cleared first (infallible) and the keyring delete
-    /// is best-effort. A keyring backend that is unavailable (e.g. no Secret
-    /// Service on a headless server — exactly the situation `disconnect` is
-    /// more likely to be reached for) must not turn "disconnect" into a
-    /// reported failure.
+    /// disconnect`, which must always succeed — so the in-memory cache is cleared
+    /// first (infallible) and the keyring delete is best-effort. A keyring
+    /// backend that is unavailable (e.g. no Secret Service on a headless server —
+    /// exactly the situation `disconnect` is more likely to be reached for) must
+    /// not turn "disconnect" into a reported failure.
     pub fn clear_password(&self) -> Result<()> {
         self.remove_from_cache();
         let _ = self.delete_from_keyring();
@@ -417,5 +503,59 @@ mod tests {
         assert!(check_password_strength(&SecretString::from("abababababab".to_string())).is_err());
         // A varied passphrase of the same length is fine.
         assert!(check_password_strength(&SecretString::from("correct-horse".to_string())).is_ok());
+    }
+
+    #[test]
+    fn password_strength_rejects_common_and_all_digit_passwords() {
+        // Common weak bases that clear the length + distinct gates but sit atop
+        // every cracking wordlist.
+        for weak in [
+            "password1234",
+            "letmein12345",
+            "qwertyuiop12",
+            "Password2024",
+        ] {
+            assert!(
+                check_password_strength(&SecretString::from(weak.to_string())).is_err(),
+                "{weak} should be rejected as a common weak password"
+            );
+        }
+        // An all-digit "passphrase", however long, is a weak PIN.
+        assert!(check_password_strength(&SecretString::from("135792468024".to_string())).is_err());
+        // A genuinely varied passphrase of the same shape is still accepted.
+        assert!(
+            check_password_strength(&SecretString::from("purple-tractor-77".to_string())).is_ok()
+        );
+    }
+
+    #[test]
+    fn forget_source_only_forgets_the_named_source() {
+        // Forgetting the env/keyring source must not touch a cached password;
+        // forgetting the cache source must. (The keyring dimension needs a real
+        // backend, but the cache dimension proves the source selectivity that
+        // stops a wrong env var from wiping a good keyring credential.)
+        let pm = PasswordManager::new_cache_only(Network::Regtest, "wallet-forget-src");
+        pm.cache_for_test("cachedpw123");
+        assert!(pm.is_cached());
+
+        pm.forget_source(PasswordSource::Env);
+        assert!(pm.is_cached(), "forgetting Env must not clear the cache");
+        pm.forget_source(PasswordSource::Keyring);
+        assert!(
+            pm.is_cached(),
+            "forgetting Keyring must not clear the cache"
+        );
+
+        pm.forget_source(PasswordSource::Cache);
+        assert!(!pm.is_cached(), "forgetting Cache must clear the cache");
+    }
+
+    #[test]
+    fn cached_or_stored_with_source_reports_cache() {
+        let pm = PasswordManager::new_cache_only(Network::Regtest, "wallet-cos-src");
+        pm.cache_for_test("cachedpw123");
+        let (pw, source) = pm.cached_or_stored_with_source().unwrap().unwrap();
+        assert_eq!(pw.expose_secret(), "cachedpw123");
+        assert_eq!(source, PasswordSource::Cache);
     }
 }

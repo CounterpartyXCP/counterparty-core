@@ -72,21 +72,25 @@ Service provider (e.g. `gnome-keyring`) for the keyring to work.
 **Non-interactive password (`XCP_WALLET_PASSWORD`).** For automation, CI or a
 headless server without a keyring, set the `XCP_WALLET_PASSWORD` environment
 variable: it is used to create and unlock the wallet without a prompt (it must
-still meet the 12-character minimum for a new wallet, and is verified before
+still meet the password policy for a new wallet, and is verified before
 use). Prefer the OS keyring for interactive use — an environment variable is
 visible to other processes running as the same user (e.g. `/proc/<pid>/environ`
 on Linux) and can leak into shell history, CI logs or crash dumps.
 
 **Password & at-rest protection.** A new wallet password must be **at least 12
-characters** and reasonably varied (a trivially repetitive one — a single
-repeated character or a short repeating pattern — is rejected). Encryption at
-rest uses `cocoon` (ChaCha20-Poly1305 with a PBKDF2 key derivation, a *fixed,
-non-memory-hard* work factor): it protects a *stolen* `wallet.db` against offline
-password guessing, with the strength of your passphrase as the main defence — so
-choose a long, high-entropy one. It is **not** a substitute for OS-level disk encryption or for keeping
-the file off shared/multi-user machines. Your private keys never leave the
-machine: they are used to sign transactions locally and are never sent to the API
-server.
+characters**, reasonably varied (a trivially repetitive one — a single repeated
+character or a short repeating pattern — is rejected), not all-digits, and not a
+well-known weak password (`password1234` and friends are refused). Encryption at
+rest uses `cocoon` (ChaCha20-Poly1305), but the password is first stretched with
+**Argon2id** (memory-hard) over a random per-wallet salt before deriving the file
+key — `cocoon`'s own KDF is a fixed, non-memory-hard PBKDF2 work factor, so the
+Argon2id pre-stretch is what actually bounds an offline attack on a *stolen*
+`wallet.db`. The strength of your passphrase is still the main defence, so choose
+a long, high-entropy one. This is **not** a substitute for OS-level disk
+encryption or for keeping the file off shared/multi-user machines. Wallets
+written by older builds are read and transparently upgraded to the new format on
+the next save. Your private keys never leave the machine: they are used to sign
+transactions locally and are never sent to the API server.
 
 **Transaction verification.** The server composes each transaction, but you sign
 it locally — so for `send`, `enhanced_send` and `sweep` the client independently

@@ -77,12 +77,25 @@ fn last_opcode(script: &Script) -> Option<Opcode> {
     }
 }
 
-/// Whether a **non-`OP_RETURN`** output is one consensus would treat as a
+/// A **conservative heuristic** for whether a non-`OP_RETURN` output looks like a
 /// Counterparty *data* output: a bare pay-to-pubkey (`… OP_CHECKSIG`) or
 /// bare-multisig (`… OP_CHECKMULTISIG`) whose RC4-de-obfuscated content carries
-/// the `CNTRPRTY` prefix. This mirrors the P2PK/multisig branches of `parse_vout`
+/// the `CNTRPRTY` prefix. It follows the P2PK/multisig branches of `parse_vout`
 /// (`counterparty-rs/src/indexer/bitcoin_client.rs`), where the prefix sits at
 /// index 1 (after a leading length byte), unlike the `OP_RETURN` encoding.
+///
+/// This is deliberately **not** a bit-exact reimplementation of consensus data
+/// extraction: the length guards below (`< 2`) bail out of some legacy
+/// M/N-pushed-as-data multisig shapes that consensus *would* read, so this can
+/// under-detect. That is safe because it is not the fund-safety guarantee — it
+/// only feeds the extra hidden-message check in
+/// [`reject_hidden_message_on_btc_send`](super::reject_hidden_message_on_btc_send).
+/// The actual guarantee is [`decode::verify_btc_recipients`](super::decode::verify_btc_recipients):
+/// any such data output is a bare multisig / bare P2PK that resolves to **no
+/// address** (or, for a data-carrying P2PKH, a non-source/non-destination
+/// address), so it is refused there before a `Match` can be returned. A false
+/// negative here therefore cannot let funds leave — it can at worst let a
+/// no-address output through to that backstop, which rejects it.
 ///
 /// A standard destination is *not* flagged: P2WPKH/P2SH/P2WSH/P2TR do not end in
 /// `OP_CHECKSIG`/`OP_CHECKMULTISIG`, and a P2PKH (which does end in `OP_CHECKSIG`)

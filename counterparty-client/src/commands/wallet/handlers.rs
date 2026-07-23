@@ -153,9 +153,19 @@ pub fn handle_export_address(wallet: &BitcoinWallet, sub_matches: &ArgMatches) -
         return Ok(());
     }
 
-    let details = wallet
-        .show_address(address, Some(true))
+    let mut details = wallet
+        .show_address(address)
         .map_err(|e| anyhow!("Failed to export address details: {}", e))?;
+
+    // Hold the revealed WIF in a Zeroizing buffer and fold it into the output
+    // only at the last moment before printing, so the plaintext key is not kept
+    // in a long-lived, un-zeroized value any longer than the reveal requires.
+    // (Exporting inherently prints the WIF; the on-screen output is plaintext by
+    // design.)
+    let wif = wallet
+        .export_wif(address)
+        .map_err(|e| anyhow!("Failed to export private key: {}", e))?;
+    details["private_key"] = serde_json::Value::String(wif.to_string());
 
     helpers::print_colored_json(&details)?;
     Ok(())

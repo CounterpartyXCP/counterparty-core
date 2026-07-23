@@ -11,6 +11,9 @@ name: Client Regtest Integration
 on:
   push:
     branches: "**"
+  # Also gate pull requests (incl. those from forks, which never push into the
+  # base repo).
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -82,7 +85,7 @@ jobs:
       - name: Run the client regtest integration test
         run: |
           cd counterparty-client
-          cargo test -- --ignored full_compose_send_scales_quantity_regtest
+          cargo test --locked -- --ignored full_compose_send_scales_quantity_regtest
 
       # Full black-box E2E: import a key into an isolated `xcp` wallet, fund it
       # from Bitcoin Core's regtest wallet, then burn → send XCP by composing via
@@ -91,7 +94,7 @@ jobs:
       - name: Run the client regtest end-to-end test
         run: |
           cd counterparty-client
-          cargo test --test e2e_regtest -- --ignored full_fund_compose_sign_broadcast_accept_regtest
+          cargo test --locked --test e2e_regtest -- --ignored full_fund_compose_sign_broadcast_accept_regtest
 
       - name: Show the regtest server log on failure
         if: failure()

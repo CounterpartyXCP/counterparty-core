@@ -6,16 +6,27 @@
 //! - Managing wallet file paths
 //! - Secure password management via the system keyring
 //!
-//! The wallet is stored as a single self-contained `cocoon` container
-//! (`wallet.db`) written atomically (temp file + rename) so an interrupted
-//! write can never leave the only copy of the private keys unreadable. Wallets
-//! created by earlier builds used a detached-prefix format (`wallet.db` +
-//! `wallet.prefix`); those are still read transparently and upgraded to the
-//! single-file format on the next save.
+//! The wallet is stored as a single self-contained file (`wallet.db`) written
+//! atomically (temp file + rename) so an interrupted write can never leave the
+//! only copy of the private keys unreadable.
+//!
+//! # On-disk format
+//!
+//! The current (v2) format is `MAGIC || salt || cocoon-container`, where the
+//! cocoon key is the password stretched through **Argon2id** over the random
+//! per-wallet `salt`. cocoon's own KDF (PBKDF2-HMAC-SHA256 at a fixed ~100k
+//! iterations) is GPU/ASIC-friendly and not tunable, so the memory-hard Argon2id
+//! pre-stretch is what actually bounds an offline attack on a stolen file; the
+//! passphrase-length floor (see [`super::password`]) remains the other half.
+//!
+//! Two older formats are still read transparently and upgraded to v2 on the next
+//! save: a bare `cocoon` container keyed on the raw password (v1), and an even
+//! earlier detached-prefix pair (`wallet.db` + `wallet.prefix`).
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use argon2::Argon2;
 use cocoon::Cocoon;
 use secrecy::ExposeSecret;
 use secrecy::SecretString;
@@ -27,6 +38,32 @@ use crate::config;
 
 /// How many times to re-prompt on a wrong password before giving up.
 const MAX_PASSWORD_ATTEMPTS: usize = 3;
+
+/// Magic prefix of the v2 wallet format (Argon2id-pre-stretched cocoon
+/// container). A legacy cocoon container begins with `0x7f 0xc0 0x0a`, so it can
+/// never be mistaken for this ASCII prefix.
+const WALLET_MAGIC_V2: &[u8] = b"XCPWKDF1";
+/// Length of the random per-wallet Argon2id salt stored right after the magic.
+const ARGON2_SALT_LEN: usize = 16;
+/// Length of the key Argon2id derives (then handed to cocoon as its password).
+const ARGON2_KEY_LEN: usize = 32;
+
+/// Derive the cocoon key from the user's password with Argon2id (memory-hard)
+/// over `salt`. This closes the gap left by cocoon's fixed PBKDF2 KDF against
+/// offline brute-forcing of a stolen wallet file. cocoon still applies its own
+/// PBKDF2 to this output — harmless defense in depth; the Argon2id memory cost is
+/// the real barrier. Uses the `argon2` crate defaults (Argon2id, 19 MiB, t=2).
+fn derive_wallet_key(password: &SecretString, salt: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
+    let mut key = Zeroizing::new(vec![0u8; ARGON2_KEY_LEN]);
+    Argon2::default()
+        .hash_password_into(
+            password.expose_secret().as_bytes(),
+            salt,
+            key.as_mut_slice(),
+        )
+        .map_err(|e| WalletError::CocoonError(format!("wallet key derivation failed: {e}")))?;
+    Ok(key)
+}
 
 /// Handles wallet storage operations
 pub struct WalletStorage {
@@ -120,20 +157,23 @@ impl WalletStorage {
     /// each by actually decrypting the wallet.
     ///
     /// * A correct password is persisted and the decrypted map returned.
-    /// * A *wrong* cached/keyring password is [`forget`](PasswordManager::forget)
-    ///   so it can never lock the CLI out of an intact wallet, and `Ok(None)` is
-    ///   returned so the caller falls through to prompting.
+    /// * A *wrong* password is forgotten from the **source that produced it**
+    ///   (see [`forget_source`](PasswordManager::forget_source)) so it can never
+    ///   lock the CLI out of an intact wallet, and `Ok(None)` is returned so the
+    ///   caller falls through to prompting. Forgetting only the failing source
+    ///   means a wrong `XCP_WALLET_PASSWORD` cannot delete a correct keyring
+    ///   credential.
     /// * A keyring that is unavailable (e.g. no Secret Service on a headless
     ///   server) is a warning, not an error — it also returns `Ok(None)`.
     fn try_noninteractive_load(&self) -> Result<Option<AddressMap>> {
-        match self.password_manager.cached_or_stored() {
-            Ok(Some(password)) => match self.decrypt_addresses(&password) {
+        match self.password_manager.cached_or_stored_with_source() {
+            Ok(Some((password, source))) => match self.decrypt_addresses(&password) {
                 Ok(addresses) => {
                     self.password_manager.persist(&password)?;
                     Ok(Some(addresses))
                 }
                 Err(_) => {
-                    self.password_manager.forget();
+                    self.password_manager.forget_source(source);
                     Ok(None)
                 }
             },
@@ -150,13 +190,30 @@ impl WalletStorage {
     /// format transparently.
     fn decrypt_addresses(&self, password: &SecretString) -> Result<AddressMap> {
         let bytes = fs::read(&self.wallet_file)?;
-        let cocoon = Cocoon::new(password.expose_secret().as_bytes());
 
-        // Preferred: single self-contained container.
+        // v2: `MAGIC || salt || cocoon container`, cocoon key = Argon2id(password, salt).
+        if let Some(rest) = bytes.strip_prefix(WALLET_MAGIC_V2) {
+            if rest.len() < ARGON2_SALT_LEN {
+                return Err(WalletError::CocoonError(
+                    "wallet file is truncated (missing key-derivation salt)".to_string(),
+                ));
+            }
+            let (salt, container) = rest.split_at(ARGON2_SALT_LEN);
+            let key = derive_wallet_key(password, salt)?;
+            let cocoon = Cocoon::new(key.as_slice());
+            let plaintext: Zeroizing<Vec<u8>> =
+                cocoon.unwrap(container).map(Zeroizing::new).map_err(|e| {
+                    WalletError::CocoonError(format!("Failed to decrypt wallet: {e:?}"))
+                })?;
+            return Ok(serde_json::from_slice(plaintext.as_slice())?);
+        }
+
+        // Legacy (v1) format: a bare cocoon container keyed on the raw password.
+        let cocoon = Cocoon::new(password.expose_secret().as_bytes());
         let plaintext: Zeroizing<Vec<u8>> = match cocoon.unwrap(&bytes) {
             Ok(data) => Zeroizing::new(data),
             Err(container_err) => {
-                // Fall back to the legacy detached-prefix format, if present.
+                // Fall back to the even older detached-prefix format, if present.
                 let prefix_file = self.wallet_file.with_extension("prefix");
                 if !prefix_file.exists() {
                     return Err(WalletError::CocoonError(format!(
@@ -185,12 +242,29 @@ impl WalletStorage {
     /// single-file write.
     fn write_encrypted(&self, addresses: &AddressMap, password: &SecretString) -> Result<()> {
         let json = Zeroizing::new(serde_json::to_string(addresses)?);
-        let mut cocoon = Cocoon::new(password.expose_secret().as_bytes());
+
+        // v2 format: derive the cocoon key with Argon2id over a fresh random
+        // per-write salt, and prefix the container with `MAGIC || salt` so it can
+        // be read back (a fresh salt each write also re-randomises the derived
+        // key, so no salt/nonce is ever reused across saves).
+        let mut salt = [0u8; ARGON2_SALT_LEN];
+        {
+            use rand::{rng, RngExt};
+            rng().fill(&mut salt);
+        }
+        let key = derive_wallet_key(password, &salt)?;
+        let mut cocoon = Cocoon::new(key.as_slice());
         let container = cocoon
             .wrap(json.as_bytes())
             .map_err(|e| WalletError::CocoonError(format!("Failed to encrypt wallet: {e:?}")))?;
 
-        atomic_write(&self.wallet_file, &container)?;
+        let mut file_bytes =
+            Vec::with_capacity(WALLET_MAGIC_V2.len() + salt.len() + container.len());
+        file_bytes.extend_from_slice(WALLET_MAGIC_V2);
+        file_bytes.extend_from_slice(&salt);
+        file_bytes.extend_from_slice(&container);
+
+        atomic_write(&self.wallet_file, &file_bytes)?;
 
         // The wallet is now stored single-file; drop the obsolete legacy prefix.
         let prefix_file = self.wallet_file.with_extension("prefix");
@@ -509,6 +583,79 @@ mod tests {
         // A wrong password must fail to decrypt.
         let wrong = SecretString::from("nope nope nope nope".to_string());
         assert!(storage.decrypt_addresses(&wrong).is_err());
+    }
+
+    #[test]
+    fn write_encrypted_uses_the_v2_argon2_format() {
+        let dir = tempfile::tempdir().unwrap();
+        let wallet_file = dir.path().join("wallet.db");
+        let storage = storage_at(&wallet_file);
+        let password = SecretString::from("correct horse battery staple".to_string());
+
+        storage.write_encrypted(&sample_map(), &password).unwrap();
+
+        let bytes = fs::read(&wallet_file).unwrap();
+        assert!(
+            bytes.starts_with(WALLET_MAGIC_V2),
+            "a freshly written wallet must use the v2 (Argon2id) format"
+        );
+        // The Argon2 salt must not be all-zero (i.e. it was actually randomised).
+        let salt = &bytes[WALLET_MAGIC_V2.len()..WALLET_MAGIC_V2.len() + ARGON2_SALT_LEN];
+        assert!(salt.iter().any(|&b| b != 0), "salt must be random");
+
+        // Two writes of the same wallet+password must use different salts (fresh
+        // per write), so the on-disk bytes differ.
+        storage.write_encrypted(&sample_map(), &password).unwrap();
+        let bytes2 = fs::read(&wallet_file).unwrap();
+        let salt2 = &bytes2[WALLET_MAGIC_V2.len()..WALLET_MAGIC_V2.len() + ARGON2_SALT_LEN];
+        assert_ne!(salt, salt2, "each write must use a fresh salt");
+    }
+
+    #[test]
+    fn legacy_v1_single_file_is_read_then_upgraded_to_v2() {
+        let dir = tempfile::tempdir().unwrap();
+        let wallet_file = dir.path().join("wallet.db");
+        let password = SecretString::from("pw pw pw pw".to_string());
+
+        // Write a legacy v1 wallet: a bare cocoon container keyed on the raw
+        // password (no magic, no Argon2 salt), exactly as earlier builds did.
+        let json = serde_json::to_string(&sample_map()).unwrap();
+        let mut cocoon = Cocoon::new(password.expose_secret().as_bytes());
+        let container = cocoon.wrap(json.as_bytes()).unwrap();
+        assert!(
+            !container.starts_with(WALLET_MAGIC_V2),
+            "a legacy cocoon container must not look like v2"
+        );
+        fs::write(&wallet_file, &container).unwrap();
+
+        let storage = storage_at(&wallet_file);
+
+        // The legacy v1 format is read transparently...
+        let loaded = storage.decrypt_addresses(&password).unwrap();
+        assert_eq!(loaded.len(), 1);
+
+        // ...and the next save upgrades it in place to the v2 (Argon2id) format.
+        storage.write_encrypted(&loaded, &password).unwrap();
+        assert!(
+            fs::read(&wallet_file).unwrap().starts_with(WALLET_MAGIC_V2),
+            "save must upgrade a legacy wallet to v2"
+        );
+        assert_eq!(storage.decrypt_addresses(&password).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn v2_wallet_fails_to_decrypt_with_a_wrong_password() {
+        let dir = tempfile::tempdir().unwrap();
+        let storage = storage_at(&dir.path().join("wallet.db"));
+        storage
+            .write_encrypted(
+                &sample_map(),
+                &SecretString::from("the right passphrase here".to_string()),
+            )
+            .unwrap();
+        assert!(storage
+            .decrypt_addresses(&SecretString::from("the wrong passphrase here".to_string()))
+            .is_err());
     }
 
     #[test]

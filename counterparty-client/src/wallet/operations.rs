@@ -157,31 +157,70 @@ impl BitcoinWallet {
     /// # Arguments
     ///
     /// * `address` - The Bitcoin address to show
-    /// * `show_private_key` - Whether to include the private key (WIF) in output
-    ///
     /// # Returns
     ///
-    /// * `Result<Value>` - JSON object with address details or error
-    pub fn show_address(&self, address: &str, show_private_key: Option<bool>) -> Result<Value> {
-        let show_private_key = show_private_key.unwrap_or(false);
+    /// * `Result<Value>` - JSON object with the address's **non-secret** details.
+    ///   The private key is never embedded here — use [`export_wif`](Self::export_wif)
+    ///   for the explicit, confirmation-gated reveal, so a WIF never lands in a
+    ///   long-lived, un-zeroized `serde_json::Value`.
+    pub fn show_address(&self, address: &str) -> Result<Value> {
         let address_info = self
             .addresses
             .get(address)
             .ok_or_else(|| WalletError::AddressNotFound(address.to_string()))?;
 
-        let mut result = json!({
+        Ok(json!({
             "address": address,
             "public_key": address_info.public_key,
             "label": address_info.label,
             "address_type": address_info.address_type,
             "network": network_to_string(self.network),
-        });
+        }))
+    }
 
-        if show_private_key {
-            result["private_key"] = json!(address_info.private_key.expose_secret());
+    /// Resolve a user-supplied `--address`/`--source`/`--destination` value that
+    /// may be a wallet *label* into the underlying address.
+    ///
+    /// * If `input` is already a wallet address, it is returned unchanged.
+    /// * If `input` uniquely matches the label of one wallet address, that
+    ///   address is returned.
+    /// * Otherwise (no match, or — defensively — an ambiguous match) `input` is
+    ///   returned unchanged, so a raw address or an *external* destination that is
+    ///   not in the wallet passes straight through.
+    ///
+    /// Labels are unique per wallet (enforced in [`add_address`](Self::add_address)),
+    /// so the ambiguous case does not arise in practice; passing the input through
+    /// unchanged is the safe fallback either way.
+    pub fn resolve_label_or_address(&self, input: &str) -> String {
+        if self.addresses.contains_key(input) {
+            return input.to_string();
         }
+        let mut matches = self
+            .addresses
+            .iter()
+            .filter(|(_, info)| info.label == input)
+            .map(|(addr, _)| addr);
+        match (matches.next(), matches.next()) {
+            (Some(addr), None) => addr.clone(),
+            _ => input.to_string(),
+        }
+    }
 
-        Ok(result)
+    /// Return an address's private key (WIF) in a [`Zeroizing`] buffer that is
+    /// wiped on drop. Kept separate from [`show_address`](Self::show_address) so
+    /// the secret is copied out of its `SecretString` only on the explicit,
+    /// confirmation-gated export path, and the caller can serialize it at the last
+    /// moment and drop it promptly. (Exporting inherently prints the WIF, so the
+    /// final on-screen/serialized output is plaintext by design; this just keeps
+    /// the in-memory handling tight.)
+    pub fn export_wif(&self, address: &str) -> Result<Zeroizing<String>> {
+        let address_info = self
+            .addresses
+            .get(address)
+            .ok_or_else(|| WalletError::AddressNotFound(address.to_string()))?;
+        Ok(Zeroizing::new(
+            address_info.private_key.expose_secret().to_string(),
+        ))
     }
 
     /// List all addresses in the wallet
@@ -435,24 +474,60 @@ mod tests {
     }
 
     #[test]
-    fn show_address_hides_private_key_by_default_and_reveals_on_request() {
+    fn show_address_never_includes_private_key() {
         let (mut w, _dir) = wallet();
         let (addr, _) = w.add_address(None, None, None, None, None).unwrap();
 
-        let public = w.show_address(&addr, None).unwrap();
+        let public = w.show_address(&addr).unwrap();
         assert_eq!(public["address"], addr);
         assert_eq!(public["network"], "regtest");
-        assert!(public.get("private_key").is_none());
+        assert!(
+            public.get("private_key").is_none(),
+            "show_address must never embed the private key"
+        );
+    }
 
-        let private = w.show_address(&addr, Some(true)).unwrap();
-        assert!(!private["private_key"].as_str().unwrap().is_empty());
+    #[test]
+    fn resolve_label_or_address_maps_labels_and_passes_through_others() {
+        let (mut w, _dir) = wallet();
+        let (addr, _) = w
+            .add_address(None, None, None, Some("savings"), None)
+            .unwrap();
+
+        // A label resolves to its address.
+        assert_eq!(w.resolve_label_or_address("savings"), addr);
+        // An existing address passes through unchanged.
+        assert_eq!(w.resolve_label_or_address(&addr), addr);
+        // An unknown value (e.g. an external destination address) passes through.
+        assert_eq!(
+            w.resolve_label_or_address("bcrt1qexternaldestination"),
+            "bcrt1qexternaldestination"
+        );
+    }
+
+    #[test]
+    fn export_wif_returns_the_private_key() {
+        let (mut w, _dir) = wallet();
+        let (addr, _) = w.add_address(None, None, None, None, None).unwrap();
+
+        let wif = w.export_wif(&addr).unwrap();
+        assert!(!wif.is_empty(), "export_wif must return the WIF");
+        // It must match the stored secret for that address.
+        assert_eq!(
+            wif.as_str(),
+            w.addresses.get(&addr).unwrap().private_key.expose_secret()
+        );
     }
 
     #[test]
     fn show_address_unknown_returns_not_found() {
         let (w, _dir) = wallet();
-        let err = w.show_address("bcrt1qdoesnotexist", None).unwrap_err();
+        let err = w.show_address("bcrt1qdoesnotexist").unwrap_err();
         assert!(matches!(err, WalletError::AddressNotFound(_)));
+        assert!(matches!(
+            w.export_wif("bcrt1qdoesnotexist").unwrap_err(),
+            WalletError::AddressNotFound(_)
+        ));
     }
 
     #[test]

@@ -32,6 +32,12 @@ hex = "0.4.3"
 bitcoin = { version = "0.32.5", features = ["rand-std"] }
 bip39 = { version = "2.2", features = ["zeroize"] }
 cocoon = "0.4"
+# Memory-hard pre-KDF for the wallet password. cocoon's own KDF is
+# PBKDF2-HMAC-SHA256 at a fixed, non-tunable ~100k iterations (GPU/ASIC-friendly);
+# stretching the password through Argon2id first raises the cost of offline
+# brute-forcing a stolen wallet file to something modern hardware can't cheaply
+# parallelise. See src/wallet/storage.rs.
+argon2 = "0.5"
 thiserror = "2.0"
 # serde_yaml is deprecated/unmaintained; serde_yaml_ng is the maintained fork
 # with a compatible API.

@@ -51,15 +51,20 @@ pub fn generate_keys_from_private_key(
     // The parse error is derived from the secret WIF the user supplied, so use a
     // fixed message rather than interpolate it (keeps key-shaped bytes out of
     // logs / terminal scrollback).
-    let pk = PrivateKey::from_str(pk_str)
+    let mut parsed = PrivateKey::from_str(pk_str)
         .map_err(|_| WalletError::BitcoinError("Invalid private key (WIF).".to_string()))?;
 
     // Create a new private key with the correct network
     let pk = PrivateKey {
-        compressed: pk.compressed,
+        compressed: parsed.compressed,
         network: network.into(),
-        inner: pk.inner,
+        inner: parsed.inner,
     };
+
+    // Wipe the parsed copy's secret bytes. `SecretKey` is `Copy` and not
+    // zeroize-on-drop, so shadowing `parsed` would otherwise leave its raw bytes
+    // on the stack after this function returns (matches `derive_key_pair`).
+    parsed.inner.non_secure_erase();
 
     let public_key = PublicKey::from_private_key(secp, &pk);
 
@@ -164,20 +169,24 @@ fn derive_key_pair(
         .derive_priv(secp, &path)
         .map_err(|e| WalletError::BitcoinError(format!("Failed to derive private key: {}", e)))?;
 
+    let mut derived_priv = derived_key.to_priv();
     let private_key = PrivateKey {
         compressed: true,
         network: network.into(),
-        inner: derived_key.to_priv().inner,
+        inner: derived_priv.inner,
     };
 
     let public_key = PublicKey::from_private_key(secp, &private_key);
 
     // Best-effort wipe of the intermediate extended-key secrets: `Xpriv` holds a
     // `secp256k1::SecretKey`, which is `Copy` and not zeroize-on-drop, so the raw
-    // bytes would otherwise linger after this function returns. The derived secret
-    // deliberately lives on — copied into `private_key`, the caller's return value.
+    // bytes would otherwise linger after this function returns. This covers the
+    // master key, the derived extended key, and the `to_priv()` copy taken from it
+    // just above. The derived secret deliberately lives on — copied into
+    // `private_key`, the caller's return value.
     master_key.private_key.non_secure_erase();
     derived_key.private_key.non_secure_erase();
+    derived_priv.inner.non_secure_erase();
 
     Ok((private_key, public_key))
 }

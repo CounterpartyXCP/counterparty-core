@@ -155,11 +155,43 @@ pub fn verify_classic_send(
     combine(checks)
 }
 
-/// Confirm that every BTC-bearing output pays either the source (change) or, when
-/// `allow_destination_output` is set, the requested destination — nothing to a
-/// third party. A matching Counterparty payload (asset/quantity/destination) does
-/// **not** by itself stop a hostile server from routing the transaction's change
-/// to an attacker output; this is the check that does.
+/// How much BTC a composed transaction may pay the *requested destination*.
+/// Change back to the source is always allowed; any output to a third-party
+/// address (or to a script with no address) is always refused.
+#[derive(Debug, Clone, Copy)]
+pub enum DestinationBtc {
+    /// The destination must receive **no** BTC. `enhanced_send` (2) and `sweep`
+    /// (4) carry the destination in their payload and move value on the ledger,
+    /// not on-chain, so any destination-paying output is a server siphoning
+    /// funds to a server-chosen address and is refused.
+    Forbidden,
+    /// The destination may receive **at most** `max` sats in total — the dust
+    /// *marker* output of a classic `send` (type 0). Without this bound a hostile
+    /// server could inflate that marker (or add a second destination output) and
+    /// route the user's whole BTC balance to the destination while the asset
+    /// payload still matched; the miner-fee cap misses it because the value
+    /// leaves as an output, not as fee.
+    AtMost(u64),
+    /// The destination must receive **exactly** `expected` sats in total — a
+    /// plain BTC send, where the delivered amount *is* the user's requested
+    /// `--quantity`. Requiring the exact total (not merely "some output pays it")
+    /// stops a server adding a second destination output to over-pay.
+    Exactly(u64),
+}
+
+/// Upper bound on the BTC a classic `send` (type 0) may pay its destination. The
+/// destination output is only a dust *marker* — the asset itself moves on the
+/// ledger via the OP_RETURN — so anything materially above dust signals a siphon.
+/// Set well above any standard dust threshold so a legitimate marker is never
+/// rejected, while still bounding a hostile server's leak to a negligible amount.
+pub const MAX_CLASSIC_SEND_DEST_SAT: u64 = 10_000;
+
+/// Confirm that every BTC-bearing output pays either the source (change) or the
+/// requested destination — nothing to a third party — and that the destination
+/// receives only what `dest_policy` permits. A matching Counterparty payload
+/// (asset/quantity/destination) does **not** by itself stop a hostile server
+/// from routing the transaction's BTC to an attacker output *or* over-paying the
+/// destination with the user's own funds; this is the check that does.
 ///
 /// When the source is unknown the change/siphon distinction cannot be made, so
 /// this **fails closed** with [`Verification::Unverifiable`] rather than passing
@@ -167,18 +199,14 @@ pub fn verify_classic_send(
 /// confirmation) instead of silently trusting the BTC routing. The wallet path
 /// always supplies the source, so this only guards a caller that forgot to.
 ///
-/// `allow_destination_output` is `true` only for transfers that legitimately pay
-/// the destination in BTC — a classic `send` (its dust destination output) and a
-/// plain BTC send. An `enhanced_send` and a `sweep` carry the destination in the
-/// payload and pay it **no** BTC, so a destination-paying output there is
-/// unexpected (funds leaving to a server-chosen address) and must be refused.
 /// Change back to the source is always allowed, so a self-transfer
-/// (source == destination) still verifies.
+/// (source == destination) still verifies — every output then pays the source,
+/// so `to_destination` is 0 and the amount policy is vacuous.
 pub fn verify_btc_recipients(
     tx: &Transaction,
     intent: &Intent,
     network: Network,
-    allow_destination_output: bool,
+    dest_policy: DestinationBtc,
 ) -> Verification {
     let Some(source) = intent.source.as_ref() else {
         return Verification::Unverifiable {
@@ -190,13 +218,19 @@ pub fn verify_btc_recipients(
         .destination
         .as_ref()
         .map(|d| normalize_address(d, network));
+    let dest_is_source = destination.as_deref() == Some(source.as_str());
 
-    let requested = if allow_destination_output {
+    let allow_destination = !matches!(dest_policy, DestinationBtc::Forbidden);
+    let requested = if allow_destination {
         format!("BTC only to source ({source}) or the destination")
     } else {
         format!("BTC only to source ({source}) as change")
     };
 
+    // Total BTC paid to the destination. Only counts outputs paying the
+    // destination and *not* the source (source is matched first below), so a
+    // self-transfer contributes nothing here.
+    let mut to_destination: u64 = 0;
     for out in &tx.output {
         // Data outputs carry no spendable value to a recipient.
         if out.script_pubkey.is_op_return() {
@@ -204,9 +238,11 @@ pub fn verify_btc_recipients(
         }
         match output_address(out, network) {
             // Change back to the source is always allowed (checked first, so a
-            // self-transfer where source == destination is not rejected below).
+            // self-transfer where source == destination is not counted below).
             Some(addr) if addr == source => {}
-            Some(addr) if allow_destination_output && Some(&addr) == destination.as_ref() => {}
+            Some(addr) if allow_destination && Some(&addr) == destination.as_ref() => {
+                to_destination = to_destination.saturating_add(out.value.to_sat());
+            }
             Some(addr) => {
                 return Verification::Mismatch {
                     field: "btc_output",
@@ -223,6 +259,30 @@ pub fn verify_btc_recipients(
             }
         }
     }
+
+    // Enforce how much the destination was allowed to receive. A self-transfer
+    // (destination == source) pays everything as source change, so the amount
+    // policy is skipped (it would otherwise wrongly reject `Exactly`).
+    if !dest_is_source {
+        match dest_policy {
+            DestinationBtc::AtMost(max) if to_destination > max => {
+                return Verification::Mismatch {
+                    field: "btc_output",
+                    requested: format!("at most {max} sats to the destination (a dust marker)"),
+                    composed: format!("{to_destination} sats to the destination"),
+                };
+            }
+            DestinationBtc::Exactly(expected) if to_destination != expected => {
+                return Verification::Mismatch {
+                    field: "btc_output",
+                    requested: format!("exactly {expected} sats to the destination"),
+                    composed: format!("{to_destination} sats to the destination"),
+                };
+            }
+            _ => {}
+        }
+    }
+
     Verification::Match
 }
 
@@ -237,23 +297,21 @@ pub fn verify_btc_recipients(
 /// (no data output to decode) or reject a legitimate dispense trigger as a
 /// message-type mismatch (its type is neither 0, 2 nor 4).
 pub fn verify_btc_send(tx: &Transaction, intent: &Intent, network: Network) -> Verification {
-    if let (Some(dest), Some(qty)) = (&intent.destination, intent.quantity) {
-        let want = normalize_address(dest, network);
-        let paid = tx.output.iter().any(|out| {
-            !out.script_pubkey.is_op_return()
-                && out.value.to_sat() == qty
-                && output_address(out, network).as_deref() == Some(want.as_str())
-        });
-        if !paid {
-            return Verification::Mismatch {
-                field: "destination",
-                requested: format!("{qty} sats to {want}"),
-                composed: "no output pays this address the requested amount".to_string(),
-            };
+    // A plain BTC send legitimately pays the destination, and the amount it
+    // delivers *is* the user's requested `--quantity` — so require the
+    // destination to receive exactly that, in total. Requiring both fields to be
+    // present makes the amount check unskippable: without a known quantity the
+    // amount cannot be verified, so degrade to Unverifiable rather than waving a
+    // possibly-over-paying transaction through.
+    match (intent.destination.as_ref(), intent.quantity) {
+        (Some(_dest), Some(qty)) => {
+            verify_btc_recipients(tx, intent, network, DestinationBtc::Exactly(qty))
         }
+        _ => Verification::Unverifiable {
+            reason: "cannot verify a plain BTC send without both a destination and an amount"
+                .to_string(),
+        },
     }
-    // A plain BTC send legitimately pays the destination.
-    verify_btc_recipients(tx, intent, network, true)
 }
 
 /// `enhanced_send` (type 2), modern CBOR form:
@@ -721,7 +779,12 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            verify_btc_recipients(&tx, &intent, NET, true),
+            verify_btc_recipients(
+                &tx,
+                &intent,
+                NET,
+                DestinationBtc::AtMost(MAX_CLASSIC_SEND_DEST_SAT)
+            ),
             Verification::Match
         );
     }
@@ -736,7 +799,43 @@ mod tests {
             ..Default::default()
         };
         assert!(matches!(
-            verify_btc_recipients(&tx, &intent, NET, true),
+            verify_btc_recipients(
+                &tx,
+                &intent,
+                NET,
+                DestinationBtc::AtMost(MAX_CLASSIC_SEND_DEST_SAT)
+            ),
+            Verification::Mismatch {
+                field: "btc_output",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn btc_recipients_rejects_an_inflated_classic_send_destination_output() {
+        // Classic send (type 0): a hostile server keeps the asset payload correct
+        // but inflates the destination "dust" marker to route the user's BTC to
+        // the destination. The AtMost dust bound must refuse it (M2).
+        let source = wpkh_addr(0x33);
+        let dest = wpkh_addr(0x11);
+        let tx = tx_with_outputs(vec![
+            value_output(&dest, 5_000_000), // 0.05 BTC dressed up as a "marker"
+            op_return_output(),
+            value_output(&source, 9000),
+        ]);
+        let intent = Intent {
+            destination: Some(dest.to_string()),
+            source: Some(source.to_string()),
+            ..Default::default()
+        };
+        assert!(matches!(
+            verify_btc_recipients(
+                &tx,
+                &intent,
+                NET,
+                DestinationBtc::AtMost(MAX_CLASSIC_SEND_DEST_SAT)
+            ),
             Verification::Mismatch {
                 field: "btc_output",
                 ..
@@ -763,7 +862,7 @@ mod tests {
             ..Default::default()
         };
         assert!(matches!(
-            verify_btc_recipients(&tx, &intent, NET, false),
+            verify_btc_recipients(&tx, &intent, NET, DestinationBtc::Forbidden),
             Verification::Mismatch {
                 field: "btc_output",
                 ..
@@ -784,7 +883,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            verify_btc_recipients(&tx, &intent, NET, false),
+            verify_btc_recipients(&tx, &intent, NET, DestinationBtc::Forbidden),
             Verification::Match
         );
     }
@@ -846,7 +945,35 @@ mod tests {
         assert!(matches!(
             verify_btc_send(&tx, &intent, NET),
             Verification::Mismatch {
-                field: "destination",
+                field: "btc_output",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn btc_send_rejects_an_extra_destination_output_that_over_pays() {
+        // Correct destination and a first output paying exactly the requested
+        // amount, but the server adds a *second* output to the same destination,
+        // over-paying with the user's own BTC. Requiring the exact total (not
+        // "some output pays it") refuses this (M2).
+        let dest = wpkh_addr(0x11);
+        let source = wpkh_addr(0x33);
+        let tx = tx_with_outputs(vec![
+            value_output(&dest, 5000),      // the requested amount
+            value_output(&dest, 4_000_000), // an extra siphon to the destination
+            value_output(&source, 9000),    // change
+        ]);
+        let intent = Intent {
+            quantity: Some(5000),
+            destination: Some(dest.to_string()),
+            source: Some(source.to_string()),
+            ..Default::default()
+        };
+        assert!(matches!(
+            verify_btc_send(&tx, &intent, NET),
+            Verification::Mismatch {
+                field: "btc_output",
                 ..
             }
         ));
@@ -886,7 +1013,12 @@ mod tests {
         let attacker = wpkh_addr(0x44);
         let tx = tx_with_outputs(vec![value_output(&attacker, 9000)]);
         assert!(matches!(
-            verify_btc_recipients(&tx, &Intent::default(), NET, true),
+            verify_btc_recipients(
+                &tx,
+                &Intent::default(),
+                NET,
+                DestinationBtc::AtMost(MAX_CLASSIC_SEND_DEST_SAT)
+            ),
             Verification::Unverifiable { .. }
         ));
     }

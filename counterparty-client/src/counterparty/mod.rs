@@ -661,7 +661,20 @@ pub fn verify_composed_transaction(
     // output; an `enhanced_send` (2) or `sweep` (4) carries the destination in its
     // payload and pays it no BTC, so a destination-paying output there is refused.
     match payload {
-        Verification::Match => decode::verify_btc_recipients(&tx, intent, network, type_id == 0),
+        Verification::Match => {
+            // Only a classic `send` (type 0) legitimately pays the destination a
+            // BTC output, and only a dust *marker* (the asset moves on the
+            // ledger); bound it so a server cannot inflate it into a siphon. An
+            // `enhanced_send` (2) or `sweep` (4) carries the destination in its
+            // payload and pays it no BTC, so any destination-paying output is
+            // refused.
+            let dest_policy = if type_id == 0 {
+                decode::DestinationBtc::AtMost(decode::MAX_CLASSIC_SEND_DEST_SAT)
+            } else {
+                decode::DestinationBtc::Forbidden
+            };
+            decode::verify_btc_recipients(&tx, intent, network, dest_policy)
+        }
         other => other,
     }
 }
@@ -967,10 +980,14 @@ mod tests {
             source: Some(attacker_amount_source.to_string()),
             flags: None,
         };
+        // The destination is paid 1 sat but the user requested 5000. The exact-total
+        // BTC-routing policy reports this as a `btc_output` mismatch (the amount is
+        // now enforced there rather than in a separate destination-address check),
+        // and crucially it is a Mismatch — not silently Unverifiable/accepted.
         assert!(matches!(
             verify_composed_transaction(&hex, "send", &intent, NET),
             Verification::Mismatch {
-                field: "destination",
+                field: "btc_output",
                 ..
             }
         ));

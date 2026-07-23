@@ -51,11 +51,23 @@ fn parse_endpoints_from_response(response: Value) -> Result<HashMap<String, ApiE
         serde_json::from_value(endpoints_value.clone())
             .context("Failed to parse API endpoints from result field")?;
 
-    // Route keys are appended verbatim to the configured API base URL
-    // (`format!("{api_url}{path}")`). Drop any that is not a rooted path (starts
-    // with `/`) or that smuggles a scheme/authority (`://`), so a poisoned or
-    // corrupted manifest cannot make a request target a surprising URL. Host
-    // selection always comes from config, never from the manifest.
+    sanitize_endpoint_paths(&mut endpoints);
+
+    Ok(endpoints)
+}
+
+/// Drop any route whose path key is not a rooted path (starts with `/`) or that
+/// smuggles a scheme/authority (`://`).
+///
+/// Route keys are appended verbatim to the configured API base URL
+/// (`format!("{api_url}{path}")`), so an unrooted key such as
+/// `@evil.example/v2/.../compose/send` would parse `api.counterparty.io:4000` as
+/// *userinfo* and send the request to `evil.example` (over its own valid TLS
+/// cert, satisfying `https_only`). Host selection must always come from config,
+/// never from the manifest — and this must hold whether the manifest arrived
+/// over the network *or* from the on-disk cache (which is user-writable and thus
+/// an attacker-influenced input), so both paths call this.
+fn sanitize_endpoint_paths(endpoints: &mut HashMap<String, ApiEndpoint>) {
     let before = endpoints.len();
     endpoints.retain(|path, _| path.starts_with('/') && !path.contains("://"));
     let dropped = before - endpoints.len();
@@ -67,8 +79,6 @@ fn parse_endpoints_from_response(response: Value) -> Result<HashMap<String, ApiE
             None,
         );
     }
-
-    Ok(endpoints)
 }
 
 // Saves endpoints to cache file
@@ -93,7 +103,13 @@ pub fn load_cached_api_endpoints(config: &AppConfig) -> Result<HashMap<String, A
     let cache_file = config.get_cache_file();
     let cache = fs::read_to_string(&cache_file).context("Failed to read cache file")?;
 
-    serde_json::from_str(&cache).context("Failed to parse cached API endpoints")
+    let mut endpoints: HashMap<String, ApiEndpoint> =
+        serde_json::from_str(&cache).context("Failed to parse cached API endpoints")?;
+    // The cache file is user-writable on disk, so it is an attacker-influenced
+    // input. Apply the same path validation the network fetch does, so a
+    // poisoned cache entry cannot redirect a request to an attacker host.
+    sanitize_endpoint_paths(&mut endpoints);
+    Ok(endpoints)
 }
 
 // Externally accessible function to update the cache
@@ -240,6 +256,37 @@ mod tests {
             loaded["/v2/addresses/<address>/compose/send"].function,
             "compose_send"
         );
+    }
+
+    #[test]
+    fn load_cached_api_endpoints_drops_poisoned_routes() {
+        // A cache file is user-writable on disk. A poisoned entry whose key is
+        // not a rooted path (here the `@evil…` userinfo trick) must be dropped on
+        // load, exactly as the network-fetch path does — otherwise it could
+        // redirect a compose request to an attacker host.
+        let dir = tempfile::tempdir().unwrap();
+        let mut config = AppConfig::new();
+        config.set_network(Network::Regtest);
+        config
+            .network_configs
+            .get_mut(&Network::Regtest)
+            .unwrap()
+            .cache_file = dir.path().join("endpoints.json");
+
+        let poisoned = json!({
+            "/v2/addresses/<address>/compose/send": {
+                "function": "compose_send", "description": "", "args": []
+            },
+            "@evil.example/v2/addresses/<address>/compose/send": {
+                "function": "compose_send", "description": "", "args": []
+            }
+        });
+        fs::write(config.get_cache_file(), poisoned.to_string()).unwrap();
+
+        let loaded = load_cached_api_endpoints(&config).unwrap();
+        assert!(loaded.contains_key("/v2/addresses/<address>/compose/send"));
+        assert!(!loaded.contains_key("@evil.example/v2/addresses/<address>/compose/send"));
+        assert_eq!(loaded.len(), 1);
     }
 
     #[test]

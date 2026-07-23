@@ -3,6 +3,10 @@ name: Rust Test
 on:
   push:
     branches: "**"
+  # Also run on pull requests so PRs opened from forks (which never push into the
+  # base repo) are still gated by the lint/coverage/audit jobs below. The Codecov
+  # upload already degrades gracefully when the token is absent on a fork.
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -35,7 +39,7 @@ jobs:
         run: |
           cd counterparty-client
           cargo fmt --check
-          cargo clippy --all-targets -- -D warnings
+          cargo clippy --locked --all-targets -- -D warnings
 
       - name: Test counterparty-client with coverage
         # `cargo llvm-cov` builds and runs the unit tests with instrumentation and
@@ -45,7 +49,7 @@ jobs:
         # library coverage.
         run: |
           cd counterparty-client
-          cargo llvm-cov --lcov --output-path lcov.info \
+          cargo llvm-cov --locked --lcov --output-path lcov.info \
             --ignore-filename-regex '(src/lib\.rs$|src/bin/|tests\.rs$)'
 
       # Determine Codecov availability without exposing the token to the
@@ -95,7 +99,7 @@ jobs:
       - name: Check the client builds on the MSRV
         run: |
           cd counterparty-client
-          cargo check --all-targets
+          cargo check --locked --all-targets
 
   # The wallet depends on the OS-specific `keyring` backend, so build and test
   # the client on macOS and Windows too (Linux is covered by the Cargo job).
@@ -118,8 +122,8 @@ jobs:
       - name: Build and test counterparty-client
         run: |
           cd counterparty-client
-          cargo build
-          cargo test
+          cargo build --locked
+          cargo test --locked
 
   # Dependency-hygiene gate for the wallet: security advisories, licenses,
   # banned/duplicate crates, and crate sources. Blocking — a newly-introduced
@@ -136,9 +140,12 @@ jobs:
         with:
           tool: cargo-audit,cargo-deny
       - name: Audit dependencies for security advisories
+        # The ignore list lives in counterparty-client/.cargo/audit.toml (the
+        # single source of truth for cargo-audit), so it cannot drift from this
+        # invocation. deny.toml carries the equivalent ignore for cargo-deny.
         run: |
           cd counterparty-client
-          cargo audit --deny warnings --ignore RUSTSEC-2025-0141
+          cargo audit --deny warnings
       - name: Check licenses, bans, and sources
         run: |
           cd counterparty-client

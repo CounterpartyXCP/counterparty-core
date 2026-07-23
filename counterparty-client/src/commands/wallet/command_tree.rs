@@ -6,21 +6,32 @@ use crate::commands::api::{ApiEndpoint, ApiEndpointArg};
 use crate::commands::wallet::args;
 use crate::commands::wallet::commands;
 
-/// Filter and sort compose endpoints
+/// Filter, sort and de-duplicate compose endpoints.
 fn filter_compose_endpoints(
     endpoints: &HashMap<String, ApiEndpoint>,
 ) -> Vec<(String, &ApiEndpoint)> {
-    // Filter endpoints for compose_* functions
-    let mut compose_commands: Vec<(String, &ApiEndpoint)> = endpoints
+    // Filter endpoints for compose_* functions, keeping the path for a
+    // deterministic tie-break.
+    let mut compose_commands: Vec<(String, String, &ApiEndpoint)> = endpoints
         .iter()
         .filter(|(_, endpoint)| endpoint.function.starts_with("compose_"))
-        .map(|(_, endpoint)| (endpoint.function.clone(), endpoint))
+        .map(|(path, endpoint)| (endpoint.function.clone(), path.clone(), endpoint))
         .collect();
 
-    // Sort commands by name for consistent ordering
-    compose_commands.sort_by(|a, b| a.0.cmp(&b.0));
+    // Sort by function name, then path, for a stable order that does not depend on
+    // HashMap iteration order.
+    compose_commands.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+
+    // De-duplicate by function name: if a (buggy or hostile) server maps the same
+    // `compose_*` function to two routes, we must not add two identically-named
+    // clap subcommands — clap panics on a duplicate. `dedup_by` keeps the first of
+    // each run, i.e. the smallest path, which is deterministic after the sort.
+    compose_commands.dedup_by(|a, b| a.0 == b.0);
 
     compose_commands
+        .into_iter()
+        .map(|(func, _path, endpoint)| (func, endpoint))
+        .collect()
 }
 
 /// Create a transaction command from a compose endpoint

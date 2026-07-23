@@ -105,12 +105,20 @@ fn ensure_fee_within_limit(raw_tx_hex: &str, utxo_list: &bitcoinsigner::UTXOList
     Ok(fee_conclusive)
 }
 
-/// Find the corresponding compose endpoint for a transaction command
-/// If the endpoint doesn't have an 'address' or 'source' parameter, add one
+/// Find the corresponding compose endpoint for a transaction command.
+///
+/// If the endpoint declares no `address`/`source` parameter (a UTXO-sourced
+/// compose such as `detach`/`movetoutxo`, whose source is a `<utxo>` path
+/// segment), a synthetic required `--address` is added so the CLI can learn which
+/// wallet key must sign. The returned `bool` reports whether that injection
+/// happened: an injected `address` is a **local-only** hint (used to pick the
+/// signing key) and must NOT be forwarded to the compose API — those endpoints
+/// take no `address` argument, so sending one would be a stray query parameter
+/// the server may reject or ignore.
 fn find_compose_endpoint<'a>(
     endpoints: &'a HashMap<String, ApiEndpoint>,
     transaction_name: &str,
-) -> Result<(&'a String, ApiEndpoint)> {
+) -> Result<(&'a String, ApiEndpoint, bool)> {
     // Convert transaction name to compose_X to find the matching endpoint
     let compose_name = format!("compose_{}", transaction_name);
 
@@ -124,8 +132,8 @@ fn find_compose_endpoint<'a>(
         .any(|arg| arg.name == "address" || arg.name == "source");
 
     if has_address {
-        // If it already has an address parameter, just return it
-        Ok((path, endpoint.clone()))
+        // If it already has an address parameter, just return it (not injected).
+        Ok((path, endpoint.clone(), false))
     } else {
         // Otherwise, create a modified endpoint with an address parameter
         let mut modified_endpoint = endpoint.clone();
@@ -135,7 +143,7 @@ fn find_compose_endpoint<'a>(
             name: "address".to_string(),
             required: true,
             arg_type: "string".to_string(),
-            description: Some("Source address that funds and signs the transaction".to_string()),
+            description: Some("Wallet address that owns the source UTXO and signs the transaction (used locally to select the signing key; not sent to the server)".to_string()),
             default: None,
             members: None,
         };
@@ -143,8 +151,8 @@ fn find_compose_endpoint<'a>(
         // Add the address parameter to the endpoint's arguments
         modified_endpoint.args.push(address_arg);
 
-        // Return the modified endpoint
-        Ok((path, modified_endpoint))
+        // Return the modified endpoint, flagged as address-injected.
+        Ok((path, modified_endpoint, true))
     }
 }
 
@@ -516,7 +524,7 @@ fn get_address_and_public_key(
 
     // Verify that the address exists in the wallet and get its details
     let addr_details = wallet
-        .show_address(&address, None)
+        .show_address(&address)
         .map_err(|_| anyhow!("Address {} not found in wallet", address))?;
 
     // Extract the public key from the address details
@@ -806,10 +814,24 @@ pub async fn handle_transaction_command(
     wallet: &BitcoinWallet,
 ) -> Result<()> {
     // Find the corresponding compose endpoint
-    let (path, endpoint) = find_compose_endpoint(endpoints, transaction_name)?;
+    let (path, endpoint, address_injected) = find_compose_endpoint(endpoints, transaction_name)?;
 
     // Extract parameters from command line arguments
     let mut params = extract_parameters_from_matches(&endpoint, transaction_name, sub_matches);
+
+    // Resolve any wallet *label* passed for an address-bearing field into the
+    // underlying address, before both the trust-anchor snapshot and the compose
+    // call, so e.g. `--destination savings` is verified and composed against the
+    // real address. A value that is already an address — or an external
+    // destination not in the wallet — passes through unchanged.
+    for key in ["address", "source", "destination"] {
+        if let Some(value) = params.get(key).cloned() {
+            let resolved = wallet.resolve_label_or_address(&value);
+            if resolved != value {
+                params.insert(key.to_string(), resolved);
+            }
+        }
+    }
 
     // Snapshot the user's own inputs (human-readable, before satoshi
     // normalization and before internal fields like `multisig_pubkey` are added)
@@ -825,6 +847,14 @@ pub async fn handle_transaction_command(
     // Get address and public key
     let public_key = get_address_and_public_key(&params, wallet)?;
     params.insert("multisig_pubkey".to_string(), public_key.to_string());
+
+    // A synthetic `--address` (injected for a UTXO-sourced compose like
+    // detach/movetoutxo) is only a local hint for choosing the signing key; the
+    // endpoint declares no `address` argument, so drop it now that the signing
+    // key is resolved rather than forwarding it as a stray query parameter.
+    if address_injected {
+        params.remove("address");
+    }
 
     // Call API and get the composed transaction
     let api_result = call_compose_api(config, path, &endpoint, &mut params).await?;
@@ -1944,8 +1974,9 @@ mod tests {
             "/v2/addresses/<address>/compose/burn".to_string(),
             endpoint_with_args("compose_burn", &["quantity"]),
         );
-        let (_, ep) = find_compose_endpoint(&endpoints, "burn").unwrap();
+        let (_, ep, injected) = find_compose_endpoint(&endpoints, "burn").unwrap();
         assert!(ep.args.iter().any(|a| a.name == "address"));
+        assert!(injected, "a missing address must be flagged as injected");
     }
 
     #[test]
@@ -1955,9 +1986,13 @@ mod tests {
             "/v2/addresses/<address>/compose/send".to_string(),
             endpoint_with_args("compose_send", &["source", "quantity"]),
         );
-        let (_, ep) = find_compose_endpoint(&endpoints, "send").unwrap();
-        // No extra address arg added (source already present).
+        let (_, ep, injected) = find_compose_endpoint(&endpoints, "send").unwrap();
+        // No extra address arg added (source already present), so not injected.
         assert_eq!(ep.args.iter().filter(|a| a.name == "address").count(), 0);
+        assert!(
+            !injected,
+            "an existing source must not be flagged as injected"
+        );
     }
 
     #[test]

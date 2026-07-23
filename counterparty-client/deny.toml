@@ -6,6 +6,10 @@
 [advisories]
 # Fail on any security vulnerability. Unmaintained/notice advisories are also
 # surfaced; the single known one below is triaged and ignored explicitly.
+# A yanked dependency (pulled from crates.io after publication, often for a
+# security or correctness problem) must also fail the build — cargo-audit does
+# not reliably catch these, and the default here is only a warning.
+yanked = "deny"
 ignore = [
     # bincode 1.3.3 is pulled in transitively by syntect (JSON->YAML output
     # highlighting) and is flagged unmaintained. No security impact; tracked for

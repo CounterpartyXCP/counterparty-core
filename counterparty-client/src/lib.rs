@@ -572,18 +572,31 @@ fn wants_help() -> bool {
 
 /// The network selected by a `--mainnet`/`--signet`/`--testnet4`/`--regtest`
 /// flag, if any (clap enforces they are mutually exclusive).
+///
+/// This is a lightweight pre-scan run *before* the full clap parse, because the
+/// network must be known to pick the API host and load endpoints, yet the full
+/// command (with its endpoint-derived subcommands) cannot be built until after
+/// that. It skips the value token of `--config-file <value>` so a path that
+/// happens to look like a network flag (`--config-file --regtest`) is not
+/// misread as selecting a network — matching how clap consumes that value. The
+/// `--config-file=<value>` form is a single token and never equals a bare
+/// network flag.
 fn network_from_args(args: &[String]) -> Option<Network> {
-    if args.iter().any(|a| a == "--mainnet") {
-        Some(Network::Mainnet)
-    } else if args.iter().any(|a| a == "--signet") {
-        Some(Network::Signet)
-    } else if args.iter().any(|a| a == "--testnet4") {
-        Some(Network::Testnet4)
-    } else if args.iter().any(|a| a == "--regtest") {
-        Some(Network::Regtest)
-    } else {
-        None
+    let mut iter = args.iter();
+    while let Some(arg) = iter.next() {
+        if arg == "--config-file" {
+            iter.next(); // skip its value token
+            continue;
+        }
+        return Some(match arg.as_str() {
+            "--mainnet" => Network::Mainnet,
+            "--signet" => Network::Signet,
+            "--testnet4" => Network::Testnet4,
+            "--regtest" => Network::Regtest,
+            _ => continue,
+        });
     }
+    None
 }
 
 /// The positional (non-flag) arguments, skipping the `--config-file <path>`
@@ -829,6 +842,22 @@ mod tests {
         assert_eq!(network_from_args(&[s("--regtest")]), Some(Network::Regtest));
         // No network flag among unrelated args.
         assert_eq!(network_from_args(&[s("wallet"), s("list_addresses")]), None);
+    }
+
+    #[test]
+    fn network_from_args_does_not_misread_config_file_value() {
+        let s = |v: &str| v.to_string();
+        // `--config-file --regtest`: `--regtest` is the config path, not a network
+        // selector — clap would consume it as the value, so we must too.
+        assert_eq!(
+            network_from_args(&[s("--config-file"), s("--regtest")]),
+            None
+        );
+        // A real network flag alongside a config-file value is still honoured.
+        assert_eq!(
+            network_from_args(&[s("--config-file"), s("cfg.toml"), s("--signet")]),
+            Some(Network::Signet)
+        );
     }
 
     #[test]

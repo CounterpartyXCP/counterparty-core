@@ -21,6 +21,7 @@ use crate::helpers;
 const UNIT: u64 = 100_000_000;
 
 /// What governs the divisibility of a given quantity parameter.
+#[derive(Debug, PartialEq, Eq)]
 enum Denomination {
     /// Divisibility comes from the asset named by this other parameter.
     Asset(&'static str),
@@ -29,6 +30,13 @@ enum Denomination {
     IssuedAsset,
     /// Always denominated in BTC satoshis (miner-facing / dispenser rate).
     Btc,
+    /// An amount that counterparty-core treats as unconditionally divisible
+    /// regardless of any asset lookup — currently the AMM LP-token quantities,
+    /// which `api/verbose.py` hardcodes to `divisible=True` because the
+    /// withdrawal/match tables don't carry the LP asset to resolve. Distinct
+    /// from [`Btc`](Self::Btc) so the intent ("always ×1e8, not a BTC amount")
+    /// is explicit at the call site.
+    AlwaysDivisible,
 }
 
 /// Divisibility-sensitive compose parameter names, mirroring the keys of
@@ -144,9 +152,16 @@ fn denomination(transaction_name: &str, param: &str) -> Option<Denomination> {
         // AMM pool deposit quantities are denominated in the two paired assets.
         ("pooldeposit", "quantity_a") => Denomination::Asset("asset_a"),
         ("pooldeposit", "quantity_b") => Denomination::Asset("asset_b"),
-        // Pool withdrawal's minimum-received slippage bounds are denominated in
-        // the same two assets (the `quantity` of LP tokens burned is left
-        // unmapped: LP-token divisibility isn't derivable from asset_a/asset_b).
+        // The minimum LP tokens to receive is an LP-token amount, and LP tokens
+        // are always divisible (see `AlwaysDivisible`). Without this it would be
+        // sent raw — a 1e8 under-scaling of the slippage floor.
+        ("pooldeposit", "min_lp_quantity") => Denomination::AlwaysDivisible,
+        // Pool withdrawal burns `quantity` LP tokens (always divisible); the
+        // minimum-received slippage bounds are denominated in the two paired
+        // assets. Leaving `quantity` unmapped previously sent the LP amount raw,
+        // burning ~1e8× fewer tokens than the user typed (and the confirmation
+        // display, showing the same raw value on both sides, hid it).
+        ("poolwithdraw", "quantity") => Denomination::AlwaysDivisible,
         ("poolwithdraw", "min_quantity_a") => Denomination::Asset("asset_a"),
         ("poolwithdraw", "min_quantity_b") => Denomination::Asset("asset_b"),
         // The UTXO's own BTC value (attach/movetoutxo) is a satoshi amount like
@@ -279,7 +294,7 @@ async fn resolve_divisibility(
     cache: &mut HashMap<String, Option<bool>>,
 ) -> Result<bool> {
     match denom {
-        Denomination::Btc => Ok(true),
+        Denomination::Btc | Denomination::AlwaysDivisible => Ok(true),
         Denomination::IssuedAsset => {
             // Prefer the on-chain divisibility when the asset already exists
             // (issuing more of an existing asset); for a brand-new asset (not yet
@@ -483,6 +498,22 @@ mod tests {
             denomination("order", "fee_required"),
             Some(Denomination::Btc)
         ));
+        // LP tokens are always divisible (counterparty-core hardcodes
+        // divisible=True): the withdrawn `quantity` and the deposit's
+        // `min_lp_quantity` must both scale by 1e8, not pass through raw.
+        assert_eq!(
+            denomination("poolwithdraw", "quantity"),
+            Some(Denomination::AlwaysDivisible)
+        );
+        assert_eq!(
+            denomination("pooldeposit", "min_lp_quantity"),
+            Some(Denomination::AlwaysDivisible)
+        );
+        // The paired-asset slippage bounds are still asset-denominated.
+        assert_eq!(
+            denomination("poolwithdraw", "min_quantity_a"),
+            Some(Denomination::Asset("asset_a"))
+        );
     }
 
     #[test]
