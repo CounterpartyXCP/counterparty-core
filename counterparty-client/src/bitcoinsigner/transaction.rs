@@ -87,6 +87,22 @@ fn verify_input_spk_matches(utxo: &UTXO, public_key: &PublicKey) -> Result<()> {
             let redeem = if let Some(ws) = utxo.witness_script.as_ref() {
                 ScriptBuf::new_p2wsh(&ws.wscript_hash())
             } else if let Some(rs) = utxo.redeem_script.as_ref() {
+                // For P2SH-P2WPKH the redeem is a P2WPKH. Checking only
+                // `P2SH(redeem) == scriptPubKey` would accept a redeem that wraps a
+                // *different* key: the signer would then rebuild the redeem from the
+                // signing key (see `p2sh::sign_p2sh_p2wpkh`) and produce an
+                // unspendable input. Verify the wrapped P2WPKH commits to the
+                // signing key too.
+                if rs.is_p2wpkh() {
+                    let expected_redeem =
+                        ScriptBuf::new_p2wpkh(&get_compressed_pubkey(public_key)?.wpubkey_hash());
+                    if *rs != expected_redeem {
+                        return Err(WalletError::UnsupportedScript(
+                            "P2SH-P2WPKH redeem script does not commit to the signing key"
+                                .to_string(),
+                        ));
+                    }
+                }
                 rs.clone()
             } else {
                 return Err(WalletError::MissingScript("redeem"));
@@ -301,5 +317,28 @@ mod tests {
         // A redeem script that does not hash to the scriptPubKey: rejected.
         utxo.redeem_script = Some(redeem_b);
         assert!(verify_input_spk_matches(&utxo, &pk).is_err());
+    }
+
+    #[test]
+    fn spk_guard_rejects_p2sh_p2wpkh_wrapping_a_different_key() {
+        let key1 = pubkey(1);
+        let key2 = pubkey(2);
+
+        // A P2SH-P2WPKH whose redeem wraps key2. `P2SH(redeem) == scriptPubKey`
+        // holds, but the redeem does not commit to the signing key (key1); the
+        // signer would rebuild a key1 redeem and emit an unspendable input, so the
+        // guard must reject it.
+        let cpk2 = get_compressed_pubkey(&key2).unwrap();
+        let redeem2 = ScriptBuf::new_p2wpkh(&cpk2.wpubkey_hash());
+        let mut utxo = UTXO::new(1000, ScriptBuf::new_p2sh(&redeem2.script_hash()));
+        utxo.redeem_script = Some(redeem2);
+        assert!(verify_input_spk_matches(&utxo, &key1).is_err());
+
+        // The matching key is accepted.
+        let cpk1 = get_compressed_pubkey(&key1).unwrap();
+        let redeem1 = ScriptBuf::new_p2wpkh(&cpk1.wpubkey_hash());
+        let mut utxo1 = UTXO::new(1000, ScriptBuf::new_p2sh(&redeem1.script_hash()));
+        utxo1.redeem_script = Some(redeem1);
+        assert!(verify_input_spk_matches(&utxo1, &key1).is_ok());
     }
 }

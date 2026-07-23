@@ -66,7 +66,10 @@ fn ensure_secure_transport(config: &AppConfig) -> Result<()> {
         ("API", config.get_api_url()),
         ("endpoints", config.get_endpoints_url()),
     ] {
-        if url.starts_with("http://") {
+        // Case-insensitive: a URL scheme is case-insensitive (RFC 3986), so
+        // `HTTP://` is just as cleartext as `http://`. Only `http://` matches —
+        // `https://` lowercased does not start with `http://` (the `s` breaks it).
+        if url.to_ascii_lowercase().starts_with("http://") {
             return Err(anyhow!(
                 "Refusing to use a cleartext http:// {label} URL for network {:?} ({}). \
                  Amounts and addresses would be sent unencrypted and could be altered in transit. \

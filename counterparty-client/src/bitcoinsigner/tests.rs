@@ -561,6 +561,46 @@ fn signs_p2tr_script_path_input() {
     );
 }
 
+#[test]
+fn rejects_p2tr_script_path_leaf_committing_to_a_different_key() {
+    let k = test_key();
+    let secp = Secp256k1::new();
+
+    // A leaf that CHECKSIGs a *different* key than the signer's, while the
+    // signer's key is the taproot internal key. The output still reconstructs
+    // (the address commits to this exact leaf + internal key), so the output-key
+    // reconstruction check alone would pass — but the signature is made with the
+    // signer's key, which this leaf's CHECKSIG would reject on-chain, giving an
+    // unspendable input. The signer must refuse to sign it up front.
+    let other_sk = SecretKey::from_slice(&[0x22u8; 32]).unwrap();
+    let other_pk = PublicKey::from_private_key(&secp, &PrivateKey::new(other_sk, NETWORK));
+    let other_xonly = XOnlyPublicKey::from_slice(&other_pk.to_bytes()[1..33]).unwrap();
+    let leaf_script = single_key_tapscript(&other_xonly);
+
+    let spend_info = TaprootBuilder::new()
+        .add_leaf(0, leaf_script.clone())
+        .unwrap()
+        .finalize(&secp, k.xonly)
+        .unwrap();
+    let spk = ScriptBuf::new_p2tr_tweaked(spend_info.output_key());
+
+    let source_address = "p2tr-wrong-leaf-source".to_string();
+    let mut utxo = UTXO::new(UTXO_AMOUNT, spk);
+    utxo.leaf_script = Some(leaf_script);
+    utxo.source_address = Some(source_address.clone());
+    let mut utxos = UTXOList::new();
+    utxos.add(utxo);
+
+    let tx = unsigned_tx();
+    let addresses = address_map(
+        &source_address,
+        &k.wif,
+        "taproot",
+        &k.public_key.to_string(),
+    );
+    assert!(sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).is_err());
+}
+
 /// Regression test for the multi-input Taproot key-path sighash. A BIP341
 /// sighash commits to *every* input's prevout, so signing a taproot input in a
 /// 2-input transaction must feed the signer both prevouts. Before the fix this

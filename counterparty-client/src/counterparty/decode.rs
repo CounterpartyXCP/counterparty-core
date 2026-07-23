@@ -106,42 +106,75 @@ pub fn verify_classic_send(
         check("quantity", &intent.quantity, quantity),
     ];
 
-    // The destination is the output **immediately before** the OP_RETURN data
-    // output — this mirrors consensus (`gettxinfo`), which treats outputs after
-    // the data output as change. Checking that *some* output pays the address
-    // would let a hostile server pay the requested address from a change-position
-    // output while making an earlier output (the real destination) go elsewhere.
+    // Consensus (`gettxinfo` `get_tx_info_new`) credits the asset to **every**
+    // non-data output that appears *before* the OP_RETURN, joined with "-", and
+    // treats outputs after it as change. So the destination must be the single
+    // output preceding the data output. Two ways a positional lookback at only
+    // `idx - 1` would be unsafe: (a) checking that *some* output pays the address
+    // lets a server pay it from a change-position output while diverting the real
+    // destination; (b) if the server places two+ outputs before the OP_RETURN,
+    // consensus credits their *join* (`"source-dest"`) — a pseudo-address that is
+    // never a valid recipient, so the asset is permanently lost — yet the last
+    // one could still be the destination. Require exactly one, and that it pays
+    // the destination.
     if let Some(dest) = &intent.destination {
         let want = normalize_address(dest, network);
-        let op_return_idx = tx
+        let mismatch = |composed: &str| {
+            Some(Verification::Mismatch {
+                field: "destination",
+                requested: want.clone(),
+                composed: composed.to_string(),
+            })
+        };
+        match tx
             .output
             .iter()
-            .position(|o| o.script_pubkey.is_op_return());
-        let paid = match op_return_idx {
-            Some(idx) if idx > 0 => {
-                output_address(&tx.output[idx - 1], network).as_deref() == Some(want.as_str())
+            .position(|o| o.script_pubkey.is_op_return())
+        {
+            None => checks.push(mismatch("no OP_RETURN data output found")),
+            Some(idx) => {
+                let pre: Vec<&bitcoin::TxOut> = tx.output[..idx]
+                    .iter()
+                    .filter(|o| !o.script_pubkey.is_op_return())
+                    .collect();
+                match pre.as_slice() {
+                    [only] if output_address(only, network).as_deref() == Some(want.as_str()) => {}
+                    [_only] => checks.push(mismatch(
+                        "the output before the OP_RETURN does not pay this address",
+                    )),
+                    [] => checks.push(mismatch("no destination output precedes the OP_RETURN")),
+                    _ => checks.push(mismatch(
+                        "more than one output precedes the OP_RETURN; consensus would credit \
+                         their join, not the requested destination",
+                    )),
+                }
             }
-            _ => false,
-        };
-        if !paid {
-            checks.push(Some(Verification::Mismatch {
-                field: "destination",
-                requested: want,
-                composed: "the output before the OP_RETURN does not pay this address".to_string(),
-            }));
         }
     }
 
     combine(checks)
 }
 
-/// Confirm that every BTC-bearing output pays either the source (change) or the
-/// requested destination — nothing to a third party. A matching Counterparty
-/// payload (asset/quantity/destination) does **not** by itself stop a hostile
-/// server from routing the transaction's change to an attacker output; this is
-/// the check that does. Skipped when the source is unknown (the wallet path
-/// always supplies it).
-pub fn verify_btc_recipients(tx: &Transaction, intent: &Intent, network: Network) -> Verification {
+/// Confirm that every BTC-bearing output pays either the source (change) or, when
+/// `allow_destination_output` is set, the requested destination — nothing to a
+/// third party. A matching Counterparty payload (asset/quantity/destination) does
+/// **not** by itself stop a hostile server from routing the transaction's change
+/// to an attacker output; this is the check that does. Skipped when the source is
+/// unknown (the wallet path always supplies it).
+///
+/// `allow_destination_output` is `true` only for transfers that legitimately pay
+/// the destination in BTC — a classic `send` (its dust destination output) and a
+/// plain BTC send. An `enhanced_send` and a `sweep` carry the destination in the
+/// payload and pay it **no** BTC, so a destination-paying output there is
+/// unexpected (funds leaving to a server-chosen address) and must be refused.
+/// Change back to the source is always allowed, so a self-transfer
+/// (source == destination) still verifies.
+pub fn verify_btc_recipients(
+    tx: &Transaction,
+    intent: &Intent,
+    network: Network,
+    allow_destination_output: bool,
+) -> Verification {
     let Some(source) = intent.source.as_ref() else {
         return Verification::Match;
     };
@@ -151,24 +184,33 @@ pub fn verify_btc_recipients(tx: &Transaction, intent: &Intent, network: Network
         .as_ref()
         .map(|d| normalize_address(d, network));
 
+    let requested = if allow_destination_output {
+        format!("BTC only to source ({source}) or the destination")
+    } else {
+        format!("BTC only to source ({source}) as change")
+    };
+
     for out in &tx.output {
         // Data outputs carry no spendable value to a recipient.
         if out.script_pubkey.is_op_return() {
             continue;
         }
         match output_address(out, network) {
-            Some(addr) if addr == source || Some(&addr) == destination.as_ref() => {}
+            // Change back to the source is always allowed (checked first, so a
+            // self-transfer where source == destination is not rejected below).
+            Some(addr) if addr == source => {}
+            Some(addr) if allow_destination_output && Some(&addr) == destination.as_ref() => {}
             Some(addr) => {
                 return Verification::Mismatch {
                     field: "btc_output",
-                    requested: format!("BTC only to source ({source}) or the destination"),
+                    requested,
                     composed: format!("{} sats to {addr}", out.value.to_sat()),
                 };
             }
             None => {
                 return Verification::Mismatch {
                     field: "btc_output",
-                    requested: format!("BTC only to source ({source}) or the destination"),
+                    requested,
                     composed: "an output pays a script that resolves to no address".to_string(),
                 };
             }
@@ -203,7 +245,8 @@ pub fn verify_btc_send(tx: &Transaction, intent: &Intent, network: Network) -> V
             };
         }
     }
-    verify_btc_recipients(tx, intent, network)
+    // A plain BTC send legitimately pays the destination.
+    verify_btc_recipients(tx, intent, network, true)
 }
 
 /// `enhanced_send` (type 2), modern CBOR form:
@@ -284,6 +327,21 @@ pub fn verify_sweep(body: &[u8], intent: &Intent, network: Network) -> Verificat
             reason: "sweep CBOR flags have an unexpected type".to_string(),
         };
     };
+
+    // A sweep can transfer asset *ownership*, so its flags must be verified — a
+    // server that turns `FLAG_OWNERSHIP` on could hand away irreversible issuer
+    // rights the user never asked to transfer. If the requested flags could not be
+    // resolved (the `sweep` command supplied none, or they failed to parse), fail
+    // *closed*: return Unverifiable so the caller refuses a verifiable-type
+    // transaction it cannot fully check, rather than silently skipping the flags
+    // comparison via [`check`]'s `None`-means-unchecked behaviour.
+    if intent.flags.is_none() {
+        return Verification::Unverifiable {
+            reason: "sweep flags were not provided, so FLAG_OWNERSHIP could not be verified; \
+                     re-run the sweep with an explicit --flags"
+                .to_string(),
+        };
+    }
 
     combine([
         check(
@@ -450,6 +508,40 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn classic_send_rejects_two_outputs_before_the_op_return() {
+        // A hostile server places a second non-data output before the OP_RETURN
+        // (here `[decoy, destination, OP_RETURN]`). Consensus would credit the
+        // asset to the *join* of both ("decoy-destination"), a pseudo-address that
+        // is never a valid recipient — the asset is permanently lost — even though
+        // the output immediately before the OP_RETURN does pay the destination.
+        // A positional `idx - 1` lookback would wave this through; requiring
+        // exactly one preceding output catches it.
+        let decoy = wpkh_addr(0x22);
+        let dest = wpkh_addr(0x11);
+        let mut body = Vec::new();
+        body.extend_from_slice(&42u64.to_be_bytes());
+        body.extend_from_slice(&1000u64.to_be_bytes());
+        let tx = tx_with_outputs(vec![
+            output_to(&decoy),
+            output_to(&dest),
+            op_return_output(),
+        ]);
+        let intent = Intent {
+            asset_id: Some(42),
+            quantity: Some(1000),
+            destination: Some(dest.to_string()),
+            ..Default::default()
+        };
+        assert!(matches!(
+            verify_classic_send(&body, &tx, &intent, NET),
+            Verification::Mismatch {
+                field: "destination",
+                ..
+            }
+        ));
+    }
+
     // ---- enhanced_send (type 2, CBOR) ----
 
     #[test]
@@ -546,6 +638,7 @@ mod tests {
         ]);
         let intent = Intent {
             destination: Some(dest.to_string()),
+            flags: Some(7),
             ..Default::default()
         };
         assert_eq!(verify_sweep(&body, &intent, NET), Verification::Match);
@@ -562,6 +655,7 @@ mod tests {
         ]);
         let intent = Intent {
             destination: Some(requested.to_string()),
+            flags: Some(7),
             ..Default::default()
         };
         assert!(matches!(
@@ -570,6 +664,29 @@ mod tests {
                 field: "destination",
                 ..
             }
+        ));
+    }
+
+    #[test]
+    fn sweep_without_requested_flags_is_unverifiable() {
+        // Fail closed: a sweep can transfer asset ownership, so if the requested
+        // flags could not be resolved (none supplied), the flags check must not be
+        // silently skipped — it degrades to Unverifiable, which the caller refuses
+        // for a verifiable-type command.
+        let dest = wpkh_addr(0x11);
+        let body = cbor(vec![
+            Value::Bytes(packed(&dest)),
+            Value::Integer(3u64.into()), // FLAG_BALANCES | FLAG_OWNERSHIP
+            Value::Bytes(vec![]),
+        ]);
+        let intent = Intent {
+            destination: Some(dest.to_string()),
+            flags: None, // the user did not pass --flags
+            ..Default::default()
+        };
+        assert!(matches!(
+            verify_sweep(&body, &intent, NET),
+            Verification::Unverifiable { .. }
         ));
     }
 
@@ -597,7 +714,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            verify_btc_recipients(&tx, &intent, NET),
+            verify_btc_recipients(&tx, &intent, NET, true),
             Verification::Match
         );
     }
@@ -612,12 +729,57 @@ mod tests {
             ..Default::default()
         };
         assert!(matches!(
-            verify_btc_recipients(&tx, &intent, NET),
+            verify_btc_recipients(&tx, &intent, NET, true),
             Verification::Mismatch {
                 field: "btc_output",
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn btc_recipients_rejects_a_destination_output_for_enhanced_send_and_sweep() {
+        // enhanced_send/sweep carry the destination in the payload and pay it no
+        // BTC. When destination outputs are disallowed, a server that adds one
+        // (funds leaving the wallet to a server-chosen address) is refused, even
+        // though the address is the requested destination.
+        let source = wpkh_addr(0x33);
+        let dest = wpkh_addr(0x11);
+        let tx = tx_with_outputs(vec![
+            op_return_output(),
+            value_output(&dest, 5000),
+            value_output(&source, 9000),
+        ]);
+        let intent = Intent {
+            destination: Some(dest.to_string()),
+            source: Some(source.to_string()),
+            ..Default::default()
+        };
+        assert!(matches!(
+            verify_btc_recipients(&tx, &intent, NET, false),
+            Verification::Mismatch {
+                field: "btc_output",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn btc_recipients_allows_self_transfer_change_even_when_destination_disallowed() {
+        // A sweep to oneself (source == destination): the only value output is
+        // change back to the source, which must still be allowed even with
+        // destination outputs disallowed (source is checked first).
+        let same = wpkh_addr(0x33);
+        let tx = tx_with_outputs(vec![op_return_output(), value_output(&same, 9000)]);
+        let intent = Intent {
+            destination: Some(same.to_string()),
+            source: Some(same.to_string()),
+            ..Default::default()
+        };
+        assert_eq!(
+            verify_btc_recipients(&tx, &intent, NET, false),
+            Verification::Match
+        );
     }
 
     // ---- verify_btc_send (plain BTC transfer, no Counterparty payload) ----
@@ -715,7 +877,7 @@ mod tests {
         let attacker = wpkh_addr(0x44);
         let tx = tx_with_outputs(vec![value_output(&attacker, 9000)]);
         assert_eq!(
-            verify_btc_recipients(&tx, &Intent::default(), NET),
+            verify_btc_recipients(&tx, &Intent::default(), NET, true),
             Verification::Match
         );
     }

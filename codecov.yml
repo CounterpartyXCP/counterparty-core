@@ -7,10 +7,12 @@
 #                Rust Test workflow via cargo-llvm-cov).
 #
 # Each source is uploaded under its own flag so the two never clobber each
-# other. The repo-wide project/patch gates stay at 90%, and
-# `component_management` adds a dedicated gate for the Rust client (see below)
-# so its coverage is tracked (and enforced) on its own, not just diluted into
-# the total.
+# other. The repo-wide project gate stays at 90%; the **patch** (diff-coverage)
+# gate is split per flag so a client-only PR is judged against the client target,
+# not the 90% default — some client lines (OS keyring, interactive stdin) can
+# only be covered by the macOS/Windows and regtest jobs, never by the hermetic
+# Linux unit run that feeds the `client` flag. `component_management` adds a
+# dedicated project gate for the Rust client (see below).
 
 coverage:
   status:
@@ -19,8 +21,18 @@ coverage:
         target: 90%
         threshold: 1%
     patch:
-      default:
+      # No untyped `default`: each upload is flagged (core / client), so scoping
+      # the patch gate per flag avoids the repo-wide 90% biting a client-only
+      # diff whose hard-to-cover lines the unit run cannot reach.
+      core:
+        flags:
+          - core
         target: 90%
+        threshold: 1%
+      client:
+        flags:
+          - client
+        target: 88%
         threshold: 1%
 
 flags:

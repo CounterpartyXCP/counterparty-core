@@ -83,6 +83,38 @@ fn run_xcp(home: &Path, args: &[&str]) -> Output {
         .expect("failed to spawn xcp")
 }
 
+/// Like [`run_xcp`], but writes `stdin_input` to the child's stdin. `run_xcp`
+/// uses `Command::output()`, which gives the child an empty stdin (immediate
+/// EOF), so the broadcast confirmation prompt reads EOF and aborts. That is
+/// correct for the `burn` step: its transaction type is not one the client can
+/// independently verify, so `--yes` deliberately does *not* auto-confirm it
+/// (a hostile server could otherwise slip an unverifiable transaction past
+/// unattended automation). The E2E confirms it the way a human would — by
+/// answering `y` at the prompt.
+fn run_xcp_with_stdin(home: &Path, args: &[&str], stdin_input: &str) -> Output {
+    use std::io::Write;
+    use std::process::Stdio;
+    let mut child = std::process::Command::new(xcp_bin())
+        .args(args)
+        .env("HOME", home)
+        .env("XDG_DATA_HOME", home.join("data"))
+        .env("XDG_CONFIG_HOME", home.join("config"))
+        .env("XDG_CACHE_HOME", home.join("cache"))
+        .env("XCP_WALLET_PASSWORD", WALLET_PASSWORD)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn xcp");
+    child
+        .stdin
+        .take()
+        .expect("child stdin is piped")
+        .write_all(stdin_input.as_bytes())
+        .expect("failed to write to xcp stdin");
+    child.wait_with_output().expect("failed to wait for xcp")
+}
+
 /// Assert an `xcp` invocation succeeded, dumping both streams on failure so a CI
 /// log shows exactly why (compose error, sign error, broadcast rejection, …).
 fn assert_xcp_ok(out: &Output, what: &str) {
@@ -275,8 +307,10 @@ async fn full_fund_compose_sign_broadcast_accept_regtest() {
     );
 
     // 3) Burn 0.5 BTC from `a`: compose over the API, sign locally with the
-    //    client's own signer, broadcast, and confirm. `a` gains XCP.
-    let out = run_xcp(
+    //    client's own signer, broadcast, and confirm. `a` gains XCP. `burn` is not
+    //    a client-verifiable type, so `--yes` would not auto-confirm it; confirm at
+    //    the prompt via stdin instead (see `run_xcp_with_stdin`).
+    let out = run_xcp_with_stdin(
         home.path(),
         &[
             "--regtest",
@@ -295,8 +329,8 @@ async fn full_fund_compose_sign_broadcast_accept_regtest() {
             "false",
             "--disable_utxo_locks",
             "true",
-            "--yes",
         ],
+        "y\n",
     );
     assert_xcp_ok(&out, "transaction burn");
     mine_and_sync(&client, 1, &mining_addr).await;

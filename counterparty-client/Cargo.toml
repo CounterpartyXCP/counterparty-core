@@ -3,8 +3,11 @@ name = "counterparty-client"
 version = "11.2.1"
 edition = "2021"
 license = "MIT"
-# MSRV: the client uses `std::sync::LazyLock`, stabilised in Rust 1.80.
-rust-version = "1.80"
+# MSRV: bounded by dependencies, not the client's own code — `keyring 4.1`
+# requires 1.88 (and `idna_adapter`/`edition2024` deps require 1.85/1.86). The
+# client itself only needs `std::sync::LazyLock` (1.80). Enforced by the
+# `MSRV` CI job in `.github/workflows/rust_test.yml`; bump both together.
+rust-version = "1.88"
 
 [dependencies]
 anyhow = "1.0.104"

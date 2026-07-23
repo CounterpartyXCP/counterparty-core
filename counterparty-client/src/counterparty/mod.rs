@@ -120,6 +120,13 @@ fn expected_message_types(tx_type: &str) -> &'static [u32] {
     }
 }
 
+/// Message type id of a *dispense trigger* — the only Counterparty payload a
+/// plain `--asset BTC` send may legitimately carry. It encodes no
+/// asset/quantity/destination (its presence just tells consensus to run any
+/// dispenser paid by this transaction), so it moves none of the source's
+/// assets. Mirrors `counterpartycore/lib/messages/dispense.py` (`ID = 13`).
+const DISPENSE_ID: u32 = 13;
+
 /// Human-readable name for a Counterparty message type id, for error messages.
 fn message_type_name(type_id: u32) -> &'static str {
     match type_id {
@@ -428,6 +435,106 @@ pub(crate) fn build_test_sweep_tx_hex(
     hex::encode(bitcoin::consensus::serialize(&tx))
 }
 
+/// Test-only builder: a plain-BTC-send-shaped transaction whose single
+/// OP_RETURN carries `message` (the de-obfuscated bytes *after* the `CNTRPRTY`
+/// prefix — type-id byte(s) + body), obfuscated the way the composer does.
+/// Outputs `[dust→destination, OP_RETURN(message), change→source]`, so every BTC
+/// recipient checks out and only the hidden payload is suspicious.
+#[cfg(test)]
+pub(crate) fn build_test_btc_send_with_message_tx_hex(
+    txid_display: [u8; 32],
+    destination: &bitcoin::Address,
+    quantity: u64,
+    source: &bitcoin::Address,
+    message: &[u8],
+) -> String {
+    use bitcoin::hashes::Hash as _;
+
+    let mut payload = b"CNTRPRTY".to_vec();
+    payload.extend_from_slice(message);
+    arc4::decrypt(&txid_display, &mut payload); // obfuscate (RC4 is symmetric)
+
+    let mut internal = txid_display;
+    internal.reverse();
+    let push = bitcoin::script::PushBytesBuf::try_from(payload).unwrap();
+    let tx = Transaction {
+        version: bitcoin::transaction::Version::TWO,
+        lock_time: bitcoin::absolute::LockTime::ZERO,
+        input: vec![bitcoin::TxIn {
+            previous_output: bitcoin::OutPoint {
+                txid: bitcoin::Txid::from_byte_array(internal),
+                vout: 0,
+            },
+            script_sig: bitcoin::ScriptBuf::new(),
+            sequence: bitcoin::Sequence::MAX,
+            witness: bitcoin::Witness::new(),
+        }],
+        output: vec![
+            bitcoin::TxOut {
+                value: bitcoin::Amount::from_sat(quantity),
+                script_pubkey: destination.script_pubkey(),
+            },
+            bitcoin::TxOut {
+                value: bitcoin::Amount::ZERO,
+                script_pubkey: bitcoin::ScriptBuf::new_op_return(&push),
+            },
+            bitcoin::TxOut {
+                value: bitcoin::Amount::from_sat(1000),
+                script_pubkey: source.script_pubkey(),
+            },
+        ],
+    };
+    hex::encode(bitcoin::consensus::serialize(&tx))
+}
+
+/// Guard the plain-BTC-send path against a Counterparty message hidden in an
+/// OP_RETURN. Returns `Some(Mismatch)` when the transaction carries a
+/// value-bearing payload (the fund-draining shape) or an unexpected number of
+/// data outputs, and `None` when it is a genuine plain payment — no OP_RETURN,
+/// a single non-Counterparty OP_RETURN (which consensus ignores), or a single
+/// dispense trigger (type 13, which moves none of the source's assets).
+fn reject_hidden_message_on_btc_send(tx: &Transaction) -> Option<Verification> {
+    let mismatch = |composed: String| {
+        Some(Verification::Mismatch {
+            field: "message type",
+            requested: "a plain BTC send (no Counterparty payload)".to_string(),
+            composed,
+        })
+    };
+
+    let op_return_count = tx
+        .output
+        .iter()
+        .filter(|o| o.script_pubkey.is_op_return())
+        .count();
+
+    match op_return_count {
+        // A plain payment. Nothing to hide a message in.
+        0 => None,
+        // Decode the single data output. Consensus only acts on a well-formed,
+        // de-obfuscated `CNTRPRTY` payload, so a non-Counterparty OP_RETURN is
+        // harmless; a Counterparty payload is allowed only if it is a dispense
+        // trigger.
+        1 => match extract::extract_message(tx) {
+            extract::Extracted::Message(message) => match unpack_message_type(&message) {
+                Some((DISPENSE_ID, _)) => None,
+                Some((type_id, _)) => mismatch(format!(
+                    "a '{}' message (type {type_id}) hidden in the OP_RETURN",
+                    message_type_name(type_id)
+                )),
+                None => mismatch(
+                    "an unrecognised Counterparty payload hidden in the OP_RETURN".to_string(),
+                ),
+            },
+            extract::Extracted::Unsupported(_) => None,
+        },
+        // A legitimate BTC send has at most one data output (an optional dispense
+        // trigger); more than one is ambiguous to decode and never expected, so
+        // refuse rather than risk consensus acting on one we did not inspect.
+        _ => mismatch("more than one OP_RETURN data output".to_string()),
+    }
+}
+
 /// Verify a server-composed transaction against the user's request.
 ///
 /// * `raw_tx_hex` — the composed (unsigned or signed; outputs are identical)
@@ -466,7 +573,18 @@ pub fn verify_composed_transaction(
     // all — see `decode::verify_btc_send`. Without this, `extract_message`
     // reports "no data output found" and the caller (which treats `send` as a
     // verifiable type) would hard-refuse every ordinary BTC send.
+    //
+    // `verify_btc_send`/`verify_btc_recipients` only inspect the BTC recipients
+    // and deliberately *skip* OP_RETURN outputs, so on their own they would wave
+    // through a hostile server that hides a value-bearing message in the data
+    // output. Because the composed transaction's first input is the user's own
+    // (Counterparty "source") address, consensus would parse such a message and
+    // debit the source's assets — the dust-to-destination BTC output being pure
+    // cover. Refuse any embedded message other than a dispense trigger first.
     if tx_type == "send" && intent.asset_id == Some(BTC_ASSET_ID) {
+        if let Some(mismatch) = reject_hidden_message_on_btc_send(&tx) {
+            return mismatch;
+        }
         return decode::verify_btc_send(&tx, intent, network);
     }
 
@@ -518,9 +636,12 @@ pub fn verify_composed_transaction(
 
     // The Counterparty payload (asset/quantity/destination) matched; now confirm
     // the *BTC* flows don't siphon funds — a matching payload does not stop a
-    // hostile server from routing the change output to an attacker address.
+    // hostile server from routing the change output to an attacker address. Only a
+    // classic `send` (type 0) legitimately pays the destination a BTC (dust)
+    // output; an `enhanced_send` (2) or `sweep` (4) carries the destination in its
+    // payload and pays it no BTC, so a destination-paying output there is refused.
     match payload {
-        Verification::Match => decode::verify_btc_recipients(&tx, intent, network),
+        Verification::Match => decode::verify_btc_recipients(&tx, intent, network, type_id == 0),
         other => other,
     }
 }
@@ -813,6 +934,81 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    // Build the de-obfuscated body of a `sweep` (type 4) to `destination` with
+    // `flags`, for hiding inside a BTC-send OP_RETURN.
+    fn sweep_message(destination: &Address, flags: u64) -> Vec<u8> {
+        use ciborium::value::Value;
+        let wp = destination.witness_program().unwrap();
+        let mut packed = vec![0x03, wp.version() as u8];
+        packed.extend_from_slice(wp.program().as_bytes());
+        let mut cbor = Vec::new();
+        ciborium::into_writer(
+            &Value::Array(vec![
+                Value::Bytes(packed),
+                Value::Integer(flags.into()),
+                Value::Bytes(vec![]),
+            ]),
+            &mut cbor,
+        )
+        .unwrap();
+        let mut message = vec![0x04u8]; // sweep type id
+        message.extend_from_slice(&cbor);
+        message
+    }
+
+    #[test]
+    fn btc_send_hiding_a_sweep_in_the_op_return_is_refused() {
+        // `send --asset BTC` paying `dest`. A hostile server pays that dust to
+        // `dest` (cover) but hides a type-4 sweep to `attacker` in the OP_RETURN;
+        // consensus (source = the user's first input) would drain the source's
+        // balances *and* asset ownership to the attacker while every BTC recipient
+        // (dest + source change) checks out. Must be a hard "message type"
+        // Mismatch, never a Match — this is the finding the guard closes.
+        let dest = wpkh_addr(0x11);
+        let source = wpkh_addr(0x33);
+        let attacker = wpkh_addr(0x44);
+        let hidden = sweep_message(&attacker, 3); // FLAG_BALANCES | FLAG_OWNERSHIP
+        let hex =
+            build_test_btc_send_with_message_tx_hex([0x11; 32], &dest, 5000, &source, &hidden);
+        let intent = Intent {
+            asset_id: Some(0), // BTC
+            quantity: Some(5000),
+            destination: Some(dest.to_string()),
+            source: Some(source.to_string()),
+            flags: None,
+        };
+        assert!(matches!(
+            verify_composed_transaction(&hex, "send", &intent, NET),
+            Verification::Mismatch {
+                field: "message type",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn btc_send_with_a_dispense_trigger_op_return_is_allowed() {
+        // A genuine BTC send to a live dispenser carries a dispense-trigger data
+        // output (message type 13, `\x0d\x00`), which moves none of the source's
+        // assets. The guard must not over-reject it.
+        let dest = wpkh_addr(0x11);
+        let source = wpkh_addr(0x33);
+        let dispense = [0x0du8, 0x00]; // DISPENSE_ID + one body byte
+        let hex =
+            build_test_btc_send_with_message_tx_hex([0x11; 32], &dest, 5000, &source, &dispense);
+        let intent = Intent {
+            asset_id: Some(0), // BTC
+            quantity: Some(5000),
+            destination: Some(dest.to_string()),
+            source: Some(source.to_string()),
+            flags: None,
+        };
+        assert_eq!(
+            verify_composed_transaction(&hex, "send", &intent, NET),
+            Verification::Match
+        );
     }
 
     #[test]

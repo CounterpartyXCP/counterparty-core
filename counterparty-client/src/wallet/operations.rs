@@ -220,10 +220,14 @@ impl BitcoinWallet {
         bitcoinsigner::sign_transaction(&self.addresses, raw_tx_hex, utxos, self.network)
     }
 
-    /// Change the wallet encryption password
+    /// Change the wallet encryption password.
     ///
-    /// This method changes the password used to encrypt the wallet database.
-    /// It will prompt for the current password and then for a new password.
+    /// The wallet was already unlocked when it was loaded (via the keyring, the
+    /// `XCP_WALLET_PASSWORD` env var, or an interactive prompt), so this does
+    /// **not** re-prompt for the current password. It prompts for the new
+    /// password (twice, with a confirmation and the strength check), re-encrypts
+    /// the wallet to disk with it, and only then updates the stored password — so
+    /// a failed write can never leave the keyring and the file out of sync.
     ///
     /// # Returns
     ///

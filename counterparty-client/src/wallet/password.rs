@@ -21,6 +21,15 @@ use crate::config;
 /// the main defence for a stolen `wallet.db`; require a reasonably long one.
 const MIN_PASSWORD_LEN: usize = 12;
 
+/// Minimum number of *distinct* characters a new password must contain, on top
+/// of [`MIN_PASSWORD_LEN`]. `cocoon`'s PBKDF2 work factor is fixed and not
+/// memory-hard, so a stolen `wallet.db` is only as safe as the passphrase is hard
+/// to guess. This rejects the trivially low-entropy passwords that clear the
+/// length bar (a single repeated character, a short repeating pattern); it is a
+/// floor, not a full entropy estimate — a long, varied passphrase is still the
+/// real defence.
+const MIN_PASSWORD_DISTINCT_CHARS: usize = 5;
+
 /// Environment variable that supplies the wallet password non-interactively.
 ///
 /// Intended for automation, CI and headless servers where neither an
@@ -58,11 +67,24 @@ fn cache() -> &'static Mutex<HashMap<String, SecretString>> {
     PASSWORD_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-/// Reject a new password that is shorter than [`MIN_PASSWORD_LEN`] characters.
+/// Reject a new password that is too short or too repetitive. Passphrase
+/// strength is the primary defence for a stolen `wallet.db` (see
+/// [`MIN_PASSWORD_LEN`] / [`MIN_PASSWORD_DISTINCT_CHARS`]).
 fn check_password_strength(password: &SecretString) -> Result<()> {
-    if password.expose_secret().chars().count() < MIN_PASSWORD_LEN {
+    let secret = password.expose_secret();
+    if secret.chars().count() < MIN_PASSWORD_LEN {
         return Err(WalletError::Validation(format!(
             "Password too short: use at least {MIN_PASSWORD_LEN} characters."
+        )));
+    }
+    let distinct = secret
+        .chars()
+        .collect::<std::collections::HashSet<_>>()
+        .len();
+    if distinct < MIN_PASSWORD_DISTINCT_CHARS {
+        return Err(WalletError::Validation(format!(
+            "Password too repetitive: use at least {MIN_PASSWORD_DISTINCT_CHARS} distinct \
+             characters. Passphrase strength is the main defence for a stolen wallet file."
         )));
     }
     Ok(())
@@ -368,7 +390,16 @@ mod tests {
     fn password_strength_enforces_minimum_length() {
         // 11 chars: below the 12-char minimum.
         assert!(check_password_strength(&SecretString::from("short-pass1".to_string())).is_err());
-        // Exactly 12 chars: accepted.
+        // Exactly 12 chars and varied: accepted.
         assert!(check_password_strength(&SecretString::from("twelve-chars".to_string())).is_ok());
+    }
+
+    #[test]
+    fn password_strength_rejects_low_distinct_characters() {
+        // Long enough (>= 12 chars) but trivially guessable -> rejected.
+        assert!(check_password_strength(&SecretString::from("aaaaaaaaaaaa".to_string())).is_err());
+        assert!(check_password_strength(&SecretString::from("abababababab".to_string())).is_err());
+        // A varied passphrase of the same length is fine.
+        assert!(check_password_strength(&SecretString::from("correct-horse".to_string())).is_ok());
     }
 }

@@ -7,6 +7,7 @@
 //! safely.
 
 use bitcoin::hashes::Hash;
+use bitcoin::opcodes::all::OP_RETURN;
 use bitcoin::script::Instruction;
 use bitcoin::{Script, Transaction};
 
@@ -35,20 +36,35 @@ fn arc4_key(tx: &Transaction) -> Option<[u8; 32]> {
     Some(key)
 }
 
-/// Concatenate the bytes pushed by an `OP_RETURN` script (all data pushes after
-/// the `OP_RETURN` opcode). Counterparty uses a single push, but concatenating
-/// is robust to either shape.
-fn opreturn_pushed_data(script: &Script) -> Option<Vec<u8>> {
+/// The single data push of a strict `[OP_RETURN, <push>]` script. This mirrors
+/// consensus (`parse_vout` in `counterparty-rs/src/indexer/bitcoin_client.rs`),
+/// which matches only that exact shape and treats any other OP_RETURN (bare, or
+/// with extra opcodes or *multiple* pushes) as non-Counterparty. Returns `None`
+/// for a non-OP_RETURN script or any shape other than one leading `OP_RETURN`
+/// followed by exactly one data push — so a multi-push OP_RETURN, which the
+/// previous concatenating logic would "decode" into a message consensus never
+/// sees, is now correctly rejected instead.
+fn opreturn_single_push(script: &Script) -> Option<Vec<u8>> {
     if !script.is_op_return() {
         return None;
     }
-    let mut out = Vec::new();
-    for instr in script.instructions() {
-        if let Ok(Instruction::PushBytes(bytes)) = instr {
-            out.extend_from_slice(bytes.as_bytes());
-        }
+    let mut instructions = script.instructions();
+    // The leading OP_RETURN opcode (guaranteed present by `is_op_return`).
+    match instructions.next()? {
+        Ok(Instruction::Op(op)) if op == OP_RETURN => {}
+        _ => return None,
     }
-    Some(out)
+    // Then exactly one data push.
+    let data = match instructions.next()? {
+        Ok(Instruction::PushBytes(bytes)) => bytes.as_bytes().to_vec(),
+        _ => return None,
+    };
+    // Anything after the single push (a second push, or another opcode) is not
+    // the consensus shape.
+    if instructions.next().is_some() {
+        return None;
+    }
+    Some(data)
 }
 
 /// Extract and de-obfuscate the Counterparty message embedded in `tx`.
@@ -69,8 +85,10 @@ pub fn extract_message(tx: &Transaction) -> Extracted {
         return Extracted::Unsupported("multiple OP_RETURN outputs; cannot verify unambiguously");
     }
 
-    let Some(mut payload) = opreturn_pushed_data(&data_output.script_pubkey) else {
-        return Extracted::Unsupported("malformed OP_RETURN data output");
+    let Some(mut payload) = opreturn_single_push(&data_output.script_pubkey) else {
+        return Extracted::Unsupported(
+            "OP_RETURN is not a single-push data output (does not match the consensus shape)",
+        );
     };
 
     arc4::decrypt(&key, &mut payload);
@@ -150,6 +168,37 @@ mod tests {
             output: vec![TxOut {
                 value: Amount::ZERO,
                 script_pubkey: ScriptBuf::new_op_return(&push),
+            }],
+        };
+        assert!(matches!(extract_message(&tx), Extracted::Unsupported(_)));
+    }
+
+    #[test]
+    fn multi_push_op_return_is_unsupported() {
+        // Consensus (`parse_vout`) accepts only `[OP_RETURN, <single push>]`. A
+        // multi-push OP_RETURN is not a Counterparty data output on-chain, so the
+        // client must not concatenate its pushes and "decode" a message consensus
+        // never sees.
+        let script = bitcoin::script::Builder::new()
+            .push_opcode(OP_RETURN)
+            .push_slice(b"CNTRPRTYAA")
+            .push_slice(b"BB")
+            .into_script();
+        let tx = Transaction {
+            version: Version::TWO,
+            lock_time: LockTime::ZERO,
+            input: vec![TxIn {
+                previous_output: OutPoint {
+                    txid: Txid::all_zeros(),
+                    vout: 0,
+                },
+                script_sig: ScriptBuf::new(),
+                sequence: Sequence::MAX,
+                witness: Witness::new(),
+            }],
+            output: vec![TxOut {
+                value: Amount::ZERO,
+                script_pubkey: script,
             }],
         };
         assert!(matches!(extract_message(&tx), Extracted::Unsupported(_)));

@@ -1,8 +1,9 @@
 use clap::{Arg, ArgAction, Command};
 use std::collections::{HashMap, HashSet};
 
+use crate::commands::api::commands::{enum_choices, json_scalar_to_string, push_help_note};
 use crate::commands::api::{ApiEndpoint, ApiEndpointArg};
-use crate::commands::wallet::args::ID_ARG_MAP;
+use crate::commands::wallet::args;
 use crate::commands::wallet::commands;
 
 /// Filter and sort compose endpoints
@@ -63,18 +64,21 @@ fn add_argument_to_command(
 
     // Store mapping for later
     let id_map_key = format!("{}:{}", command_name, static_internal_id);
-    ID_ARG_MAP
-        .lock()
-        .unwrap()
-        .insert(id_map_key, arg.name.clone());
+    args::id_arg_map().insert(id_map_key, arg.name.clone());
 
-    let static_help: &'static str = Box::leak(
-        arg.description
-            .as_deref()
-            .unwrap_or("")
-            .to_string()
-            .into_boxed_str(),
-    );
+    // Surface the server-provided allowed values and default in `--help`, exactly
+    // like the `api <fn>` builder does, so `wallet transaction <x> --help` is as
+    // informative as `api compose_<x> --help` (they used to drift). Kept in the
+    // help text, not as clap value-parsers, so it can't collide with the
+    // file-reference / label-resolution parsers applied later.
+    let mut help_text = arg.description.as_deref().unwrap_or("").to_string();
+    if let Some(choices) = enum_choices(arg) {
+        push_help_note(&mut help_text, &format!("possible values: {choices}"));
+    }
+    if let Some(default) = arg.default.as_ref().and_then(json_scalar_to_string) {
+        push_help_note(&mut help_text, &format!("default: {default}"));
+    }
+    let static_help: &'static str = Box::leak(help_text.into_boxed_str());
 
     let mut cmd_arg = Arg::new(static_internal_id)
         .long(static_long_flag)
@@ -85,21 +89,10 @@ fn add_argument_to_command(
     }
 
     if arg.arg_type == "bool" {
-        // Modified to accept values for boolean arguments
+        // Accept a value for boolean flags (--flag true/false/1/0).
         cmd_arg = cmd_arg
-            //.action(ArgAction::Set)  // Explicitly set to accept values
             .value_name("BOOL")
-            .value_parser(|s: &str| -> std::result::Result<String, String> {
-                let lower = s.to_lowercase();
-                match lower.as_str() {
-                    "true" | "1" => Ok("true".to_string()),
-                    "false" | "0" => Ok("false".to_string()),
-                    _ => Err(format!(
-                        "Invalid boolean value: {}. Use true/false or 1/0",
-                        s
-                    )),
-                }
-            });
+            .value_parser(args::parse_bool_flag);
     } else {
         cmd_arg = cmd_arg.value_name("VALUE");
     }
@@ -146,10 +139,7 @@ pub fn add_broadcast_commands(cmd: Command, endpoints: &HashMap<String, ApiEndpo
 
             // Register the ID in the map - CRUCIAL for parameter extraction
             let id_map_key = format!("{}:{}", tx_name, static_internal_id);
-            ID_ARG_MAP
-                .lock()
-                .unwrap()
-                .insert(id_map_key, "address".to_string());
+            args::id_arg_map().insert(id_map_key, "address".to_string());
 
             // Add the address argument to the command
             tx_cmd = tx_cmd.arg(

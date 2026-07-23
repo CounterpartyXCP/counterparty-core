@@ -11,7 +11,7 @@ use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 use crate::bitcoinsigner;
 use crate::commands::api;
 use crate::commands::api::{ApiEndpoint, ApiEndpointArg};
-use crate::commands::wallet::args::ID_ARG_MAP;
+use crate::commands::wallet::args;
 use crate::config::AppConfig;
 use crate::helpers;
 use crate::wallet::BitcoinWallet;
@@ -29,23 +29,43 @@ struct RevealTransactionInfo<'a> {
 /// bound is a safety net, not a guarantee — prefer segwit/taproot addresses.
 const MAX_REASONABLE_FEE_SAT: u64 = 1_000_000;
 
-/// Refuse to sign a transaction whose miner fee exceeds [`MAX_REASONABLE_FEE_SAT`].
+/// Absolute ceiling (0.01 BTC) on the value of the commit's first output
+/// (`commit:0`) — the envelope a taproot data reveal spends. The reveal is
+/// composed AND signed by the server and broadcast verbatim (its outputs are
+/// never independently verified), so the value of the single output it spends is
+/// all that bounds how much it can pay away. A legitimate reveal needs only
+/// enough to cover its own miner fee, far below this; a larger `commit:0` is a
+/// server bug or a siphon attempt. Defense-in-depth behind the human review
+/// (commit/reveal are `Unverified`, so `--yes` cannot skip that review).
+const MAX_REVEAL_ENVELOPE_SAT: u64 = 1_000_000;
+
+/// Refuse to sign a transaction whose miner fee exceeds [`MAX_REASONABLE_FEE_SAT`],
+/// and report whether that fee could be **conclusively** bounded.
 ///
 /// The fee is derived from the *server-reported* input values. Two ways that can
-/// be gamed are surfaced instead of silently trusted:
+/// be gamed are surfaced instead of silently trusted, and both mean the cap is
+/// not a guarantee — so the transaction may still be broadcast (after review),
+/// but `--yes` must not auto-confirm it (the caller enforces this):
 ///
 /// * a legacy (P2PKH) input's amount is not committed by its signature (BIP143
 ///   covers segwit only), so a server can under-report it to hide an inflated
 ///   real fee — a warning is printed when such an input is present;
 /// * if the reported inputs are not greater than the outputs the fee cannot be
 ///   computed at all (`calculate_transaction_fee` returns `None`), which is
-///   exactly the shape of an under-reporting server — this now warns loudly
-///   rather than passing the cap silently (the previous fail-*open* behaviour).
-fn ensure_fee_within_limit(raw_tx_hex: &str, utxo_list: &bitcoinsigner::UTXOList) -> Result<()> {
+///   exactly the shape of an under-reporting server — warn loudly rather than
+///   passing the cap silently (the previous fail-*open* behaviour).
+///
+/// Returns `Err` when the fee is computable and over the cap (a hard refusal),
+/// `Ok(true)` when the fee is computable, within the cap, and every input's
+/// amount is signature-committed, and `Ok(false)` when the fee could not be
+/// conclusively bounded (either case above).
+fn ensure_fee_within_limit(raw_tx_hex: &str, utxo_list: &bitcoinsigner::UTXOList) -> Result<bool> {
     let tx_bytes =
         hex::decode(raw_tx_hex).map_err(|e| anyhow!("Failed to decode transaction hex: {}", e))?;
     let tx: bitcoin::Transaction = bitcoin::consensus::deserialize(&tx_bytes)
         .map_err(|e| anyhow!("Failed to parse transaction: {}", e))?;
+
+    let mut fee_conclusive = true;
 
     match calculate_transaction_fee(&tx, utxo_list) {
         Some(fee) if fee > MAX_REASONABLE_FEE_SAT => {
@@ -60,6 +80,7 @@ fn ensure_fee_within_limit(raw_tx_hex: &str, utxo_list: &bitcoinsigner::UTXOList
         }
         Some(_) => {}
         None => {
+            fee_conclusive = false;
             helpers::print_warning(
                 "\u{26A0} Could not verify the miner fee: the server-reported input values are not \
                  greater than the outputs, so the fee safety limit could not be enforced.",
@@ -73,6 +94,7 @@ fn ensure_fee_within_limit(raw_tx_hex: &str, utxo_list: &bitcoinsigner::UTXOList
         .iter()
         .any(|u| u.get_type() == bitcoinsigner::UTXOType::P2PKH)
     {
+        fee_conclusive = false;
         helpers::print_warning(
             "\u{26A0} This transaction spends a legacy (P2PKH) input whose amount the signature does \
              not commit to, so the miner-fee safety limit cannot be guaranteed for it.",
@@ -80,7 +102,7 @@ fn ensure_fee_within_limit(raw_tx_hex: &str, utxo_list: &bitcoinsigner::UTXOList
         );
     }
 
-    Ok(())
+    Ok(fee_conclusive)
 }
 
 /// Find the corresponding compose endpoint for a transaction command
@@ -133,7 +155,7 @@ fn extract_parameters_from_matches(
     sub_matches: &ArgMatches,
 ) -> HashMap<String, String> {
     let mut params = HashMap::new();
-    let id_map = ID_ARG_MAP.lock().unwrap();
+    let id_map = args::id_arg_map();
 
     for arg in &endpoint.args {
         extract_parameter_for_arg(arg, transaction_name, sub_matches, &id_map, &mut params);
@@ -353,18 +375,22 @@ fn calculate_transaction_fee(
     tx: &bitcoin::Transaction,
     utxo_list: &bitcoinsigner::UTXOList,
 ) -> Option<u64> {
-    // Calculate total input value
-    let total_input: u64 = utxo_list.as_ref().iter().map(|utxo| utxo.amount).sum();
+    // Sum with checked arithmetic: the input amounts are server-reported, so an
+    // absurd value must yield "uncomputable" (None) — never an overflow panic
+    // (release builds enable `overflow-checks`) or a silent wrap that could hide a
+    // real inflated fee under the cap.
+    let total_input = utxo_list
+        .as_ref()
+        .iter()
+        .try_fold(0u64, |acc, utxo| acc.checked_add(utxo.amount))?;
+    let total_output = tx
+        .output
+        .iter()
+        .try_fold(0u64, |acc, output| acc.checked_add(output.value.to_sat()))?;
 
-    // Get total output value
-    let total_output: u64 = tx.output.iter().map(|output| output.value.to_sat()).sum();
-
-    // Calculate fee (inputs - outputs)
-    if total_input >= total_output {
-        Some(total_input - total_output)
-    } else {
-        None // Something is wrong if outputs > inputs
-    }
+    // Fee = inputs - outputs; outputs > inputs means the reported inputs are
+    // inconsistent, so the fee is uncomputable (`checked_sub` -> None).
+    total_input.checked_sub(total_output)
 }
 
 /// Extract raw bytes from OP_RETURN data
@@ -720,10 +746,13 @@ fn build_reveal_utxo_list(commit_tx_hex: &str) -> Result<bitcoinsigner::UTXOList
 }
 
 /// Verify a server-supplied, pre-signed reveal transaction spends **only** the
-/// commit transaction's first output (`commit_txid:0`) — the dust envelope the
-/// user just reviewed and signed for. The reveal is broadcast verbatim, so this
-/// bounds its exposure: it confirms a hostile server cannot return a "reveal"
-/// that instead spends some other wallet UTXO. `signed_commit_hex` is the
+/// commit transaction's first output (`commit_txid:0`) — the envelope the user
+/// just reviewed and signed for — **and** that that output's value is within the
+/// [`MAX_REVEAL_ENVELOPE_SAT`] limit. The reveal is broadcast verbatim and its
+/// outputs are never checked, so both the outpoint *and* the value it spends
+/// bound its exposure: a hostile server can neither return a "reveal" that spends
+/// some other wallet UTXO nor have the user fund an oversized envelope for it to
+/// siphon. `signed_commit_hex` is the
 /// locally-signed commit; its txid is final for segwit/taproot funding inputs
 /// (whose witness is excluded from the txid), and a legacy-funded commit whose
 /// txid changed on signing correctly fails this check (its pre-signed reveal
@@ -749,6 +778,19 @@ fn ensure_reveal_spends_commit_first_output(
         return Err(anyhow!(
             "SECURITY: the server-supplied reveal transaction does not spend only the commit's \
              first output ({expected}). Refusing to broadcast it. The API server may be \
+             malfunctioning or malicious."
+        ));
+    }
+
+    // Bound the envelope value: the reveal spends `commit:0` verbatim and its
+    // outputs are never verified, so `commit:0`'s value caps how much a hostile
+    // reveal could pay away. A legitimate data reveal needs only its own fee.
+    let envelope_value = commit.output.first().map(|o| o.value.to_sat()).unwrap_or(0);
+    if envelope_value > MAX_REVEAL_ENVELOPE_SAT {
+        return Err(anyhow!(
+            "SECURITY: the commit's first output is {envelope_value} sats, above the \
+             {MAX_REVEAL_ENVELOPE_SAT}-sat reveal-envelope limit. The server-signed reveal spends \
+             this output verbatim, so refusing to broadcast it. The API server may be \
              malfunctioning or malicious."
         ));
     }
@@ -840,8 +882,11 @@ pub async fn handle_transaction_command(
     let utxo_list = build_utxo_list(utxos)?;
 
     // H2: reject an absurd miner fee before signing (defense against a server
-    // that inflates the fee or burns the user's BTC to fees).
-    ensure_fee_within_limit(raw_tx_hex, &utxo_list)?;
+    // that inflates the fee or burns the user's BTC to fees). `fee_conclusive`
+    // is false when the cap could not be guaranteed (uncomputable fee or a legacy
+    // input) — the transaction may still be broadcast after review, but `--yes`
+    // must not auto-confirm it.
+    let fee_conclusive = ensure_fee_within_limit(raw_tx_hex, &utxo_list)?;
 
     // Sign the transaction using sign_transaction2
     let signed_tx = wallet
@@ -878,17 +923,18 @@ pub async fn handle_transaction_command(
     }
 
     // Ask for confirmation before broadcasting. `--yes` auto-confirms for
-    // automation / CI, but ONLY when the client independently verified the
-    // transaction. An `Unverified` type (one the client cannot decode) is
-    // vouched for solely by the server, so it must never be broadcast without a
-    // human looking at the outputs — `--yes` is deliberately overridden here so a
-    // hostile server cannot slip a siphon output past unattended automation.
+    // automation / CI, but ONLY for a transaction the client could fully verify
+    // (see `VerifyOutcome::may_auto_confirm`). A type it cannot decode, or one
+    // whose asset it could not check offline, is vouched for solely by the server
+    // and must never be broadcast without a human looking at the outputs —
+    // `--yes` is deliberately overridden here so a hostile server cannot slip an
+    // asset swap or a siphon output past unattended automation.
     let yes = sub_matches.get_flag("yes");
-    let skip_confirm = yes && verify_outcome != VerifyOutcome::Unverified;
+    let skip_confirm = yes && verify_outcome.may_auto_confirm() && fee_conclusive;
     if !skip_confirm {
-        if yes && verify_outcome == VerifyOutcome::Unverified {
+        if yes {
             helpers::print_warning(
-                "\u{26A0} --yes does not auto-confirm a transaction this client could not independently verify.",
+                "\u{26A0} --yes does not auto-confirm a transaction this client could not fully verify.",
                 Some(
                     "Review the inputs and outputs above and confirm manually (or use the expert \
                      `api compose_*` path). In a non-interactive session this aborts safely.",
@@ -925,15 +971,36 @@ enum VerifyOutcome {
     /// Every independently-checkable field matched (asset, quantity, destination,
     /// BTC routing) against a client-side trust anchor. `--yes` may auto-confirm.
     Verified,
-    /// Matched, but at least one field was taken on trust from the server — the
-    /// asset name could not be resolved offline, or the quantity's decimal scale
-    /// came from the server's reported divisibility. `--yes` may still
-    /// auto-confirm, but the user is told what was trusted.
+    /// Matched, and the only field taken on trust is the *decimal scale* of the
+    /// quantity (the server's reported divisibility for the asset). The asset,
+    /// destination and BTC routing were all independently checked, so a hostile
+    /// server cannot substitute value here — `--yes` may still auto-confirm, but
+    /// the user is told what was trusted.
     PartiallyVerified,
+    /// Destination, quantity and BTC routing matched, but the *asset* could not be
+    /// resolved offline (a sub-asset longname or non-standard name), so it was not
+    /// independently checked. A hostile server could have composed a *different*
+    /// asset the source holds to the correct destination and quantity, so `--yes`
+    /// MUST NOT skip the human review for this outcome.
+    AssetUnverified,
     /// The transaction type or encoding is outside the client's independent
     /// decoder; only the server vouches for its contents. `--yes` MUST NOT skip
     /// the human review for this outcome.
     Unverified,
+}
+
+impl VerifyOutcome {
+    /// Whether `--yes` may skip the human confirmation before broadcasting. Only
+    /// a fully [`Verified`](Self::Verified) transaction, or one whose *only*
+    /// unchecked aspect is the server-reported decimal scale of the quantity
+    /// ([`PartiallyVerified`](Self::PartiallyVerified)), qualifies. An unchecked
+    /// asset ([`AssetUnverified`](Self::AssetUnverified)) or an undecodable type
+    /// ([`Unverified`](Self::Unverified)) always requires a human to look at the
+    /// outputs, so a hostile server cannot slip an asset swap or a siphon output
+    /// past unattended automation.
+    fn may_auto_confirm(self) -> bool {
+        matches!(self, Self::Verified | Self::PartiallyVerified)
+    }
 }
 
 /// Independently verify a server-composed transaction against the user's request
@@ -1011,7 +1078,7 @@ fn verify_composed_transaction_or_abort(
                     asset_requested.map(String::as_str).unwrap_or("?"),
                 )),
             );
-            Ok(VerifyOutcome::PartiallyVerified)
+            Ok(VerifyOutcome::AssetUnverified)
         }
         Verification::Match if quantity_scale_trusted => {
             // Asset, destination and BTC routing matched, but the decimal scale of
@@ -1545,19 +1612,22 @@ mod tests {
         assert!(
             ensure_fee_within_limit(&tx_hex, &utxos(900 + MAX_REASONABLE_FEE_SAT + 1)).is_err()
         );
-        // Fee exactly at the cap -> allowed (comparison is strictly-greater).
-        assert!(ensure_fee_within_limit(&tx_hex, &utxos(900 + MAX_REASONABLE_FEE_SAT)).is_ok());
-        // A normal small fee -> allowed.
-        assert!(ensure_fee_within_limit(&tx_hex, &utxos(1000)).is_ok());
+        // Fee exactly at the cap (segwit input) -> allowed AND conclusive.
+        assert!(ensure_fee_within_limit(&tx_hex, &utxos(900 + MAX_REASONABLE_FEE_SAT)).unwrap());
+        // A normal small fee -> allowed and conclusive.
+        assert!(ensure_fee_within_limit(&tx_hex, &utxos(1000)).unwrap());
         // Reported inputs <= outputs: the fee is uncomputable. This must not fail
-        // *open* silently (it now warns and returns Ok), and must not error out.
-        assert!(ensure_fee_within_limit(&tx_hex, &utxos(500)).is_ok());
+        // *open* silently — it warns, returns Ok, but reports the fee as NOT
+        // conclusive so the caller refuses to `--yes`-auto-confirm it.
+        assert!(!ensure_fee_within_limit(&tx_hex, &utxos(500)).unwrap());
     }
 
     #[test]
-    fn ensure_fee_within_limit_allows_legacy_input_with_a_reasonable_fee() {
-        // A P2PKH input triggers the "amount not committed" warning branch; a
-        // reasonable fee is still allowed (the warning is advisory, not a refusal).
+    fn ensure_fee_within_limit_flags_legacy_input_as_inconclusive() {
+        // A P2PKH input's amount is not committed by its signature, so the cap
+        // cannot be guaranteed: the transaction is still allowed (Ok, not Err —
+        // the human can review), but the fee is reported as NOT conclusive so
+        // `--yes` will not auto-confirm it.
         let spk = p2pkh_script(6);
         let tx_hex = raw_tx_hex(vec![bitcoin::TxOut {
             value: bitcoin::Amount::from_sat(900),
@@ -1565,7 +1635,7 @@ mod tests {
         }]);
         let mut list = bitcoinsigner::UTXOList::new();
         list.add(bitcoinsigner::UTXO::new(1200, spk));
-        assert!(ensure_fee_within_limit(&tx_hex, &list).is_ok());
+        assert!(!ensure_fee_within_limit(&tx_hex, &list).unwrap());
     }
 
     // ---- ensure_reveal_spends_commit_first_output ----
@@ -1636,6 +1706,53 @@ mod tests {
             bitcoin::OutPoint::new(bitcoin::Txid::all_zeros(), 7),
         ]);
         assert!(ensure_reveal_spends_commit_first_output(&commit_hex, &extra).is_err());
+    }
+
+    #[test]
+    fn reveal_with_an_oversized_commit_envelope_is_refused() {
+        use bitcoin::hashes::Hash as _;
+        let (_, spk) = p2wpkh_addr_and_script(9);
+
+        // A commit whose first output is funded far above the envelope limit. The
+        // server-signed reveal spends it verbatim, so a large `commit:0` is how a
+        // hostile server would siphon the user's funded value — refuse it even
+        // though the reveal correctly spends only commit:0.
+        let commit = bitcoin::Transaction {
+            version: bitcoin::transaction::Version::TWO,
+            lock_time: bitcoin::absolute::LockTime::ZERO,
+            input: vec![bitcoin::TxIn {
+                previous_output: bitcoin::OutPoint {
+                    txid: bitcoin::Txid::all_zeros(),
+                    vout: 3,
+                },
+                script_sig: bitcoin::ScriptBuf::new(),
+                sequence: bitcoin::Sequence::MAX,
+                witness: bitcoin::Witness::new(),
+            }],
+            output: vec![bitcoin::TxOut {
+                value: bitcoin::Amount::from_sat(MAX_REVEAL_ENVELOPE_SAT + 1),
+                script_pubkey: spk.clone(),
+            }],
+        };
+        let commit_hex = hex::encode(bitcoin::consensus::serialize(&commit));
+        let commit_txid = commit.compute_txid();
+
+        let reveal = bitcoin::Transaction {
+            version: bitcoin::transaction::Version::TWO,
+            lock_time: bitcoin::absolute::LockTime::ZERO,
+            input: vec![bitcoin::TxIn {
+                previous_output: bitcoin::OutPoint::new(commit_txid, 0),
+                script_sig: bitcoin::ScriptBuf::new(),
+                sequence: bitcoin::Sequence::MAX,
+                witness: bitcoin::Witness::new(),
+            }],
+            output: vec![bitcoin::TxOut {
+                value: bitcoin::Amount::from_sat(500),
+                script_pubkey: spk,
+            }],
+        };
+        let reveal_hex = hex::encode(bitcoin::consensus::serialize(&reveal));
+        assert!(ensure_reveal_spends_commit_first_output(&commit_hex, &reveal_hex).is_err());
     }
 
     // ---- decode_script / build_utxo_list ----
@@ -1851,10 +1968,7 @@ mod tests {
         use clap::{Arg, Command};
         let tx_name = "cov_extract_params_tx";
         let internal_id: &'static str = "__transaction_cov_extract_params_tx_arg_0_quantity";
-        ID_ARG_MAP
-            .lock()
-            .unwrap()
-            .insert(format!("{tx_name}:{internal_id}"), "quantity".to_string());
+        args::id_arg_map().insert(format!("{tx_name}:{internal_id}"), "quantity".to_string());
 
         let ep = endpoint_with_args("compose_send", &["quantity"]);
         let cmd = Command::new(tx_name).arg(Arg::new(internal_id).long("quantity"));
@@ -2330,24 +2444,41 @@ mod tests {
     }
 
     #[test]
-    fn verify_or_abort_partial_when_asset_name_unresolvable() {
-        // M2: a sub-asset send — destination/quantity/BTC match but the asset name
-        // cannot be resolved offline, so the flow returns Ok (partial) without
-        // ever claiming a full "Verified".
+    fn verify_or_abort_asset_unverified_when_asset_name_unresolvable() {
+        // M2 + B3: a sub-asset send — destination/quantity/BTC match but the asset
+        // name cannot be resolved offline, so the asset went unchecked. The flow
+        // returns Ok (partial) without ever claiming a full "Verified", AND the
+        // outcome must NOT be `--yes`-auto-confirmable: a hostile server could
+        // otherwise compose a *different* asset the source holds to the correct
+        // destination/quantity and slip it past unattended automation.
         let dest = wpkh_address(0x11);
         let raw = crate::counterparty::build_test_enhanced_send_tx_hex([0x11; 32], 5, 2500, &dest);
         let (requested, normalized) = intent_params("PARENT.child", &dest.to_string(), "2500");
 
-        assert_eq!(
-            verify_composed_transaction_or_abort(
-                &regtest_config(),
-                "enhanced_send",
-                &requested,
-                &normalized,
-                &raw,
-            )
-            .unwrap(),
-            VerifyOutcome::PartiallyVerified
+        let outcome = verify_composed_transaction_or_abort(
+            &regtest_config(),
+            "enhanced_send",
+            &requested,
+            &normalized,
+            &raw,
+        )
+        .unwrap();
+        assert_eq!(outcome, VerifyOutcome::AssetUnverified);
+        assert!(
+            !outcome.may_auto_confirm(),
+            "an unchecked asset must never auto-confirm under --yes"
         );
+    }
+
+    #[test]
+    fn only_verified_and_quantity_scale_partial_auto_confirm() {
+        // B3: the load-bearing rule for the `--yes` gate. Only a full match, or a
+        // match whose *only* trusted aspect is the quantity's decimal scale, may
+        // skip the human confirmation; an unchecked asset or an undecodable type
+        // must always be reviewed.
+        assert!(VerifyOutcome::Verified.may_auto_confirm());
+        assert!(VerifyOutcome::PartiallyVerified.may_auto_confirm());
+        assert!(!VerifyOutcome::AssetUnverified.may_auto_confirm());
+        assert!(!VerifyOutcome::Unverified.may_auto_confirm());
     }
 }

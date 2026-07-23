@@ -168,7 +168,7 @@ pub async fn normalize_quantities(
     // (e.g. a fairminter's several caps, or a dispenser's give/escrow quantity)
     // issues at most one `GET /v2/assets/<asset>` per distinct asset instead of
     // one per field.
-    let mut divisibility_cache: HashMap<String, bool> = HashMap::new();
+    let mut divisibility_cache: HashMap<String, Option<bool>> = HashMap::new();
 
     for (name, value) in params.iter() {
         match denomination(transaction_name, name) {
@@ -214,19 +214,16 @@ async fn resolve_divisibility(
     transaction_name: &str,
     denom: &Denomination,
     params: &HashMap<String, String>,
-    cache: &mut HashMap<String, bool>,
+    cache: &mut HashMap<String, Option<bool>>,
 ) -> Result<bool> {
     match denom {
         Denomination::Btc => Ok(true),
         Denomination::IssuedAsset => {
             // Prefer the on-chain divisibility when the asset already exists
-            // (issuing more of an existing asset); otherwise use the flag.
+            // (issuing more of an existing asset); for a brand-new asset (not yet
+            // on-chain) `fetch` returns `None` and we fall back to the flag.
             if let Some(asset) = params.get("asset") {
-                if let Some(&divisible) = cache.get(asset) {
-                    return Ok(divisible);
-                }
-                if let Some(divisible) = fetch_asset_divisible(config, asset).await? {
-                    cache.insert(asset.clone(), divisible);
+                if let Some(divisible) = fetch_divisible_cached(config, asset, cache).await? {
                     return Ok(divisible);
                 }
             }
@@ -236,19 +233,36 @@ async fn resolve_divisibility(
             let asset = params.get(*asset_param).ok_or_else(|| {
                 anyhow!("cannot determine divisibility: missing '--{asset_param}'")
             })?;
-            if let Some(&divisible) = cache.get(asset) {
-                return Ok(divisible);
-            }
-            let divisible = fetch_asset_divisible(config, asset).await?.ok_or_else(|| {
-                anyhow!(
-                    "asset '{asset}' was not found, so its divisibility is unknown. \
-                     If you already know the amount in satoshis, use 'api compose_{transaction_name}' instead."
-                )
-            })?;
-            cache.insert(asset.clone(), divisible);
-            Ok(divisible)
+            fetch_divisible_cached(config, asset, cache)
+                .await?
+                .ok_or_else(|| {
+                    anyhow!(
+                        "asset '{asset}' was not found, so its divisibility is unknown. \
+                         If you already know the amount in satoshis, use 'api compose_{transaction_name}' instead."
+                    )
+                })
         }
     }
+}
+
+/// Fetch an asset's divisibility, memoizing the result — **including the
+/// not-found (`None`) answer** — for the lifetime of the surrounding
+/// `normalize_quantities` call. Without caching the negative result, a compose
+/// for a brand-new asset (which is not on-chain yet, so every lookup returns
+/// `None`) would re-issue `GET /v2/assets/<asset>` once per quantity field —
+/// e.g. every cap of a multi-cap fairminter — each subject to the request
+/// timeout.
+async fn fetch_divisible_cached(
+    config: &AppConfig,
+    asset: &str,
+    cache: &mut HashMap<String, Option<bool>>,
+) -> Result<Option<bool>> {
+    if let Some(cached) = cache.get(asset) {
+        return Ok(*cached);
+    }
+    let result = fetch_asset_divisible(config, asset).await?;
+    cache.insert(asset.to_string(), result);
+    Ok(result)
 }
 
 /// The issuance `--divisible` flag (stored as "true"/"false"); API default is true.
@@ -893,6 +907,40 @@ mod tests {
         assert_eq!(params.get("hard_cap").unwrap(), "100000000000");
         assert_eq!(params.get("soft_cap").unwrap(), "50000000000");
         assert_eq!(params.get("price").unwrap(), "50000000");
+    }
+
+    #[tokio::test]
+    async fn normalize_quantities_caches_the_not_found_result_once_per_new_asset() {
+        // M1: a brand-new fairminter asset (absent on-chain, `{"result":null}`)
+        // must be looked up exactly ONCE across all its cap fields. The negative
+        // result is now cached, so a multi-cap fairminter no longer fires one
+        // `GET /v2/assets/<asset>` per field — `mockito`'s `.expect(1)` +
+        // `.assert_async()` fails the test if it fetches more than once.
+        let mut server = mockito::Server::new_async().await;
+        let m = server
+            .mock("GET", "/v2/assets/FRESHTOKEN")
+            .with_status(200)
+            .with_body(r#"{"result":null}"#)
+            .expect(1)
+            .create_async()
+            .await;
+        let config = config_for(&server);
+        let mut params = HashMap::new();
+        params.insert("asset".to_string(), "FRESHTOKEN".to_string());
+        params.insert("divisible".to_string(), "true".to_string());
+        params.insert("hard_cap".to_string(), "10".to_string());
+        params.insert("soft_cap".to_string(), "5".to_string());
+        params.insert("premint_quantity".to_string(), "1".to_string());
+        params.insert("max_mint_per_tx".to_string(), "2".to_string());
+
+        normalize_quantities(&config, "fairminter", &mut params)
+            .await
+            .unwrap();
+
+        // Caps scaled by the `--divisible` default (true) -> 1e8.
+        assert_eq!(params.get("hard_cap").unwrap(), "1000000000");
+        assert_eq!(params.get("soft_cap").unwrap(), "500000000");
+        m.assert_async().await;
     }
 
     #[tokio::test]

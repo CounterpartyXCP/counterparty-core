@@ -134,6 +134,25 @@ impl InputSigner for P2TRSPSSigner {
             .as_ref()
             .ok_or(WalletError::MissingScript("leaf"))?;
 
+        // The client signs only the single-key tapscript `<signer_xonly>
+        // OP_CHECKSIG`. The output-key reconstruction below proves the *address*
+        // commits to this leaf and internal key, but NOT that the leaf's CHECKSIG
+        // actually verifies against the signing key — a leaf pushing a *different*
+        // key would still reconstruct the output, yet the signature (made with the
+        // signing key) would be rejected by that CHECKSIG on-chain, yielding an
+        // unspendable input. Validate the leaf shape explicitly before signing.
+        let expected_leaf = bitcoin::script::Builder::new()
+            .push_slice(xonly_pubkey.serialize())
+            .push_opcode(bitcoin::opcodes::all::OP_CHECKSIG)
+            .into_script();
+        if *leaf_script != expected_leaf {
+            return Err(WalletError::UnsupportedScript(
+                "taproot script-path leaf is not the supported `<signer_key> OP_CHECKSIG` \
+                 single-key tapscript"
+                    .to_string(),
+            ));
+        }
+
         // Reconstruct the single-leaf taproot tree once, and derive both the
         // control block and the committed output key from it.
         let spend_info = generate_spend_info(secp, &xonly_pubkey, leaf_script)?;

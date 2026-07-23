@@ -16,7 +16,8 @@ The crate builds two identical binaries: **`xcp`** (short) and
 
 There are no pre-built binaries yet — build from this repository.
 
-Requires Rust **1.80 or newer** (stable) — see [rustup.rs](https://rustup.rs).
+Requires Rust **1.88 or newer** (stable) — see [rustup.rs](https://rustup.rs). (The
+minimum is set by dependencies such as `keyring`; the CI `MSRV` job enforces it.)
 
 ```sh
 git clone https://github.com/CounterpartyXCP/counterparty-core.git
@@ -77,10 +78,12 @@ visible to other processes running as the same user (e.g. `/proc/<pid>/environ`
 on Linux) and can leak into shell history, CI logs or crash dumps.
 
 **Password & at-rest protection.** A new wallet password must be **at least 12
-characters**. Encryption at rest uses `cocoon` (ChaCha20-Poly1305 with a PBKDF2
-key derivation): it protects a *stolen* `wallet.db` against offline password
-guessing, with the length of your passphrase as the main defence — so choose a
-long one. It is **not** a substitute for OS-level disk encryption or for keeping
+characters** and reasonably varied (a trivially repetitive one — a single
+repeated character or a short repeating pattern — is rejected). Encryption at
+rest uses `cocoon` (ChaCha20-Poly1305 with a PBKDF2 key derivation, a *fixed,
+non-memory-hard* work factor): it protects a *stolen* `wallet.db` against offline
+password guessing, with the strength of your passphrase as the main defence — so
+choose a long, high-entropy one. It is **not** a substitute for OS-level disk encryption or for keeping
 the file off shared/multi-user machines. Your private keys never leave the
 machine: they are used to sign transactions locally and are never sent to the API
 server.
@@ -98,8 +101,14 @@ server's summary) and checks that:
 
 It **refuses to sign or broadcast on any mismatch**, which makes those transfers
 safe even against a malfunctioning, compromised, or man-in-the-middled API server.
-If a `send`/`enhanced_send`/`sweep` comes back in a form the client cannot decode,
-that is **also** refused (fail-closed) — `--yes` does not override it.
+For a plain `--asset BTC` send the client also refuses any Counterparty message
+hidden in the transaction's `OP_RETURN` (only a dispense trigger is allowed), and
+a `sweep` requires an explicit `--flags` so its balance/ownership scope is always
+verified. If a `send`/`enhanced_send`/`sweep` comes back in a form the client
+cannot decode, that is **also** refused (fail-closed) — `--yes` does not override
+it. `--yes` likewise never auto-confirms a transaction the client could not fully
+verify (an unresolvable asset name, or a fee it could not bound because the inputs
+are legacy or under-reported); it prints a warning and still asks you to confirm.
 
 Some things still rest on the server and are called out at run time:
 

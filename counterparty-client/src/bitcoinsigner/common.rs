@@ -52,24 +52,26 @@ pub fn create_empty_script_sig() -> ScriptBuf {
     ScriptBuf::new()
 }
 
-/// Determine the sighash type for ECDSA signatures based on input data
-pub fn get_ecdsa_sighash_type(input: &PsbtInput) -> EcdsaSighashType {
-    match input.sighash_type {
-        Some(s) => s.ecdsa_hash_ty().unwrap_or(EcdsaSighashType::All),
-        None => EcdsaSighashType::All,
-    }
+/// The ECDSA sighash type the client signs with. Always `SIGHASH_ALL`: the
+/// client composes and signs whole transactions (never partial/ANYONECANPAY
+/// signatures), and `add_witness_utxo` never sets a per-input `sighash_type`.
+/// Reading a caller-supplied type here was dead flexibility that *silently
+/// coerced* an unrecognized/cross-type byte to `All`, so the type is fixed
+/// explicitly instead. `_input` is kept for call-site symmetry with the taproot
+/// getter.
+pub fn get_ecdsa_sighash_type(_input: &PsbtInput) -> EcdsaSighashType {
+    EcdsaSighashType::All
 }
 
-/// Determine the sighash type for Taproot signatures based on input data.
-///
-/// Defaults to [`TapSighashType::Default`] (BIP341 `SIGHASH_DEFAULT`, value 0),
-/// which yields the standard 64-byte Schnorr signature with no trailing sighash
-/// byte — not `All` (0x01), which would add a byte to every taproot witness.
-pub fn get_tap_sighash_type(input: &PsbtInput) -> TapSighashType {
-    match input.sighash_type {
-        Some(s) => s.taproot_hash_ty().unwrap_or(TapSighashType::Default),
-        None => TapSighashType::Default,
-    }
+/// The Taproot sighash type the client signs with. Always
+/// [`TapSighashType::Default`] (BIP341 `SIGHASH_DEFAULT`, value 0) — the standard
+/// 64-byte Schnorr signature with no trailing sighash byte, not `All` (0x01)
+/// which would add a byte to every taproot witness. Fixing it also keeps the
+/// taproot signers' hardcoded `Prevouts::All` sound: an `ANYONECANPAY` type
+/// (which BIP341 pairs with `Prevouts::One`) can no longer be silently coerced in
+/// and compute the wrong sighash.
+pub fn get_tap_sighash_type(_input: &PsbtInput) -> TapSighashType {
+    TapSighashType::Default
 }
 
 /// Encode an ECDSA signature with its sighash type
@@ -385,21 +387,25 @@ mod tests {
     }
 
     #[test]
-    fn ecdsa_sighash_type_defaults_to_all_and_reads_explicit() {
+    fn ecdsa_sighash_type_is_always_all() {
+        // The client signs whole transactions, so the ECDSA sighash type is fixed
+        // to SIGHASH_ALL. A per-input type is intentionally ignored (it is never
+        // set), so an unexpected one can't be silently coerced.
         let mut input = PsbtInput::default();
         assert_eq!(get_ecdsa_sighash_type(&input), EcdsaSighashType::All);
-        input.sighash_type = Some(EcdsaSighashType::All.into());
+        input.sighash_type = Some(EcdsaSighashType::None.into());
         assert_eq!(get_ecdsa_sighash_type(&input), EcdsaSighashType::All);
     }
 
     #[test]
-    fn tap_sighash_type_defaults_to_default_and_reads_explicit() {
+    fn tap_sighash_type_is_always_default() {
+        // Fixed to BIP341 SIGHASH_DEFAULT (standard 64-byte sig). A per-input type
+        // is intentionally ignored, so a stray ANYONECANPAY can't be coerced in and
+        // desynchronise from the signers' hardcoded `Prevouts::All`.
         let mut input = PsbtInput::default();
-        // No sighash type set => BIP341 SIGHASH_DEFAULT (standard 64-byte sig).
         assert_eq!(get_tap_sighash_type(&input), TapSighashType::Default);
-        // An explicitly-set type is still honoured.
         input.sighash_type = Some(TapSighashType::All.into());
-        assert_eq!(get_tap_sighash_type(&input), TapSighashType::All);
+        assert_eq!(get_tap_sighash_type(&input), TapSighashType::Default);
     }
 
     #[test]

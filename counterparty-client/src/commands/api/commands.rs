@@ -116,7 +116,7 @@ fn add_subcommand(cmd: Command, func_name: String, endpoint: ApiEndpoint) -> Com
 
 /// Render a JSON scalar (string/number/bool) as the string form the API
 /// expects, or `None` for null / composite values (which have no CLI default).
-fn json_scalar_to_string(value: &serde_json::Value) -> Option<String> {
+pub(crate) fn json_scalar_to_string(value: &serde_json::Value) -> Option<String> {
     match value {
         serde_json::Value::String(s) => Some(s.clone()),
         serde_json::Value::Number(n) => Some(n.to_string()),
@@ -127,7 +127,7 @@ fn json_scalar_to_string(value: &serde_json::Value) -> Option<String> {
 
 /// The comma-separated allowed values for an enum-style argument (`members`),
 /// or `None` when the argument has no enumerated members.
-fn enum_choices(arg: &ApiEndpointArg) -> Option<String> {
+pub(crate) fn enum_choices(arg: &ApiEndpointArg) -> Option<String> {
     let members = arg.members.as_ref()?;
     let rendered: Vec<String> = members.iter().filter_map(json_scalar_to_string).collect();
     if rendered.is_empty() {
@@ -138,7 +138,7 @@ fn enum_choices(arg: &ApiEndpointArg) -> Option<String> {
 }
 
 /// Append `note` to a help string in parentheses, e.g. `... (default: true)`.
-fn push_help_note(help: &mut String, note: &str) {
+pub(crate) fn push_help_note(help: &mut String, note: &str) {
     if help.is_empty() {
         help.push_str(note);
     } else {
@@ -173,10 +173,7 @@ fn add_command_argument(
 
     // Store mapping for later retrieval
     let id_map_key = format!("{}:{}", command_name, static_internal_id);
-    crate::commands::wallet::args::ID_ARG_MAP
-        .lock()
-        .unwrap()
-        .insert(id_map_key, arg.name.clone());
+    crate::commands::wallet::args::id_arg_map().insert(id_map_key, arg.name.clone());
 
     // Surface the server-provided allowed values and default in `--help` (this
     // metadata was previously parsed but ignored). Kept in the help text rather
@@ -207,20 +204,10 @@ fn add_command_argument(
     // change.
 
     if arg.arg_type == "bool" {
-        // Modified to accept values for boolean arguments
-        cmd_arg = cmd_arg.value_name("BOOL").value_parser(
-            |s: &str| -> std::result::Result<String, String> {
-                let lower = s.to_lowercase();
-                match lower.as_str() {
-                    "true" | "1" => Ok("true".to_string()),
-                    "false" | "0" => Ok("false".to_string()),
-                    _ => Err(format!(
-                        "Invalid boolean value: {}. Use true/false or 1/0",
-                        s
-                    )),
-                }
-            },
-        );
+        // Accept a value for boolean flags (--flag true/false/1/0).
+        cmd_arg = cmd_arg
+            .value_name("BOOL")
+            .value_parser(crate::commands::wallet::args::parse_bool_flag);
     } else {
         cmd_arg = cmd_arg.value_name("VALUE");
     }
@@ -259,7 +246,7 @@ pub fn build_request_parameters(
     matches: &ArgMatches,
 ) -> HashMap<String, String> {
     let mut params = HashMap::new();
-    let id_map = crate::commands::wallet::args::ID_ARG_MAP.lock().unwrap();
+    let id_map = crate::commands::wallet::args::id_arg_map();
 
     for arg in &endpoint.args {
         // Try to find the argument by iterating through the id_map
@@ -282,14 +269,20 @@ pub fn build_request_parameters(
 /// Characters percent-encoded when substituting a value into a URL *path*
 /// segment. Real asset names / addresses / hashes are already safe, but a stray
 /// `/`, `?`, `#` or `%` in an odd value would otherwise corrupt the path or spill
-/// into the query. `.`, `-`, `_` (used in subasset longnames) are left intact.
+/// into the query. `<`, `>` and `:` are encoded too so an encoded value can never
+/// re-form a `<name>` or `<int:name>` placeholder token and corrupt a *later*
+/// substitution pass in [`build_api_path`]. `.`, `-`, `_` (used in subasset
+/// longnames) are left intact.
 const PATH_SEGMENT: &percent_encoding::AsciiSet = &percent_encoding::CONTROLS
     .add(b'/')
     .add(b'?')
     .add(b'#')
     .add(b'%')
     .add(b' ')
-    .add(b'&');
+    .add(b'&')
+    .add(b'<')
+    .add(b'>')
+    .add(b':');
 
 // Builds the API path with path parameters substituted, removing those
 // parameters from `params` so they are not *also* sent as duplicate query
