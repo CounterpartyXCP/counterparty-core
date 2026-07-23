@@ -137,6 +137,13 @@ impl PasswordManager {
     /// Prompt for a brand-new wallet password (with confirmation and a minimum
     /// strength check). Not persisted here — the caller persists after the
     /// initial encrypted write succeeds.
+    ///
+    /// Honours [`PASSWORD_ENV_VAR`] for the automation / CI / headless path where
+    /// there is no interactive prompt. Do **not** use this for a password
+    /// *rotation*: `XCP_WALLET_PASSWORD` holds the *current* unlock password, so
+    /// treating it as the new one would silently rotate the wallet to the same
+    /// value (a no-op) or to an unintended one — `change-password` uses
+    /// [`prompt_new_password_interactive`](Self::prompt_new_password_interactive).
     pub fn prompt_new_password(&self) -> Result<SecretString> {
         // Non-interactive path (automation / CI / headless): take the password
         // from the environment instead of prompting. It must still clear the
@@ -146,6 +153,15 @@ impl PasswordManager {
             return Ok(env_password);
         }
 
+        self.prompt_new_password_interactive()
+    }
+
+    /// Prompt interactively for a new wallet password (with confirmation and a
+    /// strength check), **ignoring** [`PASSWORD_ENV_VAR`]. Used by
+    /// `change-password`, where the env var holds the current unlock password and
+    /// must never be adopted as the new one without the user typing (and
+    /// confirming) it.
+    pub fn prompt_new_password_interactive(&self) -> Result<SecretString> {
         let password = self.prompt_password("Enter new wallet password: ")?;
         // Check strength before asking to confirm, so a too-short password fails
         // fast.

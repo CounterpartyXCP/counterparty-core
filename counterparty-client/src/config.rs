@@ -315,6 +315,40 @@ impl AppConfig {
         !(is_local_url(&self.get_api_url()) && is_local_url(&self.get_endpoints_url()))
     }
 
+    /// Reject a cleartext `http://` API URL on a public network (finding H2): a
+    /// network attacker could read or *alter* the composed transaction the client
+    /// is about to sign. Regtest talks to localhost and is exempt (see
+    /// [`require_https`](Self::require_https)). Returns an error so the run aborts
+    /// before any request is sent.
+    pub fn ensure_secure_transport(&self) -> anyhow::Result<()> {
+        if !self.require_https() {
+            return Ok(());
+        }
+        // Both the API base URL and the endpoints-manifest URL are fetched over
+        // the network, so both must be TLS on a public network (the `https_only`
+        // client would reject a cleartext one anyway, but with a less actionable
+        // error).
+        for (label, url) in [
+            ("API", self.get_api_url()),
+            ("endpoints", self.get_endpoints_url()),
+        ] {
+            // Case-insensitive: a URL scheme is case-insensitive (RFC 3986), so
+            // `HTTP://` is just as cleartext as `http://`. Only `http://` matches
+            // — `https://` lowercased does not start with `http://` (the `s`
+            // breaks it).
+            if url.to_ascii_lowercase().starts_with("http://") {
+                return Err(anyhow::anyhow!(
+                    "Refusing to use a cleartext http:// {label} URL for network {:?} ({}). \
+                     Amounts and addresses would be sent unencrypted and could be altered in transit. \
+                     Repoint the URL to https:// in your config, or use --regtest for local testing.",
+                    self.network,
+                    url
+                ));
+            }
+        }
+        Ok(())
+    }
+
     /// The active network's endpoint-manifest URL.
     pub fn get_endpoints_url(&self) -> String {
         self.get_active_network_config().endpoints_url
@@ -581,6 +615,38 @@ mod tests {
         assert!(!is_local_url("http://10.0.0.5:24000"));
         assert!(!is_local_url("http://127.0.0.1.evil.com:24000"));
         assert!(!is_local_url("http://user@evil.example/localhost"));
+    }
+
+    #[test]
+    fn ensure_secure_transport_rejects_cleartext_public_network() {
+        // Point mainnet at a cleartext URL and select it: must be refused (H2).
+        let mut config = AppConfig::new();
+        config.network_configs.insert(
+            Network::Mainnet,
+            NetworkConfig {
+                api_url: "http://evil.example".to_string(),
+                endpoints_url: "http://evil.example/v2/routes".to_string(),
+                cache_file: PathBuf::new(),
+                data_dir: PathBuf::new(),
+            },
+        );
+        config.set_network(Network::Mainnet);
+        assert!(config.ensure_secure_transport().is_err());
+        // A cleartext scheme in upper case (RFC 3986 case-insensitive) is caught too.
+        let nc = config.network_configs.get_mut(&Network::Mainnet).unwrap();
+        nc.api_url = "HTTP://evil.example".to_string();
+        nc.endpoints_url = "HTTP://evil.example/v2/routes".to_string();
+        assert!(config.ensure_secure_transport().is_err());
+    }
+
+    #[test]
+    fn ensure_secure_transport_allows_https_and_regtest_http() {
+        let mut config = AppConfig::new();
+        // Default mainnet endpoint is https:// -> allowed.
+        assert!(config.ensure_secure_transport().is_ok());
+        // Regtest legitimately uses http://localhost -> exempt.
+        config.set_network(Network::Regtest);
+        assert!(config.ensure_secure_transport().is_ok());
     }
 
     #[test]

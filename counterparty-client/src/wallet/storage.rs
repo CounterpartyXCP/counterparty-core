@@ -172,11 +172,12 @@ impl WalletStorage {
             }
         };
 
-        let json = Zeroizing::new(
-            String::from_utf8(plaintext.to_vec())
-                .map_err(|_| WalletError::Validation("Invalid UTF-8 in wallet file".into()))?,
-        );
-        Ok(serde_json::from_str(&json)?)
+        // Deserialize straight from the decrypted bytes. `plaintext` is
+        // `Zeroizing`, so it is wiped on drop; `from_slice` avoids the extra
+        // `String` copy of every private key that `from_utf8(plaintext.to_vec())`
+        // made — a copy that, on the UTF-8-error path, was owned by the discarded
+        // error and never zeroized.
+        Ok(serde_json::from_slice(plaintext.as_slice())?)
     }
 
     /// Encrypt and write the address map to disk atomically with the given
@@ -211,8 +212,13 @@ impl WalletStorage {
     /// Change the wallet password: re-encrypt and persist to disk *first*, then
     /// update the keyring, so a failed write can never leave the keyring and the
     /// file out of sync.
+    ///
+    /// The new password is always prompted for interactively (see
+    /// [`PasswordManager::prompt_new_password_interactive`]): `XCP_WALLET_PASSWORD`
+    /// holds the *current* unlock password, so adopting it as the new one would
+    /// silently rotate the wallet to the same (or an unintended) value.
     pub fn change_password(&self, addresses: &AddressMap) -> Result<()> {
-        let new_password = self.password_manager.prompt_new_password()?;
+        let new_password = self.password_manager.prompt_new_password_interactive()?;
         self.write_encrypted(addresses, &new_password)?;
         self.password_manager.persist(&new_password)?;
         Ok(())
@@ -271,6 +277,18 @@ fn atomic_write(path: &Path, data: &[u8]) -> Result<()> {
     if let Err(e) = fs::rename(&tmp, path) {
         let _ = fs::remove_file(&tmp);
         return Err(e.into());
+    }
+    // Persist the rename itself. The temp file's *contents* were fsync'd above,
+    // but the directory entry that `rename` created must also reach disk, or a
+    // crash immediately after could roll the directory back to the previous
+    // `wallet.db` and lose a just-added key the caller already reported saved.
+    // Best-effort and Unix-only (a directory fsync is not portable); a failure
+    // here does not undo the successful rename.
+    #[cfg(unix)]
+    if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
+        if let Ok(dir) = fs::File::open(parent) {
+            let _ = dir.sync_all();
+        }
     }
     Ok(())
 }

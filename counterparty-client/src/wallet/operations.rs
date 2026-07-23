@@ -94,7 +94,7 @@ impl BitcoinWallet {
         };
 
         // Generate keys based on provided parameters
-        let key_data = match (private_key, mnemonic) {
+        let mut key_data = match (private_key, mnemonic) {
             (Some(pk_str), _) => keys::generate_keys_from_private_key(pk_str, self.network, &secp)?,
             (None, Some(mnemonic_str)) => keys::generate_keys_from_mnemonic(
                 mnemonic_str,
@@ -139,6 +139,12 @@ impl BitcoinWallet {
             label: final_label,
             address_type: addr_type.to_string(),
         };
+
+        // The WIF now lives in `address_info.private_key` (a zeroizing
+        // `SecretString`); wipe the raw secret still held in `key_data.private_key`
+        // (`PrivateKey`/`SecretKey` are `Copy`, not zeroize-on-drop). The mnemonic
+        // (returned below) is a separate, already-`Zeroizing` field.
+        key_data.private_key.inner.non_secure_erase();
 
         self.addresses.insert(address_str.clone(), address_info);
         self.storage.save(&self.addresses)?;

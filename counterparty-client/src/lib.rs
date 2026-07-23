@@ -13,7 +13,7 @@ use std::path::PathBuf;
 
 use std::env;
 use std::io::Write;
-use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+use termcolor::{Color, ColorSpec, StandardStream, WriteColor};
 
 // Add clap_complete for shell completion
 use clap_complete::{generate, Shell};
@@ -48,38 +48,6 @@ fn get_binary_name() -> String {
                 .to_string()
         })
         .unwrap_or_else(|| "counterparty-client".to_string())
-}
-
-/// Reject a cleartext `http://` API URL on a public network (finding H2): a
-/// network attacker could read or *alter* the composed transaction the client is
-/// about to sign. Regtest talks to localhost and is exempt (see
-/// [`AppConfig::require_https`]). Returns an error so the run aborts before any
-/// request is sent.
-fn ensure_secure_transport(config: &AppConfig) -> Result<()> {
-    if !config.require_https() {
-        return Ok(());
-    }
-    // Both the API base URL and the endpoints-manifest URL are fetched over the
-    // network, so both must be TLS on a public network (the `https_only` client
-    // would reject a cleartext one anyway, but with a less actionable error).
-    for (label, url) in [
-        ("API", config.get_api_url()),
-        ("endpoints", config.get_endpoints_url()),
-    ] {
-        // Case-insensitive: a URL scheme is case-insensitive (RFC 3986), so
-        // `HTTP://` is just as cleartext as `http://`. Only `http://` matches —
-        // `https://` lowercased does not start with `http://` (the `s` breaks it).
-        if url.to_ascii_lowercase().starts_with("http://") {
-            return Err(anyhow!(
-                "Refusing to use a cleartext http:// {label} URL for network {:?} ({}). \
-                 Amounts and addresses would be sent unencrypted and could be altered in transit. \
-                 Repoint the URL to https:// in your config, or use --regtest for local testing.",
-                config.network,
-                url
-            ));
-        }
-    }
-    Ok(())
 }
 
 // Generate default config path
@@ -524,8 +492,11 @@ fn header_message(config: &AppConfig, command_name: &str, config_path: &Path) {
     let dashes_suffix = "-".repeat(total_dashes - total_dashes / 2);
     let separator = format!("{}{}{}", dashes_prefix, command_name, dashes_suffix);
 
-    // Print the header with just two colors (no colour when piped/redirected).
-    let mut stdout = StandardStream::stdout(ColorChoice::Auto);
+    // Print the header with just two colors, and only when stdout is an
+    // interactive terminal — `stdout_color_choice()` gates on `is_terminal()`
+    // (and JSON mode), so a redirected/piped header is free of ANSI escapes
+    // instead of `ColorChoice::Auto`, which keys only off env vars.
+    let mut stdout = StandardStream::stdout(helpers::stdout_color_choice());
 
     // Define colors for keys and values
     let mut key_color = ColorSpec::new();
@@ -702,7 +673,7 @@ pub async fn run() -> Result<()> {
 
     // Cleartext-transport guard (H2): abort before any request if a public
     // network is pointed at a plain `http://` API URL.
-    ensure_secure_transport(&config)?;
+    config.ensure_secure_transport()?;
 
     // Step 6: Load endpoints
     let endpoints = api::load_or_fetch_endpoints(&config).await?;
@@ -858,33 +829,6 @@ mod tests {
         assert_eq!(network_from_args(&[s("--regtest")]), Some(Network::Regtest));
         // No network flag among unrelated args.
         assert_eq!(network_from_args(&[s("wallet"), s("list_addresses")]), None);
-    }
-
-    #[test]
-    fn ensure_secure_transport_rejects_cleartext_public_network() {
-        // Point mainnet at a cleartext URL and select it: must be refused (H2).
-        let mut config = AppConfig::new();
-        config.network_configs.insert(
-            Network::Mainnet,
-            crate::config::NetworkConfig {
-                api_url: "http://evil.example".to_string(),
-                endpoints_url: "http://evil.example/v2/routes".to_string(),
-                cache_file: PathBuf::new(),
-                data_dir: PathBuf::new(),
-            },
-        );
-        config.set_network(Network::Mainnet);
-        assert!(ensure_secure_transport(&config).is_err());
-    }
-
-    #[test]
-    fn ensure_secure_transport_allows_https_and_regtest_http() {
-        let mut config = AppConfig::new();
-        // Default mainnet endpoint is https:// -> allowed.
-        assert!(ensure_secure_transport(&config).is_ok());
-        // Regtest legitimately uses http://localhost -> exempt.
-        config.set_network(Network::Regtest);
-        assert!(ensure_secure_transport(&config).is_ok());
     }
 
     #[test]

@@ -513,9 +513,11 @@ fn signs_p2tr_key_path_input() {
     let parsed = parse_signed(&signed);
     assert!(parsed.input[0].script_sig.is_empty());
     let witness: Vec<&[u8]> = parsed.input[0].witness.iter().collect();
-    // Key-path spend: a single Schnorr signature (64 or 65 bytes).
+    // Key-path spend: a single Schnorr signature. The client fixes the sighash
+    // type to SIGHASH_DEFAULT, so it is exactly 64 bytes — a 65-byte signature
+    // would mean a stray non-default sighash byte was appended.
     assert_eq!(witness.len(), 1, "key-path witness = <schnorr sig>");
-    assert!(matches!(witness[0].len(), 64 | 65));
+    assert_eq!(witness[0].len(), 64, "SIGHASH_DEFAULT => 64-byte signature");
 }
 
 #[test]
@@ -626,7 +628,7 @@ fn signs_multi_input_p2tr_key_path() {
     for input in &parsed.input {
         let witness: Vec<&[u8]> = input.witness.iter().collect();
         assert_eq!(witness.len(), 1, "each key-path input has one Schnorr sig");
-        assert!(matches!(witness[0].len(), 64 | 65));
+        assert_eq!(witness[0].len(), 64, "SIGHASH_DEFAULT => 64-byte signature");
     }
 }
 
@@ -863,6 +865,171 @@ fn p2tr_script_path_signature_verifies_against_internal_key() {
     let msg = Message::from_digest_slice(sighash.as_ref()).unwrap();
     let sig = bitcoin::secp256k1::schnorr::Signature::from_slice(sig_bytes).unwrap();
     assert!(secp.verify_schnorr(&sig, &msg, &k.xonly).is_ok());
+}
+
+/// Independent, *cryptographic* multi-input Taproot key-path verification. The
+/// `signs_multi_input_p2tr_key_path` regression asserts only witness structure; a
+/// wrong-prevout-set bug would still produce a self-consistent (signer verifies
+/// its own sig) but on-chain-*invalid* signature that structure checks miss. This
+/// re-derives each input's BIP341 sighash over the FULL prevout set and verifies
+/// every signature against the tweaked output key.
+#[test]
+fn multi_input_p2tr_key_path_signatures_verify_against_all_prevouts() {
+    let k = test_key();
+    let secp = Secp256k1::new();
+    let spk = ScriptBuf::new_p2tr(&secp, k.xonly, None);
+    let addr = Address::from_script(&spk, NETWORK).unwrap().to_string();
+
+    let mut utxos = UTXOList::new();
+    utxos.add(UTXO::new(UTXO_AMOUNT, spk.clone()));
+    utxos.add(UTXO::new(UTXO_AMOUNT, spk.clone()));
+
+    let tx = unsigned_tx_n(2);
+    let addresses = address_map(&addr, &k.wif, "taproot", &k.public_key.to_string());
+    let signed = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap();
+    let parsed = parse_signed(&signed);
+    assert_eq!(parsed.input.len(), 2);
+
+    let prevouts = vec![
+        TxOut {
+            value: Amount::from_sat(UTXO_AMOUNT),
+            script_pubkey: spk.clone(),
+        },
+        TxOut {
+            value: Amount::from_sat(UTXO_AMOUNT),
+            script_pubkey: spk,
+        },
+    ];
+    let (output_key, _) = k.xonly.tap_tweak(&secp, None);
+    for i in 0..2 {
+        let witness: Vec<&[u8]> = parsed.input[i].witness.iter().collect();
+        assert_eq!(witness.len(), 1);
+        let sig_bytes = witness[0];
+        assert_eq!(sig_bytes.len(), 64, "SIGHASH_DEFAULT 64-byte signature");
+        let mut cache = SighashCache::new(&parsed);
+        let sighash = cache
+            .taproot_key_spend_signature_hash(i, &Prevouts::All(&prevouts), TapSighashType::Default)
+            .unwrap();
+        let msg = Message::from_digest_slice(sighash.as_ref()).unwrap();
+        let sig = bitcoin::secp256k1::schnorr::Signature::from_slice(sig_bytes).unwrap();
+        assert!(
+            secp.verify_schnorr(&sig, &msg, &output_key.to_x_only_public_key())
+                .is_ok(),
+            "input {i} signature must verify against the all-prevouts sighash"
+        );
+    }
+}
+
+/// Bitcoin consensus (BIP62) requires low-S ECDSA signatures. secp256k1's signer
+/// always normalises S, so a produced signature must already equal its low-S
+/// normalisation — assert it, so a future change that emits high-S (non-standard,
+/// relay-rejected) signatures is caught.
+#[test]
+fn ecdsa_signature_is_low_s_canonical() {
+    let k = test_key();
+    let cpk = CompressedPublicKey::from_slice(&k.public_key.to_bytes()).unwrap();
+    let spk = ScriptBuf::new_p2wpkh(&cpk.wpubkey_hash());
+    let addr = Address::from_script(&spk, NETWORK).unwrap().to_string();
+
+    let mut utxos = UTXOList::new();
+    utxos.add(UTXO::new(UTXO_AMOUNT, spk));
+    let tx = unsigned_tx();
+    let addresses = address_map(&addr, &k.wif, "bech32", &k.public_key.to_string());
+    let signed = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap();
+    let parsed = parse_signed(&signed);
+
+    let witness: Vec<&[u8]> = parsed.input[0].witness.iter().collect();
+    let sig_bytes = witness[0];
+    let sig =
+        bitcoin::secp256k1::ecdsa::Signature::from_der(&sig_bytes[..sig_bytes.len() - 1]).unwrap();
+    let mut normalized = sig;
+    normalized.normalize_s();
+    assert_eq!(sig, normalized, "ECDSA signature must be low-S (canonical)");
+}
+
+/// Uncompressed keys produce a 65-byte pubkey and a different `pubkey_hash`, so a
+/// P2PKH spend with one must stay internally consistent (the pushed pubkey is the
+/// uncompressed form and the signature verifies against it).
+#[test]
+fn signs_p2pkh_with_uncompressed_key() {
+    let secp = Secp256k1::new();
+    let sk = SecretKey::from_slice(&[0x11u8; 32]).unwrap();
+    let pk = PrivateKey {
+        compressed: false,
+        network: NETWORK.into(),
+        inner: sk,
+    };
+    let public_key = PublicKey::from_private_key(&secp, &pk);
+    assert_eq!(
+        public_key.to_bytes().len(),
+        65,
+        "uncompressed pubkey is 65 bytes"
+    );
+
+    let spk = ScriptBuf::new_p2pkh(&public_key.pubkey_hash());
+    let addr = Address::from_script(&spk, NETWORK).unwrap().to_string();
+    let mut utxos = UTXOList::new();
+    utxos.add(UTXO::new(UTXO_AMOUNT, spk.clone()));
+    let tx = unsigned_tx();
+    let addresses = address_map(&addr, &pk.to_wif(), "p2pkh", &public_key.to_string());
+    let signed = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap();
+    let parsed = parse_signed(&signed);
+
+    let pushes: Vec<Vec<u8>> = parsed.input[0]
+        .script_sig
+        .instructions()
+        .filter_map(|i| match i {
+            Ok(Instruction::PushBytes(b)) => Some(b.as_bytes().to_vec()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(pushes.len(), 2, "scriptSig = <sig> <pubkey>");
+    assert_eq!(
+        pushes[1].len(),
+        65,
+        "pushed pubkey is uncompressed (65 bytes)"
+    );
+
+    let cache = SighashCache::new(&parsed);
+    let sighash = cache
+        .legacy_signature_hash(0, &spk, EcdsaSighashType::All as u32)
+        .unwrap();
+    let msg = Message::from_digest_slice(sighash.as_ref()).unwrap();
+    let sig =
+        bitcoin::secp256k1::ecdsa::Signature::from_der(&pushes[0][..pushes[0].len() - 1]).unwrap();
+    assert!(secp.verify_ecdsa(&msg, &sig, &public_key.inner).is_ok());
+}
+
+/// The P2SH scriptPubKey only commits to `hash160(redeem)`. A hostile server
+/// could supply a P2SH-P2WPKH redeem program committing to a *different* key than
+/// the wallet's; signing it would yield a validly-signed-but-unspendable input.
+/// The signer must reject a redeem whose wrapped key is not the signing key.
+#[test]
+fn p2sh_p2wpkh_with_foreign_redeem_key_is_rejected() {
+    let k = test_key();
+    let secp = Secp256k1::new();
+    // A foreign key that the redeem's P2WPKH program commits to.
+    let foreign_sk = SecretKey::from_slice(&[0x22u8; 32]).unwrap();
+    let foreign_pk = PublicKey::from_private_key(&secp, &PrivateKey::new(foreign_sk, NETWORK));
+    let foreign_cpk = CompressedPublicKey::from_slice(&foreign_pk.to_bytes()).unwrap();
+
+    let redeem = ScriptBuf::new_p2wpkh(&foreign_cpk.wpubkey_hash());
+    let spk = ScriptBuf::new_p2sh(&redeem.script_hash());
+    let addr = Address::from_script(&spk, NETWORK).unwrap().to_string();
+
+    let mut utxo = UTXO::new(UTXO_AMOUNT, spk);
+    utxo.redeem_script = Some(redeem);
+    let mut utxos = UTXOList::new();
+    utxos.add(utxo);
+
+    let tx = unsigned_tx();
+    // The wallet key `k` would sign, but the redeem commits to `foreign` -> refuse.
+    let addresses = address_map(&addr, &k.wif, "p2sh", &k.public_key.to_string());
+    let result = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK);
+    assert!(
+        result.is_err(),
+        "a P2SH-P2WPKH redeem committing to a foreign key must be refused"
+    );
 }
 
 /// Regression for the removed absurd-fee-rate guard (M-4): a large input swept

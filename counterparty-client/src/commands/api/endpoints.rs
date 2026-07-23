@@ -47,8 +47,28 @@ fn parse_endpoints_from_response(response: Value) -> Result<HashMap<String, ApiE
         .get("result")
         .context("Response missing 'result' field")?;
 
-    serde_json::from_value(endpoints_value.clone())
-        .context("Failed to parse API endpoints from result field")
+    let mut endpoints: HashMap<String, ApiEndpoint> =
+        serde_json::from_value(endpoints_value.clone())
+            .context("Failed to parse API endpoints from result field")?;
+
+    // Route keys are appended verbatim to the configured API base URL
+    // (`format!("{api_url}{path}")`). Drop any that is not a rooted path (starts
+    // with `/`) or that smuggles a scheme/authority (`://`), so a poisoned or
+    // corrupted manifest cannot make a request target a surprising URL. Host
+    // selection always comes from config, never from the manifest.
+    let before = endpoints.len();
+    endpoints.retain(|path, _| path.starts_with('/') && !path.contains("://"));
+    let dropped = before - endpoints.len();
+    if dropped > 0 {
+        crate::helpers::print_warning(
+            &format!(
+                "Ignored {dropped} API route(s) with an unexpected path (not starting with '/') in the endpoint manifest."
+            ),
+            None,
+        );
+    }
+
+    Ok(endpoints)
 }
 
 // Saves endpoints to cache file
@@ -177,6 +197,25 @@ mod tests {
     fn parse_endpoints_from_response_errors_without_result() {
         let err = parse_endpoints_from_response(json!({"nope": 1})).unwrap_err();
         assert!(err.to_string().contains("result"), "got: {err}");
+    }
+
+    #[test]
+    fn parse_endpoints_drops_non_rooted_or_scheme_paths() {
+        // Route keys are appended to the config base URL, so a poisoned manifest
+        // path that is not a rooted `/…` path (or that carries a `://` scheme)
+        // must be dropped rather than used to target a surprising URL.
+        let body = json!({
+            "result": {
+                "/v2/blocks": {"function": "get_blocks", "description": "", "args": []},
+                "http://evil.example/x": {"function": "evil", "description": "", "args": []},
+                "no-leading-slash": {"function": "bad", "description": "", "args": []},
+            }
+        });
+        let parsed = parse_endpoints_from_response(body).unwrap();
+        assert!(parsed.contains_key("/v2/blocks"));
+        assert!(!parsed.contains_key("http://evil.example/x"));
+        assert!(!parsed.contains_key("no-leading-slash"));
+        assert_eq!(parsed.len(), 1);
     }
 
     #[test]

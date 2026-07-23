@@ -23,9 +23,12 @@ impl KeyService {
     where
         F: FnOnce(&SecretKey, &PublicKey) -> Result<R>,
     {
-        // Parse the private key inside this controlled scope
+        // Parse the private key inside this controlled scope. The parse error is
+        // deliberately *not* interpolated: it is derived from the secret WIF the
+        // user supplied, so a fixed message keeps key-shaped material out of logs
+        // and terminal scrollback.
         let mut private_key = PrivateKey::from_str(private_key_str.expose_secret())
-            .map_err(|e| WalletError::BitcoinError(format!("Invalid private key: {:?}", e)))?;
+            .map_err(|_| WalletError::BitcoinError("Invalid private key (WIF).".to_string()))?;
 
         // Re-key to the target network. This only affects WIF encoding, not the
         // secret bytes or the derived public key.

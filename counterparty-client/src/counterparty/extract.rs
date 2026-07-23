@@ -7,7 +7,8 @@
 //! safely.
 
 use bitcoin::hashes::Hash;
-use bitcoin::opcodes::all::OP_RETURN;
+use bitcoin::opcodes::all::{OP_CHECKMULTISIG, OP_CHECKSIG, OP_PUSHNUM_1, OP_RETURN};
+use bitcoin::opcodes::Opcode;
 use bitcoin::script::Instruction;
 use bitcoin::{Script, Transaction};
 
@@ -67,6 +68,73 @@ fn opreturn_single_push(script: &Script) -> Option<Vec<u8>> {
     Some(data)
 }
 
+/// The trailing opcode of a script, or `None` if the script is empty or its last
+/// instruction is a data push rather than an opcode.
+fn last_opcode(script: &Script) -> Option<Opcode> {
+    match script.instructions().last() {
+        Some(Ok(Instruction::Op(op))) => Some(op),
+        _ => None,
+    }
+}
+
+/// Whether a **non-`OP_RETURN`** output is one consensus would treat as a
+/// Counterparty *data* output: a bare pay-to-pubkey (`… OP_CHECKSIG`) or
+/// bare-multisig (`… OP_CHECKMULTISIG`) whose RC4-de-obfuscated content carries
+/// the `CNTRPRTY` prefix. This mirrors the P2PK/multisig branches of `parse_vout`
+/// (`counterparty-rs/src/indexer/bitcoin_client.rs`), where the prefix sits at
+/// index 1 (after a leading length byte), unlike the `OP_RETURN` encoding.
+///
+/// A standard destination is *not* flagged: P2WPKH/P2SH/P2WSH/P2TR do not end in
+/// `OP_CHECKSIG`/`OP_CHECKMULTISIG`, and a P2PKH (which does end in `OP_CHECKSIG`)
+/// de-obfuscates to bytes that do not carry the prefix — exactly as consensus
+/// classifies it as a destination, not data.
+fn is_extra_data_output(script: &Script, key: &[u8; 32]) -> bool {
+    let instructions: Vec<Instruction> = match script.instructions().collect::<Result<_, _>>() {
+        Ok(i) => i,
+        // An unparsable script is not something consensus reads as data.
+        Err(_) => return false,
+    };
+
+    // Extract the obfuscated candidate bytes the way consensus does.
+    let mut enc = match last_opcode(script) {
+        Some(op) if op == OP_CHECKSIG => {
+            // Consensus reads instruction index 2 as the data carrier.
+            match instructions.get(2) {
+                Some(Instruction::PushBytes(b)) => b.as_bytes().to_vec(),
+                Some(Instruction::Op(op)) if *op == OP_PUSHNUM_1 => vec![1],
+                Some(Instruction::Op(op)) => vec![op.to_u8()],
+                None => return false,
+            }
+        }
+        Some(op) if op == OP_CHECKMULTISIG => {
+            // The "pubkey" pushes carry the data; consensus drops the last one
+            // and strips each chunk's leading sign byte and trailing nonce byte.
+            let pushes: Vec<&[u8]> = instructions
+                .iter()
+                .filter_map(|i| match i {
+                    Instruction::PushBytes(b) => Some(b.as_bytes()),
+                    _ => None,
+                })
+                .collect();
+            if pushes.len() < 2 {
+                return false;
+            }
+            let mut enc = Vec::new();
+            for chunk in &pushes[..pushes.len() - 1] {
+                if chunk.len() < 2 {
+                    return false;
+                }
+                enc.extend_from_slice(&chunk[1..chunk.len() - 1]);
+            }
+            enc
+        }
+        _ => return false,
+    };
+
+    arc4::decrypt(key, &mut enc);
+    enc.len() > PREFIX.len() && enc[1..=PREFIX.len()] == *PREFIX
+}
+
 /// Extract and de-obfuscate the Counterparty message embedded in `tx`.
 pub fn extract_message(tx: &Transaction) -> Extracted {
     let Some(key) = arc4_key(tx) else {
@@ -90,6 +158,24 @@ pub fn extract_message(tx: &Transaction) -> Extracted {
             "OP_RETURN is not a single-push data output (does not match the consensus shape)",
         );
     };
+
+    // Consensus concatenates *every* data output (OP_RETURN plus any bare-P2PK /
+    // bare-multisig data output) in output order. This client only decodes the
+    // single OP_RETURN, so if the transaction hides an additional consensus data
+    // output, the message we verify is not the one consensus would parse. Refuse
+    // rather than verify a partial payload — a hostile server could otherwise
+    // pass a benign OP_RETURN past verification while a multisig output prepends
+    // an attacker sweep/send that consensus acts on.
+    if tx
+        .output
+        .iter()
+        .any(|o| is_extra_data_output(&o.script_pubkey, &key))
+    {
+        return Extracted::Unsupported(
+            "transaction carries an additional bare-multisig or pay-to-pubkey data output that \
+             consensus would combine with the OP_RETURN; refusing to verify a partial message",
+        );
+    }
 
     arc4::decrypt(&key, &mut payload);
 
@@ -202,6 +288,118 @@ mod tests {
             }],
         };
         assert!(matches!(extract_message(&tx), Extracted::Unsupported(_)));
+    }
+
+    #[test]
+    fn extra_bare_multisig_data_output_is_refused() {
+        // A benign OP_RETURN the client would "verify", plus a hidden bare-multisig
+        // data output consensus would concatenate with it. Consensus reads the
+        // first "pubkey"'s inner 31 bytes as `[len, CNTRPRTY, payload]` after RC4,
+        // so the client must refuse rather than verify only the OP_RETURN.
+        use bitcoin::blockdata::script::Builder;
+        use bitcoin::opcodes::all::{OP_CHECKMULTISIG, OP_PUSHNUM_1, OP_PUSHNUM_2};
+        use bitcoin::script::PushBytes;
+
+        let key = [0x33u8; 32];
+        let mut internal = key;
+        internal.reverse();
+        let txid = Txid::from_byte_array(internal);
+
+        let mut op_return_payload = PREFIX.to_vec();
+        op_return_payload.extend_from_slice(b"\x02benign-enhanced-send");
+        arc4::decrypt(&key, &mut op_return_payload);
+        let op_return_push = bitcoin::script::PushBytesBuf::try_from(op_return_payload).unwrap();
+
+        let hidden = b"\x04hidden-sweep";
+        let mut plain = vec![(PREFIX.len() + hidden.len()) as u8];
+        plain.extend_from_slice(PREFIX);
+        plain.extend_from_slice(hidden);
+        plain.resize(31, 0); // one multisig data chunk carries 31 bytes
+        let mut obf = plain;
+        arc4::decrypt(&key, &mut obf); // symmetric obfuscation
+
+        let mut pk1 = vec![0x02u8]; // sign byte + 31 data bytes + nonce byte
+        pk1.extend_from_slice(&obf);
+        pk1.push(0x00);
+        let pk2 = [0x02u8; 33]; // second "pubkey": no data (dropped by consensus)
+
+        let multisig = Builder::new()
+            .push_opcode(OP_PUSHNUM_1)
+            .push_slice(<&PushBytes>::try_from(pk1.as_slice()).unwrap())
+            .push_slice(<&PushBytes>::try_from(pk2.as_slice()).unwrap())
+            .push_opcode(OP_PUSHNUM_2)
+            .push_opcode(OP_CHECKMULTISIG)
+            .into_script();
+
+        let tx = Transaction {
+            version: Version::TWO,
+            lock_time: LockTime::ZERO,
+            input: vec![TxIn {
+                previous_output: OutPoint { txid, vout: 0 },
+                script_sig: ScriptBuf::new(),
+                sequence: Sequence::MAX,
+                witness: Witness::new(),
+            }],
+            output: vec![
+                TxOut {
+                    value: Amount::ZERO,
+                    script_pubkey: ScriptBuf::new_op_return(&op_return_push),
+                },
+                TxOut {
+                    value: Amount::from_sat(546),
+                    script_pubkey: multisig,
+                },
+            ],
+        };
+
+        assert!(matches!(extract_message(&tx), Extracted::Unsupported(_)));
+    }
+
+    #[test]
+    fn normal_p2pkh_destination_alongside_op_return_still_extracts() {
+        // A P2PKH output ends in OP_CHECKSIG (like the consensus data-P2PK path),
+        // but its 20-byte hash does not de-obfuscate to the CNTRPRTY prefix, so it
+        // must not be mistaken for a hidden data output (no false positive).
+        use bitcoin::hashes::Hash as _;
+
+        let key = [0x44u8; 32];
+        let mut internal = key;
+        internal.reverse();
+        let txid = Txid::from_byte_array(internal);
+
+        let msg = b"\x02real-message";
+        let mut payload = PREFIX.to_vec();
+        payload.extend_from_slice(msg);
+        arc4::decrypt(&key, &mut payload);
+        let push = bitcoin::script::PushBytesBuf::try_from(payload).unwrap();
+
+        let p2pkh = ScriptBuf::new_p2pkh(&bitcoin::PubkeyHash::from_byte_array([0x07; 20]));
+
+        let tx = Transaction {
+            version: Version::TWO,
+            lock_time: LockTime::ZERO,
+            input: vec![TxIn {
+                previous_output: OutPoint { txid, vout: 0 },
+                script_sig: ScriptBuf::new(),
+                sequence: Sequence::MAX,
+                witness: Witness::new(),
+            }],
+            output: vec![
+                TxOut {
+                    value: Amount::from_sat(546),
+                    script_pubkey: p2pkh,
+                },
+                TxOut {
+                    value: Amount::ZERO,
+                    script_pubkey: ScriptBuf::new_op_return(&push),
+                },
+            ],
+        };
+
+        match extract_message(&tx) {
+            Extracted::Message(m) => assert_eq!(m, msg),
+            Extracted::Unsupported(r) => panic!("P2PKH destination wrongly flagged: {r}"),
+        }
     }
 
     #[test]

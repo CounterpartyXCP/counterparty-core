@@ -46,6 +46,12 @@ wildcards = "deny"
 # `default-features = false` + `rustls` in Cargo.toml) is otherwise only
 # enforced by feature selection, which a future dependency bump could silently
 # undo. Fail the build outright if any of these ever re-enter the tree.
+#
+# Note: this bans *system* OpenSSL / native-tls, not all C crypto. The active
+# TLS backend is rustls, whose default provider here is `aws-lc-rs` (a vendored,
+# statically-linked AWS-LC — C plus some assembly). That is intentional (no
+# dependency on the host's OpenSSL, no `native-tls`), but it is not a
+# pure-Rust crypto stack; do not read the ban list as such.
 deny = [
     { name = "openssl" },
     { name = "openssl-sys" },

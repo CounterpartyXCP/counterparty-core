@@ -25,7 +25,7 @@ pub fn json_output() -> bool {
 
 /// Colour choice for stdout: never colour in JSON mode or when stdout is not a
 /// terminal (piped/redirected), so captured output is free of ANSI escapes.
-fn stdout_color_choice() -> ColorChoice {
+pub(crate) fn stdout_color_choice() -> ColorChoice {
     if json_output() || !std::io::stdout().is_terminal() {
         ColorChoice::Never
     } else {

@@ -78,6 +78,12 @@ const KNOWN_QUANTITY_FIELDS: &[&str] = &[
     // UTXO an `attach`/`movetoutxo` targets is otherwise silently unconverted
     // with no warning at all.
     "utxo_value",
+    // `mpma` sends a comma-separated `quantities` list, converted per-element by
+    // each asset's divisibility (see `convert_mpma_quantities`). `"quantities"`
+    // (plural) contains none of the AMOUNT_ROOTS, so it is listed here so that
+    // any *other* transaction that ever grows a `quantities` field still trips
+    // the safety-net warning instead of a silent satoshi pass-through.
+    "quantities",
 ];
 
 /// Whether a parameter name looks like a divisibility-governed amount, used only
@@ -171,6 +177,18 @@ pub async fn normalize_quantities(
     let mut divisibility_cache: HashMap<String, Option<bool>> = HashMap::new();
 
     for (name, value) in params.iter() {
+        // `mpma` carries comma-separated `assets` and `quantities` lists whose
+        // i-th quantity is denominated in the i-th asset (each with its own
+        // divisibility), so it needs per-element conversion rather than the
+        // scalar `denomination` dispatch below. Handle it explicitly: `quantities`
+        // (plural) matches no `denomination` arm, so without this it would be sent
+        // as raw satoshis — a silent 1e8 error for a divisible asset.
+        if transaction_name == "mpma" && name == "quantities" {
+            let converted =
+                convert_mpma_quantities(config, params, value, &mut divisibility_cache).await?;
+            conversions.push((name.clone(), converted));
+            continue;
+        }
         match denomination(transaction_name, name) {
             Some(denom) => {
                 let divisible = resolve_divisibility(
@@ -205,6 +223,50 @@ pub async fn normalize_quantities(
     }
 
     Ok(())
+}
+
+/// Convert an `mpma` `quantities` list (comma-separated satoshi amounts) from
+/// human-readable amounts, element by element, using the divisibility of the
+/// corresponding entry in the `assets` list. Mirrors `compose_mpma`, which zips
+/// `assets`/`destinations`/`quantities` and requires equal lengths. Each asset's
+/// divisibility is resolved through the same per-call cache as the scalar path,
+/// so a repeated asset is looked up once.
+async fn convert_mpma_quantities(
+    config: &AppConfig,
+    params: &HashMap<String, String>,
+    quantities: &str,
+    cache: &mut HashMap<String, Option<bool>>,
+) -> Result<String> {
+    let assets = params.get("assets").ok_or_else(|| {
+        anyhow!("mpma needs '--assets' to convert '--quantities' by each asset's divisibility")
+    })?;
+    let asset_list: Vec<&str> = assets.split(',').map(str::trim).collect();
+    let quantity_list: Vec<&str> = quantities.split(',').map(str::trim).collect();
+    if asset_list.len() != quantity_list.len() {
+        return Err(anyhow!(
+            "mpma '--assets' ({}) and '--quantities' ({}) must have the same number of \
+             comma-separated entries",
+            asset_list.len(),
+            quantity_list.len()
+        ));
+    }
+
+    let mut converted = Vec::with_capacity(quantity_list.len());
+    for (asset, quantity) in asset_list.iter().zip(quantity_list.iter()) {
+        let divisible = fetch_divisible_cached(config, asset, cache)
+            .await?
+            .ok_or_else(|| {
+                anyhow!(
+                    "asset '{asset}' was not found, so its divisibility is unknown. If you \
+                     already know the amounts in satoshis, use 'api compose_mpma' instead."
+                )
+            })?;
+        converted.push(
+            convert_quantity(quantity, divisible)
+                .map_err(|e| anyhow!("Invalid quantity '{quantity}' for asset '{asset}': {e}"))?,
+        );
+    }
+    Ok(converted.join(","))
 }
 
 /// Resolve whether the asset governing `denom` is divisible, memoizing the
@@ -966,6 +1028,52 @@ mod tests {
 
         assert_eq!(params.get("hard_cap").unwrap(), "1000");
         assert_eq!(params.get("max_mint_per_tx").unwrap(), "10");
+    }
+
+    #[tokio::test]
+    async fn normalize_quantities_mpma_converts_each_quantity_by_its_asset() {
+        // MEDIUM regression: `mpma`'s `quantities` (plural) matched no denomination
+        // and no safety-net root, so a human `5,10` was sent as `5,10` *satoshis*.
+        // Each element must now be scaled by the divisibility of the matching
+        // `assets` entry: XCP (divisible) -> 5 -> 500000000; RAREPEPE (indivisible)
+        // -> 10 stays 10.
+        let mut server = mockito::Server::new_async().await;
+        let _rare = server
+            .mock("GET", "/v2/assets/RAREPEPE")
+            .with_status(200)
+            .with_body(r#"{"result":{"divisible":false}}"#)
+            .create_async()
+            .await;
+        let config = config_for(&server);
+        let mut params = HashMap::new();
+        params.insert("assets".to_string(), "XCP,RAREPEPE".to_string());
+        params.insert(
+            "destinations".to_string(),
+            "bcrt1qaaa,bcrt1qbbb".to_string(),
+        );
+        params.insert("quantities".to_string(), "5,10".to_string());
+
+        normalize_quantities(&config, "mpma", &mut params)
+            .await
+            .unwrap();
+
+        assert_eq!(params.get("quantities").unwrap(), "500000000,10");
+        // The other list params are untouched.
+        assert_eq!(params.get("assets").unwrap(), "XCP,RAREPEPE");
+    }
+
+    #[tokio::test]
+    async fn normalize_quantities_mpma_rejects_mismatched_list_lengths() {
+        // Guard the zip: unequal `assets`/`quantities` counts must fail fast with a
+        // clear message rather than convert a truncated/misaligned list.
+        let config = AppConfig::new();
+        let mut params = HashMap::new();
+        params.insert("assets".to_string(), "XCP,XCP".to_string());
+        params.insert("quantities".to_string(), "5".to_string());
+        let err = normalize_quantities(&config, "mpma", &mut params)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("same number"), "got: {err}");
     }
 
     #[tokio::test]

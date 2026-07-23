@@ -924,11 +924,12 @@ pub async fn handle_transaction_command(
 
     // Ask for confirmation before broadcasting. `--yes` auto-confirms for
     // automation / CI, but ONLY for a transaction the client could fully verify
-    // (see `VerifyOutcome::may_auto_confirm`). A type it cannot decode, or one
-    // whose asset it could not check offline, is vouched for solely by the server
-    // and must never be broadcast without a human looking at the outputs —
-    // `--yes` is deliberately overridden here so a hostile server cannot slip an
-    // asset swap or a siphon output past unattended automation.
+    // (see `VerifyOutcome::may_auto_confirm`). A type it cannot decode, an asset
+    // it could not check offline, or a quantity whose 1e8 decimal scale rests on
+    // the server's divisibility answer is vouched for (in part) by the server and
+    // must never be broadcast without a human looking at the outputs — `--yes` is
+    // deliberately overridden here so a hostile server cannot slip an asset swap,
+    // a 1e8 over-send, or a siphon output past unattended automation.
     let yes = sub_matches.get_flag("yes");
     let skip_confirm = yes && verify_outcome.may_auto_confirm() && fee_conclusive;
     if !skip_confirm {
@@ -973,9 +974,12 @@ enum VerifyOutcome {
     Verified,
     /// Matched, and the only field taken on trust is the *decimal scale* of the
     /// quantity (the server's reported divisibility for the asset). The asset,
-    /// destination and BTC routing were all independently checked, so a hostile
-    /// server cannot substitute value here — `--yes` may still auto-confirm, but
-    /// the user is told what was trusted.
+    /// destination and BTC routing were all independently checked, but the
+    /// quantity's **magnitude** still rests on the server: a lying `divisible`
+    /// flag scales the amount by 1e8 and would still "match" (both sides use the
+    /// same server-reported divisibility). Because that decimal scale *is* value,
+    /// `--yes` MUST NOT skip the human review for this outcome — the user has to
+    /// confirm the amount is what they intended.
     PartiallyVerified,
     /// Destination, quantity and BTC routing matched, but the *asset* could not be
     /// resolved offline (a sub-asset longname or non-standard name), so it was not
@@ -990,16 +994,17 @@ enum VerifyOutcome {
 }
 
 impl VerifyOutcome {
-    /// Whether `--yes` may skip the human confirmation before broadcasting. Only
-    /// a fully [`Verified`](Self::Verified) transaction, or one whose *only*
-    /// unchecked aspect is the server-reported decimal scale of the quantity
-    /// ([`PartiallyVerified`](Self::PartiallyVerified)), qualifies. An unchecked
-    /// asset ([`AssetUnverified`](Self::AssetUnverified)) or an undecodable type
-    /// ([`Unverified`](Self::Unverified)) always requires a human to look at the
-    /// outputs, so a hostile server cannot slip an asset swap or a siphon output
-    /// past unattended automation.
+    /// Whether `--yes` may skip the human confirmation before broadcasting. ONLY
+    /// a fully [`Verified`](Self::Verified) transaction qualifies. Every other
+    /// outcome leaves at least one value-bearing aspect on the server's word — an
+    /// unchecked asset ([`AssetUnverified`](Self::AssetUnverified)); the quantity's
+    /// server-reported decimal scale, a 1e8 magnitude the client cannot check
+    /// offline ([`PartiallyVerified`](Self::PartiallyVerified)); or an undecodable
+    /// type ([`Unverified`](Self::Unverified)) — so a human must look at the
+    /// outputs, and a hostile server cannot slip an asset swap, a 1e8 over-send, or
+    /// a siphon output past unattended automation.
     fn may_auto_confirm(self) -> bool {
-        matches!(self, Self::Verified | Self::PartiallyVerified)
+        matches!(self, Self::Verified)
     }
 }
 
@@ -2317,6 +2322,10 @@ mod tests {
         let requested = [
             ("asset".to_string(), asset.to_string()),
             ("destination".to_string(), destination.to_string()),
+            // The real compose path always supplies the funding source, and the
+            // BTC-flow check fails closed without it. These fixtures use txs with
+            // no BTC outputs (or none at all), so any source verifies.
+            ("address".to_string(), wpkh_address(0x33).to_string()),
         ]
         .into_iter()
         .collect();
@@ -2471,13 +2480,14 @@ mod tests {
     }
 
     #[test]
-    fn only_verified_and_quantity_scale_partial_auto_confirm() {
-        // B3: the load-bearing rule for the `--yes` gate. Only a full match, or a
-        // match whose *only* trusted aspect is the quantity's decimal scale, may
-        // skip the human confirmation; an unchecked asset or an undecodable type
-        // must always be reviewed.
+    fn only_fully_verified_may_auto_confirm() {
+        // B3: the load-bearing rule for the `--yes` gate. ONLY a full match may
+        // skip the human confirmation. Every partial outcome leaves a value-bearing
+        // aspect on the server's word — an unchecked asset, the quantity's
+        // server-reported decimal scale (a possible 1e8 magnitude error), or an
+        // undecodable type — so all must be reviewed.
         assert!(VerifyOutcome::Verified.may_auto_confirm());
-        assert!(VerifyOutcome::PartiallyVerified.may_auto_confirm());
+        assert!(!VerifyOutcome::PartiallyVerified.may_auto_confirm());
         assert!(!VerifyOutcome::AssetUnverified.may_auto_confirm());
         assert!(!VerifyOutcome::Unverified.may_auto_confirm());
     }

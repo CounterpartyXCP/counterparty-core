@@ -148,6 +148,41 @@ pub(crate) fn push_help_note(help: &mut String, note: &str) {
     }
 }
 
+/// Long flags the top-level CLI reserves (its `.global(true)` flags, plus clap's
+/// auto-generated `help`/`version`). A manifest arg whose name collides with one
+/// of these would define a conflicting `--<flag>` on a subcommand that already
+/// inherits the global, which clap rejects when the whole command tree is built
+/// (a panic in debug, a hard error in release) — bricking *every* invocation
+/// until the endpoint cache is refreshed. The endpoint manifest is fetched from
+/// the API server (or read from a locally-writable cache), i.e. not fully
+/// trusted, so such a name is skipped rather than leaked into clap.
+const RESERVED_LONG_FLAGS: &[&str] = &[
+    "help",
+    "version",
+    "config-file",
+    "mainnet",
+    "signet",
+    "testnet4",
+    "regtest",
+    "json",
+    "update-cache",
+];
+
+/// Whether a manifest-supplied argument name is safe to register as a clap
+/// `--long` flag. Rejects an empty or over-long name, a collision with a
+/// [`RESERVED_LONG_FLAGS`] entry, and any name that is not a conventional long
+/// flag (ASCII alphanumerics plus `-`/`_`, not starting with `-`) — all shapes a
+/// hostile or corrupted manifest could otherwise use to brick command building.
+fn is_valid_arg_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 64
+        && !name.starts_with('-')
+        && !RESERVED_LONG_FLAGS.contains(&name)
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
 // Adds an argument to a command with unique internal ID to prevent name conflicts
 fn add_command_argument(
     cmd: Command,
@@ -156,6 +191,13 @@ fn add_command_argument(
     command_name: &str,
     used_long_names: &mut HashSet<String>,
 ) -> Command {
+    // Skip an unsafe manifest arg name rather than let it brick command building
+    // (see `is_valid_arg_name`). Skipping only drops that one CLI flag; the
+    // command — and every other invocation — keeps working.
+    if !is_valid_arg_name(&arg.name) {
+        return cmd;
+    }
+
     // Skip this argument if the long name is already used
     if used_long_names.contains(&arg.name) {
         return cmd;
@@ -381,6 +423,50 @@ mod tests {
     fn find_matching_endpoint_errors_on_unknown() {
         let endpoints: HashMap<String, ApiEndpoint> = HashMap::new();
         assert!(find_matching_endpoint(&endpoints, "nope").is_err());
+    }
+
+    #[test]
+    fn is_valid_arg_name_accepts_real_params_and_rejects_reserved_or_malformed() {
+        // Real compose parameter names pass.
+        assert!(is_valid_arg_name("asset"));
+        assert!(is_valid_arg_name("give_quantity"));
+        assert!(is_valid_arg_name("quantity_by_price"));
+        // Reserved global / clap-auto flags are rejected.
+        for reserved in [
+            "json",
+            "mainnet",
+            "regtest",
+            "config-file",
+            "help",
+            "version",
+        ] {
+            assert!(!is_valid_arg_name(reserved), "{reserved} must be reserved");
+        }
+        // Malformed / injection-ish names are rejected.
+        assert!(!is_valid_arg_name(""));
+        assert!(!is_valid_arg_name("--json"));
+        assert!(!is_valid_arg_name("bad name"));
+        assert!(!is_valid_arg_name("weird=val"));
+        assert!(!is_valid_arg_name(&"x".repeat(65)));
+    }
+
+    #[test]
+    fn add_subcommand_skips_a_manifest_arg_colliding_with_a_global_flag() {
+        // A hostile/corrupted manifest naming an arg `json` (a global flag) must
+        // not reach clap, or building the command tree would conflict and brick
+        // every invocation. The colliding arg is dropped; the safe one stays.
+        let ep = endpoint("compose_send", &["json", "asset"]);
+        let cmd = add_subcommand(Command::new("api"), "compose_send".to_string(), ep);
+        let sub = cmd
+            .get_subcommands()
+            .find(|c| c.get_name() == "compose_send")
+            .expect("subcommand built");
+        let longs: Vec<&str> = sub.get_arguments().filter_map(|a| a.get_long()).collect();
+        assert!(
+            !longs.contains(&"json"),
+            "reserved flag must be skipped: {longs:?}"
+        );
+        assert!(longs.contains(&"asset"), "valid arg must remain: {longs:?}");
     }
 
     #[test]

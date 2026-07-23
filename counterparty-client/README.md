@@ -107,8 +107,10 @@ a `sweep` requires an explicit `--flags` so its balance/ownership scope is alway
 verified. If a `send`/`enhanced_send`/`sweep` comes back in a form the client
 cannot decode, that is **also** refused (fail-closed) — `--yes` does not override
 it. `--yes` likewise never auto-confirms a transaction the client could not fully
-verify (an unresolvable asset name, or a fee it could not bound because the inputs
-are legacy or under-reported); it prints a warning and still asks you to confirm.
+verify — an unresolvable asset name, a **quantity whose decimal scale rests on the
+server's reported divisibility** for a non-BTC/XCP asset, or a fee it could not
+bound because the inputs are legacy or under-reported; it prints a warning and
+still asks you to confirm.
 
 Some things still rest on the server and are called out at run time:
 
@@ -121,7 +123,9 @@ Some things still rest on the server and are called out at run time:
   explicitly (destination, quantity and BTC routing are still verified).
 - **Divisibility** is looked up from the server, and human `--quantity` conversion
   depends on it, so a server that lies about an asset's divisibility could mis-size
-  the amount — always to *your* requested destination, never to a third party.
+  the amount (by a factor of 1e8) — always to *your* requested destination, never
+  to a third party. Because that magnitude rests on the server, `--yes` will **not**
+  auto-confirm such a transfer: the client shows the amount and asks you to confirm.
 - **Legacy (P2PKH) inputs**: the legacy signature does not commit the input amount,
   so the displayed fee relies on the server-reported input values for those inputs.
   Prefer bech32/taproot addresses, whose signatures commit the amount.

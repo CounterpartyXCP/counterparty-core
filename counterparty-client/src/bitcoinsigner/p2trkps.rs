@@ -69,7 +69,7 @@ fn compute_signature(
     // wipe that untweaked copy below; the helper wipes the signing copy.
     let mut keypair = Keypair::from_secret_key(secp, secret_key);
     let tweaked_keypair = keypair.tap_tweak(secp, None);
-    let signing_keypair = tweaked_keypair.to_keypair();
+    let mut signing_keypair = tweaked_keypair.to_keypair();
     let (output_key, _) = tweaked_keypair.public_parts();
 
     // Sign (with aux-rand), verify against the tweaked output key, and wipe the
@@ -82,10 +82,14 @@ fn compute_signature(
         sighash_type,
     );
 
-    // Best-effort wipe of the remaining local secret copy (the untweaked
-    // keypair). secp256k1's `Keypair` is `Copy` and not zeroize-on-drop, so this
-    // clears the stack copies we hold; transient copies inside signing are out
-    // of reach.
+    // Best-effort wipe of the local secret copies. secp256k1's `Keypair` is `Copy`
+    // and not zeroize-on-drop, so `signing_keypair` (passed to the helper by
+    // value, which wiped only its own copy) and the untweaked `keypair` both still
+    // hold secret bytes here — wipe them. The tweaked-secret bytes inside
+    // `tweaked_keypair` itself are unreachable: `TweakedKeypair` exposes no wipe
+    // and only hands out fresh `Copy` keypairs, so this clears every copy we can
+    // name.
+    signing_keypair.non_secure_erase();
     keypair.non_secure_erase();
 
     signature

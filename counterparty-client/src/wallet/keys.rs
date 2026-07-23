@@ -48,8 +48,11 @@ pub fn generate_keys_from_private_key(
     network: Network,
     secp: &Secp256k1<All>,
 ) -> Result<KeyData> {
+    // The parse error is derived from the secret WIF the user supplied, so use a
+    // fixed message rather than interpolate it (keeps key-shaped bytes out of
+    // logs / terminal scrollback).
     let pk = PrivateKey::from_str(pk_str)
-        .map_err(|e| WalletError::BitcoinError(format!("Invalid private key: {}", e)))?;
+        .map_err(|_| WalletError::BitcoinError("Invalid private key (WIF).".to_string()))?;
 
     // Create a new private key with the correct network
     let pk = PrivateKey {
@@ -154,10 +157,10 @@ fn derive_key_pair(
     let path = DerivationPath::from_str(derivation_path)
         .map_err(|e| WalletError::BitcoinError(format!("Invalid derivation path: {}", e)))?;
 
-    let master_key = Xpriv::new_master(network, seed)
+    let mut master_key = Xpriv::new_master(network, seed)
         .map_err(|e| WalletError::BitcoinError(format!("Failed to generate master key: {}", e)))?;
 
-    let derived_key = master_key
+    let mut derived_key = master_key
         .derive_priv(secp, &path)
         .map_err(|e| WalletError::BitcoinError(format!("Failed to derive private key: {}", e)))?;
 
@@ -168,6 +171,13 @@ fn derive_key_pair(
     };
 
     let public_key = PublicKey::from_private_key(secp, &private_key);
+
+    // Best-effort wipe of the intermediate extended-key secrets: `Xpriv` holds a
+    // `secp256k1::SecretKey`, which is `Copy` and not zeroize-on-drop, so the raw
+    // bytes would otherwise linger after this function returns. The derived secret
+    // deliberately lives on — copied into `private_key`, the caller's return value.
+    master_key.private_key.non_secure_erase();
+    derived_key.private_key.non_secure_erase();
 
     Ok((private_key, public_key))
 }

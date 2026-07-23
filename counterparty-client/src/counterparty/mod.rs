@@ -16,6 +16,14 @@
 //!
 //! ## Scope and safe degradation
 //!
+//! This layer verifies *which* addresses the transaction pays and *what* the
+//! payload encodes; it does **not** bound *how much* BTC leaves as miner fee. A
+//! [`Verification::Match`] therefore only rules out a wrong destination/asset/
+//! quantity and a diverted BTC output — it is safe against value theft only in
+//! combination with the caller's absolute miner-fee cap
+//! (`commands::wallet::transaction::ensure_fee_within_limit`), which bounds a
+//! hostile server routing the balance to fees.
+//!
 //! Only the transfer message types where a tampered payload is most dangerous
 //! are decoded here: classic `send` (0), `enhanced_send` (2) and `sweep` (4).
 //! Every other transaction type, and any encoding this module does not handle
@@ -171,6 +179,12 @@ fn unpack_message_type(message: &[u8]) -> Option<(u32, &[u8])> {
 /// is algorithmic, the resulting check does not depend on (and cannot be spoofed
 /// by) the API server.
 pub fn asset_id_for_name(name: &str) -> Option<u64> {
+    // Lower bound of the numeric-asset id range (`A<n>`); named assets live
+    // strictly below it. Mirrors `generate_asset_id`'s `26**12 + 1 <= id`.
+    const NUMERIC_ASSET_MIN: u64 = 26_u64.pow(12) + 1;
+    // `generate_asset_id`'s `assert asset_id >= 26**3` for base-26 named assets.
+    const NAMED_ASSET_MIN: u64 = 26_u64.pow(3);
+
     match name {
         "BTC" => return Some(BTC_ASSET_ID),
         "XCP" => return Some(XCP_ASSET_ID),
@@ -184,9 +198,12 @@ pub fn asset_id_for_name(name: &str) -> Option<u64> {
 
     let bytes = name.as_bytes();
 
-    // Numeric asset name: `A` followed by decimal digits.
+    // Numeric asset name: `A` followed by decimal digits. Only ids in
+    // `[26^12 + 1, u64::MAX]` are valid — consensus rejects anything smaller, so
+    // resolving it would compute a *wrong* offline anchor (e.g. `A5` -> 5).
     if bytes.first() == Some(&b'A') {
-        return name[1..].parse::<u64>().ok();
+        let n = name[1..].parse::<u64>().ok()?;
+        return (n >= NUMERIC_ASSET_MIN).then_some(n);
     }
 
     // Base-26 named asset. Standard names are 4–12 characters of A–Z.
@@ -201,7 +218,10 @@ pub fn asset_id_for_name(name: &str) -> Option<u64> {
         };
         n = n.checked_mul(26)?.checked_add(digit)?;
     }
-    Some(n)
+    // Faithful to `generate_asset_id`: a base-26 id is in `[26^3, 26^12)`.
+    (NAMED_ASSET_MIN..NUMERIC_ASSET_MIN)
+        .contains(&n)
+        .then_some(n)
 }
 
 /// Test-only builder: a composed-transaction hex carrying an `enhanced_send` to
@@ -676,6 +696,21 @@ mod tests {
         assert_eq!(asset_id_for_name("AB"), None); // too short for base-26
     }
 
+    #[test]
+    fn asset_id_rejects_out_of_range_numeric_names() {
+        // `generate_asset_id` only accepts numeric ids in [26^12 + 1, u64::MAX];
+        // a smaller `A<n>` is not a valid asset, so it must not resolve to a wrong
+        // offline anchor (previously `A5` -> Some(5)).
+        assert_eq!(asset_id_for_name("A5"), None);
+        assert_eq!(asset_id_for_name("A100"), None);
+        assert_eq!(asset_id_for_name("A95428956661682176"), None); // 26^12, one below min
+                                                                   // The smallest valid numeric id (26^12 + 1) still resolves.
+        assert_eq!(
+            asset_id_for_name("A95428956661682177"),
+            Some(95428956661682177)
+        );
+    }
+
     // ---- full path: verify_composed_transaction ----
 
     fn wpkh_addr(seed: u8) -> Address {
@@ -686,11 +721,16 @@ mod tests {
     #[test]
     fn verifies_matching_enhanced_send_end_to_end() {
         let dest = wpkh_addr(0x11);
+        let source = wpkh_addr(0x33);
         let hex = build_test_enhanced_send_tx_hex([0x11; 32], 7, 2500, &dest);
         let intent = Intent {
             asset_id: Some(7),
             quantity: Some(2500),
             destination: Some(dest.to_string()),
+            // The BTC-flow check now fails closed without a source, so supply it
+            // (the wallet path always does); the enhanced_send tx has no BTC
+            // outputs, so any source verifies.
+            source: Some(source.to_string()),
             ..Default::default()
         };
         assert_eq!(

@@ -11,11 +11,6 @@ concurrency:
 jobs:
   Cargo:
     runs-on: ubuntu-latest
-    env:
-      # Exposed as a job-level env so the coverage-upload step can be skipped when
-      # it is absent (e.g. a fork), instead of coupling the whole fmt/clippy/test
-      # job to Codecov availability via `fail_ci_if_error`.
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -53,13 +48,30 @@ jobs:
           cargo llvm-cov --lcov --output-path lcov.info \
             --ignore-filename-regex '(src/lib\.rs$|src/bin/|tests\.rs$)'
 
+      # Determine Codecov availability without exposing the token to the
+      # dependency-heavy build/test steps above: a malicious build script in the
+      # crate tree could read a job-level secret while `cargo llvm-cov` runs. Only
+      # this trivial check and the upload step below ever see the token.
+      - name: Check for Codecov token
+        id: codecov_token
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          if [ -n "$CODECOV_TOKEN" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Upload client coverage to Codecov
         # Skip when no token is configured (e.g. a fork), so the core job is not
         # failed by a Codecov upload it could never authenticate. When the token
         # IS present, `fail_ci_if_error` still guards against a silently-dropped
         # report (the coverage floors in codecov.yml only bite if it lands).
-        if: ${{ env.CODECOV_TOKEN != '' }}
+        if: ${{ steps.codecov_token.outputs.present == 'true' }}
         uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           token: ${{ env.CODECOV_TOKEN }}
           slug: CounterpartyXCP/counterparty-core

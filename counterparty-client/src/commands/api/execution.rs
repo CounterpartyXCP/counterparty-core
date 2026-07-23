@@ -69,25 +69,49 @@ async fn execute_api_command(
     let api_path = build_api_path(path, endpoint, &mut params);
 
     // Execute API request
-    let result = perform_api_request(config, &api_path, &params).await?;
+    let (result, status) = perform_api_request_with_status(config, &api_path, &params).await?;
 
     // Output result
     helpers::print_colored_json(&result)?;
 
-    // Reflect an API-level error in the process exit code so scripts can detect it.
-    if result.get("error").is_some() {
-        return Err(anyhow!("API returned an error"));
+    // Reflect an API-level error in the process exit code so scripts can detect
+    // it, with an actionable message (e.g. insufficient BTC) rather than a raw
+    // internal string.
+    if let Some(error) = result.get("error") {
+        return Err(friendly_api_error(error));
+    }
+    // An HTTP error status with no `error` field in the body (a proxy 502, a bare
+    // 500, …) must still fail the process, not exit 0 with only a warning.
+    if !status.is_success() {
+        return Err(anyhow!(
+            "API request to {command} failed with HTTP {status} and no error field in the response body"
+        ));
     }
 
     Ok(())
 }
 
-// Performs the API request and returns the result
+// Performs the API request and returns the parsed body, discarding the HTTP
+// status. Callers that must react to the status (e.g. surface a bare HTTP error
+// in the exit code) use [`perform_api_request_with_status`] instead.
 pub async fn perform_api_request(
     config: &AppConfig,
     api_path: &str,
     params: &HashMap<String, String>,
 ) -> Result<Value> {
+    let (result, _status) = perform_api_request_with_status(config, api_path, params).await?;
+    Ok(result)
+}
+
+// Performs the API request and returns the parsed body together with the HTTP
+// status, so the caller can distinguish an application-level `error` payload
+// (usually HTTP 200) from a bare transport/proxy failure (a non-2xx status with
+// no `error` field) and fail the process for both.
+pub async fn perform_api_request_with_status(
+    config: &AppConfig,
+    api_path: &str,
+    params: &HashMap<String, String>,
+) -> Result<(Value, StatusCode)> {
     // Get active network API URL
     let api_url = config.get_api_url();
     let full_url = format!("{}{}", api_url, api_path);
@@ -111,12 +135,7 @@ pub async fn perform_api_request(
         .with_context(|| format!("Failed to read response body from {}", full_url))?;
 
     let result = parse_json_body(&body, status, &full_url)?;
-
-    if !status.is_success() {
-        helpers::print_error("API request failed with status:", Some(&status.to_string()));
-    }
-
-    Ok(result)
+    Ok((result, status))
 }
 
 // Sends an API request, mapping connection/timeout failures to actionable messages.
@@ -420,6 +439,35 @@ mod tests {
             .try_get_matches_from(["api", "get_execerr", "--asset", "XCP"])
             .unwrap();
         // An `error` payload must surface as a non-Ok result for scripts.
+        assert!(execute_command(&config, &endpoints, &matches)
+            .await
+            .is_err());
+    }
+
+    #[tokio::test]
+    async fn execute_command_fails_on_http_error_without_error_field() {
+        // A bare HTTP 500 whose JSON body has no `error` key must still fail the
+        // process (exit non-zero), not print a warning and exit 0.
+        let mut server = mockito::Server::new_async().await;
+        let _m = server
+            .mock("GET", "/v2/execbad/XCP")
+            .with_status(500)
+            .match_query(mockito::Matcher::Any)
+            .with_body(r#"{"result":null}"#)
+            .create_async()
+            .await;
+
+        let config = config_for(&server);
+        let mut endpoints = HashMap::new();
+        endpoints.insert(
+            "/v2/execbad/<asset>".to_string(),
+            endpoint("get_execbad", &["asset"]),
+        );
+
+        let cmd = crate::api::commands::build_command(&endpoints);
+        let matches = cmd
+            .try_get_matches_from(["api", "get_execbad", "--asset", "XCP"])
+            .unwrap();
         assert!(execute_command(&config, &endpoints, &matches)
             .await
             .is_err());

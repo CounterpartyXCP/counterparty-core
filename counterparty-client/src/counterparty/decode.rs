@@ -159,8 +159,13 @@ pub fn verify_classic_send(
 /// `allow_destination_output` is set, the requested destination — nothing to a
 /// third party. A matching Counterparty payload (asset/quantity/destination) does
 /// **not** by itself stop a hostile server from routing the transaction's change
-/// to an attacker output; this is the check that does. Skipped when the source is
-/// unknown (the wallet path always supplies it).
+/// to an attacker output; this is the check that does.
+///
+/// When the source is unknown the change/siphon distinction cannot be made, so
+/// this **fails closed** with [`Verification::Unverifiable`] rather than passing
+/// — the caller then refuses a verifiable-type command (or requires explicit
+/// confirmation) instead of silently trusting the BTC routing. The wallet path
+/// always supplies the source, so this only guards a caller that forgot to.
 ///
 /// `allow_destination_output` is `true` only for transfers that legitimately pay
 /// the destination in BTC — a classic `send` (its dust destination output) and a
@@ -176,7 +181,9 @@ pub fn verify_btc_recipients(
     allow_destination_output: bool,
 ) -> Verification {
     let Some(source) = intent.source.as_ref() else {
-        return Verification::Match;
+        return Verification::Unverifiable {
+            reason: "cannot verify BTC routing: the funding source address is unknown".to_string(),
+        };
     };
     let source = normalize_address(source, network);
     let destination = intent
@@ -871,14 +878,16 @@ mod tests {
     }
 
     #[test]
-    fn btc_recipients_skipped_when_source_unknown() {
-        // Without a source the change/siphon distinction can't be made; the check
-        // is skipped (the wallet path always supplies the source).
+    fn btc_recipients_fail_closed_when_source_unknown() {
+        // Without a source the change/siphon distinction can't be made, so the
+        // check fails *closed* (Unverifiable) rather than passing — otherwise a
+        // caller that forgot the source would silently disable BTC-flow
+        // protection and wave an attacker-paying output through.
         let attacker = wpkh_addr(0x44);
         let tx = tx_with_outputs(vec![value_output(&attacker, 9000)]);
-        assert_eq!(
+        assert!(matches!(
             verify_btc_recipients(&tx, &Intent::default(), NET, true),
-            Verification::Match
-        );
+            Verification::Unverifiable { .. }
+        ));
     }
 }
