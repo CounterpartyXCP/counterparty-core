@@ -1,0 +1,108 @@
+# Integration checks against a live regtest counterparty-server:
+#   1. divisibility lookup, quantity scaling and compose reachability
+#      (`full_compose_send_scales_quantity_regtest`, a library test);
+#   2. a full fund → compose → sign → broadcast → accept end-to-end cycle that
+#      drives the compiled `xcp` binary and signs with the client's *own* signer
+#      — not Bitcoin Core's wallet — so the Rust signer is confronted with real
+#      bitcoind consensus and real Counterparty parsing
+#      (`full_fund_compose_sign_broadcast_accept_regtest`, `tests/e2e_regtest.rs`).
+name: Client Regtest Integration
+
+on:
+  push:
+    branches: "**"
+  # Also gate pull requests (incl. those from forks, which never push into the
+  # base repo).
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ClientRegtestIntegration:
+    name: Client Regtest Integration
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Python build tooling
+        run: pip install --upgrade pytest hatchling hatch pytest-cov coveralls
+
+      # Only bitcoind is needed: the regtest node reaches "ready" without electrs
+      # (electrs is started on demand by a separate scenario, not by start()).
+      - name: Install bitcoind
+        run: |
+          wget https://bitcoincore.org/bin/bitcoin-core-28.0/bitcoin-28.0-x86_64-linux-gnu.tar.gz
+          tar -xvf bitcoin-28.0-x86_64-linux-gnu.tar.gz
+          sudo cp bitcoin-28.0/bin/bitcoin-cli /usr/local/bin/bitcoin-cli
+          sudo cp bitcoin-28.0/bin/bitcoind /usr/local/bin/bitcoind
+          sudo cp bitcoin-28.0/bin/bitcoin-wallet /usr/local/bin/bitcoin-wallet
+
+      # Build the hatch environment (counterparty-core + the counterparty-rs
+      # extension) up front so the node start below is fast and env-build failures
+      # surface on their own step.
+      - name: Build the counterparty-core environment
+        run: |
+          cd counterparty-core
+          hatch run python -c "import counterpartycore.lib.config; print('counterparty env ready')"
+
+      # regtestnode.py's __main__ brings up bitcoind + counterparty-server on the
+      # regtest API port (24000), funds addresses, generates XCP, then holds.
+      - name: Start the regtest counterparty-server
+        run: |
+          cd counterparty-core
+          hatch run python counterpartycore/test/integrations/regtest/regtestnode.py \
+            > /tmp/regtest.log 2>&1 &
+          echo $! > /tmp/regtest.pid
+
+      - name: Wait for the regtest node to be ready
+        run: |
+          for i in $(seq 1 120); do
+            if grep -q "Regtest node ready" /tmp/regtest.log; then
+              echo "Regtest node ready after ~$((i * 5))s"
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/regtest.pid)" 2>/dev/null; then
+              echo "::error::Regtest node process exited before becoming ready"
+              tail -n 200 /tmp/regtest.log || true
+              exit 1
+            fi
+            sleep 5
+          done
+          echo "::error::Regtest node did not become ready in time"
+          tail -n 200 /tmp/regtest.log || true
+          exit 1
+
+      - name: Run the client regtest integration test
+        run: |
+          cd counterparty-client
+          cargo test --locked -- --ignored full_compose_send_scales_quantity_regtest
+
+      # Full black-box E2E: import a key into an isolated `xcp` wallet, fund it
+      # from Bitcoin Core's regtest wallet, then burn → send XCP by composing via
+      # the API, signing locally with the client's own signer, and broadcasting —
+      # asserting over the v2 API that the destination is credited.
+      - name: Run the client regtest end-to-end test
+        run: |
+          cd counterparty-client
+          cargo test --locked --test e2e_regtest -- --ignored full_fund_compose_sign_broadcast_accept_regtest
+
+      - name: Show the regtest server log on failure
+        if: failure()
+        run: tail -n 200 /tmp/regtest.log || true
+
+      - name: Stop the regtest node
+        if: always()
+        run: |
+          if [ -f /tmp/regtest.pid ]; then kill "$(cat /tmp/regtest.pid)" 2>/dev/null || true; fi
+          pkill -f counterparty-server 2>/dev/null || true
+          pkill -f bitcoind 2>/dev/null || true

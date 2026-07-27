@@ -1,0 +1,91 @@
+[package]
+name = "counterparty-client"
+version = "11.2.1"
+edition = "2021"
+license = "MIT"
+# MSRV: bounded by dependencies, not the client's own code — `keyring 4.1`
+# requires 1.88 (and `idna_adapter`/`edition2024` deps require 1.85/1.86). The
+# client itself only needs `std::sync::LazyLock` (1.80). Enforced by the
+# `MSRV` CI job in `.github/workflows/rust_test.yml`; bump both together.
+rust-version = "1.88"
+
+[dependencies]
+anyhow = "1.0.104"
+clap = { version = "4.6", features = ["derive", "cargo"] }
+# rustls (not native-tls/OpenSSL): no system OpenSSL dependency across
+# macOS/Linux/Windows, and drops the OpenSSL RUSTSEC advisory. reqwest 0.13
+# renamed the `rustls-tls` feature to `rustls`.
+reqwest = { version = "0.13", default-features = false, features = [
+    "json",
+    "query",
+    "form",
+    "rustls",
+] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.44", features = ["full"] }
+hex = "0.4.3"
+# `rand-std` makes the shared secp256k1 context (bitcoinsigner/common.rs)
+# actually randomized against side-channel attacks (Secp256k1::new()'s
+# randomization branch is otherwise compiled out), and unlocks BIP340
+# aux-rand for Schnorr signing (see the taproot signers).
+bitcoin = { version = "0.32.5", features = ["rand-std"] }
+bip39 = { version = "2.2", features = ["zeroize"] }
+cocoon = "0.4"
+# Memory-hard pre-KDF for the wallet password. cocoon's own KDF is
+# PBKDF2-HMAC-SHA256 at a fixed, non-tunable ~100k iterations (GPU/ASIC-friendly);
+# stretching the password through Argon2id first raises the cost of offline
+# brute-forcing a stolen wallet file to something modern hardware can't cheaply
+# parallelise. See src/wallet/storage.rs.
+argon2 = "0.5"
+thiserror = "2.0"
+# serde_yaml is deprecated/unmaintained; serde_yaml_ng is the maintained fork
+# with a compatible API.
+serde_yaml_ng = "0.10"
+# Only the local JSON->YAML syntax highlighting in helpers.rs is used, so drop
+# syntect's default features. This removes the `plist-load`/`yaml-load` features
+# and their transitive `plist` -> `quick-xml` and `yaml-rust` deps (all flagged
+# by cargo-audit), and swaps the C `onig` regex engine for pure-Rust fancy-regex.
+syntect = { version = "5.3", default-features = false, features = [
+    "default-syntaxes",
+    "default-themes",
+    "regex-fancy",
+] }
+termcolor = "1.4"
+dirs = "6.0"
+toml = "1.0"
+rand = "0.10"
+rpassword = "7.5"
+# keyring 4's default `v1` feature ships the v1-compatible API plus native
+# backends (apple-keychain, windows, zbus secret-service).
+keyring = "4"
+secrecy = "0.10"
+indicatif = "0.18"
+clap_complete = "4.6"
+zeroize = { version = "1.9", features = ["derive"] }
+rust_decimal = "1.42"
+percent-encoding = "2.3"
+# Independent client-side verification of the server-composed transaction
+# (see src/counterparty/): RC4 de-obfuscation of the CNTRPRTY data output and
+# CBOR decoding of the modern (taproot_support) message payloads. Kept to
+# maintained crates (not the unmaintained rust-crypto the indexer still uses).
+rc4 = "0.1"
+ciborium = "0.2"
+
+[dev-dependencies]
+tempfile = "3"
+# In-process HTTP mock server used to exercise the async API/compose/broadcast
+# code paths without reaching a real Counterparty server.
+mockito = "1"
+
+# Defense-in-depth for a wallet: keep arithmetic overflow checks on in release
+# builds too (they are off by default), so an unexpected overflow in amount/fee
+# handling panics loudly instead of silently wrapping. The hot path is a
+# one-shot CLI, so the check has no meaningful performance cost here.
+[profile.release]
+overflow-checks = true
+
+# The library holds all the logic (`src/lib.rs`); `src/bin/xcp.rs` and
+# `src/bin/counterparty-client.rs` are thin wrappers auto-detected by cargo.
+# Building via a shared lib means the unit tests compile and run only once
+# (two bins pointing at one `main.rs` previously ran the whole suite twice).
