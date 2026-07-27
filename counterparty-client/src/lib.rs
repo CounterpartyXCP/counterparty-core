@@ -367,13 +367,16 @@ fn add_common_cli_args(command: Command) -> Command {
         )
 }
 
-// Function to determine if an argument should have file reference support
+// Function to determine if an argument should have file reference support.
+//
+// Secret-bearing args (`private_key`, `mnemonic`) are deliberately NOT routed
+// through this `value_parser`: clap would then store the *resolved* secret in
+// `ArgMatches` for the whole process lifetime, un-zeroized. They resolve the
+// `@<file>` form lazily in the import handler into a `Zeroizing` buffer instead
+// (see `handlers::resolve_secret_flag`), so only the non-secret `@<path>` string
+// ever reaches `ArgMatches`.
 fn should_support_file_reference(arg_id: &str) -> bool {
-    // Check if the argument ID contains any of these keywords
-    arg_id.contains("text")
-        || arg_id.contains("description")
-        || arg_id.contains("private_key")
-        || arg_id.contains("mnemonic")
+    arg_id.contains("text") || arg_id.contains("description")
 }
 
 // Recursive function to add file reference support to all matching arguments
@@ -861,15 +864,17 @@ mod tests {
     }
 
     #[test]
-    fn should_support_file_reference_matches_secret_bearing_args() {
-        assert!(should_support_file_reference("private_key"));
-        assert!(should_support_file_reference("mnemonic"));
+    fn should_support_file_reference_matches_non_secret_text_args_only() {
         assert!(should_support_file_reference(
             "__transaction_broadcast_arg_0_text"
         ));
         assert!(should_support_file_reference("description"));
         assert!(!should_support_file_reference("address"));
         assert!(!should_support_file_reference("quantity"));
+        // Secrets are resolved to `Zeroizing` in the handler, NOT via this
+        // value_parser, so the resolved key/mnemonic never lands in `ArgMatches`.
+        assert!(!should_support_file_reference("private_key"));
+        assert!(!should_support_file_reference("mnemonic"));
     }
 
     #[test]

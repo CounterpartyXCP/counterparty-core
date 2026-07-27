@@ -178,10 +178,19 @@ fn unpack_message_type(message: &[u8]) -> Option<(u32, &[u8])> {
 /// skips the asset check rather than comparing against a wrong id. Because this
 /// is algorithmic, the resulting check does not depend on (and cannot be spoofed
 /// by) the API server.
+/// Lower bound of the numeric-asset id range (`A<n>`). Named assets live strictly
+/// below it; every registry-assigned sub-asset (longname `PARENT.child`) is given
+/// a numeric id at or above it. Mirrors `generate_asset_id`'s `26**12 + 1 <= id`
+/// in counterparty-core.
+pub const NUMERIC_ASSET_MIN: u64 = 26_u64.pow(12) + 1;
+
+/// Value threshold (sats) above which [`material_foreign_outputs`] flags a
+/// non-source / non-destination output. Set above typical dust markers and
+/// taproot-envelope commit outputs so those never trip the advisory, while any
+/// materially-sized diverted change (the actual siphon) is surfaced.
+pub const FOREIGN_OUTPUT_WARN_MIN_SAT: u64 = 10_000;
+
 pub fn asset_id_for_name(name: &str) -> Option<u64> {
-    // Lower bound of the numeric-asset id range (`A<n>`); named assets live
-    // strictly below it. Mirrors `generate_asset_id`'s `26**12 + 1 <= id`.
-    const NUMERIC_ASSET_MIN: u64 = 26_u64.pow(12) + 1;
     // `generate_asset_id`'s `assert asset_id >= 26**3` for base-26 named assets.
     const NAMED_ASSET_MIN: u64 = 26_u64.pow(3);
 
@@ -222,6 +231,75 @@ pub fn asset_id_for_name(name: &str) -> Option<u64> {
     (NAMED_ASSET_MIN..NUMERIC_ASSET_MIN)
         .contains(&n)
         .then_some(n)
+}
+
+/// The asset id a *transfer* transaction moves, decoded straight from the
+/// composed transaction for the message types this client understands (classic
+/// `send`, modern `enhanced_send`). Returns `None` for other/legacy encodings or
+/// an unparsable transaction. Used to surface the composed asset to the user when
+/// the requested asset name cannot be resolved offline (a sub-asset longname).
+pub fn composed_transfer_asset_id(raw_tx_hex: &str) -> Option<u64> {
+    let tx = hex::decode(raw_tx_hex)
+        .ok()
+        .and_then(|bytes| deserialize::<Transaction>(&bytes).ok())?;
+    let message = match extract::extract_message(&tx) {
+        extract::Extracted::Message(m) => m,
+        extract::Extracted::Unsupported(_) => return None,
+    };
+    let (type_id, body) = unpack_message_type(&message)?;
+    decode::transfer_asset_id(type_id, body)
+}
+
+/// Advisory helper (never used to reject): list every BTC output paying a
+/// *material* amount (`>= min_sat`) to a resolvable address that is neither the
+/// funding `source` (change) nor the requested `destination`. It surfaces a
+/// diverted-change / siphon output for transaction types the client cannot
+/// independently verify (issuance/order/…), where a human reviewing the summary
+/// is the only gate.
+///
+/// Deliberately advisory: data-carrier outputs (OP_RETURN, and
+/// bare-multisig/P2PK/taproot-envelope, which resolve to no single address) are
+/// skipped, so this can never flag a legitimate large-payload encoding, and a
+/// legitimate third-party payment (dispense/btcpay/burn) is surfaced for review
+/// rather than blocked. Returns `(sats, address)` pairs; empty when `source` is
+/// unknown (the change/siphon distinction then can't be made).
+pub fn material_foreign_outputs(
+    raw_tx_hex: &str,
+    source: Option<&str>,
+    destination: Option<&str>,
+    network: Network,
+    min_sat: u64,
+) -> Vec<(u64, String)> {
+    let Some(source) = source else {
+        return Vec::new();
+    };
+    let Some(tx) = hex::decode(raw_tx_hex)
+        .ok()
+        .and_then(|bytes| deserialize::<Transaction>(&bytes).ok())
+    else {
+        return Vec::new();
+    };
+    let source = decode::normalize_address(source, network);
+    let destination = destination.map(|d| decode::normalize_address(d, network));
+
+    let mut foreign = Vec::new();
+    for out in &tx.output {
+        if out.script_pubkey.is_op_return() {
+            continue;
+        }
+        let sats = out.value.to_sat();
+        if sats < min_sat {
+            continue;
+        }
+        match decode::output_address(out, network) {
+            // Change to source, or the requested destination — expected.
+            Some(addr) if addr == source || Some(&addr) == destination.as_ref() => {}
+            Some(addr) => foreign.push((sats, addr)),
+            // A data carrier (no single address) — skip; advisory only.
+            None => {}
+        }
+    }
+    foreign
 }
 
 /// Test-only builder: a composed-transaction hex carrying an `enhanced_send` to
@@ -722,6 +800,59 @@ mod tests {
             asset_id_for_name("A95428956661682177"),
             Some(95428956661682177)
         );
+    }
+
+    // ---- composed_transfer_asset_id (surface the composed asset for sub-assets) ----
+
+    #[test]
+    fn composed_transfer_asset_id_reads_the_embedded_asset() {
+        let dest = wpkh_addr(0x11);
+        let hex = build_test_enhanced_send_tx_hex([0x11; 32], 7, 2500, &dest);
+        assert_eq!(composed_transfer_asset_id(&hex), Some(7));
+        // Non-CNTRPRTY / unparsable hex -> None (fail-safe, never panics).
+        assert_eq!(composed_transfer_asset_id("00"), None);
+        assert_eq!(composed_transfer_asset_id("not-hex"), None);
+    }
+
+    // ---- material_foreign_outputs (advisory siphon/diverted-change surfacing) ----
+
+    #[test]
+    fn material_foreign_outputs_flags_only_material_non_source_non_dest_outputs() {
+        let source = wpkh_addr(0x33);
+        let dest = wpkh_addr(0x11);
+        let attacker = wpkh_addr(0x44);
+        // [dust->dest, OP_RETURN, change->source (material), siphon->attacker
+        // (material), dust->attacker (below threshold)].
+        let hex = build_test_classic_send_tx_hex(
+            [0x11; 32],
+            7,
+            2500,
+            &dest,
+            &[
+                (source.clone(), 90_000),   // legitimate change -> not flagged
+                (attacker.clone(), 50_000), // material siphon -> flagged
+                (attacker.clone(), 500),    // dust below threshold -> ignored
+            ],
+        );
+
+        let foreign = material_foreign_outputs(
+            &hex,
+            Some(&source.to_string()),
+            Some(&dest.to_string()),
+            NET,
+            FOREIGN_OUTPUT_WARN_MIN_SAT,
+        );
+        assert_eq!(foreign, vec![(50_000, attacker.to_string())]);
+
+        // Unknown source -> advisory stays silent (can't tell change from siphon).
+        assert!(material_foreign_outputs(
+            &hex,
+            None,
+            Some(&dest.to_string()),
+            NET,
+            FOREIGN_OUTPUT_WARN_MIN_SAT
+        )
+        .is_empty());
     }
 
     // ---- full path: verify_composed_transaction ----

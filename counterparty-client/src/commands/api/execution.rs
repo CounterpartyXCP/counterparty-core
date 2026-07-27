@@ -28,6 +28,13 @@ pub fn http_client(https_only: bool) -> Result<Client> {
         .timeout(REQUEST_TIMEOUT)
         .connect_timeout(CONNECT_TIMEOUT)
         .https_only(https_only)
+        // The Counterparty API never legitimately redirects. Refuse ALL redirects
+        // so a compromised/open-redirecting host cannot bounce a compose request
+        // to an attacker-controlled HTTPS host (leaking query params and getting a
+        // malicious tx signed). Belt-and-braces with `https_only`, which already
+        // blocks an https->http downgrade but would still follow a cross-host
+        // https->https redirect.
+        .redirect(reqwest::redirect::Policy::none())
         .build()
         .context("Failed to initialise the HTTPS client (TLS backend error)")
 }

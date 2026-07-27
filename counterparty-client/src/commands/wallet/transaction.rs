@@ -429,20 +429,22 @@ fn extract_op_return_data(script: &bitcoin::ScriptBuf) -> String {
 }
 
 /// Convert a script to a Bitcoin address based on the network
-fn script_to_address(
-    script: &bitcoin::ScriptBuf,
-    network: crate::config::Network,
-) -> Option<String> {
-    // Convert network to Bitcoin network
-    let bitcoin_network = match network {
+/// Map the client's `config::Network` to the `bitcoin` crate's `Network`.
+fn to_bitcoin_network(network: crate::config::Network) -> bitcoin::Network {
+    match network {
         crate::config::Network::Mainnet => bitcoin::Network::Bitcoin,
         crate::config::Network::Signet => bitcoin::Network::Signet,
         crate::config::Network::Testnet4 => bitcoin::Network::Testnet,
         crate::config::Network::Regtest => bitcoin::Network::Regtest,
-    };
+    }
+}
 
+fn script_to_address(
+    script: &bitcoin::ScriptBuf,
+    network: crate::config::Network,
+) -> Option<String> {
     // Try to create address from script
-    bitcoin::Address::from_script(script, bitcoin_network)
+    bitcoin::Address::from_script(script, to_bitcoin_network(network))
         .map(|addr| addr.to_string())
         .ok()
 }
@@ -837,8 +839,14 @@ pub async fn handle_transaction_command(
     // normalization and before internal fields like `multisig_pubkey` are added)
     // so the confirmation can show what *they* requested — a trust anchor
     // independent of the server's (untrusted) echo of the composed transaction.
-    let requested_params: std::collections::BTreeMap<String, String> =
-        params.clone().into_iter().collect();
+    // Exclude client-internal keys the user never typed — `verbose` (injected for
+    // the compose call) and the `multisig_pubkey` signing hint added below — so
+    // this "your inputs" trust anchor shows only what the user actually requested.
+    let requested_params: std::collections::BTreeMap<String, String> = params
+        .iter()
+        .filter(|(k, _)| !matches!(k.as_str(), "verbose" | "multisig_pubkey"))
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect();
 
     // Convert human-readable quantities to raw satoshis based on each asset's
     // divisibility (the compose API expects satoshi integers).
@@ -952,6 +960,16 @@ pub async fn handle_transaction_command(
         display_transaction_summary(&signed_tx, &utxo_list, config.network)?;
     }
 
+    // For a transaction the client could NOT independently verify (a non-transfer
+    // compose type), the BTC output routing was never checked by
+    // `verify_btc_recipients` — so surface any material output that pays neither
+    // the source (change) nor the requested destination, so a diverted-change /
+    // siphon output is not lost in the summary. Advisory only: the confirmation
+    // gate below (which `--yes` cannot skip for this outcome) is the real control.
+    if verify_outcome == VerifyOutcome::Unverified {
+        warn_on_unverified_foreign_outputs(&signed_tx, &requested_params, config.network);
+    }
+
     // Ask for confirmation before broadcasting. `--yes` auto-confirms for
     // automation / CI, but ONLY for a transaction the client could fully verify
     // (see `VerifyOutcome::may_auto_confirm`). A type it cannot decode, an asset
@@ -961,7 +979,7 @@ pub async fn handle_transaction_command(
     // deliberately overridden here so a hostile server cannot slip an asset swap,
     // a 1e8 over-send, or a siphon output past unattended automation.
     let yes = sub_matches.get_flag("yes");
-    let skip_confirm = yes && verify_outcome.may_auto_confirm() && fee_conclusive;
+    let skip_confirm = may_skip_confirm(yes, verify_outcome, fee_conclusive);
     if !skip_confirm {
         if yes {
             helpers::print_warning(
@@ -1038,6 +1056,59 @@ impl VerifyOutcome {
     }
 }
 
+/// The single fund-safety fuse deciding whether `--yes` may skip the human
+/// confirmation before broadcasting. It may skip the prompt ONLY when all three
+/// hold: the user passed `--yes`, the client *fully* verified the composed
+/// transaction ([`VerifyOutcome::may_auto_confirm`]), AND the miner fee was
+/// conclusively bounded (`fee_conclusive`). Any partial/undecodable verification
+/// or an unbounded/legacy fee forces a human to look at the outputs — so a
+/// hostile server cannot slip an asset swap, a 1e8 over-send, or a siphon/fee
+/// output past unattended automation. Kept as a tiny pure function so the whole
+/// truth table can be unit-tested (see `may_skip_confirm_*`); do not inline it.
+fn may_skip_confirm(yes: bool, verify_outcome: VerifyOutcome, fee_conclusive: bool) -> bool {
+    yes && verify_outcome.may_auto_confirm() && fee_conclusive
+}
+
+/// Advisory warning for the [`VerifyOutcome::Unverified`] path: highlight any
+/// material BTC output that pays neither the funding source (change) nor the
+/// requested destination — the change-diversion / siphon a human might otherwise
+/// miss in the summary. Never fatal (see
+/// [`crate::counterparty::material_foreign_outputs`]); legitimate third-party
+/// payments (dispense/btcpay/burn) are surfaced for review, not blocked.
+fn warn_on_unverified_foreign_outputs(
+    signed_tx: &str,
+    requested_params: &std::collections::BTreeMap<String, String>,
+    network: crate::config::Network,
+) {
+    let source = requested_params
+        .get("source")
+        .or_else(|| requested_params.get("address"))
+        .map(String::as_str);
+    let destination = requested_params.get("destination").map(String::as_str);
+    let foreign = crate::counterparty::material_foreign_outputs(
+        signed_tx,
+        source,
+        destination,
+        to_bitcoin_network(network),
+        crate::counterparty::FOREIGN_OUTPUT_WARN_MIN_SAT,
+    );
+    if foreign.is_empty() {
+        return;
+    }
+    let details = foreign
+        .iter()
+        .map(|(sats, addr)| format!("{sats} sats -> {addr}"))
+        .collect::<Vec<_>>()
+        .join("; ");
+    helpers::print_warning(
+        "\u{26A0} This transaction pays BTC to an address that is not your source or destination.",
+        Some(&format!(
+            "Review these outputs before confirming — a compromised server could divert your \
+             change here: {details}"
+        )),
+    );
+}
+
 /// Independently verify a server-composed transaction against the user's request
 /// (closes review finding H1). The composed Counterparty payload — asset,
 /// quantity and destination — is decoded straight from the transaction (see
@@ -1059,12 +1130,7 @@ fn verify_composed_transaction_or_abort(
 ) -> Result<VerifyOutcome> {
     use crate::counterparty::{self, Verification};
 
-    let network = match config.network {
-        crate::config::Network::Mainnet => bitcoin::Network::Bitcoin,
-        crate::config::Network::Signet => bitcoin::Network::Signet,
-        crate::config::Network::Testnet4 => bitcoin::Network::Testnet,
-        crate::config::Network::Regtest => bitcoin::Network::Regtest,
-    };
+    let network = to_bitcoin_network(config.network);
 
     let asset_requested = requested_params.get("asset");
     // Resolved offline from the asset name, so a lying server cannot spoof it.
@@ -1105,12 +1171,37 @@ fn verify_composed_transaction_or_abort(
         Verification::Match if asset_unchecked => {
             // Destination, quantity and BTC routing matched, but the asset name
             // could not be resolved offline, so it was not independently checked.
+            let name = asset_requested.map(String::as_str).unwrap_or("?");
+            let composed_id = counterparty::composed_transfer_asset_id(raw_tx_hex);
+
+            // A sub-asset longname (`PARENT.child`) is ALWAYS assigned a numeric
+            // asset id (>= NUMERIC_ASSET_MIN). So if the user asked for a sub-asset
+            // but the server composed a *named* asset id, that is an unrequested
+            // asset substitution — refuse it. A genuine sub-asset always has a
+            // numeric id, so this can never reject a legitimate sub-asset send.
+            if name.contains('.') {
+                if let Some(id) = composed_id {
+                    if id < counterparty::NUMERIC_ASSET_MIN {
+                        return Err(anyhow!(
+                            "SECURITY: you requested sub-asset '{name}', but the server composed a \
+                             transaction for named asset id {id} (a sub-asset always has a numeric \
+                             id). Refusing a possible asset substitution."
+                        ));
+                    }
+                }
+            }
+
+            // Make the warning actionable: surface the composed asset id so the
+            // user can cross-check it against a trusted source before confirming.
+            let id_hint = match composed_id {
+                Some(id) => format!("the server composed asset id {id} — verify it is '{name}'"),
+                None => format!("verify the asset is '{name}'"),
+            };
             helpers::print_warning(
                 "\u{26A0} Partially verified: destination, quantity and BTC change match your request.",
                 Some(&format!(
-                    "The asset '{}' could not be resolved offline (sub-asset or non-standard name), \
-                     so it was NOT independently checked. Confirm the asset yourself before continuing.",
-                    asset_requested.map(String::as_str).unwrap_or("?"),
+                    "The asset '{name}' could not be resolved offline (sub-asset or non-standard \
+                     name), so it was NOT independently checked: {id_hint} before continuing."
                 )),
             );
             Ok(VerifyOutcome::AssetUnverified)
@@ -2511,10 +2602,17 @@ mod tests {
         // name cannot be resolved offline, so the asset went unchecked. The flow
         // returns Ok (partial) without ever claiming a full "Verified", AND the
         // outcome must NOT be `--yes`-auto-confirmable: a hostile server could
-        // otherwise compose a *different* asset the source holds to the correct
-        // destination/quantity and slip it past unattended automation.
+        // otherwise compose a *different* (sub-)asset the source holds to the
+        // correct destination/quantity and slip it past unattended automation.
+        // The composed id is a *numeric* sub-asset id (>= NUMERIC_ASSET_MIN), as a
+        // genuine sub-asset registration always is, so it is not refused outright.
         let dest = wpkh_address(0x11);
-        let raw = crate::counterparty::build_test_enhanced_send_tx_hex([0x11; 32], 5, 2500, &dest);
+        let raw = crate::counterparty::build_test_enhanced_send_tx_hex(
+            [0x11; 32],
+            crate::counterparty::NUMERIC_ASSET_MIN,
+            2500,
+            &dest,
+        );
         let (requested, normalized) = intent_params("PARENT.child", &dest.to_string(), "2500");
 
         let outcome = verify_composed_transaction_or_abort(
@@ -2533,6 +2631,28 @@ mod tests {
     }
 
     #[test]
+    fn verify_or_abort_refuses_named_asset_composed_for_a_subasset_request() {
+        // #3: the user asked for a sub-asset (`PARENT.child`, which always has a
+        // *numeric* registry id), but the server composed a transfer of a *named*
+        // asset id (5) — an unrequested asset substitution. This must hard-abort,
+        // not degrade to a soft `AssetUnverified` warning the user can't act on.
+        let dest = wpkh_address(0x11);
+        let raw = crate::counterparty::build_test_enhanced_send_tx_hex([0x11; 32], 5, 2500, &dest);
+        let (requested, normalized) = intent_params("PARENT.child", &dest.to_string(), "2500");
+
+        let err = verify_composed_transaction_or_abort(
+            &regtest_config(),
+            "enhanced_send",
+            &requested,
+            &normalized,
+            &raw,
+        )
+        .unwrap_err();
+        assert!(err.to_string().contains("SECURITY"), "got: {err}");
+        assert!(err.to_string().contains("substitution"), "got: {err}");
+    }
+
+    #[test]
     fn only_fully_verified_may_auto_confirm() {
         // B3: the load-bearing rule for the `--yes` gate. ONLY a full match may
         // skip the human confirmation. Every partial outcome leaves a value-bearing
@@ -2543,5 +2663,33 @@ mod tests {
         assert!(!VerifyOutcome::PartiallyVerified.may_auto_confirm());
         assert!(!VerifyOutcome::AssetUnverified.may_auto_confirm());
         assert!(!VerifyOutcome::Unverified.may_auto_confirm());
+    }
+
+    #[test]
+    fn may_skip_confirm_only_when_yes_verified_and_fee_conclusive() {
+        // The load-bearing `--yes` gate (transaction.rs). Exhaustively assert the
+        // truth table so a future edit that flips a `&&` to `||`, drops
+        // `fee_conclusive`, or weakens `may_auto_confirm` fails here instead of
+        // silently letting unattended automation broadcast an unverified tx.
+        use VerifyOutcome::{AssetUnverified, PartiallyVerified, Unverified, Verified};
+        for outcome in [Verified, PartiallyVerified, AssetUnverified, Unverified] {
+            for yes in [false, true] {
+                for fee_conclusive in [false, true] {
+                    let expected = yes && outcome == Verified && fee_conclusive;
+                    assert_eq!(
+                        may_skip_confirm(yes, outcome, fee_conclusive),
+                        expected,
+                        "yes={yes} outcome={outcome:?} fee_conclusive={fee_conclusive}"
+                    );
+                }
+            }
+        }
+        // Spell out the one allowed combination and the dangerous near-misses.
+        assert!(may_skip_confirm(true, Verified, true));
+        assert!(!may_skip_confirm(false, Verified, true)); // no --yes
+        assert!(!may_skip_confirm(true, Verified, false)); // fee not bounded
+        assert!(!may_skip_confirm(true, AssetUnverified, true)); // asset unchecked
+        assert!(!may_skip_confirm(true, PartiallyVerified, true)); // 1e8 scale on trust
+        assert!(!may_skip_confirm(true, Unverified, true)); // undecodable type
     }
 }

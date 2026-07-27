@@ -83,8 +83,11 @@ pub fn generate_keys_from_mnemonic(
     network: Network,
     secp: &Secp256k1<All>,
 ) -> Result<KeyData> {
+    // Fixed message (no interpolation of the bip39 error): mirror the deliberately
+    // non-interpolated WIF error paths so the mnemonic words can never leak into an
+    // error string, even if a future bip39 version changed its Display.
     let mnemonic = Mnemonic::parse_normalized(mnemonic_str)
-        .map_err(|e| WalletError::Bip39Error(format!("Invalid mnemonic: {}", e)))?;
+        .map_err(|_| WalletError::Bip39Error("Invalid mnemonic".to_string()))?;
 
     let seed = Zeroizing::new(mnemonic.to_seed(""));
 

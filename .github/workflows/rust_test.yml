@@ -7,6 +7,11 @@ on:
   # base repo) are still gated by the lint/coverage/audit jobs below. The Codecov
   # upload already degrades gracefully when the token is absent on a fork.
   pull_request:
+  # A daily run so a newly-disclosed advisory against the *unchanged* dependency
+  # tree of the released wallet is caught even with no push. Only the `Audit` job
+  # runs on this trigger (the others are gated on `github.event_name` below).
+  schedule:
+    - cron: "17 4 * * *"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -14,6 +19,8 @@ concurrency:
 
 jobs:
   Cargo:
+    # Skipped on the daily cron — that run only re-checks advisories (Audit job).
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -88,6 +95,7 @@ jobs:
   # it fails here instead of silently invalidating the claim. `cargo check` is
   # enough to catch an MSRV violation and is far cheaper than a full build+test.
   MSRV:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -104,6 +112,7 @@ jobs:
   # The wallet depends on the OS-specific `keyring` backend, so build and test
   # the client on macOS and Windows too (Linux is covered by the Cargo job).
   Client:
+    if: github.event_name != 'schedule'
     strategy:
       fail-fast: false
       matrix:
@@ -114,6 +123,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -124,6 +135,13 @@ jobs:
           cd counterparty-client
           cargo build --locked
           cargo test --locked
+
+      - name: Clippy (platform-specific code is only lint-gated here)
+        # Linux clippy runs in the `Cargo` job; this gates the `#[cfg(windows)]`
+        # ACL and macOS keychain paths under `-D warnings` on their own platforms.
+        run: |
+          cd counterparty-client
+          cargo clippy --locked --all-targets -- -D warnings
 
   # Dependency-hygiene gate for the wallet: security advisories, licenses,
   # banned/duplicate crates, and crate sources. Blocking — a newly-introduced

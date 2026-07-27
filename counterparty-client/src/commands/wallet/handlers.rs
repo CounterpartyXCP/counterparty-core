@@ -46,16 +46,47 @@ pub fn handle_new_address(wallet: &mut BitcoinWallet, sub_matches: &ArgMatches) 
 /// history / process list — prefer the `@<file>` form or the no-echo prompt.)
 type Secret = Zeroizing<String>;
 
+/// Resolve a secret-bearing flag value that may use the safe `@<file>` form into
+/// a [`Zeroizing`] buffer. Deliberately kept OUT of clap's `value_parser` (unlike
+/// the non-secret `@<file>` args wired in `lib.rs`) so the resolved secret is
+/// never copied into `ArgMatches`: for the `@<file>` form only the non-secret
+/// path string reaches clap, and the key material lives solely in `Zeroizing`
+/// here. `@@` escapes a literal leading `@`; a non-UTF-8 file is read as hex
+/// (binary key material). A raw value passed directly on the CLI still also lives
+/// in `ArgMatches`/argv — hence the `@<file>` form (or the no-echo prompt) is the
+/// recommended path.
+fn resolve_secret_flag(raw: &str) -> Result<Secret> {
+    if let Some(rest) = raw.strip_prefix("@@") {
+        return Ok(Zeroizing::new(format!("@{rest}")));
+    }
+    if let Some(path) = raw.strip_prefix('@') {
+        if !std::path::Path::new(path).exists() {
+            return Err(anyhow!("File not found: {}", path));
+        }
+        let bytes = Zeroizing::new(
+            std::fs::read(path).map_err(|e| anyhow!("Failed to read file {path}: {e}"))?,
+        );
+        return Ok(match std::str::from_utf8(&bytes) {
+            Ok(text) => Zeroizing::new(text.trim().to_string()),
+            Err(_) => Zeroizing::new(hex::encode(&*bytes)),
+        });
+    }
+    Ok(Zeroizing::new(raw.to_string()))
+}
+
 /// Handle the import_address subcommand - imports an existing key
 pub fn handle_import_address(wallet: &mut BitcoinWallet, sub_matches: &ArgMatches) -> Result<()> {
-    // Extract parameters. The secret flags support the safe `@<file>` form; wrap
-    // our copy in `Zeroizing` so it is scrubbed on drop.
+    // Resolve the safe `@<file>` form HERE (not via a clap value_parser) so the
+    // secret only ever exists in a `Zeroizing` buffer — the resolved WIF/mnemonic
+    // never lands in clap's `ArgMatches` (only the non-secret `@<path>` does).
     let flag_private_key = sub_matches
         .get_one::<String>("private_key")
-        .map(|s| Zeroizing::new(s.clone()));
+        .map(|s| resolve_secret_flag(s))
+        .transpose()?;
     let flag_mnemonic = sub_matches
         .get_one::<String>("mnemonic")
-        .map(|s| Zeroizing::new(s.clone()));
+        .map(|s| resolve_secret_flag(s))
+        .transpose()?;
     let path = sub_matches.get_one::<String>("path").map(|s| s.as_str());
     let label = sub_matches.get_one::<String>("label").map(|s| s.as_str());
     let address_type = sub_matches
@@ -429,6 +460,36 @@ mod tests {
         // Non-interactive + no flags => a clear error (never a hanging prompt).
         let err = resolve_import_secret(None, None, false).unwrap_err();
         assert!(err.to_string().contains("private-key"), "got: {err}");
+    }
+
+    #[test]
+    fn resolve_secret_flag_passthrough_and_at_escape() {
+        // A plain value is returned unchanged; `@@x` is a literal `@x`.
+        assert_eq!(
+            resolve_secret_flag("cWifValue").unwrap().as_str(),
+            "cWifValue"
+        );
+        assert_eq!(
+            resolve_secret_flag("@@literal").unwrap().as_str(),
+            "@literal"
+        );
+    }
+
+    #[test]
+    fn resolve_secret_flag_reads_and_trims_file() {
+        // The `@<file>` form reads and trims the file so the secret never has to
+        // appear on the command line / process list.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("key.wif");
+        std::fs::write(&path, "  cWifValue\n").unwrap();
+        let resolved = resolve_secret_flag(&format!("@{}", path.display())).unwrap();
+        assert_eq!(resolved.as_str(), "cWifValue");
+    }
+
+    #[test]
+    fn resolve_secret_flag_missing_file_errors() {
+        let err = resolve_secret_flag("@/no/such/file/xcp-secret").unwrap_err();
+        assert!(err.to_string().contains("File not found"), "got: {err}");
     }
 
     #[test]

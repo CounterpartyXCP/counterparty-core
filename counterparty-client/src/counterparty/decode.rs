@@ -34,7 +34,7 @@ where
 /// Canonicalise an address string for `network` (e.g. bech32 → lowercase), so a
 /// comparison is not defeated by cosmetic differences. Falls back to the raw
 /// string when it cannot be parsed for this network.
-fn normalize_address(addr: &str, network: Network) -> String {
+pub(crate) fn normalize_address(addr: &str, network: Network) -> String {
     Address::from_str(addr)
         .ok()
         .and_then(|a| a.require_network(network).ok())
@@ -79,10 +79,24 @@ fn combine(checks: impl IntoIterator<Item = Option<Verification>>) -> Verificati
 }
 
 /// The address paid by an output, canonicalised for `network`, if it resolves.
-fn output_address(out: &bitcoin::TxOut, network: Network) -> Option<String> {
+pub(crate) fn output_address(out: &bitcoin::TxOut, network: Network) -> Option<String> {
     Address::from_script(&out.script_pubkey, network)
         .ok()
         .map(|a| a.to_string())
+}
+
+/// The asset id a *transfer* message moves, for the message types this client
+/// can decode: classic `send` (0, `>QQ` header → first 8 bytes) and modern CBOR
+/// `enhanced_send` (2, first array element). `None` for other/legacy encodings.
+/// Used only to *surface* the composed asset when the requested name can't be
+/// resolved offline (a sub-asset); a genuine sub-asset always has a numeric id,
+/// so the caller's range check on the result can never reject a legitimate send.
+pub(crate) fn transfer_asset_id(type_id: u32, body: &[u8]) -> Option<u64> {
+    match type_id {
+        0 if body.len() == 16 => Some(u64::from_be_bytes(body[0..8].try_into().ok()?)),
+        2 => cbor_u64(cbor_array(body)?.first()?),
+        _ => None,
+    }
 }
 
 /// Classic `send` (type 0): payload is `>QQ` (asset id, quantity); the
@@ -753,6 +767,29 @@ mod tests {
             verify_sweep(&body, &intent, NET),
             Verification::Unverifiable { .. }
         ));
+    }
+
+    #[test]
+    fn transfer_asset_id_reads_classic_and_enhanced_only() {
+        // Classic send (type 0): asset id is the first 8 bytes of the 16-byte body.
+        let mut body = [0u8; 16];
+        body[..8].copy_from_slice(&999u64.to_be_bytes());
+        assert_eq!(transfer_asset_id(0, &body), Some(999));
+        // Wrong length for a classic send -> None (fail-safe, no panic).
+        assert_eq!(transfer_asset_id(0, &[0u8; 8]), None);
+
+        // Enhanced send (type 2): the first CBOR array element.
+        let dest = wpkh_addr(0x11);
+        let cbor_body = cbor(vec![
+            Value::Integer(777u64.into()),
+            Value::Integer(2500u64.into()),
+            Value::Bytes(packed(&dest)),
+            Value::Null,
+        ]);
+        assert_eq!(transfer_asset_id(2, &cbor_body), Some(777));
+
+        // A message type this helper does not decode -> None.
+        assert_eq!(transfer_asset_id(4, &cbor_body), None);
     }
 
     // ---- verify_btc_recipients (H2) ----

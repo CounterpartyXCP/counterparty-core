@@ -7,7 +7,6 @@
 //! using each asset's `divisible` flag.
 
 use std::collections::HashMap;
-use std::str::FromStr;
 
 use anyhow::{anyhow, Context, Result};
 use rust_decimal::prelude::ToPrimitive;
@@ -105,6 +104,12 @@ const KNOWN_QUANTITY_FIELDS: &[&str] = &[
 /// `address`, `value`, `fee_fraction`, `text`, …).
 fn looks_like_amount(name: &str) -> bool {
     const AMOUNT_ROOTS: &[&str] = &["quantity", "amount", "supply", "reserve", "cap", "price"];
+    // Block-height fields (e.g. `soft_cap_deadline_block`) contain an amount root
+    // (`cap`) but are NOT divisibility-governed amounts: they are passed through
+    // unchanged, so the "sent as satoshis" warning would be misleading.
+    if name.ends_with("_block") {
+        return false;
+    }
     AMOUNT_ROOTS.iter().any(|root| name.contains(root)) || KNOWN_QUANTITY_FIELDS.contains(&name)
 }
 
@@ -379,8 +384,11 @@ async fn fetch_asset_divisible(config: &AppConfig, asset: &str) -> Result<Option
 /// Convert a human-readable amount to a raw satoshi integer string.
 /// Divisible assets are multiplied by 1e8; indivisible assets must be whole.
 pub fn convert_quantity(value: &str, divisible: bool) -> Result<String> {
-    let amount =
-        Decimal::from_str(value.trim()).map_err(|_| anyhow!("'{value}' is not a valid number"))?;
+    // `from_str_exact` (not `from_str`): reject an over-precise amount instead of
+    // silently rounding it to 28 significant digits, which could otherwise bypass
+    // the "max 8 decimal places" contract enforced below (sub-satoshi).
+    let amount = Decimal::from_str_exact(value.trim())
+        .map_err(|_| anyhow!("'{value}' is not a valid number"))?;
     if amount < Decimal::ZERO {
         return Err(anyhow!("quantity cannot be negative"));
     }
@@ -442,6 +450,25 @@ mod tests {
     #[test]
     fn divisible_rejects_more_than_eight_decimals() {
         assert!(convert_quantity("0.000000001", true).is_err());
+    }
+
+    #[test]
+    fn divisible_rejects_over_precise_amount_not_silently_rounds() {
+        // >28 significant digits: `from_str` would ROUND this to `1` (fract == 0)
+        // and accept it as 1.0; `from_str_exact` must REJECT it instead so the
+        // "max 8 decimals" contract can't be bypassed sub-satoshi.
+        assert!(convert_quantity("1.000000000000000000000000000004", true).is_err());
+    }
+
+    #[test]
+    fn looks_like_amount_excludes_block_height_fields() {
+        // `soft_cap_deadline_block` contains the `cap` root but is a block height,
+        // passed through unchanged — it must NOT trip the "sent as satoshis" warn.
+        assert!(!looks_like_amount("soft_cap_deadline_block"));
+        assert!(!looks_like_amount("start_block"));
+        // Genuine amount fields still match.
+        assert!(looks_like_amount("quantity"));
+        assert!(looks_like_amount("soft_cap"));
     }
 
     #[test]

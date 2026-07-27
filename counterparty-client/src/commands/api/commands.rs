@@ -235,7 +235,11 @@ const PATH_SEGMENT: &percent_encoding::AsciiSet = &percent_encoding::CONTROLS
     .add(b'&')
     .add(b'<')
     .add(b'>')
-    .add(b':');
+    .add(b':')
+    // `\` too: the WHATWG URL parser normalises `\`->`/` for http(s) schemes, so
+    // without this a stray backslash in a value would inject an extra path segment
+    // (parity with the `/` encoding above).
+    .add(b'\\');
 
 // Builds the API path with path parameters substituted, removing those
 // parameters from `params` so they are not *also* sent as duplicate query
