@@ -286,24 +286,22 @@ pub async fn handle_address_balances(config: &AppConfig, sub_matches: &ArgMatche
 
     // Process and display combined results
     if let Some(balances) = cp_result.get("result") {
+        // BTC balance as a decimal-BTC string (satoshis / 1e8, 8 dp). Computed
+        // once and used by both branches below, so the non-array fallback shows
+        // BTC in the same unit as the normal path instead of raw satoshis.
+        let btc_amount_str = format!("{:.8}", (btc_balance as f64) / 100_000_000.0);
         if let Some(balances_array) = balances.as_array() {
             // Create a new array for the cleaned balances
             let mut cleaned_balances = Vec::new();
 
-            // Add BTC balance entry at the beginning, converting satoshis to BTC (divide by 10^8)
+            // Add BTC balance entry at the beginning (decimal BTC, not satoshis)
             let mut btc_entry = serde_json::Map::new();
             btc_entry.insert(
                 "asset".to_string(),
                 serde_json::Value::String("BTC".to_string()),
             );
 
-            // Convert to floating point and divide by 10^8
-            let btc_amount = (btc_balance as f64) / 100_000_000.0;
-
-            // Format as string with 8 decimal places to ensure consistent display
-            let btc_amount_str = format!("{:.8}", btc_amount);
-
-            // Insert as string value
+            // Insert the shared decimal-BTC string as the quantity.
             btc_entry.insert(
                 "quantity".to_string(),
                 serde_json::Value::String(btc_amount_str),
@@ -360,10 +358,7 @@ pub async fn handle_address_balances(config: &AppConfig, sub_matches: &ArgMatche
         } else {
             // If not an array, just display as-is plus BTC balance
             let mut combined_result = serde_json::Map::new();
-            combined_result.insert(
-                "BTC".to_string(),
-                serde_json::Value::Number(serde_json::Number::from(btc_balance)),
-            );
+            combined_result.insert("BTC".to_string(), serde_json::Value::String(btc_amount_str));
             combined_result.insert("tokens".to_string(), balances.clone());
             helpers::print_colored_json(&serde_json::Value::Object(combined_result))?;
         }

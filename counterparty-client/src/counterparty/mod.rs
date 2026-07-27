@@ -165,6 +165,18 @@ fn unpack_message_type(message: &[u8]) -> Option<(u32, &[u8])> {
     None
 }
 
+/// Lower bound of the numeric-asset id range (`A<n>`). Named assets live strictly
+/// below it; every registry-assigned sub-asset (longname `PARENT.child`) is given
+/// a numeric id at or above it. Mirrors `generate_asset_id`'s `26**12 + 1 <= id`
+/// in counterparty-core.
+pub const NUMERIC_ASSET_MIN: u64 = 26_u64.pow(12) + 1;
+
+/// Value threshold (sats) above which [`material_foreign_outputs`] flags a
+/// non-source / non-destination output. Set above typical dust markers and
+/// taproot-envelope commit outputs so those never trip the advisory, while any
+/// materially-sized diverted change (the actual siphon) is surfaced.
+pub const FOREIGN_OUTPUT_WARN_MIN_SAT: u64 = 10_000;
+
 /// Resolve a Counterparty asset *name* to its numeric id **offline**, mirroring
 /// `ledger.issuances.generate_asset_id`:
 ///
@@ -178,18 +190,6 @@ fn unpack_message_type(message: &[u8]) -> Option<(u32, &[u8])> {
 /// skips the asset check rather than comparing against a wrong id. Because this
 /// is algorithmic, the resulting check does not depend on (and cannot be spoofed
 /// by) the API server.
-/// Lower bound of the numeric-asset id range (`A<n>`). Named assets live strictly
-/// below it; every registry-assigned sub-asset (longname `PARENT.child`) is given
-/// a numeric id at or above it. Mirrors `generate_asset_id`'s `26**12 + 1 <= id`
-/// in counterparty-core.
-pub const NUMERIC_ASSET_MIN: u64 = 26_u64.pow(12) + 1;
-
-/// Value threshold (sats) above which [`material_foreign_outputs`] flags a
-/// non-source / non-destination output. Set above typical dust markers and
-/// taproot-envelope commit outputs so those never trip the advisory, while any
-/// materially-sized diverted change (the actual siphon) is surfaced.
-pub const FOREIGN_OUTPUT_WARN_MIN_SAT: u64 = 10_000;
-
 pub fn asset_id_for_name(name: &str) -> Option<u64> {
     // `generate_asset_id`'s `assert asset_id >= 26**3` for base-26 named assets.
     const NAMED_ASSET_MIN: u64 = 26_u64.pow(3);
@@ -317,11 +317,7 @@ pub(crate) fn build_test_enhanced_send_tx_hex(
     use bitcoin::hashes::Hash as _;
     use ciborium::value::Value;
 
-    let wp = destination
-        .witness_program()
-        .expect("test destination must be a witness address");
-    let mut packed = vec![0x03, wp.version() as u8];
-    packed.extend_from_slice(wp.program().as_bytes());
+    let packed = address::pack(destination);
 
     let mut cbor = Vec::new();
     ciborium::into_writer(
@@ -480,11 +476,7 @@ pub(crate) fn build_test_sweep_tx_hex(
     use bitcoin::hashes::Hash as _;
     use ciborium::value::Value;
 
-    let wp = destination
-        .witness_program()
-        .expect("test destination must be a witness address");
-    let mut packed = vec![0x03, wp.version() as u8];
-    packed.extend_from_slice(wp.program().as_bytes());
+    let packed = address::pack(destination);
 
     let mut cbor = Vec::new();
     ciborium::into_writer(
@@ -1124,13 +1116,64 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn plain_btc_send_with_a_non_counterparty_op_return_is_allowed() {
+        // A plain `send --asset BTC` may legitimately carry a single
+        // non-Counterparty OP_RETURN (consensus ignores it). `extract_message`
+        // reports it as Unsupported, so `reject_hidden_message_on_btc_send`
+        // returns None and the BTC-routing check alone decides — the transaction
+        // must verify, not be refused as an undecodable verifiable type.
+        use bitcoin::hashes::Hash as _;
+        let dest = wpkh_addr(0x11);
+        let source = wpkh_addr(0x33);
+        let memo = b"just a memo, not a counterparty payload";
+        let push = bitcoin::script::PushBytesBuf::try_from(memo.to_vec()).unwrap();
+        let tx = Transaction {
+            version: bitcoin::transaction::Version::TWO,
+            lock_time: bitcoin::absolute::LockTime::ZERO,
+            input: vec![bitcoin::TxIn {
+                previous_output: bitcoin::OutPoint {
+                    txid: bitcoin::Txid::all_zeros(),
+                    vout: 0,
+                },
+                script_sig: bitcoin::ScriptBuf::new(),
+                sequence: bitcoin::Sequence::MAX,
+                witness: bitcoin::Witness::new(),
+            }],
+            output: vec![
+                bitcoin::TxOut {
+                    value: bitcoin::Amount::from_sat(5000),
+                    script_pubkey: dest.script_pubkey(),
+                },
+                bitcoin::TxOut {
+                    value: bitcoin::Amount::ZERO,
+                    script_pubkey: bitcoin::ScriptBuf::new_op_return(&push),
+                },
+                bitcoin::TxOut {
+                    value: bitcoin::Amount::from_sat(9000),
+                    script_pubkey: source.script_pubkey(),
+                },
+            ],
+        };
+        let hex = hex::encode(bitcoin::consensus::serialize(&tx));
+        let intent = Intent {
+            asset_id: Some(0), // BTC
+            quantity: Some(5000),
+            destination: Some(dest.to_string()),
+            source: Some(source.to_string()),
+            flags: None,
+        };
+        assert_eq!(
+            verify_composed_transaction(&hex, "send", &intent, NET),
+            Verification::Match
+        );
+    }
+
     // Build the de-obfuscated body of a `sweep` (type 4) to `destination` with
     // `flags`, for hiding inside a BTC-send OP_RETURN.
     fn sweep_message(destination: &Address, flags: u64) -> Vec<u8> {
         use ciborium::value::Value;
-        let wp = destination.witness_program().unwrap();
-        let mut packed = vec![0x03, wp.version() as u8];
-        packed.extend_from_slice(wp.program().as_bytes());
+        let packed = address::pack(destination);
         let mut cbor = Vec::new();
         ciborium::into_writer(
             &Value::Array(vec![

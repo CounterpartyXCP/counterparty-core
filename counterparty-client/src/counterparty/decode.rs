@@ -112,6 +112,20 @@ pub fn verify_classic_send(
             reason: format!("unexpected classic-send payload length ({})", body.len()),
         };
     }
+
+    // Fail closed on a missing requested destination/quantity. `check` and the
+    // `if let Some(dest)` block below both treat an absent expected value as
+    // "unchecked", so without this a tampered recipient or amount could slip
+    // through as a `Match`. Mirrors the fail-closed handling of `source`
+    // (`verify_btc_recipients`) and `sweep` flags — a verifiable-type command
+    // the client cannot fully check must degrade to `Unverifiable`, not pass.
+    let (Some(_), Some(_)) = (intent.destination.as_ref(), intent.quantity) else {
+        return Verification::Unverifiable {
+            reason: "cannot verify a classic send without both a destination and a quantity"
+                .to_string(),
+        };
+    };
+
     let asset_id = u64::from_be_bytes(body[0..8].try_into().unwrap());
     let quantity = u64::from_be_bytes(body[8..16].try_into().unwrap());
 
@@ -356,6 +370,17 @@ pub fn verify_enhanced_send(body: &[u8], intent: &Intent, network: Network) -> V
         };
     };
 
+    // Fail closed on a missing requested destination/quantity: `check` treats an
+    // absent expected value as "unchecked", so without this a tampered recipient
+    // or amount could slip through as a `Match`. Parity with `verify_sweep`'s
+    // flags guard and the `source` guard in `verify_btc_recipients`.
+    let (Some(_), Some(_)) = (intent.destination.as_ref(), intent.quantity) else {
+        return Verification::Unverifiable {
+            reason: "cannot verify an enhanced_send without both a destination and a quantity"
+                .to_string(),
+        };
+    };
+
     combine([
         check("asset", &intent.asset_id, asset_id),
         check("quantity", &intent.quantity, quantity),
@@ -414,6 +439,16 @@ pub fn verify_sweep(body: &[u8], intent: &Intent, network: Network) -> Verificat
     // *closed*: return Unverifiable so the caller refuses a verifiable-type
     // transaction it cannot fully check, rather than silently skipping the flags
     // comparison via [`check`]'s `None`-means-unchecked behaviour.
+    // Fail closed on a missing requested destination: `check` treats an absent
+    // expected value as "unchecked", and a sweep moves *everything* the source
+    // owns — so a skipped destination check is exactly the hole a hostile server
+    // would use. Parity with the flags guard just below.
+    if intent.destination.is_none() {
+        return Verification::Unverifiable {
+            reason: "sweep destination was not provided, so the recipient could not be verified"
+                .to_string(),
+        };
+    }
     if intent.flags.is_none() {
         return Verification::Unverifiable {
             reason: "sweep flags were not provided, so FLAG_OWNERSHIP could not be verified; \
@@ -454,30 +489,10 @@ mod tests {
     }
 
     // The modern packed form (0x01/0x02/0x03 prefix) of an address, for building
-    // CBOR payloads (mirrors counterparty-rs utils::pack).
+    // CBOR payloads. Delegates to the shared packer so it can never drift from
+    // `address::unpack`.
     fn packed(addr: &Address) -> Vec<u8> {
-        match (
-            addr.pubkey_hash(),
-            addr.script_hash(),
-            addr.witness_program(),
-        ) {
-            (Some(h), _, _) => {
-                let mut v = vec![0x01];
-                v.extend_from_slice(h.as_byte_array());
-                v
-            }
-            (_, Some(h), _) => {
-                let mut v = vec![0x02];
-                v.extend_from_slice(h.as_byte_array());
-                v
-            }
-            (_, _, Some(wp)) => {
-                let mut v = vec![0x03, wp.version() as u8];
-                v.extend_from_slice(wp.program().as_bytes());
-                v
-            }
-            _ => panic!("unpackable"),
-        }
+        address::pack(addr)
     }
 
     fn cbor(items: Vec<Value>) -> Vec<u8> {
@@ -765,6 +780,136 @@ mod tests {
         };
         assert!(matches!(
             verify_sweep(&body, &intent, NET),
+            Verification::Unverifiable { .. }
+        ));
+    }
+
+    #[test]
+    fn classic_send_without_destination_or_quantity_is_unverifiable() {
+        // Fail closed: an absent requested destination/quantity must degrade to
+        // Unverifiable, never silently `Match` (the caller then refuses the
+        // verifiable-type command or forces confirmation).
+        let dest = wpkh_addr(0x11);
+        let mut body = Vec::new();
+        body.extend_from_slice(&42u64.to_be_bytes());
+        body.extend_from_slice(&1000u64.to_be_bytes());
+        let tx = tx_with_outputs(vec![output_to(&dest), op_return_output()]);
+
+        // Destination missing.
+        let intent = Intent {
+            asset_id: Some(42),
+            quantity: Some(1000),
+            destination: None,
+            ..Default::default()
+        };
+        assert!(matches!(
+            verify_classic_send(&body, &tx, &intent, NET),
+            Verification::Unverifiable { .. }
+        ));
+
+        // Quantity missing.
+        let intent = Intent {
+            asset_id: Some(42),
+            quantity: None,
+            destination: Some(dest.to_string()),
+            ..Default::default()
+        };
+        assert!(matches!(
+            verify_classic_send(&body, &tx, &intent, NET),
+            Verification::Unverifiable { .. }
+        ));
+    }
+
+    #[test]
+    fn enhanced_send_without_destination_is_unverifiable() {
+        // A fully-decodable payload but no requested destination must fail closed,
+        // not `Match` off a skipped destination check.
+        let dest = wpkh_addr(0x11);
+        let body = cbor(vec![
+            Value::Integer(7u64.into()),
+            Value::Integer(2500u64.into()),
+            Value::Bytes(packed(&dest)),
+            Value::Bytes(vec![]),
+        ]);
+        let intent = Intent {
+            asset_id: Some(7),
+            quantity: Some(2500),
+            destination: None,
+            ..Default::default()
+        };
+        assert!(matches!(
+            verify_enhanced_send(&body, &intent, NET),
+            Verification::Unverifiable { .. }
+        ));
+    }
+
+    #[test]
+    fn sweep_without_destination_is_unverifiable() {
+        // A sweep moves everything the source owns, so a missing requested
+        // destination must fail closed rather than skip the recipient check.
+        let dest = wpkh_addr(0x11);
+        let body = cbor(vec![
+            Value::Bytes(packed(&dest)),
+            Value::Integer(7u64.into()),
+            Value::Bytes(vec![]),
+        ]);
+        let intent = Intent {
+            destination: None,
+            flags: Some(7),
+            ..Default::default()
+        };
+        assert!(matches!(
+            verify_sweep(&body, &intent, NET),
+            Verification::Unverifiable { .. }
+        ));
+    }
+
+    #[test]
+    fn classic_send_wrong_body_length_is_unverifiable() {
+        // A payload that is not exactly the 16-byte `>QQ` classic-send shape
+        // can't be decoded, so it degrades to Unverifiable (never a false Match).
+        let dest = wpkh_addr(0x11);
+        let tx = tx_with_outputs(vec![output_to(&dest), op_return_output()]);
+        let intent = Intent {
+            asset_id: Some(42),
+            quantity: Some(1000),
+            destination: Some(dest.to_string()),
+            ..Default::default()
+        };
+        assert!(matches!(
+            verify_classic_send(&[0u8; 8], &tx, &intent, NET),
+            Verification::Unverifiable { .. }
+        ));
+    }
+
+    #[test]
+    fn btc_send_without_destination_or_quantity_is_unverifiable() {
+        // A plain BTC send verifies the destination receives *exactly* the
+        // requested amount, so both fields are required; absent either, degrade
+        // to Unverifiable rather than wave a possibly-over-paying tx through.
+        let source = wpkh_addr(0x33);
+        let dest = wpkh_addr(0x11);
+        let tx = tx_with_outputs(vec![value_output(&dest, 1000), value_output(&source, 5000)]);
+
+        let missing_quantity = Intent {
+            destination: Some(dest.to_string()),
+            source: Some(source.to_string()),
+            quantity: None,
+            ..Default::default()
+        };
+        assert!(matches!(
+            verify_btc_send(&tx, &missing_quantity, NET),
+            Verification::Unverifiable { .. }
+        ));
+
+        let missing_destination = Intent {
+            destination: None,
+            source: Some(source.to_string()),
+            quantity: Some(1000),
+            ..Default::default()
+        };
+        assert!(matches!(
+            verify_btc_send(&tx, &missing_destination, NET),
             Verification::Unverifiable { .. }
         ));
     }

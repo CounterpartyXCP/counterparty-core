@@ -11,7 +11,6 @@ use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 use crate::bitcoinsigner;
 use crate::commands::api;
 use crate::commands::api::{ApiEndpoint, ApiEndpointArg};
-use crate::commands::wallet::args;
 use crate::config::AppConfig;
 use crate::helpers;
 use crate::wallet::BitcoinWallet;
@@ -163,43 +162,33 @@ fn extract_parameters_from_matches(
     sub_matches: &ArgMatches,
 ) -> HashMap<String, String> {
     let mut params = HashMap::new();
-    let id_map = args::id_arg_map();
 
-    for arg in &endpoint.args {
-        extract_parameter_for_arg(arg, transaction_name, sub_matches, &id_map, &mut params);
+    // The internal clap id is fully determined by (tx name, index, name) — the
+    // same formula the command builder uses, including the injected `--address`
+    // which `find_compose_endpoint` appends at index `endpoint.args.len()`, the
+    // exact position `command_tree` registered it at. So reconstruct the id and
+    // read the value directly, instead of scanning the process-global
+    // `ID_ARG_MAP` (which coupled correctness to build order and was
+    // O(args × map)). An arg skipped at build time (invalid/duplicate name) was
+    // never added to clap, so `get_one` returns `None` and it is omitted.
+    for (idx, arg) in endpoint.args.iter().enumerate() {
+        let internal_id = format!(
+            "__transaction_{}_arg_{}_{}",
+            transaction_name, idx, arg.name
+        );
+        if let Some(value) = sub_matches.get_one::<String>(&internal_id) {
+            params.insert(arg.name.clone(), value.clone());
+        } else if arg.required {
+            // Required args are enforced by clap at parse time, so this is a
+            // belt-and-braces note only.
+            helpers::print_warning("Required argument not found in matches:", Some(&arg.name));
+        }
     }
 
     // Always add verbose=true
     params.insert("verbose".to_string(), "true".to_string());
 
     params
-}
-
-/// Extract a specific parameter for an argument
-fn extract_parameter_for_arg(
-    arg: &ApiEndpointArg,
-    transaction_name: &str,
-    sub_matches: &ArgMatches,
-    id_map: &HashMap<String, String>,
-    params: &mut HashMap<String, String>,
-) {
-    // Try to find the argument by iterating through the id_map
-    for (key, original_name) in id_map.iter() {
-        if key.starts_with(&format!("{}:", transaction_name)) && original_name == &arg.name {
-            // Extract the internal ID from the key
-            let internal_id = key.split(':').nth(1).unwrap_or("");
-
-            if let Some(value) = sub_matches.get_one::<String>(internal_id) {
-                params.insert(arg.name.clone(), value.clone());
-                return;
-            }
-        }
-    }
-
-    // For debugging
-    if arg.required {
-        helpers::print_warning("Required argument not found in matches:", Some(&arg.name));
-    }
 }
 
 /// Get blockchain explorer URL based on network and transaction ID
@@ -547,7 +536,7 @@ async fn call_compose_api(
 ) -> Result<serde_json::Value> {
     // Call API and get the result. `build_api_path` strips any path parameters
     // from `params` so they are not also sent as duplicate query parameters.
-    let api_path = api::build_api_path(path, endpoint, params);
+    let api_path = api::build_api_path(path, endpoint, params)?;
     let result = api::perform_api_request(config, &api_path, params).await?;
 
     // Check if we have a 'result' field in the response
@@ -1431,9 +1420,19 @@ async fn get_utxos_from_api(
                     .find(|output| output.get("n").and_then(|n| n.as_u64()) == Some(vout as u64))
                     .ok_or_else(|| anyhow!("Vout {} not found in transaction {}", vout, txid))?;
 
-                // Extract the BTC amount as an exact decimal (never via f64,
-                // which the signer's sighash then commits to). A JSON number's
-                // string form parses losslessly; a string value is also accepted.
+                // Parse the BTC amount into a `Decimal` before scaling to the
+                // satoshi value the signer's segwit sighash commits to. Note:
+                // `serde_json` is built without `arbitrary_precision`, so a
+                // *fractional* JSON number has already been parsed through `f64`
+                // by the time we see it — `n.to_string()` reflects that `f64`,
+                // not the exact wire text. Every real BTC value (≤ 21e6 BTC, ≤ 8
+                // decimals) is exactly representable in `f64`, so this is lossless
+                // in practice; only a pathologically over-precise `value` could
+                // round, and then by ≤ 1 sat — producing an invalid signature and
+                // a rejected broadcast (fail-safe), never a wrong-amount transfer.
+                // A string `value` (some servers send it as a string) is parsed
+                // exactly. `to_u64` below truncates any sub-satoshi remainder,
+                // which cannot arise for a ≤ 8-decimal amount scaled by 1e8.
                 let amount_value = output.get("value").ok_or_else(|| {
                     anyhow!("Missing or invalid amount for input {}:{}", txid, vout)
                 })?;
@@ -2115,9 +2114,11 @@ mod tests {
     #[test]
     fn extract_parameters_from_matches_reads_registered_args() {
         use clap::{Arg, Command};
+        // The extractor reconstructs the id as `__transaction_<tx>_arg_<idx>_<name>`
+        // (no ID_ARG_MAP lookup), so the clap arg id here must match that shape
+        // for arg 0 (`quantity`) of this tx.
         let tx_name = "cov_extract_params_tx";
         let internal_id: &'static str = "__transaction_cov_extract_params_tx_arg_0_quantity";
-        args::id_arg_map().insert(format!("{tx_name}:{internal_id}"), "quantity".to_string());
 
         let ep = endpoint_with_args("compose_send", &["quantity"]);
         let cmd = Command::new(tx_name).arg(Arg::new(internal_id).long("quantity"));

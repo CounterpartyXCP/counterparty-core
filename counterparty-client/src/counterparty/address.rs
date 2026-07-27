@@ -34,42 +34,50 @@ pub fn unpack(packed: &[u8], network: Network) -> Option<String> {
     }
 }
 
+/// Pack an address into the compact form [`unpack`] decodes, mirroring
+/// `counterparty-rs` `utils::pack`. Test-only: the several test modules that
+/// build `enhanced_send`/`sweep`/CBOR payloads share this one packer (and it
+/// round-trips against [`unpack`]) instead of re-implementing the
+/// `0x01`/`0x02`/`0x03` prefixing in each.
+#[cfg(test)]
+pub(crate) fn pack(addr: &Address) -> Vec<u8> {
+    match (
+        addr.pubkey_hash(),
+        addr.script_hash(),
+        addr.witness_program(),
+    ) {
+        (Some(h), _, _) => {
+            let mut v = vec![0x01];
+            v.extend_from_slice(h.as_byte_array());
+            v
+        }
+        (_, Some(h), _) => {
+            let mut v = vec![0x02];
+            v.extend_from_slice(h.as_byte_array());
+            v
+        }
+        (_, _, Some(wp)) => {
+            let mut v = vec![0x03, wp.version() as u8];
+            v.extend_from_slice(wp.program().as_bytes());
+            v
+        }
+        _ => panic!("unpackable address"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::str::FromStr;
 
-    // Round-trip: pack a known address the same way the indexer does, then
-    // confirm unpack() reproduces the canonical string.
+    // Round-trip: pack a known address with the shared packer, then confirm
+    // unpack() reproduces the canonical string.
     fn pack_roundtrip(addr: &str, network: Network) {
         let parsed = Address::from_str(addr)
             .unwrap()
             .require_network(network)
             .unwrap();
-        // Mirror counterparty-rs utils::pack.
-        let packed = match (
-            parsed.pubkey_hash(),
-            parsed.script_hash(),
-            parsed.witness_program(),
-        ) {
-            (Some(h), _, _) => {
-                let mut v = vec![0x01];
-                v.extend_from_slice(h.as_byte_array());
-                v
-            }
-            (_, Some(h), _) => {
-                let mut v = vec![0x02];
-                v.extend_from_slice(h.as_byte_array());
-                v
-            }
-            (_, _, Some(wp)) => {
-                let mut v = vec![0x03, wp.version() as u8];
-                v.extend_from_slice(wp.program().as_bytes());
-                v
-            }
-            _ => panic!("unpackable address"),
-        };
-        assert_eq!(unpack(&packed, network).as_deref(), Some(addr));
+        assert_eq!(unpack(&pack(&parsed), network).as_deref(), Some(addr));
     }
 
     #[test]

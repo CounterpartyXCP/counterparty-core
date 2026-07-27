@@ -33,12 +33,8 @@ async fn fetch_json_response(client: &Client, url: &str) -> Result<Value> {
         .send()
         .await
         .map_err(|e| super::execution::friendly_send_error(e, url))?;
-    let status = response.status();
-    let body = response
-        .text()
-        .await
-        .with_context(|| format!("Failed to read response body from {}", url))?;
-    super::execution::parse_json_body(&body, status, url)
+    let (value, _status) = super::execution::read_and_parse_response(response, url).await?;
+    Ok(value)
 }
 
 // Parses endpoints from a JSON response

@@ -76,10 +76,13 @@ fn process_file_reference(value: &str) -> Result<String> {
         // Read file content
         let content = fs::read(path).context(format!("Failed to read file: {}", path))?;
 
-        // Try to interpret as UTF-8 text, fall back to hex for binary
-        match String::from_utf8(content.clone()) {
+        // Try to interpret as UTF-8 text, fall back to hex for binary. On the
+        // error path the original bytes are recovered from the error
+        // (`into_bytes`), so the whole buffer is never cloned just to keep a copy
+        // for that branch.
+        match String::from_utf8(content) {
             Ok(text) => Ok(text.trim().to_string()),
-            Err(_) => Ok(hex::encode(content)), // Convert binary to hex
+            Err(e) => Ok(hex::encode(e.into_bytes())),
         }
     } else {
         // Not a file reference, return as is
@@ -375,8 +378,37 @@ fn add_common_cli_args(command: Command) -> Command {
 // `@<file>` form lazily in the import handler into a `Zeroizing` buffer instead
 // (see `handlers::resolve_secret_flag`), so only the non-secret `@<path>` string
 // ever reaches `ArgMatches`.
+//
+// The match is on the argument's *exact* manifest name (`text` / `description`),
+// not a substring. A bare `contains("description")` also caught the unrelated
+// boolean `lock_description` (a `compose_issuance` / `compose_fairminter` flag):
+// applied *after* `build_command`, this override silently replaced that flag's
+// bool value-parser (`args::parse_bool_flag`) with the file-reference one, so
+// `--lock_description true` lost its local `true/false/1/0` validation and a
+// value beginning with `@` was wrongly read as a file path. Manifest arg ids
+// have the shape `__<scope>_arg_<idx>_<name>` (see `commands::wallet::args`), so
+// the name is recovered from that suffix; a non-manifest id (a hardcoded flag)
+// is compared whole and matches neither token.
 fn should_support_file_reference(arg_id: &str) -> bool {
-    arg_id.contains("text") || arg_id.contains("description")
+    matches!(manifest_arg_name(arg_id), "text" | "description")
+}
+
+// Recover the original manifest argument name from an internal clap arg id of
+// the form `__<scope>_arg_<idx>_<name>`. Returns the id unchanged when it does
+// not follow that shape (e.g. a hardcoded, non-manifest flag), so such an id is
+// only matched by an exact-name comparison, never by a coincidental substring.
+fn manifest_arg_name(arg_id: &str) -> &str {
+    let Some((_, after)) = arg_id.rsplit_once("_arg_") else {
+        return arg_id;
+    };
+    // `after` is `<idx>_<name>`: drop the numeric index and its trailing `_`.
+    match after
+        .trim_start_matches(|c: char| c.is_ascii_digit())
+        .strip_prefix('_')
+    {
+        Some(name) => name,
+        None => arg_id,
+    }
 }
 
 // Recursive function to add file reference support to all matching arguments
@@ -869,12 +901,40 @@ mod tests {
             "__transaction_broadcast_arg_0_text"
         ));
         assert!(should_support_file_reference("description"));
+        assert!(should_support_file_reference(
+            "__api_compose_issuance_arg_5_description"
+        ));
         assert!(!should_support_file_reference("address"));
         assert!(!should_support_file_reference("quantity"));
+        // Regression: a bool flag whose *name* merely ends in "description"
+        // (`lock_description`, a compose_issuance/compose_fairminter flag) must
+        // NOT be treated as a file reference — a substring match silently
+        // clobbered its bool value-parser.
+        assert!(!should_support_file_reference(
+            "__api_compose_issuance_arg_6_lock_description"
+        ));
+        assert!(!should_support_file_reference(
+            "__api_compose_fairminter_arg_9_lock_description"
+        ));
         // Secrets are resolved to `Zeroizing` in the handler, NOT via this
         // value_parser, so the resolved key/mnemonic never lands in `ArgMatches`.
         assert!(!should_support_file_reference("private_key"));
         assert!(!should_support_file_reference("mnemonic"));
+    }
+
+    #[test]
+    fn manifest_arg_name_extracts_the_trailing_name_or_returns_the_id() {
+        assert_eq!(
+            manifest_arg_name("__api_compose_issuance_arg_6_lock_description"),
+            "lock_description"
+        );
+        assert_eq!(
+            manifest_arg_name("__transaction_broadcast_arg_0_text"),
+            "text"
+        );
+        // A non-manifest id (no `_arg_<idx>_` marker) is returned unchanged.
+        assert_eq!(manifest_arg_name("description"), "description");
+        assert_eq!(manifest_arg_name("rawtransaction"), "rawtransaction");
     }
 
     #[test]

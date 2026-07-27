@@ -199,20 +199,18 @@ pub fn build_request_parameters(
     matches: &ArgMatches,
 ) -> HashMap<String, String> {
     let mut params = HashMap::new();
-    let id_map = crate::commands::wallet::args::id_arg_map();
 
-    for arg in &endpoint.args {
-        // Try to find the argument by iterating through the id_map
-        for (key, original_name) in id_map.iter() {
-            if key.starts_with(&format!("{}:", endpoint.function)) && original_name == &arg.name {
-                // Extract the internal ID from the key
-                let internal_id = key.split(':').nth(1).unwrap_or("");
-
-                if let Some(value) = matches.get_one::<String>(internal_id) {
-                    params.insert(arg.name.clone(), value.clone());
-                    break; // Once we find a matching value, break out of the loop
-                }
-            }
+    // The internal clap id is fully determined by (function, index, name) — the
+    // same formula `add_command_argument` uses to build it — so reconstruct it
+    // and read the value directly, instead of scanning the process-global
+    // `ID_ARG_MAP` for every arg (which coupled correctness to build order and
+    // was O(args × map)). An arg skipped at build time (invalid or duplicate
+    // name) was never added to clap, so `get_one` returns `None` and the param is
+    // omitted — exactly as the map scan did (it had no entry for such an arg).
+    for (idx, arg) in endpoint.args.iter().enumerate() {
+        let internal_id = format!("__api_{}_arg_{}_{}", endpoint.function, idx, arg.name);
+        if let Some(value) = matches.get_one::<String>(&internal_id) {
+            params.insert(arg.name.clone(), value.clone());
         }
     }
 
@@ -248,26 +246,44 @@ pub fn build_api_path(
     path: &str,
     endpoint: &ApiEndpoint,
     params: &mut HashMap<String, String>,
-) -> String {
+) -> anyhow::Result<String> {
     let mut api_path = path.to_string();
 
     for arg in &endpoint.args {
         if let Some(value) = params.get(&arg.name).cloned() {
-            let encoded = percent_encoding::utf8_percent_encode(&value, PATH_SEGMENT).to_string();
             let int_placeholder = format!("<int:{}>", arg.name);
             let simple_placeholder = format!("<{}>", arg.name);
-
-            if api_path.contains(&int_placeholder) {
-                api_path = api_path.replace(&int_placeholder, &encoded);
-                params.remove(&arg.name);
-            } else if api_path.contains(&simple_placeholder) {
-                api_path = api_path.replace(&simple_placeholder, &encoded);
-                params.remove(&arg.name);
+            let is_int = api_path.contains(&int_placeholder);
+            if !is_int && !api_path.contains(&simple_placeholder) {
+                continue; // not a path parameter for this route; left for the query string
             }
+
+            // A `.` / `..` path segment is collapsed by the WHATWG URL parser
+            // reqwest dials with — and percent-encoding does not prevent it
+            // (`%2e%2e` is still a double-dot segment) — so it would silently
+            // retarget the request at a *different* same-host route. No path
+            // parameter (asset name, address, hash, index) is ever legitimately a
+            // bare dot segment, so reject it rather than send a surprising path.
+            if value == "." || value == ".." {
+                anyhow::bail!(
+                    "invalid value {value:?} for path parameter '{}': a '.'/'..' path segment \
+                     would be collapsed by URL normalisation and retarget the request",
+                    arg.name
+                );
+            }
+
+            let encoded = percent_encoding::utf8_percent_encode(&value, PATH_SEGMENT).to_string();
+            let placeholder = if is_int {
+                &int_placeholder
+            } else {
+                &simple_placeholder
+            };
+            api_path = api_path.replace(placeholder, &encoded);
+            params.remove(&arg.name);
         }
     }
 
-    api_path
+    Ok(api_path)
 }
 
 #[cfg(test)]
@@ -300,7 +316,7 @@ mod tests {
             ("block_index".to_string(), "100000".to_string()),
             ("verbose".to_string(), "true".to_string()),
         ]);
-        let path = build_api_path("/v2/blocks/<int:block_index>", &ep, &mut params);
+        let path = build_api_path("/v2/blocks/<int:block_index>", &ep, &mut params).unwrap();
         assert_eq!(path, "/v2/blocks/100000");
         // The path param must be removed so it isn't duplicated in the query.
         assert!(!params.contains_key("block_index"));
@@ -311,9 +327,51 @@ mod tests {
     fn build_api_path_handles_plain_placeholder() {
         let ep = endpoint("get_asset_info", &["asset"]);
         let mut params = HashMap::from([("asset".to_string(), "XCP".to_string())]);
-        let path = build_api_path("/v2/assets/<asset>", &ep, &mut params);
+        let path = build_api_path("/v2/assets/<asset>", &ep, &mut params).unwrap();
         assert_eq!(path, "/v2/assets/XCP");
         assert!(params.is_empty());
+    }
+
+    #[test]
+    fn build_api_path_percent_encodes_dangerous_bytes_in_a_path_segment() {
+        // The PATH_SEGMENT injection defense (L1): a stray separator in a
+        // substituted value must be encoded, never allowed to add a path segment,
+        // spill into the query, or re-form a `<placeholder>` token.
+        for (raw, needle) in [
+            ("a/b", "a%2Fb"),           // extra path segment
+            ("a\\b", "a%5Cb"),          // backslash normalises to `/`
+            ("a?b", "a%3Fb"),           // query spill
+            ("a#b", "a%23b"),           // fragment spill
+            ("a&b", "a%26b"),           // extra query separator
+            ("a b", "a%20b"),           // space
+            ("<asset>", "%3Casset%3E"), // cannot re-form a placeholder token
+        ] {
+            let ep = endpoint("get_asset_info", &["asset"]);
+            let mut params = HashMap::from([("asset".to_string(), raw.to_string())]);
+            let path = build_api_path("/v2/assets/<asset>", &ep, &mut params).unwrap();
+            assert_eq!(path, format!("/v2/assets/{needle}"), "raw value {raw:?}");
+            // Nothing spilled back into the query parameters.
+            assert!(params.is_empty(), "raw value {raw:?} left params behind");
+        }
+    }
+
+    #[test]
+    fn build_api_path_rejects_a_dot_segment_path_parameter() {
+        // `.`/`..` would be collapsed by URL normalisation and silently retarget
+        // the request at another route (L6), so it must be refused up front.
+        for bad in [".", ".."] {
+            let ep = endpoint("get_asset_info", &["asset"]);
+            let mut params = HashMap::from([("asset".to_string(), bad.to_string())]);
+            assert!(
+                build_api_path("/v2/assets/<asset>", &ep, &mut params).is_err(),
+                "path parameter {bad:?} must be rejected"
+            );
+        }
+        // A `.` inside a longer value (a real subasset longname) is fine.
+        let ep = endpoint("get_asset_info", &["asset"]);
+        let mut params = HashMap::from([("asset".to_string(), "PARENT.child".to_string())]);
+        let path = build_api_path("/v2/assets/<asset>", &ep, &mut params).unwrap();
+        assert_eq!(path, "/v2/assets/PARENT.child");
     }
 
     #[test]
@@ -454,16 +512,12 @@ mod tests {
     }
 
     #[test]
-    fn build_request_parameters_reads_values_via_id_map() {
-        // Build the real command tree (this registers the ID_ARG_MAP entries),
-        // then parse and extract parameters the way execution.rs does.
-        //
-        // `build_request_parameters` scans the *process-global* ID_ARG_MAP for
-        // every entry whose key is prefixed by this endpoint's function, and
-        // calls `matches.get_one` on each internal id it finds. To keep the test
-        // hermetic against other tests that also register `compose_*`/`get_*`
-        // functions into that shared map, use a function name unique to this
-        // test so only its own (fully-defined) arg ids are ever looked up.
+    fn build_request_parameters_reads_values_by_reconstructed_id() {
+        // Build the real command tree, then parse and extract parameters the way
+        // execution.rs does. `build_request_parameters` reconstructs each arg's
+        // internal id as `__api_<function>_arg_<idx>_<name>` (the same formula the
+        // builder used) and reads it straight from `matches` — no ID_ARG_MAP
+        // lookup — so this exercises that the two formulas stay in lock-step.
         let ep = endpoint("compose_uniqbrp", &["asset", "quantity"]);
         let mut endpoints = HashMap::new();
         endpoints.insert(

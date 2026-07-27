@@ -73,7 +73,7 @@ async fn execute_api_command(
     // Build parameters for the API request. `build_api_path` consumes any path
     // parameters from `params`, leaving only genuine query parameters.
     let mut params = build_request_parameters(endpoint, matches);
-    let api_path = build_api_path(path, endpoint, &mut params);
+    let api_path = build_api_path(path, endpoint, &mut params)?;
 
     // Execute API request
     let (result, status) = perform_api_request_with_status(config, &api_path, &params).await?;
@@ -84,7 +84,7 @@ async fn execute_api_command(
     // Reflect an API-level error in the process exit code so scripts can detect
     // it, with an actionable message (e.g. insufficient BTC) rather than a raw
     // internal string.
-    if let Some(error) = result.get("error") {
+    if let Some(error) = response_error(&result) {
         return Err(friendly_api_error(error));
     }
     // An HTTP error status with no `error` field in the body (a proxy 502, a bare
@@ -131,18 +131,25 @@ pub async fn perform_api_request_with_status(
 
     spinner.stop();
 
-    let response = response?;
-    let status = response.status();
+    read_and_parse_response(response?, &full_url).await
+}
 
-    // Read the body as text first so a non-JSON error page yields a helpful
-    // message instead of an opaque "expected value at line 1 column 1".
+/// Read a response body as text (so a non-JSON error page yields a helpful
+/// message instead of an opaque "expected value at line 1 column 1") and parse
+/// it as the API JSON envelope, returning the parsed value together with the
+/// HTTP status. Shared by the request path here and the endpoint-manifest fetch
+/// in `endpoints.rs` so the two response-reading paths cannot drift.
+pub(crate) async fn read_and_parse_response(
+    response: reqwest::Response,
+    url: &str,
+) -> Result<(Value, StatusCode)> {
+    let status = response.status();
     let body = response
         .text()
         .await
-        .with_context(|| format!("Failed to read response body from {}", full_url))?;
-
-    let result = parse_json_body(&body, status, &full_url)?;
-    Ok((result, status))
+        .with_context(|| format!("Failed to read response body from {}", url))?;
+    let value = parse_json_body(&body, status, url)?;
+    Ok((value, status))
 }
 
 // Sends an API request, mapping connection/timeout failures to actionable messages.
@@ -171,6 +178,15 @@ pub fn friendly_send_error(e: reqwest::Error, url: &str) -> anyhow::Error {
     } else {
         anyhow::Error::new(e).context(format!("Failed to send API request to {url}"))
     }
+}
+
+/// The API-level `error` in a response body, if present **and non-null**. The
+/// v2 server omits `error` on success today (`apiserver.py` writes it only when
+/// `error is not None`), but a JSON `null` is treated as "no error" so a future
+/// `{"result": …, "error": null}` envelope cannot start failing every command
+/// with a spurious `API error: null`.
+fn response_error(result: &Value) -> Option<&Value> {
+    result.get("error").filter(|e| !e.is_null())
 }
 
 /// Turn an API `error` payload into an actionable error. Currently special-cases
@@ -264,6 +280,16 @@ mod tests {
             parse_insufficient_funds("Insufficient funds for the target amount: -1 < 5"),
             None
         );
+    }
+
+    #[test]
+    fn response_error_ignores_absent_and_null_error() {
+        // Success shapes: no `error` field, or an explicit JSON `null`.
+        assert!(response_error(&json!({"result": {"tx_hash": "abc"}})).is_none());
+        assert!(response_error(&json!({"result": 1, "error": null})).is_none());
+        // A genuine error (string or object) is surfaced.
+        assert!(response_error(&json!({"error": "boom"})).is_some());
+        assert!(response_error(&json!({"error": {"message": "nope"}})).is_some());
     }
 
     #[test]

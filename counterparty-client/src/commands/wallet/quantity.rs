@@ -29,12 +29,13 @@ enum Denomination {
     IssuedAsset,
     /// Always denominated in BTC satoshis (miner-facing / dispenser rate).
     Btc,
-    /// An amount that counterparty-core treats as unconditionally divisible
-    /// regardless of any asset lookup — currently the AMM LP-token quantities,
-    /// which `api/verbose.py` hardcodes to `divisible=True` because the
-    /// withdrawal/match tables don't carry the LP asset to resolve. Distinct
-    /// from [`Btc`](Self::Btc) so the intent ("always ×1e8, not a BTC amount")
-    /// is explicit at the call site.
+    /// An amount that is unconditionally divisible (×1e8) with no asset lookup —
+    /// the AMM LP-token quantities (which `api/verbose.py` hardcodes to
+    /// `divisible=True` because the withdrawal/match tables don't carry the LP
+    /// asset to resolve) and the always-XCP-denominated amounts (bet wagers,
+    /// fairminter prices). Distinct from [`Btc`](Self::Btc) so the intent
+    /// ("always ×1e8, but not a BTC/miner amount") is explicit at the call site,
+    /// even though both currently resolve to divisible.
     AlwaysDivisible,
 }
 
@@ -136,7 +137,9 @@ fn denomination(transaction_name: &str, param: &str) -> Option<Denomination> {
         // Fairminter: every cap/mint quantity is denominated in the fairminted
         // asset (divisibility from `--divisible`, or the on-chain value when the
         // asset already exists). `price`/`lot_price` is the XCP paid per
-        // `quantity_by_price`/`lot_size` units, and XCP is always divisible.
+        // `quantity_by_price`/`lot_size` units; XCP is always divisible, so these
+        // use `AlwaysDivisible` (not `Btc`) — same ×1e8 scaling, but the XCP
+        // intent is explicit rather than mislabelled as a BTC/miner amount.
         ("fairminter", "hard_cap") => Denomination::IssuedAsset,
         ("fairminter", "soft_cap") => Denomination::IssuedAsset,
         ("fairminter", "premint_quantity") => Denomination::IssuedAsset,
@@ -144,16 +147,17 @@ fn denomination(transaction_name: &str, param: &str) -> Option<Denomination> {
         ("fairminter", "max_mint_per_address") => Denomination::IssuedAsset,
         ("fairminter", "quantity_by_price") => Denomination::IssuedAsset,
         ("fairminter", "pool_quantity") => Denomination::IssuedAsset,
-        ("fairminter", "price") => Denomination::Btc,
+        ("fairminter", "price") => Denomination::AlwaysDivisible,
         // `lot_price`/`lot_size` are the current canonical names for
         // `price`/`quantity_by_price` (the server accepts either); without
         // these, a fairminter composed via `--lot_size` would send a raw,
         // unconverted quantity — off by a factor of 1e8 for a divisible asset.
-        ("fairminter", "lot_price") => Denomination::Btc,
+        ("fairminter", "lot_price") => Denomination::AlwaysDivisible,
         ("fairminter", "lot_size") => Denomination::IssuedAsset,
-        // A bet's wager/counterwager are always denominated in XCP.
-        ("bet", "wager_quantity") => Denomination::Btc,
-        ("bet", "counterwager_quantity") => Denomination::Btc,
+        // A bet's wager/counterwager are always denominated in XCP (always
+        // divisible) — `AlwaysDivisible`, not `Btc`, to say so at the call site.
+        ("bet", "wager_quantity") => Denomination::AlwaysDivisible,
+        ("bet", "counterwager_quantity") => Denomination::AlwaysDivisible,
         // AMM pool deposit quantities are denominated in the two paired assets.
         ("pooldeposit", "quantity_a") => Denomination::Asset("asset_a"),
         ("pooldeposit", "quantity_b") => Denomination::Asset("asset_b"),
@@ -519,7 +523,7 @@ mod tests {
         ));
         assert!(matches!(
             denomination("fairminter", "price"),
-            Some(Denomination::Btc)
+            Some(Denomination::AlwaysDivisible)
         ));
         assert!(matches!(
             denomination("order", "fee_required"),
@@ -690,7 +694,7 @@ mod tests {
         // their aliases.
         assert!(matches!(
             denomination("fairminter", "lot_price"),
-            Some(Denomination::Btc)
+            Some(Denomination::AlwaysDivisible)
         ));
         assert!(matches!(
             denomination("fairminter", "lot_size"),
@@ -698,11 +702,11 @@ mod tests {
         ));
         assert!(matches!(
             denomination("bet", "wager_quantity"),
-            Some(Denomination::Btc)
+            Some(Denomination::AlwaysDivisible)
         ));
         assert!(matches!(
             denomination("bet", "counterwager_quantity"),
-            Some(Denomination::Btc)
+            Some(Denomination::AlwaysDivisible)
         ));
         assert!(matches!(
             denomination("pooldeposit", "quantity_a"),
