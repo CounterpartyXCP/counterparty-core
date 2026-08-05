@@ -118,7 +118,7 @@ impl Heights {
                 taproot_support: 902000,
                 fix_is_segwit: 902000,
                 ordinals_metadata_support: 999999999,
-                correct_transaction_fee: 999999999,
+                correct_transaction_fee: 966200,
             },
             Network::Testnet3 => Heights {
                 segwit: 1440200,
@@ -129,7 +129,7 @@ impl Heights {
                 taproot_support: 4410000,
                 fix_is_segwit: 4410000,
                 ordinals_metadata_support: 999999999,
-                correct_transaction_fee: 999999999,
+                correct_transaction_fee: 5166000,
             },
             Network::Testnet4 => Heights {
                 segwit: 0,
@@ -140,7 +140,7 @@ impl Heights {
                 taproot_support: 85000,
                 fix_is_segwit: 85000,
                 ordinals_metadata_support: 999999999,
-                correct_transaction_fee: 999999999,
+                correct_transaction_fee: 153700,
             },
             Network::Regtest => Heights {
                 segwit: 0,
