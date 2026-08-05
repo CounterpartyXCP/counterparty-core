@@ -10,4 +10,11 @@ ignore = [
     # highlighting) and is flagged unmaintained. No security impact; tracked for
     # removal by dropping/replacing syntect's default feature set. See deny.toml.
     "RUSTSEC-2025-0141",
+    # rkyv 0.7 is an *optional* dependency of rust_decimal that the client never
+    # enables — it appears in Cargo.lock only because lockfiles are
+    # feature-agnostic, and is never compiled into any binary (verified with
+    # `cargo tree -i rkyv --target all`: nothing to print). The fixed version
+    # (0.8.17) is unreachable while rust_decimal (latest: 1.42.1) pins rkyv 0.7;
+    # drop this ignore when rust_decimal moves to rkyv 0.8. See deny.toml.
+    "RUSTSEC-2026-0235",
 ]

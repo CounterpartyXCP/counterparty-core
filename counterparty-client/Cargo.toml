@@ -1,6 +1,6 @@
 [package]
 name = "counterparty-client"
-version = "11.2.1"
+version = "11.3.0"
 edition = "2021"
 license = "MIT"
 # MSRV: bounded by dependencies, not the client's own code — `keyring 4.1`
