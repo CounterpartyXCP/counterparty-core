@@ -1,6 +1,6 @@
-# Release Notes - Counterparty Core v11.2.1 (2026-07-23)
+# Release Notes - Counterparty Core v11.3.0 (2026-08-05)
 
-Counterparty Core v11.2.1 is an operational hardening release addressing the root causes of the 2026-07-15 production incident, in which a small number of expensive public API requests against a degraded Bitcoin backend exhausted the API worker pools and took `/v2/healthz` down with them. It also lands a **staged protocol change** — a correction to the Bitcoin miner-fee calculation (#3458) — that is dormant on mainnet (no activation height is scheduled yet) and has no consensus effect in this release. There is no database migration, and the upgrade is a plain restart.
+Counterparty Core v11.3.0 is an operational hardening release addressing the root causes of the 2026-07-15 production incident, in which a small number of expensive public API requests against a degraded Bitcoin backend exhausted the API worker pools and took `/v2/healthz` down with them. It also includes a **protocol change** — a correction to the Bitcoin miner-fee calculation (#3458) — scheduled to activate at mainnet block **966,200** (approximately September 9, 2026). This is a mandatory upgrade before that block. There is no database migration, and the upgrade is a plain restart.
 
 The most visible behavioral change is that the **legacy v1 JSON-RPC API is now disabled by default** — operators who still rely on it must opt back in with `--enable-api-v1`.
 
@@ -8,7 +8,7 @@ A dedicated health-check listener now runs on its own port (default: API port + 
 
 # Upgrading
 
-**No protocol change activates in this release.** The staged fee-calculation correction (#3458) has no mainnet activation height yet, so there is no activation block, no reparse and no migration.
+**This release includes a protocol change** — the fee-calculation correction (#3458) — activating at block **966,200** on mainnet (approximately September 9, 2026), block 5,166,000 on testnet3 and block 153,700 on testnet4 (it is already active on signet and regtest). **All nodes must upgrade before the activation block.** The change applies from the activation block forward, so there is no reparse and no migration.
 
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
 
@@ -65,7 +65,7 @@ The new health server listens on its own port (default: API port + 2 → `4002` 
 
 ## Protocol
 
-- **Correct the Bitcoin transaction fee calculation** (#3458). The Rust parser stopped walking a transaction's outputs at the first ordinary output after the Counterparty data (normally the change output), so any *further* outputs were dropped from the Bitcoin miner fee (`fee`) recorded for the transaction — e.g. `1db7a85e9bbbcd9f60a62411e94f1ae8d3851642d0e3ca73e095d522bf234293` was recorded as paying 19,388,665 sats while its inputs minus *all* outputs is 46,970 sats. Because `fee` participates in the `txlist_hash` consensus, the correction is gated behind a new `correct_transaction_fee` protocol-change height. **The mainnet, testnet3 and testnet4 activation heights are placeholders** — the change is dormant and has no consensus effect until a height is scheduled in a future release; regtest and signet enable it immediately. Only the recorded fee changes: destinations, dispensed amounts and data are untouched.
+- **Correct the Bitcoin transaction fee calculation** (#3458). The Rust parser stopped walking a transaction's outputs at the first ordinary output after the Counterparty data (normally the change output), so any *further* outputs were dropped from the Bitcoin miner fee (`fee`) recorded for the transaction — e.g. `1db7a85e9bbbcd9f60a62411e94f1ae8d3851642d0e3ca73e095d522bf234293` was recorded as paying 19,388,665 sats while its inputs minus *all* outputs is 46,970 sats. Because `fee` participates in the `txlist_hash` consensus, the correction is gated behind the `correct_transaction_fee` protocol-change height: mainnet block **966,200** (~September 9, 2026), testnet3 block 5,166,000, testnet4 block 153,700; regtest and signet enable it immediately. Only the recorded fee changes: destinations, dispensed amounts and data are untouched.
 
 ## Tools
 

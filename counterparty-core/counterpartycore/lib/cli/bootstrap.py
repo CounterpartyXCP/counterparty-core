@@ -317,7 +317,9 @@ def verify_prepared_signature(zst_path, sig_path):
 
 def prepare_bootstrap(signing_key=None, version=None, compression_level=DEFAULT_COMPRESSION_LEVEL):
     signing_key = signing_key or DEFAULT_SIGNING_KEY
-    version = version or config.BOOTSTRAP_VERSION
+    # Snapshots are prepared for the *current* release, not for the (possibly
+    # older) published set that config.BOOTSTRAP_VERSION points to.
+    version = version or f"v{config.VERSION_STRING}"
     data_dir = config.DATA_DIR
     start_time = time.time()
 
