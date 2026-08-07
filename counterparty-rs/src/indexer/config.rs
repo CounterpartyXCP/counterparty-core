@@ -162,7 +162,12 @@ impl Heights {
                 taproot_support: 0,
                 fix_is_segwit: 0,
                 ordinals_metadata_support: 0,
-                correct_transaction_fee: 0,
+                // Signet history is published in the bootstrap snapshots, so this fee
+                // correction MUST activate at a future height: enabling it from block 0
+                // recomputes the fee of already-parsed transactions and forks `txlist_hash`
+                // against the v11.2.0 snapshot (observed at block 265704). Keep in sync
+                // with `signet_block_index` in protocol_changes.json.
+                correct_transaction_fee: 321300,
             },
         }
     }
