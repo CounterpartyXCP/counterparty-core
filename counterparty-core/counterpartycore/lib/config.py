@@ -278,12 +278,12 @@ PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"
 
 
 BOOTSTRAP_URL_BASE = "https://storage.googleapis.com/counterparty-bootstrap"
-# Version tag embedded in the bootstrap snapshot file names (e.g. "v11.2.0").
+# Version tag embedded in the bootstrap snapshot file names (e.g. "v11.3.0").
 # Versioned names let several releases coexist in the bucket. This tag tracks the
 # latest *published* snapshot set, which may lag behind VERSION_STRING when a
 # release needs no new snapshots (no database migration) or when they have not
 # been uploaded yet — bump it when new snapshots are published to the bucket.
-BOOTSTRAP_VERSION = "v11.2.0"
+BOOTSTRAP_VERSION = "v11.3.0"
 
 # Ledger / state database base file names per network (as stored in the bucket).
 # testnet3 is intentionally absent: it is deprecated and no snapshots are produced

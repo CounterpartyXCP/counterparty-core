@@ -22,16 +22,17 @@ def test_verify_signature():
 
 
 def test_generate_urls():
-    counterparty_url = "https://example.com/counterparty.db.v11.2.0.zst"
+    version = config.BOOTSTRAP_VERSION
+    counterparty_url = f"https://example.com/counterparty.db.{version}.zst"
     urls = bootstrap.generate_urls(counterparty_url)
     assert urls == [
         (
-            "https://example.com/counterparty.db.v11.2.0.zst",
-            "https://example.com/counterparty.db.v11.2.0.sig",
+            f"https://example.com/counterparty.db.{version}.zst",
+            f"https://example.com/counterparty.db.{version}.sig",
         ),
         (
-            "https://example.com/state.db.v11.2.0.zst",
-            "https://example.com/state.db.v11.2.0.sig",
+            f"https://example.com/state.db.{version}.zst",
+            f"https://example.com/state.db.{version}.sig",
         ),
     ]
 
@@ -89,9 +90,9 @@ def test_compress_db_roundtrip(tmp_path):
     with open(db_path, "wb") as f:
         f.write(payload)
 
-    zst_path = bootstrap.compress_db(db_path, "v11.2.0", compression_level=1)
+    zst_path = bootstrap.compress_db(db_path, config.BOOTSTRAP_VERSION, compression_level=1)
 
-    assert zst_path == db_path + ".v11.2.0.zst"
+    assert zst_path == db_path + f".{config.BOOTSTRAP_VERSION}.zst"
     assert os.path.exists(zst_path)
     with open(zst_path, "rb") as f:
         assert pyzstd.decompress(f.read()) == payload
@@ -101,8 +102,8 @@ def test_compress_db_roundtrip(tmp_path):
 
 
 def test_verify_prepared_signature_ok(tmp_path, monkeypatch, capsys):
-    zst_path = str(tmp_path / "counterparty.db.v11.2.0.zst")
-    sig_path = str(tmp_path / "counterparty.db.v11.2.0.sig")
+    zst_path = str(tmp_path / f"counterparty.db.{config.BOOTSTRAP_VERSION}.zst")
+    sig_path = str(tmp_path / f"counterparty.db.{config.BOOTSTRAP_VERSION}.sig")
     open(zst_path, "wb").close()
     open(sig_path, "wb").close()
 
@@ -114,8 +115,8 @@ def test_verify_prepared_signature_ok(tmp_path, monkeypatch, capsys):
 
 
 def test_verify_prepared_signature_raises(tmp_path, monkeypatch):
-    zst_path = str(tmp_path / "counterparty.db.v11.2.0.zst")
-    sig_path = str(tmp_path / "counterparty.db.v11.2.0.sig")
+    zst_path = str(tmp_path / f"counterparty.db.{config.BOOTSTRAP_VERSION}.zst")
+    sig_path = str(tmp_path / f"counterparty.db.{config.BOOTSTRAP_VERSION}.sig")
     open(zst_path, "wb").close()
     open(sig_path, "wb").close()
 
@@ -149,7 +150,9 @@ def test_prepare_bootstrap_happy_path(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(bootstrap, "sign_file", lambda zst, key: zst.replace(".zst", ".sig"))
     monkeypatch.setattr(bootstrap, "verify_prepared_signature", lambda zst, sig: None)
 
-    bootstrap.prepare_bootstrap(signing_key="dev@counterparty.io", version="v11.2.0")
+    bootstrap.prepare_bootstrap(
+        signing_key="dev@counterparty.io", version=f"v{config.VERSION_STRING}"
+    )
 
     assert len(calls) == 2
     assert "Prepared 2 snapshot(s)" in capsys.readouterr().out
