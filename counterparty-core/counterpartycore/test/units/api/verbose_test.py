@@ -61,6 +61,68 @@ def test_inject_normalized_quantities_adds_order_match_market_price_normalized()
     assert result["market_price"] == result["market_price_normalized"]
 
 
+def test_inject_normalized_quantities_normalizes_all_fairminter_quantities():
+    """Every asset-denominated quantity on a fairminter row must get a
+    `_normalized` companion. `max_mint_per_address` and `pool_quantity` were
+    missing from `quantity_fields` while all their neighbours were present."""
+    result = verbose.inject_normalized_quantities(
+        [
+            {
+                "asset": "DIVISIBLE",
+                "hard_cap": 1000000000,
+                "soft_cap": 400000000,
+                "max_mint_per_tx": 100000000,
+                "max_mint_per_address": 500000000,
+                "premint_quantity": 200000000,
+                "pool_quantity": 300000000,
+                "asset_info": {"divisible": True},
+            }
+        ]
+    )[0]
+
+    assert result["max_mint_per_tx_normalized"] == decimal.Decimal("1")
+    assert result["max_mint_per_address_normalized"] == decimal.Decimal("5")
+    assert result["premint_quantity_normalized"] == decimal.Decimal("2")
+    assert result["pool_quantity_normalized"] == decimal.Decimal("3")
+
+
+def test_inject_normalized_quantities_fairminter_quantities_indivisible():
+    """Divisibility comes from the fairminter's own `asset_info`: an
+    indivisible asset is returned as-is, not divided by 1e8."""
+    result = verbose.inject_normalized_quantities(
+        [
+            {
+                "asset": "INDIVISIBLE",
+                "max_mint_per_address": 5,
+                "pool_quantity": 3,
+                "asset_info": {"divisible": False},
+            }
+        ]
+    )[0]
+
+    assert result["max_mint_per_address_normalized"] == "5"
+    assert result["pool_quantity_normalized"] == "3"
+
+
+def test_inject_normalized_quantities_skips_null_max_mint_per_address():
+    """`max_mint_per_address` is nullable (no DEFAULT on the column), so the
+    `_normalized` key is absent rather than null on fairminters that don't
+    set it. Clients must not assume the key is always present."""
+    result = verbose.inject_normalized_quantities(
+        [
+            {
+                "asset": "DIVISIBLE",
+                "max_mint_per_address": None,
+                "pool_quantity": 0,
+                "asset_info": {"divisible": True},
+            }
+        ]
+    )[0]
+
+    assert "max_mint_per_address_normalized" not in result
+    assert result["pool_quantity_normalized"] == decimal.Decimal("0")
+
+
 def test_normalize_price_does_not_leak_prec_to_caller_thread():
     """normalize_price must NOT mutate the thread-local Decimal precision
     of the caller; previously it called `decimal.getcontext().prec = 32`
