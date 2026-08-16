@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v11.3.0 (2026-08-05)
+# Release Notes - Counterparty Core v11.3.0 (2026-08-16)
 
 Counterparty Core v11.3.0 is an operational hardening release addressing the root causes of the 2026-07-15 production incident, in which a small number of expensive public API requests against a degraded Bitcoin backend exhausted the API worker pools and took `/v2/healthz` down with them. It also includes a **protocol change** — a correction to the Bitcoin miner-fee calculation (#3458) — scheduled to activate at mainnet block **966,200** (approximately September 9, 2026). This is a mandatory upgrade before that block. There is no database migration, and the upgrade is a plain restart.
 
