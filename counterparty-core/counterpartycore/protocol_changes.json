@@ -1482,5 +1482,14 @@
         "testnet3_block_index": 5064400,
         "testnet4_block_index": 147200,
         "signet_block_index": 316200
+    },
+    "correct_transaction_fee": {
+        "minimum_version_major": 11,
+        "minimum_version_minor": 3,
+        "minimum_version_revision": 0,
+        "block_index": 966200,
+        "testnet3_block_index": 5166000,
+        "testnet4_block_index": 153700,
+        "signet_block_index": 321300
     }
 }

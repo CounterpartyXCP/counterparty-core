@@ -2,9 +2,9 @@ import json
 from unittest.mock import Mock
 
 import pytest
-from counterpartycore.lib import config, ledger
+from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.api import apiserver, apiwatcher, blockcache, composer
-from counterpartycore.lib.api.routes import ALL_ROUTES, ROUTES
+from counterpartycore.lib.api.routes import ALL_ROUTES, ROUTES, get_routes
 from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.lib.parser import blocks
 from counterpartycore.lib.utils import hashcodec, helpers
@@ -139,6 +139,33 @@ def test_routes_only_document_available_show_unconfirmed_args():
 
     assert not get_route_args("/v2/transactions/counts", "show_unconfirmed")
     assert not get_route_args("/v2/routes", "show_unconfirmed")
+
+
+def test_api_v1_routes_gated_by_enable_api_v1(
+    ledger_db, state_db, monkeypatch, current_block_index
+):
+    monkeypatch.setattr(
+        "counterpartycore.lib.backend.bitcoind.getblockcount", lambda: current_block_index
+    )
+    monkeypatch.setattr("counterpartycore.lib.backend.bitcoind.get_blocks_behind", lambda: 0)
+
+    v1_paths = {"/", "/v1/", "/api/", "/rpc/"}
+    original = config.ENABLE_API_V1
+    try:
+        # Disabled by default: the legacy v1 proxy routes are neither listed by
+        # `/v2/routes` nor registered on the Flask app (they hit the 404 handler).
+        config.ENABLE_API_V1 = False
+        assert not (v1_paths & set(get_routes().keys()))
+        registered = {rule.rule for rule in apiserver.init_flask_app().url_map.iter_rules()}
+        assert not (v1_paths & registered)
+
+        # Explicit opt-in via `--enable-api-v1`: the v1 routes come back.
+        config.ENABLE_API_V1 = True
+        assert v1_paths <= set(get_routes().keys())
+        registered = {rule.rule for rule in apiserver.init_flask_app().url_map.iter_rules()}
+        assert v1_paths <= registered
+    finally:
+        config.ENABLE_API_V1 = original
 
 
 def prepare_url(db, current_block_index, defaults, rawtransaction, route):
@@ -646,6 +673,73 @@ def test_sentry_context_includes_http_error_returned_to_user(apiv2_client, monke
     assert response.json["error"] == "Unknown error"
     assert len(captured) == 1
     assert isinstance(captured[0], RuntimeError)
+
+
+def test_bitcoind_rpc_error_returns_retryable_503(apiv2_client, monkeypatch):
+    """A degraded Bitcoin backend surfaced as a BitcoindRPCError must return a
+    retryable 503, not a 400 that clients treat as permanent (issue #3459)."""
+
+    def execute_api_function_mock(_rule, _route, _function_args):
+        raise exceptions.BitcoindRPCError("Could not connect to backend")
+
+    monkeypatch.setattr(apiserver, "execute_api_function", execute_api_function_mock)
+
+    response = apiv2_client.get("/v2/transactions?limit=1")
+
+    assert response.status_code == 503
+    assert "Could not connect to backend" in response.json["error"]
+
+
+def test_rpc_budget_exceeded_returns_400(apiv2_client, monkeypatch):
+    """A request that fans out beyond API_MAX_BACKEND_RPC_CALLS is rejected with a
+    clear 400 and is not reported to Sentry (it is an expected guard, issue #3461)."""
+    monkeypatch.setattr(config, "API_MAX_BACKEND_RPC_CALLS", 2)
+    captured = []
+    monkeypatch.setattr(apiserver, "capture_exception", lambda e: captured.append(e))
+
+    def execute_api_function_mock(_rule, _route, _function_args):
+        # handle_route armed the budget (2) before calling us; simulate a route
+        # fanning out to 3 backend RPC calls -> the 3rd trips the budget.
+        for _ in range(3):
+            apiserver.bitcoind._account_rpc_calls(1)
+        return []  # unreachable
+
+    monkeypatch.setattr(apiserver, "execute_api_function", execute_api_function_mock)
+
+    response = apiv2_client.get("/v2/transactions?limit=1")
+
+    assert response.status_code == 400
+    assert "maximum number of Bitcoin backend RPC calls" in response.json["error"]
+    assert captured == []  # expected guard trip, not Sentry-reported
+
+
+def test_rpc_budget_exceeded_during_enrichment_returns_400(apiv2_client, monkeypatch):
+    """A budget trip during result enrichment (outside the inner try) is caught by
+    the outer clause and still returned as a clear 400 without Sentry noise."""
+    captured = []
+    monkeypatch.setattr(apiserver, "capture_exception", lambda e: captured.append(e))
+    monkeypatch.setattr(
+        apiserver.verbose,
+        "clean_api_result",
+        lambda _result: (_ for _ in ()).throw(
+            exceptions.ApiRPCBudgetExceededError(
+                "exceeds the maximum number of Bitcoin backend RPC calls (2)"
+            )
+        ),
+    )
+
+    response = apiv2_client.get("/v2/transactions?limit=1")
+
+    assert response.status_code == 400
+    assert "maximum number of Bitcoin backend RPC calls" in response.json["error"]
+    assert captured == []
+
+
+def test_request_under_rpc_budget_succeeds(apiv2_client, monkeypatch):
+    """Arming the budget must not break a normal request that stays under the cap."""
+    monkeypatch.setattr(config, "API_MAX_BACKEND_RPC_CALLS", 5)
+    response = apiv2_client.get("/v2/transactions?limit=1")
+    assert response.status_code == 200
 
 
 def test_sentry_context_includes_outer_http_error_returned_to_user(apiv2_client, monkeypatch):

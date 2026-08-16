@@ -3,7 +3,7 @@ use std::fmt::Display;
 use pyo3::{
     exceptions::PyValueError,
     types::{PyAnyMethods, PyDict, PyDictMethods},
-    Bound, FromPyObject, PyAny, PyErr, PyResult,
+    Borrowed, FromPyObject, PyAny, PyErr, PyResult,
 };
 use tracing::level_filters::LevelFilter;
 
@@ -13,8 +13,9 @@ pub enum Mode {
     Fetcher,
 }
 
-impl<'source> FromPyObject<'source> for Mode {
-    fn extract_bound(obj: &Bound<'source, PyAny>) -> PyResult<Self> {
+impl<'a, 'py> FromPyObject<'a, 'py> for Mode {
+    type Error = PyErr;
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
         let mode_str: String = obj.extract()?;
         match mode_str.trim().to_lowercase().as_str() {
             "indexer" => Ok(Mode::Indexer),
@@ -35,8 +36,9 @@ impl From<LogLevel> for LevelFilter {
     }
 }
 
-impl<'source> FromPyObject<'source> for LogLevel {
-    fn extract_bound(obj: &Bound<'source, PyAny>) -> PyResult<Self> {
+impl<'a, 'py> FromPyObject<'a, 'py> for LogLevel {
+    type Error = PyErr;
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
         let level_str: String = obj.extract()?;
         match level_str.trim().to_lowercase().as_str() {
             "trace" => Ok(LogLevel(LevelFilter::TRACE)),
@@ -61,8 +63,9 @@ pub enum Network {
     Signet,
 }
 
-impl<'source> FromPyObject<'source> for Network {
-    fn extract_bound(obj: &Bound<'source, PyAny>) -> PyResult<Self> {
+impl<'a, 'py> FromPyObject<'a, 'py> for Network {
+    type Error = PyErr;
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
         let network_str: String = obj.extract()?;
         match network_str.trim().to_lowercase().as_str() {
             "mainnet" => Ok(Network::Mainnet),
@@ -100,6 +103,7 @@ pub struct Heights {
     pub taproot_support: u32,
     pub fix_is_segwit: u32,
     pub ordinals_metadata_support: u32,
+    pub correct_transaction_fee: u32,
 }
 
 impl Heights {
@@ -114,6 +118,7 @@ impl Heights {
                 taproot_support: 902000,
                 fix_is_segwit: 902000,
                 ordinals_metadata_support: 999999999,
+                correct_transaction_fee: 966200,
             },
             Network::Testnet3 => Heights {
                 segwit: 1440200,
@@ -124,6 +129,7 @@ impl Heights {
                 taproot_support: 4410000,
                 fix_is_segwit: 4410000,
                 ordinals_metadata_support: 999999999,
+                correct_transaction_fee: 5166000,
             },
             Network::Testnet4 => Heights {
                 segwit: 0,
@@ -134,6 +140,7 @@ impl Heights {
                 taproot_support: 85000,
                 fix_is_segwit: 85000,
                 ordinals_metadata_support: 999999999,
+                correct_transaction_fee: 153700,
             },
             Network::Regtest => Heights {
                 segwit: 0,
@@ -144,6 +151,7 @@ impl Heights {
                 taproot_support: 0,
                 fix_is_segwit: 0,
                 ordinals_metadata_support: 0,
+                correct_transaction_fee: 0,
             },
             Network::Signet => Heights {
                 segwit: 0,
@@ -154,6 +162,12 @@ impl Heights {
                 taproot_support: 0,
                 fix_is_segwit: 0,
                 ordinals_metadata_support: 0,
+                // Signet history is published in the bootstrap snapshots, so this fee
+                // correction MUST activate at a future height: enabling it from block 0
+                // recomputes the fee of already-parsed transactions and forks `txlist_hash`
+                // against the v11.2.0 snapshot (observed at block 265704). Keep in sync
+                // with `signet_block_index` in protocol_changes.json.
+                correct_transaction_fee: 321300,
             },
         }
     }
@@ -217,6 +231,10 @@ impl Config {
         height >= self.heights.ordinals_metadata_support || self.enable_all_protocol_changes
     }
 
+    pub fn correct_transaction_fee_enabled(&self, height: u32) -> bool {
+        height >= self.heights.correct_transaction_fee || self.enable_all_protocol_changes
+    }
+
     pub fn unspendable(&self) -> String {
         match self.network {
             Network::Mainnet => "1CounterpartyXXXXXXXXXXXXXXXUWLpVr",
@@ -229,9 +247,10 @@ impl Config {
     }
 }
 
-impl<'source> FromPyObject<'source> for Config {
-    fn extract_bound(obj: &Bound<'source, PyAny>) -> PyResult<Self> {
-        let dict = obj.downcast::<PyDict>()?;
+impl<'a, 'py> FromPyObject<'a, 'py> for Config {
+    type Error = PyErr;
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
+        let dict = obj.cast::<PyDict>()?;
         let rpc_address: String = dict
             .get_item("rpc_address")?
             .ok_or(PyErr::new::<PyValueError, _>("'rpc_address' is required"))?

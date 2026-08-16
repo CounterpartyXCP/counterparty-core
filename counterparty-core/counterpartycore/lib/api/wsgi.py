@@ -278,6 +278,11 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):  # pylint: disable
             self.arbiter.kill_all_workers()
             self.server_ready_value.value = 2
 
+    def get_task_dispatcher(self):
+        # Gunicorn forks worker processes; there is no single in-process thread
+        # pool to introspect from the master, so worker metrics are unavailable.
+        return None
+
 
 class WerkzeugApplication:
     def __init__(self, app, args=None):
@@ -301,6 +306,10 @@ class WerkzeugApplication:
         self.server.shutdown()
         self.server.server_close()
         self.server_ready_value.value = 2
+
+    def get_task_dispatcher(self):
+        # Werkzeug uses a per-request thread model with no introspectable pool.
+        return None
 
 
 class WaitressApplication:
@@ -335,6 +344,12 @@ class WaitressApplication:
         self.server.close()
         self.server_ready_value.value = 2
 
+    def get_task_dispatcher(self):
+        # Waitress serves every request from a single shared ThreadedTaskDispatcher
+        # (the pool the public API and, previously, health checks contend for).
+        # Exposing it lets the isolated health server report saturation metrics.
+        return self.server.task_dispatcher
+
 
 class WSGIApplication:
     def __init__(self, app, args=None):
@@ -355,3 +370,8 @@ class WSGIApplication:
     def stop(self):
         logger.info("Stopping WSGI Server thread...")
         self.server.stop()
+
+    def get_task_dispatcher(self):
+        # Returns the underlying server's worker-thread pool for health metrics,
+        # or None when the backend has no introspectable in-process pool.
+        return self.server.get_task_dispatcher()

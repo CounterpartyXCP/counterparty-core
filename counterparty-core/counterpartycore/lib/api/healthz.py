@@ -4,7 +4,6 @@ import time
 import flask
 
 from counterpartycore.lib import (
-    backend,
     config,
     exceptions,
     ledger,
@@ -31,7 +30,14 @@ def check_last_parsed_block(db, blockcount):
 
 
 def healthz_light(db):
-    latest_block_index = backend.bitcoind.getblockcount()
+    # Use the cached backend block count (kept fresh in shared memory by the BackendHeight
+    # thread) instead of a live `getblockcount` RPC. The RPC is an unbounded dependency call
+    # that, in the request path, could amplify an overload (issue #3460). When the value is not
+    # yet known (pre-startup / API-only), fall back to the last parsed block so the check passes
+    # rather than making a blocking network call.
+    latest_block_index = CurrentState().current_block_count()
+    if not latest_block_index:
+        latest_block_index = CurrentState().current_block_index() or 0
     check_last_parsed_block(db, latest_block_index)
 
 

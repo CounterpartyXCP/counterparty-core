@@ -51,6 +51,15 @@ For example:
 
 All responses contain a `result_count` field allowing you to calculate the number of pages.
 
+## Query Cost Limits
+
+To keep a single request from generating an unbounded amount of work, the server enforces two cost limits:
+
+- **Maximum page size.** The `limit` parameter is capped at `1000` (configurable with `--api-limit-rows`, `0` removes the cap). A larger `limit` is silently clamped to the maximum. Use `cursor`/`offset` pagination to retrieve more results.
+- **Maximum backend RPC fan-out.** Some endpoints resolve data from Bitcoin Core — most notably the transaction-info routes (`/v2/transactions/info`, `/v2/transactions/<tx_hash>/info`), which look up every input of a transaction, and the `/v2/addresses/<address>/compose/*` routes, which look up an address's UTXOs. A single request may trigger at most `1000` Bitcoin Core RPC calls (configurable with `--api-max-backend-rpc-calls`, `0` removes the cap). A request that would exceed this is rejected with HTTP `400` and an explanatory error. For large composes you can avoid the backend lookups entirely by supplying the UTXOs directly via the `inputs_set` parameter.
+
+Identical Bitcoin Core lookups are cached, so repeated requests for the same transaction do not repeat the backend work.
+
 ## Bitcoin Core Proxy
 
 Routes in the `/v2/bitcoin` group serve as a proxy to make requests to Bitcoin Core.

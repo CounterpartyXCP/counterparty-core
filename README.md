@@ -60,6 +60,12 @@
 
 See the **[official project documentation](http://docs.counterparty.io)** for more information, and for instructions on installing and running the Counterparty software. The reference for the Counterparty Core API is available at **[apidocs.counterparty.io](https://apidocs.counterparty.io/)**.
 
+This repository contains:
+
+- **[`counterparty-core/`](counterparty-core/)** — the Python reference implementation (the `counterparty-server` node).
+- **[`counterparty-rs/`](counterparty-rs/)** — the Rust extension used by the node for performance-critical work.
+- **[`counterparty-client/`](counterparty-client/)** — a Rust command-line client (`xcp`) with a local encrypted wallet, for composing, signing and broadcasting Counterparty transactions against an API server. See its [README](counterparty-client/README.md).
+
 
 ## Contributing
 

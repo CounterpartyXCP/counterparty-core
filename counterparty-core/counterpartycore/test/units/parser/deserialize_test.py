@@ -1,9 +1,11 @@
 import binascii
+import struct
 import time
 from io import BytesIO
 
 import bitcoin as bitcoinlib
 import pytest
+from arc4 import ARC4  # pylint: disable=no-name-in-module
 from bitcoinutils.keys import PrivateKey
 from counterparty_rs import utils as pycoin_rs_utils
 from counterpartycore.lib import config
@@ -84,6 +86,54 @@ def test_deserialize():
         "tx_hash": "54cc399879446c4eaa7774bb764b319a2680709f99704ce60344587f49ff97e8",
         "tx_id": "54cc399879446c4eaa7774bb764b319a2680709f99704ce60344587f49ff97e8",
     }
+
+    # Regression (#3458): once `correct_transaction_fee` activates, every output must be
+    # subtracted from the Bitcoin miner fee — including outputs that come *after* the change.
+    # Before activation the parser stopped at the first ordinary output following the data and
+    # silently dropped any trailing outputs from the fee. Craft a minimal Counterparty
+    # transaction whose outputs are, in order:
+    #   vout 0: OP_RETURN data
+    #   vout 1: change  (first ordinary output after the data — where parsing stops)
+    #   vout 2: a further ordinary output, *after* the change
+    prefix_key = bytes.fromhex("11" * 32)  # ARC4 key is the first input's txid (display order)
+    op_return = ARC4(prefix_key).encrypt(config.PREFIX + b"\x00\x00\x00\ntest-fee")
+
+    def p2pkh_script(pubkey_hash):
+        return b"\x76\xa9\x14" + pubkey_hash + b"\x88\xac"
+
+    def txout(value, script):
+        return struct.pack("<Q", value) + bytes([len(script)]) + script
+
+    tx_hex = (
+        struct.pack("<I", 1)  # version
+        # single input spending prefix_key:0 (txid stored little-endian in the raw tx)
+        + b"\x01"
+        + prefix_key[::-1]
+        + struct.pack("<I", 0)
+        + b"\x00"
+        + b"\xff\xff\xff\xff"
+        + b"\x03"  # three outputs
+        + txout(0, b"\x6a" + bytes([len(op_return)]) + op_return)
+        + txout(100_000, p2pkh_script(b"\x11" * 20))
+        + txout(50_000, p2pkh_script(b"\x22" * 20))
+        + struct.pack("<I", 0)  # lock_time
+    ).hex()
+
+    # Before activation the trailing 50,000-sat output is omitted from the fee.
+    before = deserialize.deserialize_tx(tx_hex, parse_vouts=True, block_index=900_000)
+    assert before["parsed_vouts"][2] == -100_000
+    assert before["parsed_vouts"][2] != -sum(output["value"] for output in before["vout"])
+
+    # After activation every output — including the one after the change — contributes to the fee.
+    corrected = deserialize.deserialize_tx(tx_hex, parse_vouts=True, block_index=1_000_000_000)
+    assert corrected["parsed_vouts"][2] == -150_000
+    assert corrected["parsed_vouts"][2] == -sum(output["value"] for output in corrected["vout"])
+
+    # Only the fee changes; destinations, btc_amount, data and dispensers are untouched.
+    assert before["parsed_vouts"][0] == corrected["parsed_vouts"][0]
+    assert before["parsed_vouts"][1] == corrected["parsed_vouts"][1]
+    assert before["parsed_vouts"][3] == corrected["parsed_vouts"][3]
+    assert before["parsed_vouts"][4] == corrected["parsed_vouts"][4]
 
     transactions_hex = [
         "0100000001db3acf37743ac015808f7911a88761530c801819b3b907340aa65dfb6d98ce24030000006a473044022002961f4800cb157f8c0913084db0ee148fa3e1130e0b5e40c3a46a6d4f83ceaf02202c3dd8e631bf24f4c0c5341b3e1382a27f8436d75f3e0a095915995b0bf7dc8e01210395c223fbf96e49e5b9e06a236ca7ef95b10bf18c074bd91a5942fc40360d0b68fdffffff040000000000000000536a4c5058325bd61325dc633fadf05bec9157c23106759cee40954d39d9dbffc17ec5851a2d1feb5d271da422e0e24c7ae8ad29d2eeabf7f9ca3de306bd2bc98e2a39e47731aa000caf400053000c1283000149c8000000000000001976a91462bef4110f98fdcb4aac3c1869dbed9bce8702ed88acc80000000000000017a9144317f779c0a2ccf8f6bc3d440bd9e536a5bff75287fa3e5100000000001976a914bf2646b8ba8b4a143220528bde9c306dac44a01c88ac00000000",

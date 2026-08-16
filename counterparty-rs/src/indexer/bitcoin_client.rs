@@ -714,6 +714,7 @@ pub fn parse_transaction(
     let mut commit_parent_vout = 0;
     let mut potential_dispensers = Vec::new();
     let mut err = None;
+    let mut outputs_parsed = false;
     for vout in tx.output.iter() {
         vouts.push(Vout {
             value: vout.value.to_sat(),
@@ -729,6 +730,12 @@ pub fn parse_transaction(
             }
             let output_value = vout.value.to_sat() as i64;
             fee -= output_value;
+            // Counterparty semantics stop at the first ordinary output after the data. That output is normally
+            // change, but transactions may legally have additional outputs after it. Keep subtracting those
+            // outputs from the Bitcoin miner fee without interpreting them as Counterparty destinations/data.
+            if outputs_parsed {
+                continue;
+            }
             let result = parse_vout(
                 &config,
                 key.clone(),
@@ -753,7 +760,11 @@ pub fn parse_transaction(
                         }
                         btc_amount += output_value;
                     } else if parse_output.is_destination() {
-                        break;
+                        if config.correct_transaction_fee_enabled(height) {
+                            outputs_parsed = true;
+                        } else {
+                            break;
+                        }
                     } else if let ParseOutput::Data(mut new_data) = parse_output {
                         // reveal transaction data
                         if config.taproot_support_enabled(height)
