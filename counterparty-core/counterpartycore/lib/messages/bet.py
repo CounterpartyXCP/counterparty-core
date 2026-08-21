@@ -132,6 +132,14 @@ def validate(
         problems.append("feed doesn't exist")
     elif not broadcasts[-1]["text"]:
         problems.append("feed is locked")
+    elif broadcasts[-1]["timestamp"] is None:
+        # A CBOR broadcast carrying a NaN float timestamp validates as "valid"
+        # (every comparison against NaN is False, and `min(nan, MAX_INT)` returns
+        # NaN) and sqlite3 then binds NaN as NULL. `None >= deadline` is a
+        # TypeError raised inside validate(), which parse() does not wrap --
+        # unlike broadcast.parse(), which has the `broadcast_safe_validate` net.
+        # It escapes as ParseTransactionError and halts every node.
+        problems.append("feed has no usable timestamp")
     elif broadcasts[-1]["timestamp"] >= deadline:
         problems.append("deadline in that feed's past")
 

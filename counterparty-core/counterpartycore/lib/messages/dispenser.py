@@ -239,6 +239,20 @@ def validate(
             problems.append(
                 f"The oracle address {oracle_address} has not broadcasted any price yet"
             )
+        elif last_price == 0:
+            # A broadcast with `value = 0` is perfectly valid (nothing rejects
+            # zero), and so is a "lock" broadcast, which stores NULL. Both make
+            # `calculate_oracle_fee()` divide by the price: ZeroDivisionError
+            # inside parse(), wrapped into ParseTransactionError and re-raised by
+            # parse_block() -- i.e. every node halts on a two-transaction attack.
+            # `is_dispensable()` already guarded `last_price == 0`, but it is
+            # dead code since `disable_vanilla_btc_dispense`; the open/refill
+            # path was never guarded. No activation gate: opening a dispenser on
+            # a zero-price oracle crashes today, so no historical block contains
+            # one that parsed successfully.
+            problems.append(
+                f"The oracle address {oracle_address} has not broadcasted any usable price yet"
+            )
 
     if (
         give_quantity > config.MAX_INT
@@ -326,7 +340,13 @@ def calculate_oracle_fee(
     last_price, last_fee, _last_fiat_label, _last_updated = other.get_oracle_last_price(
         db, oracle_address, block_index
     )
-    last_fee_multiplier = last_fee / config.UNIT
+    # `fee_fraction_int` is NULL for a "lock" broadcast, for a broadcast whose
+    # CBOR payload carried a NaN float (sqlite3 binds NaN as NULL, and
+    # broadcast.validate() deliberately does no numeric type check), and for a
+    # value clamped out of SQLite's 64-bit range. `None / config.UNIT` is a
+    # TypeError that halts the chain; "no fee" is the same reading
+    # `bet.get_fee_fraction()` already uses for a falsy fee fraction.
+    last_fee_multiplier = (last_fee or 0) / config.UNIT
 
     # Format mainchainrate to ######.##
     oracle_mainchainrate = helpers.satoshirate_to_fiat(mainchainrate)

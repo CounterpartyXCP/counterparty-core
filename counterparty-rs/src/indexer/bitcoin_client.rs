@@ -203,7 +203,21 @@ fn parse_vout(
             // data[config.prefix.len()..] does not panic on short attacker input.
             let data_len = min(bytes[0] as usize, bytes.len() - 1);
             if data_len < config.prefix.len() {
-                return Ok((ParseOutput::Data(vec![]), None));
+                // NOTE: the dispenser slot MUST stay structurally complete
+                // (`Some`), even when the output carries no usable data. PyO3
+                // maps a `None` element to a genuine Python `None` inside
+                // `parsed_vouts.potential_dispensers`, and the Python consumers
+                // (`get_dispensers_outputs`, `get_dispensers_tx_info`) subscript
+                // every element unconditionally -- a `None` there raises an
+                // uncaught `TypeError` that halts block ingestion on every node.
+                // `destination: None` already means "not a dispenser" to Python.
+                return Ok((
+                    ParseOutput::Data(vec![]),
+                    Some(PotentialDispenser {
+                        destination: None,
+                        value: Some(value),
+                    }),
+                ));
             }
             let data = bytes[1..=data_len].to_vec();
             return Ok((
@@ -324,7 +338,15 @@ fn parse_vout(
             // chunk_len must be >= prefix.len() so chunk[prefix.len()..] does
             // not panic when attacker supplies a small bytes[0].
             if chunk_len < config.prefix.len() {
-                return Ok((ParseOutput::Data(vec![]), None));
+                // See the OP_CHECKSIG branch above: never emit a `None`
+                // dispenser slot, it crashes the Python consumers.
+                return Ok((
+                    ParseOutput::Data(vec![]),
+                    Some(PotentialDispenser {
+                        destination: None,
+                        value: Some(value),
+                    }),
+                ));
             }
             let chunk = bytes[1..=chunk_len].to_vec();
             return Ok((

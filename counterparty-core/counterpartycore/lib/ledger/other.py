@@ -28,7 +28,13 @@ def get_oracle_last_price(db, oracle_address, block_index):
         return None, None, None, None
 
     oracle_broadcast = broadcasts[0]
-    oracle_label = oracle_broadcast["text"].split("-")
+    # `text` is NULL for a "lock" broadcast (broadcast.parse() blanks the row's
+    # payload while keeping status "valid"), and for any broadcast whose
+    # validation was caught by the `broadcast_safe_validate` net. Calling
+    # `.split()` on it raises an AttributeError that escapes every caller
+    # (dispenser.validate(), dispense.get_must_give(), ...) and halts the chain.
+    oracle_text = oracle_broadcast["text"] or ""
+    oracle_label = oracle_text.split("-")
     if len(oracle_label) == 2:
         fiat_label = oracle_label[1]
     else:

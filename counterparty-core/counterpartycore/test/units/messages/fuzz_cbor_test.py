@@ -39,7 +39,12 @@ any_scalar = st.one_of(
     st.booleans(),
     st.text(max_size=32),
     st.binary(max_size=32),
-    st.floats(allow_nan=False, allow_infinity=False, width=32),
+    # NaN and +/-inf are deliberately included: they are the ammunition of the
+    # halt-vector class reported in GHSA-pmfx-7qj5-fx6c. Every comparison against
+    # NaN is False, so a NaN field sails through validate() and is then bound as
+    # NULL by sqlite3, poisoning every consumer that reads the row back. Excluding
+    # them here is exactly why that family went unnoticed.
+    st.floats(allow_nan=True, allow_infinity=True, width=32),
     st.none(),
 )
 

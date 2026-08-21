@@ -51,6 +51,24 @@ BET_TYPE_ID = {"BullCFD": 0, "BearCFD": 1, "Equal": 2, "NotEqual": 3}
 # NOTE: Pascal strings are used for storing texts for backwards‐compatibility.
 
 
+def is_non_finite(number):
+    """True for NaN and +/-inf floats (and Decimals), which SQLite stores as NULL
+    or which poison every downstream arithmetic consumer.
+
+    Since `taproot_support`, broadcasts are CBOR-decoded, so a crafted message
+    can carry a float64 NaN in `timestamp`, `value` or `fee_fraction_int`. Every
+    comparison against NaN is False, so `validate()` reports no problem and the
+    row is stored with status "valid" -- with the NaN fields bound as NULL by
+    sqlite3. See `reject_non_finite_broadcast` below and the guards in
+    `dispenser.calculate_oracle_fee()` and `bet.validate()`.
+    """
+    if isinstance(number, float):
+        return not math.isfinite(number)
+    if isinstance(number, D):
+        return not number.is_finite()
+    return False
+
+
 def parse_options_from_string(string):
     """Parse options integer from string, if exists."""
     string_list = string.split(" ")
@@ -83,6 +101,17 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, mime_type, bl
     # Rejecting those here would change the stored `status` (and flip a float
     # timestamp from valid to invalid) without a protocol change. API-level type
     # validation lives in compose() instead, off the consensus path.
+
+    if protocol.enabled("reject_non_finite_broadcast", block_index=block_index):
+        # Root-cause fix for the NaN-poisoning family: a non-finite numeric field
+        # is bound as NULL by sqlite3 while the row keeps status "valid", and
+        # every consumer that later reads it back (oracle dispenser fee maths,
+        # bet deadline comparison, bet-match settlement) crashes on the NULL and
+        # halts the chain. Rejecting the broadcast flips a parse that currently
+        # succeeds, hence the activation gate.
+        if is_non_finite(timestamp) or is_non_finite(value) or is_non_finite(fee_fraction_int):
+            problems.append("non-finite numeric value")
+            return problems
 
     # For SQLite3
     if timestamp > config.MAX_INT or value > config.MAX_INT or fee_fraction_int > config.MAX_INT:
@@ -463,6 +492,29 @@ def parse(db, tx, message):
 
             leverage = Fraction(bet_match["leverage"], 5040)
             initial_value = bet_match["initial_value"]
+
+            # The CFD arithmetic below raises on any non-numeric or non-finite
+            # operand -- TypeError for a NULL, ValueError from `round(nan)`,
+            # OverflowError from `round(+/-inf)` -- and that escapes as a
+            # ParseTransactionError, halting every node at this block.
+            #
+            # `initial_value` is the feed's last broadcast value at match time
+            # (bet.match()) and is NULL when that broadcast was a "lock" (parse()
+            # blanks `value`) or carried a NaN float64 (sqlite3 binds NaN as
+            # NULL); `value` is this broadcast's own, which can still be
+            # non-finite for blocks before `reject_non_finite_broadcast`.
+            #
+            # Scoped to the CFD branch on purpose: the Equal/NotEqual branch
+            # below does no arithmetic on `value`, settles successfully today
+            # even for a NaN, and must keep doing so. No activation gate: every
+            # case caught here crashes on current code.
+            if initial_value is None or is_non_finite(initial_value) or is_non_finite(value):
+                logger.warning(
+                    "Bet Match %s has no usable value, skipping settlement",
+                    bet_match_id,
+                )
+                broadcast_bet_match_cursor.close()
+                continue
 
             bear_credit = bear_escrow - (value - initial_value) * leverage * config.UNIT
             bull_credit = escrow_less_fee - bear_credit
