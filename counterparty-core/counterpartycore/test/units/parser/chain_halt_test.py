@@ -359,7 +359,7 @@ def test_h4_bare_multisig_m0_prevout(
     prevout_spk = (b"\x00" + b"\x21" + pk1 + b"\x21" + pk2 + b"\x52\xae").hex()
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.get_vin_info",
-        lambda vin, no_retry=False: (int(10 * config.UNIT), prevout_spk, False),
+        lambda vin, no_retry=False, prevout=None: (int(10 * config.UNIT), prevout_spk, False),
     )
 
     raw_tx = build_raw_tx(sig_script_sig(), [op_return_output(DISPENSE_PREFIX_PAYLOAD)])

@@ -251,13 +251,41 @@ def script_to_address(script_pubkey):
     return script.script_to_address_legacy(script_pubkey)
 
 
+def get_vin_prevout_overrides(decoded_tx):
+    """The (txid, output index) each input resolves to, when that differs from the
+    input's own prevout -- or None when nothing needs overriding.
+
+    Only inscription reveal transactions need this: their source is the output
+    that funded the *commit* transaction, one hop further back. The Rust
+    deserializer normally applies that rewrite and returns it as `vin["info"]`;
+    this covers the case where its batch RPC call failed and left `info` empty,
+    which would otherwise make this node resolve the commit output instead and
+    silently fork the ledger. See `backend.bitcoind.get_reveal_prevouts()`.
+    """
+    parsed_vouts = decoded_tx.get("parsed_vouts")
+    if not isinstance(parsed_vouts, (list, tuple)) or len(parsed_vouts) < 6:
+        return None
+    is_reveal_tx = parsed_vouts[5]
+    if not is_reveal_tx:
+        return None
+    # Nothing to redo when the deserializer resolved every input itself.
+    if all(vin.get("info") is not None for vin in decoded_tx["vin"]):
+        return None
+    return backend.bitcoind.get_reveal_prevouts(
+        decoded_tx, no_retry=CurrentState().parsing_mempool()
+    )
+
+
 def get_transaction_sources(decoded_tx):
     sources = []
     outputs_value = 0
+    prevouts = get_vin_prevout_overrides(decoded_tx)
 
-    for vin in decoded_tx["vin"]:  # Loop through inputs.
+    for vin_index, vin in enumerate(decoded_tx["vin"]):  # Loop through inputs.
         vout_value, script_pubkey, _is_segwit = backend.bitcoind.get_vin_info(
-            vin, no_retry=CurrentState().parsing_mempool()
+            vin,
+            no_retry=CurrentState().parsing_mempool(),
+            prevout=prevouts[vin_index] if prevouts else None,
         )
 
         outputs_value += vout_value
@@ -302,9 +330,13 @@ def get_transaction_source_from_p2sh(decoded_tx, p2sh_is_segwit):
     data = b""
     outputs_value = 0
 
-    for vin in decoded_tx["vin"]:
+    prevouts = get_vin_prevout_overrides(decoded_tx)
+
+    for vin_index, vin in enumerate(decoded_tx["vin"]):
         vout_value, _script_pubkey, is_segwit = backend.bitcoind.get_vin_info(
-            vin, no_retry=CurrentState().parsing_mempool()
+            vin,
+            no_retry=CurrentState().parsing_mempool(),
+            prevout=prevouts[vin_index] if prevouts else None,
         )
 
         if protocol.enabled("prevout_segwit_fix"):

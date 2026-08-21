@@ -874,19 +874,39 @@ pub fn parse_transaction(
                 .get_transactions(&input_txids)
                 .unwrap_or_default();
 
+            // The source of an inscription reveal transaction is one hop further
+            // back than an ordinary input: not the commit output it spends, but
+            // the output that funded the *commit* transaction. Resolving that is
+            // all-or-nothing. A partial result -- the commit transaction left in
+            // `prev_txs[0]`, or a `commit_parent_txid` recorded without its
+            // transaction -- makes this node compute a different `source` (and a
+            // different `fee`) than a node whose RPC succeeded, with nothing
+            // downstream able to notice: a silent, permanent ledger fork.
+            //
+            // So on any failure we leave the slot empty and record no commit
+            // parent. Python then redoes the same two-hop lookup in
+            // `get_reveal_prevouts()` -- which retries, and halts rather than
+            // guess if the backend is really unavailable. Keep the two in sync.
             if is_reveal_tx && !prev_txs.is_empty() {
-                if let Some(prev_tx) = &prev_txs[0] {
-                    if !prev_tx.input.is_empty() {
-                        commit_parent_txid = prev_tx.input[0].previous_output.txid;
-                        commit_parent_vout = prev_tx.input[0].previous_output.vout as usize;
-                        if let Ok(fetched_txs) =
-                            batch_client.get_transactions(&[commit_parent_txid])
-                        {
-                            if !fetched_txs.is_empty() {
-                                prev_txs[0] = fetched_txs[0].clone();
+                let mut commit_parent = None;
+                if let Some(Some(commit_tx)) = prev_txs.first() {
+                    if !commit_tx.input.is_empty() {
+                        let parent_txid = commit_tx.input[0].previous_output.txid;
+                        let parent_vout = commit_tx.input[0].previous_output.vout as usize;
+                        if let Ok(fetched_txs) = batch_client.get_transactions(&[parent_txid]) {
+                            if let Some(Some(parent_tx)) = fetched_txs.first() {
+                                commit_parent = Some((parent_txid, parent_vout, parent_tx.clone()));
                             }
                         }
                     }
+                }
+                match commit_parent {
+                    Some((parent_txid, parent_vout, parent_tx)) => {
+                        commit_parent_txid = parent_txid;
+                        commit_parent_vout = parent_vout;
+                        prev_txs[0] = Some(parent_tx);
+                    }
+                    None => prev_txs[0] = None,
                 }
             }
         }

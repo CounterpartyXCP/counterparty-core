@@ -10,7 +10,10 @@ from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.backend import bitcoind
 from counterpartycore.lib.utils import helpers
 from counterpartycore.test.fixtures import decodedtxs
-from counterpartycore.test.mocks.bitcoind import original_get_vin_info
+from counterpartycore.test.mocks.bitcoind import (
+    original_get_reveal_prevouts,
+    original_get_vin_info,
+)
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 ORIGINAL_GET_UTXO_ADDRESS_AND_VALUE = bitcoind.get_utxo_address_and_value
@@ -514,6 +517,141 @@ def test_get_vin_info_legacy(monkeypatch):
         "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac",
         False,
     )
+
+
+# ---------------------------------------------------------------------------
+# Inscription reveal transactions resolve their source one hop further back: to
+# the output that funded the *commit* transaction, not to the commit output the
+# reveal spends. The Rust deserializer normally does that rewrite and returns it
+# as `vin["info"]`; when its batch RPC call fails it returns no `info`, and the
+# Python fallback must reproduce the rewrite instead of resolving the input
+# normally -- otherwise this node computes a different `source` (and `fee`) than
+# every node whose RPC succeeded, and forks the ledger silently.
+# ---------------------------------------------------------------------------
+COMMIT_TXID = "aa" * 32
+FUNDING_TXID = "bb" * 32
+OTHER_TXID = "cc" * 32
+
+
+def reveal_decoded_tx(vins):
+    # parsed_vouts = (destinations, btc_amount, fee, data, potential_dispensers, is_reveal_tx)
+    return {"vin": vins, "parsed_vouts": ([], 0, 0, b"data", [], True)}
+
+
+def commit_transaction(vin_hash=FUNDING_TXID, vin_n=3):
+    return {"vin": [{"hash": vin_hash, "n": vin_n}], "vout": []}
+
+
+def test_get_reveal_prevouts_points_at_the_commit_parent(monkeypatch):
+    monkeypatch.setattr(
+        bitcoind, "get_decoded_transaction", lambda *args, **kwargs: commit_transaction()
+    )
+    decoded_tx = reveal_decoded_tx([{"hash": COMMIT_TXID, "n": 0, "info": None}])
+    assert original_get_reveal_prevouts(decoded_tx) == [(FUNDING_TXID, 3)]
+
+
+def test_get_reveal_prevouts_mirrors_rust_for_extra_inputs(monkeypatch):
+    """The Rust rewrite keys the output index off the *resolved* prevout txid, so
+    any other input spending the same funding transaction also uses the commit
+    parent's output index. Reproduce that exactly, quirk included."""
+    monkeypatch.setattr(
+        bitcoind, "get_decoded_transaction", lambda *args, **kwargs: commit_transaction()
+    )
+    decoded_tx = reveal_decoded_tx(
+        [
+            {"hash": COMMIT_TXID, "n": 0, "info": None},
+            {"hash": FUNDING_TXID, "n": 7, "info": None},
+            {"hash": OTHER_TXID, "n": 1, "info": None},
+        ]
+    )
+    assert original_get_reveal_prevouts(decoded_tx) == [
+        (FUNDING_TXID, 3),
+        (FUNDING_TXID, 3),
+        (OTHER_TXID, 1),
+    ]
+
+
+def test_get_reveal_prevouts_no_override_for_coinbase_commit(monkeypatch):
+    """A commit transaction with no input has no funding output; the Rust side
+    records no commit parent either, so the inputs resolve normally."""
+    monkeypatch.setattr(
+        bitcoind,
+        "get_decoded_transaction",
+        lambda *args, **kwargs: {"vin": [], "vout": []},
+    )
+    decoded_tx = reveal_decoded_tx([{"hash": COMMIT_TXID, "n": 0, "info": None}])
+    assert original_get_reveal_prevouts(decoded_tx) is None
+
+
+def test_get_reveal_prevouts_error_halts_during_catchup(monkeypatch):
+    """A backend failure on the commit lookup must halt, exactly like any other
+    unresolvable prevout -- never fall back to resolving the commit output."""
+
+    def raise_error(*args, **kwargs):
+        raise exceptions.BitcoindRPCError("No such mempool or blockchain transaction")
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+    monkeypatch.setattr(bitcoind.CurrentState, "parsing_mempool", lambda self: False)
+    monkeypatch.setattr(bitcoind.CurrentState, "stopping", lambda self: False)
+
+    decoded_tx = reveal_decoded_tx([{"hash": COMMIT_TXID, "n": 0, "info": None}])
+    with pytest.raises(exceptions.BitcoindRPCError, match="Refusing to silently skip") as exc:
+        original_get_reveal_prevouts(decoded_tx)
+    assert COMMIT_TXID in str(exc.value)
+
+
+def test_get_reveal_prevouts_error_skips_in_mempool(monkeypatch):
+    def raise_error(*args, **kwargs):
+        raise exceptions.BitcoindRPCError
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+    monkeypatch.setattr(bitcoind.CurrentState, "parsing_mempool", lambda self: True)
+
+    decoded_tx = reveal_decoded_tx([{"hash": COMMIT_TXID, "n": 0, "info": None}])
+    with pytest.raises(exceptions.DecodeError, match="vin not found"):
+        original_get_reveal_prevouts(decoded_tx, no_retry=True)
+
+
+def test_get_vin_info_uses_the_prevout_override(monkeypatch):
+    """The fallback must fetch the overridden prevout, not the input's own."""
+    fetched = {}
+
+    def fake_get_decoded_transaction(tx_hash, *args, **kwargs):
+        fetched["tx_hash"] = tx_hash
+        return {
+            "vout": [
+                {"value": 0, "script_pub_key": "00"},
+                {"value": 0, "script_pub_key": "00"},
+                {"value": 0, "script_pub_key": "00"},
+                {
+                    "value": 42,
+                    "script_pub_key": "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac",
+                },
+            ],
+            "segwit": False,
+        }
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", fake_get_decoded_transaction)
+    assert original_get_vin_info(
+        {"hash": COMMIT_TXID, "n": 0, "info": None}, prevout=(FUNDING_TXID, 3)
+    ) == (42, "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac", False)
+    assert fetched["tx_hash"] == FUNDING_TXID
+
+
+def test_get_vin_info_ignores_the_override_when_already_resolved(monkeypatch):
+    """When the deserializer resolved the input itself it already applied the
+    rewrite; the override must not trigger a second, redundant lookup."""
+
+    def fail(*args, **kwargs):
+        raise AssertionError("should not hit the backend")
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", fail)
+    vin = {
+        "hash": COMMIT_TXID,
+        "n": 0,
+        "info": {"value": 7, "script_pub_key": "0011", "is_segwit": True},
+    }
+    assert original_get_vin_info(vin, prevout=(FUNDING_TXID, 3)) == (7, "0011", True)
 
 
 def test_get_vin_info_legacy_error_halts_during_catchup(monkeypatch):
