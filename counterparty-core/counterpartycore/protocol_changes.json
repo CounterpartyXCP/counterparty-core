@@ -1495,7 +1495,7 @@
     },
     "reject_non_finite_broadcast": {
         "minimum_version_major": 11,
-        "minimum_version_minor": 3,
+        "minimum_version_minor": 4,
         "minimum_version_revision": 0,
         "block_index": 966200,
         "testnet3_block_index": 5166000,
