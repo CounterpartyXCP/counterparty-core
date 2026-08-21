@@ -23,6 +23,7 @@ network.
 
 import binascii
 import struct
+from decimal import Decimal as D
 
 import cbor2
 import pytest
@@ -31,6 +32,7 @@ from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages import bet, broadcast, dispenser, fairminter
 from counterpartycore.lib.parser import blocks, deserialize, gettxinfo
 from counterpartycore.lib.utils import address as address_utils
+from counterpartycore.lib.utils import helpers
 from counterpartycore.test.mocks.bitcoind import mine_block
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
@@ -86,6 +88,25 @@ def deserialize_crafted_tx(current_block_index, blockchain_mock, defaults, raw_t
     return decoded_tx
 
 
+def free_carrier(ledger_db, tx):
+    """Re-point a carrier transaction at a `transactions` row that no broadcast
+    has used yet. `broadcasts.tx_index` is UNIQUE and a foreign key, and
+    `dummy_tx()` falls back to the newest transaction for any address that has
+    none of its own -- so several oracles in this module would otherwise collide
+    on the same carrier."""
+    free = (
+        ledger_db.cursor()
+        .execute(
+            "SELECT tx_index, tx_hash, block_index FROM transactions "
+            "WHERE tx_index NOT IN (SELECT tx_index FROM broadcasts) "
+            "ORDER BY rowid DESC LIMIT 1"
+        )
+        .fetchone()
+    )
+    assert free is not None, "no unused carrier transaction left in the fixture"
+    return {**tx, **free}
+
+
 def oracle_broadcast(
     ledger_db,
     blockchain_mock,
@@ -95,11 +116,15 @@ def oracle_broadcast(
     fee_fraction_int,
     text=b"XCP-USD",
     use_first_tx=False,
+    unique_tx=False,
 ):
     """Run the production broadcast.parse() with a CBOR (post-taproot) message and
     return the stored row. `use_first_tx` picks a different carrier transaction so
-    that two broadcasts from the same source do not collide on `tx_index`."""
+    that two broadcasts from the same source do not collide on `tx_index`;
+    `unique_tx` picks one that no broadcast has claimed at all."""
     tx = blockchain_mock.dummy_tx(ledger_db, oracle, use_first_tx=use_first_tx)
+    if unique_tx:
+        tx = free_carrier(ledger_db, tx)
     message = cbor2.dumps([timestamp, value, fee_fraction_int, "text/plain", text])
     broadcast.parse(ledger_db, tx, message)
     return (
@@ -406,6 +431,22 @@ def test_backend_errors_still_propagate(
         gettxinfo.get_tx_info(ledger_db, decoded_tx, current_block_index)
 
 
+def test_ledger_lookup_errors_are_not_absorbed(ledger_db, monkeypatch, defaults):
+    """The net covers code that derives from the transaction bytes. The one
+    ledger read reached from inside it, `is_dispensable()`, is isolated: a
+    data-shaped exception from the *database* says nothing about these bytes, and
+    absorbing it would silently drop a real transaction -- block 510556 again."""
+
+    def boom(_db, _destination, _amount):
+        raise KeyError("dispensers row is missing a column")
+
+    monkeypatch.setattr("counterpartycore.lib.messages.dispenser.is_dispensable", boom)
+    with pytest.raises(exceptions.DatabaseError, match="Ledger lookup failed"):
+        gettxinfo.get_dispensers_outputs(ledger_db, [(defaults["addresses"][5], 200)])
+    # ... and DatabaseError is outside MALFORMED_TRANSACTION_ERRORS, so it halts.
+    assert not issubclass(exceptions.DatabaseError, gettxinfo.MALFORMED_TRANSACTION_ERRORS)
+
+
 # ---------------------------------------------------------------------------
 # Locked feeds: broadcast.parse() blanks `text`, `value` and `fee_fraction_int`
 # while keeping status "valid", so every oracle reader must tolerate NULLs.
@@ -429,3 +470,153 @@ def test_locked_oracle_feed_does_not_halt(ledger_db, blockchain_mock, defaults):
     dispenser.parse(ledger_db, tx, open_oracle_dispenser_message(oracle))
     # No price at all -> the dispenser is rejected, not a crash.
     assert count_dispensers(ledger_db) == before
+
+
+# ---------------------------------------------------------------------------
+# C2 (scope) -- the zero-price guard must stay confined to the statuses that
+# actually reach calculate_oracle_fee(). A CLOSE never computes an oracle fee,
+# yet parse() runs it through validate() with whatever oracle_address the
+# message carried; rejecting it there would flip a close that succeeds today.
+# ---------------------------------------------------------------------------
+def test_c2_zero_price_guard_is_scoped_to_open_and_refill(ledger_db, blockchain_mock, defaults):
+    oracle = defaults["addresses"][6]
+    row = oracle_broadcast(ledger_db, blockchain_mock, oracle, 1_700_000_000, 0, 0, unique_tx=True)
+    assert row["status"] == "valid", row["status"]
+    assert row["value"] == 0
+
+    def oracle_problems(status):
+        _asset_id, problems = dispenser.validate(
+            ledger_db,
+            defaults["addresses"][0],
+            config.XCP,
+            100,
+            100,
+            10_000,
+            status,
+            None,
+            blocks.CurrentState().current_block_index(),
+            oracle,
+        )
+        return [p for p in (problems or []) if "usable price" in p]
+
+    # Opening on a zero-price oracle reaches `mainchainrate / 0` -> guarded.
+    assert oracle_problems(dispenser.STATUS_OPEN) != []
+    assert oracle_problems(dispenser.STATUS_OPEN_EMPTY_ADDRESS) != []
+    # Closing never computes an oracle fee: it must keep its historical outcome.
+    assert oracle_problems(dispenser.STATUS_CLOSED) == []
+
+
+# ---------------------------------------------------------------------------
+# CFD settlement -- the arithmetic in the CFD branch of broadcast.parse() raises
+# on a NULL `initial_value` (TypeError), on round(nan) (ValueError) and on
+# round(+/-inf) (OverflowError). Found while fixing C3/C5, not in the original
+# report.
+# ---------------------------------------------------------------------------
+def insert_pending_cfd_match(ledger_db, defaults, feed_address, initial_value, tag):
+    """A pending BullCFD/BearCFD match on `feed_address`, shaped exactly like
+    what `bet.match()` writes. `initial_value` is the feed's last broadcast value
+    at match time: NULL after a "lock" broadcast, or after one carrying a NaN
+    float64 (sqlite3 binds NaN as NULL).
+
+    `tag` must be hexadecimal: the match tables store the hashes compactly and
+    `MATCH_ID_SQL` rebuilds the composite id with `hex_lower()`, so a non-hex
+    "hash" would not round-trip to `helpers.make_id()`."""
+    tx0_hash = (tag + "0").ljust(64, "a")
+    tx1_hash = (tag + "1").ljust(64, "b")
+    assert len(bytes.fromhex(tx0_hash)) == 32 and len(bytes.fromhex(tx1_hash)) == 32
+    block_index = blocks.CurrentState().current_block_index()
+    bindings = {
+        "id": helpers.make_id(tx0_hash, tx1_hash),
+        "tx0_index": 900000 + 2 * len(tag),
+        "tx0_hash": tx0_hash,
+        "tx0_address": defaults["addresses"][0],
+        "tx1_index": 900001 + 2 * len(tag),
+        "tx1_hash": tx1_hash,
+        "tx1_address": defaults["addresses"][2],
+        "tx0_bet_type": 0,  # BullCFD
+        "tx1_bet_type": 1,  # BearCFD -> bet_match_type_id == cfd_type_id
+        "feed_address": feed_address,
+        "initial_value": initial_value,
+        "deadline": 1_600_000_000,
+        "target_value": 0.0,
+        "leverage": 5040,
+        "forward_quantity": 1000,
+        "backward_quantity": 1000,
+        "tx0_block_index": block_index,
+        "tx1_block_index": block_index,
+        "block_index": block_index,
+        "tx0_expiration": 100,
+        "tx1_expiration": 100,
+        "match_expire_index": block_index + 100,
+        "fee_fraction_int": 0,
+        "status": "pending",
+    }
+    ledger.events.insert_record(ledger_db, "bet_matches", bindings, "BET_MATCH")
+    return helpers.make_id(tx0_hash, tx1_hash)
+
+
+def bet_match_status(ledger_db, match_id):
+    row = (
+        ledger_db.cursor()
+        .execute(
+            f"SELECT status FROM (SELECT *, {helpers.MATCH_ID_SQL} AS id, MAX(rowid) AS rowid "  # noqa: S608
+            "FROM bet_matches GROUP BY tx0_index, tx1_index) WHERE id = ?",
+            (match_id,),
+        )
+        .fetchone()
+    )
+    return row["status"] if row else None
+
+
+def test_cfd_settlement_null_initial_value_does_not_halt(ledger_db, blockchain_mock, defaults):
+    """`initial_value` is NULL after a locked or NaN-valued broadcast; the CFD
+    arithmetic would raise TypeError inside broadcast.parse()."""
+    oracle = defaults["addresses"][7]
+    match_id = insert_pending_cfd_match(ledger_db, defaults, oracle, None, "cfd0")
+
+    row = oracle_broadcast(
+        ledger_db, blockchain_mock, oracle, 1_700_000_000, 1.0, 0, unique_tx=True
+    )
+    assert row["status"] == "valid", row["status"]
+    # Settlement is skipped, not attempted: the match stays pending.
+    assert bet_match_status(ledger_db, match_id) == "pending"
+
+
+def test_cfd_settlement_non_finite_broadcast_value_does_not_halt(
+    ledger_db, blockchain_mock, defaults
+):
+    """Before `reject_non_finite_broadcast` the broadcast's own `value` can be
+    non-finite; `round(nan)` raises ValueError and `round(+/-inf)` OverflowError."""
+    oracle = defaults["addresses"][8]
+    match_id = insert_pending_cfd_match(ledger_db, defaults, oracle, 1.0, "cfdabcd")
+
+    with ProtocolChangesDisabled(["reject_non_finite_broadcast"]):
+        row = oracle_broadcast(
+            ledger_db,
+            blockchain_mock,
+            oracle,
+            1_700_000_000,
+            float("nan"),
+            0,
+            unique_tx=True,
+        )
+    assert row["status"] == "valid", row["status"]
+    assert row["value"] is None  # sqlite3 binds NaN as NULL
+    assert bet_match_status(ledger_db, match_id) == "pending"
+
+
+# ---------------------------------------------------------------------------
+# The non-finite predicate itself, shared by broadcast.validate() (gated) and by
+# the ungated downstream guards.
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    "value",
+    [float("nan"), float("inf"), float("-inf"), D("NaN"), D("Infinity"), D("-Infinity")],
+)
+def test_is_non_finite_true(value):
+    assert broadcast.is_non_finite(value)
+
+
+@pytest.mark.parametrize("value", [0, 1, -1, 0.0, 1.5, D("0"), D("1.5"), None, "nan", b"nan"])
+def test_is_non_finite_false(value):
+    assert not broadcast.is_non_finite(value)

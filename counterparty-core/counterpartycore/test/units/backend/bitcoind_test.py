@@ -638,9 +638,45 @@ def test_get_vin_info_uses_the_prevout_override(monkeypatch):
     assert fetched["tx_hash"] == FUNDING_TXID
 
 
-def test_get_vin_info_ignores_the_override_when_already_resolved(monkeypatch):
-    """When the deserializer resolved the input itself it already applied the
-    rewrite; the override must not trigger a second, redundant lookup."""
+def test_get_vin_info_prefers_the_override_over_a_stale_info(monkeypatch):
+    """An override only exists when the deserializer failed to resolve the reveal
+    as a whole -- and in that state it recorded no `commit_parent_txid`, so any
+    `info` it *did* return was computed at the input's own output index instead
+    of the commit parent's. A node whose RPC succeeded uses the commit parent's.
+    So the override must win over `info`, or that difference silently reaches
+    `source` and `fee`."""
+    fetched = {}
+
+    def fake_get_decoded_transaction(tx_hash, *args, **kwargs):
+        fetched["tx_hash"] = tx_hash
+        return {
+            "vout": [{"value": 0, "script_pub_key": "00"}] * 3
+            + [
+                {
+                    "value": 42,
+                    "script_pub_key": "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac",
+                }
+            ],
+            "segwit": False,
+        }
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", fake_get_decoded_transaction)
+    stale = {
+        "hash": FUNDING_TXID,
+        "n": 7,
+        "info": {"value": 7, "script_pub_key": "0011", "is_segwit": True},
+    }
+    assert original_get_vin_info(stale, prevout=(FUNDING_TXID, 3)) == (
+        42,
+        "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac",
+        False,
+    )
+    assert fetched["tx_hash"] == FUNDING_TXID
+
+
+def test_get_vin_info_uses_info_when_there_is_no_override(monkeypatch):
+    """The normal path: the deserializer resolved everything, so no override is
+    produced and no extra RPC round-trip happens."""
 
     def fail(*args, **kwargs):
         raise AssertionError("should not hit the backend")
@@ -651,7 +687,7 @@ def test_get_vin_info_ignores_the_override_when_already_resolved(monkeypatch):
         "n": 0,
         "info": {"value": 7, "script_pub_key": "0011", "is_segwit": True},
     }
-    assert original_get_vin_info(vin, prevout=(FUNDING_TXID, 3)) == (7, "0011", True)
+    assert original_get_vin_info(vin) == (7, "0011", True)
 
 
 def test_get_vin_info_legacy_error_halts_during_catchup(monkeypatch):

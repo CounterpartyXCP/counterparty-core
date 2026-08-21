@@ -239,7 +239,7 @@ def validate(
             problems.append(
                 f"The oracle address {oracle_address} has not broadcasted any price yet"
             )
-        elif last_price == 0:
+        elif last_price == 0 and status in [STATUS_OPEN, STATUS_OPEN_EMPTY_ADDRESS]:
             # A broadcast with `value = 0` is perfectly valid (nothing rejects
             # zero), and so is a "lock" broadcast, which stores NULL. Both make
             # `calculate_oracle_fee()` divide by the price: ZeroDivisionError
@@ -247,9 +247,18 @@ def validate(
             # parse_block() -- i.e. every node halts on a two-transaction attack.
             # `is_dispensable()` already guarded `last_price == 0`, but it is
             # dead code since `disable_vanilla_btc_dispense`; the open/refill
-            # path was never guarded. No activation gate: opening a dispenser on
-            # a zero-price oracle crashes today, so no historical block contains
-            # one that parsed successfully.
+            # path was never guarded.
+            #
+            # Restricted to the statuses that actually reach
+            # `calculate_oracle_fee()` -- opening and refilling -- because that
+            # restriction is what makes the change consensus-neutral and lets it
+            # ship ungated: such a transaction raises on current code, so no
+            # historical block contains one that parsed successfully. A CLOSE
+            # (STATUS_CLOSED) never computes an oracle fee, yet `parse()` passes
+            # it through `validate()` with whatever `oracle_address` the message
+            # carried; flagging a problem there would turn a close that succeeds
+            # today into an invalid transaction and leave the dispenser open --
+            # a retroactive consensus change.
             problems.append(
                 f"The oracle address {oracle_address} has not broadcasted any usable price yet"
             )

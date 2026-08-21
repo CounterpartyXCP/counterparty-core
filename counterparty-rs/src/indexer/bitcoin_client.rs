@@ -692,6 +692,37 @@ fn extract_data_from_witness(script: &Script, allow_metadata_map: bool) -> Resul
     }
 }
 
+/// Applies the commit-parent rewrite to the prevouts fetched for an inscription
+/// reveal transaction, and returns the commit parent's `(txid, output index)`.
+///
+/// All-or-nothing on purpose. When `commit_parent` is `None` the lookup failed,
+/// and *every* slot is cleared rather than only the first: the vin loop in
+/// `parse_transaction()` selects the commit parent's output index for any input
+/// whose resolved prevout txid matches it, and with no commit parent recorded
+/// that match can never happen. Leaving the other slots populated would resolve
+/// an input that also spends the funding transaction at its *own* output index,
+/// while a node whose RPC succeeded resolves it at the commit parent's -- a
+/// silent divergence in `source` and `fee`. Empty slots instead send every input
+/// through `get_reveal_prevouts()` on the Python side, which reproduces the
+/// rewrite for all of them.
+fn apply_commit_parent(
+    prev_txs: &mut [Option<bitcoin::Transaction>],
+    commit_parent: Option<(Txid, usize, bitcoin::Transaction)>,
+) -> Option<(Txid, usize)> {
+    match commit_parent {
+        Some((parent_txid, parent_vout, parent_tx)) => {
+            if let Some(slot) = prev_txs.first_mut() {
+                *slot = Some(parent_tx);
+            }
+            Some((parent_txid, parent_vout))
+        }
+        None => {
+            prev_txs.iter_mut().for_each(|slot| *slot = None);
+            None
+        }
+    }
+}
+
 pub fn parse_transaction(
     tx: &bitcoin::Transaction,
     config: &Config,
@@ -883,8 +914,8 @@ pub fn parse_transaction(
             // different `fee`) than a node whose RPC succeeded, with nothing
             // downstream able to notice: a silent, permanent ledger fork.
             //
-            // So on any failure we leave the slot empty and record no commit
-            // parent. Python then redoes the same two-hop lookup in
+            // So on any failure we leave *every* input unresolved and record no
+            // commit parent. Python then redoes the same two-hop lookup in
             // `get_reveal_prevouts()` -- which retries, and halts rather than
             // guess if the backend is really unavailable. Keep the two in sync.
             if is_reveal_tx && !prev_txs.is_empty() {
@@ -900,13 +931,11 @@ pub fn parse_transaction(
                         }
                     }
                 }
-                match commit_parent {
-                    Some((parent_txid, parent_vout, parent_tx)) => {
-                        commit_parent_txid = parent_txid;
-                        commit_parent_vout = parent_vout;
-                        prev_txs[0] = Some(parent_tx);
-                    }
-                    None => prev_txs[0] = None,
+                if let Some((parent_txid, parent_vout)) =
+                    apply_commit_parent(&mut prev_txs, commit_parent)
+                {
+                    commit_parent_txid = parent_txid;
+                    commit_parent_vout = parent_vout;
                 }
             }
         }
@@ -1486,5 +1515,74 @@ mod tests {
             Error::ParseVout(msg) => assert_eq!(msg, "xcp array in metadata is empty"),
             other => panic!("expected ParseVout, got {:?}", other),
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // Commit-parent resolution for inscription reveal transactions is
+    // all-or-nothing: a partial result makes this node compute a different
+    // `source` and `fee` than a node whose RPC succeeded, with nothing
+    // downstream able to notice. See GHSA-pmfx-7qj5-fx6c.
+    // -----------------------------------------------------------------------
+    fn commit_parent_test_tx(value: u64) -> Transaction {
+        Transaction {
+            version: Version::ONE,
+            lock_time: LockTime::ZERO,
+            input: vec![],
+            output: vec![TxOut {
+                value: Amount::from_sat(value),
+                script_pubkey: ScriptBuf::new(),
+            }],
+        }
+    }
+
+    fn commit_parent_test_txid(n: u8) -> Txid {
+        Txid::from_raw_hash(sha256d::Hash::from_slice(&test_sha256_hash(n as u32)).unwrap())
+    }
+
+    #[test]
+    fn test_apply_commit_parent_resolved_rewrites_only_the_first_slot() {
+        let parent = commit_parent_test_tx(42);
+        let other = commit_parent_test_tx(7);
+        let mut prev_txs = vec![Some(commit_parent_test_tx(1)), Some(other.clone())];
+        let txid = commit_parent_test_txid(3);
+
+        let resolved = apply_commit_parent(&mut prev_txs, Some((txid, 5, parent.clone())));
+
+        assert_eq!(resolved, Some((txid, 5)));
+        assert_eq!(prev_txs[0], Some(parent));
+        // the other inputs keep their own prevout: the vin loop will pick the
+        // commit parent's output index for them via the `commit_parent_txid`
+        // comparison, exactly as before.
+        assert_eq!(prev_txs[1], Some(other));
+    }
+
+    #[test]
+    fn test_apply_commit_parent_unresolved_clears_every_slot() {
+        // Regression: clearing only `prev_txs[0]` left any *other* input that
+        // spends the funding transaction resolved at its own output index --
+        // while a node whose RPC succeeded resolves it at the commit parent's.
+        // Both `source` and `fee` diverge, and `fee` feeds `txlist_hash`.
+        let mut prev_txs = vec![
+            Some(commit_parent_test_tx(1)),
+            Some(commit_parent_test_tx(2)),
+            Some(commit_parent_test_tx(3)),
+        ];
+
+        let resolved = apply_commit_parent(&mut prev_txs, None);
+
+        assert_eq!(resolved, None);
+        assert!(prev_txs.iter().all(|slot| slot.is_none()));
+    }
+
+    #[test]
+    fn test_apply_commit_parent_tolerates_an_empty_slot_list() {
+        let mut prev_txs: Vec<Option<Transaction>> = vec![];
+        let txid = commit_parent_test_txid(4);
+
+        let resolved =
+            apply_commit_parent(&mut prev_txs, Some((txid, 0, commit_parent_test_tx(1))));
+
+        assert_eq!(resolved, Some((txid, 0)));
+        assert!(prev_txs.is_empty());
     }
 }

@@ -17,6 +17,7 @@ when (and only when) it is needed, and threads the answer into every input.
 
 from counterpartycore.lib import backend
 from counterpartycore.lib.parser import gettxinfo
+from counterpartycore.test.mocks.bitcoind import original_get_vin_info
 
 COMMIT_TXID = "aa" * 32
 FUNDING_TXID = "bb" * 32
@@ -95,5 +96,53 @@ def test_get_transaction_sources_resolves_the_commit_parent(monkeypatch):
 
     assert requested == [(FUNDING_TXID, 3), (OTHER_TXID, 1)]
     assert COMMIT_TXID not in [txid for txid, _n in requested]
+    assert outputs_value == 200
+    assert sources == "mmTPoijZbv5sLkCpbG6JkjFkWR89WCJL7G"
+
+
+def test_override_reaches_inputs_the_deserializer_did_resolve(monkeypatch):
+    """The partial-resolution shape: the deserializer failed on the commit parent
+    (input 0 unresolved) but had already returned `info` for another input that
+    spends the *funding* transaction. That `info` was computed at the input's own
+    output index, while a node whose RPC succeeded resolves it at the commit
+    parent's -- so every input must go through the override, stale `info`
+    included, and the real `get_vin_info()` must prefer it."""
+    fetched = []
+
+    def fake_get_decoded_transaction(tx_hash, *args, **kwargs):
+        fetched.append(tx_hash)
+        return {
+            "vout": [{"value": 1, "script_pub_key": "00"}] * 3
+            + [
+                {
+                    "value": 100,
+                    "script_pub_key": "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac",
+                }
+            ],
+            "segwit": False,
+        }
+
+    monkeypatch.setattr(
+        backend.bitcoind,
+        "get_reveal_prevouts",
+        # what get_reveal_prevouts() computes for a second input spending FUNDING_TXID
+        lambda *args, **kwargs: [(FUNDING_TXID, 3), (FUNDING_TXID, 3)],
+    )
+    monkeypatch.setattr(backend.bitcoind, "get_decoded_transaction", fake_get_decoded_transaction)
+    # the session-wide bitcoind mock replaces get_vin_info; this test needs the
+    # real one, since the override-vs-`info` precedence lives inside it
+    monkeypatch.setattr(backend.bitcoind, "get_vin_info", original_get_vin_info)
+
+    tx = decoded_tx(
+        [
+            {"hash": COMMIT_TXID, "n": 0, "info": None},
+            # `info` present but computed at output 7, not at the commit parent's 3
+            {"hash": FUNDING_TXID, "n": 7, "info": RESOLVED_INFO},
+        ]
+    )
+    sources, outputs_value = gettxinfo.get_transaction_sources(tx)
+
+    assert fetched == [FUNDING_TXID, FUNDING_TXID]
+    # 2 x 100, i.e. the commit parent's output 3 -- not RESOLVED_INFO's value of 1
     assert outputs_value == 200
     assert sources == "mmTPoijZbv5sLkCpbG6JkjFkWR89WCJL7G"

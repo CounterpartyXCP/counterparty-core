@@ -776,8 +776,9 @@ def list_unspent(source, allow_unconfirmed_inputs):
     return []
 
 
-def unresolved_prevout_error(prevout_hash, error):
-    """Shared policy for a prevout that could not be fetched from the backend."""
+def raise_unresolved_prevout(prevout_hash, error):
+    """Shared policy for a prevout that could not be fetched from the backend.
+    Never returns: it always raises."""
     # While parsing the mempool the parent transaction may legitimately be
     # unavailable (e.g. not yet relayed). Skipping the *unconfirmed* tx is
     # safe: it will be re-evaluated once it confirms.
@@ -787,7 +788,7 @@ def unresolved_prevout_error(prevout_hash, error):
             "Skipping unconfirmed (mempool) transaction.",
             prevout_hash,
         )
-        return exceptions.DecodeError("vin not found")
+        raise exceptions.DecodeError("vin not found") from error
     # During catch-up the parent of a *confirmed* transaction must exist.
     # A failure here is an infrastructure error (unhealthy/overloaded
     # backend, a transient gateway 5xx, missing `txindex`, ...), NOT
@@ -800,13 +801,15 @@ def unresolved_prevout_error(prevout_hash, error):
     if CurrentState().stopping():
         # A clean shutdown interrupted the lookup; propagate the original
         # (shutdown) error rather than the consensus-corruption warning.
-        return error
-    return exceptions.BitcoindRPCError(
+        # Re-raised bare (not `from error`, which would make the exception its
+        # own `__cause__`); the caller's traceback is preserved either way.
+        raise error
+    raise exceptions.BitcoindRPCError(
         f"Failed to resolve parent transaction {prevout_hash} for VIN resolution "
         "while parsing a confirmed block. Refusing to silently skip a confirmed "
         "transaction, which would corrupt consensus. Is `txindex` enabled and the "
         "backend healthy?"
-    )
+    ) from error
 
 
 def get_reveal_prevouts(decoded_tx, no_retry=False):
@@ -818,13 +821,13 @@ def get_reveal_prevouts(decoded_tx, no_retry=False):
     *commit* transaction. The Rust deserializer normally performs that rewrite
     itself (the `is_reveal_tx` branch of `parse_transaction()` in
     `counterparty-rs/src/indexer/bitcoin_client.rs`) and returns the result as
-    `vin["info"]`. When its batch RPC call fails it returns no `info` at all, and
-    resolving `vin["hash"]:vin["n"]` here instead -- as an ordinary input --
-    would give this node a *different* `source` and a different `fee` than every
-    node whose RPC succeeded, with nothing downstream able to notice: a silent,
-    permanent ledger fork. This reproduces the Rust rewrite exactly so that both
-    paths agree, including its treatment of any *other* input that happens to
-    spend the same funding transaction.
+    `vin["info"]`. When it cannot, it clears *every* input -- the rewrite is
+    all-or-nothing there -- and resolving `vin["hash"]:vin["n"]` here instead, as
+    if these were ordinary inputs, would give this node a *different* `source`
+    and a different `fee` than every node whose RPC succeeded, with nothing
+    downstream able to notice: a silent, permanent ledger fork. This reproduces
+    the Rust rewrite exactly so that both paths agree, including its treatment of
+    any *other* input that happens to spend the same funding transaction.
 
     Returns None when there is nothing to override, in which case the inputs
     resolve normally.
@@ -838,7 +841,7 @@ def get_reveal_prevouts(decoded_tx, no_retry=False):
     try:
         commit_tx = get_decoded_transaction(commit_hash, no_retry=no_retry)
     except exceptions.BitcoindRPCError as e:
-        raise unresolved_prevout_error(commit_hash, e) from e
+        raise_unresolved_prevout(commit_hash, e)
     if not commit_tx["vin"]:
         # A commit transaction with no input (coinbase) has no funding output.
         # The Rust side records no commit parent in that case either, so the
@@ -856,12 +859,25 @@ def get_reveal_prevouts(decoded_tx, no_retry=False):
 
 def get_vin_info(vin, no_retry=False, prevout=None):
     """`prevout` overrides the (txid, output index) this input resolves to. It is
-    only ever set for an inscription reveal transaction -- see
-    `get_reveal_prevouts()` -- and is ignored when the deserializer already
-    resolved the input, since that resolution applied the same rewrite."""
+    only ever set for an inscription reveal transaction whose deserializer
+    resolution was incomplete -- see `get_reveal_prevouts()`.
+
+    When an override is given it WINS over `vin["info"]`. The deserializer only
+    leaves an input unresolved on a reveal transaction when the commit-parent
+    lookup failed as a whole, and in that state it recorded no
+    `commit_parent_txid`: any `info` it did return for the *other* inputs was
+    therefore computed without the commit-parent rewrite, i.e. at the input's own
+    output index, where a node whose RPC succeeded uses the commit parent's. That
+    difference is invisible downstream but changes `source` and `fee`. Trusting
+    the override for every input keeps this node byte-identical to a healthy one
+    regardless of how far the deserializer got. Costs nothing on the normal path:
+    `get_vin_prevout_overrides()` returns None as soon as every input is
+    resolved, so `prevout` is None for all but a degraded reveal transaction."""
+    if prevout is not None:
+        return get_vin_info_legacy(vin, no_retry=no_retry, prevout=prevout)
     vin_info = vin.get("info")
     if vin_info is None:
-        return get_vin_info_legacy(vin, no_retry=no_retry, prevout=prevout)
+        return get_vin_info_legacy(vin, no_retry=no_retry)
     return vin_info["value"], vin_info["script_pub_key"], vin_info["is_segwit"]
 
 
@@ -887,7 +903,7 @@ def get_vin_info_legacy(vin, no_retry=False, prevout=None):
             is_segwit,
         )
     except exceptions.BitcoindRPCError as e:
-        raise unresolved_prevout_error(prevout_hash, e) from e
+        raise_unresolved_prevout(prevout_hash, e)
 
 
 def get_transaction(tx_hash: str, result_format: str = "json"):

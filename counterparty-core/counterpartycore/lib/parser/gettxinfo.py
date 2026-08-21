@@ -258,9 +258,15 @@ def get_vin_prevout_overrides(decoded_tx):
     Only inscription reveal transactions need this: their source is the output
     that funded the *commit* transaction, one hop further back. The Rust
     deserializer normally applies that rewrite and returns it as `vin["info"]`;
-    this covers the case where its batch RPC call failed and left `info` empty,
+    this covers the case where its RPC failed and it left the inputs unresolved,
     which would otherwise make this node resolve the commit output instead and
     silently fork the ledger. See `backend.bitcoind.get_reveal_prevouts()`.
+
+    An override is produced for *every* input, not only the unresolved ones, and
+    `get_vin_info()` prefers it over `vin["info"]`: the deserializer's failure is
+    all-or-nothing, so a leftover `info` could only come from a build where that
+    invariant does not hold -- and it would have been computed without the
+    commit-parent rewrite.
     """
     parsed_vouts = decoded_tx.get("parsed_vouts")
     if not isinstance(parsed_vouts, (list, tuple)) or len(parsed_vouts) < 6:
@@ -382,9 +388,30 @@ def get_dispensers_outputs(db, potential_dispensers):
         destination, btc_amount = potential_dispenser
         if destination is None or btc_amount is None:
             continue
-        if dispenser.is_dispensable(db, destination, btc_amount):
+        if _is_dispensable(db, destination, btc_amount):
             outputs.append((destination, btc_amount))
     return outputs
+
+
+def _is_dispensable(db, destination, btc_amount):
+    """`dispenser.is_dispensable()` is the only ledger-DB read reached from
+    inside `get_tx_info()`'s safety net (dispensers, then the oracle's last
+    broadcast). A data-shaped exception raised in there says something about the
+    *database*, not about these transaction bytes, so absorbing it as
+    "non-Counterparty" would silently drop a real transaction -- the block-510556
+    failure mode. Convert it to a type outside `MALFORMED_TRANSACTION_ERRORS` so
+    it halts and gets diagnosed instead.
+
+    Any future ledger read added under `_get_tx_info()` must be isolated the same
+    way; see the note on `MALFORMED_TRANSACTION_ERRORS`.
+    """
+    try:
+        return dispenser.is_dispensable(db, destination, btc_amount)
+    except MALFORMED_TRANSACTION_ERRORS as e:
+        raise exceptions.DatabaseError(
+            f"Ledger lookup failed while testing dispensability of {destination} "
+            f"({type(e).__name__}: {e})"
+        ) from e
 
 
 def get_dispensers_tx_info(sources, dispensers_outputs):
@@ -629,6 +656,20 @@ def update_utxo_balances_cache(db, utxos_info, data, destination, block_index):
 # Widening the *catching* of these errors needs no activation gate: a
 # transaction that reaches any of them raises today, so every node halts on it,
 # so no historical block can contain one that was ever parsed successfully.
+#
+# The net is only sound as long as everything it covers derives from the
+# transaction bytes. Three boundaries keep that true, and a change to any of them
+# has to be re-argued:
+#
+#   * `get_utxos_info()` runs BEFORE the try: its ledger reads
+#     (`utxo_has_balance`) must halt, and its pure-data helpers already normalise
+#     to `DecodeError`.
+#   * `update_utxo_balances_cache()` runs in the `finally`, also outside the net,
+#     for the same reason -- it writes the UTXO balances cache.
+#   * the one ledger read reached from inside the net, `is_dispensable()`, is
+#     isolated by `_is_dispensable()`, which re-raises data errors as
+#     `DatabaseError` (outside this tuple). Any ledger read added under
+#     `_get_tx_info()` must be isolated the same way.
 MALFORMED_TRANSACTION_ERRORS = (
     TypeError,
     ValueError,  # includes binascii.Error
@@ -648,6 +689,9 @@ def get_tx_info(db, decoded_tx, block_index, composing=False):
         # utxos_info contains sources (inputs with balances),
         # destination (first non-OP_RETURN output),
         # number of outputs and the OP_RETURN index
+        # Deliberately outside the MALFORMED_TRANSACTION_ERRORS net below: this
+        # reads the ledger, and a failure here must halt rather than be recorded
+        # as "not a Counterparty transaction".
         utxos_info = get_utxos_info(db, decoded_tx)
 
     try:
@@ -670,5 +714,9 @@ def get_tx_info(db, decoded_tx, block_index, composing=False):
         return b"", None, None, None, None, None, utxos_info
     finally:
         # update utxo balances cache before parsing the transaction
-        # to catch chained utxo moves
+        # to catch chained utxo moves.
+        # Runs outside the net on purpose (see MALFORMED_TRANSACTION_ERRORS): it
+        # writes the balances cache, so a failure must halt. On the absorbed
+        # paths `data` and `destination` are still None, exactly as on the
+        # long-standing DecodeError path.
         update_utxo_balances_cache(db, utxos_info, data, destination, block_index)
