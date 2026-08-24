@@ -210,7 +210,20 @@ def validate(
     if protocol.enabled("fairminter_v2", block_index=block_index):
         if soft_cap > hard_cap > 0:
             problems.append("Soft cap must be <= hard cap.")
-        if hard_cap > 0 and price > 0 and hard_cap % quantity_by_price != 0:
+        # `quantity_by_price != 0` first: the `quantity_by_price < 1` check above
+        # appends a problem but does not return, so a zero lot size reaches the
+        # modulo and raises ZeroDivisionError -- one ordinary transaction halts
+        # every node. Deliberately `!= 0` and not `> 0`: a *negative* lot size
+        # computes a modulo today without raising, and this problem string is
+        # stored in the `fairminters` table, so excluding negatives too would be
+        # a retroactive consensus change. Ungated for the same reason the zero
+        # case is safe: it raises on current code.
+        if (
+            hard_cap > 0
+            and price > 0
+            and quantity_by_price != 0
+            and hard_cap % quantity_by_price != 0
+        ):
             problems.append("hard cap must be a multiple of lot size")
     else:
         if soft_cap >= hard_cap > 0:

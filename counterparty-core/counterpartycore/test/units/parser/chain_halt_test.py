@@ -29,6 +29,7 @@ import cbor2
 import pytest
 from arc4 import ARC4
 from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.api import composer
 from counterpartycore.lib.messages import (
     bet,
     broadcast,
@@ -64,11 +65,11 @@ def sig_script_sig():
     return bytes([len(sig)]) + sig
 
 
-def build_raw_tx(script_sig, outputs):
+def build_raw_tx(script_sig, outputs, prev_txid=PREV_TXID):
     """1-input raw transaction with the given scriptSig and (value, spk) outputs."""
     tx = struct.pack("<I", 1)
     tx += b"\x01"
-    tx += binascii.unhexlify(PREV_TXID)[::-1]
+    tx += binascii.unhexlify(prev_txid)[::-1]
     tx += struct.pack("<I", 0)
     tx += bytes([len(script_sig)]) + script_sig
     tx += b"\xff\xff\xff\xff"
@@ -80,14 +81,22 @@ def build_raw_tx(script_sig, outputs):
     return binascii.hexlify(tx).decode()
 
 
-def op_return_output(message_bytes):
-    payload = ARC4(ARC4_KEY).encrypt(prefix() + message_bytes)
+def op_return_output(message_bytes, arc4_key=ARC4_KEY):
+    payload = ARC4(arc4_key).encrypt(prefix() + message_bytes)
     return 0, b"\x6a" + bytes([len(payload)]) + payload
 
 
-def deserialize_crafted_tx(current_block_index, blockchain_mock, defaults, raw_tx):
+def p2pkh_output(address, value=546):
+    """Dust output to `address`, so that `tx["destination"]` resolves to it --
+    which is what `bet.parse()` reads as the feed address."""
+    return value, binascii.unhexlify(composer.address_to_script_pub_key(address).to_hex())
+
+
+def deserialize_crafted_tx(
+    current_block_index, blockchain_mock, defaults, raw_tx, prev_txid=PREV_TXID, source=None
+):
     deserialize.Deserializer.reset_instance()
-    blockchain_mock.source_by_txid[PREV_TXID] = defaults["addresses"][0]
+    blockchain_mock.source_by_txid[prev_txid] = source or defaults["addresses"][0]
     decoded_tx = deserialize.deserialize_tx(
         raw_tx, parse_vouts=True, block_index=current_block_index
     )
@@ -519,10 +528,20 @@ def test_c2_zero_price_guard_is_scoped_to_open_and_refill(ledger_db, blockchain_
 # round(+/-inf) (OverflowError). Found while fixing C3/C5, not in the original
 # report.
 # ---------------------------------------------------------------------------
-def insert_pending_cfd_match(ledger_db, defaults, feed_address, initial_value, tag):
-    """A pending BullCFD/BearCFD match on `feed_address`, shaped exactly like
-    what `bet.match()` writes. `initial_value` is the feed's last broadcast value
-    at match time: NULL after a "lock" broadcast, or after one carrying a NaN
+def insert_pending_bet_match(
+    ledger_db,
+    defaults,
+    feed_address,
+    initial_value,
+    tag,
+    bet_types=(0, 1),
+    fee_fraction_int=0,
+    escrow=1000,
+):
+    """A pending match on `feed_address`, shaped exactly like what `bet.match()`
+    writes. `bet_types` defaults to BullCFD/BearCFD; (2, 3) gives an
+    Equal/NotEqual match. `initial_value` is the feed's last broadcast value at
+    match time: NULL after a "lock" broadcast, or after one carrying a NaN
     float64 (sqlite3 binds NaN as NULL).
 
     `tag` must be hexadecimal: the match tables store the hashes compactly and
@@ -540,22 +559,22 @@ def insert_pending_cfd_match(ledger_db, defaults, feed_address, initial_value, t
         "tx1_index": 900001 + 2 * len(tag),
         "tx1_hash": tx1_hash,
         "tx1_address": defaults["addresses"][2],
-        "tx0_bet_type": 0,  # BullCFD
-        "tx1_bet_type": 1,  # BearCFD -> bet_match_type_id == cfd_type_id
+        "tx0_bet_type": bet_types[0],
+        "tx1_bet_type": bet_types[1],
         "feed_address": feed_address,
         "initial_value": initial_value,
         "deadline": 1_600_000_000,
         "target_value": 0.0,
         "leverage": 5040,
-        "forward_quantity": 1000,
-        "backward_quantity": 1000,
+        "forward_quantity": escrow,
+        "backward_quantity": escrow,
         "tx0_block_index": block_index,
         "tx1_block_index": block_index,
         "block_index": block_index,
         "tx0_expiration": 100,
         "tx1_expiration": 100,
         "match_expire_index": block_index + 100,
-        "fee_fraction_int": 0,
+        "fee_fraction_int": fee_fraction_int,
         "status": "pending",
     }
     ledger.events.insert_record(ledger_db, "bet_matches", bindings, "BET_MATCH")
@@ -579,7 +598,7 @@ def test_cfd_settlement_null_initial_value_does_not_halt(ledger_db, blockchain_m
     """`initial_value` is NULL after a locked or NaN-valued broadcast; the CFD
     arithmetic would raise TypeError inside broadcast.parse()."""
     oracle = defaults["addresses"][7]
-    match_id = insert_pending_cfd_match(ledger_db, defaults, oracle, None, "cfd0")
+    match_id = insert_pending_bet_match(ledger_db, defaults, oracle, None, "cfd0")
 
     row = oracle_broadcast(
         ledger_db, blockchain_mock, oracle, 1_700_000_000, 1.0, 0, unique_tx=True
@@ -595,7 +614,7 @@ def test_cfd_settlement_non_finite_broadcast_value_does_not_halt(
     """Before `reject_non_finite_broadcast` the broadcast's own `value` can be
     non-finite; `round(nan)` raises ValueError and `round(+/-inf)` OverflowError."""
     oracle = defaults["addresses"][8]
-    match_id = insert_pending_cfd_match(ledger_db, defaults, oracle, 1.0, "cfdabcd")
+    match_id = insert_pending_bet_match(ledger_db, defaults, oracle, 1.0, "cfdabcd")
 
     with ProtocolChangesDisabled(["reject_non_finite_broadcast"]):
         row = oracle_broadcast(
@@ -729,3 +748,158 @@ def test_null_out_of_range_ints_leaves_valid_values_alone():
         "f": True,
         "g": None,
     }
+
+
+# ---------------------------------------------------------------------------
+# N3 -- ZeroDivisionError in fairminter.validate(): the `quantity_by_price < 1`
+# check appends a problem but does not return, so a zero lot size still reaches
+# `hard_cap % quantity_by_price`. One ordinary transaction.
+# ---------------------------------------------------------------------------
+def zero_lot_size_fairminter_message():
+    asset_id = ledger.issuances.generate_asset_id("ZEROQBP")
+    #  asset_id, price=1, quantity_by_price=0, ..., hard_cap=100, ...
+    payload = cbor2.dumps(
+        [asset_id, 0, 1, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, False, False, False, True]
+    )
+    return bytes([fairminter.ID]) + payload
+
+
+def test_n3_zero_lot_size_fairminter_does_not_halt(
+    ledger_db, current_block_index, blockchain_mock, defaults
+):
+    raw_tx = build_raw_tx(sig_script_sig(), [op_return_output(zero_lot_size_fairminter_message())])
+    decoded_tx = deserialize_crafted_tx(current_block_index, blockchain_mock, defaults, raw_tx)
+    assert decoded_tx["parsed_vouts"][3][0] == fairminter.ID
+
+    mine_block(ledger_db, [decoded_tx])  # must not raise
+
+    row = (
+        ledger_db.cursor()
+        .execute("SELECT status FROM fairminters ORDER BY rowid DESC LIMIT 1")
+        .fetchone()
+    )
+    assert "quantity_by_price must be >= 1" in row["status"], row["status"]
+
+
+def test_n3_negative_lot_size_keeps_its_status_string(ledger_db, defaults):
+    """The guard is `!= 0`, not `> 0`, on purpose: a negative lot size computes a
+    modulo today without raising, and this status string is stored in the
+    `fairminters` table -- so excluding negatives too would rewrite history."""
+    problems = fairminter.validate(
+        ledger_db, defaults["addresses"][0], "ZEROQBP", price=1, quantity_by_price=-3, hard_cap=100
+    )
+    assert "hard cap must be a multiple of lot size" in problems
+
+
+# ---------------------------------------------------------------------------
+# N4 -- a negative CBOR `fee_fraction_int` is stored as "valid", copied onto
+# every bet match on that feed, and the settlement then credits the feed a
+# negative quantity: CreditError halts the chain.
+# ---------------------------------------------------------------------------
+def test_n4_negative_fee_fraction_broadcast_is_rejected(ledger_db, blockchain_mock, defaults):
+    """Root cause, gated by `reject_negative_fee_fraction`."""
+    row = oracle_broadcast(
+        ledger_db, blockchain_mock, defaults["addresses"][1], 1_700_000_000, 1.0, -1
+    )
+    assert row["status"] == "invalid: negative fee fraction", row["status"]
+
+
+# Distinct prevout txids: each one is also that transaction's ARC4 key, so the
+# four transactions below must not share one.
+FEED_TXID_1 = "f10102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+FEED_TXID_2 = "f20102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+BETTOR_TXID_A = "aa0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+BETTOR_TXID_B = "bb0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+
+
+def mine_crafted_tx(
+    ledger_db,
+    current_block_index,
+    blockchain_mock,
+    defaults,
+    prev_txid,
+    source,
+    message,
+    outputs=(),
+):
+    raw_tx = build_raw_tx(
+        sig_script_sig(),
+        [*outputs, op_return_output(message, arc4_key=binascii.unhexlify(prev_txid))],
+        prev_txid=prev_txid,
+    )
+    decoded_tx = deserialize_crafted_tx(
+        current_block_index, blockchain_mock, defaults, raw_tx, prev_txid=prev_txid, source=source
+    )
+    mine_block(ledger_db, [decoded_tx])
+
+
+def test_n4_negative_fee_fraction_settlement_does_not_halt(
+    ledger_db, current_block_index, blockchain_mock, defaults
+):
+    """Before the activation such a broadcast can already be on chain, so the
+    settlement clamp is ungated and load-bearing on its own. Driven through the
+    real ingestion path -- four transactions, as reported."""
+    feed = defaults["addresses"][5]
+
+    with ProtocolChangesDisabled(["reject_negative_fee_fraction"]):
+        mine_crafted_tx(
+            ledger_db,
+            current_block_index,
+            blockchain_mock,
+            defaults,
+            FEED_TXID_1,
+            feed,
+            bytes([broadcast.ID]) + cbor2.dumps([1_700_000_000, 1.0, -1, "text/plain", b"XCP-USD"]),
+        )
+        row = (
+            ledger_db.cursor()
+            .execute("SELECT * FROM broadcasts ORDER BY rowid DESC LIMIT 1")
+            .fetchone()
+        )
+        assert row["status"] == "valid" and row["fee_fraction_int"] == -1
+
+        # Two opposing Equal/NotEqual bets on that feed. The escrow has to be
+        # large enough that `int(-1e-8 * total_escrow)` truncates to a non-zero
+        # negative fee.
+        for prev_txid, bettor, bet_type in (
+            (BETTOR_TXID_A, defaults["addresses"][0], 2),
+            (BETTOR_TXID_B, defaults["addresses"][1], 3),
+        ):
+            mine_crafted_tx(
+                ledger_db,
+                current_block_index,
+                blockchain_mock,
+                defaults,
+                prev_txid,
+                bettor,
+                bytes([bet.ID])
+                + struct.pack(">HIQQdII", bet_type, 1_800_000_000, 10**8, 10**8, 1.0, 5040, 100),
+                outputs=[p2pkh_output(feed)],
+            )
+
+        match = (
+            ledger_db.cursor()
+            .execute("SELECT * FROM bet_matches ORDER BY rowid DESC LIMIT 1")
+            .fetchone()
+        )
+        assert match is not None and match["fee_fraction_int"] < 0, match
+
+        # The settle broadcast: past the deadline, so the match resolves. Must
+        # not raise -- the negative feed fee is read as no fee.
+        mine_crafted_tx(
+            ledger_db,
+            current_block_index,
+            blockchain_mock,
+            defaults,
+            FEED_TXID_2,
+            feed,
+            bytes([broadcast.ID]) + cbor2.dumps([1_800_000_001, 1.0, 0, "text/plain", b"XCP-USD"]),
+        )
+
+    resolution = (
+        ledger_db.cursor()
+        .execute("SELECT * FROM bet_match_resolutions ORDER BY rowid DESC LIMIT 1")
+        .fetchone()
+    )
+    assert resolution is not None
+    assert resolution["fee"] == 0, resolution["fee"]

@@ -127,6 +127,23 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, mime_type, bl
     if timestamp < 0:
         problems.append("negative timestamp")
 
+    if protocol.enabled("reject_negative_fee_fraction", block_index=block_index):
+        # `fee_fraction_int` is bounded above (`> MAX_INT`, and `>= UNIT` since
+        # `max_fee_fraction`) but never below. The legacy binary format packs it
+        # as an unsigned `I`, so a negative value only became expressible when
+        # `taproot_support` made broadcasts CBOR-decoded. A negative fee fraction
+        # is stored as "valid", copied onto every bet match on that feed, and the
+        # settlement in parse() below then credits the feed a negative quantity:
+        # `credit()` raises CreditError, which halts every node. Four ordinary
+        # transactions (broadcast, two opposing bets, settle broadcast).
+        #
+        # Gated because it flips the status of a broadcast that parses today --
+        # a negative fee fraction is only fatal once a match settles, so such a
+        # row could already exist on chain. The ungated clamp in parse() is what
+        # protects rows predating this activation.
+        if fee_fraction_int < 0:
+            problems.append("negative fee fraction")
+
     if not source:
         problems.append("null source address")
     # Check previous broadcast in this feed.
@@ -467,6 +484,17 @@ def parse(db, tx, message):
             fee_fraction = fee_fraction_int / config.UNIT
 
         fee = int(fee_fraction * total_escrow)  # Truncate.
+        if fee < 0:
+            # A broadcast predating `reject_negative_fee_fraction` can carry a
+            # negative `fee_fraction_int`, and `bet.get_fee_fraction()` copies the
+            # feed's last one onto every new bet -- so a match created long after
+            # the activation can still inherit it. The feed fee below is credited
+            # unconditionally and `credit()` rejects a negative quantity, so the
+            # whole block fails to parse. Read it as no fee: the settlement then
+            # proceeds exactly as it does for a zero-fee feed. Ungated, and it
+            # stays load-bearing after the activation -- any match reaching this
+            # raises on current code, so no historical block settled one.
+            fee = 0
         escrow_less_fee = total_escrow - fee
 
         # Get known bet match type IDs.
