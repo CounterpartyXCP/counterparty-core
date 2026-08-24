@@ -22,6 +22,7 @@ use crypto::symmetriccipher::SynchronousStreamCipher;
 
 use crate::indexer::block::VinOutput;
 use crate::indexer::rpc_client::{BatchRpcClient, BATCH_CLIENT};
+use tracing::error;
 
 use std::sync::Arc;
 
@@ -86,6 +87,18 @@ impl BlockHasEntries for Block {
 }
 
 fn arc4_decrypt(key: &[u8], data: &[u8]) -> Vec<u8> {
+    // `Rc4::new` asserts a non-empty key, and a failed assert in Rust surfaces
+    // in Python as `PanicException`, which derives from BaseException and so
+    // escapes every `except Exception` in the call chain. The key is the first
+    // input's prevout txid, so it is empty only for a transaction with no
+    // inputs at all: impossible inside a block (a coinbase still has one input
+    // whose prevout txid is all zeros), but reachable through the API paths that
+    // deserialize caller-supplied hex (`apiv1.get_tx_info`, the composer's
+    // `info`). No key means no ARC4 keystream and therefore no recoverable
+    // Counterparty payload; return nothing so every prefix check below fails.
+    if key.is_empty() {
+        return Vec::new();
+    }
     let mut rc4 = Rc4::new(key);
     let mut result: Vec<u8> = repeat(0).take(data.len()).collect();
     rc4.process(data, &mut result);
@@ -883,19 +896,38 @@ pub fn parse_transaction(
             .as_ref()
             .map_or(false, |p| p.destinations == vec![config.unspendable()])
     {
-        if BATCH_CLIENT.lock().unwrap().is_none() {
-            *BATCH_CLIENT.lock().unwrap() = Some(
-                BatchRpcClient::new(
+        // `Mutex::lock()` returns Err once any thread has panicked while holding
+        // the lock, and `.unwrap()` on that turns a single panic anywhere into a
+        // permanent panic on every later call -- for a `static` mutex, for the
+        // whole process lifetime. Recover the guard instead: the protected value
+        // is an `Option<BatchRpcClient>`, which cannot be left half-written.
+        // Building the client can also fail (a bad reqwest configuration), and
+        // `.unwrap()` on that raised `PanicException` -- a BaseException that no
+        // Python handler catches. Leave the client unset instead: `prev_txs`
+        // stays all-`None` and the Python side resolves the prevouts itself,
+        // which retries and halts rather than guessing.
+        {
+            let mut batch_client = BATCH_CLIENT.lock().unwrap_or_else(|e| e.into_inner());
+            if batch_client.is_none() {
+                match BatchRpcClient::new(
                     config.rpc_address.clone(),
                     config.rpc_user.clone(),
                     config.rpc_password.clone(),
                     config.rpc_api_key.clone(),
-                )
-                .unwrap(),
-            );
+                ) {
+                    Ok(client) => *batch_client = Some(client),
+                    Err(e) => {
+                        error!("Could not create the batch RPC client: {:?}", e);
+                    }
+                }
+            }
         }
 
-        if let Some(batch_client) = BATCH_CLIENT.lock().unwrap().as_ref() {
+        if let Some(batch_client) = BATCH_CLIENT
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+        {
             let input_txids: Vec<_> = tx
                 .input
                 .iter()
@@ -1584,5 +1616,26 @@ mod tests {
 
         assert_eq!(resolved, Some((txid, 0)));
         assert!(prev_txs.is_empty());
+    }
+
+    // -----------------------------------------------------------------------
+    // `Rc4::new` asserts a non-empty key. A failed assert reaches Python as
+    // `PanicException`, which derives from BaseException and escapes every
+    // `except Exception`. The key is empty only for a transaction with no
+    // inputs -- impossible in a block, reachable through the API paths that
+    // deserialize caller-supplied hex.
+    // -----------------------------------------------------------------------
+    #[test]
+    fn test_arc4_decrypt_with_an_empty_key_returns_nothing() {
+        assert_eq!(arc4_decrypt(&[], b"CNTRPRTYpayload"), Vec::<u8>::new());
+    }
+
+    #[test]
+    fn test_arc4_decrypt_with_a_key_is_reversible() {
+        let key = test_sha256_hash(1);
+        let plaintext = b"CNTRPRTYpayload";
+        let ciphertext = arc4_decrypt(&key, plaintext);
+        assert_ne!(ciphertext, plaintext.to_vec());
+        assert_eq!(arc4_decrypt(&key, &ciphertext), plaintext.to_vec());
     }
 }

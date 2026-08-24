@@ -397,9 +397,7 @@ def parse(db, tx, message):
         # validate() (which only flags the value as a problem string, it
         # doesn't replace it). Mirror the same defense applied to
         # issuances; see fuzz_cbor_test.py::test_cbor_broadcast_no_halt.
-        for _k, _v in list(bindings.items()):
-            if isinstance(_v, int) and (_v > config.MAX_INT or _v < -config.MAX_INT):
-                bindings[_k] = None
+        helpers.null_out_of_range_ints(bindings)
         ledger.events.insert_record(db, "broadcasts", bindings, "BROADCAST")
 
     logger.info("Broadcast from %(source)s (%(tx_hash)s) [%(status)s]", bindings)

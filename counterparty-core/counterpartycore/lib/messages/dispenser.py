@@ -6,6 +6,7 @@
 #
 import json
 import logging
+import math
 import os
 import struct
 from math import floor
@@ -239,7 +240,13 @@ def validate(
             problems.append(
                 f"The oracle address {oracle_address} has not broadcasted any price yet"
             )
-        elif last_price == 0 and status in [STATUS_OPEN, STATUS_OPEN_EMPTY_ADDRESS]:
+        elif (
+            status in [STATUS_OPEN, STATUS_OPEN_EMPTY_ADDRESS]
+            and oracle_fee_from_price(
+                last_price, _last_fee, escrow_quantity, give_quantity, mainchainrate
+            )
+            is None
+        ):
             # A broadcast with `value = 0` is perfectly valid (nothing rejects
             # zero), and so is a "lock" broadcast, which stores NULL. Both make
             # `calculate_oracle_fee()` divide by the price: ZeroDivisionError
@@ -343,12 +350,30 @@ def compose(
     return (source, destination, data)
 
 
-def calculate_oracle_fee(
-    db, escrow_quantity, give_quantity, mainchainrate, oracle_address, block_index
-):
-    last_price, last_fee, _last_fiat_label, _last_updated = other.get_oracle_last_price(
-        db, oracle_address, block_index
-    )
+def oracle_fee_from_price(last_price, last_fee, escrow_quantity, give_quantity, mainchainrate):
+    """Pure arithmetic half of `calculate_oracle_fee()`. Returns `None` when the
+    oracle price cannot produce a usable fee, so that `validate()` can reject the
+    transaction instead of letting `parse()` raise.
+
+    Every `None` case raises on current code -- ZeroDivisionError on a zero
+    price, OverflowError/ValueError from `int()` on a non-finite result -- so no
+    historical block can contain a dispenser that opened through one of them.
+    That is what lets the guard ship ungated, exactly like the zero-price guard
+    in `validate()`.
+
+    The non-finite case is *not* limited to NaN broadcasts: a perfectly finite
+    but subnormal price (float64 admits 5e-324 since broadcasts became
+    CBOR-decoded) overflows `oracle_mainchainrate / last_price` to +inf, and a
+    zero fee fraction then turns `inf * 0` into NaN. `int()` raises on both.
+    """
+    if last_price is None or last_price == 0:
+        return None
+    if give_quantity is None or give_quantity <= 0 or mainchainrate is None:
+        # Both are already rejected by validate() for an opening/refilling
+        # dispenser; guard here too so this helper is safe to call before the
+        # rest of validate() has finished collecting problems.
+        return None
+
     # `fee_fraction_int` is NULL for a "lock" broadcast, for a broadcast whose
     # CBOR payload carried a NaN float (sqlite3 binds NaN as NULL, and
     # broadcast.validate() deliberately does no numeric type check), and for a
@@ -364,9 +389,27 @@ def calculate_oracle_fee(
     # Calculate the total amount earned for dispenser and the fee
     remaining = int(floor(escrow_quantity / give_quantity))
     total_quantity_btc = oracle_mainchainrate_btc * remaining
-    oracle_fee_btc = int(total_quantity_btc * last_fee_multiplier * config.UNIT)
+    oracle_fee_btc = total_quantity_btc * last_fee_multiplier * config.UNIT
 
-    return oracle_fee_btc
+    if not math.isfinite(oracle_fee_btc):
+        return None
+    return int(oracle_fee_btc)
+
+
+def calculate_oracle_fee(
+    db, escrow_quantity, give_quantity, mainchainrate, oracle_address, block_index
+):
+    last_price, last_fee, _last_fiat_label, _last_updated = other.get_oracle_last_price(
+        db, oracle_address, block_index
+    )
+    oracle_fee_btc = oracle_fee_from_price(
+        last_price, last_fee, escrow_quantity, give_quantity, mainchainrate
+    )
+    # Unreachable from parse(): validate() rejects an opening/refilling dispenser
+    # whose price yields no usable fee, and those are the only statuses that get
+    # here. compose(skip_validation=True) can still reach it; charge no fee
+    # rather than raise.
+    return 0 if oracle_fee_btc is None else oracle_fee_btc
 
 
 def unpack(message, return_dict=False, block_index=None):

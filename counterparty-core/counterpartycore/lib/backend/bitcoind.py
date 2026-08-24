@@ -187,6 +187,19 @@ def get_json_response(response, retry=0):
         ) from e
 
 
+def error_message(response_json):
+    """The backend's error message, whatever shape the error object has.
+
+    `response_json["error"]["message"]` raises KeyError/TypeError on a
+    malformed error object; see the note in `rpc_call()` on why an exception of
+    that shape must never escape this module.
+    """
+    error = response_json.get("error")
+    if isinstance(error, dict):
+        return str(error.get("message", error))
+    return str(error)
+
+
 def rpc_call(payload, retry=0):
     """Calls to bitcoin core and returns the response"""
     # Count this call against the per-request API budget (issue #3461). Only on the
@@ -279,32 +292,63 @@ def rpc_call(payload, retry=0):
     # Handle json decode errors
     response_json = get_json_response(response)
 
-    if "error" in response_json and isinstance(response_json["error"], str):
-        response_json["error"] = {"message": response_json["error"], "code": -1}
+    # Everything below reads the *backend response*, not the transaction bytes,
+    # so every failure here is an infrastructure failure and must surface as
+    # `BitcoindRPCError`. A shape the code below does not expect -- a 200 body
+    # with neither "result" nor "error", an error object without "message", a
+    # non-dict payload -- would otherwise raise KeyError/TypeError, which
+    # `gettxinfo.MALFORMED_TRANSACTION_ERRORS` absorbs as "not a Counterparty
+    # transaction": the node whose backend glitched would silently drop a real
+    # transaction while healthy nodes parse it, i.e. the exact silent fork the
+    # net exists to prevent (block 510556). `safe_rpc_payload()` already makes
+    # this conversion for the API path; the parser path now does too.
+    try:
+        if not isinstance(response_json, (dict, list)):
+            raise exceptions.BitcoindRPCError(
+                f"Unexpected response type from backend: {type(response_json).__name__}"
+            )
 
-    # Batch query returns a list
-    if isinstance(response_json, list):
-        result = response_json
-    elif "error" not in response_json.keys() or response_json["error"] is None:  # noqa: E711
-        result = response_json["result"]
-    elif "Block height out of range" in response_json["error"]["message"]:
-        # this error should be managed by the caller
-        raise exceptions.BlockOutOfRange(response_json["error"]["message"])
-    elif response_json["error"]["code"] in [-28, -8, -5, -2, -1]:
-        # "Verifying blocks..." or "Block height out of range" or "The network does not appear to fully agree!""
-        warning_message = f"Error calling {payload}: {response_json['error']}. Sleeping for ten seconds and retrying."
-        if response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
-            warning_message += f" Is `txindex` enabled in {config.BTC_NAME} Core?"
-        logger.warning(warning_message, stack_info=config.VERBOSE > 0)
-        if should_retry():
-            # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
-            # seconds to start, this'll hit the maximum recursion depth limit.
-            if not interruptible_sleep(10):
-                raise exceptions.BitcoindRPCError("Shutdown requested during error retry")
-            return rpc_call(payload, retry=retry + 1)
-        raise exceptions.BitcoindRPCError(warning_message)
-    else:
-        raise exceptions.BitcoindRPCError(response_json["error"]["message"])
+        if isinstance(response_json, dict):
+            if "error" in response_json and isinstance(response_json["error"], str):
+                response_json["error"] = {"message": response_json["error"], "code": -1}
+
+        # Batch query returns a list
+        if isinstance(response_json, list):
+            result = response_json
+        elif "error" not in response_json.keys() or response_json["error"] is None:  # noqa: E711
+            if "result" not in response_json:
+                raise exceptions.BitcoindRPCError(
+                    "Malformed response from backend: no `result` and no `error`"
+                )
+            result = response_json["result"]
+            if result is None:
+                # Mirrors safe_rpc_payload(): a null result means the backend
+                # answered but has nothing for us. Returning it would hand a
+                # `None` to the deserializer (pyo3 TypeError) or to a caller
+                # subscripting it -- data-shaped exceptions the net absorbs.
+                raise exceptions.BitcoindRPCError("No result returned")
+        elif "Block height out of range" in error_message(response_json):
+            # this error should be managed by the caller
+            raise exceptions.BlockOutOfRange(error_message(response_json))
+        elif response_json["error"].get("code") in [-28, -8, -5, -2, -1]:
+            # "Verifying blocks..." or "Block height out of range" or "The network does not appear to fully agree!""
+            warning_message = f"Error calling {payload}: {response_json['error']}. Sleeping for ten seconds and retrying."
+            if response_json["error"].get("code") == -5:  # RPC_INVALID_ADDRESS_OR_KEY
+                warning_message += f" Is `txindex` enabled in {config.BTC_NAME} Core?"
+            logger.warning(warning_message, stack_info=config.VERBOSE > 0)
+            if should_retry():
+                # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
+                # seconds to start, this'll hit the maximum recursion depth limit.
+                if not interruptible_sleep(10):
+                    raise exceptions.BitcoindRPCError("Shutdown requested during error retry")
+                return rpc_call(payload, retry=retry + 1)
+            raise exceptions.BitcoindRPCError(warning_message)
+        else:
+            raise exceptions.BitcoindRPCError(error_message(response_json))
+    except (KeyError, IndexError, TypeError, AttributeError, ValueError) as e:
+        raise exceptions.BitcoindRPCError(
+            f"Malformed response from backend ({type(e).__name__}: {e})"
+        ) from e
 
     if hasattr(logger, "trace"):
         if isinstance(payload, dict):

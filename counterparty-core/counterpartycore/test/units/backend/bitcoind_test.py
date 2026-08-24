@@ -8,6 +8,7 @@ import requests
 from bitcoinutils.transactions import Script
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.backend import bitcoind
+from counterpartycore.lib.parser import gettxinfo
 from counterpartycore.lib.utils import helpers
 from counterpartycore.test.fixtures import decodedtxs
 from counterpartycore.test.mocks.bitcoind import (
@@ -81,6 +82,12 @@ def mock_requests_post(*args, **kwargs):
         return MockResponse(200, "string")
     if payload["method"] == "return_error_string":
         return MockResponse(200, {"error": "an error"})
+    if payload["method"] == "return_error_without_message":
+        return MockResponse(200, {"error": {"code": -32603}})
+    if payload["method"] == "return_error_not_a_dict":
+        return MockResponse(200, {"error": ["boom"]})
+    if payload["method"] == "return_json_list_at_top_level":
+        return MockResponse(200, [{"result": "ok", "id": 0}])
 
 
 @pytest.fixture(scope="function")
@@ -1138,3 +1145,38 @@ def test_rpc_accounting_retry_recursion_counts_once(monkeypatch, rpc_budget_rese
     bitcoind.begin_api_rpc_accounting(1)  # budget of 1: a double-count would trip it
     assert bitcoind.rpc("getblockcount", []) == "ok"
     assert bitcoind.end_api_rpc_accounting() == 1
+
+
+# ---------------------------------------------------------------------------
+# A malformed *backend response* is an infrastructure failure, never a data
+# error: `gettxinfo.MALFORMED_TRANSACTION_ERRORS` absorbs KeyError/TypeError as
+# "not a Counterparty transaction", so a KeyError escaping rpc_call would make
+# the node whose backend glitched silently drop a real transaction while healthy
+# nodes parse it. Every shape below must surface as BitcoindRPCError.
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    "method",
+    [
+        "return_empty",  # 200 body with neither "result" nor "error"
+        "return_none_result",  # {"result": null}
+        "return_error_without_message",  # error object with no "message"
+        "return_error_not_a_dict",  # error that is neither str nor dict
+    ],
+)
+def test_rpc_call_malformed_response_raises_backend_error(init_mock, method):
+    with pytest.raises(exceptions.BitcoindRPCError):
+        bitcoind.rpc(method, [])
+
+
+def test_rpc_call_malformed_response_is_outside_the_parser_safety_net(init_mock):
+    """The net must let these through; assert the type relationship directly so
+    a future widening of MALFORMED_TRANSACTION_ERRORS trips this test."""
+    with pytest.raises(exceptions.BitcoindRPCError) as exc_info:
+        bitcoind.rpc("return_empty", [])
+    assert not isinstance(exc_info.value, gettxinfo.MALFORMED_TRANSACTION_ERRORS)
+
+
+def test_rpc_call_batch_response_is_returned_unchanged(init_mock):
+    """A batch reply is a list and each element carries its own result/error;
+    getrawtransaction_batch() filters those itself."""
+    assert bitcoind.rpc("return_json_list_at_top_level", []) == [{"result": "ok", "id": 0}]

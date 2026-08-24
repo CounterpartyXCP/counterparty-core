@@ -1220,9 +1220,7 @@ def parse(db, tx, message, message_type_id):
             # 64-bit range would raise OverflowError inside insert_record. This
             # happens in practice when CBOR-encoded hand-rolled txs supply huge
             # values that flow through validate() into the invalid-record bindings.
-            for _k, _v in list(bindings.items()):
-                if isinstance(_v, int) and (_v > config.MAX_INT or _v < -config.MAX_INT):
-                    bindings[_k] = None
+            helpers.null_out_of_range_ints(bindings)
             # Intern the asset name so the compact ``issuances.asset`` FK resolves
             # even for INVALID issuances. Valid creations register the asset via
             # the ASSET_CREATION event above, and reissuances reuse the existing

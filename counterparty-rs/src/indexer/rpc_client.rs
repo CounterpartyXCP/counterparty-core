@@ -129,7 +129,11 @@ impl BatchRpcClient {
             return Ok(vec![]);
         }
 
-        let mut cache = self.cache.lock().unwrap();
+        // Recover from lock poisoning rather than panicking: a single panic in
+        // any thread that held this lock would otherwise turn every subsequent
+        // prevout batch into a `PanicException` (a BaseException, so nothing in
+        // Python catches it). The protected value is a plain lookup cache.
+        let mut cache = self.cache.lock().unwrap_or_else(|e| e.into_inner());
         let mut uncached_txids = Vec::new();
         let mut result_map = HashMap::new();
 

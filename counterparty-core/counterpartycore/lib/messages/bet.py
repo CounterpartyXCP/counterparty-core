@@ -336,7 +336,21 @@ def parse(db, tx, message):
         else:
             if balance < wager_quantity:
                 wager_quantity = balance
-                counterwager_quantity = int(ledger.issuances.price(wager_quantity, odds))
+                try:
+                    counterwager_quantity = int(ledger.issuances.price(wager_quantity, odds))
+                except ZeroDivisionError:
+                    # `odds` is zero on exactly one path: the message carried a
+                    # zero `counterwager_quantity`, so the `price()` call above
+                    # raised and fell back to 0. The overbet rescale then divides
+                    # by it again -- uncaught, so a single bet transaction with a
+                    # zero counterwager and a wager above the sender's XCP balance
+                    # halts every node (ParseTransactionError re-raised by
+                    # parse_block). Keep the counterwager at zero: validate()
+                    # below rejects it as "non-positive counterwager", which is
+                    # what a non-overbet zero-counterwager bet already does.
+                    # Ungated: such a transaction raises on current code, so no
+                    # historical block can contain one that parsed successfully.
+                    counterwager_quantity = 0
 
         problems, leverage = validate(
             db,

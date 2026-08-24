@@ -29,7 +29,14 @@ import cbor2
 import pytest
 from arc4 import ARC4
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.messages import bet, broadcast, dispenser, fairminter
+from counterpartycore.lib.messages import (
+    bet,
+    broadcast,
+    dispenser,
+    fairminter,
+    pooldeposit,
+    poolwithdraw,
+)
 from counterpartycore.lib.parser import blocks, deserialize, gettxinfo
 from counterpartycore.lib.utils import address as address_utils
 from counterpartycore.lib.utils import helpers
@@ -620,3 +627,105 @@ def test_is_non_finite_true(value):
 @pytest.mark.parametrize("value", [0, 1, -1, 0.0, 1.5, D("0"), D("1.5"), None, "nan", b"nan"])
 def test_is_non_finite_false(value):
     assert not broadcast.is_non_finite(value)
+
+
+# ---------------------------------------------------------------------------
+# Follow-up findings (second adversarial pass on the fix branch).
+# ---------------------------------------------------------------------------
+def test_zero_counterwager_overbet_does_not_halt(ledger_db, blockchain_mock, defaults):
+    """`bet.parse()` guards the first `price(wager, counterwager)` against a zero
+    counterwager but not the overbet rescale, which divides by `odds` -- itself
+    zero on exactly that path."""
+    source = defaults["addresses"][0]
+    balance = ledger.balances.get_balance(ledger_db, source, config.XCP)
+    assert balance > 0
+    # bet_type=2 (Equal), FORMAT ">HIQQdII": wager above the balance forces the
+    # overbet rescale; counterwager 0 makes `odds` zero.
+    message = struct.pack(">HIQQdII", 2, 1_800_000_000, balance + 1, 0, 1.0, 5040, 100)
+    tx = blockchain_mock.dummy_tx(ledger_db, source, destination=defaults["addresses"][1])
+    bet.parse(ledger_db, tx, message)
+
+    row = ledger_db.cursor().execute("SELECT * FROM bets ORDER BY rowid DESC LIMIT 1").fetchone()
+    assert row is not None
+    assert "non‐positive counterwager" in row["status"], row["status"]
+
+
+def test_subnormal_oracle_price_dispenser_does_not_halt(ledger_db, blockchain_mock, defaults):
+    """A finite but subnormal price overflows `oracle_mainchainrate / last_price`
+    to +inf, and `int(inf)` raises OverflowError inside `calculate_oracle_fee()`."""
+    oracle = defaults["addresses"][1]
+    row = oracle_broadcast(ledger_db, blockchain_mock, oracle, 1_700_000_000, 5e-324, 5_000_000)
+    assert row["status"] == "valid", row["status"]
+    assert row["value"] == 5e-324
+
+    before = count_dispensers(ledger_db)
+    tx = blockchain_mock.dummy_tx(
+        ledger_db, defaults["addresses"][0], destination=oracle, btc_amount=10**8
+    )
+    dispenser.parse(ledger_db, tx, open_oracle_dispenser_message(oracle))
+    assert count_dispensers(ledger_db) == before
+
+
+# ---------------------------------------------------------------------------
+# SQLite binds a Python int as signed 64-bit and raises OverflowError above
+# 2**63-1. Message formats that unpack `>Q` fields admit up to 2**64-1, and
+# validate() only *reports* the excess -- the raw value still reaches the
+# invalid-record bindings. `amm_pools` is live on mainnet since block 952,800.
+# ---------------------------------------------------------------------------
+def pool_assets():
+    return (
+        ledger.issuances.generate_asset_id(config.XCP),
+        ledger.issuances.generate_asset_id("DIVISIBLE"),
+    )
+
+
+def test_pool_withdraw_quantity_above_max_int_does_not_halt(ledger_db, blockchain_mock, defaults):
+    asset_a, asset_b = pool_assets()
+    message = struct.pack(">QQQQQ", asset_a, asset_b, 2**64 - 1, 0, 0)
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    poolwithdraw.parse(ledger_db, tx, message)
+
+    row = (
+        ledger_db.cursor()
+        .execute("SELECT * FROM pool_withdrawals ORDER BY rowid DESC LIMIT 1")
+        .fetchone()
+    )
+    assert "exceeds maximum value" in row["status"], row["status"]
+    assert row["quantity_destroyed"] is None
+
+
+def test_pool_deposit_quantity_above_max_int_does_not_halt(ledger_db, blockchain_mock, defaults):
+    asset_a, asset_b = pool_assets()
+    message = struct.pack(">QQQQQQ", asset_a, asset_b, 2**64 - 1, 2**64 - 1, 0, 0)
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    pooldeposit.parse(ledger_db, tx, message)
+
+    row = (
+        ledger_db.cursor()
+        .execute("SELECT * FROM pool_deposits ORDER BY rowid DESC LIMIT 1")
+        .fetchone()
+    )
+    assert "exceeds maximum value" in row["status"], row["status"]
+    assert row["quantity_a"] is None and row["quantity_b"] is None
+
+
+def test_null_out_of_range_ints_leaves_valid_values_alone():
+    bindings = {
+        "a": config.MAX_INT,
+        "b": -config.MAX_INT,
+        "c": config.MAX_INT + 1,
+        "d": -config.MAX_INT - 1,
+        "e": "not an int",
+        "f": True,
+        "g": None,
+    }
+    assert helpers.null_out_of_range_ints(bindings) is bindings
+    assert bindings == {
+        "a": config.MAX_INT,
+        "b": -config.MAX_INT,
+        "c": None,
+        "d": None,
+        "e": "not an int",
+        "f": True,
+        "g": None,
+    }
