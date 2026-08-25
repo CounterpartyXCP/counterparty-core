@@ -57,7 +57,7 @@ jobs:
             test-path: integrations/testnet4_test.py
             integration_cache_network: testnet4
 
-          - name: Testnet4 Start and Shutdown
+          - name: Waitress Blocked-Query Shutdown
             test-path: integrations/shutdown_test.py
 
           - name: Testnet4 Rebuild

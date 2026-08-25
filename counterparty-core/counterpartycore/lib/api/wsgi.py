@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 
+import apsw
 import gunicorn.app.base
 import waitress
 import waitress.server
@@ -93,13 +94,26 @@ class NodeStatusCheckerThread(threading.Thread):
             while not self.stop_event.is_set():
                 refresh_current_state(self.state_db, self.shared_backend_height)
                 self.stop_event.wait(timeout=1)
+        except apsw.InterruptError:
+            if not self.stop_event.is_set():
+                raise
+            logger.debug("NodeStatusChecker query interrupted during shutdown.")
         finally:
             self.state_db.close()
 
-    def stop(self):
+    def stop(self, deadline=None):
         self.stop_event.set()
         if self.is_alive():
-            self.join()
+            try:
+                self.state_db.interrupt()
+            except apsw.Error:
+                # The checker may finish and close its connection between the
+                # is_alive() check and this cross-thread interrupt.
+                pass
+            timeout = 2 if deadline is None else max(0, min(2, deadline - time.monotonic()))
+            self.join(timeout=timeout)
+            if self.is_alive():
+                logger.warning("NodeStatusChecker thread did not stop before its deadline.")
 
 
 class GunicornArbiter(Arbiter):
@@ -202,18 +216,28 @@ class GunicornArbiter(Arbiter):
             if e.errno != errno.ECHILD:
                 raise
 
-    def kill_all_workers(self):
+    def kill_all_workers(self, deadline=None):
         if len(self.workers_pids) == 0:
             return
+        if deadline is None:
+            deadline = time.monotonic() + 10
         for pid in self.workers_pids:
             try:
                 os.kill(pid, signal.SIGTERM)
             except ProcessLookupError:
                 pass
-        while True:
-            stopped = [not helpers.is_process_alive(pid) for pid in self.workers_pids]
-            if all(stopped):
-                break
+        alive = list(self.workers_pids)
+        while alive and time.monotonic() < deadline:
+            alive = [pid for pid in alive if helpers.is_process_alive(pid)]
+            if alive:
+                time.sleep(0.01)
+        if alive:
+            logger.warning("Gunicorn workers did not stop gracefully: %s", alive)
+            for pid in alive:
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
         logger.info("All workers killed: %s", self.workers_pids)
         self.workers_pids = []
 
@@ -270,12 +294,12 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):  # pylint: disable
             sys.stderr.flush()
             sys.exit(1)
 
-    def stop(self):
+    def stop(self, deadline=None):
         if self.current_state_thread:
-            self.current_state_thread.stop()
+            self.current_state_thread.stop(deadline=deadline)
         if self.arbiter and self.master_pid == os.getpid():
             logger.info("Stopping Gunicorn")
-            self.arbiter.kill_all_workers()
+            self.arbiter.kill_all_workers(deadline=deadline)
             self.server_ready_value.value = 2
 
     def get_task_dispatcher(self):
@@ -301,8 +325,8 @@ class WerkzeugApplication:
         self.current_state_thread.start()
         self.server.serve_forever()
 
-    def stop(self):
-        self.current_state_thread.stop()
+    def stop(self, deadline=None):
+        self.current_state_thread.stop(deadline=deadline)
         self.server.shutdown()
         self.server.server_close()
         self.server_ready_value.value = 2
@@ -339,8 +363,8 @@ class WaitressApplication:
             else:
                 raise
 
-    def stop(self):
-        self.current_state_thread.stop()
+    def stop(self, deadline=None):
+        self.current_state_thread.stop(deadline=deadline)
         self.server.close()
         self.server_ready_value.value = 2
 
@@ -367,9 +391,9 @@ class WSGIApplication:
         logger.info("Starting WSGI Server thread...")
         self.server.run(server_ready_value, shared_backend_height)
 
-    def stop(self):
+    def stop(self, deadline=None):
         logger.info("Stopping WSGI Server thread...")
-        self.server.stop()
+        self.server.stop(deadline=deadline)
 
     def get_task_dispatcher(self):
         # Returns the underlying server's worker-thread pool for health metrics,

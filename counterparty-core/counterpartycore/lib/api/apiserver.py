@@ -725,7 +725,9 @@ def run_apiserver(
         )
         check_database_version(state_db)
 
+        watcher_started_at = time.monotonic()
         watcher = apiwatcher.APIWatcher(state_db)
+        logger.info("API Watcher initialized in %.2fs.", time.monotonic() - watcher_started_at)
         watcher.start()
 
         app = init_flask_app()
@@ -772,21 +774,26 @@ def run_apiserver(
     finally:
         logger.info("Stopping API Server...")
 
+        # Leave room inside the parent's ten-second grace period for the
+        # parent-checker's polling interval and process teardown/reaping. Each
+        # component receives a sub-deadline bounded by this one, so individually
+        # bounded joins cannot add up past the parent deadline.
+        shutdown_deadline = time.monotonic() + 8
+
         if health_server is not None:
             logger.trace("Stopping Health Check Server...")
-            health_server.stop()
+            health_server.stop(deadline=min(shutdown_deadline, time.monotonic() + 1))
 
         if wsgi_server is not None:
             logger.trace("Stopping WSGI Server thread...")
-            wsgi_server.stop()
+            wsgi_server.stop(deadline=min(shutdown_deadline, time.monotonic() + 2))
 
         logger.trace("Closing Ledger DB and State DB Connection Pool...")
         LedgerDBConnectionPool().close()
         StateDBConnectionPool().close()
 
         if watcher is not None:
-            watcher.stop()
-            watcher.join()
+            watcher.stop(deadline=shutdown_deadline)
 
         # Stop memory profiler
         if mem_profiler is not None:
@@ -854,15 +861,25 @@ class APIServer:
     def stop(self):
         logger.info("Stopping API Server process...")
         if self.process.is_alive():
+            started_at = time.monotonic()
             try:
                 os.kill(self.process.pid, signal.SIGTERM)
             except ProcessLookupError:
                 pass
             self.process.join(timeout=10)
             if self.process.is_alive():
-                logger.error("API Server process did not stop in time. Terminating forcefully...")
+                logger.error(
+                    "API Server process did not stop cleanly within 10s. Terminating forcefully..."
+                )
                 self.process.kill()
-        logger.info("API Server process stopped.")
+                self.process.join(timeout=5)
+            elapsed = time.monotonic() - started_at
+            if self.process.is_alive():
+                logger.critical("API Server process is still alive after %.2fs.", elapsed)
+            else:
+                logger.info("API Server process stopped in %.2fs.", elapsed)
+        else:
+            logger.info("API Server process was already stopped.")
 
     def has_stopped(self):
         return self.server_ready_value.value == 2

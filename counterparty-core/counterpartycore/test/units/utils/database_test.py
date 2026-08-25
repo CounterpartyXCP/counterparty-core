@@ -1279,6 +1279,28 @@ def test_apply_outstanding_migration_lock_timeout(temp_db_file):
         os.rmdir(migration_dir)
 
 
+def test_apply_outstanding_migration_logs_phase_timings(temp_db_file):
+    migration_dir = tempfile.mkdtemp()
+    mock_backend = MagicMock()
+    mock_backend.to_apply.return_value = []
+
+    try:
+        with patch("counterpartycore.lib.utils.database.get_backend", return_value=mock_backend):
+            with patch("counterpartycore.lib.utils.database.read_migrations", return_value=[]):
+                with patch(
+                    "counterpartycore.lib.utils.database._wal_size", side_effect=[4096, 1024]
+                ):
+                    with patch.object(database.logger, "info") as log_info:
+                        apply_outstanding_migration(temp_db_file, migration_dir)
+
+        messages = [call.args[0] % call.args[1:] for call in log_info.call_args_list]
+        assert any("0 pending" in message for message in messages)
+        assert any("WAL: 4096 -> 1024 bytes" in message for message in messages)
+        mock_backend.connection.close.assert_called_once_with()
+    finally:
+        os.rmdir(migration_dir)
+
+
 # =============================================================================
 # Tests for rollback_all_migrations function (lines 370-373)
 # =============================================================================

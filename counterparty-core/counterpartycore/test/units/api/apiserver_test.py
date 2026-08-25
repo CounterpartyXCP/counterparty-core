@@ -1,5 +1,5 @@
 import json
-from unittest.mock import Mock
+from unittest.mock import Mock, call, patch
 
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
@@ -9,6 +9,45 @@ from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.lib.parser import blocks
 from counterpartycore.lib.utils import hashcodec, helpers
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
+
+
+def test_api_server_stop_waits_for_graceful_exit():
+    server = apiserver.APIServer(Mock(), Mock())
+    server.process = Mock()
+    server.process.pid = 123
+    server.process.is_alive.side_effect = [True, False, False]
+
+    with patch.object(apiserver.os, "kill") as kill:
+        server.stop()
+
+    kill.assert_called_once_with(123, apiserver.signal.SIGTERM)
+    server.process.join.assert_called_once_with(timeout=10)
+    server.process.kill.assert_not_called()
+
+
+def test_api_server_stop_has_bounded_forced_kill():
+    server = apiserver.APIServer(Mock(), Mock())
+    server.process = Mock()
+    server.process.pid = 123
+    server.process.is_alive.side_effect = [True, True, False]
+
+    with patch.object(apiserver.os, "kill"):
+        server.stop()
+
+    assert server.process.join.call_args_list == [call(timeout=10), call(timeout=5)]
+    server.process.kill.assert_called_once_with()
+
+
+def test_api_server_stop_reports_process_that_survives_kill():
+    server = apiserver.APIServer(Mock(), Mock())
+    server.process = Mock()
+    server.process.pid = 123
+    server.process.is_alive.side_effect = [True, True, True]
+
+    with patch.object(apiserver.os, "kill"), patch.object(apiserver.logger, "critical") as critical:
+        server.stop()
+
+    critical.assert_called_once()
 
 
 def test_apiserver_root(apiv2_client, current_block_index):

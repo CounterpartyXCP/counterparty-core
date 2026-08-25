@@ -3,6 +3,8 @@ import logging
 import threading
 import time
 
+import apsw
+
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.parser import utxosinfo
@@ -687,8 +689,20 @@ def get_last_block_parsed(state_db, no_cache=False):
         if block_index is not None:
             return int(block_index)
     cursor = state_db.cursor()
+    # SQLite otherwise chooses parsed_events_event_idx and builds a temporary
+    # B-tree to sort every BLOCK_PARSED row by event_index. On a cold mainnet
+    # State DB this can add minutes to every API process start. Force the
+    # existing event-index index so SQLite reverse-scans from the newest event
+    # and stops at the first BLOCK_PARSED row, preserving the original ordering
+    # semantics without the temporary sort.
     cursor.execute(
-        "SELECT block_index FROM parsed_events WHERE event = 'BLOCK_PARSED' ORDER BY event_index DESC LIMIT 1"
+        """
+        SELECT block_index
+        FROM parsed_events INDEXED BY parsed_events_event_index_idx
+        WHERE event = 'BLOCK_PARSED'
+        ORDER BY event_index DESC
+        LIMIT 1
+        """
     )
     parsed_event = cursor.fetchone()
     if parsed_event:
@@ -801,23 +815,14 @@ class APIWatcher(threading.Thread):
 
     def run(self):
         logger.info("Starting API Watcher thread...")
-        catch_up(self.ledger_db, self.state_db, self)
-        if not self.stop_event.is_set():
-            self.follow()
-
-    def follow(self):
         try:
-            no_check_reorg_since = 0
-            while not self.stop_event.is_set():
-                try:
-                    parse_next_event(self.ledger_db, self.state_db)
-                except exceptions.NoEventToParse:
-                    if time.time() - no_check_reorg_since > 5:
-                        check_reorg(self.ledger_db, self.state_db)
-                        no_check_reorg_since = time.time()
-                    self.stop_event.wait(timeout=0.1)
-                if self.stop_event.is_set():
-                    break
+            catch_up(self.ledger_db, self.state_db, self)
+            if not self.stop_event.is_set():
+                self.follow()
+        except apsw.InterruptError:
+            if not self.stop_event.is_set():
+                raise
+            logger.debug("API Watcher query interrupted during shutdown.")
         finally:
             if self.state_db is not None:
                 self.state_db.close()
@@ -826,10 +831,30 @@ class APIWatcher(threading.Thread):
             if self.current_state_thread is not None:
                 self.current_state_thread.stop()
 
-    def stop(self):
+    def follow(self):
+        no_check_reorg_since = 0
+        while not self.stop_event.is_set():
+            try:
+                parse_next_event(self.ledger_db, self.state_db)
+            except exceptions.NoEventToParse:
+                if time.time() - no_check_reorg_since > 5:
+                    check_reorg(self.ledger_db, self.state_db)
+                    no_check_reorg_since = time.time()
+                self.stop_event.wait(timeout=0.1)
+            if self.stop_event.is_set():
+                break
+
+    def stop(self, deadline=None):
         logger.info("Stopping API Watcher thread...")
         self.stop_event.set()
-        self.join(timeout=5)
+        for connection in (self.state_db, self.ledger_db):
+            if connection is not None:
+                try:
+                    connection.interrupt()
+                except apsw.Error:
+                    pass
+        timeout = 5 if deadline is None else max(0, min(5, deadline - time.monotonic()))
+        self.join(timeout=timeout)
         if self.is_alive():
             logger.warning("API Watcher thread did not stop in time, continuing...")
         else:

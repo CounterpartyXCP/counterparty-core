@@ -1,98 +1,83 @@
-import random
-import socket
+import logging
+import threading
 import time
-from io import StringIO
+from types import SimpleNamespace
 
-import pytest
-from counterpartycore.lib.cli import server
-from counterpartycore.lib.cli.initialise import initialise_log_and_config
-from counterpartycore.lib.cli.main import arg_parser
-from counterpartycore.test.integrations import reparsetest
-
-# Marker logged once every essential thread has been started.
-SERVER_READY_LOG = "Watching for new blocks..."
-# Generous timeout for the server to reach the "ready" state. Hitting it
-# almost always means the public testnet4 backend rate-limited us during
-# startup (429), not a real shutdown regression — skip instead of fail.
-SERVER_READY_TIMEOUT = 180
+import apsw
+from counterpartycore.lib import config
+from counterpartycore.lib.api import wsgi
 
 
-def is_port_in_used(port):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        s.bind(("127.0.0.1", port))
+def test_waitress_shutdown_interrupts_blocked_node_status_query(monkeypatch, tmp_path):
+    """Exercise the production WSGI backend with a real cross-thread SQLite interrupt.
+
+    This test is deliberately local and deterministic: it cannot turn a missing
+    public backend into a passing skip, as the former Testnet4 shutdown test did.
+    """
+    state_db = apsw.Connection(str(tmp_path / "state.db"))
+    query_started = threading.Event()
+
+    def progress_handler():
+        query_started.set()
         return False
-    except socket.error:
-        return True
-    finally:
-        s.close()
 
+    state_db.set_progress_handler(progress_handler, 100)
 
-def wait_for_server_ready(log_stream, timeout):
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        if SERVER_READY_LOG in log_stream.getvalue():
-            return True
-        time.sleep(0.5)
-    return False
+    def blocked_refresh(connection, _shared_backend_height):
+        connection.execute(
+            """
+            WITH RECURSIVE counter(value) AS (
+                VALUES(0)
+                UNION ALL
+                SELECT value + 1 FROM counter WHERE value < 1000000000
+            )
+            SELECT sum(value) FROM counter
+            """
+        ).fetchone()
 
+    monkeypatch.setattr(wsgi.database, "get_db_connection", lambda _path: state_db)
+    monkeypatch.setattr(wsgi, "refresh_current_state", blocked_refresh)
+    monkeypatch.setattr(wsgi.config, "API_HOST", "127.0.0.1", raising=False)
+    monkeypatch.setattr(wsgi.config, "API_PORT", 0, raising=False)
+    monkeypatch.setattr(wsgi.config, "WAITRESS_THREADS", 1, raising=False)
+    monkeypatch.setattr(wsgi.config, "STATE_DATABASE", str(tmp_path / "state.db"), raising=False)
+    monkeypatch.setattr(
+        wsgi.log,
+        "re_set_up",
+        lambda *_args, **_kwargs: logging.getLogger(config.LOGGER_NAME),
+    )
+    monkeypatch.setattr(wsgi.CurrentState, "set_backend_height_value", lambda _self, _value: None)
 
-def test_shutdown():
-    reparsetest.prepare("testnet4")
+    def application(_environ, start_response):
+        start_response("200 OK", [("Content-Type", "text/plain")])
+        return [b"ok"]
 
-    counterparty_server = None
-    log_stream = StringIO()
+    waitress = wsgi.WaitressApplication(application)
+    server_errors = []
+
+    def run_server():
+        try:
+            waitress.run(SimpleNamespace(value=0), SimpleNamespace(value=0))
+        except Exception as exc:  # pragma: no cover  # pylint: disable=broad-exception-caught
+            server_errors.append(exc)
+
+    server_thread = threading.Thread(target=run_server, name="WaitressIntegration")
+    server_thread.start()
     try:
-        parser = arg_parser(no_config_file=True)
-        args = parser.parse_args(
-            [
-                "--testnet4",
-                "--data-dir",
-                reparsetest.DATA_DIR,
-                "--cache-dir",
-                reparsetest.DATA_DIR,
-                "start",
-                "--backend-connect",
-                "testnet4.counterparty.io",
-                "--backend-port",
-                "48332",
-                "--backend-ssl",
-                "--wsgi-server",
-                "gunicorn",
-            ]
+        assert query_started.wait(timeout=5), (
+            f"NodeStatusChecker never entered the blocking query; server errors: {server_errors!r}"
         )
 
-        initialise_log_and_config(args, log_stream=log_stream)
-
-        counterparty_server = server.CounterpartyServer(args, log_stream)
-        counterparty_server.start()
-
-        if not wait_for_server_ready(log_stream, SERVER_READY_TIMEOUT):
-            pytest.skip(
-                f"Server did not reach ready state within {SERVER_READY_TIMEOUT}s "
-                "(likely backend rate-limit); cannot validate shutdown."
-            )
-
-        # Server is fully up. Let it run a random extra duration so shutdown
-        # is exercised at varying points in the steady-state loop.
-        extra_duration = random.randint(10, 60)  # noqa S311
-        print("Extra run duration after ready: ", extra_duration)
-        deadline = time.time() + extra_duration
-        while time.time() < deadline:
-            counterparty_server.join(1)
-
+        started_at = time.monotonic()
+        waitress.stop(deadline=started_at + 2)
+        elapsed = time.monotonic() - started_at
+        server_thread.join(timeout=2)
     finally:
-        print("Shutting down server...")
-        if counterparty_server is not None:
-            counterparty_server.stop()
+        if server_thread.is_alive():
+            waitress.stop(deadline=time.monotonic() + 2)
+            server_thread.join(timeout=2)
 
-    logs = log_stream.getvalue()
-
-    assert "Ledger.Main - Shutting down..." in logs
-    assert "Ledger.Main - Asset Conservation Checker thread stopped." in logs
-    assert "Ledger.BackendHeight - BackendHeight Thread stopped." in logs
-    assert "Ledger.Main - API Server v1 thread stopped." in logs
-    assert "Ledger.Main - API Server process stopped." in logs
-    assert "Ledger.Main - Shutdown complete." in logs
-
-    assert not is_port_in_used(44000)
+    assert elapsed < 2
+    assert not waitress.current_state_thread.is_alive()
+    assert not server_thread.is_alive()
+    assert server_errors == []

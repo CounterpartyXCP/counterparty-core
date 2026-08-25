@@ -10,9 +10,98 @@ Focuses on the PR-touched code paths:
 import inspect
 import json
 import re
+import threading
+from unittest.mock import MagicMock
 
 import pytest
 from counterpartycore.lib.api import apiwatcher
+
+
+def test_api_watcher_stop_interrupts_sqlite_connections():
+    watcher = apiwatcher.APIWatcher.__new__(apiwatcher.APIWatcher)
+    threading.Thread.__init__(watcher, name="Watcher")
+    watcher.stop_event = threading.Event()
+    watcher.state_db = MagicMock()
+    watcher.ledger_db = MagicMock()
+    watcher.current_state_thread = None
+    watcher.join = MagicMock()
+    watcher.is_alive = MagicMock(return_value=False)
+
+    watcher.stop()
+
+    watcher.state_db.interrupt.assert_called_once_with()
+    watcher.ledger_db.interrupt.assert_called_once_with()
+    watcher.join.assert_called_once_with(timeout=5)
+
+
+def test_api_watcher_handles_shutdown_interrupt(monkeypatch):
+    watcher = apiwatcher.APIWatcher.__new__(apiwatcher.APIWatcher)
+    threading.Thread.__init__(watcher, name="Watcher")
+    watcher.stop_event = threading.Event()
+    watcher.state_db = MagicMock()
+    watcher.ledger_db = MagicMock()
+    watcher.current_state_thread = None
+
+    def interrupted_catch_up(_ledger_db, _state_db, _watcher):
+        watcher.stop_event.set()
+        raise apiwatcher.apsw.InterruptError("interrupted")
+
+    monkeypatch.setattr(apiwatcher, "catch_up", interrupted_catch_up)
+
+    watcher.run()
+
+    watcher.state_db.close.assert_called_once_with()
+    watcher.ledger_db.close.assert_called_once_with()
+
+
+def test_get_last_block_parsed_preserves_event_order_and_uses_event_index(state_db):
+    expected = state_db.execute(
+        """
+        SELECT block_index
+        FROM parsed_events
+        WHERE event = 'BLOCK_PARSED'
+        ORDER BY event_index DESC
+        LIMIT 1
+        """
+    ).fetchone()["block_index"]
+
+    actual = apiwatcher.get_last_block_parsed(state_db, no_cache=True)
+    plan = state_db.execute(
+        """
+        EXPLAIN QUERY PLAN
+        SELECT block_index
+        FROM parsed_events INDEXED BY parsed_events_event_index_idx
+        WHERE event = 'BLOCK_PARSED'
+        ORDER BY event_index DESC
+        LIMIT 1
+        """
+    ).fetchall()
+
+    assert actual == expected
+    assert any("parsed_events_event_index_idx" in row["detail"] for row in plan)
+    assert not any("USE TEMP B-TREE" in row["detail"] for row in plan)
+
+
+def test_get_last_block_parsed_uses_latest_event_not_highest_block(state_db):
+    max_event_index = state_db.execute(
+        "SELECT COALESCE(MAX(event_index), 0) AS max_event_index FROM parsed_events"
+    ).fetchone()["max_event_index"]
+    state_db.execute(
+        "INSERT INTO parsed_events (event_index, event, event_hash, block_index) VALUES (?, ?, ?, ?)",
+        (max_event_index + 1, "BLOCK_PARSED", "older-height-newer-event", 100),
+    )
+    state_db.execute(
+        "INSERT INTO parsed_events (event_index, event, event_hash, block_index) VALUES (?, ?, ?, ?)",
+        (max_event_index + 2, "OTHER", "trailing-event", 999),
+    )
+
+    assert apiwatcher.get_last_block_parsed(state_db, no_cache=True) == 100
+
+
+def test_get_last_block_parsed_empty_table(state_db):
+    state_db.execute("DELETE FROM parsed_events")
+
+    assert apiwatcher.get_last_block_parsed(state_db, no_cache=True) == 0
 
 
 def test_detach_from_utxo_field_name_correct():

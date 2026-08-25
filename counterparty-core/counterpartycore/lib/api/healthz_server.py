@@ -204,10 +204,11 @@ class HealthSampler(threading.Thread):
                 except Exception as e:  # pylint: disable=broad-except
                     logger.debug("healthz: error closing state DB connection: %s", e)
 
-    def stop(self):
+    def stop(self, deadline=None):
         self.stop_event.set()
         if self.is_alive():
-            self.join(timeout=5)
+            timeout = 5 if deadline is None else max(0, min(5, deadline - time.monotonic()))
+            self.join(timeout=timeout)
 
     def _tick(self):
         now = time.monotonic()
@@ -551,7 +552,9 @@ class HealthCheckServer:
         self.httpd = None
         self._serve_thread = None
 
-    def stop(self):
+    def stop(self, deadline=None):
+        if deadline is None:
+            deadline = time.monotonic() + 5
         if self.httpd is not None:
             try:
                 # shutdown() must be called from a different thread than serve_forever().
@@ -560,7 +563,7 @@ class HealthCheckServer:
             except Exception as e:  # pylint: disable=broad-except
                 logger.debug("Error stopping health check server: %s", e)
         if self.sampler is not None:
-            self.sampler.stop()
+            self.sampler.stop(deadline=deadline)
         if self._serve_thread is not None:
-            self._serve_thread.join(timeout=5)
+            self._serve_thread.join(timeout=max(0, deadline - time.monotonic()))
         logger.trace("Health check server stopped.")

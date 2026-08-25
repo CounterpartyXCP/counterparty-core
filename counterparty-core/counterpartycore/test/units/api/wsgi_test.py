@@ -109,6 +109,48 @@ def test_node_status_checker_thread_run_and_stop(monkeypatch):
     assert closed["value"] is True
 
 
+def test_node_status_checker_stop_interrupts_sqlite(monkeypatch):
+    state_db = MagicMock()
+    monkeypatch.setattr(wsgi.database, "get_db_connection", lambda _path: state_db)
+    thread = wsgi.NodeStatusCheckerThread(SimpleNamespace(value=0))
+    monkeypatch.setattr(thread, "is_alive", lambda: True)
+    thread.join = MagicMock()
+
+    thread.stop()
+
+    state_db.interrupt.assert_called_once_with()
+    thread.join.assert_called_once_with(timeout=2)
+
+
+def test_node_status_checker_stop_tolerates_connection_closed_race(monkeypatch):
+    state_db = MagicMock()
+    state_db.interrupt.side_effect = wsgi.apsw.ConnectionClosedError("closed")
+    monkeypatch.setattr(wsgi.database, "get_db_connection", lambda _path: state_db)
+    thread = wsgi.NodeStatusCheckerThread(SimpleNamespace(value=0))
+    monkeypatch.setattr(thread, "is_alive", lambda: True)
+    thread.join = MagicMock()
+
+    thread.stop()
+
+    thread.join.assert_called_once_with(timeout=2)
+
+
+def test_node_status_checker_handles_shutdown_interrupt(monkeypatch):
+    state_db = MagicMock()
+    monkeypatch.setattr(wsgi.database, "get_db_connection", lambda _path: state_db)
+    thread = wsgi.NodeStatusCheckerThread(SimpleNamespace(value=0))
+
+    def interrupted_refresh(_state_db, _shared_backend_height):
+        thread.stop_event.set()
+        raise wsgi.apsw.InterruptError("interrupted")
+
+    monkeypatch.setattr(wsgi, "refresh_current_state", interrupted_refresh)
+
+    thread.run()
+
+    state_db.close.assert_called_once_with()
+
+
 def test_werkzeug_application_run_and_stop(monkeypatch):
     server_ready_value = SimpleNamespace(value=0)
     shared_backend_height = SimpleNamespace(value=0)
@@ -136,7 +178,7 @@ def test_werkzeug_application_run_and_stop(monkeypatch):
         def start(self):
             self.started = True
 
-        def stop(self):
+        def stop(self, deadline=None):
             self.stopped = True
 
     dummy_server = DummyServer()
@@ -177,7 +219,7 @@ def test_waitress_application_run_ignores_bad_fd(monkeypatch):
         def start(self):
             self.started = True
 
-        def stop(self):
+        def stop(self, deadline=None):
             self.stopped = True
 
     dummy_server = DummyServer()
@@ -222,7 +264,7 @@ def test_gunicorn_application_run_and_stop(monkeypatch):
         def start(self):
             self.started = True
 
-        def stop(self):
+        def stop(self, deadline=None):
             self.stopped = True
 
     class DummyArbiter:
@@ -234,7 +276,7 @@ def test_gunicorn_application_run_and_stop(monkeypatch):
         def run(self):
             self.run_called = True
 
-        def kill_all_workers(self):
+        def kill_all_workers(self, deadline=None):
             self.killed = True
 
     monkeypatch.setattr(wsgi, "NodeStatusCheckerThread", DummyThread)
@@ -259,3 +301,21 @@ def test_gunicorn_application_uses_ipv6_bind(monkeypatch):
     app = wsgi.GunicornApplication(lambda *_args, **_kwargs: None)
 
     assert app.options["bind"] == "[::1]:4000"
+
+
+def test_gunicorn_worker_shutdown_escalates_at_deadline(monkeypatch):
+    arbiter = wsgi.GunicornArbiter.__new__(wsgi.GunicornArbiter)
+    arbiter.workers_pids = [101, 102]
+    signals = []
+    monkeypatch.setattr(wsgi.helpers, "is_process_alive", lambda _pid: True)
+    monkeypatch.setattr(wsgi.os, "kill", lambda pid, sig: signals.append((pid, sig)))
+
+    arbiter.kill_all_workers(deadline=time.monotonic())
+
+    assert signals == [
+        (101, wsgi.signal.SIGTERM),
+        (102, wsgi.signal.SIGTERM),
+        (101, wsgi.signal.SIGKILL),
+        (102, wsgi.signal.SIGKILL),
+    ]
+    assert arbiter.workers_pids == []
