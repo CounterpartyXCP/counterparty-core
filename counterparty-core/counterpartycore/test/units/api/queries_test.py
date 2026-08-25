@@ -8,11 +8,101 @@ import inspect
 import pytest
 from counterpartycore.lib import config
 from counterpartycore.lib.api import queries, routes, verbose
-from counterpartycore.lib.utils import hashcodec
+from counterpartycore.lib.utils import database, hashcodec
 
 # =============================================================================
 # Tests for select_rows function - where clause handling
 # =============================================================================
+
+
+def _insert_address_history_sends(ledger_db):
+    """Insert a compact synthetic send history covering every address leg."""
+    target = "synthetic-history-target"
+    other = "synthetic-history-other"
+    for address in (target, other):
+        ledger_db.execute("INSERT OR IGNORE INTO address_list (address) VALUES (?)", (address,))
+    for asset_id, asset_name in ((970001, "HISTORYA"), (970002, "HISTORYB")):
+        ledger_db.execute(
+            "INSERT OR IGNORE INTO assets (asset_id, asset_name) VALUES (?, ?)",
+            (str(asset_id), asset_name),
+        )
+
+    target_id = database.address_index_from_name(ledger_db, target)
+    other_id = database.address_index_from_name(ledger_db, other)
+    asset_ids = {
+        row["asset_name"]: row["asset_index"]
+        for row in ledger_db.execute(
+            "SELECT asset_index, asset_name FROM assets WHERE asset_name IN (?, ?)",
+            ("HISTORYA", "HISTORYB"),
+        ).fetchall()
+    }
+    block_index = ledger_db.execute(
+        "SELECT MAX(block_index) AS block_index FROM blocks"
+    ).fetchone()["block_index"]
+    rows = [
+        # source, source_address, destination, destination_address, asset, quantity, type
+        (target_id, None, other_id, None, "HISTORYA", 10, "send"),
+        (other_id, None, target_id, None, "HISTORYA", 20, "attach"),
+        (other_id, target_id, other_id, None, "HISTORYB", 30, "move"),
+        (other_id, None, other_id, target_id, "HISTORYA", 40, "detach"),
+        # Match two branches: UNION must expose this row exactly once.
+        (target_id, None, target_id, None, "HISTORYA", 50, "send"),
+        (other_id, None, other_id, None, "HISTORYA", 60, "send"),
+    ]
+    for index, row in enumerate(rows, start=1):
+        tx_index = 9_700_000 + index
+        tx_hash = hashcodec.hash_to_db(f"{tx_index:064x}")
+        ledger_db.execute(
+            "INSERT INTO transactions (tx_index, tx_hash, block_index, supported) VALUES (?, ?, ?, ?)",
+            (tx_index, tx_hash, block_index, True),
+        )
+        source, source_address, destination, destination_address, asset, quantity, send_type = row
+        ledger_db.execute(
+            """
+            INSERT INTO sends (
+                tx_index, tx_hash, block_index, source, source_address,
+                destination, destination_address, asset, quantity, status,
+                msg_index, fee_paid, send_type
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'valid', 0, 0, ?)
+            """,
+            (
+                tx_index,
+                tx_hash,
+                block_index,
+                source,
+                source_address,
+                destination,
+                destination_address,
+                asset_ids[asset],
+                quantity,
+                send_type,
+            ),
+        )
+    return target, target_id
+
+
+def _naive_send_rowids(
+    ledger_db, address_id, *, asset=None, send_types=None, order_by="rowid DESC"
+):
+    predicates = "source = ? OR source_address = ? OR destination = ? OR destination_address = ?"
+    bindings = [address_id] * 4
+    filters = []
+    if asset is not None:
+        filters.append("asset = (SELECT asset_index FROM assets WHERE asset_name = ?)")
+        bindings.append(asset)
+    if send_types is not None:
+        filters.append(f"send_type IN ({','.join('?' for _ in send_types)})")
+        bindings += send_types
+    where = f"({predicates})"
+    if filters:
+        where += f" AND {' AND '.join(filters)}"
+    return [
+        row["rowid"]
+        for row in ledger_db.execute(
+            f"SELECT rowid FROM sends WHERE {where} ORDER BY {order_by}",  # noqa: S608
+            bindings,
+        ).fetchall()
+    ]
 
 
 def test_select_rows_with_notlike_filter(state_db):
@@ -62,6 +152,472 @@ def test_select_rows_with_comma_separated_addresses(ledger_db, defaults):
         assert row["address"] in [addr1, addr2]
 
 
+def test_generic_address_filter_keeps_single_statement_resolution(ledger_db, defaults, monkeypatch):
+    """Only explicit index-union callers should use the Python address resolver."""
+    monkeypatch.setattr(
+        database,
+        "address_index_from_name",
+        lambda *_args, **_kwargs: pytest.fail("generic address filter used Python resolver"),
+    )
+    result = queries.select_rows(
+        ledger_db,
+        "credits",
+        where={"address": defaults["addresses"][0]},
+        limit=10,
+    )
+    assert result.result_count is not None
+
+
+@pytest.mark.parametrize(
+    ("getter", "table", "expected_indexes"),
+    [
+        (
+            queries.get_credits_by_address,
+            "credits",
+            {"credits_address_idx", "credits_utxo_address_idx"},
+        ),
+        (
+            queries.get_debits_by_address,
+            "debits",
+            {"debits_address_idx", "debits_utxo_address_idx"},
+        ),
+        (
+            queries.get_sends_by_address,
+            "sends",
+            {
+                "sends_source_idx",
+                "sends_source_address",
+                "sends_destination_idx",
+                "sends_destination_address",
+            },
+        ),
+    ],
+)
+def test_address_history_endpoints_use_index_union(
+    ledger_db, defaults, getter, table, expected_indexes
+):
+    """Every address OR branch must use its own index before the results are
+    ordered by rowid. A plain OR makes SQLite reverse-scan the whole table on
+    mainnet (millions of rows) when the address's newest event is old."""
+    address = defaults["addresses"][0]
+    executed = []
+    ledger_db.setexectrace(
+        lambda _cursor, sql, bindings: (
+            executed.append((sql, tuple(bindings) if bindings is not None else ())) or True
+        )
+    )
+    try:
+        result = getter(ledger_db, address, limit=10)
+    finally:
+        ledger_db.setexectrace(None)
+
+    assert result.result_count is not None
+    row_sql, row_bindings = next(
+        (sql, bindings)
+        for sql, bindings in executed
+        if f"SELECT rowid FROM {table} INDEXED BY" in sql  # noqa: S608
+        and "ORDER BY" in sql
+    )
+    plan = ledger_db.execute(f"EXPLAIN QUERY PLAN {row_sql}", row_bindings).fetchall()
+    details = {row["detail"] for row in plan}
+
+    for index in expected_indexes:
+        assert any(index in detail and "SEARCH" in detail for detail in details)
+
+
+@pytest.mark.parametrize(
+    ("getter", "table", "fields"),
+    [
+        (queries.get_credits_by_address, "credits", ("address", "utxo_address")),
+        (queries.get_debits_by_address, "debits", ("address", "utxo_address")),
+        (
+            queries.get_sends_by_address,
+            "sends",
+            ("source", "source_address", "destination", "destination_address"),
+        ),
+    ],
+)
+def test_address_history_index_union_matches_naive_or(ledger_db, defaults, getter, table, fields):
+    """The UNION must deduplicate rows matching more than one address column
+    and preserve the exact result/count of the original OR predicate."""
+    address = defaults["addresses"][0]
+    address_index = database.address_index_from_name(ledger_db, address)
+
+    fast = getter(ledger_db, address, limit=10_000, offset=0)
+    extra = " AND quantity > 0" if table in {"credits", "debits"} else ""
+    predicates = " OR ".join(f"({field} = ?{extra})" for field in fields)
+    naive = ledger_db.execute(
+        f"SELECT rowid FROM {table} WHERE {predicates} ORDER BY rowid DESC",  # noqa: S608
+        (address_index,) * len(fields),
+    ).fetchall()
+
+    assert [row["rowid"] for row in fast.result] == [row["rowid"] for row in naive]
+    assert fast.result_count == len(naive)
+
+
+@pytest.mark.parametrize(
+    ("getter", "action_field"),
+    [
+        (queries.get_credits_by_address, "calling_function"),
+        (queries.get_debits_by_address, "action"),
+    ],
+)
+def test_address_history_action_filter_matches_naive_or(ledger_db, getter, action_field):
+    table = "credits" if action_field == "calling_function" else "debits"
+    seed = ledger_db.execute(
+        f"SELECT address, {action_field} AS action FROM {table} "  # noqa: S608
+        f"WHERE address IS NOT NULL AND quantity > 0 AND {action_field} IS NOT NULL LIMIT 1"
+    ).fetchone()
+    address = seed["address"]
+    address_id = database.address_index_from_name(ledger_db, address)
+    result = getter(ledger_db, address, action=seed["action"], limit=10_000, offset=0)
+    expected = ledger_db.execute(
+        f"SELECT rowid FROM {table} WHERE "  # noqa: S608
+        f"((address = ? AND quantity > 0 AND {action_field} = ?) OR "
+        f"(utxo_address = ? AND quantity > 0 AND {action_field} = ?)) ORDER BY rowid DESC",
+        (address_id, seed["action"], address_id, seed["action"]),
+    ).fetchall()
+    assert [row["rowid"] for row in result.result] == [row["rowid"] for row in expected]
+    assert result.result_count == len(expected)
+
+
+def test_sends_by_address_and_asset_matches_naive_or(ledger_db):
+    address, address_id = _insert_address_history_sends(ledger_db)
+    result = queries.get_sends_by_address_and_asset(
+        ledger_db, address, "historya", limit=100, offset=0
+    )
+    expected = _naive_send_rowids(ledger_db, address_id, asset="HISTORYA")
+    assert [row["rowid"] for row in result.result] == expected
+    assert result.result_count == len(expected)
+
+
+@pytest.mark.parametrize(
+    ("send_type", "expected_types"),
+    [
+        ("send", ["send"]),
+        ("send,attach", ["send", "attach"]),
+        ("all", None),
+        ("all,send", None),
+    ],
+)
+def test_sends_by_address_send_type_variants(ledger_db, send_type, expected_types):
+    address, address_id = _insert_address_history_sends(ledger_db)
+    result = queries.get_sends_by_address(
+        ledger_db, address, send_type=send_type, limit=100, offset=0
+    )
+    expected = _naive_send_rowids(ledger_db, address_id, send_types=expected_types)
+    assert [row["rowid"] for row in result.result] == expected
+    assert result.result_count == len(expected)
+
+
+def test_send_type_duplicates_are_normalized_and_bounded(ledger_db):
+    address, address_id = _insert_address_history_sends(ledger_db)
+    repeated = ",".join(["send"] * 200 + ["attach"] * 200)
+
+    where = queries.prepare_sends_where(
+        repeated,
+        [
+            {"source": address},
+            {"source_address": address},
+            {"destination": address},
+            {"destination_address": address},
+        ],
+    )
+    result = queries.get_sends_by_address(
+        ledger_db, address, send_type=repeated, limit=100, offset=0
+    )
+    expected = _naive_send_rowids(ledger_db, address_id, send_types=["send", "attach"])
+
+    assert len(where) == 8
+    assert [row["rowid"] for row in result.result] == expected
+
+
+@pytest.mark.parametrize("send_type", ["", "send,invalid", "invalid"])
+def test_invalid_send_types_fail_explicitly(send_type):
+    with pytest.raises(ValueError, match="Invalid send type"):
+        queries.prepare_sends_where(send_type)
+
+
+def test_address_history_cursor_deduplicates_and_paginates(ledger_db):
+    address, address_id = _insert_address_history_sends(ledger_db)
+    expected = _naive_send_rowids(ledger_db, address_id)
+    actual = []
+    cursor = None
+    page_number = 0
+    while True:
+        page = queries.get_sends_by_address(ledger_db, address, cursor=cursor, limit=2)
+        actual += [row["rowid"] for row in page.result]
+        if page_number == 0:
+            assert page.result_count == len(expected)
+        else:
+            assert page.result_count is None
+        if page.next_cursor is None:
+            break
+        cursor = page.next_cursor
+        page_number += 1
+    assert actual == expected
+    assert len(actual) == len(set(actual))
+
+
+def test_address_history_offset_matches_naive_or(ledger_db):
+    address, address_id = _insert_address_history_sends(ledger_db)
+    expected = _naive_send_rowids(ledger_db, address_id)
+    offset_result = queries.get_sends_by_address(ledger_db, address, limit=2, offset=1)
+    assert [row["rowid"] for row in offset_result.result] == expected[1:3]
+    assert offset_result.result_count == len(expected)
+
+
+@pytest.mark.parametrize(
+    "getter",
+    [
+        queries.get_credits_by_address,
+        queries.get_debits_by_address,
+        queries.get_sends_by_address,
+        lambda db, address, **kwargs: queries.get_sends_by_address_and_asset(
+            db, address, "XCP", **kwargs
+        ),
+    ],
+)
+def test_indexed_address_history_rejects_deep_offset(ledger_db, getter):
+    with pytest.raises(ValueError, match="offset must be between"):
+        getter(
+            ledger_db,
+            "bounded-history-address",
+            offset=queries.ADDRESS_HISTORY_MAX_OFFSET + 1,
+        )
+
+
+@pytest.mark.parametrize(
+    "getter",
+    [
+        queries.get_sends_by_address,
+        lambda db, address, **kwargs: queries.get_sends_by_address_and_asset(
+            db, address, "XCP", **kwargs
+        ),
+    ],
+)
+def test_indexed_address_history_rejects_arbitrary_sort(ledger_db, getter):
+    with pytest.raises(ValueError, match="sort is not supported"):
+        getter(ledger_db, "bounded-history-address", sort="quantity:asc")
+
+
+def test_address_history_index_union_cursor_asc(ledger_db):
+    address, address_id = _insert_address_history_sends(ledger_db)
+    expected = _naive_send_rowids(ledger_db, address_id, order_by="rowid ASC")
+    where = [
+        {"source": address},
+        {"source_address": address},
+        {"destination": address},
+        {"destination_address": address},
+    ]
+    hints = [
+        "sends_source_idx",
+        "sends_source_address",
+        "sends_destination_idx",
+        "sends_destination_address",
+    ]
+    actual = []
+    cursor = None
+    while True:
+        page = queries.select_rows(
+            ledger_db,
+            "sends",
+            where=where,
+            where_index_hints=hints,
+            order="ASC",
+            last_cursor=cursor,
+            limit=2,
+            with_count=False,
+        )
+        actual += [row["rowid"] for row in page.result]
+        if page.next_cursor is None:
+            break
+        cursor = page.next_cursor
+
+    assert actual == expected
+    assert len(actual) == len(set(actual))
+
+
+def test_address_history_unknown_address_is_empty(ledger_db):
+    result = queries.get_sends_by_address(ledger_db, "unknown-history-address", limit=10)
+    assert result.result == []
+    assert result.result_count == 0
+    assert result.next_cursor is None
+
+
+def test_hot_address_page_union_is_bounded_and_count_uses_or(ledger_db):
+    """Hot histories must not build and deduplicate their complete rowid set twice."""
+    address, address_id = _insert_address_history_sends(ledger_db)
+    block_index = ledger_db.execute(
+        "SELECT MAX(block_index) AS block_index FROM blocks"
+    ).fetchone()["block_index"]
+    asset_id = ledger_db.execute(
+        "SELECT asset_index FROM assets WHERE asset_name = ?", ("HISTORYA",)
+    ).fetchone()["asset_index"]
+    hot_row_count = 2_000
+    ledger_db.executemany(
+        "INSERT INTO transactions (tx_index, tx_hash, block_index, supported) VALUES (?, ?, ?, ?)",
+        (
+            (
+                9_800_000 + index,
+                hashcodec.hash_to_db(f"{9_800_000 + index:064x}"),
+                block_index,
+                True,
+            )
+            for index in range(hot_row_count)
+        ),
+    )
+    # Every row matches two branches. The global UNION must deduplicate them,
+    # but the page query must still inspect only K rows from each branch.
+    ledger_db.executemany(
+        """
+        INSERT INTO sends (
+            tx_index, tx_hash, block_index, source, destination, asset,
+            quantity, status, msg_index, fee_paid, send_type
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'valid', 0, 0, 'send')
+        """,
+        (
+            (
+                9_800_000 + index,
+                hashcodec.hash_to_db(f"{9_800_000 + index:064x}"),
+                block_index,
+                address_id,
+                address_id,
+                asset_id,
+                1_000 + index,
+            )
+            for index in range(hot_row_count)
+        ),
+    )
+    executed = []
+    ledger_db.setexectrace(
+        lambda _cursor, sql, bindings: (
+            executed.append((sql, tuple(bindings) if bindings is not None else ())) or True
+        )
+    )
+    try:
+        result = queries.get_sends_by_address(ledger_db, address, limit=2)
+    finally:
+        ledger_db.setexectrace(None)
+    assert len(result.result) == 2
+    assert result.result_count == hot_row_count + 5
+
+    row_sql, row_bindings = next(
+        (sql, bindings)
+        for sql, bindings in executed
+        if "SELECT rowid FROM sends INDEXED BY" in sql and "ORDER BY" in sql
+    )
+    count_sql, count_bindings = next(
+        (sql, bindings)
+        for sql, bindings in executed
+        if "COUNT(*) AS count" in sql and "FROM sends" in sql
+    )
+    normalized_row_sql = " ".join(row_sql.split())
+    normalized_count_sql = " ".join(count_sql.split())
+    assert normalized_row_sql.count("SELECT rowid FROM (SELECT rowid FROM sends INDEXED BY") == 4
+    # Four bounded branches plus the final global page limit.
+    assert normalized_row_sql.count("ORDER BY rowid DESC LIMIT ?") == 5
+    assert [row_bindings[index] for index in (1, 3, 5, 7)] == [3, 3, 3, 3]
+    assert "UNION" not in normalized_count_sql
+    assert normalized_count_sql.count(" OR ") == 3
+
+    row_plan = ledger_db.execute(f"EXPLAIN QUERY PLAN {row_sql}", row_bindings).fetchall()
+    row_details = {row["detail"] for row in row_plan}
+    for index in (
+        "sends_source_idx",
+        "sends_source_address",
+        "sends_destination_idx",
+        "sends_destination_address",
+    ):
+        assert any(index in detail and "SEARCH" in detail for detail in row_details)
+
+    count_plan = ledger_db.execute(f"EXPLAIN QUERY PLAN {count_sql}", count_bindings).fetchall()
+    # SQLite may prefer a table scan for this deliberately tiny fixture, but
+    # the count must remain free to choose its native OR plan instead of being
+    # forced through the UNION's temporary deduplication B-tree.
+    assert not any("UNION USING TEMP B-TREE" in row["detail"] for row in count_plan)
+
+
+@pytest.mark.parametrize(
+    ("getter", "table", "action_field", "expected_indexes"),
+    [
+        (
+            queries.get_credits_by_address,
+            "credits",
+            "calling_function",
+            ("credits_address_idx", "credits_utxo_address_idx"),
+        ),
+        (
+            queries.get_debits_by_address,
+            "debits",
+            "action",
+            ("debits_address_idx", "debits_utxo_address_idx"),
+        ),
+    ],
+)
+def test_hot_credit_debit_cursor_pages_skip_repeated_count(
+    ledger_db, getter, table, action_field, expected_indexes
+):
+    address = "synthetic-hot-credit-debit-address"
+    ledger_db.execute("INSERT OR IGNORE INTO address_list (address) VALUES (?)", (address,))
+    address_id = database.address_index_from_name(ledger_db, address)
+    asset_id = ledger_db.execute("SELECT asset_index FROM assets LIMIT 1").fetchone()["asset_index"]
+    block_index = ledger_db.execute(
+        "SELECT MAX(block_index) AS block_index FROM blocks"
+    ).fetchone()["block_index"]
+    hot_row_count = 2_000
+    ledger_db.executemany(
+        f"INSERT INTO {table} ("  # noqa: S608
+        f"block_index, address, asset, quantity, {action_field}, event, tx_index, utxo_address"
+        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            (
+                block_index,
+                address_id,
+                asset_id,
+                1,
+                "synthetic-history",
+                f"synthetic-{index}",
+                9_900_000 + index,
+                address_id,
+            )
+            for index in range(hot_row_count)
+        ),
+    )
+
+    first = getter(ledger_db, address, limit=2)
+    expected_count = ledger_db.execute(
+        f"SELECT COUNT(*) AS count FROM {table} "  # noqa: S608
+        "WHERE quantity > 0 AND (address = ? OR utxo_address = ?)",
+        (address_id, address_id),
+    ).fetchone()["count"]
+    assert first.result_count == expected_count
+    assert first.next_cursor is not None
+
+    executed = []
+    ledger_db.setexectrace(
+        lambda _cursor, sql, bindings: (
+            executed.append((sql, tuple(bindings) if bindings is not None else ())) or True
+        )
+    )
+    try:
+        second = getter(ledger_db, address, cursor=first.next_cursor, limit=2)
+    finally:
+        ledger_db.setexectrace(None)
+
+    assert second.result_count is None
+    assert not any("COUNT(*) AS count" in sql for sql, _bindings in executed)
+    row_sql, row_bindings = next(
+        (sql, bindings)
+        for sql, bindings in executed
+        if f"SELECT rowid FROM {table} INDEXED BY" in sql  # noqa: S608
+    )
+    plan = ledger_db.execute(f"EXPLAIN QUERY PLAN {row_sql}", row_bindings).fetchall()
+    details = {row["detail"] for row in plan}
+    for index in expected_indexes:
+        assert any(index in detail and "SEARCH" in detail for detail in details)
+
+
 def test_get_transactions_by_address_uses_indexed_base_filter(ledger_db, defaults):
     """Address-filtered transaction queries must resolve the address to its
     integer ``address_id`` and filter the indexed base ``transactions.source``
@@ -72,7 +628,7 @@ def test_get_transactions_by_address_uses_indexed_base_filter(ledger_db, default
     address = defaults["addresses"][0]
 
     executed = []
-    ledger_db.setexectrace(lambda cursor, sql, bindings: (executed.append(sql) or True))
+    ledger_db.setexectrace(lambda cursor, sql, bindings: executed.append(sql) or True)
     try:
         result = queries.get_transactions_by_address(ledger_db, address, limit=50)
     finally:
@@ -1124,8 +1680,8 @@ def test_prepare_sends_where_all_with_list_conditions():
 
 def test_prepare_sends_where_with_invalid_type():
     """Test prepare_sends_where with invalid send type."""
-    result = queries.prepare_sends_where("invalid_type")
-    assert len(result) == 0
+    with pytest.raises(ValueError, match="Invalid send type"):
+        queries.prepare_sends_where("invalid_type")
 
 
 # =============================================================================
