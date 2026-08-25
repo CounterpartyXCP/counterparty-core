@@ -631,7 +631,13 @@ def init_flask_app():
 def execute_upgrade_actions(state_db, upgrade_actions):
     for action in upgrade_actions:
         if action[0] in ["rollback", "reparse"]:
-            dbbuilder.rollback_state_db(state_db, block_index=action[1])
+            # Deliberately the *full* rebuild, not `dbbuilder.rollback_state_db()`
+            # and its incremental fast path: a release that ships a rollback
+            # action may also have changed how the State DB is derived from the
+            # Ledger DB, and only re-applying the migrations picks those changes
+            # up. Reverting row by row would faithfully restore rows built by
+            # the *previous* release's rules.
+            dbbuilder.full_rollback_state_db(state_db, block_index=action[1])
             break  # no need to continue
         if action[0] == "refresh_state_db":
             dbbuilder.refresh_state_db(state_db)

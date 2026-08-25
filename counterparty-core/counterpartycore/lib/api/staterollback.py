@@ -37,8 +37,6 @@ rollback point.
 import logging
 import time
 
-import apsw
-
 from counterpartycore.lib import config
 from counterpartycore.lib.api import statetables
 from counterpartycore.lib.utils import database
@@ -63,6 +61,15 @@ MAX_INCREMENTAL_DEPTH = 1000
 # orphaned block touched, so a State DB missing the marker falls back to the
 # full rebuild -- which sets the marker, making the fallback self-healing.
 READY_FLAG = "INCREMENTAL_ROLLBACK_READY"
+
+# Returned by ``rollback_reason`` when the State DB is already at or below the
+# requested block. Unlike the other reasons this one does *not* select the full
+# rebuild: there is nothing to undo, and re-deriving every table from the whole
+# ledger history to achieve nothing would be the most expensive no-op available.
+# Reachable from the CLI (``counterparty-server rollback/reparse`` to a block the
+# State DB has not caught up to yet), never from ``apiwatcher.check_reorg``,
+# whose target is always strictly below the last parsed block.
+NOTHING_TO_ROLL_BACK = "nothing to roll back"
 
 # Append-only State DB tables: every row carries the ``block_index`` of the
 # event that produced it, so reverting is a DELETE.
@@ -116,7 +123,10 @@ def is_ready(state_db):
 
 def rollback_reason(state_db, block_index):
     """Return ``None`` when the incremental path applies, else a short reason
-    explaining why the caller must fall back to the full rebuild.
+    explaining why the caller must take another path.
+
+    :data:`NOTHING_TO_ROLL_BACK` is the one reason that does not mean "fall
+    back to the full rebuild" -- see the caller in ``dbbuilder``.
 
     Any unexpected failure here (a State DB old enough to be missing the
     ``config`` or ``parsed_events`` table, say) also selects the full rebuild:
@@ -132,12 +142,16 @@ def rollback_reason(state_db, block_index):
         if not is_ready(state_db):
             return "State DB predates incremental rollback support"
         last_block_parsed = apiwatcher.get_last_block_parsed(state_db, no_cache=True)
-    except apsw.Error as e:
+    except Exception as e:  # pylint: disable=broad-except
+        # Deliberately broad: this function only picks a path. Anything that
+        # stops us inspecting the State DB -- an apsw error on a schema too old
+        # to have ``config`` / ``parsed_events``, a cached tip that will not
+        # parse as an int -- must select the full rebuild rather than propagate.
         return f"State DB cannot be inspected ({e})"
     if last_block_parsed <= 0:
         return "State DB is empty"
     if block_index > last_block_parsed:
-        return "nothing to roll back"
+        return NOTHING_TO_ROLL_BACK
     depth = last_block_parsed - block_index + 1
     if depth > MAX_INCREMENTAL_DEPTH:
         return f"rollback depth ({depth} blocks) exceeds {MAX_INCREMENTAL_DEPTH}"
@@ -305,6 +319,17 @@ def _rollback_events_count(state_db):
             (SELECT orphan_count FROM rollback_events o WHERE o.event = events_count.event), 0
         )
     """)
+    # A negative count cannot happen if the invariant above holds, so it is
+    # worth a warning rather than a silent DELETE: it would mean the streamed
+    # handler and ``parsed_events`` have drifted apart, and every later rollback
+    # would be wrong in the same way.
+    negative = cursor.execute("SELECT event, count FROM events_count WHERE count < 0").fetchall()
+    if negative:
+        logger.warning(
+            "`events_count` went negative while rolling back, which should be impossible: %s. "
+            "Rebuild the State DB with `--rebuild-state-db` to resynchronize it.",
+            {row["event"]: row["count"] for row in negative},
+        )
     # An event type that no longer occurs at all is absent from a fresh build,
     # not present with a zero count.
     cursor.execute("DELETE FROM events_count WHERE count <= 0")
@@ -342,8 +367,10 @@ def _rebuild_assets_info(state_db, block_index):
 def rollback(state_db, block_index):
     """Revert the State DB to its state at ``block_index - 1``.
 
-    The caller is responsible for the enclosing transaction and for having
-    checked :func:`rollback_reason`.
+    The caller is responsible for the enclosing transaction, for having checked
+    :func:`rollback_reason`, and for having disabled foreign-key enforcement --
+    ``PRAGMA foreign_keys`` is a no-op inside a transaction, so it cannot be set
+    here (see :func:`rollback_state_db`).
     """
     # Local import: apiwatcher imports dbbuilder, which imports this module.
     # pylint: disable=import-outside-toplevel
@@ -353,60 +380,68 @@ def rollback(state_db, block_index):
     # State DB write connection, and DETACH is not valid inside a transaction.
     attach_ledger_db(state_db)
     cursor = state_db.cursor()
-    cursor.execute("PRAGMA foreign_keys=OFF")
-    try:
-        orphan_counts = _collect_orphan_events(state_db, block_index)
-        orphan_events = set(orphan_counts)
 
-        for table in PRUNABLE_TABLES:
-            if not _table_exists(state_db, table):
-                continue
-            cursor.execute(
-                f"DELETE FROM {table} WHERE block_index >= ?",  # noqa: S608  # nosec B608
-                (block_index,),
-            )
+    orphan_counts = _collect_orphan_events(state_db, block_index)
+    orphan_events = set(orphan_counts)
 
-        reverted = {}
-        for table, key_columns in statetables.STATE_CONSOLIDATED_KEYS.items():
-            if not _table_exists(state_db, table):
-                # AMM pool tables do not exist before activation.
-                continue
-            reverted[table] = _restore_consolidated_table(state_db, table, key_columns, block_index)
-
-        _rollback_events_count(state_db)
-        if "NEW_TRANSACTION" in orphan_events:
-            _rebuild_transaction_types_count(state_db, block_index)
-        if reverted.get("fairminters") or "NEW_FAIRMINT" in orphan_events:
-            _refresh_fairminter_totals(state_db, block_index)
-
-        asset_events = set(apiwatcher.ASSET_EVENTS) | set(apiwatcher.XCP_DESTROY_EVENTS)
-        if orphan_events & asset_events:
-            _rebuild_assets_info(state_db, block_index)
-
-        # ``parsed_events`` shrank, so the cached tip must be recomputed.
-        apiwatcher.update_last_parsed_events_cache(state_db, event=None)
-        # The State DB now sits exactly at ``block_index - 1``, so the
-        # double-counting guard a full rebuild needs (which copies balances
-        # from the ledger's *current* tip) does not apply here.
-        database.set_config_value(state_db, "BALANCES_COPIED_AT_BLOCK", None)
-        mark_ready(state_db)
-
-        # Logged at INFO: this line is the only visibility an operator has into
-        # what a reorganization actually cost them.
-        logger.info(
-            "Reverted %s event(s) and %s object(s) %s",
-            sum(orphan_counts.values()),
-            sum(reverted.values()),
-            {table: count for table, count in reverted.items() if count},
+    for table in PRUNABLE_TABLES:
+        if not _table_exists(state_db, table):
+            continue
+        cursor.execute(
+            f"DELETE FROM {table} WHERE block_index >= ?",  # noqa: S608  # nosec B608
+            (block_index,),
         )
-    finally:
-        cursor.execute("PRAGMA foreign_keys=ON")
+
+    reverted = {}
+    for table, key_columns in statetables.STATE_CONSOLIDATED_KEYS.items():
+        if not _table_exists(state_db, table):
+            # AMM pool tables do not exist before activation.
+            continue
+        reverted[table] = _restore_consolidated_table(state_db, table, key_columns, block_index)
+
+    _rollback_events_count(state_db)
+    if "NEW_TRANSACTION" in orphan_events:
+        _rebuild_transaction_types_count(state_db, block_index)
+    if reverted.get("fairminters") or "NEW_FAIRMINT" in orphan_events:
+        _refresh_fairminter_totals(state_db, block_index)
+
+    asset_events = set(apiwatcher.ASSET_EVENTS) | set(apiwatcher.XCP_DESTROY_EVENTS)
+    if orphan_events & asset_events:
+        _rebuild_assets_info(state_db, block_index)
+
+    # ``parsed_events`` shrank, so the cached tip must be recomputed.
+    apiwatcher.update_last_parsed_events_cache(state_db, event=None)
+    # The State DB now sits exactly at ``block_index - 1``, so the
+    # double-counting guard a full rebuild needs (which copies balances
+    # from the ledger's *current* tip) does not apply here.
+    database.set_config_value(state_db, "BALANCES_COPIED_AT_BLOCK", None)
+    mark_ready(state_db)
+
+    # Logged at INFO: this line is the only visibility an operator has into
+    # what a reorganization actually cost them.
+    logger.info(
+        "Reverted %s event(s) and %s object(s) %s",
+        sum(orphan_counts.values()),
+        sum(reverted.values()),
+        {table: count for table, count in reverted.items() if count},
+    )
 
 
 def rollback_state_db(state_db, block_index):
     """Incrementally roll the State DB back to ``block_index - 1``."""
     logger.info("Rolling back State DB to block index %s (incremental)...", block_index)
     start_time = time.time()
-    with state_db:
-        rollback(state_db, block_index)
+    cursor = state_db.cursor()
+    # Migration 0006 copies the Ledger DB's CREATE TABLE statements verbatim, so
+    # several consolidated tables carry FOREIGN KEY clauses pointing at parent
+    # tables (``blocks``, ``transactions``) that the State DB does not have.
+    # Enforcement has to be off while their rows are deleted and re-inserted --
+    # and ``PRAGMA foreign_keys`` is a documented no-op inside a transaction, so
+    # it must be set here, *before* ``with state_db:`` opens one.
+    cursor.execute("PRAGMA foreign_keys=OFF")
+    try:
+        with state_db:
+            rollback(state_db, block_index)
+    finally:
+        cursor.execute("PRAGMA foreign_keys=ON")
     logger.info("State DB rolled back in %.2f seconds", time.time() - start_time)

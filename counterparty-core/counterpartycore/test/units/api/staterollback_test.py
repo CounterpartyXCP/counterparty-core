@@ -52,6 +52,10 @@ def _assert_same_state(expected, actual, context):
         )
 
 
+def _foreign_keys(db):
+    return db.execute("PRAGMA foreign_keys").fetchone()["foreign_keys"]
+
+
 def _last_block(db):
     return db.execute("SELECT MAX(block_index) AS block_index FROM blocks").fetchone()[
         "block_index"
@@ -226,6 +230,80 @@ def test_full_rebuild_when_marker_missing(state_db, ledger_db):
         staterollback.rollback_reason(state_db, _last_block(ledger_db))
         == "State DB predates incremental rollback support"
     )
+
+
+def test_nothing_to_roll_back_is_a_noop(state_db, ledger_db, monkeypatch):
+    """A target above the State DB's own tip has nothing to undo. Re-deriving
+    every table from the whole ledger history to achieve that would be the most
+    expensive no-op available -- the watcher just replays forward instead."""
+    target = apiwatcher.get_last_block_parsed(state_db, no_cache=True) + 1
+    assert staterollback.rollback_reason(state_db, target) == staterollback.NOTHING_TO_ROLL_BACK
+
+    before = _dump_state_db(state_db)
+    rebuilt = []
+    monkeypatch.setattr(
+        dbbuilder, "full_rollback_state_db", lambda db, block_index: rebuilt.append(block_index)
+    )
+    dbbuilder.rollback_state_db(state_db, target)
+
+    assert rebuilt == [], "a no-op rollback triggered a full rebuild"
+    _assert_same_state(before, _dump_state_db(state_db), "no-op rollback")
+
+
+def test_incremental_failure_falls_back_to_the_full_rebuild(state_db, ledger_db, monkeypatch):
+    """The incremental path is an optimization; the full rebuild is the ground
+    truth. A failure must degrade to it, not propagate: the caller is
+    ``apiwatcher.check_reorg()`` on the watcher thread, which has no handler for
+    it and would die, freezing the State DB behind the Ledger DB."""
+    target = _nth_last_active_block(ledger_db, 3)
+    before = _dump_state_db(state_db)
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("simulated incremental failure")
+
+    # Fail *after* the prune and the consolidated restore have written rows, so
+    # the test also proves the enclosing transaction undoes them.
+    monkeypatch.setattr(staterollback, "_rollback_events_count", boom)
+    rebuilt = []
+    monkeypatch.setattr(
+        dbbuilder, "full_rollback_state_db", lambda db, block_index: rebuilt.append(block_index)
+    )
+
+    dbbuilder.rollback_state_db(state_db, target)
+
+    assert rebuilt == [target], "a failed incremental rollback did not fall back"
+    _assert_same_state(
+        before, _dump_state_db(state_db), "a failed incremental rollback left rows behind"
+    )
+
+
+def test_unreadable_state_db_selects_the_full_rebuild(state_db, ledger_db, monkeypatch):
+    """`rollback_reason` only picks a path, so *any* failure to inspect the
+    State DB has to select the full rebuild rather than propagate."""
+
+    def boom(*args, **kwargs):
+        raise ValueError("invalid literal for int()")
+
+    monkeypatch.setattr(apiwatcher, "get_last_block_parsed", boom)
+    reason = staterollback.rollback_reason(state_db, _last_block(ledger_db))
+    assert reason is not None and "cannot be inspected" in reason
+
+
+def test_foreign_keys_are_disabled_outside_the_transaction(state_db, ledger_db, monkeypatch):
+    """``PRAGMA foreign_keys`` is a documented no-op inside a transaction, so the
+    guard has to be set before the rollback opens one -- and restored after."""
+    seen = []
+    real_rollback = staterollback.rollback
+
+    def record(db, block_index):
+        seen.append(_foreign_keys(db))
+        return real_rollback(db, block_index)
+
+    monkeypatch.setattr(staterollback, "rollback", record)
+    dbbuilder.rollback_state_db(state_db, _nth_last_active_block(ledger_db, 1))
+
+    assert seen == [0], "foreign key enforcement was still on during the rollback"
+    assert _foreign_keys(state_db) == 1, "foreign key enforcement was not restored"
 
 
 def test_full_rebuild_marks_state_db_ready(state_db, ledger_db):

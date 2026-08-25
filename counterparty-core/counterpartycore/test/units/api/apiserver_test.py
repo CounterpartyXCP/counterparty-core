@@ -502,8 +502,20 @@ def test_check_database_version(state_db, ledger_db, test_helpers, caplog, monke
     def refresh_mock(db):
         apiserver.logger.info("Refreshing state database")
 
-    monkeypatch.setattr("counterpartycore.lib.api.dbbuilder.rollback_state_db", rollback_mock)
+    # `full_rollback_state_db`, not `rollback_state_db`: an upgrade action must
+    # never take the incremental fast path (the derivation rules themselves may
+    # have changed in the release that ships the action).
+    monkeypatch.setattr("counterpartycore.lib.api.dbbuilder.full_rollback_state_db", rollback_mock)
     monkeypatch.setattr("counterpartycore.lib.api.dbbuilder.refresh_state_db", refresh_mock)
+    # Guard the intent: if `execute_upgrade_actions` ever goes back through the
+    # dispatcher, this mock fires and the test fails loudly instead of silently
+    # running an incremental rollback.
+    monkeypatch.setattr(
+        "counterpartycore.lib.api.dbbuilder.rollback_state_db",
+        lambda db, block_index: pytest.fail(
+            "upgrade actions must call full_rollback_state_db, not the dispatcher"
+        ),
+    )
 
     with test_helpers.capture_log(
         caplog,

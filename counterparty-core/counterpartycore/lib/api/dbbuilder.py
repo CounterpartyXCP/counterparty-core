@@ -213,17 +213,43 @@ def rollback_state_db(state_db, block_index):
 
     Prefers the incremental path (:mod:`counterpartycore.lib.api.staterollback`),
     whose cost is proportional to the number of rows the rolled back blocks
-    touched. Falls back to the full rebuild below -- which re-derives every
-    table from the entire ledger history -- for a deep rollback, for the
-    ``UPGRADE_ACTIONS`` rollbacks (where the derivation rules themselves may
-    have changed), and for a State DB predating the invariants the incremental
-    path relies on.
+    touched. Falls back to :func:`full_rollback_state_db` -- which re-derives
+    every table from the entire ledger history -- for a deep rollback, for a
+    State DB predating the invariants the incremental path relies on, and if the
+    incremental path raises for any reason at all.
+
+    The ``UPGRADE_ACTIONS`` rollbacks do not come through here: they call
+    :func:`full_rollback_state_db` directly (see
+    ``apiserver.execute_upgrade_actions``), because a release that ships one may
+    also have changed the derivation rules themselves, and only the full rebuild
+    re-applies those.
     """
     reason = staterollback.rollback_reason(state_db, block_index)
     if reason is None:
-        staterollback.rollback_state_db(state_db, block_index)
+        try:
+            staterollback.rollback_state_db(state_db, block_index)
+            return
+        except Exception as e:  # pylint: disable=broad-except
+            # The incremental path is an optimization; the full rebuild is the
+            # ground truth and is always correct. Anything unexpected -- a State
+            # DB whose schema the projection does not fit, a SQL error in a
+            # table this release has never seen -- must degrade to the slow path
+            # rather than propagate: the caller is `apiwatcher.check_reorg()`,
+            # running on the watcher thread, which has no handler for it and
+            # would die, leaving the State DB frozen behind the Ledger DB.
+            logger.warning(
+                "Incremental State DB rollback failed (%s); falling back to the full rebuild.",
+                e,
+                exc_info=True,
+            )
+    elif reason == staterollback.NOTHING_TO_ROLL_BACK:
+        # Re-deriving every table from the entire ledger history to undo nothing
+        # would be the most expensive no-op available. The watcher replays
+        # forward from where the State DB actually is.
+        logger.info("State DB is already below block index %s; nothing to roll back.", block_index)
         return
-    logger.info("Full State DB rebuild required: %s.", reason)
+    else:
+        logger.info("Full State DB rebuild required: %s.", reason)
     full_rollback_state_db(state_db, block_index)
 
 

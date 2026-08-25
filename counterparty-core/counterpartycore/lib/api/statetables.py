@@ -95,8 +95,15 @@ DERIVED_COLUMNS = {
         # ``(utxo_tx_hash, utxo_vout)`` pair (``lower(hex(...))`` yields the
         # lowercase hex the utxo string used; a NULL tx_hash -> NULL utxo).
         "utxo": "lower(hex(b.utxo_tx_hash)) || ':' || b.utxo_vout",
-        # migration 0006 fills this with a post-INSERT UPDATE from ``assets``;
-        # the same value, resolved inline, so a restored row is complete.
+        # ``asset_longname`` is not a ledger column: migration 0006 adds it with
+        # ALTER TABLE *after* the bulk INSERT and fills it from ``assets`` in its
+        # POST_QUERIES, so on the build path this rule is never reached (the
+        # column does not exist yet when the projection is computed). It exists
+        # for the rollback path, where the column is already there and a restored
+        # row would otherwise come back with a NULL longname. Same value, same
+        # source -- ``ledger_db.assets`` -- as both the migration's POST_QUERY
+        # and ``apiwatcher.update_balances`` (which reads it back out of
+        # ``assets_info``, itself a projection of ``ledger_db.assets``).
         "asset_longname": (
             "(SELECT asset_longname FROM ledger_db.assets WHERE asset_index = b.asset)"
         ),
