@@ -2393,6 +2393,121 @@ def test_utxolocks_mutex_attribute_present():
     assert hasattr(composer.UTXOLocks(), "_mutex")
 
 
+def test_construct_releases_atomic_reservation_when_final_validator_rejects(ledger_db, defaults):
+    composer.UTXOLocks().init()
+    saw_reservation = []
+
+    def reject(tx_info):
+        assert tx_info[2] == b"data"
+        saw_reservation.append(bool(composer.UTXOLocks().locks))
+        raise exceptions.ComposeConflictError("new pending conflict")
+
+    with pytest.raises(exceptions.ComposeConflictError, match="new pending conflict"):
+        composer.construct(
+            ledger_db,
+            (defaults["addresses"][0], [(defaults["addresses"][1], 666)], b"data"),
+            {},
+            final_validator=reject,
+        )
+
+    assert saw_reservation == [True]
+    assert composer.UTXOLocks().locks == {}
+
+
+def test_construct_rebuilds_outputs_from_authoritative_refreshed_data(ledger_db, defaults):
+    composer.UTXOLocks().init()
+    refreshed_data = b"authoritative-refreshed-data"
+
+    result, _unspent_list = composer.construct(
+        ledger_db,
+        (defaults["addresses"][0], [(defaults["addresses"][1], 666)], b"stale-data"),
+        {},
+        final_validator=lambda tx_info: (tx_info[0], tx_info[1], refreshed_data),
+    )
+
+    assert result["data"] == config.PREFIX + refreshed_data
+
+
+def test_compose_transaction_runs_final_validator_for_return_only_data(ledger_db, defaults):
+    calls = []
+    params = {
+        "source": defaults["addresses"][0],
+        "destination": defaults["addresses"][1],
+        "asset": "XCP",
+        "quantity": defaults["small"],
+    }
+
+    result = composer.compose_transaction(
+        ledger_db,
+        "send",
+        params,
+        {"return_only_data": True},
+        final_validator=lambda tx_info: calls.append(tx_info) or tx_info,
+    )
+
+    assert len(calls) == 1
+    assert "data" in result
+
+
+def test_compose_transaction_uses_authoritative_refreshed_data(ledger_db, defaults):
+    params = {
+        "source": defaults["addresses"][0],
+        "destination": defaults["addresses"][1],
+        "asset": "XCP",
+        "quantity": defaults["small"],
+    }
+
+    result = composer.compose_transaction(
+        ledger_db,
+        "send",
+        params,
+        {"return_only_data": True},
+        final_validator=lambda tx_info: (tx_info[0], tx_info[1], b"authoritative"),
+    )
+
+    assert result["data"] == config.PREFIX + b"authoritative"
+
+
+def test_utxolocks_reserve_inputs_is_atomic_and_releasable():
+    composer.UTXOLocks().init()
+    composer.UTXOLocks().set_limits(60, 2000)
+    inputs = [TxInput("11" * 32, 0)]
+    barrier = threading.Barrier(2)
+    reservations = []
+
+    def reserve():
+        barrier.wait()
+        reservations.append(composer.UTXOLocks().reserve_inputs(inputs))
+
+    threads = [threading.Thread(target=reserve) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    winners = [reservation for reservation in reservations if reservation is not None]
+    assert len(winners) == 1
+    assert len(reservations) - len(winners) == 1
+    composer.UTXOLocks().release_reservation(winners[0])
+    assert composer.UTXOLocks().locks == {}
+
+
+def test_utxolocks_does_not_replace_or_release_another_requests_reservation():
+    locks = composer.UTXOLocks()
+    locks.init()
+    locks.set_limits(60, 2000)
+    inputs = [TxInput("22" * 32, 0)]
+    reservation = locks.reserve_inputs(inputs)
+    utxo = next(iter(reservation))
+
+    # Simulate expiration followed by another request winning the same input.
+    with locks._mutex:  # noqa: SLF001
+        locks.locks[utxo] = reservation[utxo] + 1
+    assert locks.replace_reservation(reservation, inputs) is None
+    locks.release_reservation(reservation)
+    assert locks.locked(utxo) is True
+
+
 def test_get_output_type_aliases():
     """get_output_type / is_segwit_output are now thin re-exports of the
     `script` module helpers; this test pins the re-export so the alias

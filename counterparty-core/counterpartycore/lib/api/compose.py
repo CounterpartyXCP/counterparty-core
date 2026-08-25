@@ -1,5 +1,6 @@
 import binascii
 import decimal
+import json
 
 from counterpartycore.lib import (
     backend,
@@ -16,6 +17,211 @@ from counterpartycore.lib.parser import deserialize, gettxinfo, messagetype, p2s
 from counterpartycore.lib.utils import script
 
 D = decimal.Decimal
+
+_PENDING_ASSET_EVENTS = (
+    "ASSET_CREATION",
+    "ASSET_ISSUANCE",
+    "NEW_FAIRMINTER",
+    "RESET_ISSUANCE",
+)
+_ACTIVE_FAIRMINTER_STATUSES = {"open", "pending"}
+_CONFLICTING_ISSUANCE_EVENTS = {
+    "creation",
+    "lock_description",
+    "lock_quantity",
+    "open_fairminter",
+    "reset",
+    "transfer",
+}
+
+
+def _asset_names_from_bindings(bindings):
+    return {
+        value
+        for key in ("asset", "asset_name", "asset_longname")
+        if isinstance((value := bindings.get(key)), str)
+    }
+
+
+def _issuance_asset_events(bindings):
+    asset_events = bindings.get("asset_events", "")
+    if isinstance(asset_events, str):
+        return set(asset_events.split())
+    if isinstance(asset_events, list):
+        return {event for event in asset_events if isinstance(event, str)}
+    return set()
+
+
+def _pending_asset_conflict_kind(event, bindings, name=None, params=None):
+    """Classify only pending events that can invalidate a later compose.
+
+    A plain valid reissuance is intentionally compatible with another
+    reissuance by the confirmed owner. Asset creation, ownership/lock/reset
+    changes, and active fairminters can change validation for a transaction
+    composed from confirmed state and therefore fail closed.
+    """
+    if event == "ASSET_CREATION":
+        return "asset creation"
+    if event == "NEW_FAIRMINTER":
+        if bindings.get("status") in _ACTIVE_FAIRMINTER_STATUSES:
+            return "fairminter"
+        return None
+    if event in {"ASSET_ISSUANCE", "RESET_ISSUANCE"} and bindings.get("status") == "valid":
+        conflicting_events = _issuance_asset_events(bindings) & _CONFLICTING_ISSUANCE_EVENTS
+        # A quantity lock does not invalidate a zero-quantity ownership transfer
+        # or metadata-only issuance. Keep the fail-closed classification for
+        # fairminters and for any issuance that changes quantity or resets.
+        if (
+            name == "issuance"
+            and params is not None
+            and params.get("quantity") == 0
+            and not params.get("reset", False)
+        ):
+            conflicting_events.discard("lock_quantity")
+        if conflicting_events:
+            return f"asset state change ({', '.join(sorted(conflicting_events))})"
+    return None
+
+
+def _canonical_asset_name(db, asset):
+    if "." not in asset:
+        return asset
+    rows = ledger.issuances.get_assets_by_longname(db, asset)
+    return rows[0]["asset_name"] if rows else asset
+
+
+def _proposed_issuance_quantity(name, params):
+    if name == "issuance":
+        return params.get("quantity", 0)
+    if name == "fairminter":
+        premint_quantity = params.get("premint_quantity", 0)
+        pool_quantity = params.get("pool_quantity", 0)
+        if type(premint_quantity) is int and type(pool_quantity) is int:
+            return premint_quantity + pool_quantity
+    return 0
+
+
+def _confirmed_issuance_quantity(db, asset):
+    canonical_asset = _canonical_asset_name(db, asset)
+    issuances = ledger.issuances.get_issuances(
+        db,
+        asset=canonical_asset,
+        status="valid",
+        first=True,
+        current_block_index=CurrentState().current_block_index(),
+    )
+    return sum(issuance["quantity"] for issuance in issuances)
+
+
+def _reject_pending_asset_conflict(db, asset, name=None, params=None):
+    """Reject best-effort compose conflicts already parsed from the mempool.
+
+    Consensus validation deliberately uses confirmed ledger state. API compose
+    adds this separate guard so callers do not pay Bitcoin/XCP fees for a
+    transaction that is already known to conflict with a pending issuance or
+    fairminter. This cannot eliminate the normal race after compose returns,
+    but it closes the window represented in Counterparty's current mempool.
+    """
+    # ``mempool`` contains parsed event bundles, not one summary row per
+    # transaction. Read only event types that can describe asset ownership or
+    # fairminter state and stop at the first unconditional conflict. Ordering is
+    # deliberately omitted: SQLite would otherwise sort the entire unindexed
+    # event set before yielding even one row.
+    cursor = db.cursor()
+    pending_reissuance_quantity = 0
+    pending_reissuance_hash = None
+    try:
+        rows = cursor.execute(
+            "SELECT tx_hash, event, bindings FROM mempool WHERE event IN (?, ?, ?, ?)",
+            _PENDING_ASSET_EVENTS,
+        )
+        for row in rows:
+            try:
+                bindings = json.loads(row["bindings"])
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if not isinstance(bindings, dict):
+                continue
+            if asset not in _asset_names_from_bindings(bindings):
+                continue
+            conflict_kind = _pending_asset_conflict_kind(
+                row["event"], bindings, name=name, params=params
+            )
+            tx_hash = row["tx_hash"]
+            if conflict_kind is not None and isinstance(tx_hash, str):
+                raise exceptions.ComposeConflictError(
+                    f"A pending {conflict_kind} for asset {asset} already exists "
+                    f"in Counterparty's parsed mempool ({tx_hash}). Wait for it to confirm or "
+                    "leave the mempool."
+                )
+            if (
+                row["event"] == "ASSET_ISSUANCE"
+                and bindings.get("status") == "valid"
+                and "reissuance" in _issuance_asset_events(bindings)
+                and type(bindings.get("quantity")) is int
+                and bindings["quantity"] > 0
+            ):
+                pending_reissuance_quantity += bindings["quantity"]
+                if pending_reissuance_hash is None and isinstance(tx_hash, str):
+                    pending_reissuance_hash = tx_hash
+    finally:
+        cursor.close()
+
+    if pending_reissuance_quantity == 0 or name is None or params is None:
+        return
+
+    # A reset's validity depends on the complete pre-reset balance/supply state,
+    # so a pending quantity change makes confirmed-state validation stale even
+    # when arithmetic overflow is not involved.
+    if name == "issuance" and params.get("reset", False):
+        raise exceptions.ComposeConflictError(
+            f"A pending reissuance for asset {asset} can change reset validation "
+            f"({pending_reissuance_hash}). Wait for it to confirm or leave the mempool."
+        )
+
+    proposed_quantity = _proposed_issuance_quantity(name, params)
+    if type(proposed_quantity) is not int or proposed_quantity <= 0:
+        return
+    confirmed_quantity = _confirmed_issuance_quantity(db, asset)
+    if confirmed_quantity + pending_reissuance_quantity + proposed_quantity > config.MAX_INT:
+        raise exceptions.ComposeConflictError(
+            f"Pending reissuance quantity for asset {asset} can make this transaction exceed "
+            f"the maximum total quantity ({pending_reissuance_hash}). Wait for it to confirm "
+            "or leave the mempool."
+        )
+
+
+def _compose_with_pending_asset_guard(db, name, params, asset, construct_params):
+    """Compose with best-effort pending and confirmed-state rechecks.
+
+    The parser updates the ``mempool`` event table asynchronously, so an unseen
+    Bitcoin mempool transaction can still race this guard. Consensus remains
+    authoritative. ``validate=false`` deliberately preserves the existing
+    advanced-user bypass for both normal and final validation.
+    """
+    if not construct_params.get("validate", True):
+        return composer.compose_transaction(db, name, params, construct_params)
+
+    _reject_pending_asset_conflict(db, asset, name=name, params=params)
+
+    def final_validator(_original_tx_info):
+        # A conflicting transaction may have confirmed since the first message
+        # validation. Re-run confirmed-state validation, then inspect parsed
+        # mempool state once more while the selected Bitcoin inputs are
+        # atomically reserved. The refreshed tx_info is authoritative: state
+        # transitions can change message type/data (notably initial subasset ->
+        # reissuance), and returning the stale bytes would still lose fees.
+        refreshed_tx_info = composer.compose_data(db, name, params, skip_validation=False)
+        _reject_pending_asset_conflict(db, asset, name=name, params=params)
+        return refreshed_tx_info
+
+    return composer.compose_transaction(
+        db,
+        name,
+        params,
+        construct_params,
+        final_validator=final_validator,
+    )
 
 
 def _add_xcp_fee(result, xcp_fee):
@@ -238,7 +444,7 @@ def compose_issuance(
         "description": description,
         "mime_type": mime_type,
     }
-    return composer.compose_transaction(db, "issuance", params, construct_params)
+    return _compose_with_pending_asset_guard(db, "issuance", params, asset, construct_params)
 
 
 def compose_mpma(
@@ -508,7 +714,8 @@ def compose_fairminter(
         "pool_quantity": pool_quantity,
         "lp_asset": lp_asset,
     }
-    return composer.compose_transaction(db, "fairminter", params, construct_params)
+    asset_name = f"{asset_parent}.{asset}" if asset_parent else asset
+    return _compose_with_pending_asset_guard(db, "fairminter", params, asset_name, construct_params)
 
 
 def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construct_params):
