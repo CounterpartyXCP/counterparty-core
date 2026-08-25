@@ -553,8 +553,6 @@ def update_balances(state_db, event):
 
     event_bindings = get_event_bindings(event)
     quantity = event_bindings["quantity"]
-    if quantity == 0:
-        return
 
     if event["event"] == "DEBIT":
         quantity = -quantity
@@ -569,16 +567,40 @@ def update_balances(state_db, event):
     sql = f"SELECT * FROM balances WHERE {field_name} = :address_or_utxo AND asset = :asset"  # noqa: S608 # nosec B608
     existing_balance = fetch_one(state_db, sql, event_bindings)
 
+    # ``block_index`` / ``tx_index`` must be stamped on both paths, exactly as
+    # the ledger stamps its own ``balances`` row for the same credit/debit.
+    # ``block_index`` is what the incremental State DB rollback uses to find
+    # which balances a reorganized block touched (see ``api/staterollback.py``):
+    # left stale, a rolled back node would keep the orphaned quantity forever.
+    # Stamping both also makes a streamed row identical to the one a full
+    # rebuild copies out of the ledger.
     if existing_balance is not None:
+        # A zero-quantity credit/debit still bumps the row: ``ledger.events``
+        # appends a new ``balances`` row for it, so skipping it here would leave
+        # the State DB's block_index/tx_index behind the Ledger DB's.
         sql = f"""
             UPDATE balances
-            SET quantity = quantity + :quantity
+            SET quantity = quantity + :quantity,
+                block_index = :block_index,
+                tx_index = :tx_index
             WHERE {field_name} = :address_or_utxo AND asset = :asset
             """  # noqa: S608 # nosec B608
+    elif event["event"] == "DEBIT" and quantity == 0:
+        # ``remove_from_balance()`` writes no row when there is nothing to debit
+        # ("don't create balance if quantity is 0 and there is no balance").
+        return
     else:
+        # ``asset_longname`` is denormalized onto ``balances`` by migration 0006
+        # (POST_QUERIES); resolve it here too, otherwise every balance row first
+        # created by the event stream carries a NULL longname while the same row
+        # on a freshly built State DB carries the real one.
         sql = f"""
-            INSERT INTO balances ({field_name}, asset, quantity, utxo_address)
-            VALUES (:address_or_utxo, :asset, :quantity, :utxo_address)
+            INSERT INTO balances
+                ({field_name}, asset, quantity, utxo_address, block_index, tx_index,
+                 asset_longname)
+            VALUES
+                (:address_or_utxo, :asset, :quantity, :utxo_address, :block_index, :tx_index,
+                 (SELECT asset_longname FROM assets_info WHERE asset = :asset))
             """  # noqa: S608 # nosec B608
     utxo_address = None
     if "utxo_address" in event_bindings:
@@ -588,6 +610,8 @@ def update_balances(state_db, event):
         "asset": event_bindings["asset"],
         "utxo_address": utxo_address,
         "quantity": quantity,
+        "block_index": event["block_index"],
+        "tx_index": event_bindings.get("tx_index"),
     }
     cursor.execute(sql, insert_bindings)
 

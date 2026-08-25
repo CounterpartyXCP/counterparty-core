@@ -7,6 +7,7 @@ import time
 from yoyo.migrations import topological_sort
 
 from counterpartycore.lib import config
+from counterpartycore.lib.api import staterollback
 from counterpartycore.lib.cli import log
 from counterpartycore.lib.utils import database
 
@@ -35,6 +36,9 @@ MIGRATIONS_AFTER_ROLLBACK = [
     "0013.add_performance_indexes",
     "0014.add_pool_consolidated_tables",
     "0015.add_dispenser_origin_index",
+    # 0016 indexes tables that 0006 drops and recreates, so it must be
+    # re-applied with them.
+    "0016.add_rollback_block_index_indexes",
 ]
 
 ROLLBACKABLE_TABLES = [
@@ -125,6 +129,9 @@ def build_state_db():
     with log.Spinner("Vacuuming State DB..."):
         state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
         database.vacuum(state_db)
+        # Every table was just derived from the Ledger DB, so the invariants
+        # the incremental rollback relies on hold (see ``staterollback``).
+        staterollback.mark_ready(state_db)
         state_db.close()
 
     logger.info("State DB built in %.2f seconds", time.time() - start_time)
@@ -175,6 +182,25 @@ def record_balances_copied_block(state_db):
 
 
 def rollback_state_db(state_db, block_index):
+    """Roll the State DB back to ``block_index - 1``.
+
+    Prefers the incremental path (:mod:`counterpartycore.lib.api.staterollback`),
+    whose cost is proportional to the number of rows the rolled back blocks
+    touched. Falls back to the full rebuild below -- which re-derives every
+    table from the entire ledger history -- for a deep rollback, for the
+    ``UPGRADE_ACTIONS`` rollbacks (where the derivation rules themselves may
+    have changed), and for a State DB predating the invariants the incremental
+    path relies on.
+    """
+    reason = staterollback.rollback_reason(state_db, block_index)
+    if reason is None:
+        staterollback.rollback_state_db(state_db, block_index)
+        return
+    logger.info("Full State DB rebuild required: %s.", reason)
+    full_rollback_state_db(state_db, block_index)
+
+
+def full_rollback_state_db(state_db, block_index):
     logger.info("Rolling back State DB to block index %s...", block_index)
     start_time = time.time()
 
@@ -186,6 +212,7 @@ def rollback_state_db(state_db, block_index):
         # Record the ledger_db block index to prevent double-counting of balances
         # during catch-up (see record_balances_copied_block docstring for details)
         record_balances_copied_block(state_db)
+        staterollback.mark_ready(state_db)
 
     logger.info("State DB rolled back in %.2f seconds", time.time() - start_time)
 
@@ -200,5 +227,6 @@ def refresh_state_db(state_db):
         # Record the ledger_db block index to prevent double-counting of balances
         # during catch-up (see record_balances_copied_block docstring for details)
         record_balances_copied_block(state_db)
+        staterollback.mark_ready(state_db)
 
     logger.info("State DB refreshed in %.2f seconds", time.time() - start_time)
