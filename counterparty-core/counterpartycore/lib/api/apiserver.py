@@ -22,6 +22,7 @@ from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import (
     apiwatcher,
     dbbuilder,
+    dbstatus,
     healthz,
     healthz_server,
     queries,
@@ -709,6 +710,27 @@ def run_apiserver(
         pool_monitor = ConnectionPoolMonitor(stop_event, interval_seconds=60)
         pool_monitor.start()
 
+        # Dedicated health-check listener on its own socket + thread pool, isolated from the
+        # public API worker pool so probes cannot be head-of-line blocked by slow requests
+        # (issue #3460). Started *before* the State DB migration/rebuild block below, which
+        # takes tens of minutes on mainnet: until #3485 nothing answered probes during it, so
+        # liveness failed with a connection refusal and Kubernetes killed the pod mid-rebuild,
+        # only for the next start to begin again from zero. It now answers 200 on liveness and
+        # 503 `rebuilding` on readiness throughout. Non-fatal on failure; the task dispatcher
+        # is attached further down, once the WSGI server exists.
+        if not getattr(config, "NO_HEALTHZ_SERVER", False):
+            health_server = healthz_server.HealthCheckServer(
+                host=config.API_HOST,
+                port=config.HEALTHZ_PORT,
+                saturation_grace=getattr(
+                    config,
+                    "HEALTHZ_SATURATION_GRACE",
+                    config.DEFAULT_HEALTHZ_SATURATION_GRACE_SECONDS,
+                ),
+                stop_event=stop_event,
+            )
+            health_server.start()
+
         if args["rebuild_state_db"]:
             dbbuilder.build_state_db()
         elif args["refresh_state_db"]:
@@ -716,9 +738,10 @@ def run_apiserver(
             dbbuilder.refresh_state_db(state_db)
             state_db.close()
         else:
-            database.apply_outstanding_migration(
-                config.STATE_DATABASE, config.STATE_DB_MIGRATIONS_DIR
-            )
+            with dbstatus.rebuilding("migrate", "applying outstanding State DB migrations"):
+                database.apply_outstanding_migration(
+                    config.STATE_DATABASE, config.STATE_DB_MIGRATIONS_DIR
+                )
 
         state_db = database.get_db_connection(
             config.STATE_DATABASE, read_only=False, check_wal=False
@@ -742,23 +765,9 @@ def run_apiserver(
             logger.error("Error starting WSGI Server: %s", e)
             sys.exit(1)
 
-        # Dedicated health-check listener on its own socket + thread pool, isolated from the
-        # public API worker pool so probes cannot be head-of-line blocked by slow requests
-        # (issue #3460). Started here, once the WSGI server (and its task dispatcher) exist,
-        # but before the blocking wsgi_server.run() below. Non-fatal on failure.
-        if not getattr(config, "NO_HEALTHZ_SERVER", False):
-            health_server = healthz_server.HealthCheckServer(
-                host=config.API_HOST,
-                port=config.HEALTHZ_PORT,
-                dispatcher=wsgi_server.get_task_dispatcher(),
-                saturation_grace=getattr(
-                    config,
-                    "HEALTHZ_SATURATION_GRACE",
-                    config.DEFAULT_HEALTHZ_SATURATION_GRACE_SECONDS,
-                ),
-                stop_event=stop_event,
-            )
-            health_server.start()
+        # The worker pool now exists, so the sampler can report its gauges.
+        if health_server is not None:
+            health_server.attach_dispatcher(wsgi_server.get_task_dispatcher())
 
         logger.info("Starting Parent Process Checker thread...")
         parent_checker = ParentProcessChecker(wsgi_server, stop_event, parent_pid)

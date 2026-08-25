@@ -7,7 +7,7 @@ import time
 from yoyo.migrations import topological_sort
 
 from counterpartycore.lib import config
-from counterpartycore.lib.api import staterollback
+from counterpartycore.lib.api import dbstatus, staterollback
 from counterpartycore.lib.cli import log
 from counterpartycore.lib.utils import database
 
@@ -77,21 +77,40 @@ def rollback_migration(state_db, migration_id):
     module.rollback(state_db)
 
 
-def rollback_migrations(state_db, migration_ids):
-    for migration_id in reversed(migration_ids):
-        logger.debug("Rolling back migration `%s`...", migration_id)
-        rollback_migration(state_db, migration_id)
+def rollback_migrations(state_db, migration_ids, progress=None, offset=0):
+    for index, migration_id in enumerate(reversed(migration_ids)):
+        _run_migration_step(
+            state_db, rollback_migration, "Rolling back", migration_id, progress, offset + index
+        )
 
 
-def apply_migrations(state_db, migration_ids):
-    for migration_id in migration_ids:
-        logger.debug("Applying migration `%s`...", migration_id)
-        apply_migration(state_db, migration_id)
+def apply_migrations(state_db, migration_ids, progress=None, offset=0):
+    for index, migration_id in enumerate(migration_ids):
+        _run_migration_step(
+            state_db, apply_migration, "Applying", migration_id, progress, offset + index
+        )
 
 
-def reapply_migrations(state_db, migration_ids):
-    rollback_migrations(state_db, migration_ids)
-    apply_migrations(state_db, migration_ids)
+def _run_migration_step(state_db, run, verb, migration_id, progress, index):
+    """Run one migration, reporting it to the operator and to the health probes.
+
+    Reported at INFO, not DEBUG: these steps are what a State DB rebuild
+    actually spends its tens of minutes on, and their absence from the log is
+    why the 33-minute rebuild in #3485 was indistinguishable from a hang.
+    """
+    if progress is not None:
+        progress.step(f"{verb.lower()} `{migration_id}`", index + 1)
+    logger.info("%s migration `%s`...", verb, migration_id)
+    start_time = time.time()
+    run(state_db, migration_id)
+    logger.info("%s migration `%s` in %.2f seconds", verb, migration_id, time.time() - start_time)
+
+
+def reapply_migrations(state_db, migration_ids, progress=None):
+    # Each migration is dropped and re-applied, hence 2 * len(migration_ids)
+    # reportable steps.
+    rollback_migrations(state_db, migration_ids, progress=progress)
+    apply_migrations(state_db, migration_ids, progress=progress, offset=len(migration_ids))
 
 
 def rollback_tables(state_db, block_index):
@@ -120,19 +139,27 @@ def build_state_db():
     # migration 0010). Make sure the Ledger DB is fully migrated before
     # building the State DB so this command works against bootstrap snapshots
     # that predate the latest Ledger DB migrations.
-    with log.Spinner("Applying Ledger DB migrations"):
-        database.apply_outstanding_migration(config.DATABASE, config.LEDGER_DB_MIGRATIONS_DIR)
+    # Published for the health probes: this runs before the API listener exists,
+    # so ``rebuilding`` is the only thing that distinguishes a pod that is busy
+    # from one that is wedged (see ``api/dbstatus.py``).
+    with dbstatus.rebuilding("build", "applying Ledger DB migrations") as progress:
+        with log.Spinner("Applying Ledger DB migrations"):
+            database.apply_outstanding_migration(config.DATABASE, config.LEDGER_DB_MIGRATIONS_DIR)
 
-    with log.Spinner("Applying migrations"):
-        database.apply_outstanding_migration(config.STATE_DATABASE, config.STATE_DB_MIGRATIONS_DIR)
+        progress.step("applying State DB migrations")
+        with log.Spinner("Applying migrations"):
+            database.apply_outstanding_migration(
+                config.STATE_DATABASE, config.STATE_DB_MIGRATIONS_DIR
+            )
 
-    with log.Spinner("Vacuuming State DB..."):
-        state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
-        database.vacuum(state_db)
-        # Every table was just derived from the Ledger DB, so the invariants
-        # the incremental rollback relies on hold (see ``staterollback``).
-        staterollback.mark_ready(state_db)
-        state_db.close()
+        progress.step("vacuuming")
+        with log.Spinner("Vacuuming State DB..."):
+            state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
+            database.vacuum(state_db)
+            # Every table was just derived from the Ledger DB, so the invariants
+            # the incremental rollback relies on hold (see ``staterollback``).
+            staterollback.mark_ready(state_db)
+            state_db.close()
 
     logger.info("State DB built in %.2f seconds", time.time() - start_time)
 
@@ -204,15 +231,18 @@ def full_rollback_state_db(state_db, block_index):
     logger.info("Rolling back State DB to block index %s...", block_index)
     start_time = time.time()
 
-    with state_db:
-        with log.Spinner("Rolling back State DB tables..."):
-            rollback_tables(state_db, block_index)
-        with log.Spinner("Re-applying migrations..."):
-            reapply_migrations(state_db, MIGRATIONS_AFTER_ROLLBACK)
-        # Record the ledger_db block index to prevent double-counting of balances
-        # during catch-up (see record_balances_copied_block docstring for details)
-        record_balances_copied_block(state_db)
-        staterollback.mark_ready(state_db)
+    with dbstatus.rebuilding(
+        "rollback", "pruning rolled back rows", total=2 * len(MIGRATIONS_AFTER_ROLLBACK)
+    ) as progress:
+        with state_db:
+            with log.Spinner("Rolling back State DB tables..."):
+                rollback_tables(state_db, block_index)
+            with log.Spinner("Re-applying migrations..."):
+                reapply_migrations(state_db, MIGRATIONS_AFTER_ROLLBACK, progress=progress)
+            # Record the ledger_db block index to prevent double-counting of balances
+            # during catch-up (see record_balances_copied_block docstring for details)
+            record_balances_copied_block(state_db)
+            staterollback.mark_ready(state_db)
 
     logger.info("State DB rolled back in %.2f seconds", time.time() - start_time)
 
@@ -221,12 +251,15 @@ def refresh_state_db(state_db):
     logger.info("Rebuilding non rollbackable tables in State DB...")
     start_time = time.time()
 
-    with state_db:
-        with log.Spinner("Re-applying migrations..."):
-            reapply_migrations(state_db, MIGRATIONS_AFTER_ROLLBACK)
-        # Record the ledger_db block index to prevent double-counting of balances
-        # during catch-up (see record_balances_copied_block docstring for details)
-        record_balances_copied_block(state_db)
-        staterollback.mark_ready(state_db)
+    with dbstatus.rebuilding(
+        "refresh", "re-applying migrations", total=2 * len(MIGRATIONS_AFTER_ROLLBACK)
+    ) as progress:
+        with state_db:
+            with log.Spinner("Re-applying migrations..."):
+                reapply_migrations(state_db, MIGRATIONS_AFTER_ROLLBACK, progress=progress)
+            # Record the ledger_db block index to prevent double-counting of balances
+            # during catch-up (see record_balances_copied_block docstring for details)
+            record_balances_copied_block(state_db)
+            staterollback.mark_ready(state_db)
 
     logger.info("State DB refreshed in %.2f seconds", time.time() - start_time)

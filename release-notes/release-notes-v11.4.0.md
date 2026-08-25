@@ -6,9 +6,13 @@ Until now a Bitcoin reorganization — however shallow — rebuilt the entire St
 
 Rollbacks are now proportional to what the orphaned blocks actually changed. A one-block reorg reverts a handful of rows instead of tens of millions.
 
+The rebuild that remains — at upgrade, and for the deep rollbacks a new release occasionally requires — is no longer silent. It now reports itself: the dedicated health listener starts **before** it, answers `200` on liveness and `503 rebuilding` on readiness throughout, and names the step under way.
+
 # Upgrading
 
 This release **requires a one-time State DB refresh**, applied automatically on first start (`refresh_state_db`). It takes roughly as long as one of the old reorg rebuilds and happens once, at a moment you control, rather than unpredictably at the next reorg. There is no ledger reparse and no protocol change.
+
+**Point your Kubernetes probes at the dedicated health listener before upgrading** (port `4002` on mainnet — `/healthz/live` for liveness, `/healthz/ready` for readiness), if you have not already since v11.3.0. During the refresh the pod reports `200` on liveness and `503 rebuilding` on readiness, so it stays out of rotation and is not restarted. A liveness probe still pointed at the API port would get a connection refusal for the whole refresh and kill the pod, and the next start would begin the work again from zero.
 
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
 
@@ -28,6 +32,18 @@ A single `logger.info` line now reports what a reorganization cost — how many 
 **Fallbacks.** The full rebuild is still used, and is still correct, for a rollback deeper than 1,000 blocks, for the `UPGRADE_ACTIONS` rollbacks (where the derivation rules themselves may have changed between releases), and for a State DB that predates this release. That last check is self-healing: such a State DB takes the full path once, which marks it eligible for the incremental path afterwards.
 
 **Verification.** The incremental path is covered by differential tests that roll a fixture back to six different points — from a single active block up to essentially its whole history — and assert, table by table, that the result is identical to a from-scratch rebuild against the same rolled-back ledger, and that a rollback followed by the watcher's forward replay reproduces the State DB exactly. Every optional pass in the rollback (the counters, the `assets_info` re-derivation, the `fairminters` aggregates, the block bound on the ledger lookups) was checked by mutation: removing it makes those tests fail.
+
+## A rebuild that reports itself (#3485)
+
+Every remaining State DB build, refresh or full rollback now publishes its progress (`counterpartycore/lib/api/dbstatus.py`), and two consumers read it:
+
+- **The health listener starts first.** It used to be created after the migration/rebuild block, so for the tens of minutes that block runs there was no socket to probe at all — liveness got a connection refusal, Kubernetes killed the pod mid-rebuild, and the restart began again from zero. It is now started before that block (the WSGI task dispatcher is attached later, once the worker pool exists; until then the pool gauges simply read as unavailable).
+- **`rebuilding` is a distinct readiness state.** `/healthz/ready` returns `503` with `reason: "rebuilding"` and a `rebuild` object naming the operation, the current step and the elapsed time; `/healthz/metrics` carries the same. It takes precedence over the lag signal, which reads from tables that are being dropped and repopulated and would otherwise report a misleading `behind_backend`. Liveness stays `200` throughout — the process is healthy and working.
+- **Each migration is logged at INFO, with its duration.** Previously the whole rebuild logged nothing above DEBUG, which is why the 33 minutes in the incident report were indistinguishable from a hang.
+
+The health sampler also reopens its own State DB connection after a rebuild: `build_state_db()` unlinks and recreates the file, so a connection held across it would have reported a frozen block height for the rest of the process's life.
+
+**On serving from a second State DB while one is rebuilt** (suggestion 2 in the issue): not implemented, and we think it should not be. Once rollbacks are incremental, a full rebuild only happens at startup, before any listener exists — there are no readers to keep serving. The atomic-swap machinery (a second file, connection-pool epoch invalidation, a swap under live readers) would carry real risk for a case that no longer arises, whereas a correct `rebuilding` readiness state removes the pod from rotation and explains why, which is what suggestion 3 was really after.
 
 ## State DB / Ledger DB consistency fixes
 
