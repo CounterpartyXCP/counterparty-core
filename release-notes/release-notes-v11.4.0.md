@@ -57,3 +57,7 @@ The differential tests above surfaced three ways in which a State DB maintained 
 
 - The rules for projecting a Ledger DB row into its State DB counterpart — decoding the compact `asset_index` / `address_id` / `(utxo_tx_hash, utxo_vout)` representations — now live in one place, `counterpartycore/lib/api/statetables.py`, shared by the build path (migrations `0004`, `0006`, `0014`) and the rollback path. Two independent copies of these rules would drift, and drift here is a silent divergence no API response would reveal.
 - New State DB migration `0016` adds the missing `block_index` indexes on `addresses`, `rps` and `rps_matches`.
+
+## Security
+
+- Bumped `h2` to 0.4.19 in both Rust lockfiles for **RUSTSEC-2026-0258** ("h2 unbounded empty DATA frames"). `counterparty-rs` carried 0.4.8 and `counterparty-client` 0.4.15; the advisory requires >= 0.4.16.
