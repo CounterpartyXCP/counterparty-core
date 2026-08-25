@@ -123,6 +123,7 @@ def rollback_reason(state_db, block_index):
     this function only picks a path, and the full rebuild is always correct.
     """
     # A local import: apiwatcher imports dbbuilder, which imports this module.
+    # pylint: disable=import-outside-toplevel
     from counterpartycore.lib.api import apiwatcher  # noqa: PLC0415
 
     if block_index <= config.BLOCK_FIRST:
@@ -345,6 +346,7 @@ def rollback(state_db, block_index):
     checked :func:`rollback_reason`.
     """
     # Local import: apiwatcher imports dbbuilder, which imports this module.
+    # pylint: disable=import-outside-toplevel
     from counterpartycore.lib.api import apiwatcher  # noqa: PLC0415
 
     # Left attached on exit, like the migration path: this is the long-lived

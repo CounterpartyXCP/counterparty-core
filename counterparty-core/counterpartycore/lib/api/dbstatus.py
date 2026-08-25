@@ -15,6 +15,7 @@ into a distinct ``rebuilding`` readiness state. It is deliberately trivial:
 a single immutable snapshot swapped in under a lock, read without one.
 """
 
+import contextlib
 import logging
 import threading
 import time
@@ -51,68 +52,76 @@ class RebuildProgress:
         return body
 
 
-_lock = threading.Lock()
-_current: Optional[RebuildProgress] = None
+class _Tracker:
+    """The single in-flight operation.
+
+    Writers take the lock; readers do not: ``current`` is only ever rebound to
+    a new immutable snapshot, so a reader racing a writer sees either the old
+    one or the new one, never a half-built value.
+    """
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self.current: Optional[RebuildProgress] = None
+
+    def start(self, operation, phase, total=None):
+        with self._lock:
+            self.current = RebuildProgress(
+                operation=operation,
+                phase=phase,
+                step=None,
+                total=total,
+                started_at=time.monotonic(),
+            )
+
+    def step(self, phase, index=None):
+        """Advance to the next phase, keeping the operation's start time."""
+        with self._lock:
+            if self.current is None:
+                return
+            self.current = RebuildProgress(
+                operation=self.current.operation,
+                phase=phase,
+                step=index,
+                total=self.current.total,
+                started_at=self.current.started_at,
+            )
+
+    def finish(self):
+        with self._lock:
+            self.current = None
+
+
+_tracker = _Tracker()
 
 
 def current() -> Optional[RebuildProgress]:
-    """The operation under way, or ``None``. Read without taking the lock:
-    ``_current`` is only ever rebound to a new immutable value."""
-    return _current
+    """The operation under way, or ``None``."""
+    return _tracker.current
 
 
 def start(operation, phase, total=None):
-    global _current  # noqa: PLW0603
-    with _lock:
-        _current = RebuildProgress(
-            operation=operation,
-            phase=phase,
-            step=None,
-            total=total,
-            started_at=time.monotonic(),
-        )
+    _tracker.start(operation, phase, total=total)
 
 
 def step(phase, index=None):
     """Advance to the next phase, keeping the operation's start time."""
-    global _current  # noqa: PLW0603
-    with _lock:
-        if _current is None:
-            return
-        _current = RebuildProgress(
-            operation=_current.operation,
-            phase=phase,
-            step=index,
-            total=_current.total,
-            started_at=_current.started_at,
-        )
+    _tracker.step(phase, index=index)
 
 
 def finish():
-    global _current  # noqa: PLW0603
-    with _lock:
-        _current = None
+    _tracker.finish()
 
 
-class rebuilding:  # noqa: N801  # used as a context manager, reads as a verb
+@contextlib.contextmanager
+def rebuilding(operation, phase, total=None):
     """Publish ``operation`` for the duration of the block, whatever happens.
 
     ``with dbstatus.rebuilding("refresh", "applying migrations", total=14) as p:``
     then ``p.step("0006.create_and_populate_consolidated_tables", 6)``.
     """
-
-    def __init__(self, operation, phase, total=None):
-        self.operation = operation
-        self.phase = phase
-        self.total = total
-
-    def __enter__(self):
-        start(self.operation, self.phase, total=self.total)
-        return self
-
-    def step(self, phase, index=None):
-        step(phase, index=index)
-
-    def __exit__(self, exc_type, exc_value, traceback):
+    start(operation, phase, total=total)
+    try:
+        yield _tracker
+    finally:
         finish()
-        return False

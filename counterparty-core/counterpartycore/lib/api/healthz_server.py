@@ -206,7 +206,8 @@ class HealthSampler(threading.Thread):
             # connection opened before the rebuild now points at a deleted
             # inode and would report a frozen block height forever. Drop it and
             # let the branch below reopen against the new file.
-            own_db = self._close_own_db(own_db)
+            self._close_own_db(own_db)
+            own_db = None
         if own_db is not None or rebuilding:
             # Nothing to do, or the file is mid-flight and not worth opening.
             return own_db
@@ -223,7 +224,7 @@ class HealthSampler(threading.Thread):
 
     def _close_own_db(self, own_db):
         """Close the sampler's own state-DB connection and forget the readings
-        taken through it. Always returns ``None``, for reassignment."""
+        taken through it."""
         self._last_parsed_provider = None
         self._last_parsed_value = None
         self._last_parsed_advanced_at = None
@@ -232,7 +233,6 @@ class HealthSampler(threading.Thread):
                 own_db.close()
             except Exception as e:  # pylint: disable=broad-except
                 logger.debug("healthz: error closing state DB connection: %s", e)
-        return None
 
     def stop(self):
         self.stop_event.set()
