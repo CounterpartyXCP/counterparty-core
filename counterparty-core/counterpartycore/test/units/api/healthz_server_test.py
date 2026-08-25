@@ -45,6 +45,10 @@ def make_sampler(
     last_parsed=100,
     block_time=None,
     api_only=False,
+    rebuilding=False,
+    rebuild_age=60,
+    rebuild_cache_cold=False,
+    rebuild_max_ready_seconds=7200,
     saturation_grace=5,
 ):
     return HealthSampler(
@@ -54,6 +58,10 @@ def make_sampler(
         backend_height_provider=lambda: backend_height,
         block_time_provider=lambda: block_time,
         api_only_provider=lambda: api_only,
+        state_db_rebuilding_provider=lambda: rebuilding,
+        state_db_rebuild_age_provider=lambda: rebuild_age,
+        state_db_stale_cache_available_provider=lambda: not rebuild_cache_cold,
+        state_db_rebuild_max_ready_seconds=rebuild_max_ready_seconds,
     )
 
 
@@ -103,6 +111,50 @@ def test_api_only_skips_lag_axis():
     assert snap.ready is True
     assert snap.reason is None
     assert snap.backend_height is None
+
+
+def test_state_db_rebuild_serves_consistent_stale_snapshot():
+    sampler = make_sampler(backend_height=200, last_parsed=100, rebuilding=True)
+    sampler._tick()
+    snap = sampler.current_snapshot()
+    assert snap.ready is True
+    assert snap.reason == "state_db_rebuilding"
+    assert snap.lag == 100
+
+
+def test_state_db_rebuild_requires_readable_state_db():
+    sampler = make_sampler(backend_height=200, last_parsed=None, rebuilding=True)
+    sampler._tick()
+    snap = sampler.current_snapshot()
+    assert snap.ready is False
+    assert snap.reason == "state_db_unavailable"
+
+
+def test_state_db_rebuild_exceeding_max_age_becomes_unready():
+    sampler = make_sampler(
+        backend_height=200,
+        last_parsed=100,
+        rebuilding=True,
+        rebuild_age=7201,
+        rebuild_max_ready_seconds=7200,
+    )
+    sampler._tick()
+    snap = sampler.current_snapshot()
+    assert snap.ready is False
+    assert snap.reason == "state_db_rebuild_stale"
+
+
+def test_state_db_rebuild_with_cold_replacement_child_is_unready():
+    sampler = make_sampler(
+        backend_height=200,
+        last_parsed=100,
+        rebuilding=True,
+        rebuild_cache_cold=True,
+    )
+    sampler._tick()
+    snap = sampler.current_snapshot()
+    assert snap.ready is False
+    assert snap.reason == "state_db_stale_cache_unavailable"
 
 
 # --------------------------------------------------------------------------------------------
@@ -282,6 +334,27 @@ def test_http_readiness_ok(ready_server):
         code, body = ready_server.get(path)
         assert code == 200
         assert body == {"status": "ready"}
+
+
+def test_http_readiness_rebuilding_is_routable_but_degraded():
+    snapshot = _ready_snapshot()
+    snapshot = HealthSnapshot(
+        ready=True,
+        reason="state_db_rebuilding",
+        backend_height=snapshot.backend_height,
+        last_parsed=snapshot.last_parsed,
+        lag=snapshot.lag,
+        saturated=snapshot.saturated,
+        saturation_seconds=snapshot.saturation_seconds,
+        workers=snapshot.workers,
+    )
+    fx = _HttpServerFixture(FakeSampler(snapshot))
+    try:
+        code, body = fx.get("/healthz/ready")
+        assert code == 200
+        assert body == {"status": "degraded", "reason": "state_db_rebuilding"}
+    finally:
+        fx.close()
 
 
 def test_http_readiness_degraded_behind_backend():

@@ -111,6 +111,10 @@ class HealthSampler(threading.Thread):
         backend_height_provider=None,
         block_time_provider=None,
         api_only_provider=None,
+        state_db_rebuilding_provider=None,
+        state_db_rebuild_age_provider=None,
+        state_db_stale_cache_available_provider=None,
+        state_db_rebuild_max_ready_seconds=None,
     ):
         super().__init__(name="HealthSampler", daemon=True)
         self.dispatcher = dispatcher
@@ -152,6 +156,22 @@ class HealthSampler(threading.Thread):
         self._api_only_provider = api_only_provider or (
             lambda: bool(getattr(config, "API_ONLY", False))
         )
+        self._state_db_rebuilding_provider = (
+            state_db_rebuilding_provider or CurrentState().state_db_rebuilding
+        )
+        self._state_db_rebuild_age_provider = (
+            state_db_rebuild_age_provider or CurrentState().state_db_rebuild_age
+        )
+        self._state_db_stale_cache_available_provider = state_db_stale_cache_available_provider or (
+            lambda: not CurrentState().state_db_rebuild_cache_cold()
+            and not config.DISABLE_API_CACHE
+            and config.API_PASSWORD is None
+        )
+        self.state_db_rebuild_max_ready_seconds = (
+            state_db_rebuild_max_ready_seconds
+            if state_db_rebuild_max_ready_seconds is not None
+            else config.DEFAULT_STATE_DB_REBUILD_MAX_READY_SECONDS
+        )
 
         self.stop_event = threading.Event()
         self._snapshot = HealthSnapshot(
@@ -191,8 +211,8 @@ class HealthSampler(threading.Thread):
                         own_db = database.get_db_connection(
                             config.STATE_DATABASE, read_only=True, check_wal=False
                         )
-                        self._last_parsed_provider = (
-                            lambda db=own_db: apiwatcher.get_last_block_parsed(db)
+                        self._last_parsed_provider = lambda db=own_db: (
+                            apiwatcher.get_last_block_parsed(db)
                         )
                     except Exception as e:  # pylint: disable=broad-except
                         logger.debug("healthz: state DB not ready yet: %s", e)
@@ -227,7 +247,10 @@ class HealthSampler(threading.Thread):
         caught_up, lag, ledger_reason, backend_height, last_parsed = self._compute_caught_up(now)
         ready = caught_up and not over_saturated
         if ready:
-            reason = None
+            # ``state_db_rebuilding`` is ready-but-degraded: the live DB is a
+            # consistent stale snapshot and must remain routable on singleton
+            # deployments while its replacement is built off to the side.
+            reason = ledger_reason
         elif not caught_up:
             reason = ledger_reason
         else:
@@ -317,6 +340,8 @@ class HealthSampler(threading.Thread):
             # API-only nodes serve a static/frozen ledger and do not track the backend tip.
             return True, None, None, None, None
 
+        rebuilding = self._state_db_rebuilding_provider()
+
         backend_height = self._backend_height_provider()
         last_parsed = None
         if self._last_parsed_provider is not None:
@@ -330,6 +355,20 @@ class HealthSampler(threading.Thread):
         ):
             self._last_parsed_value = last_parsed
             self._last_parsed_advanced_at = now
+
+        if rebuilding:
+            lag = (
+                backend_height - last_parsed
+                if backend_height is not None and last_parsed is not None
+                else None
+            )
+            if last_parsed is None:
+                return False, lag, "state_db_unavailable", backend_height, last_parsed
+            if not self._state_db_stale_cache_available_provider():
+                return False, lag, "state_db_stale_cache_unavailable", backend_height, last_parsed
+            if self._state_db_rebuild_age_provider() > self.state_db_rebuild_max_ready_seconds:
+                return False, lag, "state_db_rebuild_stale", backend_height, last_parsed
+            return True, lag, "state_db_rebuilding", backend_height, last_parsed
 
         if not backend_height:  # None (starting) or 0
             return False, None, "starting", backend_height, last_parsed
@@ -423,6 +462,8 @@ class HealthRequestHandler(BaseHTTPRequestHandler):
     def _readiness(self):
         snap = self.server.sampler.current_snapshot()
         if snap.ready:
+            if snap.reason == "state_db_rebuilding":
+                return 200, {"status": "degraded", "reason": snap.reason}
             return 200, {"status": "ready"}
         body = {"status": "degraded", "reason": snap.reason}
         if snap.backend_height is not None:

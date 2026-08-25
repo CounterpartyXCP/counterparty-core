@@ -1,4 +1,5 @@
 import logging
+import time
 
 from counterpartycore.lib import config
 from counterpartycore.lib.ledger import blocks
@@ -90,6 +91,58 @@ class CurrentState(metaclass=helpers.SingletonMeta):
 
     def stopping(self):
         return self.state.get("STOPPING", False)
+
+    def set_state_db_rebuilding(self, rebuilding):
+        shared_value = self.state.get("STATE_DB_REBUILDING_VALUE")
+        shared_started_at = self.state.get("STATE_DB_REBUILD_STARTED_AT_VALUE")
+        shared_cache_cold = self.state.get("STATE_DB_REBUILD_CACHE_COLD_VALUE")
+        if shared_value is not None:
+            if rebuilding:
+                if not shared_value.value or not shared_started_at.value:
+                    shared_started_at.value = time.time()
+                shared_value.value = True
+            else:
+                shared_value.value = False
+                shared_started_at.value = 0.0
+                if shared_cache_cold is not None:
+                    shared_cache_cold.value = False
+        else:
+            if rebuilding:
+                if not self.state.get("STATE_DB_REBUILDING", False):
+                    self.state["STATE_DB_REBUILD_STARTED_AT"] = time.time()
+                self.state["STATE_DB_REBUILDING"] = True
+            else:
+                self.state["STATE_DB_REBUILDING"] = False
+                self.state["STATE_DB_REBUILD_STARTED_AT"] = 0.0
+
+    def set_state_db_rebuild_shared_values(
+        self,
+        rebuilding_value,
+        started_at_value,
+        cache_cold_value=None,
+    ):
+        self.state["STATE_DB_REBUILDING_VALUE"] = rebuilding_value
+        self.state["STATE_DB_REBUILD_STARTED_AT_VALUE"] = started_at_value
+        self.state["STATE_DB_REBUILD_CACHE_COLD_VALUE"] = cache_cold_value
+
+    def state_db_rebuilding(self):
+        shared_value = self.state.get("STATE_DB_REBUILDING_VALUE")
+        if shared_value is not None:
+            return bool(shared_value.value)
+        return self.state.get("STATE_DB_REBUILDING", False)
+
+    def state_db_rebuild_age(self):
+        shared_started_at = self.state.get("STATE_DB_REBUILD_STARTED_AT_VALUE")
+        started_at = (
+            shared_started_at.value
+            if shared_started_at is not None
+            else self.state.get("STATE_DB_REBUILD_STARTED_AT", 0.0)
+        )
+        return max(0.0, time.time() - started_at) if started_at else 0.0
+
+    def state_db_rebuild_cache_cold(self):
+        shared_cache_cold = self.state.get("STATE_DB_REBUILD_CACHE_COLD_VALUE")
+        return bool(shared_cache_cold.value) if shared_cache_cold is not None else False
 
 
 class ConsensusHashBuilder(metaclass=helpers.SingletonMeta):

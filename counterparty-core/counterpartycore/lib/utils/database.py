@@ -879,56 +879,72 @@ def _wal_size(db_file):
         return 0
 
 
-def apply_outstanding_migration(db_file, migration_dir):
+def apply_outstanding_migration(db_file, migration_dir, stop_event=None):
     total_started_at = time.monotonic()
     wal_size_before = _wal_size(db_file)
     logger.info("Checking migrations for %s (WAL: %d bytes)...", db_file, wal_size_before)
 
     phase_started_at = time.monotonic()
     backend = get_backend(f"sqlite:///{db_file}")
+    if stop_event is not None:
+        backend.connection.set_progress_handler(
+            lambda: 1 if stop_event.is_set() else 0,
+            10_000,
+        )
     logger.info(
         "Migration backend opened for %s in %.2fs.",
         db_file,
         time.monotonic() - phase_started_at,
     )
 
-    phase_started_at = time.monotonic()
-    migrations = read_migrations(migration_dir)
-    to_apply = backend.to_apply(migrations)
-    logger.info(
-        "Migration discovery completed for %s in %.2fs; %d pending.",
-        db_file,
-        time.monotonic() - phase_started_at,
-        len(to_apply),
-    )
-    needs_vacuum = any(any(name in m.id for name in _VACUUM_AFTER_MIGRATIONS) for m in to_apply)
-
-    phase_started_at = time.monotonic()
     try:
-        backend.apply_migrations(to_apply)
-    except LockTimeout:
-        logger.warning("Migration lock timeout for %s. Breaking lock and retrying...", db_file)
-        backend.break_lock()
+        phase_started_at = time.monotonic()
+        migrations = read_migrations(migration_dir)
         to_apply = backend.to_apply(migrations)
-        backend.apply_migrations(to_apply)
-    logger.info(
-        "Migration apply completed for %s in %.2fs.",
-        db_file,
-        time.monotonic() - phase_started_at,
-    )
+        logger.info(
+            "Migration discovery completed for %s in %.2fs; %d pending.",
+            db_file,
+            time.monotonic() - phase_started_at,
+            len(to_apply),
+        )
+        needs_vacuum = any(
+            any(name in migration.id for name in _VACUUM_AFTER_MIGRATIONS) for migration in to_apply
+        )
 
-    phase_started_at = time.monotonic()
-    backend.connection.close()
-    logger.info(
-        "Migration backend closed for %s in %.2fs.",
-        db_file,
-        time.monotonic() - phase_started_at,
-    )
+        phase_started_at = time.monotonic()
+        try:
+            backend.apply_migrations(to_apply)
+        except LockTimeout:
+            logger.warning("Migration lock timeout for %s. Breaking lock and retrying...", db_file)
+            backend.break_lock()
+            to_apply = backend.to_apply(migrations)
+            backend.apply_migrations(to_apply)
+        logger.info(
+            "Migration apply completed for %s in %.2fs.",
+            db_file,
+            time.monotonic() - phase_started_at,
+        )
+    finally:
+        phase_started_at = time.monotonic()
+        if stop_event is not None:
+            backend.connection.set_progress_handler(None, 0)
+        backend.connection.close()
+        logger.info(
+            "Migration backend closed for %s in %.2fs.",
+            db_file,
+            time.monotonic() - phase_started_at,
+        )
     if needs_vacuum:
         logger.info("Running VACUUM after compact-hash migration to reclaim disk space...")
         conn = apsw.Connection(db_file)
-        conn.cursor().execute("VACUUM")
-        conn.close()
+        try:
+            if stop_event is not None:
+                conn.set_progress_handler(lambda: 1 if stop_event.is_set() else 0, 10_000)
+            conn.cursor().execute("VACUUM")
+        finally:
+            if stop_event is not None:
+                conn.set_progress_handler(None, 0)
+            conn.close()
         logger.info("VACUUM completed.")
     logger.info(
         "Migration check completed for %s in %.2fs (WAL: %d -> %d bytes).",

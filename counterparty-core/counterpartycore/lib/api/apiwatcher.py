@@ -7,11 +7,21 @@ import apsw
 
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import dbbuilder
+from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import utxosinfo
 from counterpartycore.lib.utils import database, hashcodec
 from counterpartycore.lib.utils.helpers import format_duration
 
 logger = logging.getLogger(config.LOGGER_NAME)
+
+
+class AnyStopEvent:
+    def __init__(self, *events):
+        self.events = events
+
+    def is_set(self):
+        return any(event.is_set() for event in self.events)
+
 
 UPDATE_EVENTS_ID_FIELDS = {
     "BLOCK_PARSED": ["block_index"],
@@ -720,15 +730,37 @@ def parse_event(state_db, event, ledger_db=None):
         logger.event(f"Event parsed: {event['message_index']} {event['event']}")
 
 
+def get_ledger_data_version(ledger_db):
+    return ledger_db.execute("PRAGMA data_version").fetchone()["data_version"]
+
+
 def catch_up(ledger_db, state_db, watcher=None):
-    check_reorg(ledger_db, state_db)
+    rebuild_staged = check_reorg(
+        ledger_db,
+        state_db,
+        watcher.stage_state_db_rebuild if watcher is not None else None,
+    )
+    if rebuild_staged:
+        return
     event_to_parse_count = get_event_to_parse_count(ledger_db, state_db)
     if event_to_parse_count > 0:
         logger.debug("%s events to catch up...", event_to_parse_count)
         start_time = time.time()
         event_parsed = 0
+        lineage_checked_at = None
         next_event = get_next_event_to_parse(ledger_db, state_db)
         while next_event and (watcher is None or not watcher.stop_event.is_set()):
+            ledger_data_version = get_ledger_data_version(ledger_db)
+            lineage_at = (next_event["block_index"], ledger_data_version)
+            if watcher is not None and lineage_at != lineage_checked_at:
+                rebuild_staged = check_reorg(
+                    ledger_db,
+                    state_db,
+                    watcher.stage_state_db_rebuild,
+                )
+                if rebuild_staged:
+                    return
+                lineage_checked_at = lineage_at
             parse_event(state_db, next_event, ledger_db=ledger_db)
             event_parsed += 1
             if event_parsed % 50000 == 0:
@@ -750,7 +782,8 @@ def catch_up(ledger_db, state_db, watcher=None):
 def search_matching_event(ledger_db, state_db):
     state_db_cursor = state_db.cursor()
     state_db_cursor.execute(
-        "SELECT * FROM parsed_events WHERE event = 'BLOCK_PARSED' ORDER BY event_index DESC LIMIT -1 OFFSET 1"
+        "SELECT * FROM parsed_events INDEXED BY parsed_events_event_index_idx "
+        "WHERE event = 'BLOCK_PARSED' ORDER BY event_index DESC"
     )
     matching_event = None
     for parsed_event in state_db_cursor:
@@ -768,10 +801,11 @@ def search_matching_event(ledger_db, state_db):
     return matching_event
 
 
-def check_reorg(ledger_db, state_db):
+def check_reorg(ledger_db, state_db, stage_rebuild=None):
     last_event_parsed = fetch_one(
         state_db,
-        "SELECT * FROM parsed_events WHERE event = 'BLOCK_PARSED' ORDER BY event_index DESC LIMIT 1 OFFSET 1",
+        "SELECT * FROM parsed_events INDEXED BY parsed_events_event_index_idx "
+        "WHERE event = 'BLOCK_PARSED' ORDER BY event_index DESC LIMIT 1",
     )
     if last_event_parsed is None:
         return
@@ -787,7 +821,30 @@ def check_reorg(ledger_db, state_db):
             target_block_index = matching_event["block_index"] + 1
         logger.warning("Blockchain reorganization detected at Block %s", target_block_index)
         logger.info("Rolling back to block: %s", target_block_index)
-        dbbuilder.rollback_state_db(state_db, block_index=target_block_index)
+        if stage_rebuild is not None:
+            try:
+                stage_rebuild()
+                return True
+            except exceptions.StateDBRebuildCancelled:
+                dbbuilder.discard_staged_state_db()
+                logger.info(
+                    "Staged State DB rebuild cancelled during shutdown; preserving the "
+                    "parent-owned gate across any child restart."
+                )
+                return True
+            except Exception:  # pylint: disable=broad-except
+                dbbuilder.discard_staged_state_db()
+                logger.exception(
+                    "Staged State DB rebuild failed; falling back to in-place rollback."
+                )
+        try:
+            dbbuilder.rollback_state_db(state_db, block_index=target_block_index)
+        except Exception:
+            logger.exception("In-place State DB rollback failed while API remained gated.")
+            raise
+        else:
+            CurrentState().set_state_db_rebuilding(False)
+    return False
 
 
 def parse_next_event(ledger_db, state_db):
@@ -800,29 +857,75 @@ def parse_next_event(ledger_db, state_db):
 
 
 class APIWatcher(threading.Thread):
-    def __init__(self, state_db):
+    def __init__(self, state_db, state_db_rebuild_ready_event=None, fatal_event=None):
         threading.Thread.__init__(self, name="Watcher")
         logger.debug("Initializing API Watcher...")
         self.state_db = None
         self.ledger_db = None
         self.current_state_thread = None
+        self.state_db_rebuild_ready_event = state_db_rebuild_ready_event
+        self.fatal_event = fatal_event
         self.stop_event = threading.Event()  # Add stop event
+        self.rebuild_cancel_event = threading.Event()
         self.state_db = state_db
         self.ledger_db = database.get_db_connection(
             config.DATABASE, read_only=True, check_wal=False
         )
         update_last_parsed_events_cache(self.state_db, event=None)
 
+    def stage_state_db_rebuild(self):
+        if self.state_db_rebuild_ready_event is None:
+            raise exceptions.APIWatcherError("No State DB rebuild coordinator is configured")
+        CurrentState().set_state_db_rebuilding(True)
+        self.rebuild_cancel_event.clear()
+        rebuild_deadline = threading.Timer(
+            config.DEFAULT_STATE_DB_REBUILD_MAX_READY_SECONDS,
+            self._cancel_timed_out_rebuild,
+        )
+        rebuild_deadline.daemon = True
+        rebuild_deadline.start()
+        try:
+            dbbuilder.stage_state_db_rebuild(
+                stop_event=AnyStopEvent(self.stop_event, self.rebuild_cancel_event)
+            )
+        except Exception as error:
+            if self.stop_event.is_set():
+                raise exceptions.StateDBRebuildCancelled() from error
+            if self.rebuild_cancel_event.is_set():
+                raise exceptions.DatabaseError("State DB rebuild exceeded its deadline") from error
+            raise
+        finally:
+            rebuild_deadline.cancel()
+        self.state_db_rebuild_ready_event.set()
+        self.stop_event.set()
+
+    def _cancel_timed_out_rebuild(self):
+        logger.error("State DB rebuild exceeded its deadline; restarting the API child.")
+        self.rebuild_cancel_event.set()
+        if self.fatal_event is not None:
+            self.fatal_event.set()
+
     def run(self):
         logger.info("Starting API Watcher thread...")
         try:
             catch_up(self.ledger_db, self.state_db, self)
             if not self.stop_event.is_set():
+                # A parent-owned rebuild gate survives the activation restart.
+                # Clear it only after the replacement has been checked against
+                # the live Ledger DB and caught up, never merely because a new
+                # API child started.
+                CurrentState().set_state_db_rebuilding(False)
                 self.follow()
         except apsw.InterruptError:
             if not self.stop_event.is_set():
-                raise
+                logger.exception("API Watcher was interrupted unexpectedly.")
+                if self.fatal_event is not None:
+                    self.fatal_event.set()
             logger.debug("API Watcher query interrupted during shutdown.")
+        except Exception:  # pylint: disable=broad-except
+            logger.exception("API Watcher failed; requesting API child restart.")
+            if self.fatal_event is not None:
+                self.fatal_event.set()
         finally:
             if self.state_db is not None:
                 self.state_db.close()
@@ -832,15 +935,27 @@ class APIWatcher(threading.Thread):
                 self.current_state_thread.stop()
 
     def follow(self):
-        no_check_reorg_since = 0
+        lineage_checked_at = None
         while not self.stop_event.is_set():
-            try:
-                parse_next_event(self.ledger_db, self.state_db)
-            except exceptions.NoEventToParse:
-                if time.time() - no_check_reorg_since > 5:
-                    check_reorg(self.ledger_db, self.state_db)
-                    no_check_reorg_since = time.time()
+            next_event = get_next_event_to_parse(self.ledger_db, self.state_db)
+            if next_event is None:
+                rebuild_staged = check_reorg(
+                    self.ledger_db, self.state_db, self.stage_state_db_rebuild
+                )
+                if rebuild_staged:
+                    break
                 self.stop_event.wait(timeout=0.1)
+                continue
+            ledger_data_version = get_ledger_data_version(self.ledger_db)
+            lineage_at = (next_event["block_index"], ledger_data_version)
+            if lineage_at != lineage_checked_at:
+                rebuild_staged = check_reorg(
+                    self.ledger_db, self.state_db, self.stage_state_db_rebuild
+                )
+                if rebuild_staged:
+                    break
+                lineage_checked_at = lineage_at
+            parse_event(self.state_db, next_event, ledger_db=self.ledger_db)
             if self.stop_event.is_set():
                 break
 

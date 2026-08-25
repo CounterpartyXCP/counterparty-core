@@ -13,8 +13,11 @@ import re
 import threading
 from unittest.mock import MagicMock
 
+import apsw
 import pytest
 from counterpartycore.lib.api import apiwatcher
+from counterpartycore.lib.ledger.currentstate import CurrentState
+from counterpartycore.lib.utils import database
 
 
 def test_api_watcher_stop_interrupts_sqlite_connections():
@@ -24,6 +27,7 @@ def test_api_watcher_stop_interrupts_sqlite_connections():
     watcher.state_db = MagicMock()
     watcher.ledger_db = MagicMock()
     watcher.current_state_thread = None
+    watcher.fatal_event = None
     watcher.join = MagicMock()
     watcher.is_alive = MagicMock(return_value=False)
 
@@ -52,6 +56,178 @@ def test_api_watcher_handles_shutdown_interrupt(monkeypatch):
 
     watcher.state_db.close.assert_called_once_with()
     watcher.ledger_db.close.assert_called_once_with()
+
+
+def test_api_watcher_stages_rebuild_and_requests_coordinated_restart(monkeypatch):
+    watcher = apiwatcher.APIWatcher.__new__(apiwatcher.APIWatcher)
+    threading.Thread.__init__(watcher, name="Watcher")
+    watcher.stop_event = threading.Event()
+    watcher.rebuild_cancel_event = threading.Event()
+    watcher.state_db_rebuild_ready_event = MagicMock()
+    watcher.fatal_event = None
+    stage = MagicMock()
+    monkeypatch.setattr(apiwatcher.dbbuilder, "stage_state_db_rebuild", stage)
+    CurrentState().set_state_db_rebuilding(False)
+
+    watcher.stage_state_db_rebuild()
+
+    cancel_event = stage.call_args.kwargs["stop_event"]
+    assert cancel_event.events == (watcher.stop_event, watcher.rebuild_cancel_event)
+    watcher.state_db_rebuild_ready_event.set.assert_called_once_with()
+    assert watcher.stop_event.is_set()
+    assert CurrentState().state_db_rebuilding() is True
+    CurrentState().set_state_db_rebuilding(False)
+
+
+def test_api_watcher_translates_shutdown_during_rebuild_to_cancellation(monkeypatch):
+    watcher = apiwatcher.APIWatcher.__new__(apiwatcher.APIWatcher)
+    threading.Thread.__init__(watcher, name="Watcher")
+    watcher.stop_event = threading.Event()
+    watcher.rebuild_cancel_event = threading.Event()
+    watcher.state_db_rebuild_ready_event = MagicMock()
+    watcher.fatal_event = None
+
+    def cancelled_rebuild(stop_event):
+        watcher.stop_event.set()
+        assert stop_event.is_set()
+        raise RuntimeError("sqlite interrupted")
+
+    monkeypatch.setattr(apiwatcher.dbbuilder, "stage_state_db_rebuild", cancelled_rebuild)
+
+    with pytest.raises(apiwatcher.exceptions.StateDBRebuildCancelled):
+        watcher.stage_state_db_rebuild()
+
+    watcher.state_db_rebuild_ready_event.set.assert_not_called()
+    CurrentState().set_state_db_rebuilding(False)
+
+
+def test_follow_checks_lineage_before_appending_new_branch_event(monkeypatch):
+    watcher = apiwatcher.APIWatcher.__new__(apiwatcher.APIWatcher)
+    threading.Thread.__init__(watcher, name="Watcher")
+    watcher.stop_event = threading.Event()
+    watcher.state_db = MagicMock()
+    watcher.ledger_db = MagicMock()
+    watcher.state_db_rebuild_ready_event = MagicMock()
+    watcher.fatal_event = None
+    event = {"message_index": 999, "block_index": 500, "event": "CREDIT"}
+    monkeypatch.setattr(apiwatcher, "get_next_event_to_parse", MagicMock(return_value=event))
+    monkeypatch.setattr(apiwatcher, "get_ledger_data_version", MagicMock(return_value=1))
+    check = MagicMock(return_value=True)
+    monkeypatch.setattr(apiwatcher, "check_reorg", check)
+    parse = MagicMock()
+    monkeypatch.setattr(apiwatcher, "parse_event", parse)
+
+    watcher.follow()
+
+    check.assert_called_once_with(
+        watcher.ledger_db,
+        watcher.state_db,
+        watcher.stage_state_db_rebuild,
+    )
+    parse.assert_not_called()
+
+
+def test_follow_rechecks_lineage_when_ledger_changes_mid_block(monkeypatch):
+    watcher = apiwatcher.APIWatcher.__new__(apiwatcher.APIWatcher)
+    threading.Thread.__init__(watcher, name="Watcher")
+    watcher.stop_event = threading.Event()
+    watcher.state_db = MagicMock()
+    watcher.ledger_db = MagicMock()
+    watcher.state_db_rebuild_ready_event = MagicMock()
+    watcher.fatal_event = None
+    events = [
+        {"message_index": 100, "block_index": 500, "event": "CREDIT"},
+        {"message_index": 101, "block_index": 500, "event": "DEBIT"},
+    ]
+    monkeypatch.setattr(
+        apiwatcher,
+        "get_next_event_to_parse",
+        MagicMock(side_effect=[*events, None]),
+    )
+    monkeypatch.setattr(
+        apiwatcher,
+        "get_ledger_data_version",
+        MagicMock(side_effect=[1, 2]),
+    )
+    check = MagicMock(side_effect=[False, True])
+    monkeypatch.setattr(apiwatcher, "check_reorg", check)
+    parse = MagicMock()
+    monkeypatch.setattr(apiwatcher, "parse_event", parse)
+
+    watcher.follow()
+
+    parse.assert_called_once_with(watcher.state_db, events[0], ledger_db=watcher.ledger_db)
+    assert check.call_count == 2
+
+
+def test_api_watcher_failure_requests_parent_restart(monkeypatch):
+    watcher = apiwatcher.APIWatcher.__new__(apiwatcher.APIWatcher)
+    threading.Thread.__init__(watcher, name="Watcher")
+    watcher.stop_event = threading.Event()
+    watcher.state_db = MagicMock()
+    watcher.ledger_db = MagicMock()
+    watcher.current_state_thread = None
+    watcher.fatal_event = MagicMock()
+    monkeypatch.setattr(apiwatcher, "catch_up", MagicMock(side_effect=RuntimeError("boom")))
+
+    watcher.run()
+
+    watcher.fatal_event.set.assert_called_once_with()
+
+
+def test_rebuild_timeout_cancels_work_and_requests_parent_restart():
+    watcher = apiwatcher.APIWatcher.__new__(apiwatcher.APIWatcher)
+    watcher.rebuild_cancel_event = threading.Event()
+    watcher.fatal_event = MagicMock()
+
+    watcher._cancel_timed_out_rebuild()
+
+    assert watcher.rebuild_cancel_event.is_set()
+    watcher.fatal_event.set.assert_called_once_with()
+
+
+@pytest.mark.parametrize("new_branch_event_count", [0, 2, 5])
+def test_same_height_one_block_reorg_is_detected_for_any_event_count(new_branch_event_count):
+    ledger_db = apsw.Connection(":memory:")
+    state_db = apsw.Connection(":memory:")
+    ledger_db.set_row_trace(database.rowtracer)
+    state_db.set_row_trace(database.rowtracer)
+    ledger_db.execute(
+        "CREATE TABLE messages (message_index INTEGER PRIMARY KEY, block_index INTEGER, "
+        "event_hash TEXT, event TEXT)"
+    )
+    state_db.execute(
+        "CREATE TABLE parsed_events (event_index INTEGER PRIMARY KEY, block_index INTEGER, "
+        "event_hash TEXT, event TEXT)"
+    )
+    state_db.execute("CREATE INDEX parsed_events_event_index_idx ON parsed_events (event_index)")
+    common = (10, 99, "common", "BLOCK_PARSED")
+    ledger_db.execute("INSERT INTO messages VALUES (?, ?, ?, ?)", common)
+    state_db.execute("INSERT INTO parsed_events VALUES (?, ?, ?, ?)", common)
+    for index in range(11, 13):
+        state_db.execute(
+            "INSERT INTO parsed_events VALUES (?, 100, ?, 'CREDIT')",
+            (index, f"old-{index}"),
+        )
+    state_db.execute("INSERT INTO parsed_events VALUES (13, 100, 'old-block', 'BLOCK_PARSED')")
+    for offset in range(new_branch_event_count):
+        message_index = 11 + offset
+        ledger_db.execute(
+            "INSERT INTO messages VALUES (?, 100, ?, 'CREDIT')",
+            (message_index, f"new-{message_index}"),
+        )
+    ledger_db.execute(
+        "INSERT INTO messages VALUES (?, 100, 'new-block', 'BLOCK_PARSED')",
+        (11 + new_branch_event_count,),
+    )
+    stage_rebuild = MagicMock()
+
+    try:
+        assert apiwatcher.check_reorg(ledger_db, state_db, stage_rebuild=stage_rebuild) is True
+    finally:
+        state_db.close()
+        ledger_db.close()
+    stage_rebuild.assert_called_once_with()
 
 
 def test_get_last_block_parsed_preserves_event_order_and_uses_event_index(state_db):

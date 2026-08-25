@@ -93,6 +93,23 @@ def check_server_health(db, check_type: str = "light"):
     Health check route.
     :param check_type: Type of health check to perform. Options are 'light' and 'heavy' (e.g. light)
     """
+    if CurrentState().state_db_rebuilding():
+        if (
+            CurrentState().state_db_rebuild_cache_cold()
+            or config.DISABLE_API_CACHE
+            or config.API_PASSWORD is not None
+        ):
+            raise exceptions.StateDBRebuildUnavailable(
+                "State DB is rebuilding without a usable stale-response cache"
+            )
+        if (
+            CurrentState().state_db_rebuild_age()
+            > config.DEFAULT_STATE_DB_REBUILD_MAX_READY_SECONDS
+        ):
+            raise exceptions.StateDBRebuildUnavailable(
+                "State DB rebuild exceeded its maximum stale-serving age"
+            )
+        return {"status": "Degraded", "reason": "state_db_rebuilding"}
     if not healthz(db, check_type):
         return {"status": "Unhealthy"}
     return {"status": "Healthy"}

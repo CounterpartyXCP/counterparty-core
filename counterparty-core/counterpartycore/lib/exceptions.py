@@ -34,6 +34,14 @@ class ComposeError(MessageError):
     pass
 
 
+class StateDBRebuildCancelled(DatabaseError):
+    """Raised when shutdown cancels an in-progress staged State DB rebuild."""
+
+
+class StateDBRebuildUnavailable(DatabaseError):
+    """Raised when a request requires fresh state during a staged rebuild."""
+
+
 class UnpackError(MessageError):
     pass
 

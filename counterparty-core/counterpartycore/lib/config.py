@@ -161,6 +161,10 @@ DEFAULT_HEALTHZ_SATURATION_GRACE_SECONDS = 5
 # Liveness fails only if the health sampler heartbeat is staler than this (a
 # genuine deadlock of the health process), never on ledger lag or saturation.
 DEFAULT_HEALTHZ_LIVENESS_HEARTBEAT_TIMEOUT_SECONDS = 30
+# A normal production-sized staged rebuild takes about 40 minutes. Keep stale
+# cache hits routable for at most two hours; after that readiness must alert
+# rather than advertising an indefinitely wedged recovery as healthy.
+DEFAULT_STATE_DB_REBUILD_MAX_READY_SECONDS = 2 * 60 * 60
 
 UNSPENDABLE_REGTEST = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"
 UNSPENDABLE_TESTNET3 = "mvCounterpartyXXXXXXXXXXXXXXW24Hef"
@@ -335,6 +339,15 @@ DEFAULT_UTXO_VALUE = 546
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 LEDGER_DB_MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "ledger", "migrations")
 STATE_DB_MIGRATIONS_DIR = os.path.join(CURRENT_DIR, "api", "migrations")
+# A staged State DB rebuild reads from an immutable SQLite backup so the live
+# ledger writer cannot invalidate a long-running migration snapshot. Normal
+# migrations leave this unset and read DATABASE directly.
+STATE_DB_LEDGER_SOURCE_DATABASE = None
+
+
+def state_db_ledger_source_database():
+    return STATE_DB_LEDGER_SOURCE_DATABASE or globals()["DATABASE"]
+
 
 PROFILE_INTERVAL_MINUTES = 15
 

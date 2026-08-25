@@ -1,4 +1,5 @@
 import json
+import multiprocessing
 from unittest.mock import Mock, call, patch
 
 import pytest
@@ -9,6 +10,14 @@ from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.lib.parser import blocks
 from counterpartycore.lib.utils import hashcodec, helpers
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
+
+REAL_IS_SERVER_READY = apiserver.is_server_ready
+
+
+def _set_rebuild_state_in_spawned_process(rebuilding_value, started_at_value):
+    current_state = ledger.currentstate.CurrentState()
+    current_state.set_state_db_rebuild_shared_values(rebuilding_value, started_at_value)
+    current_state.set_state_db_rebuilding(True)
 
 
 def test_api_server_stop_waits_for_graceful_exit():
@@ -48,6 +57,149 @@ def test_api_server_stop_reports_process_that_survives_kill():
         server.stop()
 
     critical.assert_called_once()
+
+
+def test_api_server_restart_replaces_child_and_waits_until_ready():
+    server = apiserver.APIServer(Mock(), Mock())
+    server.stop_event.is_set.return_value = False
+    old_process = Mock()
+    old_process.is_alive.return_value = False
+    server.process = old_process
+    server.restart_args = Mock()
+    server.restart_log_stream = Mock()
+
+    def start_replacement(_args, _log_stream):
+        server.process = Mock()
+        server.process.is_alive.return_value = True
+        server.server_ready_value.value = 1
+
+    server._start_process = Mock(side_effect=start_replacement)
+
+    server.restart()
+
+    server._start_process.assert_called_once_with(server.restart_args, server.restart_log_stream)
+    assert server.is_ready()
+
+
+def test_api_server_remains_ready_while_state_db_rebuilds():
+    current_state = ledger.currentstate.CurrentState()
+    current_state.set_state_db_rebuilding(True)
+    try:
+        assert REAL_IS_SERVER_READY() is True
+    finally:
+        current_state.set_state_db_rebuilding(False)
+
+
+def test_api_server_becomes_unready_when_state_db_rebuild_is_stale():
+    current_state = ledger.currentstate.CurrentState()
+    current_state.set_state_db_rebuilding(True)
+    try:
+        with patch.object(
+            current_state,
+            "state_db_rebuild_age",
+            return_value=config.DEFAULT_STATE_DB_REBUILD_MAX_READY_SECONDS + 1,
+        ):
+            assert REAL_IS_SERVER_READY() is False
+    finally:
+        current_state.set_state_db_rebuilding(False)
+
+
+def test_state_db_rebuild_flag_uses_shared_memory():
+    context = multiprocessing.get_context("spawn")
+    rebuilding_value = context.Value("b", 0)
+    started_at_value = context.Value("d", 0.0)
+    current_state = ledger.currentstate.CurrentState()
+    current_state.set_state_db_rebuild_shared_values(rebuilding_value, started_at_value)
+
+    process = context.Process(
+        target=_set_rebuild_state_in_spawned_process,
+        args=(rebuilding_value, started_at_value),
+    )
+    process.start()
+    process.join(timeout=10)
+
+    assert process.exitcode == 0
+    assert rebuilding_value.value == 1
+    assert started_at_value.value > 0
+    assert current_state.state_db_rebuilding() is True
+    assert current_state.state_db_rebuild_age() >= 0
+    original_started_at = started_at_value.value
+    current_state.set_state_db_rebuilding(True)
+    assert started_at_value.value == original_started_at
+    current_state.set_state_db_rebuilding(False)
+
+
+def test_rebuild_monitor_restarts_an_unexpectedly_dead_api_child():
+    server = apiserver.APIServer(Mock(), Mock(), state_db_rebuild_ready_event=Mock())
+    server.stop_event.is_set.side_effect = [False, False, True]
+    server.state_db_rebuild_ready_event.wait.return_value = False
+    server.process = Mock()
+    server.process.is_alive.return_value = False
+    server.restart = Mock()
+
+    server._monitor_rebuilt_state_db()
+
+    server.restart.assert_called_once_with(activating_rebuild=False)
+
+
+def test_rebuild_monitor_restarts_api_child_after_critical_watcher_failure():
+    server = apiserver.APIServer(Mock(), Mock(), state_db_rebuild_ready_event=Mock())
+    server.stop_event.is_set.side_effect = [False, False, True]
+    server.state_db_rebuild_ready_event.wait.return_value = False
+    server.process = Mock()
+    server.process.is_alive.return_value = True
+    server.api_child_fatal_event.set()
+    server.restart = Mock()
+
+    server._monitor_rebuilt_state_db()
+
+    server.restart.assert_called_once_with(activating_rebuild=False)
+
+
+def test_state_db_rebuild_serves_only_stale_safe_requests(apiv2_client, defaults, monkeypatch):
+    current_state = ledger.currentstate.CurrentState()
+    monkeypatch.setattr(config, "DISABLE_API_CACHE", False)
+    blockcache.BLOCK_CACHE.clear()
+    try:
+        seeded = apiv2_client.get("/v2/assets/XCP?verbose=false")
+        assert seeded.status_code == 200
+        current_state.set_state_db_rebuilding(True)
+        state_pool_connection = apiserver.StateDBConnectionPool().connection
+        ledger_pool_connection = apiserver.LedgerDBConnectionPool().connection
+        with patch.object(
+            apiserver.StateDBConnectionPool(), "connection", wraps=state_pool_connection
+        ) as state_connection:
+            with patch.object(
+                apiserver.LedgerDBConnectionPool(), "connection", wraps=ledger_pool_connection
+            ) as ledger_connection:
+                cached_read = apiv2_client.get("/v2/assets/XCP?verbose=false")
+        state_connection.assert_not_called()
+        ledger_connection.assert_not_called()
+        cache_miss = apiv2_client.get("/v2/assets/XCP?verbose=true")
+        api_root = apiv2_client.get("/v2/")
+        public_health = apiv2_client.get("/v2/healthz")
+        compose = apiv2_client.get(f"/v2/addresses/{defaults['addresses'][0]}/compose/issuance")
+        mempool = apiv2_client.get("/v2/mempool/events")
+        bitcoin = apiv2_client.get("/v2/bitcoin/getmempoolinfo")
+        transaction_info = apiv2_client.get("/v2/transactions/info")
+        post = apiv2_client.post("/v2/bitcoin/transactions", data={"rawtx": "00"})
+    finally:
+        current_state.set_state_db_rebuilding(False)
+        blockcache.BLOCK_CACHE.clear()
+
+    assert cached_read.status_code == 200
+    assert cached_read.headers["X-COUNTERPARTY-STALE"] == "true"
+    assert cache_miss.status_code == 503
+    assert "no safe pre-reorg cached response" in cache_miss.json["error"]
+    assert public_health.status_code == 200
+    assert public_health.json["result"] == {
+        "status": "Degraded",
+        "reason": "state_db_rebuilding",
+    }
+    assert api_root.status_code == 503
+    for response in (compose, mempool, bitcoin, transaction_info, post):
+        assert response.status_code == 503
+        assert "requires fresh state" in response.json["error"]
 
 
 def test_apiserver_root(apiv2_client, current_block_index):

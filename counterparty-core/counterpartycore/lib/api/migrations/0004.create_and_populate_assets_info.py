@@ -32,7 +32,7 @@ def apply(db):
         > 0
     )
     if not attached:
-        db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
+        db.execute("ATTACH DATABASE ? AS ledger_db", (config.state_db_ledger_source_database(),))
 
     db.execute("""
         CREATE TABLE assets_info(
@@ -134,7 +134,11 @@ def apply(db):
     cursor = db.cursor()
     cursor.execute(sql)
 
-    ledger_db = database.get_db_connection(config.DATABASE)
+    ledger_db = database.get_db_connection(config.state_db_ledger_source_database())
+    try:
+        xcp_supply = ledger.supplies.xcp_supply(ledger_db)
+    finally:
+        ledger_db.close()
     cursor.execute(
         """
         INSERT INTO assets_info (
@@ -149,7 +153,7 @@ def apply(db):
             "asset": "XCP",
             "divisible": True,
             "locked": True,
-            "supply": ledger.supplies.xcp_supply(ledger_db),
+            "supply": xcp_supply,
             "description": "The Counterparty protocol native currency",
             "first_issuance_block_index": 278319,
             "last_issuance_block_index": 283810,

@@ -57,6 +57,18 @@ def verify_password(username, password):
 
 
 def is_server_ready():
+    # A staged State DB rebuild deliberately serves the last internally
+    # consistent snapshot until the replacement is complete. Keep the
+    # singleton routable during that degraded-but-readable period.
+    if CurrentState().state_db_rebuilding():
+        return (
+            not CurrentState().state_db_rebuild_cache_cold()
+            and not config.DISABLE_API_CACHE
+            and config.API_PASSWORD is None
+            and CurrentState().state_db_rebuild_age()
+            <= config.DEFAULT_STATE_DB_REBUILD_MAX_READY_SECONDS
+        )
+
     backend_height = CurrentState().current_backend_height()
     block_index = CurrentState().current_block_index()
 
@@ -109,6 +121,24 @@ def is_cachable(rule, route=None, result=None):
     if request.path == "/v2/addresses/mempool":
         return False
     if "show_unconfirmed=true" in request.url:
+        return False
+    return True
+
+
+def can_serve_stale_during_state_db_rebuild(rule, route):
+    """Whether a request may use a response cached before rebuilding."""
+    if rule in {"/v2/healthz", "/healthz"}:
+        return True
+    if request.method != "GET" or config.API_PASSWORD is not None:
+        return False
+    path = request.path.lower()
+    if any(fragment in path for fragment in ("/compose/", "/mempool")):
+        return False
+    if request.args.get("show_unconfirmed", "false").lower() in {"true", "1"}:
+        return False
+    if route is not None and route["category"] in {"bitcoin", "compose", "mempool", "v1"}:
+        return False
+    if route is not None and route["function"].__module__.endswith(".compose"):
         return False
     return True
 
@@ -198,7 +228,13 @@ def return_result(
     response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
     response.headers["X-COUNTERPARTY-VERSION"] = config.VERSION_STRING
     response.headers["X-BITCOIN-HEIGHT"] = CurrentState().current_backend_height()
-    response.headers["X-LEDGER-STATE"] = CurrentState().ledger_state()
+    rebuilding = CurrentState().state_db_rebuilding()
+    response.headers["X-LEDGER-STATE"] = (
+        "State DB Rebuilding" if rebuilding else CurrentState().ledger_state()
+    )
+    if rebuilding:
+        response.headers["X-COUNTERPARTY-STALE"] = "true"
+        response.headers["X-STATE-DB-REBUILD-AGE"] = str(int(CurrentState().state_db_rebuild_age()))
     response.headers["Content-Type"] = "application/json"
     set_cache_control_headers(response, http_code, result)
     set_cors_headers(response)
@@ -354,8 +390,12 @@ def cache_response(uncached, response):
 
 def execute_api_function(rule, route, function_args):
     # cache everything for one block
-    with StateDBConnectionPool().connection() as state_db:
-        current_block_index = apiwatcher.get_last_block_parsed(state_db)
+    rebuilding = CurrentState().state_db_rebuilding()
+    if rebuilding:
+        current_block_index = CurrentState().current_block_index()
+    else:
+        with StateDBConnectionPool().connection() as state_db:
+            current_block_index = apiwatcher.get_last_block_parsed(state_db)
     cache_key = f"{current_block_index}:{request.url}"
     # except for blocks
     if request.path.startswith("/v2/blocks/") and not request.path.startswith("/v2/blocks/last"):
@@ -367,6 +407,11 @@ def execute_api_function(rule, route, function_args):
             sentry_get_span.set_data("cache.hit", True)
             return BLOCK_CACHE[cache_key]  # already-enriched CachedResponse
         sentry_get_span.set_data("cache.hit", False)
+
+    if rebuilding and rule not in {"/v2/healthz", "/healthz"}:
+        raise exceptions.StateDBRebuildUnavailable(
+            "State DB is rebuilding and no safe pre-reorg cached response exists"
+        )
 
     needed_db = function_needs_db(route["function"])
     if needed_db == "ledger_db":
@@ -447,11 +492,28 @@ def handle_route(**kwargs):
             )
 
         if rule == "/v2/":
+            if CurrentState().state_db_rebuilding():
+                return return_result(
+                    503,
+                    error="State DB is rebuilding; API metadata requires fresh state",
+                    start_time=start_time,
+                    query_args=query_args,
+                )
             return return_result(
                 200, result=api_root(), start_time=start_time, query_args=query_args
             )
 
         route = ROUTES.get(rule)
+
+        if CurrentState().state_db_rebuilding() and not can_serve_stale_during_state_db_rebuild(
+            rule, route
+        ):
+            return return_result(
+                503,
+                error="State DB is rebuilding; this request requires fresh state",
+                start_time=start_time,
+                query_args=query_args,
+            )
 
         # parse args
         try:
@@ -464,6 +526,8 @@ def handle_route(**kwargs):
         # call the function
         try:
             result = execute_api_function(rule, route, function_args)
+        except exceptions.StateDBRebuildUnavailable as e:
+            return return_result(503, error=str(e), start_time=start_time, query_args=query_args)
         except exceptions.BitcoindRPCError as e:
             # The Bitcoin backend is unavailable or degraded. This is transient
             # and not the client's fault, so return a retryable 503 rather than a
@@ -674,7 +738,17 @@ class ConnectionPoolMonitor(threading.Thread):
 
 
 def run_apiserver(
-    args, server_ready_value, stop_event, shared_backend_height, parent_pid, log_stream
+    args,
+    server_ready_value,
+    stop_event,
+    shared_backend_height,
+    parent_pid,
+    log_stream,
+    state_db_rebuild_ready_event=None,
+    state_db_rebuilding_value=None,
+    state_db_rebuild_started_at_value=None,
+    state_db_rebuild_cache_cold_value=None,
+    api_child_fatal_event=None,
 ):
     logger.info("Starting API Server process...")
 
@@ -696,6 +770,11 @@ def run_apiserver(
         # Initialize Sentry, logging, config, etc.
         sentry.init()
         initialise_log_and_config(argparse.Namespace(**args), api=True, log_stream=log_stream)
+        CurrentState().set_state_db_rebuild_shared_values(
+            state_db_rebuilding_value,
+            state_db_rebuild_started_at_value,
+            state_db_rebuild_cache_cold_value,
+        )
 
         # Start memory profiler if enabled via --memory-profile flag
         if getattr(config, "MEMORY_PROFILE", False):
@@ -708,6 +787,9 @@ def run_apiserver(
         logger.info("Starting Connection Pool Monitor thread...")
         pool_monitor = ConnectionPoolMonitor(stop_event, interval_seconds=60)
         pool_monitor.start()
+
+        if not args["rebuild_state_db"] and not args["refresh_state_db"]:
+            dbbuilder.activate_staged_state_db()
 
         if args["rebuild_state_db"]:
             dbbuilder.build_state_db()
@@ -726,7 +808,11 @@ def run_apiserver(
         check_database_version(state_db)
 
         watcher_started_at = time.monotonic()
-        watcher = apiwatcher.APIWatcher(state_db)
+        watcher = apiwatcher.APIWatcher(
+            state_db,
+            state_db_rebuild_ready_event,
+            fatal_event=api_child_fatal_event,
+        )
         logger.info("API Watcher initialized in %.2fs.", time.monotonic() - watcher_started_at)
         watcher.start()
 
@@ -826,25 +912,50 @@ class ParentProcessChecker(threading.Thread):
 
 
 class APIServer:
-    def __init__(self, stop_event, shared_backend_height):
+    def __init__(self, stop_event, shared_backend_height, state_db_rebuild_ready_event=None):
         self.process = None
         self.server_ready_value = Value("I", 0)
+        # ``stop_event`` is the lifetime of the whole Counterparty server.
+        # Each API child gets a separate event so a coordinated child restart
+        # can drain the old process without permanently stopping its successor.
         self.stop_event = stop_event
+        self.child_stop_event = None
         self.shared_backend_height = shared_backend_height
+        self.state_db_rebuild_ready_event = state_db_rebuild_ready_event or multiprocessing.Event()
+        # The parent owns rebuild state so it survives both an unexpected API
+        # child crash and the deliberate child restart used for activation.
+        # Gunicorn workers inherit these same synchronized values.
+        self.state_db_rebuilding_value = Value("b", 0)
+        self.state_db_rebuild_started_at_value = Value("d", 0.0)
+        self.state_db_rebuild_cache_cold_value = Value("b", 0)
+        self.api_child_fatal_event = multiprocessing.Event()
+        self.process_lock = threading.RLock()
+        self.rebuild_monitor = None
+        self.restart_args = None
+        self.restart_log_stream = None
 
-    def start(self, args, log_stream):
+    def _start_process(self, args, log_stream):
         if self.process is not None:
             raise exceptions.APIError("API Server is already running")
+        if self.state_db_rebuilding_value.value:
+            self.state_db_rebuild_cache_cold_value.value = True
+        self.api_child_fatal_event.clear()
+        self.child_stop_event = multiprocessing.Event()
         self.process = Process(
             name="API",
             target=run_apiserver,
             args=(
                 vars(args),
                 self.server_ready_value,
-                self.stop_event,
+                self.child_stop_event,
                 self.shared_backend_height,
                 os.getpid(),
                 log_stream,
+                self.state_db_rebuild_ready_event,
+                self.state_db_rebuilding_value,
+                self.state_db_rebuild_started_at_value,
+                self.state_db_rebuild_cache_cold_value,
+                self.api_child_fatal_event,
             ),
         )
         try:
@@ -855,13 +966,85 @@ class APIServer:
             raise e
         return self.process
 
+    def start(self, args, log_stream):
+        with self.process_lock:
+            return self._start_process(args, log_stream)
+
+    def start_rebuild_monitor(self, args, log_stream):
+        if self.rebuild_monitor is not None:
+            return
+        self.restart_args = args
+        self.restart_log_stream = log_stream
+        self.rebuild_monitor = threading.Thread(
+            target=self._monitor_rebuilt_state_db,
+            name="StateDBRebuildMonitor",
+            daemon=True,
+        )
+        self.rebuild_monitor.start()
+
+    def _monitor_rebuilt_state_db(self):
+        while not self.stop_event.is_set():
+            if not self.state_db_rebuild_ready_event.wait(timeout=1):
+                with self.process_lock:
+                    child_died = self.process is not None and not self.process.is_alive()
+                child_fatal = self.api_child_fatal_event.is_set()
+                if (child_died or child_fatal) and not self.stop_event.is_set():
+                    reason = "critical watcher failure" if child_fatal else "unexpected exit"
+                    logger.error("API child reported %s; restarting it.", reason)
+                    try:
+                        self.restart(activating_rebuild=False)
+                    except Exception:  # pylint: disable=broad-except
+                        logger.exception("Could not restart unexpected API child failure.")
+                        os.kill(os.getpid(), signal.SIGTERM)
+                        return
+                continue
+            self.state_db_rebuild_ready_event.clear()
+            if self.stop_event.is_set():
+                return
+            try:
+                self.restart(activating_rebuild=True)
+            except Exception:  # pylint: disable=broad-except
+                logger.exception(
+                    "Could not restart API child to activate rebuilt State DB; "
+                    "requesting full process restart."
+                )
+                os.kill(os.getpid(), signal.SIGTERM)
+                return
+
+    def restart(self, activating_rebuild=False):
+        if activating_rebuild:
+            logger.warning("Restarting API child to activate rebuilt State DB...")
+        else:
+            logger.warning("Restarting API child after unexpected exit...")
+        with self.process_lock:
+            self._stop_process()
+            if self.stop_event.is_set():
+                return
+            self.process = None
+            self.server_ready_value.value = 0
+            self._start_process(self.restart_args, self.restart_log_stream)
+
+        deadline = time.monotonic() + 300
+        while not self.is_ready():
+            if self.stop_event.is_set():
+                return
+            if self.process is None or not self.process.is_alive() or time.monotonic() >= deadline:
+                raise exceptions.APIError("Restarted API child did not become ready")
+            time.sleep(0.1)
+        if activating_rebuild:
+            logger.warning("API child restarted successfully with rebuilt State DB.")
+        else:
+            logger.warning("API child restarted successfully after unexpected exit.")
+
     def is_ready(self):
         return self.server_ready_value.value == 1
 
-    def stop(self):
+    def _stop_process(self):
         logger.info("Stopping API Server process...")
-        if self.process.is_alive():
+        if self.process is not None and self.process.is_alive():
             started_at = time.monotonic()
+            if self.child_stop_event is not None:
+                self.child_stop_event.set()
             try:
                 os.kill(self.process.pid, signal.SIGTERM)
             except ProcessLookupError:
@@ -880,6 +1063,15 @@ class APIServer:
                 logger.info("API Server process stopped in %.2fs.", elapsed)
         else:
             logger.info("API Server process was already stopped.")
+
+    def stop(self):
+        with self.process_lock:
+            self._stop_process()
+        if (
+            self.rebuild_monitor is not None
+            and self.rebuild_monitor is not threading.current_thread()
+        ):
+            self.rebuild_monitor.join(timeout=2)
 
     def has_stopped(self):
         return self.server_ready_value.value == 2

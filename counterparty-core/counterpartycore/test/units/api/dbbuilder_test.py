@@ -1,5 +1,12 @@
+import os
+import threading
+from unittest.mock import MagicMock
+
+import apsw
+import pytest
+from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import dbbuilder
-from counterpartycore.lib.utils import hashcodec
+from counterpartycore.lib.utils import database, hashcodec
 from counterpartycore.lib.utils.database import (
     ADDRESS_INDEX_COLUMN_NAMES,
     ASSET_INDEX_COLUMN_NAMES,
@@ -41,6 +48,347 @@ def column_exists(db, table_name, column_name):
     """Check if a column exists in a table."""
     columns = db.execute(f"PRAGMA table_info({table_name})").fetchall()
     return any(col["name"] == column_name for col in columns)
+
+
+def _create_marker_database(path, value):
+    db = apsw.Connection(str(path))
+    db.execute("CREATE TABLE marker (value TEXT)")
+    db.execute("INSERT INTO marker VALUES (?)", (value,))
+    db.close()
+
+
+def _read_marker_database(path):
+    db = apsw.Connection(str(path), flags=apsw.SQLITE_OPEN_READONLY)
+    try:
+        return db.execute("SELECT value FROM marker").fetchone()[0]
+    finally:
+        db.close()
+
+
+def test_staged_state_db_rebuild_does_not_touch_live_database(tmp_path, monkeypatch, ledger_db):
+    live_db = tmp_path / "state.db"
+    _create_marker_database(live_db, "live")
+    monkeypatch.setattr(config, "STATE_DATABASE", str(live_db))
+    observed = {}
+
+    def fake_apply(staged_path, _migration_dir, **_kwargs):
+        observed["ledger_source"] = config.state_db_ledger_source_database()
+        assert os.path.exists(observed["ledger_source"])
+        assert not os.path.exists(f"{observed['ledger_source']}-wal")
+        _create_marker_database(staged_path, "rebuilt")
+
+    monkeypatch.setattr(database, "apply_outstanding_migration", fake_apply)
+    monkeypatch.setattr(
+        dbbuilder,
+        "_replacement_manifest",
+        lambda staged_path, _ledger_path, stop_event=None: {
+            "staged_size": os.path.getsize(staged_path)
+        },
+    )
+
+    dbbuilder.stage_state_db_rebuild()
+
+    assert _read_marker_database(live_db) == "live"
+    assert _read_marker_database(dbbuilder.staged_state_db_path()) == "rebuilt"
+    assert observed["ledger_source"].endswith(".ledger-snapshot")
+    assert not os.path.exists(observed["ledger_source"])
+    assert os.path.exists(dbbuilder.staged_state_db_ready_path())
+
+
+def test_activate_staged_state_db_retains_previous_database(tmp_path, monkeypatch):
+    live_db = tmp_path / "state.db"
+    staged_db = tmp_path / "state.db.rebuild"
+    ready_path = tmp_path / "state.db.rebuild.ready"
+    _create_marker_database(live_db, "live")
+    _create_marker_database(staged_db, "rebuilt")
+    monkeypatch.setattr(config, "STATE_DATABASE", str(live_db))
+    manifest = {
+        "version": config.VERSION_STRING,
+        "migration_digest": "digest",
+        "staged_size": os.path.getsize(staged_db),
+    }
+    ready_path.write_text("{}\n")
+    monkeypatch.setattr(dbbuilder, "_read_ready_manifest", lambda _path: manifest)
+    monkeypatch.setattr(dbbuilder, "_manifest_is_current", lambda _manifest, _path, **_kwargs: True)
+    fsync_directory = MagicMock()
+    monkeypatch.setattr(dbbuilder, "_fsync_directory", fsync_directory)
+
+    assert dbbuilder.activate_staged_state_db() is True
+
+    assert _read_marker_database(live_db) == "rebuilt"
+    assert _read_marker_database(dbbuilder.previous_state_db_path()) == "live"
+    assert not ready_path.exists()
+    assert fsync_directory.call_count == 3
+
+
+@pytest.mark.parametrize("failing_barrier", [1, 2, 3])
+def test_activation_is_recoverable_at_every_directory_barrier(
+    tmp_path, monkeypatch, failing_barrier
+):
+    live_db = tmp_path / "state.db"
+    staged_db = tmp_path / "state.db.rebuild"
+    ready_path = tmp_path / "state.db.rebuild.ready"
+    _create_marker_database(live_db, "live")
+    _create_marker_database(staged_db, "rebuilt")
+    ready_path.write_text("{}\n")
+    monkeypatch.setattr(config, "STATE_DATABASE", str(live_db))
+    monkeypatch.setattr(dbbuilder, "_read_ready_manifest", lambda _path: {})
+    monkeypatch.setattr(dbbuilder, "_manifest_is_current", lambda _manifest, _path, **_kwargs: True)
+    barrier_calls = 0
+
+    def fail_selected_barrier(_path):
+        nonlocal barrier_calls
+        barrier_calls += 1
+        if barrier_calls == failing_barrier:
+            raise OSError("simulated power-loss boundary")
+
+    monkeypatch.setattr(dbbuilder, "_fsync_directory", fail_selected_barrier)
+    with pytest.raises(OSError, match="power-loss boundary"):
+        dbbuilder.activate_staged_state_db()
+
+    monkeypatch.setattr(dbbuilder, "_fsync_directory", lambda _path: None)
+    dbbuilder.activate_staged_state_db()
+
+    assert _read_marker_database(live_db) == "rebuilt"
+    assert _read_marker_database(dbbuilder.previous_state_db_path()) == "live"
+    assert not ready_path.exists()
+
+
+def test_missing_staged_database_requires_live_manifest_match(tmp_path, monkeypatch):
+    live_db = tmp_path / "state.db"
+    ready_path = tmp_path / "state.db.rebuild.ready"
+    _create_marker_database(live_db, "rebuilt")
+    ready_path.write_text("{}\n")
+    monkeypatch.setattr(config, "STATE_DATABASE", str(live_db))
+    monkeypatch.setattr(dbbuilder, "_read_ready_manifest", lambda _path: {})
+    monkeypatch.setattr(
+        dbbuilder, "_manifest_is_current", lambda _manifest, _path, **_kwargs: False
+    )
+
+    with pytest.raises(exceptions.DatabaseError, match="does not match its manifest"):
+        dbbuilder.activate_staged_state_db()
+
+    assert ready_path.exists()
+    assert _read_marker_database(live_db) == "rebuilt"
+
+
+def test_incomplete_staged_state_db_is_never_activated(tmp_path, monkeypatch):
+    live_db = tmp_path / "state.db"
+    staged_db = tmp_path / "state.db.rebuild"
+    _create_marker_database(live_db, "live")
+    _create_marker_database(staged_db, "partial")
+    ledger_snapshot = tmp_path / "state.db.rebuild.ledger-snapshot"
+    _create_marker_database(ledger_snapshot, "partial-ledger")
+    (tmp_path / "state.db.rebuild-journal").write_text("journal")
+    (tmp_path / "state.db.rebuild.ready.tmp").write_text("partial marker")
+    monkeypatch.setattr(config, "STATE_DATABASE", str(live_db))
+
+    assert dbbuilder.activate_staged_state_db() is False
+
+    assert _read_marker_database(live_db) == "live"
+    assert not staged_db.exists()
+    assert not ledger_snapshot.exists()
+    assert not (tmp_path / "state.db.rebuild-journal").exists()
+    assert not (tmp_path / "state.db.rebuild.ready.tmp").exists()
+
+
+def test_failed_space_preflight_retains_previous_recovery_copy(tmp_path, monkeypatch):
+    live_db = tmp_path / "state.db"
+    previous_db = tmp_path / "state.db.previous"
+    _create_marker_database(live_db, "live")
+    _create_marker_database(previous_db, "previous")
+    monkeypatch.setattr(config, "STATE_DATABASE", str(live_db))
+
+    def fail_preflight():
+        assert previous_db.exists()
+        raise exceptions.DatabaseError("insufficient space")
+
+    monkeypatch.setattr(dbbuilder, "_ensure_staged_rebuild_space", fail_preflight)
+
+    with pytest.raises(exceptions.DatabaseError, match="insufficient space"):
+        dbbuilder.stage_state_db_rebuild()
+    assert previous_db.exists()
+
+
+def test_rebuild_releases_previous_only_when_preflight_requires_it(tmp_path, monkeypatch):
+    live_db = tmp_path / "state.db"
+    previous_db = tmp_path / "state.db.previous"
+    _create_marker_database(live_db, "live")
+    _create_marker_database(previous_db, "previous")
+    monkeypatch.setattr(config, "STATE_DATABASE", str(live_db))
+    monkeypatch.setattr(dbbuilder, "_ensure_staged_rebuild_space", lambda: True)
+
+    def stop_before_backup(_path, stop_event=None):
+        assert not previous_db.exists()
+        raise exceptions.StateDBRebuildCancelled("stop after reclaim assertion")
+
+    monkeypatch.setattr(dbbuilder, "_backup_ledger_database", stop_before_backup)
+
+    with pytest.raises(exceptions.StateDBRebuildCancelled):
+        dbbuilder.stage_state_db_rebuild()
+
+
+def test_stale_manifest_never_replaces_live_database(tmp_path, monkeypatch):
+    live_db = tmp_path / "state.db"
+    staged_db = tmp_path / "state.db.rebuild"
+    ready_path = tmp_path / "state.db.rebuild.ready"
+    _create_marker_database(live_db, "live")
+    _create_marker_database(staged_db, "rebuilt")
+    ready_path.write_text("{}\n")
+    monkeypatch.setattr(config, "STATE_DATABASE", str(live_db))
+    monkeypatch.setattr(
+        dbbuilder,
+        "_read_ready_manifest",
+        lambda _path: {
+            "version": config.VERSION_STRING,
+            "migration_digest": "digest",
+            "staged_size": os.path.getsize(staged_db),
+        },
+    )
+    monkeypatch.setattr(
+        dbbuilder, "_manifest_is_current", lambda _manifest, _path, **_kwargs: False
+    )
+
+    assert dbbuilder.activate_staged_state_db() is False
+    assert _read_marker_database(live_db) == "live"
+    assert not staged_db.exists()
+    assert not ready_path.exists()
+
+
+def test_manifest_lineage_rejects_a_replaced_ledger_branch(tmp_path, monkeypatch):
+    ledger_path = tmp_path / "ledger.db"
+    ledger = apsw.Connection(str(ledger_path))
+    ledger.execute(
+        "CREATE TABLE messages (message_index INTEGER PRIMARY KEY, event_hash TEXT, "
+        "block_index INTEGER, event TEXT)"
+    )
+    ledger.executemany(
+        "INSERT INTO messages VALUES (?, ?, ?, ?)",
+        [
+            (1, "old-block", 100, "BLOCK_PARSED"),
+            (2, "old-tip", 100, "CREDIT"),
+        ],
+    )
+    ledger.close()
+    monkeypatch.setattr(config, "DATABASE", str(ledger_path))
+    manifest = {
+        "source_event_index": 2,
+        "source_event_hash": "old-tip",
+        "source_event_block_index": 100,
+        "source_block_event_index": 1,
+        "source_block_event_hash": "old-block",
+        "source_block_index": 100,
+    }
+
+    assert dbbuilder._manifest_matches_live_ledger(manifest) is True
+
+    ledger = apsw.Connection(str(ledger_path))
+    ledger.execute("UPDATE messages SET event_hash = 'new-block' WHERE message_index = 1")
+    ledger.execute("UPDATE messages SET event_hash = 'new-tip' WHERE message_index = 2")
+    ledger.close()
+
+    assert dbbuilder._manifest_matches_live_ledger(manifest) is False
+
+
+def test_manifest_rejects_a_different_builder_commit(monkeypatch):
+    manifest = {
+        "version": config.VERSION_STRING,
+        "builder_commit": "old-image",
+        "migration_digest": "digest",
+    }
+    monkeypatch.setattr(config, "CURRENT_COMMIT", "new-image")
+    monkeypatch.setattr(dbbuilder, "_migration_digest", lambda: "digest")
+    monkeypatch.setattr(dbbuilder, "_state_db_matches_manifest", lambda _path, _manifest: True)
+    monkeypatch.setattr(dbbuilder, "_manifest_matches_live_ledger", lambda _manifest: True)
+
+    assert dbbuilder._manifest_is_current(manifest, "state.db") is False
+
+
+def test_latest_ledger_block_manifest_query_avoids_temp_sort():
+    ledger_db = apsw.Connection(":memory:")
+    ledger_db.set_row_trace(database.rowtracer)
+    ledger_db.execute(
+        "CREATE TABLE messages (message_index INTEGER PRIMARY KEY, event_hash TEXT, "
+        "block_index INTEGER, event TEXT)"
+    )
+    ledger_db.execute("CREATE INDEX messages_event_idx ON messages (event)")
+    plan = ledger_db.execute(
+        f"EXPLAIN QUERY PLAN {dbbuilder.LAST_LEDGER_BLOCK_EVENT_SQL}"
+    ).fetchall()
+    ledger_db.close()
+
+    assert not any("USE TEMP B-TREE" in row["detail"] for row in plan)
+
+
+def test_ledger_snapshot_backup_is_cancellable(tmp_path, monkeypatch):
+    ledger_path = tmp_path / "ledger.db"
+    ledger = apsw.Connection(str(ledger_path))
+    ledger.execute("CREATE TABLE data (value TEXT)")
+    ledger.executemany("INSERT INTO data VALUES (?)", [("x" * 1024,)] * 1_000)
+    ledger.close()
+    monkeypatch.setattr(config, "DATABASE", str(ledger_path))
+    stop_event = threading.Event()
+    stop_event.set()
+
+    with pytest.raises(exceptions.StateDBRebuildCancelled):
+        dbbuilder._backup_ledger_database(
+            str(tmp_path / "snapshot.db"),
+            stop_event=stop_event,
+        )
+
+
+def test_staged_rebuild_from_ledger_is_complete_and_activatable(tmp_path, monkeypatch, ledger_db):
+    live_db = tmp_path / "state.db"
+    _create_marker_database(live_db, "live")
+    monkeypatch.setattr(config, "STATE_DATABASE", str(live_db))
+
+    dbbuilder.stage_state_db_rebuild()
+    staged_db = database.get_db_connection(
+        dbbuilder.staged_state_db_path(), read_only=True, check_wal=False
+    )
+    try:
+        staged_events = staged_db.execute("SELECT COUNT(*) AS count FROM parsed_events").fetchone()[
+            "count"
+        ]
+        ledger_events = ledger_db.execute("SELECT COUNT(*) AS count FROM messages").fetchone()[
+            "count"
+        ]
+        assert staged_events == ledger_events
+        assert table_exists(staged_db, "assets_info")
+        assert table_exists(staged_db, "balances")
+        assert view_exists(staged_db, "orders_info")
+    finally:
+        staged_db.close()
+
+    assert dbbuilder.activate_staged_state_db() is True
+    activated_db = database.get_db_connection(str(live_db), read_only=True, check_wal=False)
+    try:
+        assert table_exists(activated_db, "parsed_events")
+        assert activated_db.execute("PRAGMA quick_check(1)").fetchone()["quick_check"] == "ok"
+    finally:
+        activated_db.close()
+
+
+def test_fallback_rollback_rebuilds_address_events_to_ledger_tip(state_db, ledger_db):
+    expected_count = state_db.execute("SELECT COUNT(*) AS count FROM address_events").fetchone()[
+        "count"
+    ]
+    first_address_block = state_db.execute(
+        "SELECT MIN(block_index) AS block_index FROM address_events"
+    ).fetchone()["block_index"]
+    assert expected_count > 0
+    assert first_address_block is not None
+
+    dbbuilder.rollback_state_db(state_db, block_index=first_address_block)
+
+    assert (
+        state_db.execute("SELECT COUNT(*) AS count FROM address_events").fetchone()["count"]
+        == expected_count
+    )
+    assert (
+        state_db.execute("SELECT COUNT(*) AS count FROM parsed_events").fetchone()["count"]
+        == ledger_db.execute("SELECT COUNT(*) AS count FROM messages").fetchone()["count"]
+    )
 
 
 def test_migration_0001_rollback(state_db, ledger_db):

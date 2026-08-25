@@ -96,6 +96,7 @@ class CounterpartyServer(threading.Thread):
         self.asset_conservation_checker = None
         self.db = None
         self.api_stop_event = None
+        self.state_db_rebuild_ready_event = None
         self.backend_height_thread = None
         self.log_stream = log_stream
         self.periodic_profiler = None
@@ -199,8 +200,11 @@ class CounterpartyServer(threading.Thread):
 
         # API Server v2
         self.api_stop_event = multiprocessing.Event()
+        self.state_db_rebuild_ready_event = multiprocessing.Event()
         self.apiserver_v2 = api_v2.APIServer(
-            self.api_stop_event, self.backend_height_thread.shared_backend_height
+            self.api_stop_event,
+            self.backend_height_thread.shared_backend_height,
+            self.state_db_rebuild_ready_event,
         )
         self.apiserver_v2.start(self.args, self.log_stream)
         while not self.apiserver_v2.is_ready():
@@ -209,6 +213,7 @@ class CounterpartyServer(threading.Thread):
                 logger.error("API server stopped unexpectedly.")
                 return
             time.sleep(0.1)
+        self.apiserver_v2.start_rebuild_monitor(self.args, self.log_stream)
 
         if self.args.api_only:
             # Loop must check the event so stop() actually exits the loop;

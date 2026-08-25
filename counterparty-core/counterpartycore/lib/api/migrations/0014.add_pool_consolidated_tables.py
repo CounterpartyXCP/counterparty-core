@@ -123,7 +123,7 @@ def apply(db):
         > 0
     )
     if not attached:
-        db.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
+        db.execute("ATTACH DATABASE ? AS ledger_db", (config.state_db_ledger_source_database(),))
 
     # Check which pool tables exist in ledger DB (they won't pre-activation)
     ledger_tables = {

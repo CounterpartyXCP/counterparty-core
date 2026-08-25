@@ -1301,6 +1301,84 @@ def test_apply_outstanding_migration_logs_phase_timings(temp_db_file):
         os.rmdir(migration_dir)
 
 
+def test_apply_outstanding_migration_installs_cancellation_progress_handler(temp_db_file):
+    migration_dir = tempfile.mkdtemp()
+    mock_backend = MagicMock()
+    mock_backend.to_apply.return_value = []
+    stop_event = MagicMock()
+    stop_event.is_set.return_value = True
+
+    try:
+        with patch("counterpartycore.lib.utils.database.get_backend", return_value=mock_backend):
+            with patch("counterpartycore.lib.utils.database.read_migrations", return_value=[]):
+                apply_outstanding_migration(
+                    temp_db_file,
+                    migration_dir,
+                    stop_event=stop_event,
+                )
+
+        progress_call = mock_backend.connection.set_progress_handler.call_args_list[0]
+        assert progress_call.args[0]() == 1
+        assert progress_call.args[1] == 10_000
+        assert mock_backend.connection.set_progress_handler.call_args_list[-1].args == (None, 0)
+        mock_backend.connection.close.assert_called_once_with()
+    finally:
+        os.rmdir(migration_dir)
+
+
+def test_apply_outstanding_migration_makes_vacuum_cancellable(temp_db_file):
+    migration_dir = tempfile.mkdtemp()
+    migration = MagicMock(id="compact-hash-migration")
+    mock_backend = MagicMock()
+    mock_backend.to_apply.return_value = [migration]
+    vacuum_connection = MagicMock()
+    stop_event = MagicMock()
+    stop_event.is_set.return_value = True
+
+    try:
+        with patch.object(database, "_VACUUM_AFTER_MIGRATIONS", ["compact-hash"]):
+            with patch(
+                "counterpartycore.lib.utils.database.get_backend", return_value=mock_backend
+            ):
+                with patch(
+                    "counterpartycore.lib.utils.database.read_migrations",
+                    return_value=[migration],
+                ):
+                    with patch(
+                        "counterpartycore.lib.utils.database.apsw.Connection",
+                        return_value=vacuum_connection,
+                    ):
+                        apply_outstanding_migration(
+                            temp_db_file,
+                            migration_dir,
+                            stop_event=stop_event,
+                        )
+
+        progress_call = vacuum_connection.set_progress_handler.call_args_list[0]
+        assert progress_call.args[0]() == 1
+        assert progress_call.args[1] == 10_000
+        assert vacuum_connection.set_progress_handler.call_args_list[-1].args == (None, 0)
+        vacuum_connection.close.assert_called_once_with()
+    finally:
+        os.rmdir(migration_dir)
+
+
+def test_apply_outstanding_migration_closes_backend_when_discovery_fails(temp_db_file):
+    migration_dir = tempfile.mkdtemp()
+    mock_backend = MagicMock()
+    mock_backend.to_apply.side_effect = RuntimeError("discovery failed")
+
+    try:
+        with patch("counterpartycore.lib.utils.database.get_backend", return_value=mock_backend):
+            with patch("counterpartycore.lib.utils.database.read_migrations", return_value=[]):
+                with pytest.raises(RuntimeError, match="discovery failed"):
+                    apply_outstanding_migration(temp_db_file, migration_dir)
+
+        mock_backend.connection.close.assert_called_once_with()
+    finally:
+        os.rmdir(migration_dir)
+
+
 # =============================================================================
 # Tests for rollback_all_migrations function (lines 370-373)
 # =============================================================================
