@@ -128,10 +128,6 @@ class SerializationError(Exception):
     pass
 
 
-class NoEventToParse(Exception):
-    pass
-
-
 class InvalidUTXOError(Exception):
     pass
 
