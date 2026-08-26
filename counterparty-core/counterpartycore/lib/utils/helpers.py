@@ -6,6 +6,7 @@ import mimetypes
 import os
 import string
 import threading
+import time
 from urllib.parse import urlparse
 
 import pygit2
@@ -151,6 +152,54 @@ def is_process_alive(pid):
     except OSError:
         return False
     return True
+
+
+class ShutdownBudget:
+    """One wall-clock budget shared by every step of a shutdown sequence.
+
+    A shutdown can be initiated from more than one place (a watchdog thread
+    noticing the parent is going away, and the `finally` block of the code it
+    interrupts). If each of them starts its own budget, the budgets run back to
+    back and their sum overshoots whatever deadline the caller was trying to
+    respect. Arming is therefore idempotent: the first caller fixes the deadline
+    and everyone after it shares what is left.
+    """
+
+    def __init__(self, total):
+        self.total = total
+        self._deadline = None
+        self._lock = threading.Lock()
+
+    def arm(self):
+        """Return the aggregate deadline, starting the clock on the first call."""
+        with self._lock:
+            if self._deadline is None:
+                self._deadline = time.monotonic() + self.total
+            return self._deadline
+
+    def sub_deadline(self, seconds):
+        """A per-component deadline, never later than the aggregate one."""
+        return min(self.arm(), time.monotonic() + seconds)
+
+
+def split_deadline(deadline, fraction):
+    """Carve `fraction` of the budget still left before `deadline`.
+
+    Serial cleanup steps handed the same deadline let a slow first step starve
+    the ones behind it: it returns exactly at the deadline and every later step
+    computes a zero timeout, turning a graceful stop into an immediate kill.
+    Splitting the remaining budget keeps a guaranteed share for what has yet to
+    run.
+    """
+    now = time.monotonic()
+    return now + max(0.0, deadline - now) * fraction
+
+
+def deadline_timeout(deadline, maximum):
+    """Clamp `deadline` into a join()/wait() timeout of at most `maximum` seconds."""
+    if deadline is None:
+        return maximum
+    return max(0.0, min(maximum, deadline - time.monotonic()))
 
 
 def dhash(text):

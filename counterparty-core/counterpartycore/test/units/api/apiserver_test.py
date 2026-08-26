@@ -1,5 +1,8 @@
 import json
-from unittest.mock import Mock
+import os
+import threading
+import time
+from unittest.mock import Mock, call, patch
 
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
@@ -9,6 +12,86 @@ from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.lib.parser import blocks
 from counterpartycore.lib.utils import hashcodec, helpers
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
+
+
+def test_parent_process_checker_stops_wsgi_inside_the_shared_budget():
+    """The checker is the shutdown trigger on the usual path, so it must arm and
+    spend the same budget the `finally` block later draws from -- not its own."""
+    budget = helpers.ShutdownBudget(total=8)
+    stop_event = threading.Event()
+    wsgi_server = Mock()
+    stop_event.set()
+
+    checker = apiserver.ParentProcessChecker(wsgi_server, stop_event, os.getpid(), budget)
+    checker.run()
+
+    deadline = wsgi_server.stop.call_args.kwargs["deadline"]
+    assert deadline is not None
+    assert deadline <= budget.arm()
+    # The budget was armed by the checker, not left for the finally block to start over.
+    assert budget.arm() - time.monotonic() < 8
+
+
+def test_parent_process_checker_wakes_on_stop_event_without_waiting_out_the_poll():
+    """`stop_event` is set before the parent signals; sleeping through the poll
+    interval instead of waiting on it spends a second of the ten-second budget
+    doing nothing."""
+    budget = helpers.ShutdownBudget(total=8)
+    stop_event = threading.Event()
+    wsgi_server = Mock()
+
+    checker = apiserver.ParentProcessChecker(wsgi_server, stop_event, os.getpid(), budget)
+    checker.start()
+    try:
+        started_at = time.monotonic()
+        stop_event.set()
+        checker.join(timeout=5)
+        elapsed = time.monotonic() - started_at
+    finally:
+        stop_event.set()
+
+    assert not checker.is_alive()
+    assert elapsed < 0.5
+    wsgi_server.stop.assert_called_once()
+
+
+def test_api_server_stop_waits_for_graceful_exit():
+    server = apiserver.APIServer(Mock(), Mock())
+    server.process = Mock()
+    server.process.pid = 123
+    server.process.is_alive.side_effect = [True, False, False]
+
+    with patch.object(apiserver.os, "kill") as kill:
+        server.stop()
+
+    kill.assert_called_once_with(123, apiserver.signal.SIGTERM)
+    server.process.join.assert_called_once_with(timeout=10)
+    server.process.kill.assert_not_called()
+
+
+def test_api_server_stop_has_bounded_forced_kill():
+    server = apiserver.APIServer(Mock(), Mock())
+    server.process = Mock()
+    server.process.pid = 123
+    server.process.is_alive.side_effect = [True, True, False]
+
+    with patch.object(apiserver.os, "kill"):
+        server.stop()
+
+    assert server.process.join.call_args_list == [call(timeout=10), call(timeout=5)]
+    server.process.kill.assert_called_once_with()
+
+
+def test_api_server_stop_reports_process_that_survives_kill():
+    server = apiserver.APIServer(Mock(), Mock())
+    server.process = Mock()
+    server.process.pid = 123
+    server.process.is_alive.side_effect = [True, True, True]
+
+    with patch.object(apiserver.os, "kill"), patch.object(apiserver.logger, "critical") as critical:
+        server.stop()
+
+    critical.assert_called_once()
 
 
 def test_apiserver_root(apiv2_client, current_block_index):

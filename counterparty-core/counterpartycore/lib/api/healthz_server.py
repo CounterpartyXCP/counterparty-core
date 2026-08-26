@@ -35,7 +35,7 @@ from typing import Optional
 from counterpartycore.lib import config
 from counterpartycore.lib.api import apiwatcher, dbstatus
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.utils import database
+from counterpartycore.lib.utils import database, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -234,10 +234,10 @@ class HealthSampler(threading.Thread):
             except Exception as e:  # pylint: disable=broad-except
                 logger.debug("healthz: error closing state DB connection: %s", e)
 
-    def stop(self):
+    def stop(self, deadline=None):
         self.stop_event.set()
         if self.is_alive():
-            self.join(timeout=5)
+            self.join(timeout=helpers.deadline_timeout(deadline, 5))
 
     def _tick(self):
         now = time.monotonic()
@@ -610,7 +610,9 @@ class HealthCheckServer:
         self.httpd = None
         self._serve_thread = None
 
-    def stop(self):
+    def stop(self, deadline=None):
+        if deadline is None:
+            deadline = time.monotonic() + 5
         if self.httpd is not None:
             try:
                 # shutdown() must be called from a different thread than serve_forever().
@@ -619,7 +621,11 @@ class HealthCheckServer:
             except Exception as e:  # pylint: disable=broad-except
                 logger.debug("Error stopping health check server: %s", e)
         if self.sampler is not None:
-            self.sampler.stop()
+            # Half the budget: the serve thread still has to be joined after this,
+            # and a sampler stuck on its own join would otherwise leave it none.
+            self.sampler.stop(deadline=helpers.split_deadline(deadline, 0.5))
         if self._serve_thread is not None:
-            self._serve_thread.join(timeout=5)
+            self._serve_thread.join(timeout=max(0, deadline - time.monotonic()))
+            if self._serve_thread.is_alive():
+                logger.warning("Health check server thread did not stop before its deadline.")
         logger.trace("Health check server stopped.")
