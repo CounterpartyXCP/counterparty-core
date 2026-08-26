@@ -20,6 +20,8 @@ The refresh is an optimization, not a correctness requirement: it pays the cost 
 
 API consumers of the address history endpoints should check the **Address history endpoints** section below before upgrading: `/v2/addresses/<address>/sends` and `/sends/<asset>` no longer expose `sort`, `offset` is capped at 10,000 on those routes and on `/credits` and `/debits`, and `result_count` is now `null` on cursor pages rather than recomputed for each one. `openapi.json` has been updated to match.
 
+Clients that compose issuances or fairminters should also expect a new `409` response when the parsed mempool already contains a conflicting asset operation — see **Conflicting pending asset compositions** below.
+
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
 
 # Changelog
@@ -82,6 +84,16 @@ Three request shapes that defeated the bound are now rejected or narrowed on the
 - **Repeated `send_type` members are deduplicated** and unknown ones rejected. `send_type=send,send,send,…` previously amplified into one union branch per repetition.
 
 The exact result count is computed on the initial page and on offset pages only; on cursor pages `result_count` is `null`. Counting is precisely what the bound above cannot help with — it has to touch every matching row — so later cursor pages stay bounded. The count itself no longer reuses the ordered union either: it lets SQLite combine the address indexes directly, which is substantially cheaper for busy addresses.
+
+## Conflicting pending asset compositions
+
+Issuance and fairminter composition only ever validated against confirmed state, so two transactions created seconds apart could both compose successfully and only one of them could ever be valid — the second was broadcast, paid its fee and was rejected by the parser.
+
+Composing an issuance or a fairminter now returns **`409`** when Counterparty's parsed mempool already holds a conflicting asset creation, ownership transfer, lock or reset, or an active fairminter for the same asset. Compatible valid reissuances stay composable, unless their cumulative pending quantity could overflow the maximum supply.
+
+The check runs twice, because the mempool moves while a composition is being assembled: once up front, and again after the selected UTXOs have been atomically reserved (or, for message-only composition, before the data is returned). Confirmed state is re-read on that second pass as well. A composition that fails it releases its UTXO reservation rather than leaving the inputs locked, and any message bytes refreshed by the second pass are the ones used for the returned transaction.
+
+`validate=false` remains the explicit advanced-user override and skips both passes.
 
 ## State DB / Ledger DB consistency fixes
 

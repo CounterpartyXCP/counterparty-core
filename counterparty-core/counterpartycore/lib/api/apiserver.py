@@ -473,6 +473,8 @@ def handle_route(**kwargs):
             set_sentry_api_response_context(503, error)
             logger.warning("Backend unavailable while serving API request: %s", error)
             return return_result(503, error=error, start_time=start_time, query_args=query_args)
+        except exceptions.ComposeConflictError as e:
+            return return_result(409, error=str(e), start_time=start_time, query_args=query_args)
         except (
             exceptions.JSONRPCInvalidRequest,
             flask.wrappers.BadRequest,
