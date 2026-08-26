@@ -41,6 +41,10 @@ def watcher_has_failed():
 # event and stop as soon as the LIMIT is satisfied. The ORDER BY and LIMIT are
 # unchanged, so the ordering semantics are identical; only the access path differs.
 #
+# `LAST_PARSED_EVENT_SQL` carries no `event` filter, so that plan was never open to
+# it; it is pinned to the same index anyway, to keep one access path across all
+# three queries and to fail loudly if the index is ever dropped.
+#
 # `INDEXED BY` is a hard requirement rather than a hint: `parsed_events_event_index_idx`
 # is created by migration 0002 and dropping or renaming it makes these queries fail
 # outright instead of silently regressing to the slow plan.
@@ -52,19 +56,35 @@ LAST_BLOCK_PARSED_SQL = """
     LIMIT 1
 """
 
-# The last block the State DB parsed, whole row: what `check_reorg` compares
-# against the Ledger DB. It deliberately does *not* skip to the block before it.
-# Skipping one (the historical `LIMIT 1 OFFSET 1`) makes the shallowest and by far
-# the most common reorganization -- the tip block replaced by another at the same
-# height -- invisible: the only parsed event whose hash changed is the one the
-# comparison steps over, and the next block on the new branch then appends on top
-# of the orphaned one. Comparing the newest row cannot yield a false positive:
-# the State DB only ever copies events the Ledger DB has committed, so the hash
-# at that `message_index` differs only if the ledger really did roll back.
-LAST_BLOCK_PARSED_EVENT_SQL = """
+# The last event the State DB parsed, whole row: what `check_reorg` compares
+# against the Ledger DB. Neither restriction the historical query carried is safe
+# here, and each one hid a different reorganization:
+#
+#   - `LIMIT 1 OFFSET 1` skipped to the block *before* the last one parsed, which
+#     makes the shallowest and by far the most common reorganization -- the tip
+#     block replaced by another at the same height -- invisible: the only parsed
+#     event whose hash changed is the one the comparison steps over, and the next
+#     block on the new branch then appends on top of the orphaned one.
+#
+#   - `WHERE event = 'BLOCK_PARSED'` compared the last *block* rather than the last
+#     *event*. The watcher advances one event at a time (`get_next_event_to_parse`
+#     orders by `message_index`, not by block), so between two blocks it sits with
+#     part of a block copied and that block's BLOCK_PARSED not yet written. A
+#     rollback landing in that window leaves the last BLOCK_PARSED -- the previous
+#     block's, untouched by the reorganization -- matching, so the check passes
+#     while the State DB holds orphaned events of the block it was in the middle
+#     of. Nothing ever repairs that: every BLOCK_PARSED compared afterwards comes
+#     from the new branch and matches.
+#
+# Comparing the newest row cannot yield a false positive: the State DB only ever
+# copies events the Ledger DB has committed, whatever their type, so the hash at
+# that `message_index` differs only if the ledger really did roll back.
+#
+# `search_matching_event` keeps the `BLOCK_PARSED` filter -- it looks for the
+# rollback *target*, which is a block index.
+LAST_PARSED_EVENT_SQL = """
     SELECT *
     FROM parsed_events INDEXED BY parsed_events_event_index_idx
-    WHERE event = 'BLOCK_PARSED'
     ORDER BY event_index DESC
     LIMIT 1
 """
@@ -852,10 +872,14 @@ def search_matching_event(ledger_db, state_db):
 def check_reorg(ledger_db, state_db):
     """Roll the State DB back if the Ledger DB has changed branch under it.
 
-    Returns True when a rollback was performed, so callers holding an event
-    selected against the old branch know to discard it.
+    Returns True when a branch change was detected and a rollback requested, so
+    callers holding an event selected against the old branch know to discard it.
+    `dbbuilder.rollback_state_db` may find nothing left to undo (the State DB
+    already sits below the target); re-selecting the event is harmless there, so
+    the return value stays "the ledger moved under us" rather than "rows were
+    deleted".
     """
-    last_event_parsed = fetch_one(state_db, LAST_BLOCK_PARSED_EVENT_SQL)
+    last_event_parsed = fetch_one(state_db, LAST_PARSED_EVENT_SQL)
     if last_event_parsed is None:
         return False
     ledger_event = fetch_one(

@@ -114,15 +114,23 @@ def test_api_watcher_handles_shutdown_interrupt(monkeypatch):
 # regressing to the plan that cost 132s on a cold mainnet State DB.
 BLOCK_PARSED_QUERIES = [
     ("LAST_BLOCK_PARSED_SQL", apiwatcher.LAST_BLOCK_PARSED_SQL),
-    ("LAST_BLOCK_PARSED_EVENT_SQL", apiwatcher.LAST_BLOCK_PARSED_EVENT_SQL),
     ("BLOCKS_PARSED_DESC_SQL", apiwatcher.BLOCKS_PARSED_DESC_SQL),
+]
+
+# `LAST_PARSED_EVENT_SQL` carries no `event` filter, so the planner reaches for the
+# event-index index on its own and the 132s plan was never available to it. It is
+# pinned all the same -- one access path across all three queries, and a loud
+# failure if the index is ever dropped -- but it cannot take the premise the test
+# below guards, which is that the *unhinted* query picks the sort.
+EVENT_INDEX_QUERIES = BLOCK_PARSED_QUERIES + [
+    ("LAST_PARSED_EVENT_SQL", apiwatcher.LAST_PARSED_EVENT_SQL),
 ]
 
 
 @pytest.mark.parametrize(
-    ("name", "query"), BLOCK_PARSED_QUERIES, ids=[q[0] for q in BLOCK_PARSED_QUERIES]
+    ("name", "query"), EVENT_INDEX_QUERIES, ids=[q[0] for q in EVENT_INDEX_QUERIES]
 )
-def test_block_parsed_queries_scan_the_event_index_without_sorting(state_db, name, query):
+def test_event_index_queries_scan_without_sorting(state_db, name, query):
     plan = state_db.execute("EXPLAIN QUERY PLAN " + query).fetchall()  # noqa: S608  # nosec B608
     details = [row["detail"] for row in plan]
 
@@ -135,9 +143,9 @@ def test_block_parsed_queries_scan_the_event_index_without_sorting(state_db, nam
 
 
 @pytest.mark.parametrize(
-    ("name", "query"), BLOCK_PARSED_QUERIES, ids=[q[0] for q in BLOCK_PARSED_QUERIES]
+    ("name", "query"), EVENT_INDEX_QUERIES, ids=[q[0] for q in EVENT_INDEX_QUERIES]
 )
-def test_block_parsed_queries_match_the_unhinted_plan(state_db, name, query):
+def test_event_index_queries_match_the_unhinted_plan(state_db, name, query):
     """`INDEXED BY` must change only the access path, never the result."""
     unhinted = query.replace(" INDEXED BY parsed_events_event_index_idx", "")
     assert unhinted != query, f"{name} lost its INDEXED BY clause"
@@ -534,21 +542,12 @@ def _connect(schema, rows_sql, rows):
     return db
 
 
-@pytest.fixture
-def reorg_dbs():
-    """A State DB whose `parsed_events` mirror a three-block Ledger DB.
-
-    Blocks 1, 2 and 3 were parsed, each ending on a BLOCK_PARSED event, and the
-    Ledger DB still holds exactly those events. Tests rewrite the ledger's
-    hashes to stage the branch change they are about.
-    """
-    blocks = [(10, "BLOCK_PARSED", "hash-1", 1), (20, "BLOCK_PARSED", "hash-2", 2)]
-    blocks.append((30, "BLOCK_PARSED", "hash-3", 3))
+def _reorg_dbs(parsed_events, messages):
     state_db = _connect(
         "CREATE TABLE parsed_events "
         "(event_index INTEGER, event TEXT, event_hash TEXT, block_index INTEGER)",
         "INSERT INTO parsed_events VALUES (?, ?, ?, ?)",
-        blocks,
+        parsed_events,
     )
     state_db.execute(
         "CREATE UNIQUE INDEX parsed_events_event_index_idx ON parsed_events (event_index)"
@@ -557,13 +556,55 @@ def reorg_dbs():
         "CREATE TABLE messages "
         "(message_index INTEGER PRIMARY KEY, event TEXT, event_hash TEXT, block_index INTEGER)",
         "INSERT INTO messages VALUES (?, ?, ?, ?)",
-        blocks,
+        messages,
     )
     try:
         yield ledger_db, state_db
     finally:
         state_db.close()
         ledger_db.close()
+
+
+# Blocks 1, 2 and 3, each parsed through to its BLOCK_PARSED event.
+WHOLE_BLOCKS = [
+    (10, "BLOCK_PARSED", "hash-1", 1),
+    (20, "BLOCK_PARSED", "hash-2", 2),
+    (30, "BLOCK_PARSED", "hash-3", 3),
+]
+
+# The State DB stopped *between* two events of block 3: its CREDIT is copied, the
+# BLOCK_PARSED that closes the block is not. `get_next_event_to_parse` orders by
+# `message_index` and not by block, so this is where the watcher sits for as long
+# as it takes to copy a block -- and for the whole of a catch-up.
+MID_BLOCK_EVENTS = [
+    (10, "BLOCK_PARSED", "hash-1", 1),
+    (20, "BLOCK_PARSED", "hash-2", 2),
+    (25, "CREDIT", "credit-3", 3),
+]
+MID_BLOCK_MESSAGES = MID_BLOCK_EVENTS + [(30, "BLOCK_PARSED", "hash-3", 3)]
+
+
+@pytest.fixture
+def reorg_dbs():
+    """A State DB whose `parsed_events` mirror a three-block Ledger DB.
+
+    Blocks 1, 2 and 3 were parsed, each ending on a BLOCK_PARSED event, and the
+    Ledger DB still holds exactly those events. Tests rewrite the ledger's
+    hashes to stage the branch change they are about.
+    """
+    yield from _reorg_dbs(WHOLE_BLOCKS, WHOLE_BLOCKS)
+
+
+@pytest.fixture
+def mid_block_dbs():
+    """The same pair, caught with block 3 only half copied into the State DB."""
+    yield from _reorg_dbs(MID_BLOCK_EVENTS, MID_BLOCK_MESSAGES)
+
+
+@pytest.fixture
+def partial_block_dbs():
+    """A State DB that never finished a block, over a ledger that replaced it."""
+    yield from _reorg_dbs([(5, "CREDIT", "credit-1", 1)], [(5, "CREDIT", "other-credit", 1)])
 
 
 @pytest.fixture
@@ -609,6 +650,60 @@ def test_check_reorg_rolls_back_to_the_first_block_that_still_matches(reorg_dbs,
 
     assert apiwatcher.check_reorg(ledger_db, state_db) is True
     assert rollbacks == [2]
+
+
+def test_check_reorg_leaves_a_matching_ledger_alone_mid_block(mid_block_dbs, rollbacks):
+    """Sitting in the middle of a block is the watcher's normal state between two
+    events, not a reorganization: the copied part of the block still matches."""
+    ledger_db, state_db = mid_block_dbs
+
+    assert apiwatcher.check_reorg(ledger_db, state_db) is False
+    assert rollbacks == []
+
+
+def test_check_reorg_detects_a_reorg_inside_the_block_being_parsed(mid_block_dbs, rollbacks):
+    """The blind spot a BLOCK_PARSED-only comparison leaves: the State DB holds
+    part of block 3 when the ledger replaces that block. The last BLOCK_PARSED it
+    parsed is block 2's, which the reorganization never touched, so comparing
+    blocks reports nothing while the copied events of block 3 are orphaned."""
+    ledger_db, state_db = mid_block_dbs
+    ledger_db.execute("UPDATE messages SET event_hash = 'other-credit' WHERE message_index = 25")
+    ledger_db.execute("UPDATE messages SET event_hash = 'other-3' WHERE message_index = 30")
+
+    # The premise: the newest *block* the State DB parsed still matches.
+    last_block = apiwatcher.fetch_one(state_db, apiwatcher.LAST_BLOCK_PARSED_SQL)
+    in_ledger = apiwatcher.fetch_one(
+        ledger_db,
+        "SELECT * FROM messages WHERE block_index = ? AND event = 'BLOCK_PARSED'",
+        (last_block["block_index"],),
+    )
+    assert in_ledger is None or in_ledger["event_hash"] == "hash-2"
+
+    assert apiwatcher.check_reorg(ledger_db, state_db) is True
+    assert rollbacks == [3]
+
+
+def test_check_reorg_detects_a_reorg_that_truncates_the_block_being_parsed(
+    mid_block_dbs, rollbacks
+):
+    """A rollback that has not yet re-added the replacement block: the event the
+    State DB last copied simply no longer exists in the ledger."""
+    ledger_db, state_db = mid_block_dbs
+    ledger_db.execute("DELETE FROM messages WHERE block_index = 3")
+
+    assert apiwatcher.check_reorg(ledger_db, state_db) is True
+    assert rollbacks == [3]
+
+
+def test_check_reorg_rolls_back_to_the_genesis_when_only_a_partial_block_was_parsed(
+    partial_block_dbs, rollbacks
+):
+    """`search_matching_event` walks BLOCK_PARSED rows, and there are none: the
+    State DB never finished a block, so there is no block to keep."""
+    ledger_db, state_db = partial_block_dbs
+
+    assert apiwatcher.check_reorg(ledger_db, state_db) is True
+    assert rollbacks == [0]
 
 
 def test_check_reorg_rolls_back_to_the_genesis_when_nothing_matches(reorg_dbs, rollbacks):
