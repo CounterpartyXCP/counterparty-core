@@ -35,7 +35,7 @@ from typing import Optional
 from counterpartycore.lib import config
 from counterpartycore.lib.api import apiwatcher, dbstatus
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.utils import database
+from counterpartycore.lib.utils import database, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -237,8 +237,7 @@ class HealthSampler(threading.Thread):
     def stop(self, deadline=None):
         self.stop_event.set()
         if self.is_alive():
-            timeout = 5 if deadline is None else max(0, min(5, deadline - time.monotonic()))
-            self.join(timeout=timeout)
+            self.join(timeout=helpers.deadline_timeout(deadline, 5))
 
     def _tick(self):
         now = time.monotonic()
@@ -622,7 +621,11 @@ class HealthCheckServer:
             except Exception as e:  # pylint: disable=broad-except
                 logger.debug("Error stopping health check server: %s", e)
         if self.sampler is not None:
-            self.sampler.stop(deadline=deadline)
+            # Half the budget: the serve thread still has to be joined after this,
+            # and a sampler stuck on its own join would otherwise leave it none.
+            self.sampler.stop(deadline=helpers.split_deadline(deadline, 0.5))
         if self._serve_thread is not None:
             self._serve_thread.join(timeout=max(0, deadline - time.monotonic()))
+            if self._serve_thread.is_alive():
+                logger.warning("Health check server thread did not stop before its deadline.")
         logger.trace("Health check server stopped.")

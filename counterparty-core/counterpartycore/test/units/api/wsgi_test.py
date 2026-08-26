@@ -1,4 +1,5 @@
 import errno
+import os
 import time
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -292,6 +293,63 @@ def test_gunicorn_application_run_and_stop(monkeypatch):
     app.stop()
     assert app.arbiter.killed is True
     assert server_ready_value.value == 2
+
+
+def test_node_status_checker_is_a_daemon_thread(monkeypatch):
+    """Same reason as APIWatcher: without this the bounded join below bounds
+    nothing, because a surviving non-daemon thread blocks interpreter shutdown."""
+    monkeypatch.setattr(wsgi.database, "get_db_connection", lambda _path: MagicMock())
+
+    thread = wsgi.NodeStatusCheckerThread(SimpleNamespace(value=0))
+
+    assert thread.daemon is True
+
+
+def test_gunicorn_stop_reserves_budget_for_the_workers(monkeypatch):
+    """A checker that ignores its interrupt must not leave the workers a
+    zero-second grace period, which would SIGKILL every in-flight request."""
+    app = wsgi.GunicornApplication.__new__(wsgi.GunicornApplication)
+    app.current_state_thread = MagicMock()
+    app.arbiter = MagicMock()
+    app.master_pid = os.getpid()
+    app.server_ready_value = SimpleNamespace(value=0)
+
+    deadline = time.monotonic() + 9
+    app.stop(deadline=deadline)
+
+    checker_deadline = app.current_state_thread.stop.call_args.kwargs["deadline"]
+    assert checker_deadline < deadline
+    # The workers keep the rest of the budget, not whatever the checker left over.
+    assert app.arbiter.kill_all_workers.call_args.kwargs["deadline"] == deadline
+    assert deadline - checker_deadline > 5
+
+
+def test_gunicorn_stop_without_deadline_keeps_the_default(monkeypatch):
+    app = wsgi.GunicornApplication.__new__(wsgi.GunicornApplication)
+    app.current_state_thread = MagicMock()
+    app.arbiter = MagicMock()
+    app.master_pid = os.getpid()
+    app.server_ready_value = SimpleNamespace(value=0)
+
+    app.stop()
+
+    assert app.current_state_thread.stop.call_args.kwargs["deadline"] is None
+    assert app.arbiter.kill_all_workers.call_args.kwargs["deadline"] is None
+
+
+def test_gunicorn_worker_shutdown_does_not_signal_workers_that_already_exited(monkeypatch):
+    """The liveness check must run at least once even on an expired deadline,
+    otherwise a clean stop is reported as an unresponsive one."""
+    arbiter = wsgi.GunicornArbiter.__new__(wsgi.GunicornArbiter)
+    arbiter.workers_pids = [101, 102]
+    signals = []
+    monkeypatch.setattr(wsgi.helpers, "is_process_alive", lambda _pid: False)
+    monkeypatch.setattr(wsgi.os, "kill", lambda pid, sig: signals.append((pid, sig)))
+
+    arbiter.kill_all_workers(deadline=time.monotonic() - 1)
+
+    assert signals == [(101, wsgi.signal.SIGTERM), (102, wsgi.signal.SIGTERM)]
+    assert arbiter.workers_pids == []
 
 
 def test_gunicorn_application_uses_ipv6_bind(monkeypatch):

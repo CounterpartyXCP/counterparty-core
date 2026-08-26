@@ -83,7 +83,10 @@ def refresh_current_state(state_db, shared_backend_height):
 
 class NodeStatusCheckerThread(threading.Thread):
     def __init__(self, shared_backend_height):
-        threading.Thread.__init__(self, name="NodeStatusChecker")
+        # Daemon for the same reason as APIWatcher: the bounded join below is
+        # only meaningful if a thread that outlives it cannot block interpreter
+        # shutdown. This thread is read-only, so it has nothing to lose at exit.
+        threading.Thread.__init__(self, name="NodeStatusChecker", daemon=True)
         self.shared_backend_height = shared_backend_height
         self.state_db = database.get_db_connection(config.STATE_DATABASE)
         self.stop_event = threading.Event()
@@ -110,8 +113,7 @@ class NodeStatusCheckerThread(threading.Thread):
                 # The checker may finish and close its connection between the
                 # is_alive() check and this cross-thread interrupt.
                 pass
-            timeout = 2 if deadline is None else max(0, min(2, deadline - time.monotonic()))
-            self.join(timeout=timeout)
+            self.join(timeout=helpers.deadline_timeout(deadline, 2))
             if self.is_alive():
                 logger.warning("NodeStatusChecker thread did not stop before its deadline.")
 
@@ -226,11 +228,15 @@ class GunicornArbiter(Arbiter):
                 os.kill(pid, signal.SIGTERM)
             except ProcessLookupError:
                 pass
+        # Check liveness at least once even when the deadline has already passed,
+        # so workers that exited promptly are not reported as unresponsive and
+        # signalled again.
         alive = list(self.workers_pids)
-        while alive and time.monotonic() < deadline:
+        while True:
             alive = [pid for pid in alive if helpers.is_process_alive(pid)]
-            if alive:
-                time.sleep(0.01)
+            if not alive or time.monotonic() >= deadline:
+                break
+            time.sleep(0.01)
         if alive:
             logger.warning("Gunicorn workers did not stop gracefully: %s", alive)
             for pid in alive:
@@ -238,7 +244,9 @@ class GunicornArbiter(Arbiter):
                     os.kill(pid, signal.SIGKILL)
                 except ProcessLookupError:
                     pass
-        logger.info("All workers killed: %s", self.workers_pids)
+            logger.info("Gunicorn workers force-killed: %s", self.workers_pids)
+        else:
+            logger.info("All workers stopped gracefully: %s", self.workers_pids)
         self.workers_pids = []
 
 
@@ -296,7 +304,12 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):  # pylint: disable
 
     def stop(self, deadline=None):
         if self.current_state_thread:
-            self.current_state_thread.stop(deadline=deadline)
+            # A third of the budget, so a checker that ignores its interrupt
+            # cannot leave the workers with a zero-second grace period and turn
+            # every in-flight request into a SIGKILL.
+            self.current_state_thread.stop(
+                deadline=deadline if deadline is None else helpers.split_deadline(deadline, 1 / 3)
+            )
         if self.arbiter and self.master_pid == os.getpid():
             logger.info("Stopping Gunicorn")
             self.arbiter.kill_all_workers(deadline=deadline)

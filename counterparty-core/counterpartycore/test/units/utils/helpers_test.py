@@ -1,5 +1,7 @@
 import decimal
 import os
+import threading
+import time
 from unittest.mock import Mock, patch
 
 import pygit2
@@ -90,6 +92,75 @@ def test_is_process_alive():
     assert helpers.is_process_alive(os.getpid()) is True
     # Non-existent PID (very high number)
     assert helpers.is_process_alive(999999999) is False
+
+
+def test_shutdown_budget_arms_once_and_is_shared():
+    """Two initiators must not each get a full budget: their budgets would run
+    back to back and their sum would overshoot the caller's deadline."""
+    budget = helpers.ShutdownBudget(total=8)
+
+    first = budget.arm()
+    second = budget.arm()
+
+    assert first == second
+    assert 0 < budget.remaining() <= 8
+
+
+def test_shutdown_budget_sub_deadline_never_exceeds_the_aggregate():
+    budget = helpers.ShutdownBudget(total=1)
+    aggregate = budget.arm()
+
+    assert budget.sub_deadline(10) == aggregate
+    assert budget.sub_deadline(0.1) < aggregate
+
+
+def test_shutdown_budget_remaining_floors_at_zero():
+    budget = helpers.ShutdownBudget(total=0)
+
+    assert budget.remaining() == 0
+
+
+def test_shutdown_budget_arm_is_thread_safe():
+    budget = helpers.ShutdownBudget(total=8)
+    start = threading.Barrier(8)
+    deadlines = []
+    lock = threading.Lock()
+
+    def arm():
+        start.wait()
+        deadline = budget.arm()
+        with lock:
+            deadlines.append(deadline)
+
+    threads = [threading.Thread(target=arm) for _ in range(8)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert len(set(deadlines)) == 1
+
+
+def test_split_deadline_leaves_a_share_for_what_runs_next():
+    deadline = time.monotonic() + 10
+
+    half = helpers.split_deadline(deadline, 0.5)
+
+    assert half < deadline
+    assert 4 < half - time.monotonic() <= 5
+
+
+def test_split_deadline_of_an_expired_deadline_is_now():
+    expired = time.monotonic() - 5
+
+    assert helpers.split_deadline(expired, 0.5) <= time.monotonic()
+
+
+def test_deadline_timeout_clamps_both_ways():
+    assert helpers.deadline_timeout(None, 5) == 5
+    assert helpers.deadline_timeout(time.monotonic() + 100, 5) == 5
+    assert helpers.deadline_timeout(time.monotonic() - 100, 5) == 0
+    assert 0 < helpers.deadline_timeout(time.monotonic() + 1, 5) <= 1
 
 
 def test_api_json_encoder():

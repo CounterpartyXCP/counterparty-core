@@ -694,6 +694,7 @@ def run_apiserver(
     mem_profiler = None
     pool_monitor = None
     health_server = None
+    shutdown_budget = helpers.ShutdownBudget(total=8)
 
     try:
         # Set signal handlers for graceful shutdown
@@ -778,7 +779,7 @@ def run_apiserver(
             health_server.attach_dispatcher(wsgi_server.get_task_dispatcher())
 
         logger.info("Starting Parent Process Checker thread...")
-        parent_checker = ParentProcessChecker(wsgi_server, stop_event, parent_pid)
+        parent_checker = ParentProcessChecker(wsgi_server, stop_event, parent_pid, shutdown_budget)
         parent_checker.start()
 
         app.app_context().push()
@@ -789,19 +790,22 @@ def run_apiserver(
     finally:
         logger.info("Stopping API Server...")
 
-        # Leave room inside the parent's ten-second grace period for the
-        # parent-checker's polling interval and process teardown/reaping. Each
-        # component receives a sub-deadline bounded by this one, so individually
-        # bounded joins cannot add up past the parent deadline.
-        shutdown_deadline = time.monotonic() + 8
+        # `arm()` is idempotent: on the usual path the ParentProcessChecker has
+        # already started this budget and stopped the WSGI server inside it, so
+        # what is left here is the remainder of that same eight seconds rather
+        # than a fresh one. Eight leaves room inside the parent's ten-second
+        # grace period for the checker's polling interval and process
+        # teardown/reaping. Every component gets a sub-deadline bounded by this
+        # one, so the individually bounded joins cannot add up past it.
+        shutdown_deadline = shutdown_budget.arm()
 
         if health_server is not None:
             logger.trace("Stopping Health Check Server...")
-            health_server.stop(deadline=min(shutdown_deadline, time.monotonic() + 1))
+            health_server.stop(deadline=shutdown_budget.sub_deadline(1))
 
         if wsgi_server is not None:
             logger.trace("Stopping WSGI Server thread...")
-            wsgi_server.stop(deadline=min(shutdown_deadline, time.monotonic() + 2))
+            wsgi_server.stop(deadline=shutdown_budget.sub_deadline(2))
 
         logger.trace("Closing Ledger DB and State DB Connection Pool...")
         LedgerDBConnectionPool().close()
@@ -822,20 +826,29 @@ def run_apiserver(
 # 1. `docker-compose stop` does not send a SIGTERM to the child processes (in this case the API v2 process)
 # 2. `process.terminate()` does not trigger a `KeyboardInterrupt` or execute the `finally` block.
 class ParentProcessChecker(threading.Thread):
-    def __init__(self, wsgi_server, stop_event, parent_pid):
+    def __init__(self, wsgi_server, stop_event, parent_pid, shutdown_budget):
         super().__init__(name="ParentProcessChecker")
         self.daemon = True
         self.wsgi_server = wsgi_server
         self.stop_event = stop_event
         self.parent_pid = parent_pid
+        self.shutdown_budget = shutdown_budget
 
     def run(self):
         try:
+            # Waiting on the event rather than sleeping through it: the parent
+            # sets `stop_event` before signalling, so a graceful stop starts here
+            # immediately instead of up to a second later. The one-second timeout
+            # remains as the poll interval for the other case, a parent that died
+            # without setting anything.
             while not self.stop_event.is_set() and helpers.is_process_alive(self.parent_pid):
-                time.sleep(1)
+                self.stop_event.wait(timeout=1)
             logger.debug("Parent process stopped. Exiting...")
             if self.wsgi_server is not None:
-                self.wsgi_server.stop()
+                # This is the shutdown trigger on the usual path, so it is what
+                # starts the aggregate budget. Stopping the WSGI server unblocks
+                # `run_apiserver`, whose `finally` then spends what is left of it.
+                self.wsgi_server.stop(deadline=self.shutdown_budget.sub_deadline(2))
         except KeyboardInterrupt:
             pass
 

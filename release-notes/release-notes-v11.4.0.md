@@ -1,6 +1,6 @@
 # Release Notes - Counterparty Core v11.4.0 (TBD)
 
-Counterparty Core v11.4.0 makes State DB rollbacks incremental (#3485).
+Counterparty Core v11.4.0 makes State DB rollbacks incremental (#3485), and bounds API shutdown and cold startup (#3486).
 
 Until now a Bitcoin reorganization — however shallow — rebuilt the entire State DB. On mainnet a **one-block reorg took ~33 minutes**, during the last ~6 of which the public API returned 5xx, despite the process having ample CPU and memory headroom. The cost had nothing to do with how deep the reorganization was: `rollback_state_db()` deleted the rows of three tables and then re-applied thirteen migrations, each of which dropped its table and repopulated it from the entire ledger history (`parsed_events` alone is a full copy of `messages`).
 
@@ -50,6 +50,22 @@ Every remaining State DB build, refresh or full rollback now publishes its progr
 The health sampler also reopens its own State DB connection after a rebuild: `build_state_db()` unlinks and recreates the file, so a connection held across it would have reported a frozen block height for the rest of the process's life.
 
 **On serving from a second State DB while one is rebuilt** (suggestion 2 in the issue): not implemented, and we think it should not be. Once rollbacks are incremental, a full rebuild only happens at startup, before any listener exists — there are no readers to keep serving. The atomic-swap machinery (a second file, connection-pool epoch invalidation, a swap under live readers) would carry real risk for a case that no longer arises, whereas a correct `rebuilding` readiness state removes the pod from rotation and explains why, which is what suggestion 3 was really after.
+
+## API shutdown and cold startup (#3486)
+
+A GKE node upgrade found the other half of the same problem: the API child took longer than the parent's ten-second grace period to exit and was force-killed, and its next start then spent minutes initializing the API watcher — a real outage on a singleton.
+
+Profiling an isolated disk cloned from the mainnet snapshot put almost all of that startup cost in one query. `parsed_events` carries an index on `event` and a unique index on `event_index`; asked for the latest `BLOCK_PARSED` row by `event_index`, SQLite picked the `event` index and built a temporary B-tree to sort every `BLOCK_PARSED` row ever written, to return one. That plan cost **132 seconds** on a cold mainnet State DB, on a path that runs at every API process start. Three queries used it — `get_last_block_parsed`, `check_reorg` (which also runs every five seconds in steady state) and `search_matching_event` — and all three now force the event-index index instead, so SQLite reverse-scans from the newest event and stops as soon as the `LIMIT`/`OFFSET` is satisfied. The `ORDER BY` is unchanged, so the ordering semantics are identical; on the same snapshot the watcher now initializes in **0.01 seconds**. `search_matching_event` gains a second benefit: it can now stop after the first few blocks of a shallow reorg instead of sorting the full history before it starts looking.
+
+The shutdown path is bounded rather than hopeful:
+
+- **Blocking reads are interrupted.** The API watcher and the node-status checker both spent shutdown inside a SQLite read that no `stop_event` could reach. `stop()` now calls `interrupt()` on their connections from the stopping thread, and the threads treat `apsw.InterruptError` as a clean exit when they are already stopping (and re-raise it otherwise). Writes are unaffected: every one runs inside a savepoint, so an interrupted event parse rolls back whole.
+- **One budget, armed once, shared by everything.** Health listener, WSGI server, watcher and Gunicorn worker cleanup draw sub-deadlines from a single eight-second budget that starts when the shutdown is first initiated — not one budget per component, and not a fresh one for the `finally` block after the watchdog thread already spent time in its own stop. Steps that run one after another split what is left rather than sharing a deadline, so a slow first step cannot leave the next one with a zero-second grace period.
+- **The bounded joins actually bound.** The watcher and node-status threads are now daemons. A non-daemon thread that outlives its join still blocks interpreter shutdown, so before this the timeout logged a warning and the process hung anyway — precisely the failure being fixed.
+- **Gunicorn worker cleanup terminates.** `kill_all_workers()` waited for workers to exit in an unbounded loop; it now escalates to `SIGKILL` at its deadline. Operators running `--wsgi-server gunicorn` (not the default) should know that this bounds the worker drain window to the WSGI server's share of the budget rather than Gunicorn's own `graceful_timeout`: a request still in flight when that share runs out is dropped. Exiting inside the parent's ten seconds is the constraint the budget exists to satisfy, and it cannot also accommodate a ten-second drain.
+- **The parent reports what happened.** The API child's stop is timed, the forced kill is itself bounded and followed by a second join, and a process that survives even that is logged at `CRITICAL` instead of being reported as stopped.
+
+Startup diagnostics were added for the parts that remain slow: `apply_outstanding_migration` now logs each phase separately — backend open (which is where WAL recovery lands), migration discovery with the pending count, application, and connection close — along with the WAL size before and after. On the incident node these are what distinguish a multi-minute WAL recovery from a multi-minute migration.
 
 ## State DB / Ledger DB consistency fixes
 
