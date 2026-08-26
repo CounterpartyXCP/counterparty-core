@@ -514,7 +514,17 @@ TransactionType = Literal[
 SendType = Literal["all", "send", "attach", "move", "detach"]
 ADDRESS_HISTORY_MAX_OFFSET = 10_000
 _SEND_TYPES = tuple(typing.get_args(SendType))
-_FILTERABLE_SEND_TYPES = tuple(send_type for send_type in _SEND_TYPES if send_type != "all")
+
+# The four ``sends`` columns an address history matches against, each with the
+# index that resolves it. Order matters: a branch is attributed to the first
+# address column it carries. Keep in sync with the ``CREATE INDEX`` statements
+# in ``ledger.migrations`` / ``ledger.migration_data.compact_hash_schema``.
+SENDS_ADDRESS_INDEXES = {
+    "source": "sends_source_idx",
+    "source_address": "sends_source_address",
+    "destination": "sends_destination_idx",
+    "destination_address": "sends_destination_address",
+}
 
 SUPPORTED_SORT_FIELDS = {
     "balances": ["address", "asset", "asset_longname", "quantity"],
@@ -2242,9 +2252,10 @@ def get_credits_by_address(
     :param str action: The action to filter by
     :param int cursor: The last index of the credits to return
     :param int limit: The maximum number of credits to return (e.g. 5)
-    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter).
+        Capped at 10,000 on this route because skipped rows must still be materialized; use `cursor` to page further.
     """
-    _validate_indexed_address_history_request(offset)
+    _validate_address_history_offset(offset)
     where = [{"address": address, "quantity__gt": 0}, {"utxo_address": address, "quantity__gt": 0}]
     if action:
         where[0]["calling_function"] = action
@@ -2328,9 +2339,10 @@ def get_debits_by_address(
     :param str action: The action to filter by
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
-    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter).
+        Capped at 10,000 on this route because skipped rows must still be materialized; use `cursor` to page further.
     """
-    _validate_indexed_address_history_request(offset)
+    _validate_address_history_offset(offset)
     where = [{"address": address, "quantity__gt": 0}, {"utxo_address": address, "quantity__gt": 0}]
     if action:
         where[0]["action"] = action
@@ -2379,12 +2391,12 @@ def prepare_sends_where(send_type: SendType, other_conditions=None):
     if "all" in requested_types:
         requested_types = ["all"]
     else:
-        # Preserve caller order while bounding query branches to the four real
-        # send types. Repeated valid CSV members must not amplify an indexed
-        # UNION into hundreds of identical branches.
+        # Preserve caller order but collapse repeats: ``send_type=send,send,...``
+        # is accepted by the CSV enum parser and would otherwise amplify into one
+        # (indexed) union branch per repetition. After the check above every
+        # remaining member is one of the four real send types, so this also
+        # bounds the branch count.
         requested_types = list(dict.fromkeys(requested_types))
-        if len(requested_types) > len(_FILTERABLE_SEND_TYPES):
-            raise ValueError(f"At most {len(_FILTERABLE_SEND_TYPES)} send types may be requested")
 
     where = []
     for type_send in requested_types:
@@ -2394,28 +2406,50 @@ def prepare_sends_where(send_type: SendType, other_conditions=None):
             elif isinstance(other_conditions, list):
                 where = other_conditions
             break
-        if type_send in typing.get_args(SendType):
-            where_send = {"send_type": type_send}
-            if other_conditions:
-                if isinstance(other_conditions, dict):
-                    where_send.update(other_conditions)
-                    where.append(where_send)
-                elif isinstance(other_conditions, list):
-                    for other_condition in other_conditions:
-                        where.append(other_condition | where_send)
-            else:
+        where_send = {"send_type": type_send}
+        if other_conditions:
+            if isinstance(other_conditions, dict):
+                where_send.update(other_conditions)
                 where.append(where_send)
+            elif isinstance(other_conditions, list):
+                for other_condition in other_conditions:
+                    where.append(other_condition | where_send)
+        else:
+            where.append(where_send)
     return where
 
 
-def _validate_indexed_address_history_request(offset, sort=None):
-    """Bound expensive pagination modes on indexed address-history routes."""
+def _validate_address_history_offset(offset):
+    """Bound deep offset pagination on the indexed address-history routes.
+
+    Offsets are materialized and discarded row by row, which the per-branch
+    bound in ``select_rows`` cannot help with; past the cap, callers must use
+    cursor pagination.
+    """
     if offset is not None and (offset < 0 or offset > ADDRESS_HISTORY_MAX_OFFSET):
         raise ValueError(
             f"offset must be between 0 and {ADDRESS_HISTORY_MAX_OFFSET} for address history"
         )
-    if sort is not None:
-        raise ValueError("sort is not supported for indexed address history; use cursor pagination")
+
+
+def _sends_address_index_hints(where):
+    """Map each ``sends`` address-history branch to the index that resolves it.
+
+    ``prepare_sends_where`` builds one branch per (address column, send type)
+    pair, so every branch carries exactly one of ``SENDS_ADDRESS_INDEXES``.
+    Raise explicitly rather than letting ``next()`` surface a bare
+    ``StopIteration``, which the API layer reports as an opaque 503.
+    """
+    hints = []
+    for branch in where:
+        hint = next(
+            (index for field, index in SENDS_ADDRESS_INDEXES.items() if field in branch),
+            None,
+        )
+        if hint is None:
+            raise ValueError(f"No indexed address column in sends branch: {sorted(branch)}")
+        hints.append(hint)
+    return hints
 
 
 def get_sends(
@@ -3538,7 +3572,6 @@ def get_sends_by_address(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
-    sort: str = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of an address
@@ -3546,10 +3579,10 @@ def get_sends_by_address(
     :param str send_type: The type of sends to return
     :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
-    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
-    :param str sort: Unsupported for this indexed address history; use cursor pagination
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter).
+        Capped at 10,000 on this route because skipped rows must still be materialized; use `cursor` to page further.
     """
-    _validate_indexed_address_history_request(offset, sort)
+    _validate_address_history_offset(offset)
     where = prepare_sends_where(
         send_type,
         [
@@ -3559,12 +3592,6 @@ def get_sends_by_address(
             {"destination_address": address},
         ],
     )
-    address_indexes = {
-        "source": "sends_source_idx",
-        "source_address": "sends_source_address",
-        "destination": "sends_destination_idx",
-        "destination_address": "sends_destination_address",
-    }
     return select_rows(
         ledger_db,
         "sends",
@@ -3572,10 +3599,7 @@ def get_sends_by_address(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        where_index_hints=[
-            next(index for field, index in address_indexes.items() if field in branch)
-            for branch in where
-        ],
+        where_index_hints=_sends_address_index_hints(where),
         with_count=cursor is None or offset is not None,
     )
 
@@ -3588,7 +3612,6 @@ def get_sends_by_address_and_asset(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
-    sort: str = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of an address and asset
@@ -3597,10 +3620,10 @@ def get_sends_by_address_and_asset(
     :param str send_type: The type of sends to return
     :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
-    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
-    :param str sort: Unsupported for this indexed address history; use cursor pagination
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter).
+        Capped at 10,000 on this route because skipped rows must still be materialized; use `cursor` to page further.
     """
-    _validate_indexed_address_history_request(offset, sort)
+    _validate_address_history_offset(offset)
     where = prepare_sends_where(
         send_type,
         [
@@ -3610,12 +3633,6 @@ def get_sends_by_address_and_asset(
             {"destination_address": address, "asset": asset.upper()},
         ],
     )
-    address_indexes = {
-        "source": "sends_source_idx",
-        "source_address": "sends_source_address",
-        "destination": "sends_destination_idx",
-        "destination_address": "sends_destination_address",
-    }
     return select_rows(
         ledger_db,
         "sends",
@@ -3623,10 +3640,7 @@ def get_sends_by_address_and_asset(
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        where_index_hints=[
-            next(index for field, index in address_indexes.items() if field in branch)
-            for branch in where
-        ],
+        where_index_hints=_sends_address_index_hints(where),
         with_count=cursor is None or offset is not None,
     )
 

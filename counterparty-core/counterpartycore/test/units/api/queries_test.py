@@ -81,6 +81,18 @@ def _insert_address_history_sends(ledger_db):
     return target, target_id
 
 
+def _extract_rowid_union(sql):
+    """Return the `(SELECT rowid ... UNION ...)` operand of `WHERE rowid IN (...)`,
+    parens balanced, so the candidate set can be executed on its own."""
+    start = sql.index("rowid IN (") + len("rowid IN ")
+    depth = 0
+    for offset, char in enumerate(sql[start:], start=start):
+        depth += (char == "(") - (char == ")")
+        if depth == 0:
+            return sql[start : offset + 1]
+    raise AssertionError("unbalanced rowid IN (...) in generated SQL")
+
+
 def _naive_send_rowids(
     ledger_db, address_id, *, asset=None, send_types=None, order_by="rowid DESC"
 ):
@@ -389,16 +401,50 @@ def test_indexed_address_history_rejects_deep_offset(ledger_db, getter):
 
 @pytest.mark.parametrize(
     "getter",
+    [queries.get_sends_by_address, queries.get_sends_by_address_and_asset],
+)
+def test_indexed_address_history_exposes_no_sort(getter):
+    """An arbitrary sort cannot be bounded by the per-branch top-K slice, so
+    these routes must not offer `sort` at all rather than accept it and fail.
+    The signature is what `prepare_route_args` documents, so dropping the
+    parameter here is what keeps the published spec honest."""
+    assert "sort" not in inspect.signature(getter).parameters
+
+
+@pytest.mark.parametrize(
+    "getter",
     [
+        queries.get_credits_by_address,
+        queries.get_debits_by_address,
         queries.get_sends_by_address,
-        lambda db, address, **kwargs: queries.get_sends_by_address_and_asset(
-            db, address, "XCP", **kwargs
-        ),
+        queries.get_sends_by_address_and_asset,
     ],
 )
-def test_indexed_address_history_rejects_arbitrary_sort(ledger_db, getter):
-    with pytest.raises(ValueError, match="sort is not supported"):
-        getter(ledger_db, "bounded-history-address", sort="quantity:asc")
+def test_address_history_offset_cap_is_documented(getter):
+    """The published spec takes the `offset` bound from this docstring, so the
+    documented number must track the constant the route actually enforces."""
+    offset_doc = routes.get_args_description(getter)["offset"]
+    assert f"{queries.ADDRESS_HISTORY_MAX_OFFSET:,}" in offset_doc
+
+
+def test_address_history_index_hints_exist(ledger_db):
+    """`INDEXED BY` is a hard constraint: a missing index makes the endpoint
+    raise `no such index` instead of falling back to a slower plan. Pin the six
+    (table, index) pairs the address-history routes force, so a migration that
+    renames or moves one fails here rather than on a live node."""
+    expected = {
+        ("credits", "credits_address_idx"),
+        ("credits", "credits_utxo_address_idx"),
+        ("debits", "debits_address_idx"),
+        ("debits", "debits_utxo_address_idx"),
+    } | {("sends", index) for index in queries.SENDS_ADDRESS_INDEXES.values()}
+    existing = {
+        (row["tbl_name"], row["name"])
+        for row in ledger_db.execute(
+            "SELECT name, tbl_name FROM sqlite_master WHERE type = 'index'"
+        )
+    }
+    assert expected <= existing, expected - existing
 
 
 def test_address_history_index_union_cursor_asc(ledger_db):
@@ -523,13 +569,25 @@ def test_hot_address_page_union_is_bounded_and_count_uses_or(ledger_db):
 
     row_plan = ledger_db.execute(f"EXPLAIN QUERY PLAN {row_sql}", row_bindings).fetchall()
     row_details = {row["detail"] for row in row_plan}
-    for index in (
-        "sends_source_idx",
-        "sends_source_address",
-        "sends_destination_idx",
-        "sends_destination_address",
-    ):
+    branch_count = len(queries.SENDS_ADDRESS_INDEXES)
+    for index in queries.SENDS_ADDRESS_INDEXES.values():
         assert any(index in detail and "SEARCH" in detail for detail in row_details)
+
+    # The four SEARCHes above say every branch uses its index; they do not say
+    # the merged set is small. That is the property the outer page inherits, and
+    # it is structural rather than a plan choice: each branch is pinned to its
+    # index and cut to `limit + 1`, so the candidate set stays at four page-sized
+    # slices however long the history is. Assert the set, not the plan -- which
+    # side SQLite drives the outer query from is a cost decision that flips with
+    # table size (on a fixture this small it scans `sends` and probes the set
+    # with a bloom filter; at mainnet scale it takes the rowid lookup), so
+    # asserting it here would pin the fixture's size, not the guarantee.
+    union = _extract_rowid_union(row_sql)
+    candidates = ledger_db.execute(
+        f"SELECT rowid FROM sends WHERE rowid IN {union}",  # noqa: S608
+        row_bindings[: 2 * branch_count],
+    ).fetchall()
+    assert 0 < len(candidates) <= branch_count * (2 + 1) < hot_row_count
 
     count_plan = ledger_db.execute(f"EXPLAIN QUERY PLAN {count_sql}", count_bindings).fetchall()
     # SQLite may prefer a table scan for this deliberately tiny fixture, but
@@ -1135,14 +1193,18 @@ def test_quantitative_endpoints_expose_sort():
     The API only injects parameters declared in the function signature, so a getter
     that does not declare `sort` silently ignores the query parameter. This guards
     against re-introducing that gap.
+
+    `get_sends_by_address` / `get_sends_by_address_and_asset` are deliberately
+    absent: their address history is served by a bounded per-index union that an
+    arbitrary global sort cannot use, so they withdrew `sort` instead of
+    documenting one they always reject. See
+    `test_indexed_address_history_exposes_no_sort`.
     """
     getters = [
         queries.get_sends,
         queries.get_sends_by_block,
         queries.get_sends_by_transaction_hash,
         queries.get_sends_by_asset,
-        queries.get_sends_by_address,
-        queries.get_sends_by_address_and_asset,
         queries.get_receive_by_address,
         queries.get_receive_by_address_and_asset,
         queries.get_issuances,

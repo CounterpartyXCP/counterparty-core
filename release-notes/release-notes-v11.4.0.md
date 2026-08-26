@@ -18,7 +18,7 @@ The refresh is an optimization, not a correctness requirement: it pays the cost 
 
 **Point your Kubernetes probes at the dedicated health listener before upgrading** (port `4002` on mainnet — `/healthz/live` for liveness, `/healthz/ready` for readiness), if you have not already since v11.3.0. During the refresh the pod reports `200` on liveness and `503 rebuilding` on readiness, so it stays out of rotation and is not restarted. A liveness probe still pointed at the API port would get a connection refusal for the whole refresh and kill the pod, and the next start would begin the work again from zero.
 
-API consumers of the address history endpoints should check the **Address history endpoints** section below before upgrading: `/v2/addresses/<address>/sends` and `/sends/<asset>` no longer accept `sort`, `offset` is capped at 10,000 on those routes and on `/credits` and `/debits`, and `result_count` is now `null` on cursor pages rather than recomputed for each one.
+API consumers of the address history endpoints should check the **Address history endpoints** section below before upgrading: `/v2/addresses/<address>/sends` and `/sends/<asset>` no longer expose `sort`, `offset` is capped at 10,000 on those routes and on `/credits` and `/debits`, and `result_count` is now `null` on cursor pages rather than recomputed for each one. `openapi.json` has been updated to match.
 
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
 
@@ -71,14 +71,14 @@ Startup diagnostics were added for the parts that remain slow: `apply_outstandin
 
 ## Address history endpoints
 
-`/v2/addresses/<address>/credits`, `/debits`, `/sends` and `/sends/<asset>` match an address against two or four columns, each of which already has its own index. SQLite planned the resulting `OR` predicate followed by `ORDER BY rowid DESC LIMIT` as a reverse full-table scan — the right plan only for an address whose newest row sits near the tip. For an address with a short or an old history it reverse-scanned millions of unrelated rows before reaching the first match.
+`/v2/addresses/<address>/credits`, `/debits`, `/sends` and `/sends/<asset>` match an address against two or four columns, each of which already has its own index. Neither plan SQLite has for the resulting `OR` predicate followed by `ORDER BY rowid DESC LIMIT` is bounded by the page size. A reverse full-table scan — the right plan only for an address whose newest row sits near the tip — reads millions of unrelated rows before reaching the first match of an address whose history is short or old. The alternative, a multi-index `OR`, does use every index but then has to sort the address's *entire* history to honour the ordering, so a busy address pays for all of it to return one page.
 
-Each `OR` branch is now resolved through its own index (`INDEXED BY`) and the branches are merged on `rowid`, so the planner can no longer fall back to the scan. Under the default `rowid` ordering each branch contributes only one page-sized slice before the merge: the global top *K* distinct rows must appear in the top *K* of at least one branch, so that bound is exact, not approximate. An arbitrary sort has no such theorem behind it and keeps the full index union.
+Each `OR` branch is now resolved through its own index (`INDEXED BY`) and cut to a single page-sized slice before the branches are merged on `rowid`. The bound is exact rather than approximate — the global top *K* distinct rows must appear in the top *K* of at least one branch — and it is structural rather than another bet on the planner: however long the address's history, the page is selected from at most four page-sized slices instead of from the whole history.
 
 Three request shapes that defeated the bound are now rejected or narrowed on these four routes:
 
-- **`offset` is capped at 10,000.** Deep offset pagination has to materialize and discard every skipped row; past that point, use `cursor`.
-- **`sort` is no longer accepted** on `/sends` and `/sends/<asset>` by address. Sorting on an arbitrary column reintroduces the very scan the fix removes; use cursor pagination.
+- **`offset` is capped at 10,000** (and negative offsets, previously treated as `0`, are rejected). Deep offset pagination has to materialize and discard every skipped row; past that point, use `cursor`.
+- **`sort` has been withdrawn** from `/sends` and `/sends/<asset>` by address. A global sort over an arbitrary column cannot be bounded by the per-branch slice above, so rather than accept the parameter and always fail, these routes no longer advertise it: it is gone from their signature and from `openapi.json`, and passing it now returns `400 Unrecognized parameter(s): sort`. Use cursor pagination. This matches how `/v2/addresses/balances` already handles a `sort` it cannot honour.
 - **Repeated `send_type` members are deduplicated** and unknown ones rejected. `send_type=send,send,send,…` previously amplified into one union branch per repetition.
 
 The exact result count is computed on the initial page and on offset pages only; on cursor pages `result_count` is `null`. Counting is precisely what the bound above cannot help with — it has to touch every matching row — so later cursor pages stay bounded. The count itself no longer reuses the ordered union either: it lets SQLite combine the address indexes directly, which is substantially cheaper for busy addresses.
