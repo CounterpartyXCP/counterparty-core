@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 import binascii
 import hashlib
 import inspect

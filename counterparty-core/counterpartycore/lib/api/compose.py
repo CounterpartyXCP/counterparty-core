@@ -35,6 +35,15 @@ _CONFLICTING_ISSUANCE_EVENTS = {
 }
 
 
+def _is_exact_int(value):
+    """Strict integer check for untrusted JSON bindings and compose params.
+
+    ``bool`` is a subclass of ``int``, so ``isinstance`` alone would let
+    ``True``/``False`` through as quantities.
+    """
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
 def _asset_names_from_bindings(bindings):
     return {
         value
@@ -96,7 +105,7 @@ def _proposed_issuance_quantity(name, params):
     if name == "fairminter":
         premint_quantity = params.get("premint_quantity", 0)
         pool_quantity = params.get("pool_quantity", 0)
-        if type(premint_quantity) is int and type(pool_quantity) is int:
+        if _is_exact_int(premint_quantity) and _is_exact_int(pool_quantity):
             return premint_quantity + pool_quantity
     return 0
 
@@ -158,7 +167,7 @@ def _reject_pending_asset_conflict(db, asset, name=None, params=None):
                 row["event"] == "ASSET_ISSUANCE"
                 and bindings.get("status") == "valid"
                 and "reissuance" in _issuance_asset_events(bindings)
-                and type(bindings.get("quantity")) is int
+                and _is_exact_int(bindings.get("quantity"))
                 and bindings["quantity"] > 0
             ):
                 pending_reissuance_quantity += bindings["quantity"]
@@ -180,7 +189,7 @@ def _reject_pending_asset_conflict(db, asset, name=None, params=None):
         )
 
     proposed_quantity = _proposed_issuance_quantity(name, params)
-    if type(proposed_quantity) is not int or proposed_quantity <= 0:
+    if not _is_exact_int(proposed_quantity) or proposed_quantity <= 0:
         return
     confirmed_quantity = _confirmed_issuance_quantity(db, asset)
     if confirmed_quantity + pending_reissuance_quantity + proposed_quantity > config.MAX_INT:
