@@ -1,4 +1,7 @@
 import json
+import os
+import threading
+import time
 from unittest.mock import Mock, call, patch
 
 import pytest
@@ -9,6 +12,47 @@ from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.lib.parser import blocks
 from counterpartycore.lib.utils import hashcodec, helpers
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
+
+
+def test_parent_process_checker_stops_wsgi_inside_the_shared_budget():
+    """The checker is the shutdown trigger on the usual path, so it must arm and
+    spend the same budget the `finally` block later draws from -- not its own."""
+    budget = helpers.ShutdownBudget(total=8)
+    stop_event = threading.Event()
+    wsgi_server = Mock()
+    stop_event.set()
+
+    checker = apiserver.ParentProcessChecker(wsgi_server, stop_event, os.getpid(), budget)
+    checker.run()
+
+    deadline = wsgi_server.stop.call_args.kwargs["deadline"]
+    assert deadline is not None
+    assert deadline <= budget.arm()
+    # The budget was armed by the checker, not left for the finally block to start over.
+    assert budget.arm() - time.monotonic() < 8
+
+
+def test_parent_process_checker_wakes_on_stop_event_without_waiting_out_the_poll():
+    """`stop_event` is set before the parent signals; sleeping through the poll
+    interval instead of waiting on it spends a second of the ten-second budget
+    doing nothing."""
+    budget = helpers.ShutdownBudget(total=8)
+    stop_event = threading.Event()
+    wsgi_server = Mock()
+
+    checker = apiserver.ParentProcessChecker(wsgi_server, stop_event, os.getpid(), budget)
+    checker.start()
+    try:
+        started_at = time.monotonic()
+        stop_event.set()
+        checker.join(timeout=5)
+        elapsed = time.monotonic() - started_at
+    finally:
+        stop_event.set()
+
+    assert not checker.is_alive()
+    assert elapsed < 0.5
+    wsgi_server.stop.assert_called_once()
 
 
 def test_api_server_stop_waits_for_graceful_exit():
@@ -541,8 +585,20 @@ def test_check_database_version(state_db, ledger_db, test_helpers, caplog, monke
     def refresh_mock(db):
         apiserver.logger.info("Refreshing state database")
 
-    monkeypatch.setattr("counterpartycore.lib.api.dbbuilder.rollback_state_db", rollback_mock)
+    # `full_rollback_state_db`, not `rollback_state_db`: an upgrade action must
+    # never take the incremental fast path (the derivation rules themselves may
+    # have changed in the release that ships the action).
+    monkeypatch.setattr("counterpartycore.lib.api.dbbuilder.full_rollback_state_db", rollback_mock)
     monkeypatch.setattr("counterpartycore.lib.api.dbbuilder.refresh_state_db", refresh_mock)
+    # Guard the intent: if `execute_upgrade_actions` ever goes back through the
+    # dispatcher, this mock fires and the test fails loudly instead of silently
+    # running an incremental rollback.
+    monkeypatch.setattr(
+        "counterpartycore.lib.api.dbbuilder.rollback_state_db",
+        lambda db, block_index: pytest.fail(
+            "upgrade actions must call full_rollback_state_db, not the dispatcher"
+        ),
+    )
 
     with test_helpers.capture_log(
         caplog,

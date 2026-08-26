@@ -57,7 +57,8 @@ jobs:
             test-path: integrations/testnet4_test.py
             integration_cache_network: testnet4
 
-          - name: Waitress Blocked-Query Shutdown
+          # Blocked-query interrupt (local, deterministic) + testnet4 start/shutdown
+          - name: API Shutdown
             test-path: integrations/shutdown_test.py
 
           - name: Testnet4 Rebuild

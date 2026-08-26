@@ -40,6 +40,11 @@ UPGRADE_ACTIONS = {
         "11.0.4": [("rollback", 926807)],
         "11.1.0": [("rollback", 941000)],
         "11.2.0": [("refresh_state_db", 0)],
+        # The incremental State DB rollback (#3485) needs
+        # ``balances.block_index`` to be up to date on every row; a
+        # refresh re-derives the State DB from the Ledger DB so the
+        # first reorg after the upgrade is already on the fast path.
+        "11.4.0": [("refresh_state_db", 0)],
     },
     "testnet3": {
         "10.3.0": [("reparse", 0)],
@@ -58,6 +63,11 @@ UPGRADE_ACTIONS = {
         "11.0.4": [("reparse", 4017708)],
         "11.1.0": [("refresh_state_db", 0)],
         "11.2.0": [("refresh_state_db", 0)],
+        # The incremental State DB rollback (#3485) needs
+        # ``balances.block_index`` to be up to date on every row; a
+        # refresh re-derives the State DB from the Ledger DB so the
+        # first reorg after the upgrade is already on the fast path.
+        "11.4.0": [("refresh_state_db", 0)],
     },
     "testnet4": {
         "10.10.0": [("rollback", 64492)],
@@ -67,12 +77,22 @@ UPGRADE_ACTIONS = {
         "11.0.3": [("reparse", 99290)],
         "11.1.0": [("refresh_state_db", 0)],
         "11.2.0": [("refresh_state_db", 0)],
+        # The incremental State DB rollback (#3485) needs
+        # ``balances.block_index`` to be up to date on every row; a
+        # refresh re-derives the State DB from the Ledger DB so the
+        # first reorg after the upgrade is already on the fast path.
+        "11.4.0": [("refresh_state_db", 0)],
     },
     "signet": {
         "11.0.2": [("refresh_state_db", 0)],
         "11.0.3": [("reparse", 266993)],
         "11.1.0": [("refresh_state_db", 0)],
         "11.2.0": [("refresh_state_db", 0)],
+        # The incremental State DB rollback (#3485) needs
+        # ``balances.block_index`` to be up to date on every row; a
+        # refresh re-derives the State DB from the Ledger DB so the
+        # first reorg after the upgrade is already on the fast path.
+        "11.4.0": [("refresh_state_db", 0)],
     },
 }
 
