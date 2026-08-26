@@ -218,6 +218,24 @@ class GunicornArbiter(Arbiter):
             if e.errno != errno.ECHILD:
                 raise
 
+    def _worker_exited(self, pid):
+        """Whether `pid` is gone, reaping it if it exited but was not reaped yet.
+
+        `helpers.is_process_alive()` is wrong here: workers are forked by
+        `spawn_worker`, so they are our own children and linger as zombies
+        between their exit and a `waitpid()`, which `kill(pid, 0)` reports as
+        alive. `kill_all_workers` runs off the arbiter loop, so nothing else is
+        guaranteed to reap them while it waits -- without reaping here, a clean
+        stop would burn the whole deadline and then SIGKILL processes that are
+        already dead. Losing the race against the arbiter's own `reap_workers`
+        raises ECHILD, which likewise means the worker is gone.
+        """
+        try:
+            reaped_pid, _status = os.waitpid(pid, os.WNOHANG)
+        except ChildProcessError:
+            return True
+        return reaped_pid != 0
+
     def kill_all_workers(self, deadline=None):
         if len(self.workers_pids) == 0:
             return
@@ -233,7 +251,7 @@ class GunicornArbiter(Arbiter):
         # signalled again.
         alive = list(self.workers_pids)
         while True:
-            alive = [pid for pid in alive if helpers.is_process_alive(pid)]
+            alive = [pid for pid in alive if not self._worker_exited(pid)]
             if not alive or time.monotonic() >= deadline:
                 break
             time.sleep(0.01)
@@ -244,7 +262,7 @@ class GunicornArbiter(Arbiter):
                     os.kill(pid, signal.SIGKILL)
                 except ProcessLookupError:
                     pass
-            logger.info("Gunicorn workers force-killed: %s", self.workers_pids)
+            logger.info("Gunicorn workers force-killed: %s", alive)
         else:
             logger.info("All workers stopped gracefully: %s", self.workers_pids)
         self.workers_pids = []

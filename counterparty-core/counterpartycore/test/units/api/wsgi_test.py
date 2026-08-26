@@ -4,6 +4,7 @@ import time
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pytest
 from counterpartycore.lib.api import wsgi
 
 
@@ -343,11 +344,40 @@ def test_gunicorn_worker_shutdown_does_not_signal_workers_that_already_exited(mo
     arbiter = wsgi.GunicornArbiter.__new__(wsgi.GunicornArbiter)
     arbiter.workers_pids = [101, 102]
     signals = []
-    monkeypatch.setattr(wsgi.helpers, "is_process_alive", lambda _pid: False)
+    monkeypatch.setattr(wsgi.os, "waitpid", lambda pid, _flags: (pid, 0))
     monkeypatch.setattr(wsgi.os, "kill", lambda pid, sig: signals.append((pid, sig)))
 
     arbiter.kill_all_workers(deadline=time.monotonic() - 1)
 
+    assert signals == [(101, wsgi.signal.SIGTERM), (102, wsgi.signal.SIGTERM)]
+    assert arbiter.workers_pids == []
+
+
+def test_gunicorn_worker_shutdown_reaps_zombies_instead_of_killing_them(monkeypatch):
+    """Workers are our own children, so an exited one stays a zombie until it is
+    reaped and `kill(pid, 0)` still reports it as alive. Waiting on liveness
+    alone would burn the whole deadline and then SIGKILL processes already dead."""
+    arbiter = wsgi.GunicornArbiter.__new__(wsgi.GunicornArbiter)
+    arbiter.workers_pids = [101, 102]
+    signals = []
+    reaped = []
+
+    def fake_waitpid(pid, _flags):
+        reaped.append(pid)
+        if pid == 102:
+            # Already collected by the arbiter's own reap_workers.
+            raise ChildProcessError(errno.ECHILD, "No child processes")
+        return pid, 0
+
+    monkeypatch.setattr(wsgi.os, "waitpid", fake_waitpid)
+    monkeypatch.setattr(
+        wsgi.helpers, "is_process_alive", lambda _pid: pytest.fail("zombies read as alive")
+    )
+    monkeypatch.setattr(wsgi.os, "kill", lambda pid, sig: signals.append((pid, sig)))
+
+    arbiter.kill_all_workers(deadline=time.monotonic() + 5)
+
+    assert reaped == [101, 102]
     assert signals == [(101, wsgi.signal.SIGTERM), (102, wsgi.signal.SIGTERM)]
     assert arbiter.workers_pids == []
 
@@ -365,7 +395,7 @@ def test_gunicorn_worker_shutdown_escalates_at_deadline(monkeypatch):
     arbiter = wsgi.GunicornArbiter.__new__(wsgi.GunicornArbiter)
     arbiter.workers_pids = [101, 102]
     signals = []
-    monkeypatch.setattr(wsgi.helpers, "is_process_alive", lambda _pid: True)
+    monkeypatch.setattr(wsgi.os, "waitpid", lambda _pid, _flags: (0, 0))
     monkeypatch.setattr(wsgi.os, "kill", lambda pid, sig: signals.append((pid, sig)))
 
     arbiter.kill_all_workers(deadline=time.monotonic())

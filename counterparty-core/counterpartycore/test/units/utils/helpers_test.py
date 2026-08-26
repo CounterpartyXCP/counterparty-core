@@ -103,7 +103,7 @@ def test_shutdown_budget_arms_once_and_is_shared():
     second = budget.arm()
 
     assert first == second
-    assert 0 < budget.remaining() <= 8
+    assert 0 < first - time.monotonic() <= 8
 
 
 def test_shutdown_budget_sub_deadline_never_exceeds_the_aggregate():
@@ -112,12 +112,6 @@ def test_shutdown_budget_sub_deadline_never_exceeds_the_aggregate():
 
     assert budget.sub_deadline(10) == aggregate
     assert budget.sub_deadline(0.1) < aggregate
-
-
-def test_shutdown_budget_remaining_floors_at_zero():
-    budget = helpers.ShutdownBudget(total=0)
-
-    assert budget.remaining() == 0
 
 
 def test_shutdown_budget_arm_is_thread_safe():

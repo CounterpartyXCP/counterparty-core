@@ -29,7 +29,7 @@ def test_parent_process_checker_stops_wsgi_inside_the_shared_budget():
     assert deadline is not None
     assert deadline <= budget.arm()
     # The budget was armed by the checker, not left for the finally block to start over.
-    assert budget.remaining() < 8
+    assert budget.arm() - time.monotonic() < 8
 
 
 def test_parent_process_checker_wakes_on_stop_event_without_waiting_out_the_poll():

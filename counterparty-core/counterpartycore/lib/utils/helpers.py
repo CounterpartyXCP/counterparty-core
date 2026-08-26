@@ -181,9 +181,6 @@ class ShutdownBudget:
         """A per-component deadline, never later than the aggregate one."""
         return min(self.arm(), time.monotonic() + seconds)
 
-    def remaining(self):
-        return max(0.0, self.arm() - time.monotonic())
-
 
 def split_deadline(deadline, fraction):
     """Carve `fraction` of the budget still left before `deadline`.
