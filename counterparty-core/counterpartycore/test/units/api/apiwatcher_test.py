@@ -722,6 +722,40 @@ def test_check_reorg_is_a_no_op_on_an_empty_state_db(reorg_dbs, rollbacks):
     assert rollbacks == []
 
 
+def test_get_last_block_touched_sees_the_block_being_copied(mid_block_dbs, reorg_dbs):
+    """`get_last_block_parsed` reports the last block *completed*; this one the
+    block the watcher is inside. They agree on a whole block and diverge on a
+    half-copied one, which is the case a rollback target has to be measured
+    against (see `staterollback.rollback_reason`)."""
+    _, mid_block_state_db = mid_block_dbs
+    _, whole_blocks_state_db = reorg_dbs
+
+    assert apiwatcher.get_last_block_parsed(whole_blocks_state_db, no_cache=True) == 3
+    assert apiwatcher.get_last_block_touched(whole_blocks_state_db) == 3
+
+    assert apiwatcher.get_last_block_parsed(mid_block_state_db, no_cache=True) == 2
+    assert apiwatcher.get_last_block_touched(mid_block_state_db) == 3
+
+
+def test_get_last_block_touched_is_zero_on_an_empty_state_db(reorg_dbs):
+    _, state_db = reorg_dbs
+    state_db.execute("DELETE FROM parsed_events")
+
+    assert apiwatcher.get_last_block_touched(state_db) == 0
+
+
+def test_check_reorg_targets_a_block_the_state_db_actually_holds(mid_block_dbs, rollbacks):
+    """The contract `staterollback.rollback_reason` relies on: whatever
+    `check_reorg` asks to roll back to, the State DB holds rows at or above it,
+    so the rollback is never dismissed as having nothing to undo."""
+    ledger_db, state_db = mid_block_dbs
+    ledger_db.execute("UPDATE messages SET event_hash = 'other-credit' WHERE message_index = 25")
+
+    assert apiwatcher.check_reorg(ledger_db, state_db) is True
+    assert rollbacks == [3]
+    assert rollbacks[0] <= apiwatcher.get_last_block_touched(state_db)
+
+
 def test_search_matching_event_starts_at_the_last_parsed_block(reorg_dbs):
     """It must consider the tip too: with the tip skipped, a State DB whose only
     orphaned block is its last one would roll back one block further than the
@@ -766,7 +800,7 @@ def watch(monkeypatch):
     """A `ReorgWatch` over a fake ledger, with counters for both sides."""
     state = {"data_version": 1, "checks": 0, "reorg": False, "now": 1000.0}
     monkeypatch.setattr(apiwatcher, "get_ledger_data_version", lambda _db: state["data_version"])
-    monkeypatch.setattr(apiwatcher.time, "time", lambda: state["now"])
+    monkeypatch.setattr(apiwatcher.time, "monotonic", lambda: state["now"])
 
     def check_reorg(_ledger_db, _state_db):
         state["checks"] += 1

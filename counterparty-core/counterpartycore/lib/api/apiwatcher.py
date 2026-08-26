@@ -807,6 +807,30 @@ def get_last_block_parsed(state_db, no_cache=False):
     return 0
 
 
+def get_last_block_touched(state_db):
+    """The block index of the last event the State DB copied, finished or not.
+
+    Differs from `get_last_block_parsed` exactly while a block is half copied:
+    that one reports the last block *completed* -- the one whose BLOCK_PARSED is
+    written -- while this one reports the block the watcher is currently inside.
+
+    A rollback target has to be compared against this one. The orphaned rows of a
+    half-copied block sit one block above the completed tip, so measuring against
+    the completed tip reads them as "already below the target" and leaves them in
+    place -- which is precisely the case `check_reorg` aims at when it rolls back
+    to `last_block_parsed + 1`. See `staterollback.rollback_reason`.
+
+    Deliberately uncached: `LAST_BLOCK_PARSED` only advances on a BLOCK_PARSED
+    event, which is what makes it the wrong number here, and there is no cached
+    counterpart for a block still being copied. Callers are on the rollback path,
+    where one index lookup does not matter.
+    """
+    last_event_parsed = fetch_one(state_db, LAST_PARSED_EVENT_SQL)
+    if last_event_parsed is None:
+        return 0
+    return last_event_parsed["block_index"]
+
+
 def parse_event(state_db, event, ledger_db=None):
     with state_db:
         logger.trace(f"Parsing event: {event}")
@@ -942,7 +966,10 @@ class ReorgWatch:
             next_event["block_index"] if next_event is not None else None,
             get_ledger_data_version(self.ledger_db),
         )
-        now = time.time()
+        # Monotonic: the floor measures an elapsed duration, and a wall clock
+        # stepped backwards (NTP correction, a suspended host resuming) would
+        # otherwise suspend the only guarantee that does not rest on the counter.
+        now = time.monotonic()
         if marker == self.checked_at and now - self.checked_when < self.FORCE_INTERVAL:
             return False
         self.checked_at = marker
