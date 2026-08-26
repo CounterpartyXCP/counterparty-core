@@ -1,6 +1,6 @@
 # Release Notes - Counterparty Core v11.4.0 (TBD)
 
-Counterparty Core v11.4.0 makes State DB rollbacks incremental (#3485), and bounds API shutdown and cold startup (#3486).
+Counterparty Core v11.4.0 makes State DB rollbacks incremental (#3485), bounds API shutdown and cold startup (#3486), and puts the address history endpoints back on their indexes.
 
 Until now a Bitcoin reorganization — however shallow — rebuilt the entire State DB. On mainnet a **one-block reorg took ~33 minutes**, during the last ~6 of which the public API returned 5xx, despite the process having ample CPU and memory headroom. The cost had nothing to do with how deep the reorganization was: `rollback_state_db()` deleted the rows of three tables and then re-applied thirteen migrations, each of which dropped its table and repopulated it from the entire ledger history (`parsed_events` alone is a full copy of `messages`).
 
@@ -17,6 +17,8 @@ This release performs a **one-time State DB refresh** on first start (`refresh_s
 The refresh is an optimization, not a correctness requirement: it pays the cost of the last full rebuild at a moment you control rather than unpredictably at your next reorg. A State DB that has not been through it is flagged as ineligible for the incremental path and simply takes the old full-rebuild route once, which then flags it as eligible. Nodes therefore converge on the fast path either way — a node upgraded with `--force` (which skips the version check, and so the refresh) is correct, just slower on its first reorg.
 
 **Point your Kubernetes probes at the dedicated health listener before upgrading** (port `4002` on mainnet — `/healthz/live` for liveness, `/healthz/ready` for readiness), if you have not already since v11.3.0. During the refresh the pod reports `200` on liveness and `503 rebuilding` on readiness, so it stays out of rotation and is not restarted. A liveness probe still pointed at the API port would get a connection refusal for the whole refresh and kill the pod, and the next start would begin the work again from zero.
+
+API consumers of the address history endpoints should check the **Address history endpoints** section below before upgrading: `/v2/addresses/<address>/sends` and `/sends/<asset>` no longer expose `sort`, `offset` is capped at 10,000 on those routes and on `/credits` and `/debits`, and `result_count` is now `null` on cursor pages rather than recomputed for each one. `openapi.json` has been updated to match.
 
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
 
@@ -66,6 +68,20 @@ The shutdown path is bounded rather than hopeful:
 - **The parent reports what happened.** The API child's stop is timed, the forced kill is itself bounded and followed by a second join, and a process that survives even that is logged at `CRITICAL` instead of being reported as stopped.
 
 Startup diagnostics were added for the parts that remain slow: `apply_outstanding_migration` now logs each phase separately — backend open (which is where WAL recovery lands), migration discovery with the pending count, application, and connection close — along with the WAL size before and after. On the incident node these are what distinguish a multi-minute WAL recovery from a multi-minute migration.
+
+## Address history endpoints
+
+`/v2/addresses/<address>/credits`, `/debits`, `/sends` and `/sends/<asset>` match an address against two or four columns, each of which already has its own index. Neither plan SQLite has for the resulting `OR` predicate followed by `ORDER BY rowid DESC LIMIT` is bounded by the page size. A reverse full-table scan — the right plan only for an address whose newest row sits near the tip — reads millions of unrelated rows before reaching the first match of an address whose history is short or old. The alternative, a multi-index `OR`, does use every index but then has to sort the address's *entire* history to honour the ordering, so a busy address pays for all of it to return one page.
+
+Each `OR` branch is now resolved through its own index (`INDEXED BY`) and cut to a single page-sized slice before the branches are merged on `rowid`. The bound is exact rather than approximate — the global top *K* distinct rows must appear in the top *K* of at least one branch — and it is structural rather than another bet on the planner: however long the address's history, the page is selected from at most four page-sized slices instead of from the whole history.
+
+Three request shapes that defeated the bound are now rejected or narrowed on these four routes:
+
+- **`offset` is capped at 10,000** (and negative offsets, previously treated as `0`, are rejected). Deep offset pagination has to materialize and discard every skipped row; past that point, use `cursor`.
+- **`sort` has been withdrawn** from `/sends` and `/sends/<asset>` by address. A global sort over an arbitrary column cannot be bounded by the per-branch slice above, so rather than accept the parameter and always fail, these routes no longer advertise it: it is gone from their signature and from `openapi.json`, and passing it now returns `400 Unrecognized parameter(s): sort`. Use cursor pagination. This matches how `/v2/addresses/balances` already handles a `sort` it cannot honour.
+- **Repeated `send_type` members are deduplicated** and unknown ones rejected. `send_type=send,send,send,…` previously amplified into one union branch per repetition.
+
+The exact result count is computed on the initial page and on offset pages only; on cursor pages `result_count` is `null`. Counting is precisely what the bound above cannot help with — it has to touch every matching row — so later cursor pages stay bounded. The count itself no longer reuses the ordered union either: it lets SQLite combine the address indexes directly, which is substantially cheaper for busy addresses.
 
 ## State DB / Ledger DB consistency fixes
 

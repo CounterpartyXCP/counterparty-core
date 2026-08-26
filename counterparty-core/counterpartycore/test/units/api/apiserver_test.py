@@ -6,7 +6,7 @@ from unittest.mock import Mock, call, patch
 
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.api import apiserver, apiwatcher, blockcache, composer
+from counterpartycore.lib.api import apiserver, apiwatcher, blockcache, composer, queries
 from counterpartycore.lib.api.routes import ALL_ROUTES, ROUTES, get_routes
 from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.lib.parser import blocks
@@ -195,6 +195,12 @@ def test_routes_do_not_expose_unsupported_sort():
     # get_balances_by_addresses builds its own SQL and cannot honour `sort`
     # (its result is grouped/aggregated), so the route must not expose it at all.
     assert _sort_arg("/v2/addresses/balances") is None
+    # The address-history sends routes resolve each address OR branch through
+    # its own index and take a bounded top-K slice per branch. An arbitrary
+    # global sort cannot be bounded that way, so `sort` is not offered: a
+    # documented-but-always-rejected parameter would make the spec lie.
+    assert _sort_arg("/v2/addresses/<address>/sends") is None
+    assert _sort_arg("/v2/addresses/<address>/sends/<asset>") is None
 
 
 def get_route_args(route, name):
@@ -1308,6 +1314,25 @@ def test_limit_param_capped_to_api_limit_rows(apiv2_client, monkeypatch):
     response = apiv2_client.get("/v2/transactions?limit=99999")
     assert response.status_code == 200
     assert len(response.json["result"]) <= 5
+
+
+def test_indexed_address_history_cost_guards_return_400(apiv2_client, defaults):
+    address = defaults["addresses"][0]
+    deep_offset = queries.ADDRESS_HISTORY_MAX_OFFSET + 1
+
+    offset_response = apiv2_client.get(f"/v2/addresses/{address}/credits?offset={deep_offset}")
+    negative_response = apiv2_client.get(f"/v2/addresses/{address}/credits?offset=-1")
+    sort_response = apiv2_client.get(f"/v2/addresses/{address}/sends?sort=quantity:asc")
+
+    assert offset_response.status_code == 400
+    assert "offset must be between" in offset_response.json["error"]
+    assert negative_response.status_code == 400
+    assert "offset must be between" in negative_response.json["error"]
+    # `sort` was withdrawn from these routes rather than accepted and rejected,
+    # so it is now an unknown parameter -- still a 400, and the spec no longer
+    # advertises it. See `test_routes_do_not_expose_unsupported_sort`.
+    assert sort_response.status_code == 400
+    assert "Unrecognized parameter(s): sort" in sort_response.json["error"]
 
 
 def test_api_cache_size_bounds_block_cache(apiv2_client, monkeypatch):
