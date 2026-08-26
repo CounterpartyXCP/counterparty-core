@@ -1,5 +1,6 @@
 import errno
 import os
+import threading
 import time
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -304,6 +305,41 @@ def test_node_status_checker_is_a_daemon_thread(monkeypatch):
     thread = wsgi.NodeStatusCheckerThread(SimpleNamespace(value=0))
 
     assert thread.daemon is True
+
+
+def test_node_status_checker_stop_does_not_interrupt_a_connection_being_closed(monkeypatch):
+    """apsw calls sqlite3_interrupt() holding the GIL, but close() releases it
+    around sqlite3_close_v2(): an unsynchronised interrupt can reach a handle
+    that is already being freed, so the two must never overlap."""
+    state_db = MagicMock()
+    monkeypatch.setattr(wsgi.database, "get_db_connection", lambda _path: state_db)
+
+    thread = wsgi.NodeStatusCheckerThread(SimpleNamespace(value=0))
+    monkeypatch.setattr(
+        wsgi, "refresh_current_state", lambda *_args, **_kwargs: thread.stop_event.set()
+    )
+
+    closing = threading.Event()
+    in_close = threading.Event()
+    overlapped = []
+
+    def slow_close():
+        closing.set()
+        in_close.set()
+        time.sleep(0.05)
+        in_close.clear()
+
+    state_db.close.side_effect = slow_close
+    state_db.interrupt.side_effect = lambda: overlapped.append(in_close.is_set())
+
+    thread.start()
+    assert closing.wait(timeout=5), "checker never reached its close"
+    thread.stop(deadline=time.monotonic() + 5)
+
+    assert not thread.is_alive()
+    # The interrupt waited for the close to finish. Without the lock it runs
+    # immediately and sees a close in flight.
+    assert overlapped == [False]
 
 
 def test_gunicorn_stop_reserves_budget_for_the_workers(monkeypatch):

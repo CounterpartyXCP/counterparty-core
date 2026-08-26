@@ -865,6 +865,9 @@ class APIWatcher(threading.Thread):
         self.ledger_db = None
         self.current_state_thread = None
         self.stop_event = threading.Event()  # Add stop event
+        # See `stop()`: guards the cross-thread interrupt against this thread's
+        # own close().
+        self.db_lock = threading.Lock()
         self.state_db = state_db
         self.ledger_db = database.get_db_connection(
             config.DATABASE, read_only=True, check_wal=False
@@ -882,10 +885,11 @@ class APIWatcher(threading.Thread):
                 raise
             logger.debug("API Watcher query interrupted during shutdown.")
         finally:
-            if self.state_db is not None:
-                self.state_db.close()
-            if self.ledger_db is not None:
-                self.ledger_db.close()
+            with self.db_lock:
+                if self.state_db is not None:
+                    self.state_db.close()
+                if self.ledger_db is not None:
+                    self.ledger_db.close()
             if self.current_state_thread is not None:
                 self.current_state_thread.stop()
 
@@ -905,12 +909,19 @@ class APIWatcher(threading.Thread):
     def stop(self, deadline=None):
         logger.info("Stopping API Watcher thread...")
         self.stop_event.set()
-        for connection in (self.state_db, self.ledger_db):
-            if connection is not None:
-                try:
-                    connection.interrupt()
-                except apsw.Error:
-                    pass
+        # Under the lock: apsw checks the connection is open and then calls
+        # sqlite3_interrupt() while holding the GIL, but close() releases it
+        # around sqlite3_close_v2(), so an unsynchronised interrupt can reach a
+        # handle that is already being freed. Held only for the duration of the
+        # interrupts, which never block, so the closing thread waits on it for
+        # microseconds and the join() below cannot deadlock against it.
+        with self.db_lock:
+            for connection in (self.state_db, self.ledger_db):
+                if connection is not None:
+                    try:
+                        connection.interrupt()
+                    except apsw.Error:
+                        pass
         self.join(timeout=deadline_timeout(deadline, 5))
         if self.is_alive():
             logger.warning("API Watcher thread did not stop in time, continuing...")

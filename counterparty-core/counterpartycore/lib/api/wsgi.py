@@ -90,6 +90,9 @@ class NodeStatusCheckerThread(threading.Thread):
         self.shared_backend_height = shared_backend_height
         self.state_db = database.get_db_connection(config.STATE_DATABASE)
         self.stop_event = threading.Event()
+        # See `stop()`: guards the cross-thread interrupt against this thread's
+        # own close().
+        self.db_lock = threading.Lock()
 
     def run(self):
         logger.debug("Starting NodeStatusChecker thread...")
@@ -102,17 +105,25 @@ class NodeStatusCheckerThread(threading.Thread):
                 raise
             logger.debug("NodeStatusChecker query interrupted during shutdown.")
         finally:
-            self.state_db.close()
+            with self.db_lock:
+                self.state_db.close()
 
     def stop(self, deadline=None):
         self.stop_event.set()
         if self.is_alive():
-            try:
-                self.state_db.interrupt()
-            except apsw.Error:
-                # The checker may finish and close its connection between the
-                # is_alive() check and this cross-thread interrupt.
-                pass
+            # Under the lock: apsw checks the connection is open and then calls
+            # sqlite3_interrupt() while holding the GIL, but close() releases it
+            # around sqlite3_close_v2(), so an unsynchronised interrupt can reach
+            # a handle that is already being freed. Held only for the duration of
+            # the interrupt, which never blocks, so the closing thread waits on it
+            # for microseconds and the join() below cannot deadlock against it.
+            with self.db_lock:
+                try:
+                    self.state_db.interrupt()
+                except apsw.Error:
+                    # The checker may finish and close its connection between the
+                    # is_alive() check and this cross-thread interrupt.
+                    pass
             self.join(timeout=helpers.deadline_timeout(deadline, 2))
             if self.is_alive():
                 logger.warning("NodeStatusChecker thread did not stop before its deadline.")
@@ -326,7 +337,7 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):  # pylint: disable
             # cannot leave the workers with a zero-second grace period and turn
             # every in-flight request into a SIGKILL.
             self.current_state_thread.stop(
-                deadline=deadline if deadline is None else helpers.split_deadline(deadline, 1 / 3)
+                deadline=None if deadline is None else helpers.split_deadline(deadline, 1 / 3)
             )
         if self.arbiter and self.master_pid == os.getpid():
             logger.info("Stopping Gunicorn")

@@ -111,7 +111,12 @@ def test_waitress_shutdown_interrupts_blocked_node_status_query(monkeypatch, tmp
             waitress.stop(deadline=time.monotonic() + 2)
             server_thread.join(timeout=2)
 
-    assert elapsed < 2
+    # The proof that the interrupt landed is the dead thread below: had `stop()`
+    # merely timed out on its two-second component deadline, the blocked query
+    # would still be running. This bound only catches an outright hang, so it is
+    # deliberately looser than that deadline -- a loaded runner can spend a
+    # second scheduling threads without anything being wrong.
+    assert elapsed < 5
     assert not waitress.current_state_thread.is_alive()
     assert not server_thread.is_alive()
     assert server_errors == []

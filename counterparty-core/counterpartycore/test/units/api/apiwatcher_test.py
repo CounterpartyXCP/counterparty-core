@@ -13,6 +13,7 @@ import inspect
 import json
 import re
 import threading
+import time
 from unittest.mock import MagicMock
 
 import pytest
@@ -23,6 +24,7 @@ def test_api_watcher_stop_interrupts_sqlite_connections():
     watcher = apiwatcher.APIWatcher.__new__(apiwatcher.APIWatcher)
     threading.Thread.__init__(watcher, name="Watcher")
     watcher.stop_event = threading.Event()
+    watcher.db_lock = threading.Lock()
     watcher.state_db = MagicMock()
     watcher.ledger_db = MagicMock()
     watcher.current_state_thread = None
@@ -34,6 +36,44 @@ def test_api_watcher_stop_interrupts_sqlite_connections():
     watcher.state_db.interrupt.assert_called_once_with()
     watcher.ledger_db.interrupt.assert_called_once_with()
     watcher.join.assert_called_once_with(timeout=5)
+
+
+def test_api_watcher_stop_does_not_interrupt_a_connection_being_closed(monkeypatch):
+    """apsw calls sqlite3_interrupt() holding the GIL, but close() releases it
+    around sqlite3_close_v2(): an unsynchronised interrupt can reach a handle
+    that is already being freed, so the two must never overlap."""
+    monkeypatch.setattr(apiwatcher.database, "get_db_connection", lambda *a, **k: MagicMock())
+    monkeypatch.setattr(apiwatcher, "update_last_parsed_events_cache", lambda *a, **k: None)
+
+    watcher = apiwatcher.APIWatcher(MagicMock())
+    # Return straight to `run`'s finally, without entering `follow`.
+    monkeypatch.setattr(apiwatcher, "catch_up", lambda *a, **k: watcher.stop_event.set())
+
+    closing = threading.Event()
+    in_close = threading.Event()
+    overlapped = []
+
+    def slow_close():
+        closing.set()
+        in_close.set()
+        time.sleep(0.05)
+        in_close.clear()
+
+    def record_interrupt():
+        overlapped.append(in_close.is_set())
+
+    watcher.state_db.close.side_effect = slow_close
+    watcher.state_db.interrupt.side_effect = record_interrupt
+    watcher.ledger_db.interrupt.side_effect = record_interrupt
+
+    watcher.start()
+    assert closing.wait(timeout=5), "watcher never reached its close"
+    watcher.stop(deadline=time.monotonic() + 5)
+
+    assert not watcher.is_alive()
+    # Both interrupts waited for the close to finish. Without the lock they run
+    # immediately and see a close in flight.
+    assert overlapped == [False, False]
 
 
 def test_api_watcher_is_a_daemon_thread(monkeypatch):
@@ -52,6 +92,7 @@ def test_api_watcher_handles_shutdown_interrupt(monkeypatch):
     watcher = apiwatcher.APIWatcher.__new__(apiwatcher.APIWatcher)
     threading.Thread.__init__(watcher, name="Watcher")
     watcher.stop_event = threading.Event()
+    watcher.db_lock = threading.Lock()
     watcher.state_db = MagicMock()
     watcher.ledger_db = MagicMock()
     watcher.current_state_thread = None
