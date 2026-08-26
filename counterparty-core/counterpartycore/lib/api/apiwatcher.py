@@ -9,9 +9,54 @@ from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.parser import utxosinfo
 from counterpartycore.lib.utils import database, hashcodec
-from counterpartycore.lib.utils.helpers import format_duration
+from counterpartycore.lib.utils.helpers import deadline_timeout, format_duration
 
 logger = logging.getLogger(config.LOGGER_NAME)
+
+# `parsed_events` carries an index on `event` (`parsed_events_event_idx`) and a
+# unique index on `event_index` (`parsed_events_event_index_idx`). For a query
+# filtered on `event = 'BLOCK_PARSED'` and ordered by `event_index DESC`, SQLite
+# picks the `event` index and then builds a temporary B-tree to sort every
+# BLOCK_PARSED row it found -- on a cold mainnet State DB that is minutes of I/O
+# to return a single row, on paths that run at every API process start
+# (`APIWatcher.__init__` -> `get_last_block_parsed`, then `catch_up` ->
+# `check_reorg`) and every five seconds afterwards.
+#
+# Forcing the event-index index instead makes SQLite reverse-scan from the newest
+# event and stop as soon as the LIMIT/OFFSET is satisfied. The ORDER BY, LIMIT and
+# OFFSET are unchanged, so the ordering semantics are identical; only the access
+# path differs.
+#
+# `INDEXED BY` is a hard requirement rather than a hint: `parsed_events_event_index_idx`
+# is created by migration 0002 and dropping or renaming it makes these queries fail
+# outright instead of silently regressing to the slow plan.
+LAST_BLOCK_PARSED_SQL = """
+    SELECT block_index
+    FROM parsed_events INDEXED BY parsed_events_event_index_idx
+    WHERE event = 'BLOCK_PARSED'
+    ORDER BY event_index DESC
+    LIMIT 1
+"""
+
+PREVIOUS_BLOCK_PARSED_SQL = """
+    SELECT *
+    FROM parsed_events INDEXED BY parsed_events_event_index_idx
+    WHERE event = 'BLOCK_PARSED'
+    ORDER BY event_index DESC
+    LIMIT 1 OFFSET 1
+"""
+
+# Same plan, unbounded: `search_matching_event` walks back until it finds a
+# BLOCK_PARSED row whose hash still matches the Ledger DB. The reverse scan also
+# lets that walk stop after the first few blocks in the common shallow-reorg case,
+# instead of first sorting every BLOCK_PARSED row ever written.
+EARLIER_BLOCKS_PARSED_SQL = """
+    SELECT *
+    FROM parsed_events INDEXED BY parsed_events_event_index_idx
+    WHERE event = 'BLOCK_PARSED'
+    ORDER BY event_index DESC
+    LIMIT -1 OFFSET 1
+"""
 
 UPDATE_EVENTS_ID_FIELDS = {
     "BLOCK_PARSED": ["block_index"],
@@ -555,8 +600,6 @@ def update_balances(state_db, event):
 
     event_bindings = get_event_bindings(event)
     quantity = event_bindings["quantity"]
-    if quantity == 0:
-        return
 
     if event["event"] == "DEBIT":
         quantity = -quantity
@@ -571,16 +614,40 @@ def update_balances(state_db, event):
     sql = f"SELECT * FROM balances WHERE {field_name} = :address_or_utxo AND asset = :asset"  # noqa: S608 # nosec B608
     existing_balance = fetch_one(state_db, sql, event_bindings)
 
+    # ``block_index`` / ``tx_index`` must be stamped on both paths, exactly as
+    # the ledger stamps its own ``balances`` row for the same credit/debit.
+    # ``block_index`` is what the incremental State DB rollback uses to find
+    # which balances a reorganized block touched (see ``api/staterollback.py``):
+    # left stale, a rolled back node would keep the orphaned quantity forever.
+    # Stamping both also makes a streamed row identical to the one a full
+    # rebuild copies out of the ledger.
     if existing_balance is not None:
+        # A zero-quantity credit/debit still bumps the row: ``ledger.events``
+        # appends a new ``balances`` row for it, so skipping it here would leave
+        # the State DB's block_index/tx_index behind the Ledger DB's.
         sql = f"""
             UPDATE balances
-            SET quantity = quantity + :quantity
+            SET quantity = quantity + :quantity,
+                block_index = :block_index,
+                tx_index = :tx_index
             WHERE {field_name} = :address_or_utxo AND asset = :asset
             """  # noqa: S608 # nosec B608
+    elif event["event"] == "DEBIT" and quantity == 0:
+        # ``remove_from_balance()`` writes no row when there is nothing to debit
+        # ("don't create balance if quantity is 0 and there is no balance").
+        return
     else:
+        # ``asset_longname`` is denormalized onto ``balances`` by migration 0006
+        # (POST_QUERIES); resolve it here too, otherwise every balance row first
+        # created by the event stream carries a NULL longname while the same row
+        # on a freshly built State DB carries the real one.
         sql = f"""
-            INSERT INTO balances ({field_name}, asset, quantity, utxo_address)
-            VALUES (:address_or_utxo, :asset, :quantity, :utxo_address)
+            INSERT INTO balances
+                ({field_name}, asset, quantity, utxo_address, block_index, tx_index,
+                 asset_longname)
+            VALUES
+                (:address_or_utxo, :asset, :quantity, :utxo_address, :block_index, :tx_index,
+                 (SELECT asset_longname FROM assets_info WHERE asset = :asset))
             """  # noqa: S608 # nosec B608
     utxo_address = None
     if "utxo_address" in event_bindings:
@@ -590,6 +657,8 @@ def update_balances(state_db, event):
         "asset": event_bindings["asset"],
         "utxo_address": utxo_address,
         "quantity": quantity,
+        "block_index": event["block_index"],
+        "tx_index": event_bindings.get("tx_index"),
     }
     cursor.execute(sql, insert_bindings)
 
@@ -689,21 +758,7 @@ def get_last_block_parsed(state_db, no_cache=False):
         if block_index is not None:
             return int(block_index)
     cursor = state_db.cursor()
-    # SQLite otherwise chooses parsed_events_event_idx and builds a temporary
-    # B-tree to sort every BLOCK_PARSED row by event_index. On a cold mainnet
-    # State DB this can add minutes to every API process start. Force the
-    # existing event-index index so SQLite reverse-scans from the newest event
-    # and stops at the first BLOCK_PARSED row, preserving the original ordering
-    # semantics without the temporary sort.
-    cursor.execute(
-        """
-        SELECT block_index
-        FROM parsed_events INDEXED BY parsed_events_event_index_idx
-        WHERE event = 'BLOCK_PARSED'
-        ORDER BY event_index DESC
-        LIMIT 1
-        """
-    )
+    cursor.execute(LAST_BLOCK_PARSED_SQL)
     parsed_event = cursor.fetchone()
     if parsed_event:
         return parsed_event["block_index"]
@@ -749,9 +804,7 @@ def catch_up(ledger_db, state_db, watcher=None):
 
 def search_matching_event(ledger_db, state_db):
     state_db_cursor = state_db.cursor()
-    state_db_cursor.execute(
-        "SELECT * FROM parsed_events WHERE event = 'BLOCK_PARSED' ORDER BY event_index DESC LIMIT -1 OFFSET 1"
-    )
+    state_db_cursor.execute(EARLIER_BLOCKS_PARSED_SQL)
     matching_event = None
     for parsed_event in state_db_cursor:
         ledger_event = fetch_one(
@@ -769,10 +822,7 @@ def search_matching_event(ledger_db, state_db):
 
 
 def check_reorg(ledger_db, state_db):
-    last_event_parsed = fetch_one(
-        state_db,
-        "SELECT * FROM parsed_events WHERE event = 'BLOCK_PARSED' ORDER BY event_index DESC LIMIT 1 OFFSET 1",
-    )
+    last_event_parsed = fetch_one(state_db, PREVIOUS_BLOCK_PARSED_SQL)
     if last_event_parsed is None:
         return
     ledger_event = fetch_one(
@@ -801,12 +851,23 @@ def parse_next_event(ledger_db, state_db):
 
 class APIWatcher(threading.Thread):
     def __init__(self, state_db):
-        threading.Thread.__init__(self, name="Watcher")
+        # Daemon: `stop()` bounds its own join, but a non-daemon thread that
+        # outlives that join still blocks interpreter shutdown, so the API child
+        # would hang past the parent's ten-second budget and be force-killed --
+        # exactly the outage this bound exists to prevent. `interrupt()` unblocks
+        # the thread in every case SQLite checks the interrupt flag; daemon mode
+        # covers the ones it does not (blocking I/O, SQLITE_BUSY retry loops).
+        # Losing the thread at exit is safe: every write runs inside a savepoint
+        # (`parse_event`), so an abandoned transaction rolls back via WAL recovery.
+        threading.Thread.__init__(self, name="Watcher", daemon=True)
         logger.debug("Initializing API Watcher...")
         self.state_db = None
         self.ledger_db = None
         self.current_state_thread = None
         self.stop_event = threading.Event()  # Add stop event
+        # See `stop()`: guards the cross-thread interrupt against this thread's
+        # own close().
+        self.db_lock = threading.Lock()
         self.state_db = state_db
         self.ledger_db = database.get_db_connection(
             config.DATABASE, read_only=True, check_wal=False
@@ -824,10 +885,11 @@ class APIWatcher(threading.Thread):
                 raise
             logger.debug("API Watcher query interrupted during shutdown.")
         finally:
-            if self.state_db is not None:
-                self.state_db.close()
-            if self.ledger_db is not None:
-                self.ledger_db.close()
+            with self.db_lock:
+                if self.state_db is not None:
+                    self.state_db.close()
+                if self.ledger_db is not None:
+                    self.ledger_db.close()
             if self.current_state_thread is not None:
                 self.current_state_thread.stop()
 
@@ -847,14 +909,20 @@ class APIWatcher(threading.Thread):
     def stop(self, deadline=None):
         logger.info("Stopping API Watcher thread...")
         self.stop_event.set()
-        for connection in (self.state_db, self.ledger_db):
-            if connection is not None:
-                try:
-                    connection.interrupt()
-                except apsw.Error:
-                    pass
-        timeout = 5 if deadline is None else max(0, min(5, deadline - time.monotonic()))
-        self.join(timeout=timeout)
+        # Under the lock: apsw checks the connection is open and then calls
+        # sqlite3_interrupt() while holding the GIL, but close() releases it
+        # around sqlite3_close_v2(), so an unsynchronised interrupt can reach a
+        # handle that is already being freed. Held only for the duration of the
+        # interrupts, which never block, so the closing thread waits on it for
+        # microseconds and the join() below cannot deadlock against it.
+        with self.db_lock:
+            for connection in (self.state_db, self.ledger_db):
+                if connection is not None:
+                    try:
+                        connection.interrupt()
+                    except apsw.Error:
+                        pass
+        self.join(timeout=deadline_timeout(deadline, 5))
         if self.is_alive():
             logger.warning("API Watcher thread did not stop in time, continuing...")
         else:

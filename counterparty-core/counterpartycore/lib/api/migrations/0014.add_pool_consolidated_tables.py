@@ -5,25 +5,18 @@ import logging
 import time
 
 from counterpartycore.lib import config
-from counterpartycore.lib.utils.database import (
-    ADDRESS_INDEX_COLUMN_NAMES,
-    ASSET_INDEX_COLUMN_NAMES,
-    text_affinitize_index_columns,
+from counterpartycore.lib.api.statetables import (
+    LEDGER_POOL_KEYS as POOL_TABLES,
 )
+from counterpartycore.lib.api.statetables import (
+    consolidated_projection,
+)
+from counterpartycore.lib.utils.database import text_affinitize_index_columns
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 __depends__ = {"0013.add_performance_indexes"}
-
-# group_by fields determine which columns identify a unique record
-# (used to get the latest version via MAX(rowid)).
-POOL_TABLES = {
-    "pools": "asset_a, asset_b",
-    "pool_deposits": "tx_hash",
-    "pool_withdrawals": "tx_hash",
-    "pool_matches": "rowid",
-}
 
 
 def dict_factory(cursor, row):
@@ -68,29 +61,17 @@ def build_table(state_db, table_name, group_by):
     """)  # noqa: S608  # nosec B608
     state_db.execute("CREATE INDEX temp.latest_ids_idx ON latest_ids(max_id)")
 
-    # The State DB stores asset *names*; decode the compact ``asset_index`` back
-    # to names while ``ledger_db`` is attached (the INSERT ... SELECT bypasses
-    # the rowtracer). ``lp_asset`` is not normalized, so it is copied verbatim.
-    columns = []
-    for col in state_db.execute(f"PRAGMA table_info({table_name})"):
-        name = col["name"]
-        if name in ASSET_INDEX_COLUMN_NAMES:
-            columns.append(
-                f"(SELECT asset_name FROM ledger_db.assets WHERE asset_index = b.{name}) AS {name}"  # noqa: S608  # nosec B608
-            )
-        elif name in ADDRESS_INDEX_COLUMN_NAMES:
-            # decode the compact ``address_id`` back to the address string
-            columns.append(
-                f"(SELECT address FROM ledger_db.address_list WHERE address_id = b.{name}) AS {name}"  # noqa: S608  # nosec B608
-            )
-        else:
-            columns.append(f"b.{name}")
-    select_fields = ", ".join(columns)
+    # The State DB stores decoded asset names / addresses where the Ledger DB
+    # stores compact indexes. The projection is shared with the incremental
+    # rollback path so the two can never drift apart -- see
+    # ``api/statetables.py``.
+    names, expressions = consolidated_projection(state_db, table_name)
 
-    # table_name comes from POOL_TABLES dict; select_fields is built from PRAGMA table_info results
+    # table_name comes from POOL_TABLES; the projection is built from PRAGMA
+    # table_info results
     state_db.execute(f"""
-        INSERT INTO {table_name}
-        SELECT {select_fields}
+        INSERT INTO {table_name} ({", ".join(names)})
+        SELECT {", ".join(expressions)}
         FROM ledger_db.{table_name} b
         JOIN latest_ids l ON b.rowid = l.max_id
     """)  # noqa: S608  # nosec B608
