@@ -77,12 +77,17 @@ def verify_signature(public_key_data, signature_path, snapshot_path):
         # lockfile creation, so the kill must come first. check=False because
         # the agent may legitimately not have started (e.g. import_keys
         # raised); ignore_errors guards against gpg transiently recreating a
-        # file during shutdown.
-        subprocess.run(  # noqa: S603
-            ["gpgconf", "--homedir", temp_dir, "--kill", "gpg-agent"],  # noqa: S607  # nosec B603, B607
-            check=False,
-            capture_output=True,
-        )
+        # file during shutdown. Nothing here may raise: an OSError from a
+        # missing `gpgconf` would both skip the removal below and mask the
+        # exception that brought us into this block.
+        try:
+            subprocess.run(  # noqa: S603
+                ["gpgconf", "--homedir", temp_dir, "--kill", "gpg-agent"],  # noqa: S607  # nosec B603, B607
+                check=False,
+                capture_output=True,
+            )
+        except OSError:  # `gpgconf` not on PATH
+            pass
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     return verified

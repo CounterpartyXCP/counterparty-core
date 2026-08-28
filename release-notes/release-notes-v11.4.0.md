@@ -135,7 +135,7 @@ The differential tests above surfaced three ways in which a State DB maintained 
 
 ## Bugfixes
 
-- **Fix a resource leak in snapshot signature verification** (`bootstrap` / `prepare-bootstrap`). Every call to `verify_signature()` leaked one `gpg-agent` daemon and one temporary GnuPG home directory, because the cleanup added in f53a7443 was accidentally disabled in 301c37ac ("Fix bootstrap with custom url") — commented out as apparent leftover debugging. The agent is now terminated with `gpgconf --homedir <dir> --kill gpg-agent` before the directory is removed, which avoids the socket/lockfile race that removing a live agent's home directory would otherwise hit. Only the agent spawned by the call itself is terminated; other GnuPG daemons on the machine are unaffected.
+- **Fix a resource leak in snapshot signature verification** (`bootstrap` / `prepare-bootstrap`). Every call to `verify_signature()` leaked one `gpg-agent` daemon and one temporary GnuPG home directory, because the cleanup added in f53a7443 was accidentally disabled in 301c37ac ("Fix bootstrap with custom url") — commented out as apparent leftover debugging. The agent is now terminated with `gpgconf --homedir <dir> --kill gpg-agent` before the directory is removed, which avoids the socket/lockfile race that removing a live agent's home directory would otherwise hit. Only the agent spawned by the call itself is terminated; other GnuPG daemons on the machine are unaffected, and a missing `gpgconf` can neither skip the removal nor mask the error that triggered it. Three regression tests now pin the cleanup, so it cannot be silently dropped again.
 
 # Credits
 
