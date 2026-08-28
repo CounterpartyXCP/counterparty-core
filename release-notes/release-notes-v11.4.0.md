@@ -131,6 +131,7 @@ The differential tests above surfaced three ways in which a State DB maintained 
 ## Security
 
 - Bumped `h2` to 0.4.19 in both Rust lockfiles for **RUSTSEC-2026-0258** ("h2 unbounded empty DATA frames"). `counterparty-rs` carried 0.4.8 and `counterparty-client` 0.4.15; the advisory requires >= 0.4.16.
+- Bumped `chacha20` to 0.10.2 in `counterparty-client`. Version 0.10.1 was yanked from crates.io; it reaches the client transitively through `rand` 0.10.2, and `deny.toml` treats a yanked dependency as a build failure rather than a warning.
 
 ## Bugfixes
 
