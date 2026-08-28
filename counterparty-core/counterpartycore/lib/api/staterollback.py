@@ -62,13 +62,19 @@ MAX_INCREMENTAL_DEPTH = 1000
 # full rebuild -- which sets the marker, making the fallback self-healing.
 READY_FLAG = "INCREMENTAL_ROLLBACK_READY"
 
-# Returned by ``rollback_reason`` when the State DB is already at or below the
+# Returned by ``rollback_reason`` when the State DB is already below the
 # requested block. Unlike the other reasons this one does *not* select the full
 # rebuild: there is nothing to undo, and re-deriving every table from the whole
 # ledger history to achieve nothing would be the most expensive no-op available.
-# Reachable from the CLI (``counterparty-server rollback/reparse`` to a block the
-# State DB has not caught up to yet), never from ``apiwatcher.check_reorg``,
-# whose target is always strictly below the last parsed block.
+# Reached from the CLI (``counterparty-server rollback/reparse`` to a block the
+# State DB has not caught up to yet), and from ``apiwatcher.check_reorg`` when
+# the ledger invalidates a block the watcher had not started copying.
+#
+# "Below" is measured against ``apiwatcher.get_last_block_touched`` -- the block
+# of the last event copied -- and not against the last block *completed*. A
+# reorganization caught mid-block targets ``last_block_parsed + 1``, so measuring
+# against the completed tip would answer "nothing to roll back" for the very case
+# that has orphaned rows to remove.
 NOTHING_TO_ROLL_BACK = "nothing to roll back"
 
 # Append-only State DB tables: every row carries the ``block_index`` of the
@@ -141,18 +147,23 @@ def rollback_reason(state_db, block_index):
     try:
         if not is_ready(state_db):
             return "State DB predates incremental rollback support"
-        last_block_parsed = apiwatcher.get_last_block_parsed(state_db, no_cache=True)
+        # The last block *touched*, not the last one completed: while a block is
+        # half copied its rows are the ones a reorganization orphans, and they
+        # sit one block above the last BLOCK_PARSED. Measuring against the
+        # completed tip reports NOTHING_TO_ROLL_BACK for exactly that case and
+        # leaves the orphaned rows -- and their applied mutations -- in place.
+        last_block_touched = apiwatcher.get_last_block_touched(state_db)
     except Exception as e:  # pylint: disable=broad-except
         # Deliberately broad: this function only picks a path. Anything that
         # stops us inspecting the State DB -- an apsw error on a schema too old
         # to have ``config`` / ``parsed_events``, a cached tip that will not
         # parse as an int -- must select the full rebuild rather than propagate.
         return f"State DB cannot be inspected ({e})"
-    if last_block_parsed <= 0:
+    if last_block_touched <= 0:
         return "State DB is empty"
-    if block_index > last_block_parsed:
+    if block_index > last_block_touched:
         return NOTHING_TO_ROLL_BACK
-    depth = last_block_parsed - block_index + 1
+    depth = last_block_touched - block_index + 1
     if depth > MAX_INCREMENTAL_DEPTH:
         return f"rollback depth ({depth} blocks) exceeds {MAX_INCREMENTAL_DEPTH}"
     return None

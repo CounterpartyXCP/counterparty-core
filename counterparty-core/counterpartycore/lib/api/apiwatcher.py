@@ -5,13 +5,28 @@ import time
 
 import apsw
 
-from counterpartycore.lib import config, exceptions
+from counterpartycore.lib import config
 from counterpartycore.lib.api import dbbuilder
 from counterpartycore.lib.parser import utxosinfo
 from counterpartycore.lib.utils import database, hashcodec
 from counterpartycore.lib.utils.helpers import deadline_timeout, format_duration
 
 logger = logging.getLogger(config.LOGGER_NAME)
+
+# Set when the watcher thread stops on an error rather than on shutdown. Nothing
+# restarts it, and nothing else advances the State DB, so from that moment the
+# API serves a snapshot that is frozen at whatever block it had reached -- until
+# now silently, since the thread died with its traceback going nowhere near the
+# log. The health sampler reads this to fail readiness immediately with
+# `watcher_stopped`, instead of waiting for the lag to grow past the ready
+# threshold (and never reporting it at all on an `--api-only` node, which does
+# not compare itself to the backend tip).
+WATCHER_FAILED = threading.Event()
+
+
+def watcher_has_failed():
+    return WATCHER_FAILED.is_set()
+
 
 # `parsed_events` carries an index on `event` (`parsed_events_event_idx`) and a
 # unique index on `event_index` (`parsed_events_event_index_idx`). For a query
@@ -20,12 +35,15 @@ logger = logging.getLogger(config.LOGGER_NAME)
 # BLOCK_PARSED row it found -- on a cold mainnet State DB that is minutes of I/O
 # to return a single row, on paths that run at every API process start
 # (`APIWatcher.__init__` -> `get_last_block_parsed`, then `catch_up` ->
-# `check_reorg`) and every five seconds afterwards.
+# `check_reorg`) and on every reorganization check afterwards.
 #
 # Forcing the event-index index instead makes SQLite reverse-scan from the newest
-# event and stop as soon as the LIMIT/OFFSET is satisfied. The ORDER BY, LIMIT and
-# OFFSET are unchanged, so the ordering semantics are identical; only the access
-# path differs.
+# event and stop as soon as the LIMIT is satisfied. The ORDER BY and LIMIT are
+# unchanged, so the ordering semantics are identical; only the access path differs.
+#
+# `LAST_PARSED_EVENT_SQL` carries no `event` filter, so that plan was never open to
+# it; it is pinned to the same index anyway, to keep one access path across all
+# three queries and to fail loudly if the index is ever dropped.
 #
 # `INDEXED BY` is a hard requirement rather than a hint: `parsed_events_event_index_idx`
 # is created by migration 0002 and dropping or renaming it makes these queries fail
@@ -38,24 +56,48 @@ LAST_BLOCK_PARSED_SQL = """
     LIMIT 1
 """
 
-PREVIOUS_BLOCK_PARSED_SQL = """
+# The last event the State DB parsed, whole row: what `check_reorg` compares
+# against the Ledger DB. Neither restriction the historical query carried is safe
+# here, and each one hid a different reorganization:
+#
+#   - `LIMIT 1 OFFSET 1` skipped to the block *before* the last one parsed, which
+#     makes the shallowest and by far the most common reorganization -- the tip
+#     block replaced by another at the same height -- invisible: the only parsed
+#     event whose hash changed is the one the comparison steps over, and the next
+#     block on the new branch then appends on top of the orphaned one.
+#
+#   - `WHERE event = 'BLOCK_PARSED'` compared the last *block* rather than the last
+#     *event*. The watcher advances one event at a time (`get_next_event_to_parse`
+#     orders by `message_index`, not by block), so between two blocks it sits with
+#     part of a block copied and that block's BLOCK_PARSED not yet written. A
+#     rollback landing in that window leaves the last BLOCK_PARSED -- the previous
+#     block's, untouched by the reorganization -- matching, so the check passes
+#     while the State DB holds orphaned events of the block it was in the middle
+#     of. Nothing ever repairs that: every BLOCK_PARSED compared afterwards comes
+#     from the new branch and matches.
+#
+# Comparing the newest row cannot yield a false positive: the State DB only ever
+# copies events the Ledger DB has committed, whatever their type, so the hash at
+# that `message_index` differs only if the ledger really did roll back.
+#
+# `search_matching_event` keeps the `BLOCK_PARSED` filter -- it looks for the
+# rollback *target*, which is a block index.
+LAST_PARSED_EVENT_SQL = """
     SELECT *
     FROM parsed_events INDEXED BY parsed_events_event_index_idx
-    WHERE event = 'BLOCK_PARSED'
     ORDER BY event_index DESC
-    LIMIT 1 OFFSET 1
+    LIMIT 1
 """
 
 # Same plan, unbounded: `search_matching_event` walks back until it finds a
 # BLOCK_PARSED row whose hash still matches the Ledger DB. The reverse scan also
 # lets that walk stop after the first few blocks in the common shallow-reorg case,
 # instead of first sorting every BLOCK_PARSED row ever written.
-EARLIER_BLOCKS_PARSED_SQL = """
+BLOCKS_PARSED_DESC_SQL = """
     SELECT *
     FROM parsed_events INDEXED BY parsed_events_event_index_idx
     WHERE event = 'BLOCK_PARSED'
     ORDER BY event_index DESC
-    LIMIT -1 OFFSET 1
 """
 
 UPDATE_EVENTS_ID_FIELDS = {
@@ -765,6 +807,30 @@ def get_last_block_parsed(state_db, no_cache=False):
     return 0
 
 
+def get_last_block_touched(state_db):
+    """The block index of the last event the State DB copied, finished or not.
+
+    Differs from `get_last_block_parsed` exactly while a block is half copied:
+    that one reports the last block *completed* -- the one whose BLOCK_PARSED is
+    written -- while this one reports the block the watcher is currently inside.
+
+    A rollback target has to be compared against this one. The orphaned rows of a
+    half-copied block sit one block above the completed tip, so measuring against
+    the completed tip reads them as "already below the target" and leaves them in
+    place -- which is precisely the case `check_reorg` aims at when it rolls back
+    to `last_block_parsed + 1`. See `staterollback.rollback_reason`.
+
+    Deliberately uncached: `LAST_BLOCK_PARSED` only advances on a BLOCK_PARSED
+    event, which is what makes it the wrong number here, and there is no cached
+    counterpart for a block still being copied. Callers are on the rollback path,
+    where one index lookup does not matter.
+    """
+    last_event_parsed = fetch_one(state_db, LAST_PARSED_EVENT_SQL)
+    if last_event_parsed is None:
+        return 0
+    return last_event_parsed["block_index"]
+
+
 def parse_event(state_db, event, ledger_db=None):
     with state_db:
         logger.trace(f"Parsing event: {event}")
@@ -776,7 +842,8 @@ def parse_event(state_db, event, ledger_db=None):
 
 
 def catch_up(ledger_db, state_db, watcher=None):
-    check_reorg(ledger_db, state_db)
+    reorg_watch = ReorgWatch(ledger_db, state_db)
+    reorg_watch.check()
     event_to_parse_count = get_event_to_parse_count(ledger_db, state_db)
     if event_to_parse_count > 0:
         logger.debug("%s events to catch up...", event_to_parse_count)
@@ -784,6 +851,11 @@ def catch_up(ledger_db, state_db, watcher=None):
         event_parsed = 0
         next_event = get_next_event_to_parse(ledger_db, state_db)
         while next_event and (watcher is None or not watcher.stop_event.is_set()):
+            if reorg_watch.check(next_event):
+                # The rollback moved the State DB tip: the event in hand was
+                # selected against the branch that has just been undone.
+                next_event = get_next_event_to_parse(ledger_db, state_db)
+                continue
             parse_event(state_db, next_event, ledger_db=ledger_db)
             event_parsed += 1
             if event_parsed % 50000 == 0:
@@ -804,7 +876,7 @@ def catch_up(ledger_db, state_db, watcher=None):
 
 def search_matching_event(ledger_db, state_db):
     state_db_cursor = state_db.cursor()
-    state_db_cursor.execute(EARLIER_BLOCKS_PARSED_SQL)
+    state_db_cursor.execute(BLOCKS_PARSED_DESC_SQL)
     matching_event = None
     for parsed_event in state_db_cursor:
         ledger_event = fetch_one(
@@ -822,9 +894,18 @@ def search_matching_event(ledger_db, state_db):
 
 
 def check_reorg(ledger_db, state_db):
-    last_event_parsed = fetch_one(state_db, PREVIOUS_BLOCK_PARSED_SQL)
+    """Roll the State DB back if the Ledger DB has changed branch under it.
+
+    Returns True when a branch change was detected and a rollback requested, so
+    callers holding an event selected against the old branch know to discard it.
+    `dbbuilder.rollback_state_db` may find nothing left to undo (the State DB
+    already sits below the target); re-selecting the event is harmless there, so
+    the return value stays "the ledger moved under us" rather than "rows were
+    deleted".
+    """
+    last_event_parsed = fetch_one(state_db, LAST_PARSED_EVENT_SQL)
     if last_event_parsed is None:
-        return
+        return False
     ledger_event = fetch_one(
         ledger_db,
         "SELECT * FROM messages WHERE message_index = ?",
@@ -838,15 +919,66 @@ def check_reorg(ledger_db, state_db):
         logger.warning("Blockchain reorganization detected at Block %s", target_block_index)
         logger.info("Rolling back to block: %s", target_block_index)
         dbbuilder.rollback_state_db(state_db, block_index=target_block_index)
+        return True
+    return False
 
 
-def parse_next_event(ledger_db, state_db):
-    next_event = get_next_event_to_parse(ledger_db, state_db)
+def get_ledger_data_version(ledger_db):
+    """SQLite's change counter for the Ledger DB.
 
-    if next_event is None:
-        raise exceptions.NoEventToParse("No event to parse")
+    The pager bumps it whenever *another* connection commits, so a change in
+    this value is an exact "the ledger moved" signal for the watcher's read-only
+    connection -- including a rollback that lands in the middle of the block it
+    is parsing, which comparing block indexes alone cannot see.
+    """
+    return fetch_one(ledger_db, "PRAGMA data_version")["data_version"]
 
-    parse_event(state_db, next_event, ledger_db=ledger_db)
+
+class ReorgWatch:
+    """Decides when running `check_reorg` is worth it.
+
+    The watcher used to look for a reorganization only once it had nothing left
+    to parse, and then at most once every five seconds. That leaves both cases
+    where the ledger changes branch under a watcher that is *not* idle
+    undetected until it next runs out of events: a rollback while it is still
+    replaying a backlog, and one that lands mid-block. Each event it appends in
+    between is derived from the new branch and written on top of state derived
+    from the old one.
+
+    Keying the check on `PRAGMA data_version` covers both, and costs less than
+    the timer it replaces rather than more: at the tip -- where the watcher
+    spends nearly all of its time, polling every 100ms -- the counter is
+    unchanged and the two index lookups are skipped entirely. The five-second
+    interval is kept as a floor, so detection never rests on the counter alone.
+    """
+
+    FORCE_INTERVAL = 5
+
+    def __init__(self, ledger_db, state_db):
+        self.ledger_db = ledger_db
+        self.state_db = state_db
+        self.checked_at = None
+        self.checked_when = 0.0
+
+    def check(self, next_event=None):
+        """Returns True when a reorganization was detected and rolled back."""
+        marker = (
+            next_event["block_index"] if next_event is not None else None,
+            get_ledger_data_version(self.ledger_db),
+        )
+        # Monotonic: the floor measures an elapsed duration, and a wall clock
+        # stepped backwards (NTP correction, a suspended host resuming) would
+        # otherwise suspend the only guarantee that does not rest on the counter.
+        now = time.monotonic()
+        if marker == self.checked_at and now - self.checked_when < self.FORCE_INTERVAL:
+            return False
+        self.checked_at = marker
+        self.checked_when = now
+        # The marker stays recorded even when the answer was "rolled back": the
+        # check has just run against this exact ledger revision, so re-running it
+        # for the replacement event would only spin. A rollback the ledger keeps
+        # invalidating must not turn into a hot loop of index lookups.
+        return check_reorg(self.ledger_db, self.state_db)
 
 
 class APIWatcher(threading.Thread):
@@ -865,6 +997,7 @@ class APIWatcher(threading.Thread):
         self.ledger_db = None
         self.current_state_thread = None
         self.stop_event = threading.Event()  # Add stop event
+        WATCHER_FAILED.clear()
         # See `stop()`: guards the cross-thread interrupt against this thread's
         # own close().
         self.db_lock = threading.Lock()
@@ -882,8 +1015,15 @@ class APIWatcher(threading.Thread):
                 self.follow()
         except apsw.InterruptError:
             if not self.stop_event.is_set():
-                raise
-            logger.debug("API Watcher query interrupted during shutdown.")
+                self._report_failure("API Watcher was interrupted unexpectedly.")
+            else:
+                logger.debug("API Watcher query interrupted during shutdown.")
+        except Exception:  # pylint: disable=broad-except
+            # Re-raising only hands the traceback to `threading.excepthook`,
+            # which writes to stderr rather than to the log, and leaves the
+            # process serving a State DB that can never advance again as if
+            # nothing had happened.
+            self._report_failure("API Watcher stopped on an unexpected error.")
         finally:
             with self.db_lock:
                 if self.state_db is not None:
@@ -893,16 +1033,23 @@ class APIWatcher(threading.Thread):
             if self.current_state_thread is not None:
                 self.current_state_thread.stop()
 
+    def _report_failure(self, message):
+        WATCHER_FAILED.set()
+        logger.critical(message, exc_info=True)
+
     def follow(self):
-        no_check_reorg_since = 0
+        reorg_watch = ReorgWatch(self.ledger_db, self.state_db)
         while not self.stop_event.is_set():
-            try:
-                parse_next_event(self.ledger_db, self.state_db)
-            except exceptions.NoEventToParse:
-                if time.time() - no_check_reorg_since > 5:
-                    check_reorg(self.ledger_db, self.state_db)
-                    no_check_reorg_since = time.time()
+            next_event = get_next_event_to_parse(self.ledger_db, self.state_db)
+            if next_event is None:
+                # At the tip. A reorganization is the only thing left that can
+                # change what to do next, and it announces itself with no event.
+                reorg_watch.check()
                 self.stop_event.wait(timeout=0.1)
+                continue
+            if reorg_watch.check(next_event):
+                continue
+            parse_event(self.state_db, next_event, ledger_db=self.ledger_db)
             if self.stop_event.is_set():
                 break
 
