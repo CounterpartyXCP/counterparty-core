@@ -114,15 +114,23 @@ def test_api_watcher_handles_shutdown_interrupt(monkeypatch):
 # regressing to the plan that cost 132s on a cold mainnet State DB.
 BLOCK_PARSED_QUERIES = [
     ("LAST_BLOCK_PARSED_SQL", apiwatcher.LAST_BLOCK_PARSED_SQL),
-    ("PREVIOUS_BLOCK_PARSED_SQL", apiwatcher.PREVIOUS_BLOCK_PARSED_SQL),
-    ("EARLIER_BLOCKS_PARSED_SQL", apiwatcher.EARLIER_BLOCKS_PARSED_SQL),
+    ("BLOCKS_PARSED_DESC_SQL", apiwatcher.BLOCKS_PARSED_DESC_SQL),
+]
+
+# `LAST_PARSED_EVENT_SQL` carries no `event` filter, so the planner reaches for the
+# event-index index on its own and the 132s plan was never available to it. It is
+# pinned all the same -- one access path across all three queries, and a loud
+# failure if the index is ever dropped -- but it cannot take the premise the test
+# below guards, which is that the *unhinted* query picks the sort.
+EVENT_INDEX_QUERIES = BLOCK_PARSED_QUERIES + [
+    ("LAST_PARSED_EVENT_SQL", apiwatcher.LAST_PARSED_EVENT_SQL),
 ]
 
 
 @pytest.mark.parametrize(
-    ("name", "query"), BLOCK_PARSED_QUERIES, ids=[q[0] for q in BLOCK_PARSED_QUERIES]
+    ("name", "query"), EVENT_INDEX_QUERIES, ids=[q[0] for q in EVENT_INDEX_QUERIES]
 )
-def test_block_parsed_queries_scan_the_event_index_without_sorting(state_db, name, query):
+def test_event_index_queries_scan_without_sorting(state_db, name, query):
     plan = state_db.execute("EXPLAIN QUERY PLAN " + query).fetchall()  # noqa: S608  # nosec B608
     details = [row["detail"] for row in plan]
 
@@ -135,9 +143,9 @@ def test_block_parsed_queries_scan_the_event_index_without_sorting(state_db, nam
 
 
 @pytest.mark.parametrize(
-    ("name", "query"), BLOCK_PARSED_QUERIES, ids=[q[0] for q in BLOCK_PARSED_QUERIES]
+    ("name", "query"), EVENT_INDEX_QUERIES, ids=[q[0] for q in EVENT_INDEX_QUERIES]
 )
-def test_block_parsed_queries_match_the_unhinted_plan(state_db, name, query):
+def test_event_index_queries_match_the_unhinted_plan(state_db, name, query):
     """`INDEXED BY` must change only the access path, never the result."""
     unhinted = query.replace(" INDEXED BY parsed_events_event_index_idx", "")
     assert unhinted != query, f"{name} lost its INDEXED BY clause"
@@ -511,3 +519,505 @@ def test_events_address_fields_keys_are_lowercase_underscore():
     for event_name, fields in apiwatcher.EVENTS_ADDRESS_FIELDS.items():
         for field in fields:
             assert pattern.match(field), f"{event_name} declares a malformed field name {field!r}"
+
+
+# --------------------------------------------------------------------------------------------
+# Reorganization detection
+# --------------------------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def clear_watcher_failure():
+    """`WATCHER_FAILED` is process-wide; never let one test leak into the next."""
+    apiwatcher.WATCHER_FAILED.clear()
+    yield
+    apiwatcher.WATCHER_FAILED.clear()
+
+
+def _connect(schema, rows_sql, rows):
+    db = apiwatcher.apsw.Connection(":memory:")
+    db.execute(schema)
+    db.executemany(rows_sql, rows)
+    db.setrowtrace(apiwatcher.database.rowtracer)
+    return db
+
+
+def _reorg_dbs(parsed_events, messages):
+    state_db = _connect(
+        "CREATE TABLE parsed_events "
+        "(event_index INTEGER, event TEXT, event_hash TEXT, block_index INTEGER)",
+        "INSERT INTO parsed_events VALUES (?, ?, ?, ?)",
+        parsed_events,
+    )
+    state_db.execute(
+        "CREATE UNIQUE INDEX parsed_events_event_index_idx ON parsed_events (event_index)"
+    )
+    ledger_db = _connect(
+        "CREATE TABLE messages "
+        "(message_index INTEGER PRIMARY KEY, event TEXT, event_hash TEXT, block_index INTEGER)",
+        "INSERT INTO messages VALUES (?, ?, ?, ?)",
+        messages,
+    )
+    try:
+        yield ledger_db, state_db
+    finally:
+        state_db.close()
+        ledger_db.close()
+
+
+# Blocks 1, 2 and 3, each parsed through to its BLOCK_PARSED event.
+WHOLE_BLOCKS = [
+    (10, "BLOCK_PARSED", "hash-1", 1),
+    (20, "BLOCK_PARSED", "hash-2", 2),
+    (30, "BLOCK_PARSED", "hash-3", 3),
+]
+
+# The State DB stopped *between* two events of block 3: its CREDIT is copied, the
+# BLOCK_PARSED that closes the block is not. `get_next_event_to_parse` orders by
+# `message_index` and not by block, so this is where the watcher sits for as long
+# as it takes to copy a block -- and for the whole of a catch-up.
+MID_BLOCK_EVENTS = [
+    (10, "BLOCK_PARSED", "hash-1", 1),
+    (20, "BLOCK_PARSED", "hash-2", 2),
+    (25, "CREDIT", "credit-3", 3),
+]
+MID_BLOCK_MESSAGES = MID_BLOCK_EVENTS + [(30, "BLOCK_PARSED", "hash-3", 3)]
+
+
+@pytest.fixture
+def reorg_dbs():
+    """A State DB whose `parsed_events` mirror a three-block Ledger DB.
+
+    Blocks 1, 2 and 3 were parsed, each ending on a BLOCK_PARSED event, and the
+    Ledger DB still holds exactly those events. Tests rewrite the ledger's
+    hashes to stage the branch change they are about.
+    """
+    yield from _reorg_dbs(WHOLE_BLOCKS, WHOLE_BLOCKS)
+
+
+@pytest.fixture
+def mid_block_dbs():
+    """The same pair, caught with block 3 only half copied into the State DB."""
+    yield from _reorg_dbs(MID_BLOCK_EVENTS, MID_BLOCK_MESSAGES)
+
+
+@pytest.fixture
+def partial_block_dbs():
+    """A State DB that never finished a block, over a ledger that replaced it."""
+    yield from _reorg_dbs([(5, "CREDIT", "credit-1", 1)], [(5, "CREDIT", "other-credit", 1)])
+
+
+@pytest.fixture
+def rollbacks(monkeypatch):
+    """Records the blocks `check_reorg` asks to roll back to."""
+    targets = []
+    monkeypatch.setattr(
+        apiwatcher.dbbuilder,
+        "rollback_state_db",
+        lambda state_db, block_index: targets.append(block_index),
+    )
+    return targets
+
+
+def test_check_reorg_leaves_a_matching_ledger_alone(reorg_dbs, rollbacks):
+    ledger_db, state_db = reorg_dbs
+
+    assert apiwatcher.check_reorg(ledger_db, state_db) is False
+    assert rollbacks == []
+
+
+def test_check_reorg_detects_a_tip_block_replaced_at_the_same_height(reorg_dbs, rollbacks):
+    """The shallowest reorganization there is, and the one the historical
+    `LIMIT 1 OFFSET 1` comparison could not see: the block the State DB parsed
+    last is replaced by another at the same height, so the only event whose hash
+    changed is the one that query stepped over."""
+    ledger_db, state_db = reorg_dbs
+    ledger_db.execute("UPDATE messages SET event_hash = 'other-3' WHERE message_index = 30")
+
+    # The premise: everything below the tip is untouched, so a check that skips
+    # the tip compares two identical hashes and reports nothing.
+    previous = apiwatcher.fetch_one(state_db, "SELECT * FROM parsed_events WHERE event_index = 20")
+    in_ledger = apiwatcher.fetch_one(ledger_db, "SELECT * FROM messages WHERE message_index = 20")
+    assert previous["event_hash"] == in_ledger["event_hash"]
+
+    assert apiwatcher.check_reorg(ledger_db, state_db) is True
+    assert rollbacks == [3]
+
+
+def test_check_reorg_rolls_back_to_the_first_block_that_still_matches(reorg_dbs, rollbacks):
+    ledger_db, state_db = reorg_dbs
+    ledger_db.execute("UPDATE messages SET event_hash = 'other' WHERE message_index IN (20, 30)")
+
+    assert apiwatcher.check_reorg(ledger_db, state_db) is True
+    assert rollbacks == [2]
+
+
+def test_check_reorg_leaves_a_matching_ledger_alone_mid_block(mid_block_dbs, rollbacks):
+    """Sitting in the middle of a block is the watcher's normal state between two
+    events, not a reorganization: the copied part of the block still matches."""
+    ledger_db, state_db = mid_block_dbs
+
+    assert apiwatcher.check_reorg(ledger_db, state_db) is False
+    assert rollbacks == []
+
+
+def test_check_reorg_detects_a_reorg_inside_the_block_being_parsed(mid_block_dbs, rollbacks):
+    """The blind spot a BLOCK_PARSED-only comparison leaves: the State DB holds
+    part of block 3 when the ledger replaces that block. The last BLOCK_PARSED it
+    parsed is block 2's, which the reorganization never touched, so comparing
+    blocks reports nothing while the copied events of block 3 are orphaned."""
+    ledger_db, state_db = mid_block_dbs
+    ledger_db.execute("UPDATE messages SET event_hash = 'other-credit' WHERE message_index = 25")
+    ledger_db.execute("UPDATE messages SET event_hash = 'other-3' WHERE message_index = 30")
+
+    # The premise: the newest *block* the State DB parsed still matches.
+    last_block = apiwatcher.fetch_one(state_db, apiwatcher.LAST_BLOCK_PARSED_SQL)
+    in_ledger = apiwatcher.fetch_one(
+        ledger_db,
+        "SELECT * FROM messages WHERE block_index = ? AND event = 'BLOCK_PARSED'",
+        (last_block["block_index"],),
+    )
+    assert in_ledger is None or in_ledger["event_hash"] == "hash-2"
+
+    assert apiwatcher.check_reorg(ledger_db, state_db) is True
+    assert rollbacks == [3]
+
+
+def test_check_reorg_detects_a_reorg_that_truncates_the_block_being_parsed(
+    mid_block_dbs, rollbacks
+):
+    """A rollback that has not yet re-added the replacement block: the event the
+    State DB last copied simply no longer exists in the ledger."""
+    ledger_db, state_db = mid_block_dbs
+    ledger_db.execute("DELETE FROM messages WHERE block_index = 3")
+
+    assert apiwatcher.check_reorg(ledger_db, state_db) is True
+    assert rollbacks == [3]
+
+
+def test_check_reorg_rolls_back_to_the_genesis_when_only_a_partial_block_was_parsed(
+    partial_block_dbs, rollbacks
+):
+    """`search_matching_event` walks BLOCK_PARSED rows, and there are none: the
+    State DB never finished a block, so there is no block to keep."""
+    ledger_db, state_db = partial_block_dbs
+
+    assert apiwatcher.check_reorg(ledger_db, state_db) is True
+    assert rollbacks == [0]
+
+
+def test_check_reorg_rolls_back_to_the_genesis_when_nothing_matches(reorg_dbs, rollbacks):
+    ledger_db, state_db = reorg_dbs
+    ledger_db.execute("DELETE FROM messages")
+
+    assert apiwatcher.check_reorg(ledger_db, state_db) is True
+    assert rollbacks == [0]
+
+
+def test_check_reorg_is_a_no_op_on_an_empty_state_db(reorg_dbs, rollbacks):
+    ledger_db, state_db = reorg_dbs
+    state_db.execute("DELETE FROM parsed_events")
+
+    assert apiwatcher.check_reorg(ledger_db, state_db) is False
+    assert rollbacks == []
+
+
+def test_get_last_block_touched_sees_the_block_being_copied(mid_block_dbs, reorg_dbs):
+    """`get_last_block_parsed` reports the last block *completed*; this one the
+    block the watcher is inside. They agree on a whole block and diverge on a
+    half-copied one, which is the case a rollback target has to be measured
+    against (see `staterollback.rollback_reason`)."""
+    _, mid_block_state_db = mid_block_dbs
+    _, whole_blocks_state_db = reorg_dbs
+
+    assert apiwatcher.get_last_block_parsed(whole_blocks_state_db, no_cache=True) == 3
+    assert apiwatcher.get_last_block_touched(whole_blocks_state_db) == 3
+
+    assert apiwatcher.get_last_block_parsed(mid_block_state_db, no_cache=True) == 2
+    assert apiwatcher.get_last_block_touched(mid_block_state_db) == 3
+
+
+def test_get_last_block_touched_is_zero_on_an_empty_state_db(reorg_dbs):
+    _, state_db = reorg_dbs
+    state_db.execute("DELETE FROM parsed_events")
+
+    assert apiwatcher.get_last_block_touched(state_db) == 0
+
+
+def test_check_reorg_targets_a_block_the_state_db_actually_holds(mid_block_dbs, rollbacks):
+    """The contract `staterollback.rollback_reason` relies on: whatever
+    `check_reorg` asks to roll back to, the State DB holds rows at or above it,
+    so the rollback is never dismissed as having nothing to undo."""
+    ledger_db, state_db = mid_block_dbs
+    ledger_db.execute("UPDATE messages SET event_hash = 'other-credit' WHERE message_index = 25")
+
+    assert apiwatcher.check_reorg(ledger_db, state_db) is True
+    assert rollbacks == [3]
+    assert rollbacks[0] <= apiwatcher.get_last_block_touched(state_db)
+
+
+def test_search_matching_event_starts_at_the_last_parsed_block(reorg_dbs):
+    """It must consider the tip too: with the tip skipped, a State DB whose only
+    orphaned block is its last one would roll back one block further than the
+    reorganization actually reached."""
+    ledger_db, state_db = reorg_dbs
+    ledger_db.execute("UPDATE messages SET event_hash = 'other-3' WHERE message_index = 30")
+
+    matching = apiwatcher.search_matching_event(ledger_db, state_db)
+
+    assert matching["block_index"] == 2
+
+
+def test_get_ledger_data_version_changes_when_another_connection_commits(tmp_path):
+    """The signal `ReorgWatch` is keyed on: SQLite only bumps `data_version` for
+    changes committed by a *different* connection, which is exactly the watcher's
+    relationship to the ledger writer."""
+    path = str(tmp_path / "ledger.db")
+    writer = apiwatcher.apsw.Connection(path)
+    writer.execute("CREATE TABLE t (x)")
+    reader = apiwatcher.apsw.Connection(path)
+    reader.setrowtrace(apiwatcher.database.rowtracer)
+
+    before = apiwatcher.get_ledger_data_version(reader)
+    reader.execute("SELECT * FROM t").fetchall()
+    assert apiwatcher.get_ledger_data_version(reader) == before
+
+    writer.execute("INSERT INTO t VALUES (1)")
+    after = apiwatcher.get_ledger_data_version(reader)
+
+    reader.close()
+    writer.close()
+    assert after != before
+
+
+# --------------------------------------------------------------------------------------------
+# ReorgWatch: when the check actually runs
+# --------------------------------------------------------------------------------------------
+
+
+@pytest.fixture
+def watch(monkeypatch):
+    """A `ReorgWatch` over a fake ledger, with counters for both sides."""
+    state = {"data_version": 1, "checks": 0, "reorg": False, "now": 1000.0}
+    monkeypatch.setattr(apiwatcher, "get_ledger_data_version", lambda _db: state["data_version"])
+    monkeypatch.setattr(apiwatcher.time, "monotonic", lambda: state["now"])
+
+    def check_reorg(_ledger_db, _state_db):
+        state["checks"] += 1
+        return state["reorg"]
+
+    monkeypatch.setattr(apiwatcher, "check_reorg", check_reorg)
+    return apiwatcher.ReorgWatch(MagicMock(), MagicMock()), state
+
+
+def test_reorg_watch_skips_the_check_while_the_ledger_has_not_moved(watch):
+    watcher, state = watch
+
+    for _ in range(50):
+        assert watcher.check({"block_index": 7}) is False
+
+    assert state["checks"] == 1
+
+
+def test_reorg_watch_rechecks_when_the_ledger_commits_inside_the_block(watch):
+    """A rollback landing mid-block leaves the block index unchanged, so the
+    ledger's data version is the only thing that reveals it."""
+    watcher, state = watch
+    watcher.check({"block_index": 7})
+
+    state["data_version"] += 1
+    watcher.check({"block_index": 7})
+
+    assert state["checks"] == 2
+
+
+def test_reorg_watch_rechecks_on_each_new_block(watch):
+    watcher, state = watch
+    watcher.check({"block_index": 7})
+    watcher.check({"block_index": 8})
+
+    assert state["checks"] == 2
+
+
+def test_reorg_watch_still_checks_every_five_seconds_at_rest(watch):
+    """The counter is the fast path, not the whole guarantee."""
+    watcher, state = watch
+    watcher.check()
+    state["now"] += apiwatcher.ReorgWatch.FORCE_INTERVAL - 0.1
+    watcher.check()
+    assert state["checks"] == 1
+
+    state["now"] += 0.2
+    watcher.check()
+
+    assert state["checks"] == 2
+
+
+def test_reorg_watch_reports_a_rollback_without_spinning_on_it(watch):
+    """The caller answers a rollback by re-selecting the event it was holding
+    and coming straight back. The check has already run against this ledger
+    revision, so running it again for the replacement would be a hot loop of
+    index lookups for as long as the ledger stays in that state."""
+    watcher, state = watch
+    state["reorg"] = True
+
+    assert watcher.check({"block_index": 7}) is True
+    assert watcher.check({"block_index": 7}) is False
+    assert state["checks"] == 1
+
+    # A replacement event from another block is a new lineage, and is checked.
+    assert watcher.check({"block_index": 8}) is True
+    assert state["checks"] == 2
+
+
+# --------------------------------------------------------------------------------------------
+# The watcher loops: a rollback invalidates the event in hand
+# --------------------------------------------------------------------------------------------
+
+
+class FakeWatch:
+    """A `ReorgWatch` that reports a reorganization on its nth call."""
+
+    def __init__(self, reorg_on=()):
+        self.reorg_on = set(reorg_on)
+        self.calls = []
+
+    def __call__(self, *_args):  # stands in for the class itself
+        return self
+
+    def check(self, next_event=None):
+        self.calls.append(next_event["block_index"] if next_event else None)
+        return len(self.calls) in self.reorg_on
+
+
+def test_catch_up_discards_the_event_it_held_when_a_reorg_rolls_back(monkeypatch):
+    """The event was selected against the branch the rollback has just undone;
+    parsing it anyway appends new-branch state on top of state that no longer
+    exists."""
+    events = [{"block_index": 5, "message_index": 1}, {"block_index": 6, "message_index": 2}]
+    remaining = list(events)
+    parsed = []
+    # calls: 1 = the pre-loop check, 2 = the first event -> reorg
+    fake = FakeWatch(reorg_on={2})
+    monkeypatch.setattr(apiwatcher, "ReorgWatch", fake)
+    monkeypatch.setattr(apiwatcher, "get_event_to_parse_count", lambda *a: len(events))
+    monkeypatch.setattr(
+        apiwatcher, "get_next_event_to_parse", lambda *a: remaining.pop(0) if remaining else None
+    )
+    monkeypatch.setattr(
+        apiwatcher, "parse_event", lambda _db, event, ledger_db=None: parsed.append(event)
+    )
+
+    apiwatcher.catch_up(MagicMock(), MagicMock())
+
+    assert parsed == [events[1]]
+    assert fake.calls == [None, 5, 6]
+
+
+def test_follow_checks_for_a_reorg_before_every_event(monkeypatch):
+    watcher = apiwatcher.APIWatcher.__new__(apiwatcher.APIWatcher)
+    watcher.stop_event = threading.Event()
+    watcher.state_db = MagicMock()
+    watcher.ledger_db = MagicMock()
+    events = [{"block_index": 5}, {"block_index": 6}]
+    remaining = list(events)
+    parsed = []
+    fake = FakeWatch()
+    monkeypatch.setattr(apiwatcher, "ReorgWatch", fake)
+
+    def next_event(*_args):
+        if remaining:
+            return remaining.pop(0)
+        watcher.stop_event.set()
+        return None
+
+    monkeypatch.setattr(apiwatcher, "get_next_event_to_parse", next_event)
+    monkeypatch.setattr(
+        apiwatcher, "parse_event", lambda _db, event, ledger_db=None: parsed.append(event)
+    )
+
+    watcher.follow()
+
+    assert parsed == events
+    # The third call is the idle poll of the iteration that found no event left.
+    assert fake.calls[:2] == [5, 6]
+
+
+def test_follow_polls_for_a_reorg_while_idle(monkeypatch):
+    """At the tip there is no event to key the check on, and a reorganization is
+    the only thing that can change what to do next."""
+    watcher = apiwatcher.APIWatcher.__new__(apiwatcher.APIWatcher)
+    watcher.stop_event = threading.Event()
+    watcher.state_db = MagicMock()
+    watcher.ledger_db = MagicMock()
+    fake = FakeWatch()
+    monkeypatch.setattr(apiwatcher, "ReorgWatch", fake)
+    monkeypatch.setattr(apiwatcher, "get_next_event_to_parse", lambda *a: None)
+
+    stopper = threading.Timer(0.3, watcher.stop_event.set)
+    stopper.start()
+    watcher.follow()
+    stopper.cancel()
+
+    assert fake.calls and set(fake.calls) == {None}
+
+
+# --------------------------------------------------------------------------------------------
+# A watcher that stops on an error must say so
+# --------------------------------------------------------------------------------------------
+
+
+def _bare_watcher():
+    watcher = apiwatcher.APIWatcher.__new__(apiwatcher.APIWatcher)
+    threading.Thread.__init__(watcher, name="Watcher")
+    watcher.stop_event = threading.Event()
+    watcher.db_lock = threading.Lock()
+    watcher.state_db = MagicMock()
+    watcher.ledger_db = MagicMock()
+    watcher.current_state_thread = None
+    return watcher
+
+
+def test_a_failed_watcher_is_logged_and_flagged(monkeypatch):
+    """Re-raising handed the traceback to `threading.excepthook`, which writes to
+    stderr and not to the log: the State DB stopped advancing and the API went on
+    serving a frozen snapshot with nothing to show for it."""
+    watcher = _bare_watcher()
+    monkeypatch.setattr(
+        apiwatcher, "catch_up", MagicMock(side_effect=ValueError("state db is a pumpkin"))
+    )
+    logger = MagicMock()
+    monkeypatch.setattr(apiwatcher, "logger", logger)
+
+    watcher.run()  # must not propagate: nothing above it would handle it
+
+    assert apiwatcher.watcher_has_failed() is True
+    # With the traceback, or the log says the watcher stopped without saying why.
+    assert logger.critical.call_args.kwargs == {"exc_info": True}
+    watcher.state_db.close.assert_called_once_with()
+    watcher.ledger_db.close.assert_called_once_with()
+
+
+def test_an_unexpected_interrupt_is_flagged_too(monkeypatch):
+    watcher = _bare_watcher()
+    monkeypatch.setattr(
+        apiwatcher, "catch_up", MagicMock(side_effect=apiwatcher.apsw.InterruptError("interrupted"))
+    )
+
+    watcher.run()
+
+    assert apiwatcher.watcher_has_failed() is True
+
+
+def test_an_interrupt_during_shutdown_is_not_a_failure(monkeypatch):
+    watcher = _bare_watcher()
+
+    def interrupted_catch_up(*_args):
+        watcher.stop_event.set()
+        raise apiwatcher.apsw.InterruptError("interrupted")
+
+    monkeypatch.setattr(apiwatcher, "catch_up", interrupted_catch_up)
+
+    watcher.run()
+
+    assert apiwatcher.watcher_has_failed() is False

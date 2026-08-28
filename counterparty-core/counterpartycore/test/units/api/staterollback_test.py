@@ -94,6 +94,12 @@ def _block_of_last_split_fairmint(db):
     return row["block_index"]
 
 
+def _events_of_block(db, block_index):
+    return db.execute(
+        "SELECT * FROM messages WHERE block_index = ? ORDER BY message_index", (block_index,)
+    ).fetchall()
+
+
 def _touched_objects(db, target):
     """How many consolidated objects the rollback will have to revert."""
     return {
@@ -232,11 +238,47 @@ def test_full_rebuild_when_marker_missing(state_db, ledger_db):
     )
 
 
+def test_rollback_undoes_a_half_copied_block(state_db, ledger_db):
+    """The watcher advances one event at a time, so between two blocks it sits
+    with part of a block copied and that block's BLOCK_PARSED not yet written.
+    A reorganization caught there targets ``last_block_parsed + 1``, which reads
+    as "above the State DB's tip" if the tip is measured by completed blocks --
+    and answering NOTHING_TO_ROLL_BACK leaves the orphaned rows of the block in
+    progress, plus the mutations they applied, in place forever.
+
+    Undoing a half-copied block must land exactly where the block started."""
+    target = _nth_last_active_block(ledger_db, 1)
+
+    # Put the State DB back to the start of `target`, then copy that block event
+    # by event and stop before its BLOCK_PARSED.
+    dbbuilder.rollback_state_db(state_db, target)
+    at_block_start = _dump_state_db(state_db)
+
+    events = _events_of_block(ledger_db, target)
+    assert len(events) > 1, "the test needs a block with events before its BLOCK_PARSED"
+    assert events[-1]["event"] == "BLOCK_PARSED"
+    for event in events[:-1]:
+        apiwatcher.parse_event(state_db, event, ledger_db=ledger_db)
+    assert _dump_state_db(state_db) != at_block_start, "nothing was copied; the test is vacuous"
+
+    # The premise: the last block *completed* is still the one below the target,
+    # untouched by the reorganization -- only the last block *touched* sees it.
+    assert apiwatcher.get_last_block_parsed(state_db, no_cache=True) == target - 1
+    assert apiwatcher.get_last_block_touched(state_db) == target
+
+    assert staterollback.rollback_reason(state_db, target) is None
+    dbbuilder.rollback_state_db(state_db, target)
+
+    _assert_same_state(
+        at_block_start, _dump_state_db(state_db), f"half-copied block {target} rolled back"
+    )
+
+
 def test_nothing_to_roll_back_is_a_noop(state_db, ledger_db, monkeypatch):
     """A target above the State DB's own tip has nothing to undo. Re-deriving
     every table from the whole ledger history to achieve that would be the most
     expensive no-op available -- the watcher just replays forward instead."""
-    target = apiwatcher.get_last_block_parsed(state_db, no_cache=True) + 1
+    target = apiwatcher.get_last_block_touched(state_db) + 1
     assert staterollback.rollback_reason(state_db, target) == staterollback.NOTHING_TO_ROLL_BACK
 
     before = _dump_state_db(state_db)
@@ -284,7 +326,7 @@ def test_unreadable_state_db_selects_the_full_rebuild(state_db, ledger_db, monke
     def boom(*args, **kwargs):
         raise ValueError("invalid literal for int()")
 
-    monkeypatch.setattr(apiwatcher, "get_last_block_parsed", boom)
+    monkeypatch.setattr(apiwatcher, "get_last_block_touched", boom)
     reason = staterollback.rollback_reason(state_db, _last_block(ledger_db))
     assert reason is not None and "cannot be inspected" in reason
 

@@ -16,8 +16,9 @@ Endpoints (all GET, JSON):
                          heartbeat is stale (a genuine deadlock). Never reflects ledger lag or
                          saturation, so a busy-but-alive pod is never restarted.
 * ``/healthz/ready``   — readiness: should this pod receive traffic? 503 when a State DB
-                         rebuild is under way, when the ledger is behind the backend, or when
-                         the worker pool has been saturated past a grace period (load shedding).
+                         rebuild is under way, when the API watcher has stopped on an error,
+                         when the ledger is behind the backend, or when the worker pool has
+                         been saturated past a grace period (load shedding).
 * ``/healthz``         — alias of ``/healthz/ready``.
 * ``/healthz/metrics`` — worker-pool + saturation + handler-latency gauges for alerting.
 """
@@ -56,7 +57,9 @@ class WorkerMetrics:
 @dataclass(frozen=True)
 class HealthSnapshot:
     ready: bool
-    reason: Optional[str]  # None when ready, else "starting" | "behind_backend" | "saturated"
+    # None when ready, else "starting" | "behind_backend" | "saturated"
+    # | "rebuilding" | "watcher_stopped"
+    reason: Optional[str]
     backend_height: Optional[int]
     last_parsed: Optional[int]
     lag: Optional[int]
@@ -264,6 +267,13 @@ class HealthSampler(threading.Thread):
             caught_up, lag, ledger_reason, backend_height, last_parsed = self._compute_caught_up(
                 now
             )
+            if apiwatcher.watcher_has_failed():
+                # The State DB is frozen at whatever block the watcher reached
+                # and nothing will advance it again, so shed the pod now rather
+                # than once the lag happens to cross the ready threshold -- on
+                # an `--api-only` node, where `_compute_caught_up` reports ready
+                # unconditionally, that would otherwise be never.
+                caught_up, ledger_reason = False, "watcher_stopped"
         ready = caught_up and not over_saturated
         if ready:
             reason = None
