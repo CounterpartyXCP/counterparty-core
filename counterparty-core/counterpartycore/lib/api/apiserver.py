@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 from collections import namedtuple
+from importlib import resources
 from multiprocessing import Process, Value
 
 import flask
@@ -46,8 +47,19 @@ logger = logging.getLogger(config.LOGGER_NAME)
 auth = HTTPBasicAuth()
 
 
-CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-OPENAPI_FILEPATH = os.path.join(CURR_DIR, "..", "..", "..", "..", "openapi.json")
+def get_openapi_filepath():
+    packaged_spec = resources.files("counterpartycore").joinpath("openapi.json")
+    if packaged_spec.is_file():
+        return os.fspath(packaged_spec)
+
+    # Editable/source-tree fallback. Built wheels force-include the same root
+    # document at counterpartycore/openapi.json, so installed servers do not
+    # depend on the repository layout.
+    source_spec = resources.files("counterpartycore").joinpath("..", "..", "openapi.json")
+    return os.fspath(source_spec)
+
+
+OPENAPI_FILEPATH = get_openapi_filepath()
 
 
 @auth.verify_password

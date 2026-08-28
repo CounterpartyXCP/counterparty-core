@@ -91,6 +91,14 @@ The API watcher thread is what advances the State DB, and nothing restarts it. A
 
 Such a failure is now logged at `CRITICAL` with its traceback, and `/healthz/ready` returns `503` with `reason: "watcher_stopped"` from that moment. Previously the only symptom was the lag signal drifting past the ready threshold minutes later — and on an `--api-only` node, which does not compare itself to the backend tip, never at all. Liveness deliberately stays `200`: the process is internally alive, and the remedy is to shed traffic and page an operator, not to have Kubernetes kill a pod mid-request.
 
+## Packaged OpenAPI document (#3495)
+
+The installed wheel now includes `openapi.json`. Previously `/v2/openapi.json`
+worked from a source checkout but returned `500` from the official container:
+the handler walked four directories upward from `site-packages`, where the
+repository-root file does not exist. The API now resolves the packaged resource
+and retains a source-tree fallback for editable development installs.
+
 ## Address history endpoints
 
 `/v2/addresses/<address>/credits`, `/debits`, `/sends` and `/sends/<asset>` match an address against two or four columns, each of which already has its own index. Neither plan SQLite has for the resulting `OR` predicate followed by `ORDER BY rowid DESC LIMIT` is bounded by the page size. A reverse full-table scan — the right plan only for an address whose newest row sits near the tip — reads millions of unrelated rows before reaching the first match of an address whose history is short or old. The alternative, a multi-index `OR`, does use every index but then has to sort the address's *entire* history to honour the ordering, so a busy address pays for all of it to return one page.

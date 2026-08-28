@@ -132,6 +132,11 @@ def test_apiserver_openapi_spec(apiv2_client):
     )
 
 
+def test_openapi_file_is_available_to_the_running_package():
+    assert os.path.isfile(apiserver.OPENAPI_FILEPATH)
+    assert apiserver.OPENAPI_FILEPATH.endswith("openapi.json")
+
+
 def _sort_arg(route):
     return next((arg for arg in ROUTES[route]["args"] if arg["name"] == "sort"), None)
 
