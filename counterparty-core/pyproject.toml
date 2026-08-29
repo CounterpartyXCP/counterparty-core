@@ -45,6 +45,9 @@ path = "counterpartycore/lib/config.py"
 [tool.hatch.build.targets.wheel]
 include = ["counterpartycore"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"../openapi.json" = "counterpartycore/openapi.json"
+
 [tool.hatch.envs.default]
 pre-install-commands = [
   "pip install -e ../counterparty-rs",
