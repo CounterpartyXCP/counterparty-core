@@ -1,8 +1,10 @@
+import json
+
 import pytest
 from counterpartycore.lib import exceptions, ledger
 from counterpartycore.lib.api import compose
 from counterpartycore.lib.messages import pooldeposit
-from counterpartycore.lib.utils import script
+from counterpartycore.lib.utils import hashcodec, script
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 # ============================================================================
@@ -140,6 +142,292 @@ def test_compose_issuance(apiv2_client, defaults):
         f"&description=Test asset"
     )
     assert response.status_code in [200, 400]
+
+
+def _insert_mempool_event(ledger_db, tx_hash, event, bindings):
+    ledger_db.execute(
+        "INSERT INTO mempool (tx_hash, command, category, bindings, timestamp, event, addresses) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (
+            hashcodec.hash_to_db(tx_hash),
+            "insert",
+            event.lower(),
+            bindings if isinstance(bindings, str) else json.dumps(bindings),
+            0,
+            event,
+            "",
+        ),
+    )
+
+
+def test_compose_issuance_rejects_real_pending_creation_bundle(apiv2_client, ledger_db, defaults):
+    asset = "PENDINGASSET"
+    tx_hash = "ab" * 32
+    _insert_mempool_event(
+        ledger_db,
+        tx_hash,
+        "ASSET_CREATION",
+        {"asset_id": "123", "asset_name": asset, "asset_longname": None},
+    )
+    _insert_mempool_event(
+        ledger_db,
+        tx_hash,
+        "ASSET_ISSUANCE",
+        {
+            "asset": asset,
+            "asset_longname": None,
+            "source": defaults["addresses"][0],
+            "status": "valid",
+            "asset_events": "creation",
+        },
+    )
+
+    response = apiv2_client.get(
+        f"/v2/addresses/{defaults['addresses'][0]}/compose/issuance"
+        f"?asset={asset}&quantity=1000&return_only_data=true"
+    )
+
+    assert response.status_code == 409
+    assert "pending" in response.json["error"].lower()
+    assert asset in response.json["error"]
+    assert tx_hash in response.json["error"]
+    assert response.json["error"].count(tx_hash) == 1
+
+
+@pytest.mark.parametrize(
+    ("event", "bindings"),
+    [
+        ("ASSET_CREATION", {"asset_name": "PENDINGASSET"}),
+        (
+            "ASSET_ISSUANCE",
+            {
+                "asset": "PENDINGASSET",
+                "status": "valid",
+                "asset_events": "transfer",
+                "transfer": True,
+            },
+        ),
+        (
+            "NEW_FAIRMINTER",
+            {"asset": "PENDINGASSET", "status": "open", "source": "issuer"},
+        ),
+        (
+            "NEW_FAIRMINTER",
+            {"asset": "PENDINGASSET", "status": "pending", "source": "issuer"},
+        ),
+        (
+            "RESET_ISSUANCE",
+            {"asset": "PENDINGASSET", "status": "valid", "asset_events": "reset"},
+        ),
+    ],
+)
+def test_pending_asset_conflict_uses_real_event_semantics(ledger_db, event, bindings):
+    _insert_mempool_event(ledger_db, "bc" * 32, event, bindings)
+
+    with pytest.raises(exceptions.ComposeConflictError, match="PENDINGASSET"):
+        compose._reject_pending_asset_conflict(ledger_db, "PENDINGASSET")
+
+
+def test_pending_compatible_reissuance_does_not_block(ledger_db, defaults):
+    _insert_mempool_event(
+        ledger_db,
+        "cd" * 32,
+        "ASSET_ISSUANCE",
+        {
+            "asset": "DIVISIBLE",
+            "source": defaults["addresses"][0],
+            "issuer": defaults["addresses"][0],
+            "quantity": 1000,
+            "status": "valid",
+            "asset_events": "reissuance change_description",
+        },
+    )
+
+    result = compose.compose_issuance(
+        ledger_db,
+        defaults["addresses"][0],
+        "DIVISIBLE",
+        1000,
+        divisible=True,
+        return_only_data=True,
+    )
+
+    assert result["data"].startswith(b"CNTRPRTY")
+
+
+@pytest.mark.parametrize("malformed", ["{", "[]", '"text"', "1", "null"])
+def test_pending_asset_conflict_ignores_malformed_or_non_object_bindings(ledger_db, malformed):
+    _insert_mempool_event(ledger_db, "de" * 32, "ASSET_CREATION", malformed)
+
+    compose._reject_pending_asset_conflict(ledger_db, "PENDINGASSET")
+
+
+def test_pending_asset_conflict_ignores_invalid_status_and_other_asset(ledger_db):
+    _insert_mempool_event(
+        ledger_db,
+        "ef" * 32,
+        "ASSET_ISSUANCE",
+        {
+            "asset": "PENDINGASSET",
+            "status": "invalid: conflict",
+            "asset_events": "creation",
+        },
+    )
+    _insert_mempool_event(
+        ledger_db,
+        "f0" * 32,
+        "NEW_FAIRMINTER",
+        {"asset": "PENDINGASSET", "status": "valid"},
+    )
+    _insert_mempool_event(
+        ledger_db,
+        "f1" * 32,
+        "NEW_FAIRMINTER",
+        {"asset": "OTHERASSET", "status": "open"},
+    )
+
+    compose._reject_pending_asset_conflict(ledger_db, "PENDINGASSET")
+
+
+def test_compose_issuance_validate_false_bypasses_pending_guard(ledger_db, defaults, monkeypatch):
+    _insert_mempool_event(ledger_db, "12" * 32, "ASSET_CREATION", {"asset_name": "PENDINGASSET"})
+    expected = {"data": b"advanced-user-override"}
+    monkeypatch.setattr(compose.composer, "compose_transaction", lambda *_args, **_kwargs: expected)
+
+    result = compose.compose_issuance(
+        ledger_db,
+        defaults["addresses"][0],
+        "PENDINGASSET",
+        1000,
+        validate=False,
+        return_only_data=True,
+    )
+
+    assert result == expected
+
+
+def test_compose_fairminter_has_symmetric_pending_guard(ledger_db, defaults, monkeypatch):
+    _insert_mempool_event(
+        ledger_db,
+        "23" * 32,
+        "ASSET_CREATION",
+        {"asset_name": "A123", "asset_longname": "PARENT.CHILD"},
+    )
+    monkeypatch.setattr(
+        compose.composer,
+        "compose_transaction",
+        lambda *_args, **_kwargs: pytest.fail("composition must not start"),
+    )
+
+    with pytest.raises(exceptions.ComposeConflictError, match="PARENT.CHILD"):
+        compose.compose_fairminter(
+            ledger_db,
+            defaults["addresses"][0],
+            "CHILD",
+            asset_parent="PARENT",
+            max_mint_per_tx=100,
+        )
+
+
+def test_compose_issuance_final_recheck_catches_new_pending_event(ledger_db, defaults, monkeypatch):
+    asset = "PENDINGASSET"
+    compose_data_calls = []
+
+    def fake_compose_data(*args, **kwargs):
+        compose_data_calls.append((args, kwargs))
+        return defaults["addresses"][0], [], b"data"
+
+    def fake_compose_transaction(_db, _name, _params, _construct_params, final_validator=None):
+        _insert_mempool_event(ledger_db, "34" * 32, "ASSET_CREATION", {"asset_name": asset})
+        final_validator((defaults["addresses"][0], [], b"original"))
+        pytest.fail("final validator should reject the new conflict")
+
+    monkeypatch.setattr(compose.composer, "compose_data", fake_compose_data)
+    monkeypatch.setattr(compose.composer, "compose_transaction", fake_compose_transaction)
+
+    with pytest.raises(exceptions.ComposeConflictError, match=asset):
+        compose.compose_issuance(
+            ledger_db,
+            defaults["addresses"][0],
+            asset,
+            1000,
+        )
+
+    assert len(compose_data_calls) == 1
+
+
+def test_pending_reissuance_quantity_detects_cumulative_overflow(ledger_db, monkeypatch):
+    asset = "NEARMAX"
+    _insert_mempool_event(
+        ledger_db,
+        "35" * 32,
+        "ASSET_ISSUANCE",
+        {
+            "asset": asset,
+            "quantity": 100,
+            "status": "valid",
+            "asset_events": "reissuance",
+        },
+    )
+    monkeypatch.setattr(
+        compose.ledger.issuances,
+        "get_issuances",
+        lambda *_args, **_kwargs: [{"quantity": compose.config.MAX_INT - 150}],
+    )
+
+    with pytest.raises(exceptions.ComposeConflictError, match="maximum total quantity"):
+        compose._reject_pending_asset_conflict(
+            ledger_db,
+            asset,
+            name="issuance",
+            params={"quantity": 100, "reset": False},
+        )
+
+
+def test_pending_quantity_lock_allows_zero_quantity_transfer(ledger_db):
+    asset = "LOCKINGASSET"
+    _insert_mempool_event(
+        ledger_db,
+        "36" * 32,
+        "ASSET_ISSUANCE",
+        {
+            "asset": asset,
+            "quantity": 0,
+            "status": "valid",
+            "asset_events": "lock_quantity",
+        },
+    )
+
+    compose._reject_pending_asset_conflict(
+        ledger_db,
+        asset,
+        name="issuance",
+        params={"quantity": 0, "reset": False, "transfer_destination": "destination"},
+    )
+    with pytest.raises(exceptions.ComposeConflictError, match="lock_quantity"):
+        compose._reject_pending_asset_conflict(
+            ledger_db,
+            asset,
+            name="issuance",
+            params={"quantity": 1, "reset": False},
+        )
+
+
+def test_fairminter_pending_guard_returns_http_409(apiv2_client, ledger_db, defaults):
+    asset = "FAIRCONFLICT"
+    _insert_mempool_event(
+        ledger_db,
+        "37" * 32,
+        "NEW_FAIRMINTER",
+        {"asset": asset, "status": "open", "source": defaults["addresses"][0]},
+    )
+
+    response = apiv2_client.get(
+        f"/v2/addresses/{defaults['addresses'][0]}/compose/fairminter"
+        f"?asset={asset}&max_mint_per_tx=100&return_only_data=true"
+    )
+    assert response.status_code == 409
+    assert asset in response.json["error"]
 
 
 def test_compose_mpma(apiv2_client, defaults):

@@ -6836,7 +6836,7 @@
                         "name": "offset",
                         "in": "query",
                         "required": false,
-                        "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)",
+                        "description": "The number of lines to skip before returning results (overrides the `cursor` parameter). Capped at 10,000 on this route because skipped rows must still be materialized; use `cursor` to page further.",
                         "schema": {
                             "type": "integer"
                         }
@@ -7051,7 +7051,7 @@
                         "name": "offset",
                         "in": "query",
                         "required": false,
-                        "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)",
+                        "description": "The number of lines to skip before returning results (overrides the `cursor` parameter). Capped at 10,000 on this route because skipped rows must still be materialized; use `cursor` to page further.",
                         "schema": {
                             "type": "integer"
                         }
@@ -7540,20 +7540,10 @@
                         "name": "offset",
                         "in": "query",
                         "required": false,
-                        "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)",
+                        "description": "The number of lines to skip before returning results (overrides the `cursor` parameter). Capped at 10,000 on this route because skipped rows must still be materialized; use `cursor` to page further.",
                         "schema": {
                             "type": "integer"
                         }
-                    },
-                    {
-                        "name": "sort",
-                        "in": "query",
-                        "required": false,
-                        "description": "The sort order of the results to return (overrides the `cursor` parameter)",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "example": "quantity:desc"
                     },
                     {
                         "name": "verbose",
@@ -7920,20 +7910,10 @@
                         "name": "offset",
                         "in": "query",
                         "required": false,
-                        "description": "The number of lines to skip before returning results (overrides the `cursor` parameter)",
+                        "description": "The number of lines to skip before returning results (overrides the `cursor` parameter). Capped at 10,000 on this route because skipped rows must still be materialized; use `cursor` to page further.",
                         "schema": {
                             "type": "integer"
                         }
-                    },
-                    {
-                        "name": "sort",
-                        "in": "query",
-                        "required": false,
-                        "description": "The sort order of the results to return (overrides the `cursor` parameter)",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "example": "quantity:desc"
                     },
                     {
                         "name": "verbose",

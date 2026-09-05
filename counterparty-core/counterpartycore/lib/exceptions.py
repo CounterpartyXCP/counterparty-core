@@ -34,6 +34,10 @@ class ComposeError(MessageError):
     pass
 
 
+class ComposeConflictError(ComposeError):
+    """A valid compose request conflicts with current pending state."""
+
+
 class UnpackError(MessageError):
     pass
 
@@ -121,10 +125,6 @@ class APIWatcherError(Exception):
 
 
 class SerializationError(Exception):
-    pass
-
-
-class NoEventToParse(Exception):
     pass
 
 

@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 import binascii
 import hashlib
 import inspect
@@ -580,12 +581,15 @@ class UTXOLocks(metaclass=helpers.SingletonMeta):
 
     def locked(self, utxo):
         with self._mutex:
-            if utxo not in self.locks:
-                return False
-            if time.time() - self.locks[utxo] > self.max_age:
-                del self.locks[utxo]
-                return False
-            return True
+            return self._locked_unchecked(utxo)
+
+    def _locked_unchecked(self, utxo, now=None):
+        if utxo not in self.locks:
+            return False
+        if (now or time.time()) - self.locks[utxo] > self.max_age:
+            del self.locks[utxo]
+            return False
+        return True
 
     def filter_unspent_list(self, unspent_list):
         return [utxo for utxo in unspent_list if not self.locked(f"{utxo['txid']}:{utxo['vout']}")]
@@ -593,6 +597,56 @@ class UTXOLocks(metaclass=helpers.SingletonMeta):
     def lock_inputs(self, inputs):
         for tx_input in inputs:
             self.lock(f"{tx_input.txid}:{tx_input.txout_index}")
+
+    @staticmethod
+    def _input_ids(inputs):
+        return [f"{tx_input.txid}:{tx_input.txout_index}" for tx_input in inputs]
+
+    def reserve_inputs(self, inputs):
+        """Atomically reserve inputs if none is currently reserved.
+
+        Returns an opaque reservation mapping on success and ``None`` when a
+        concurrent compose won the race. The timestamp token lets a failed
+        validator release only its own reservation.
+        """
+        input_ids = self._input_ids(inputs)
+        with self._mutex:
+            now = time.time()
+            if any(self._locked_unchecked(utxo, now=now) for utxo in input_ids):
+                return None
+            reservation = {utxo: now for utxo in input_ids}
+            self.locks.update(reservation)
+            while len(self.locks) > self.max_size:
+                self.locks.popitem(last=False)
+            return reservation
+
+    def release_reservation(self, reservation):
+        if reservation is None:
+            return
+        with self._mutex:
+            for utxo, token in reservation.items():
+                if self.locks.get(utxo) == token:
+                    del self.locks[utxo]
+
+    def replace_reservation(self, reservation, inputs):
+        """Atomically replace this request's reservation after a recompose."""
+        new_input_ids = self._input_ids(inputs)
+        old_input_ids = set(reservation or {})
+        with self._mutex:
+            now = time.time()
+            for utxo in new_input_ids:
+                if utxo in old_input_ids and self.locks.get(utxo) == reservation[utxo]:
+                    continue
+                if self._locked_unchecked(utxo, now=now):
+                    return None
+            for utxo, token in (reservation or {}).items():
+                if utxo not in new_input_ids and self.locks.get(utxo) == token:
+                    del self.locks[utxo]
+            new_reservation = {utxo: now for utxo in new_input_ids}
+            self.locks.update(new_reservation)
+            while len(self.locks) > self.max_size:
+                self.locks.popitem(last=False)
+            return new_reservation
 
 
 def complete_unspent_list(unspent_list):
@@ -1091,7 +1145,7 @@ def compose_data(db, name, params, accept_missing_params=False, skip_validation=
     return compose_method(db, **params)
 
 
-def construct(db, tx_info, construct_params):
+def construct(db, tx_info, construct_params, final_validator=None):
     source, destinations, data = tx_info
 
     # prepare unspent list
@@ -1108,8 +1162,49 @@ def construct(db, tx_info, construct_params):
     )
     inputs = utxos_to_txins(selected_utxos)
 
-    if not construct_params.get("disable_utxo_locks", False):
-        UTXOLocks().lock_inputs(inputs)
+    locks_enabled = not construct_params.get("disable_utxo_locks", False)
+    reservation = None
+    if locks_enabled:
+        # The filter performed by ``prepare_unspent_list`` is necessarily
+        # optimistic. Reserve the final selection with one compare-and-set so
+        # two request threads cannot both succeed in the filter->lock gap.
+        reservation = UTXOLocks().reserve_inputs(inputs)
+        if reservation is None:
+            raise exceptions.ComposeError(
+                "Selected UTXOs were reserved by another compose request; retry composition"
+            )
+
+    try:
+        if final_validator is not None:
+            refreshed_tx_info = final_validator(tx_info)
+            if refreshed_tx_info is not None and refreshed_tx_info != tx_info:
+                previous_source = source
+                tx_info = refreshed_tx_info
+                source, destinations, data = tx_info
+                if source != previous_source:
+                    unspent_list = prepare_unspent_list(db, source, construct_params)
+                outputs, reveal_tx_info = prepare_outputs(
+                    db, source, destinations, data, unspent_list, construct_params
+                )
+                selected_utxos, btc_in, change_outputs = prepare_inputs_and_change(
+                    db, source, outputs, unspent_list, construct_params
+                )
+                inputs = utxos_to_txins(selected_utxos)
+            if locks_enabled:
+                # Revalidate ownership even when the message bytes did not
+                # change: a long validation can outlive the normal lock TTL,
+                # allowing another request to reserve the input meanwhile.
+                replacement = UTXOLocks().replace_reservation(reservation, inputs)
+                if replacement is None:
+                    raise exceptions.ComposeError(
+                        "Refreshed transaction requires UTXOs reserved by another compose "
+                        "request; retry composition"
+                    )
+                reservation = replacement
+    except Exception:
+        if locks_enabled:
+            UTXOLocks().release_reservation(reservation)
+        raise
 
     # construct transaction
     btc_out = sum(output.amount for output in outputs)
@@ -1360,7 +1455,7 @@ def prepare_construct_params(construct_params):
     return cleaned_construct_params, warnings
 
 
-def compose_transaction(db, name, params, construct_parameters):
+def compose_transaction(db, name, params, construct_parameters, final_validator=None):
     helpers.setup_bitcoinutils()
 
     construct_params, warnings = prepare_construct_params(construct_parameters)
@@ -1370,13 +1465,31 @@ def compose_transaction(db, name, params, construct_parameters):
     tx_info = compose_data(db, name, params, skip_validation=skip_validation)
 
     if construct_params.get("return_only_data", False):
+        if final_validator is not None:
+            refreshed_tx_info = final_validator(tx_info)
+            if refreshed_tx_info is not None:
+                tx_info = refreshed_tx_info
         data = tx_info[2]
         return {
             "data": config.PREFIX + data if data else None,
         }
 
     # construct transaction
-    result, unspent_list = construct(db, tx_info, construct_params)
+    effective_tx_info = [tx_info]
+
+    def refresh_tx_info(original_tx_info):
+        refreshed_tx_info = final_validator(original_tx_info)
+        if refreshed_tx_info is not None:
+            effective_tx_info[0] = refreshed_tx_info
+        return refreshed_tx_info
+
+    result, unspent_list = construct(
+        db,
+        tx_info,
+        construct_params,
+        final_validator=refresh_tx_info if final_validator is not None else None,
+    )
+    tx_info = effective_tx_info[0]
 
     # sanity check
     try:
