@@ -1,12 +1,12 @@
-# Release Notes - Counterparty Core v11.4.0 (TBD)
+# Release Notes - Counterparty Core v11.4.0 (2026-09-05)
 
-Counterparty Core v11.4.0 makes State DB rollbacks incremental (#3485), bounds API shutdown and cold startup (#3486), fixes two blind spots in the API watcher's reorganization detection, and puts the address history endpoints back on their indexes.
+Counterparty Core v11.4.0 makes State DB rollbacks incremental (#3485), bounds API shutdown and cold startup (#3486), closes three blind spots in the API watcher's reorganization detection (#3493), and puts the address history endpoints back on their indexes (#3489). It also rejects compositions that conflict with Counterparty's parsed mempool with a new `409` (#3490), reports a stopped watcher on `/healthz/ready` instead of leaving it to the lag signal (#3493), and ships `openapi.json` inside the wheel so `/v2/openapi.json` works from the official container (#3495).
 
-Until now a Bitcoin reorganization — however shallow — rebuilt the entire State DB. On mainnet a **one-block reorg took ~33 minutes**, during the last ~6 of which the public API returned 5xx, despite the process having ample CPU and memory headroom. The cost had nothing to do with how deep the reorganization was: `rollback_state_db()` deleted the rows of three tables and then re-applied thirteen migrations, each of which dropped its table and repopulated it from the entire ledger history (`parsed_events` alone is a full copy of `messages`).
+Until now a Bitcoin reorganization — however shallow — rebuilt the entire State DB. On mainnet a **one-block reorg took ~33 minutes**, during the last ~6 of which the public API returned 5xx, despite the process having ample CPU and memory headroom. The cost had nothing to do with how deep the reorganization was: `rollback_state_db()` deleted the rows of three tables and then re-applied twelve migrations, most of which dropped their table and repopulated it from the entire ledger history (`parsed_events` alone is a full copy of `messages`).
 
 Rollbacks now revert what the orphaned blocks actually changed instead of re-deriving everything. A one-block reorg touches a handful of rows instead of tens of millions.
 
-Two passes are still re-derived rather than undone, because the data needed to decrement them disappears from the Ledger DB along with the orphaned blocks: `transaction_types_count` (one grouped scan of `transactions`, whenever a rolled back block held a transaction) and `assets_info` (whenever it held an issuance, a burn, a destruction, a sweep or a dividend — which includes every fairmint). They dominate what a reorg now costs, and they are a fraction of the thirteen migrations they replace, but the result is not zero: expect minutes rather than the previous half hour.
+Two passes are still re-derived rather than undone, because the data needed to decrement them disappears from the Ledger DB along with the orphaned blocks: `transaction_types_count` (one grouped scan of `transactions`, whenever a rolled back block held a transaction) and `assets_info` (whenever it held an issuance, a burn, a destruction, a sweep or a dividend — which includes every fairmint). They dominate what a reorg now costs, and they are a fraction of the twelve migrations they replace, but the result is not zero: expect minutes rather than the previous half hour.
 
 The rebuild that remains — at upgrade, and for the deep rollbacks a new release occasionally requires — is no longer silent. It now reports itself: the dedicated health listener starts **before** it, answers `200` on liveness and `503 rebuilding` on readiness throughout, and names the step under way.
 
@@ -18,9 +18,11 @@ The refresh is an optimization, not a correctness requirement: it pays the cost 
 
 **Point your Kubernetes probes at the dedicated health listener before upgrading** (port `4002` on mainnet — `/healthz/live` for liveness, `/healthz/ready` for readiness), if you have not already since v11.3.0. During the refresh the pod reports `200` on liveness and `503 rebuilding` on readiness, so it stays out of rotation and is not restarted. A liveness probe still pointed at the API port would get a connection refusal for the whole refresh and kill the pod, and the next start would begin the work again from zero.
 
+`/healthz/ready` also gains a second new reason: it returns `503 watcher_stopped` from the moment the API watcher dies on an unexpected error, on every node including `--api-only` ones. Alerting that matches on the readiness `reason` field should learn `rebuilding` and `watcher_stopped` alongside the existing values. Liveness stays `200` in both cases.
+
 API consumers of the address history endpoints should check the **Address history endpoints** section below before upgrading: `/v2/addresses/<address>/sends` and `/sends/<asset>` no longer expose `sort`, `offset` is capped at 10,000 on those routes and on `/credits` and `/debits`, and `result_count` is now `null` on cursor pages rather than recomputed for each one. `openapi.json` has been updated to match.
 
-Clients that compose issuances or fairminters should also expect a new `409` response when the parsed mempool already contains a conflicting asset operation — see **Conflicting pending asset compositions** below.
+Clients that compose issuances or fairminters should also expect a new `409 Conflict` response when the parsed mempool already contains a conflicting asset operation — see **Conflicting pending asset compositions** below. It is documented in `openapi.json` alongside the other response codes; clients that treat any non-`200` as a permanent failure should retry a `409` once the conflicting transaction has confirmed or been dropped.
 
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
 
@@ -32,7 +34,7 @@ To upgrade, download the latest version of `counterparty-core` and restart `coun
 
 - **Append-only tables** (`parsed_events`, `address_events`, `all_expirations`, `pool_matches`) are pruned by `block_index`.
 - **Consolidated tables** (`balances`, `orders`, `dispensers`, `fairminters`, the match tables, the AMM pool tables — one row per object holding its latest version) have the rows touched at or after the rollback point deleted and re-inserted from that object's latest Ledger DB version *strictly below* the rollback point. The block bound matters: when the API watcher reacts to a reorganization the Ledger DB has already rolled back and may have re-parsed part of the new chain, and restoring to the ledger's current tip would leave the State DB ahead of `parsed_events` and cause the forward replay to apply those blocks twice.
-- **Counters** are adjusted rather than recomputed from scratch: `events_count` is decremented by the orphaned events, and `transaction_types_count` / `assets_info` / the `fairminters` aggregates are re-derived only when the orphaned blocks actually contained the relevant events.
+- **Counters** are adjusted rather than recomputed from scratch: `events_count` is decremented by the orphaned events; `transaction_types_count` and `assets_info` — the only two full re-derivations left — run only when the orphaned blocks actually contained the relevant events; and the `fairminters` aggregates are recomputed only for the fairminters whose fairmints were reverted, not for the whole table.
 - Views and indexes are no longer dropped and rebuilt, because the tables they cover are no longer dropped and rebuilt.
 
 A single `logger.info` line now reports what a reorganization cost — how many events and objects were reverted, per table. Previously the 33 minutes were entirely silent at INFO level.
@@ -71,7 +73,7 @@ The shutdown path is bounded rather than hopeful:
 
 Startup diagnostics were added for the parts that remain slow: `apply_outstanding_migration` now logs each phase separately — backend open (which is where WAL recovery lands), migration discovery with the pending count, application, and connection close — along with the WAL size before and after. On the incident node these are what distinguish a multi-minute WAL recovery from a multi-minute migration.
 
-## Reorganization detection
+## Reorganization detection (#3493)
 
 Three ways for the Ledger DB to change branch under the API watcher went undetected. All three are fixed in `counterpartycore/lib/api/apiwatcher.py`.
 
@@ -85,7 +87,7 @@ Detecting that case is only half of it. A reorganization caught mid-block target
 
 `check_reorg()` now also reports when it found the ledger on another branch, and both loops discard the event they were holding when it did: that event was selected against the branch the rollback has just undone.
 
-## A watcher that stops on an error now says so
+## A watcher that stops on an error now says so (#3493)
 
 The API watcher thread is what advances the State DB, and nothing restarts it. An unexpected error inside it was re-raised into `threading.excepthook`, which writes to stderr rather than to the log — so the thread died with its traceback going nowhere, and the process went on serving a State DB frozen at whatever block it had reached, as if nothing had happened.
 
@@ -93,13 +95,9 @@ Such a failure is now logged at `CRITICAL` with its traceback, and `/healthz/rea
 
 ## Packaged OpenAPI document (#3495)
 
-The installed wheel now includes `openapi.json`. Previously `/v2/openapi.json`
-worked from a source checkout but returned `500` from the official container:
-the handler walked four directories upward from `site-packages`, where the
-repository-root file does not exist. The API now resolves the packaged resource
-and retains a source-tree fallback for editable development installs.
+The installed wheel now includes `openapi.json`. Previously `/v2/openapi.json` worked from a source checkout but returned `500` from the official container: the handler walked four directories upward from `site-packages`, where the repository-root file does not exist. The API now resolves the packaged resource and retains a source-tree fallback for editable development installs.
 
-## Address history endpoints
+## Address history endpoints (#3489)
 
 `/v2/addresses/<address>/credits`, `/debits`, `/sends` and `/sends/<asset>` match an address against two or four columns, each of which already has its own index. Neither plan SQLite has for the resulting `OR` predicate followed by `ORDER BY rowid DESC LIMIT` is bounded by the page size. A reverse full-table scan — the right plan only for an address whose newest row sits near the tip — reads millions of unrelated rows before reaching the first match of an address whose history is short or old. The alternative, a multi-index `OR`, does use every index but then has to sort the address's *entire* history to honour the ordering, so a busy address pays for all of it to return one page.
 
@@ -113,7 +111,7 @@ Three request shapes that defeated the bound are now rejected or narrowed on the
 
 The exact result count is computed on the initial page and on offset pages only; on cursor pages `result_count` is `null`. Counting is precisely what the bound above cannot help with — it has to touch every matching row — so later cursor pages stay bounded. The count itself no longer reuses the ordered union either: it lets SQLite combine the address indexes directly, which is substantially cheaper for busy addresses.
 
-## Conflicting pending asset compositions
+## Conflicting pending asset compositions (#3490)
 
 Issuance and fairminter composition only ever validated against confirmed state, so two transactions created seconds apart could both compose successfully and only one of them could ever be valid — the second was broadcast, paid its fee and was rejected by the parser.
 
@@ -123,7 +121,7 @@ The check runs twice, because the mempool moves while a composition is being ass
 
 `validate=false` remains the explicit advanced-user override and skips both passes.
 
-## State DB / Ledger DB consistency fixes
+## State DB / Ledger DB consistency fixes (#3485)
 
 The differential tests above surfaced three ways in which a State DB maintained by the event stream drifted from one built from scratch. All three are fixed in `apiwatcher.update_balances()`, and the one-time refresh normalizes existing rows:
 
@@ -143,7 +141,7 @@ The differential tests above surfaced three ways in which a State DB maintained 
 
 ## Bugfixes
 
-- **Fix a resource leak in snapshot signature verification** (`bootstrap` / `prepare-bootstrap`). Every call to `verify_signature()` leaked one `gpg-agent` daemon and one temporary GnuPG home directory, because the cleanup added in f53a7443 was accidentally disabled in 301c37ac ("Fix bootstrap with custom url") — commented out as apparent leftover debugging. The agent is now terminated with `gpgconf --homedir <dir> --kill gpg-agent` before the directory is removed, which avoids the socket/lockfile race that removing a live agent's home directory would otherwise hit. Only the agent spawned by the call itself is terminated; other GnuPG daemons on the machine are unaffected, and a missing `gpgconf` can neither skip the removal nor mask the error that triggered it. Three regression tests now pin the cleanup, so it cannot be silently dropped again.
+- **Fix a resource leak in snapshot signature verification** (#3492) in `bootstrap` / `prepare-bootstrap`. Every call to `verify_signature()` leaked one `gpg-agent` daemon and one temporary GnuPG home directory, because the cleanup added in f53a7443 was accidentally disabled in 301c37ac ("Fix bootstrap with custom url") — commented out as apparent leftover debugging. The agent is now terminated with `gpgconf --homedir <dir> --kill gpg-agent` before the directory is removed, which avoids the socket/lockfile race that removing a live agent's home directory would otherwise hit. Only the agent spawned by the call itself is terminated; other GnuPG daemons on the machine are unaffected, and a missing `gpgconf` can neither skip the removal nor mask the error that triggered it. Three regression tests now pin the cleanup, so it cannot be silently dropped again.
 
 # Credits
 
