@@ -11,10 +11,11 @@ import socket
 import threading
 import time
 from collections import deque
+from unittest.mock import MagicMock
 
 import pytest
 from counterpartycore.lib import config
-from counterpartycore.lib.api import healthz_server
+from counterpartycore.lib.api import apiwatcher, healthz_server
 from counterpartycore.lib.api.healthz_server import (
     HealthCheckServer,
     HealthRequestHandler,
@@ -365,6 +366,43 @@ def test_bind_failure_is_non_fatal():
         sock.close()
 
 
+def test_stop_reserves_budget_for_the_serve_thread(monkeypatch):
+    """The sampler and the serve thread are stopped one after the other. Handing
+    both the same deadline lets a stuck sampler leave the serve thread a zero
+    timeout, so it is abandoned rather than joined."""
+    server = HealthCheckServer(host="127.0.0.1", port=0, dispatcher=None, saturation_grace=5)
+    server.httpd = None
+    server.sampler = MagicMock()
+    server._serve_thread = MagicMock()  # pylint: disable=protected-access
+    server._serve_thread.is_alive.return_value = False  # pylint: disable=protected-access
+
+    deadline = time.monotonic() + 4
+    server.stop(deadline=deadline)
+
+    sampler_deadline = server.sampler.stop.call_args.kwargs["deadline"]
+    assert sampler_deadline < deadline
+    join_timeout = server._serve_thread.join.call_args.kwargs[  # pylint: disable=protected-access
+        "timeout"
+    ]
+    assert join_timeout > 1
+
+
+def test_stop_warns_when_the_serve_thread_outlives_its_deadline(monkeypatch):
+    server = HealthCheckServer(host="127.0.0.1", port=0, dispatcher=None, saturation_grace=5)
+    server.httpd = None
+    server.sampler = None
+    server._serve_thread = MagicMock()  # pylint: disable=protected-access
+    server._serve_thread.is_alive.return_value = True  # pylint: disable=protected-access
+    warnings = []
+    monkeypatch.setattr(
+        healthz_server.logger, "warning", lambda msg, *args: warnings.append(msg % args)
+    )
+
+    server.stop(deadline=time.monotonic())
+
+    assert any("did not stop before its deadline" in message for message in warnings)
+
+
 def test_start_stop_serves_requests(monkeypatch):
     monkeypatch.setattr(config, "API_ONLY", True, raising=False)
     server = HealthCheckServer(host="127.0.0.1", port=0, dispatcher=None, saturation_grace=5)
@@ -378,3 +416,72 @@ def test_start_stop_serves_requests(monkeypatch):
         conn.close()
     finally:
         server.stop()
+
+
+# --------------------------------------------------------------------------------------------
+# Sampler: the stopped-watcher readiness axis
+# --------------------------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def clear_watcher_failure():
+    apiwatcher.WATCHER_FAILED.clear()
+    yield
+    apiwatcher.WATCHER_FAILED.clear()
+
+
+def test_a_stopped_watcher_makes_the_pod_unready():
+    """Nothing restarts the watcher, so from the moment it dies the State DB is
+    frozen at whatever block it had reached. Waiting for the lag to cross the
+    ready threshold serves stale reads in the meantime."""
+    sampler = make_sampler(backend_height=100, last_parsed=100)
+    sampler._tick()
+    assert sampler.current_snapshot().ready is True
+
+    apiwatcher.WATCHER_FAILED.set()
+    sampler._tick()
+    snap = sampler.current_snapshot()
+
+    assert snap.ready is False
+    assert snap.reason == "watcher_stopped"
+    # Still published, since it is what an operator needs to see how far behind
+    # the frozen snapshot is.
+    assert snap.last_parsed == 100
+
+
+def test_a_stopped_watcher_is_reported_on_an_api_only_node():
+    """An `--api-only` node does not compare itself to the backend tip, so the
+    lag signal would never report this at all."""
+    sampler = make_sampler(api_only=True)
+    sampler._tick()
+    assert sampler.current_snapshot().ready is True
+
+    apiwatcher.WATCHER_FAILED.set()
+    sampler._tick()
+
+    assert sampler.current_snapshot().reason == "watcher_stopped"
+
+
+def test_a_rebuild_still_wins_over_a_stopped_watcher():
+    """The watcher stops itself for the duration of a rebuild; reporting that as
+    a failure would hide the operation actually under way."""
+    sampler = make_sampler()
+    apiwatcher.WATCHER_FAILED.set()
+    healthz_server.dbstatus.start("rollback", "pruning")
+    try:
+        sampler._tick()
+    finally:
+        healthz_server.dbstatus.finish()
+
+    assert sampler.current_snapshot().reason == "rebuilding"
+
+
+def test_liveness_survives_a_stopped_watcher():
+    """Liveness answers "is this process internally alive?", and it is: the
+    remedy is to shed traffic and page an operator, not to have Kubernetes kill
+    a pod mid-request."""
+    sampler = make_sampler()
+    apiwatcher.WATCHER_FAILED.set()
+    sampler._tick()
+
+    assert sampler.heartbeat_age() < sampler.liveness_heartbeat_timeout

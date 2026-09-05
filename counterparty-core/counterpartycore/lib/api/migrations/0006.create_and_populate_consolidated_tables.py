@@ -5,33 +5,18 @@ import logging
 import time
 
 from counterpartycore.lib import config
-from counterpartycore.lib.utils.database import (
-    ADDRESS_INDEX_COLUMN_NAMES,
-    ASSET_INDEX_COLUMN_NAMES,
-    text_affinitize_index_columns,
+from counterpartycore.lib.api.statetables import (
+    LEDGER_CONSOLIDATED_KEYS as CONSOLIDATED_TABLES,
 )
+from counterpartycore.lib.api.statetables import (
+    consolidated_projection,
+)
+from counterpartycore.lib.utils.database import text_affinitize_index_columns
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
 __depends__ = {"0005.create_and_populate_events_count"}
-
-CONSOLIDATED_TABLES = {
-    "fairminters": "tx_hash",
-    # ``utxo`` is the compact ``(utxo_tx_hash, utxo_vout)`` ledger pair; group
-    # by both halves (the State DB stores the reconstructed ``utxo`` string).
-    "balances": "address, utxo_tx_hash, utxo_vout, asset",
-    "addresses": "address",
-    "dispensers": "source, asset, tx_hash",
-    # match tables: the composite TEXT ``id`` was dropped; the match is keyed
-    # by the ``(tx0_index, tx1_index)`` pair (compact-hash storage migration).
-    "bet_matches": "tx0_index, tx1_index",
-    "bets": "tx_hash",
-    "order_matches": "tx0_index, tx1_index",
-    "orders": "tx_hash",
-    "rps": "tx_hash",
-    "rps_matches": "tx0_index, tx1_index",
-}
 
 ADDITONAL_COLUMNS = {
     "fairminters": [
@@ -134,36 +119,15 @@ def build_consolidated_table(state_db, table_name):
         CREATE INDEX temp.latest_ids_idx ON latest_ids(max_id)
     """)
 
-    # The State DB stores asset *names* (it must read its own rows without the
-    # Ledger DB attached). Asset columns are stored as the compact
-    # ``asset_index`` in ``ledger_db``, so decode them back to names here while
-    # ``ledger_db`` is attached (the INSERT ... SELECT bypasses the rowtracer).
-    columns = []
-    for column in state_db.execute(f"PRAGMA table_info({table_name})"):
-        col = column["name"]
-        if col in ASSET_INDEX_COLUMN_NAMES:
-            columns.append(
-                f"(SELECT asset_name FROM ledger_db.assets WHERE asset_index = b.{col}) AS {col}"  # noqa: S608  # nosec B608
-            )
-        elif col in ADDRESS_INDEX_COLUMN_NAMES:
-            # decode the compact ``address_id`` back to the address string
-            columns.append(
-                f"(SELECT address FROM ledger_db.address_list WHERE address_id = b.{col}) AS {col}"  # noqa: S608  # nosec B608
-            )
-        elif col == "utxo" and table_name == "balances":
-            # reconstruct the ``tx_hash:vout`` string from the compact ledger
-            # ``(utxo_tx_hash, utxo_vout)`` pair (``lower(hex(...))`` yields the
-            # lowercase hex the utxo string used; a NULL tx_hash -> NULL utxo).
-            columns.append(
-                "lower(hex(b.utxo_tx_hash)) || ':' || b.utxo_vout AS utxo"  # noqa: S608  # nosec B608
-            )
-        else:
-            columns.append(f"b.{col}")
-    select_fields = ", ".join(columns)
+    # The State DB stores decoded asset names / addresses / utxo strings where
+    # the Ledger DB stores compact indexes. The projection is shared with the
+    # incremental rollback path so the two can never drift apart -- see
+    # ``api/statetables.py``.
+    names, expressions = consolidated_projection(state_db, table_name)
 
     state_db.execute(f"""
-        INSERT INTO {table_name}
-        SELECT {select_fields}
+        INSERT INTO {table_name} ({", ".join(names)})
+        SELECT {", ".join(expressions)}
         FROM ledger_db.{table_name} b
         JOIN latest_ids l ON b.rowid = l.max_id
     """)  # noqa S608 # nosec B608

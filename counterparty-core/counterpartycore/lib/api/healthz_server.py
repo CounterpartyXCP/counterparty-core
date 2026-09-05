@@ -15,9 +15,10 @@ Endpoints (all GET, JSON):
 * ``/healthz/live``    — liveness: is the process internally alive? 200 unless the sampler
                          heartbeat is stale (a genuine deadlock). Never reflects ledger lag or
                          saturation, so a busy-but-alive pod is never restarted.
-* ``/healthz/ready``   — readiness: should this pod receive traffic? 503 when the ledger is
-                         behind the backend OR the worker pool has been saturated past a grace
-                         period (load shedding).
+* ``/healthz/ready``   — readiness: should this pod receive traffic? 503 when a State DB
+                         rebuild is under way, when the API watcher has stopped on an error,
+                         when the ledger is behind the backend, or when the worker pool has
+                         been saturated past a grace period (load shedding).
 * ``/healthz``         — alias of ``/healthz/ready``.
 * ``/healthz/metrics`` — worker-pool + saturation + handler-latency gauges for alerting.
 """
@@ -33,9 +34,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional
 
 from counterpartycore.lib import config
-from counterpartycore.lib.api import apiwatcher
+from counterpartycore.lib.api import apiwatcher, dbstatus
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.utils import database
+from counterpartycore.lib.utils import database, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -56,13 +57,18 @@ class WorkerMetrics:
 @dataclass(frozen=True)
 class HealthSnapshot:
     ready: bool
-    reason: Optional[str]  # None when ready, else "starting" | "behind_backend" | "saturated"
+    # None when ready, else "starting" | "behind_backend" | "saturated"
+    # | "rebuilding" | "watcher_stopped"
+    reason: Optional[str]
     backend_height: Optional[int]
     last_parsed: Optional[int]
     lag: Optional[int]
     saturated: bool
     saturation_seconds: float
     workers: Optional[WorkerMetrics]  # None on gunicorn/werkzeug (no introspectable pool)
+    # Set while a State DB build/refresh/rollback is under way (issue #3485): the
+    # pod is healthy and working, but must not receive traffic yet.
+    rebuild: Optional[dbstatus.RebuildProgress] = None
 
 
 def _instrument_dispatcher(dispatcher):
@@ -181,33 +187,60 @@ class HealthSampler(threading.Thread):
     # -- sampler loop ------------------------------------------------------------------------
     def run(self):
         own_db = None
+        rebuilding = dbstatus.current() is not None
         try:
             self._tick()  # publish a snapshot immediately (worker metrics available at once)
             while not self.stop_event.wait(self.interval):
-                # Open the state DB lazily and tolerate transient unavailability (e.g. during
-                # early startup) by retrying, rather than letting the sampler thread die.
-                if self._owns_db and own_db is None:
-                    try:
-                        own_db = database.get_db_connection(
-                            config.STATE_DATABASE, read_only=True, check_wal=False
-                        )
-                        self._last_parsed_provider = (
-                            lambda db=own_db: apiwatcher.get_last_block_parsed(db)
-                        )
-                    except Exception as e:  # pylint: disable=broad-except
-                        logger.debug("healthz: state DB not ready yet: %s", e)
+                was_rebuilding, rebuilding = rebuilding, dbstatus.current() is not None
+                own_db = self._own_db_for_tick(own_db, was_rebuilding, rebuilding)
                 self._tick()
         finally:
-            if own_db is not None:
-                try:
-                    own_db.close()
-                except Exception as e:  # pylint: disable=broad-except
-                    logger.debug("healthz: error closing state DB connection: %s", e)
+            self._close_own_db(own_db)
 
-    def stop(self):
+    def _own_db_for_tick(self, own_db, was_rebuilding, rebuilding):
+        """Keep the sampler's own state-DB connection valid across a rebuild.
+
+        Returns the connection to use for this tick (possibly None).
+        """
+        if not self._owns_db:
+            return own_db
+        if was_rebuilding and not rebuilding:
+            # build_state_db() unlinks and recreates the file, so a
+            # connection opened before the rebuild now points at a deleted
+            # inode and would report a frozen block height forever. Drop it and
+            # let the branch below reopen against the new file.
+            self._close_own_db(own_db)
+            own_db = None
+        if own_db is not None or rebuilding:
+            # Nothing to do, or the file is mid-flight and not worth opening.
+            return own_db
+        # Open lazily and tolerate transient unavailability (e.g. during early
+        # startup) by retrying, rather than letting the sampler thread die.
+        try:
+            own_db = database.get_db_connection(
+                config.STATE_DATABASE, read_only=True, check_wal=False
+            )
+            self._last_parsed_provider = lambda db=own_db: apiwatcher.get_last_block_parsed(db)
+        except Exception as e:  # pylint: disable=broad-except
+            logger.debug("healthz: state DB not ready yet: %s", e)
+        return own_db
+
+    def _close_own_db(self, own_db):
+        """Close the sampler's own state-DB connection and forget the readings
+        taken through it."""
+        self._last_parsed_provider = None
+        self._last_parsed_value = None
+        self._last_parsed_advanced_at = None
+        if own_db is not None:
+            try:
+                own_db.close()
+            except Exception as e:  # pylint: disable=broad-except
+                logger.debug("healthz: error closing state DB connection: %s", e)
+
+    def stop(self, deadline=None):
         self.stop_event.set()
         if self.is_alive():
-            self.join(timeout=5)
+            self.join(timeout=helpers.deadline_timeout(deadline, 5))
 
     def _tick(self):
         now = time.monotonic()
@@ -223,7 +256,24 @@ class HealthSampler(threading.Thread):
         )
         self._warn_on_saturation(over_saturated, workers, saturation_seconds)
 
-        caught_up, lag, ledger_reason, backend_height, last_parsed = self._compute_caught_up(now)
+        # A State DB rebuild wins over every other readiness signal: the tables
+        # the lag is read from are being dropped and repopulated underneath us,
+        # so "behind_backend" would be both wrong and unactionable.
+        rebuild = dbstatus.current()
+        if rebuild is not None:
+            caught_up, lag, ledger_reason = False, None, "rebuilding"
+            backend_height, last_parsed = self._backend_height_provider(), None
+        else:
+            caught_up, lag, ledger_reason, backend_height, last_parsed = self._compute_caught_up(
+                now
+            )
+            if apiwatcher.watcher_has_failed():
+                # The State DB is frozen at whatever block the watcher reached
+                # and nothing will advance it again, so shed the pod now rather
+                # than once the lag happens to cross the ready threshold -- on
+                # an `--api-only` node, where `_compute_caught_up` reports ready
+                # unconditionally, that would otherwise be never.
+                caught_up, ledger_reason = False, "watcher_stopped"
         ready = caught_up and not over_saturated
         if ready:
             reason = None
@@ -241,6 +291,7 @@ class HealthSampler(threading.Thread):
             saturated=saturated_now,
             saturation_seconds=saturation_seconds,
             workers=workers,
+            rebuild=rebuild,
         )
         self._maybe_log_worker_stats(now, workers, saturation_seconds)
 
@@ -424,6 +475,8 @@ class HealthRequestHandler(BaseHTTPRequestHandler):
         if snap.ready:
             return 200, {"status": "ready"}
         body = {"status": "degraded", "reason": snap.reason}
+        if snap.rebuild is not None:
+            body["rebuild"] = snap.rebuild.as_dict()
         if snap.backend_height is not None:
             body["backend_height"] = snap.backend_height
         if snap.last_parsed is not None:
@@ -459,6 +512,7 @@ class HealthRequestHandler(BaseHTTPRequestHandler):
                 "backend_height": snap.backend_height,
                 "last_parsed_block": snap.last_parsed,
                 "lag": snap.lag,
+                "rebuild": snap.rebuild.as_dict() if snap.rebuild is not None else None,
             },
             "health_handler": {
                 "live": _latency_stats(self.server.live_latencies_ms),
@@ -503,6 +557,21 @@ class HealthCheckServer:
         self.sampler = None
         self._serve_thread = None
         self.started_at_monotonic = time.monotonic()
+
+    def attach_dispatcher(self, dispatcher):
+        """Give the sampler the WSGI task dispatcher once it exists.
+
+        The server is started *before* the WSGI server so that probes are
+        answered during a State DB rebuild (issue #3485), at which point there
+        is no worker pool to introspect yet. Until this is called the pool
+        gauges simply read as unavailable.
+        """
+        if dispatcher is None:
+            return
+        self.dispatcher = dispatcher
+        _instrument_dispatcher(dispatcher)
+        if self.sampler is not None:
+            self.sampler.dispatcher = dispatcher
 
     def start(self):
         try:
@@ -551,7 +620,9 @@ class HealthCheckServer:
         self.httpd = None
         self._serve_thread = None
 
-    def stop(self):
+    def stop(self, deadline=None):
+        if deadline is None:
+            deadline = time.monotonic() + 5
         if self.httpd is not None:
             try:
                 # shutdown() must be called from a different thread than serve_forever().
@@ -560,7 +631,11 @@ class HealthCheckServer:
             except Exception as e:  # pylint: disable=broad-except
                 logger.debug("Error stopping health check server: %s", e)
         if self.sampler is not None:
-            self.sampler.stop()
+            # Half the budget: the serve thread still has to be joined after this,
+            # and a sampler stuck on its own join would otherwise leave it none.
+            self.sampler.stop(deadline=helpers.split_deadline(deadline, 0.5))
         if self._serve_thread is not None:
-            self._serve_thread.join(timeout=5)
+            self._serve_thread.join(timeout=max(0, deadline - time.monotonic()))
+            if self._serve_thread.is_alive():
+                logger.warning("Health check server thread did not stop before its deadline.")
         logger.trace("Health check server stopped.")
