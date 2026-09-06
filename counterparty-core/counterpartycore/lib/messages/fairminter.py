@@ -1,5 +1,6 @@
 import decimal
 import logging
+import math
 import struct
 
 import cbor2
@@ -15,6 +16,15 @@ D = decimal.Decimal
 
 ID = 90
 MIN_MINTED_ASSET_COMMISSION = D("0.0000001")
+
+
+def _is_nan(number):
+    """True for NaN only. +/-inf is deliberately NOT included: it compares fine
+    (`inf >= 1` is True) and already yields a stable "invalid" status, so
+    treating it differently here would change historical consensus."""
+    if isinstance(number, D):
+        return number.is_nan()
+    return math.isnan(number)
 
 
 def validate(
@@ -88,6 +98,17 @@ def validate(
     if minted_asset_commission is not None:
         if not isinstance(minted_asset_commission, (float, D)):
             problems.append("minted_asset_commission must be a float")
+        elif _is_nan(minted_asset_commission):
+            # `unpack_new()` computes `D(minted_asset_commission_int) / D(1e8)`,
+            # and a CBOR float64 NaN (or the literal string "NaN" in the legacy
+            # pipe-delimited format) yields Decimal("NaN"). Any *ordering*
+            # comparison against Decimal("NaN") raises decimal.InvalidOperation,
+            # an ArithmeticError that no handler catches: it escapes validate()
+            # -- called from parse() before any DB access -- is wrapped into
+            # ParseTransactionError and re-raised by parse_block(), halting every
+            # node. A single ordinary transaction is enough. No activation gate:
+            # such a transaction crashes today, so none was ever parsed.
+            problems.append("`minted_asset_commission` must be a number")
         elif minted_asset_commission < 0 or minted_asset_commission >= 1:
             problems.append(
                 "`minted_asset_commission` must be less than 0 or greater than or equal to 1"
@@ -189,7 +210,20 @@ def validate(
     if protocol.enabled("fairminter_v2", block_index=block_index):
         if soft_cap > hard_cap > 0:
             problems.append("Soft cap must be <= hard cap.")
-        if hard_cap > 0 and price > 0 and hard_cap % quantity_by_price != 0:
+        # `quantity_by_price != 0` first: the `quantity_by_price < 1` check above
+        # appends a problem but does not return, so a zero lot size reaches the
+        # modulo and raises ZeroDivisionError -- one ordinary transaction halts
+        # every node. Deliberately `!= 0` and not `> 0`: a *negative* lot size
+        # computes a modulo today without raising, and this problem string is
+        # stored in the `fairminters` table, so excluding negatives too would be
+        # a retroactive consensus change. Ungated for the same reason the zero
+        # case is safe: it raises on current code.
+        if (
+            hard_cap > 0
+            and price > 0
+            and quantity_by_price != 0
+            and hard_cap % quantity_by_price != 0
+        ):
             problems.append("hard cap must be a multiple of lot size")
     else:
         if soft_cap >= hard_cap > 0:
