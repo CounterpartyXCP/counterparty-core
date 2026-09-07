@@ -43,6 +43,12 @@ jobs:
         with:
           path: ~/.cache/counterparty-integration-cache/${{ inputs.integration_cache_network }}
           # Cache key version: increment to invalidate incompatible caches
+          # v7: bootstrap snapshots bumped to v11.4.0. Same reason as v6: a restored
+          # cache short-circuits the bootstrap download, so without a new key the
+          # integration tests would keep running against the v11.3.0-derived DBs and
+          # never exercise the new snapshots. The v11.4.0 snapshots have also been
+          # through the one-time `refresh_state_db`, so a v6 cache would take the slow
+          # full-rebuild path on its first reorg instead of the incremental one.
           # v6: bootstrap snapshots bumped to v11.3.0. A restored cache short-circuits
           # the bootstrap download, so without a new key the integration tests would
           # keep running against the v11.2.0-derived DBs and never exercise the new
@@ -59,9 +65,9 @@ jobs:
           # migration 0004 then fails with `no such column: a.asset_index`.
           # v3: compact-hash match tables re-keyed on (tx0_index, tx1_index);
           # the v2 cached DBs carry the old TEXT `id` schema and are incompatible.
-          key: integration-v6-${{ inputs.integration_cache_network }}-${{ github.run_id }}
+          key: integration-v7-${{ inputs.integration_cache_network }}-${{ github.run_id }}
           restore-keys: |
-            integration-v6-${{ inputs.integration_cache_network }}-
+            integration-v7-${{ inputs.integration_cache_network }}-
 
       - name: Set up Python
         uses: actions/setup-python@v3
@@ -129,7 +135,7 @@ jobs:
           path: ~/.cache/counterparty-integration-cache/${{ inputs.integration_cache_network }}
           # Cache key version: increment to invalidate incompatible caches
           # (must match the restore key above).
-          key: integration-v6-${{ inputs.integration_cache_network }}-${{ github.run_id }}
+          key: integration-v7-${{ inputs.integration_cache_network }}-${{ github.run_id }}
 
       - name: Upload coverage
         uses: codecov/codecov-action@v5
