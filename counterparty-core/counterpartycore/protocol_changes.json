@@ -1304,13 +1304,13 @@
         "signet_block_index": 310300
     },
     "ordinals_metadata_support": {
-        "_comment": "NOT an activated change. The gate is enforced by the Rust deserializer only (Heights::new in counterparty-rs/src/indexer/config.rs); nothing in Python reads it. The v11.1.0 release pass bumped these heights along with every other pending change, but config.rs was never updated, so the feature has in fact never activated on mainnet/testnet3/testnet4. These values are restored to what the code actually enforces; scheduling a real activation means changing BOTH files. Signet and regtest have had it enabled since block 0 and their bootstrap snapshots depend on that, so their heights must stay 0.",
+        "_comment": "The gate is enforced by the Rust deserializer only (Heights::new in counterparty-rs/src/indexer/config.rs); nothing in Python reads it. The v11.1.0 release pass bumped these heights along with every other pending change, but config.rs was never updated, so the feature never activated on mainnet/testnet3/testnet4. These heights now schedule a real activation and MUST stay in sync with config.rs. Signet and regtest have had it enabled since block 0 and their bootstrap snapshots depend on that, so their heights must stay 0.",
         "minimum_version_major": 11,
-        "minimum_version_minor": 1,
+        "minimum_version_minor": 4,
         "minimum_version_revision": 0,
-        "block_index": 999999999,
-        "testnet3_block_index": 999999999,
-        "testnet4_block_index": 999999999,
+        "block_index": 970000,
+        "testnet3_block_index": 5200000,
+        "testnet4_block_index": 157000,
         "signet_block_index": 0
     },
     "indefinite_orders": {
