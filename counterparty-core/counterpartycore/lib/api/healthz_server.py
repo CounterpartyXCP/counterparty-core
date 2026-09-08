@@ -572,11 +572,22 @@ class HealthCheckServer:
     a failure to bind must never reduce API availability (the legacy in-API ``/healthz`` remains).
     """
 
-    def __init__(self, host, port, dispatcher=None, saturation_grace=None, stop_event=None):
+    def __init__(
+        self,
+        host,
+        port,
+        dispatcher=None,
+        saturation_grace=None,
+        stop_event=None,
+        serving_provider=None,
+    ):
         self.host = host
         self.port = port
         self.dispatcher = dispatcher
         self.saturation_grace = saturation_grace
+        # Readiness stays false until this reports that the public API can
+        # serve requests; see `HealthSampler.__init__` (issue #3504).
+        self.serving_provider = serving_provider
         # stop_event is accepted for symmetry with the other server threads; the health server
         # is a daemon and is torn down explicitly via stop(), so it is not otherwise used.
         self.stop_event = stop_event
@@ -606,7 +617,9 @@ class HealthCheckServer:
         try:
             _instrument_dispatcher(self.dispatcher)
             self.sampler = HealthSampler(
-                dispatcher=self.dispatcher, saturation_grace=self.saturation_grace
+                dispatcher=self.dispatcher,
+                saturation_grace=self.saturation_grace,
+                serving_provider=self.serving_provider,
             )
             self.sampler.start()
 

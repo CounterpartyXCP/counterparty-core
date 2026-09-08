@@ -6,6 +6,7 @@ providers and a fake task dispatcher, and the HTTP layer is exercised against a 
 """
 
 import http.client
+import inspect
 import json
 import socket
 import threading
@@ -426,6 +427,40 @@ def test_bind_failure_is_non_fatal():
         server.stop()  # also must not raise
     finally:
         sock.close()
+
+
+def test_server_accepts_the_apiserver_construction_kwargs():
+    """`run_apiserver` is the only caller and is not covered by the unit suite,
+    so nothing here would otherwise catch a keyword it passes that
+    `HealthCheckServer` does not accept -- the constructor raises inside the
+    API process and the node never becomes ready."""
+    signature = inspect.signature(HealthCheckServer.__init__)
+    assert {
+        "host",
+        "port",
+        "saturation_grace",
+        "stop_event",
+        "serving_provider",
+    } <= set(signature.parameters)
+
+
+def test_server_hands_the_serving_signal_to_its_sampler():
+    server = HealthCheckServer(
+        host="127.0.0.1",
+        port=0,
+        dispatcher=None,
+        saturation_grace=5,
+        serving_provider=lambda: False,
+    )
+    try:
+        server.start()
+        assert server.sampler is not None
+        server.sampler._tick()  # pylint: disable=protected-access
+        snap = server.sampler.current_snapshot()
+        assert snap.ready is False
+        assert snap.reason == "starting"
+    finally:
+        server.stop()
 
 
 def test_stop_reserves_budget_for_the_serve_thread(monkeypatch):
