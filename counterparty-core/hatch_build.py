@@ -18,7 +18,12 @@
 #
 import os
 
-from hatchling.builders.hooks.plugin.interface import BuildHookInterface
+# Hatchling is a build-time dependency declared in `[build-system]`; it is not
+# present in the lint environment, which installs the package rather than
+# building it.
+from hatchling.builders.hooks.plugin.interface import (  # pylint: disable=import-error
+    BuildHookInterface,
+)
 
 PACKAGED_PATH = os.path.join("counterpartycore", "openapi.json")
 
@@ -45,7 +50,9 @@ def resolve_openapi_source(root):
 class OpenAPIBuildHook(BuildHookInterface):
     PLUGIN_NAME = "openapi"
 
-    def initialize(self, version, build_data):
+    # `version` is part of the build-hook interface ("standard" / "editable");
+    # the document is packaged the same way either way.
+    def initialize(self, version, build_data):  # pylint: disable=unused-argument
         source = resolve_openapi_source(self.root)
         if source is None:
             # A checkout that has never generated the document should still be

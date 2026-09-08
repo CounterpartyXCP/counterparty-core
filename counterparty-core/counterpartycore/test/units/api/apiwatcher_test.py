@@ -17,7 +17,7 @@ import time
 from unittest.mock import MagicMock
 
 import pytest
-from counterpartycore.lib.api import apiwatcher
+from counterpartycore.lib.api import addressevents, apiwatcher
 
 
 def test_api_watcher_stop_interrupts_sqlite_connections():
@@ -267,7 +267,7 @@ def test_detach_from_utxo_field_name_correct():
     """DETACH_FROM_UTXO must reference `source_address` (not the legacy typo
     `sourc_address`); the streamed handler keys off this dict and silently
     dropped the source row for every detach until the typo was fixed."""
-    fields = apiwatcher.EVENTS_ADDRESS_FIELDS["DETACH_FROM_UTXO"]
+    fields = addressevents.EVENTS_ADDRESS_FIELDS["DETACH_FROM_UTXO"]
     assert "source_address" in fields
     assert "sourc_address" not in fields
     assert "destination" in fields
@@ -460,7 +460,7 @@ def test_pool_events_in_events_address_fields():
         "NEW_POOL_WITHDRAWAL",
         "POOL_MATCH",
     ):
-        assert event in apiwatcher.EVENTS_ADDRESS_FIELDS
+        assert event in addressevents.EVENTS_ADDRESS_FIELDS
 
 
 def test_pool_tables_in_state_db_tables():
@@ -516,7 +516,7 @@ def test_events_address_fields_keys_are_lowercase_underscore():
     look like a real binding key (lowercase + underscores). This would
     have caught the original `sourc_address` typo."""
     pattern = re.compile(r"^[a-z][a-z0-9_]*$")
-    for event_name, fields in apiwatcher.EVENTS_ADDRESS_FIELDS.items():
+    for event_name, fields in addressevents.EVENTS_ADDRESS_FIELDS.items():
         for field in fields:
             assert pattern.match(field), f"{event_name} declares a malformed field name {field!r}"
 

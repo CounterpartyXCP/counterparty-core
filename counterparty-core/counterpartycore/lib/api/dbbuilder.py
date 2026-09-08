@@ -7,7 +7,7 @@ import time
 from yoyo.migrations import topological_sort
 
 from counterpartycore.lib import config
-from counterpartycore.lib.api import dbstatus, staterollback
+from counterpartycore.lib.api import addressevents, dbstatus, staterollback
 from counterpartycore.lib.cli import log
 from counterpartycore.lib.utils import database
 
@@ -215,7 +215,7 @@ def backfill_address_events(state_db):
     ``0001.create_and_populate_address_events``: re-applying it would drop the
     whole table and rebuild it from ``ledger_db.messages``, which loses the
     UTXO-owner aliases that only the runtime path
-    (``apiwatcher.update_address_events``) adds, for any UTXO that no longer
+    (``addressevents.update_address_events``) adds, for any UTXO that no longer
     holds a balance.
 
     But ``0002`` *does* repopulate ``parsed_events`` from the entire Ledger
@@ -234,11 +234,6 @@ def backfill_address_events(state_db):
     counting: ``rollback_tables`` deletes whole blocks, so an event either kept
     all of its rows or lost all of them.
     """
-    # Imported here rather than at module scope: `apiwatcher` imports this
-    # module, so a top-level import would be circular.
-    # pylint: disable=import-outside-toplevel
-    from counterpartycore.lib.api import apiwatcher  # noqa: PLC0415
-
     start_time = time.time()
     cursor = state_db.cursor()
 
@@ -251,7 +246,7 @@ def backfill_address_events(state_db):
     if not already_attached:
         cursor.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
 
-    event_names = list(apiwatcher.EVENTS_ADDRESS_FIELDS.keys())
+    event_names = list(addressevents.EVENTS_ADDRESS_FIELDS.keys())
     placeholders = ", ".join(["?"] * len(event_names))
 
     # Materialised first, and deliberately not streamed straight into the
@@ -283,7 +278,7 @@ def backfill_address_events(state_db):
             JOIN ledger_db.messages AS m ON m.message_index = missed.message_index
             ORDER BY m.message_index
         """):
-            apiwatcher.update_address_events(state_db, event)
+            addressevents.update_address_events(state_db, event)
         backfill_cursor.close()
 
     cursor.execute("DROP TABLE temp.missing_address_events")

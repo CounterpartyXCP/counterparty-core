@@ -1,7 +1,7 @@
 import json
 
 from counterpartycore.lib.api import dbbuilder
-from counterpartycore.lib.api.apiwatcher import EVENTS_ADDRESS_FIELDS
+from counterpartycore.lib.api.addressevents import EVENTS_ADDRESS_FIELDS
 from counterpartycore.lib.utils import hashcodec
 from counterpartycore.lib.utils.database import (
     ADDRESS_INDEX_COLUMN_NAMES,
