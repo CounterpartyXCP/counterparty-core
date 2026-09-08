@@ -35,9 +35,11 @@ from counterpartycore.lib.messages import (
     broadcast,
     dispenser,
     fairminter,
+    issuance,
     pooldeposit,
     poolwithdraw,
 )
+from counterpartycore.lib.messages.broadcast import BET_TYPE_ID
 from counterpartycore.lib.parser import blocks, deserialize, gettxinfo
 from counterpartycore.lib.utils import address as address_utils
 from counterpartycore.lib.utils import helpers
@@ -264,6 +266,115 @@ def test_c3_null_fee_fraction_oracle_dispenser(ledger_db, blockchain_mock, defau
     dispenser.parse(ledger_db, tx, open_oracle_dispenser_message(oracle))
     # The dispenser opens with no oracle fee instead of halting the chain.
     assert count_dispensers(ledger_db) == before + 1
+
+
+# ---------------------------------------------------------------------------
+# C3b -- a *second* malformed field alongside the non-finite one. CBOR can carry
+# any type, and `validate()` returns as soon as it sees the non-finite field, so
+# the other retained fields never reach the numeric comparison whose `TypeError`
+# `broadcast_safe_validate` recovers from. Binding safety for the invalid record
+# therefore cannot depend on that recovery.
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    "poison",
+    [[1, 2], {"a": 1}, D("1.5")],
+    ids=["cbor_array", "cbor_map", "cbor_decimal"],
+)
+def test_c3b_non_finite_plus_a_second_malformed_field(ledger_db, blockchain_mock, defaults, poison):
+    row = oracle_broadcast(
+        ledger_db, blockchain_mock, defaults["addresses"][1], float("nan"), 1.0, poison
+    )
+    assert row["status"] == "invalid: non-finite numeric value", row["status"]
+    assert row["fee_fraction_int"] is None
+
+
+@pytest.mark.parametrize("field", [0, 1, 2], ids=["timestamp", "value", "fee_fraction_int"])
+def test_c3b_finite_decimal_field_is_rejected(ledger_db, blockchain_mock, defaults, field):
+    """cbor2 decodes a decimal fraction (tag 4) as `decimal.Decimal`. Every
+    comparison in `validate()` accepts it, so the broadcast was stored "valid" --
+    and sqlite3 cannot bind it at all, so the insert raised and halted the chain.
+    Clamped it would land as a NULL on a "valid" row: the NaN poison exactly.
+    Rejected under the same gate as the non-finite fields."""
+    message = [1_700_000_000, 1.0, 0, "text/plain", b"XCP-USD"]
+    message[field] = D("1.5")
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][1])
+    broadcast.parse(ledger_db, tx, cbor2.dumps(message))
+
+    row = (
+        ledger_db.cursor()
+        .execute("SELECT * FROM broadcasts ORDER BY rowid DESC LIMIT 1")
+        .fetchone()
+    )
+    assert row["status"] == "invalid: unstorable numeric value", row["status"]
+
+
+def test_c3b_pre_activation_combined_field_does_not_halt(ledger_db, blockchain_mock, defaults):
+    """Before the gate the non-finite check does not run, so the container field
+    *does* reach the numeric comparison and `broadcast_safe_validate` normalises
+    it -- the control that shows the early return is what removes that recovery.
+    Either way the block must parse."""
+    with ProtocolChangesDisabled(["reject_non_finite_broadcast"]):
+        row = oracle_broadcast(
+            ledger_db, blockchain_mock, defaults["addresses"][1], float("nan"), 1.0, [1, 2]
+        )
+    assert row["status"] == "invalid: validation error", row["status"]
+    assert row["fee_fraction_int"] == 0
+
+
+def test_c3b_pre_activation_decimal_is_stored_as_null(ledger_db, blockchain_mock, defaults):
+    """And before the gate a finite Decimal keeps its historical status -- it is
+    the clamp, not the gate, that stops the insert from raising. The row it
+    leaves is the NULL-on-"valid" shape the ungated downstream guards already
+    cope with."""
+    with ProtocolChangesDisabled(["reject_non_finite_broadcast"]):
+        row = oracle_broadcast(
+            ledger_db, blockchain_mock, defaults["addresses"][1], 1_700_000_000, 1.0, D("1.5")
+        )
+    assert row["status"] == "valid", row["status"]
+    assert row["fee_fraction_int"] is None
+
+
+def test_c3b_unbindable_mime_type_does_not_halt(ledger_db, blockchain_mock, defaults):
+    """`mime_type` is never rewritten by the `broadcast_safe_validate` recovery,
+    so only the clamp at the insert keeps it bindable."""
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][1])
+    broadcast.parse(ledger_db, tx, cbor2.dumps([1_700_000_000, 1.0, 0, ["text/plain"], b"XCP-USD"]))
+
+    row = (
+        ledger_db.cursor()
+        .execute("SELECT * FROM broadcasts ORDER BY rowid DESC LIMIT 1")
+        .fetchone()
+    )
+    assert "Invalid mime type" in row["status"], row["status"]
+    assert row["mime_type"] is None
+
+
+@pytest.mark.parametrize(
+    "poison", [[1, 2], {"a": 1}, D("1.5")], ids=["cbor_array", "cbor_map", "cbor_decimal"]
+)
+@pytest.mark.parametrize("field", [1, 5], ids=["quantity", "mime_type"])
+def test_c3b_unbindable_issuance_field_does_not_halt(
+    ledger_db, blockchain_mock, defaults, field, poison
+):
+    """Same clamp, same reason, on the other CBOR-decoded handler that keeps an
+    invalid record: `_clamp()` there only covers the numeric fields it knows."""
+    message = [
+        ledger.issuances.generate_asset_id("BINDCRASH"),
+        1000,
+        True,
+        False,
+        False,
+        "text/plain",
+        b"d",
+    ]
+    message[field] = poison
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
+    issuance.parse(ledger_db, tx, cbor2.dumps(message), issuance.ID)
+
+    row = (
+        ledger_db.cursor().execute("SELECT * FROM issuances ORDER BY rowid DESC LIMIT 1").fetchone()
+    )
+    assert row is not None and row["status"] != "valid", row["status"]
 
 
 # ---------------------------------------------------------------------------
@@ -728,7 +839,7 @@ def test_pool_deposit_quantity_above_max_int_does_not_halt(ledger_db, blockchain
     assert row["quantity_a"] is None and row["quantity_b"] is None
 
 
-def test_null_out_of_range_ints_leaves_valid_values_alone():
+def test_null_unbindable_values_leaves_valid_values_alone():
     bindings = {
         "a": config.MAX_INT,
         "b": -config.MAX_INT,
@@ -738,7 +849,7 @@ def test_null_out_of_range_ints_leaves_valid_values_alone():
         "f": True,
         "g": None,
     }
-    assert helpers.null_out_of_range_ints(bindings) is bindings
+    assert helpers.null_unbindable_values(bindings) is bindings
     assert bindings == {
         "a": config.MAX_INT,
         "b": -config.MAX_INT,
@@ -748,6 +859,32 @@ def test_null_out_of_range_ints_leaves_valid_values_alone():
         "f": True,
         "g": None,
     }
+
+
+def test_null_unbindable_values_nulls_types_sqlite_cannot_bind():
+    """The bindable scalars must survive untouched (float NaN included: sqlite3
+    binds it, as NULL, which is what the `reject_non_finite_broadcast` gate is
+    for), and everything else must go."""
+    nan = float("nan")
+    bindings = {
+        "float": 1.5,
+        "nan": nan,
+        "bytes": b"\x00",
+        "list": [1, 2],
+        "dict": {"a": 1},
+        "decimal": D("1.5"),
+        "tuple": (1, 2),
+        "set": {1},
+    }
+    helpers.null_unbindable_values(bindings)
+    assert bindings["float"] == 1.5
+    assert bindings["nan"] is nan
+    assert bindings["bytes"] == b"\x00"
+    assert bindings["list"] is None
+    assert bindings["dict"] is None
+    assert bindings["decimal"] is None
+    assert bindings["tuple"] is None
+    assert bindings["set"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -837,9 +974,16 @@ def test_n4_negative_fee_fraction_settlement_does_not_halt(
     ledger_db, current_block_index, blockchain_mock, defaults
 ):
     """Before the activation such a broadcast can already be on chain, so the
-    settlement clamp is ungated and load-bearing on its own. Driven through the
-    real ingestion path -- four transactions, as reported."""
+    settlement guard is ungated and load-bearing on its own. Driven through the
+    real ingestion path -- four transactions, as reported. The match is skipped,
+    not settled with a zero fee; see
+    `test_n4_negative_fee_does_not_flip_a_pending_cfd_match`."""
     feed = defaults["addresses"][5]
+    resolutions_before = (
+        ledger_db.cursor()
+        .execute("SELECT COUNT(*) AS n FROM bet_match_resolutions")
+        .fetchone()["n"]
+    )
 
     with ProtocolChangesDisabled(["reject_negative_fee_fraction"]):
         mine_crafted_tx(
@@ -896,10 +1040,116 @@ def test_n4_negative_fee_fraction_settlement_does_not_halt(
             bytes([broadcast.ID]) + cbor2.dumps([1_800_000_001, 1.0, 0, "text/plain", b"XCP-USD"]),
         )
 
-    resolution = (
+    # The block parsed. The match was skipped rather than resolved: no
+    # resolution row, and it is still pending.
+    resolutions_after = (
         ledger_db.cursor()
-        .execute("SELECT * FROM bet_match_resolutions ORDER BY rowid DESC LIMIT 1")
+        .execute("SELECT COUNT(*) AS n FROM bet_match_resolutions")
+        .fetchone()["n"]
+    )
+    assert resolutions_after == resolutions_before
+
+    match = (
+        ledger_db.cursor()
+        .execute("SELECT * FROM bet_matches ORDER BY rowid DESC LIMIT 1")
         .fetchone()
     )
-    assert resolution is not None
-    assert resolution["fee"] == 0, resolution["fee"]
+    assert match["status"] == "pending", match["status"]
+
+
+CFD_FEED_TXID_1 = "c10102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+CFD_FEED_TXID_2 = "c20102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+CFD_BETTOR_TXID_A = "ca0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+CFD_BETTOR_TXID_B = "cb0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+
+
+def test_n4_negative_fee_does_not_flip_a_pending_cfd_match(
+    ledger_db, current_block_index, blockchain_mock, defaults
+):
+    """The negative-fee guard must not change a match old code left *pending*.
+
+    Clamping `fee` to 0 instead of skipping the match would. `escrow_less_fee`
+    is `total_escrow - fee`, so a negative fee makes it *larger* than the
+    escrow, and the CFD liquidation test `bull_credit <= 0` reads
+    `escrow_less_fee <= bear_credit`. Here total_escrow = 2e8, fee = -2 and
+    bear_credit = 2e8 (bear_escrow 1e8, value 0.0 against an initial value of
+    1.0 at 1x leverage): old arithmetic gives escrow_less_fee = 2e8 + 2 and
+    bull_credit = 2, so no liquidation -- and the deadline has not passed, so
+    nothing is written and the match stays pending. Under the clamp
+    escrow_less_fee = 2e8, bull_credit = 0, and the match settles "liquidated
+    for bear" instead. That path never reaches the negative-fee `credit()` and
+    never raises on old code, so no activation gate protects it: only skipping
+    the match leaves it untouched.
+    """
+    feed = defaults["addresses"][5]
+    bear = defaults["addresses"][1]
+
+    with ProtocolChangesDisabled(["reject_negative_fee_fraction"]):
+        mine_crafted_tx(
+            ledger_db,
+            current_block_index,
+            blockchain_mock,
+            defaults,
+            CFD_FEED_TXID_1,
+            feed,
+            bytes([broadcast.ID]) + cbor2.dumps([1_700_000_000, 1.0, -1, "text/plain", b"XCP-USD"]),
+        )
+
+        # Opposing BullCFD / BearCFD bets on that feed, 1x leverage, deadline
+        # far in the future. FORMAT ">HIQQdII".
+        for prev_txid, bettor, bet_type in (
+            (CFD_BETTOR_TXID_A, defaults["addresses"][0], BET_TYPE_ID["BullCFD"]),
+            (CFD_BETTOR_TXID_B, bear, BET_TYPE_ID["BearCFD"]),
+        ):
+            mine_crafted_tx(
+                ledger_db,
+                current_block_index,
+                blockchain_mock,
+                defaults,
+                prev_txid,
+                bettor,
+                bytes([bet.ID])
+                + struct.pack(">HIQQdII", bet_type, 1_800_000_000, 10**8, 10**8, 0.0, 5040, 100),
+                outputs=[p2pkh_output(feed)],
+            )
+
+        match = (
+            ledger_db.cursor()
+            .execute("SELECT * FROM bet_matches ORDER BY rowid DESC LIMIT 1")
+            .fetchone()
+        )
+        assert match is not None and match["status"] == "pending", match
+        assert match["fee_fraction_int"] < 0, match["fee_fraction_int"]
+        assert match["initial_value"] == 1.0, match["initial_value"]
+
+        balance_before = ledger.balances.get_balance(ledger_db, bear, config.XCP)
+        resolutions_before = (
+            ledger_db.cursor()
+            .execute("SELECT COUNT(*) AS n FROM bet_match_resolutions")
+            .fetchone()["n"]
+        )
+
+        # A broadcast *before* the deadline. Must not resolve the match.
+        mine_crafted_tx(
+            ledger_db,
+            current_block_index,
+            blockchain_mock,
+            defaults,
+            CFD_FEED_TXID_2,
+            feed,
+            bytes([broadcast.ID]) + cbor2.dumps([1_700_000_001, 0.0, 0, "text/plain", b"XCP-USD"]),
+        )
+
+    match = (
+        ledger_db.cursor()
+        .execute("SELECT * FROM bet_matches ORDER BY rowid DESC LIMIT 1")
+        .fetchone()
+    )
+    assert match["status"] == "pending", match["status"]
+    assert ledger.balances.get_balance(ledger_db, bear, config.XCP) == balance_before
+    assert (
+        ledger_db.cursor()
+        .execute("SELECT COUNT(*) AS n FROM bet_match_resolutions")
+        .fetchone()["n"]
+        == resolutions_before
+    )

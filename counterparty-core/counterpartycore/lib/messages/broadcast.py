@@ -111,6 +111,25 @@ def validate(db, source, timestamp, value, fee_fraction_int, text, mime_type, bl
         # succeeds, hence the activation gate.
         if is_non_finite(timestamp) or is_non_finite(value) or is_non_finite(fee_fraction_int):
             problems.append("non-finite numeric value")
+            # Returning here means the retained fields never reach the numeric
+            # comparisons below, so a *second*, independently malformed field
+            # (say a CBOR array `fee_fraction_int` alongside a NaN `timestamp`)
+            # no longer raises the `TypeError` that parse()'s
+            # `broadcast_safe_validate` recovery keys off. Binding safety for the
+            # invalid record therefore cannot depend on that recovery: it is
+            # enforced unconditionally at the insert in parse().
+            return problems
+
+        # Same poison, different type. cbor2 decodes a CBOR decimal fraction
+        # (tag 4) or bigfloat (tag 5) as a `decimal.Decimal`, which every
+        # comparison below accepts -- so the broadcast is stored "valid" -- but
+        # which sqlite3 cannot bind at all: without the clamp in parse() the
+        # insert raises and halts the chain, and with it the field lands as NULL
+        # on a "valid" row, which is exactly the NaN poisoning above. A
+        # non-finite Decimal is already caught by `is_non_finite()`; this covers
+        # the finite ones. Same gate: it flips a broadcast that parses today.
+        if any(isinstance(field, D) for field in (timestamp, value, fee_fraction_int)):
+            problems.append("unstorable numeric value")
             return problems
 
     # For SQLite3
@@ -407,14 +426,17 @@ def parse(db, tx, message):
         "mime_type": mime_type,
     }
     if "integer overflow" not in status:
-        # Final safety clamp: any int that exceeds SQLite's signed 64-bit
-        # range would raise OverflowError inside insert_record. This happens
-        # for CBOR-encoded hand-rolled txs whose `mime_type` (TEXT column)
-        # or numeric fields carry attacker-supplied huge ints that survive
-        # validate() (which only flags the value as a problem string, it
-        # doesn't replace it). Mirror the same defense applied to
-        # issuances; see fuzz_cbor_test.py::test_cbor_broadcast_no_halt.
-        helpers.null_out_of_range_ints(bindings)
+        # Final binding-safety clamp for the retained fields. A CBOR-encoded
+        # hand-rolled tx can put *any* type in any of them, and the recovery
+        # above only rewrites `timestamp`/`value`/`fee_fraction_int`/`text` --
+        # and only on the branch that raised. `mime_type` is never rewritten at
+        # all, and a field that never reaches a numeric comparison (because an
+        # earlier `validate()` check returned first, e.g. the non-finite one) is
+        # never rewritten either. So this must cover the whole record, not just
+        # the fields the recovery happens to touch; see
+        # `helpers.null_unbindable_values` and
+        # chain_halt_test.py::test_c3b_* and fuzz_cbor_test.py.
+        helpers.null_unbindable_values(bindings)
         ledger.events.insert_record(db, "broadcasts", bindings, "BROADCAST")
 
     logger.info("Broadcast from %(source)s (%(tx_hash)s) [%(status)s]", bindings)
@@ -488,13 +510,33 @@ def parse(db, tx, message):
             # A broadcast predating `reject_negative_fee_fraction` can carry a
             # negative `fee_fraction_int`, and `bet.get_fee_fraction()` copies the
             # feed's last one onto every new bet -- so a match created long after
-            # the activation can still inherit it. The feed fee below is credited
-            # unconditionally and `credit()` rejects a negative quantity, so the
-            # whole block fails to parse. Read it as no fee: the settlement then
-            # proceeds exactly as it does for a zero-fee feed. Ungated, and it
-            # stays load-bearing after the activation -- any match reaching this
-            # raises on current code, so no historical block settled one.
-            fee = 0
+            # the activation can still inherit it. Every path that resolves a
+            # match credits the feed `fee` unconditionally, and `credit()` rejects
+            # a negative quantity, so the whole block fails to parse.
+            #
+            # Skip the match instead of clamping `fee` to 0. The clamp looks
+            # equivalent but is not: `escrow_less_fee = total_escrow - fee` is
+            # *larger* than the escrow when the fee is negative, and the CFD
+            # liquidation test `bull_credit <= 0` reads
+            # `escrow_less_fee <= bear_credit`. A match that old code left
+            # pending -- not liquidated, deadline not reached, so it never
+            # reaches a `credit()` and never raises -- can therefore flip to
+            # "settled: liquidated for bear" under the clamp (T=100, f=-10,
+            # bear_credit=105: pending before, liquidated after), changing a
+            # state that parses fine today.
+            #
+            # Ungated, and sound without a gate precisely because of that
+            # asymmetry: the only states skipped here are the ones that DO reach
+            # a `credit()` with a negative fee, and every one of those raises on
+            # current code, so no historical block ever settled one. A state old
+            # code left pending stays pending -- `continue` writes nothing, which
+            # is exactly what falling through to the end of the loop body did.
+            logger.warning(
+                "Bet Match %s has a negative feed fee, skipping settlement",
+                bet_match_id,
+            )
+            broadcast_bet_match_cursor.close()
+            continue
         escrow_less_fee = total_escrow - fee
 
         # Get known bet match type IDs.

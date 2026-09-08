@@ -211,8 +211,9 @@ def parse(db, tx, message):
         }
         # `quantity` is a `>Q` field, so it can be up to 2**64-1; validate()
         # reports "quantity exceeds maximum value" but leaves the raw value in
-        # place, and binding it raises OverflowError inside insert_record().
-        helpers.null_out_of_range_ints(bindings)
+        # place, and binding it raises OverflowError inside insert_record() (or
+        # TypeError, for a CBOR list/dict/Decimal).
+        helpers.null_unbindable_values(bindings)
         ledger.events.insert_record(db, "pool_withdrawals", bindings, "NEW_POOL_WITHDRAWAL")
         logger.info("Pool withdrawal %(tx_hash)s is invalid: %(status)s", bindings)
         ledger.blocks.set_transaction_status(db, tx["tx_index"], False)

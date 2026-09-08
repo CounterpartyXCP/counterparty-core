@@ -26,6 +26,7 @@ Endpoints (all GET, JSON):
 import contextlib
 import json
 import logging
+import os
 import threading
 import time
 from collections import deque
@@ -556,6 +557,8 @@ class HealthCheckServer:
         self.httpd = None
         self.sampler = None
         self._serve_thread = None
+        # PID of the process that actually bound the listener; see stop().
+        self._owner_pid = None
         self.started_at_monotonic = time.monotonic()
 
     def attach_dispatcher(self, dispatcher):
@@ -592,6 +595,7 @@ class HealthCheckServer:
                 target=self.httpd.serve_forever, name="HealthCheckServer", daemon=True
             )
             self._serve_thread.start()
+            self._owner_pid = os.getpid()
             logger.info(
                 "Health check server listening on %s:%s (isolated from the API worker pool)",
                 self.host,
@@ -619,10 +623,28 @@ class HealthCheckServer:
         self.sampler = None
         self.httpd = None
         self._serve_thread = None
+        self._owner_pid = None
 
     def stop(self, deadline=None):
         if deadline is None:
             deadline = time.monotonic() + 5
+        if self._owner_pid is not None and os.getpid() != self._owner_pid:
+            # An inherited copy of this object in a forked child, i.e. a Gunicorn
+            # worker: the arbiter forks from inside `wsgi_server.run()`, which sits
+            # in the same `try` as the `start()` above, so a worker retiring on
+            # `max_requests` raises SystemExit and unwinds through
+            # `run_apiserver()`'s `finally` -- reaching here, before the PID guard
+            # in `GunicornApplication.stop()`.
+            #
+            # It must not touch the server. `serve_forever` runs only in the
+            # parent, and `socketserver.BaseServer.shutdown()` waits on an `Event`
+            # that only `serve_forever` sets; the child's copy was inherited
+            # *cleared* and nothing in the child will ever set it, so the call
+            # blocks forever and the worker never exits. Nothing here belongs to
+            # the child anyway: the listener, its handler threads and the sampler
+            # all live in the parent, which stops them on its own shutdown.
+            logger.trace("Health check server belongs to another process; nothing to stop.")
+            return
         if self.httpd is not None:
             try:
                 # shutdown() must be called from a different thread than serve_forever().
