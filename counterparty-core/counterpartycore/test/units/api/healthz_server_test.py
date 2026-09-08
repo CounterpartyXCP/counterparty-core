@@ -485,3 +485,33 @@ def test_liveness_survives_a_stopped_watcher():
     sampler._tick()
 
     assert sampler.heartbeat_age() < sampler.liveness_heartbeat_timeout
+
+
+def test_stop_from_another_process_touches_nothing(monkeypatch):
+    """A Gunicorn worker retires by raising SystemExit, which unwinds through
+    `run_apiserver()`'s `finally` and calls `health_server.stop()` in the
+    *forked child* -- the arbiter forks from inside `wsgi_server.run()`, in the
+    same `try` as the listener's own `start()`.
+
+    `serve_forever` only ever ran in the parent, and
+    `socketserver.BaseServer.shutdown()` waits on an `Event` that only
+    `serve_forever` sets: the child inherited it cleared and nothing in the
+    child will ever set it, so without the owner-PID guard the call blocks
+    forever (verified directly against a forked child; not reproduced here
+    because forking a multi-threaded pytest process is itself deadlock-prone).
+    The guard is checked here by standing in for the child's PID: `stop()` must
+    return having touched neither the listener nor the sampler.
+    """
+    server = HealthCheckServer(host="127.0.0.1", port=0, saturation_grace=0)
+    server.start()
+    assert server.httpd is not None, "could not bind the health check server"
+    try:
+        monkeypatch.setattr(healthz_server.os, "getpid", lambda: server._owner_pid + 1)
+        server.stop()
+        # Untouched: still serving, sampler still ticking.
+        assert server._serve_thread.is_alive()
+        assert server.sampler.is_alive()
+    finally:
+        monkeypatch.undo()
+        server.stop()
+        assert not server._serve_thread.is_alive()

@@ -16,25 +16,46 @@ from counterpartycore.lib import config
 D = decimal.Decimal
 
 
-def null_out_of_range_ints(bindings):
-    """Replace every int outside SQLite's signed 64-bit range with `None`, in
-    place, and return the bindings.
+# apsw/sqlite3 binds exactly these Python types; anything else raises
+# `TypeError: Bad binding argument type` at INSERT time. `bool` is a subclass of
+# `int` and needs no entry of its own.
+BINDABLE_TYPES = (type(None), int, float, str, bytes)
 
-    sqlite3 raises `OverflowError: int too big to convert` when a binding
-    exceeds 2**63-1, and `insert_record()` is called from message handlers whose
-    exceptions `parse_tx()` wraps and `parse_block()` re-raises -- so one crafted
-    transaction halts every node at the same block. Message formats that unpack
-    unsigned 64-bit fields (`>Q`) admit values up to 2**64-1, and `validate()`
-    only *reports* them as a problem: the raw value still reaches the
-    invalid-record bindings.
 
-    Ungated: a transaction that would be clamped here raises on current code, so
+def null_unbindable_values(bindings):
+    """Replace every value SQLite cannot bind with `None`, in place, and return
+    the bindings.
+
+    Two kinds of value qualify, and both reach the bindings the same way: from a
+    CBOR-decoded message body, which -- unlike the legacy `struct` formats it
+    replaced after `taproot_support` -- can carry any type at all.
+
+    * An `int` outside SQLite's signed 64-bit range raises `OverflowError: int
+      too big to convert`. Message formats that unpack unsigned 64-bit fields
+      (`>Q`) admit values up to 2**64-1, and `validate()` only *reports* them as
+      a problem: the raw value still reaches the invalid-record bindings.
+    * A value whose type has no SQLite equivalent raises `TypeError: Bad binding
+      argument type`. cbor2 decodes an array as `list`, a map as `dict`, and a
+      decimal fraction (tag 4) or bigfloat (tag 5) as `decimal.Decimal` -- none
+      of which any `validate()` rejects, because comparing them against
+      `config.MAX_INT` either succeeds (`Decimal`) or raises a `TypeError` the
+      per-message safety net normalises for *some* fields but not the rest.
+
+    `insert_record()` is called from message handlers whose exceptions
+    `parse_tx()` wraps and `parse_block()` re-raises -- so one crafted
+    transaction halts every node at the same block.
+
+    Ungated: a transaction that would be changed here raises on current code, so
     no historical block can contain one that was ever recorded.
     """
     for key, value in list(bindings.items()):
-        if isinstance(value, int) and not isinstance(value, bool):
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int):
             if value > config.MAX_INT or value < -config.MAX_INT:
                 bindings[key] = None
+        elif not isinstance(value, BINDABLE_TYPES):
+            bindings[key] = None
     return bindings
 
 

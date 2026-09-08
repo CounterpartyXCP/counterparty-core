@@ -462,9 +462,49 @@ def convert_to_psbt(rawtx):
     return rpc("converttopsbt", [rawtx, True])
 
 
+def check_raw_transaction_result(tx_hash, result, verbose):
+    """Validate the *shape* of a `getrawtransaction` result and return it.
+
+    `rpc_call()` guarantees the JSON-RPC envelope, not what the method put in
+    `result`. A superficially valid envelope carrying a malformed result -- a
+    dict where the raw hex belongs, a number, a list -- passes straight through
+    and only fails much later, at the native deserializer, as a pyo3 `TypeError`
+    (non-`str` argument) or `ValueError` (invalid hex). Those are data-shaped
+    exceptions: `get_vin_info_legacy()` catches only `BitcoindRPCError`, so they
+    reach `gettxinfo.MALFORMED_TRANSACTION_ERRORS`, which absorbs them as "not a
+    Counterparty transaction". The node whose backend glitched would then
+    silently drop a confirmed transaction that every healthy node parses -- the
+    block 510556 silent-fork class, one boundary further out than the envelope
+    checks in `rpc_call()`.
+
+    Raising `BitcoindRPCError` instead keeps the failure classified as
+    infrastructure all the way down the chain. It runs *before* the value is
+    cached, so a single bad answer cannot poison `getrawtransaction`'s
+    `lru_cache` for the rest of the process (`lru_cache` does not memoise
+    exceptions).
+    """
+    if verbose:
+        # Every caller of the verbose form indexes `["vout"]`.
+        if not isinstance(result, dict) or not isinstance(result.get("vout"), list):
+            raise exceptions.BitcoindRPCError(
+                f"Malformed verbose `getrawtransaction` result for {tx_hash}: "
+                f"expected a dict with a `vout` list, got {type(result).__name__}"
+            )
+    elif not isinstance(result, str):
+        raise exceptions.BitcoindRPCError(
+            f"Malformed `getrawtransaction` result for {tx_hash}: "
+            f"expected a hex str, got {type(result).__name__}"
+        )
+    return result
+
+
 @functools.lru_cache(maxsize=10000)
 def getrawtransaction(tx_hash, verbose=False, no_retry=False):
-    return rpc("getrawtransaction", [tx_hash, 1 if verbose else 0], no_retry=no_retry)
+    return check_raw_transaction_result(
+        tx_hash,
+        rpc("getrawtransaction", [tx_hash, 1 if verbose else 0], no_retry=no_retry),
+        verbose,
+    )
 
 
 def getrawtransaction_batch(tx_hashes, verbose=False, return_dict=False, no_retry=False):
@@ -496,18 +536,25 @@ def getrawtransaction_batch(tx_hashes, verbose=False, return_dict=False, no_retr
         else:
             batch_results = rpc_call(payload)
 
-        # Process results for this batch
+        # Process results for this batch. Same shape check as the single-call
+        # path (see `check_raw_transaction_result`): a malformed member result
+        # must surface as an infrastructure error here, not as a decode failure
+        # in the parser.
         if return_dict:
             for result in batch_results:
                 if "result" in result and result["result"] is not None:
                     # Use the batch array to get the correct tx_hash
                     batch_index = result["id"]
                     tx_hash = batch[batch_index]
-                    all_raw_transactions[tx_hash] = result["result"]
+                    all_raw_transactions[tx_hash] = check_raw_transaction_result(
+                        tx_hash, result["result"], verbose
+                    )
         else:
             for result in batch_results:
                 if "result" in result and result["result"] is not None:
-                    all_raw_transactions.append(result["result"])
+                    all_raw_transactions.append(
+                        check_raw_transaction_result("<batch>", result["result"], verbose)
+                    )
 
     return all_raw_transactions
 
@@ -702,7 +749,22 @@ def get_decoded_transaction(tx_hash, block_index=None, no_retry=False):
         return TRANSACTIONS_CACHE[tx_hash]
 
     raw_tx = getrawtransaction(tx_hash, no_retry=no_retry)
-    tx = deserialize.deserialize_tx(raw_tx, block_index=block_index)
+    try:
+        tx = deserialize.deserialize_tx(raw_tx, block_index=block_index)
+    except Exception as e:  # pylint: disable=broad-except
+        # `raw_tx` is what the *backend* answered, not bytes taken from the block
+        # being parsed, so a failure to decode it is an infrastructure failure --
+        # a truncated/garbled body, a proxy that rewrote the payload, a result
+        # that is not a transaction at all. The deserializer signals those as
+        # pyo3 `ValueError`/`TypeError`, which `gettxinfo`'s malformed-child net
+        # absorbs as "not a Counterparty transaction": this node would silently
+        # drop a confirmed transaction that healthy nodes parse (block 510556).
+        # `raise_unresolved_prevout()` in the callers then applies the usual
+        # policy -- skip while parsing the mempool, halt during catch-up.
+        raise exceptions.BitcoindRPCError(
+            f"Could not deserialize transaction {tx_hash} returned by the backend "
+            f"({type(e).__name__}: {e})"
+        ) from e
 
     add_transaction_in_cache(tx_hash, tx)
 
@@ -934,11 +996,19 @@ def get_vin_info_legacy(vin, no_retry=False, prevout=None):
         # `fix_is_segwit` protocol change (block 902000) it is whether the *parent
         # transaction* carries any witness (equivalently `txid != wtxid`), NOT whether
         # the prevout output is itself a witness program. Computing it with
-        # `is_segwit_output()` unconditionally applies the post-fix semantics to pre-fix
-        # blocks, which flips the source of P2SH-encoded transactions funded by a segwit
-        # parent from bech32 to base58 and forks the ledger (observed at block 832867).
+        # the post-fix rule unconditionally flips the source of P2SH-encoded
+        # transactions funded by a segwit parent from bech32 to base58 and forks the
+        # ledger (observed at block 832867).
+        #
+        # Post-fix the Rust side calls `script_pubkey.is_witness_program()`, so this
+        # does too. `script.is_segwit_output()` is NOT the same predicate: it
+        # disassembles the script, so it raises `DecodeError` on an empty
+        # scriptPubKey (which the Rust side simply reports as non-witness) and misses
+        # witness versions 2-16. Since this fallback runs precisely when the
+        # deserializer failed -- a node-local, degraded condition -- a mismatch here
+        # would give this node a different `source` and `fee` than every healthy one.
         if protocol.enabled("fix_is_segwit"):
-            is_segwit = script.is_segwit_output(vout["script_pub_key"])
+            is_segwit = script.is_witness_program(vout["script_pub_key"])
         else:
             is_segwit = vin_ctx["segwit"]
         return (

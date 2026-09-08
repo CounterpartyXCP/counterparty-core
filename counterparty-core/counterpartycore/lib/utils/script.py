@@ -48,6 +48,50 @@ def is_segwit_output(script_pub_key):
     return get_output_type(script_pub_key) in ("P2WPKH", "P2WSH", "P2TR")
 
 
+# Byte values from rust-bitcoin's `blockdata::opcodes::all`.
+_OP_PUSHBYTES_2 = 0x02
+_OP_PUSHBYTES_40 = 0x28
+_OP_PUSHNUM_1 = 0x51
+_OP_PUSHNUM_16 = 0x60
+
+
+def is_witness_program(script_pub_key):
+    """Whether `script_pub_key` is a witness program, deciding it exactly as the
+    Rust fetcher does.
+
+    `is_segwit_output()` answers a subtly different question, and answers it by
+    disassembling the script: it therefore raises `DecodeError` for anything
+    `script_to_asm()` cannot parse -- an empty scriptPubKey most obviously,
+    where `asm[-1]` is an `IndexError` -- and it reports witness versions 2-16
+    as "UNKNOWN". The Rust side
+    (`output.script_pubkey.is_witness_program()` in
+    `indexer/bitcoin_client.rs`, i.e. rust-bitcoin's `Script::witness_version`)
+    never throws and never disassembles: it is a pure byte-shape test.
+
+    Both compute the same `is_segwit` flag for the same input, so they have to
+    agree -- see `bitcoind.get_vin_info_legacy()`, which is the Python fallback
+    taken exactly when the deserializer could not resolve the prevout itself. A
+    node on the fallback must stay byte-identical to one that was not. Kept
+    separate from `is_segwit_output()`, which keeps its own semantics for the
+    composer (off the consensus path).
+    """
+    if isinstance(script_pub_key, str):
+        try:
+            script_pub_key = binascii.unhexlify(script_pub_key)
+        except binascii.Error:
+            return False
+    if not 4 <= len(script_pub_key) <= 42:
+        return False
+    push_opbyte = script_pub_key[1]
+    if push_opbyte < _OP_PUSHBYTES_2 or push_opbyte > _OP_PUSHBYTES_40:
+        return False
+    # The push must cover exactly the rest of the script.
+    if len(script_pub_key) - 2 != push_opbyte:
+        return False
+    version_opbyte = script_pub_key[0]
+    return version_opbyte == 0 or _OP_PUSHNUM_1 <= version_opbyte <= _OP_PUSHNUM_16
+
+
 def _script_to_address(scriptpubkey, use_legacy=False):
     if isinstance(scriptpubkey, str):
         scriptpubkey = binascii.unhexlify(scriptpubkey)

@@ -9,7 +9,7 @@ from bitcoinutils.transactions import Script
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.backend import bitcoind
 from counterpartycore.lib.parser import gettxinfo
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import helpers, script
 from counterpartycore.test.fixtures import decodedtxs
 from counterpartycore.test.mocks.bitcoind import (
     original_get_reveal_prevouts,
@@ -910,8 +910,11 @@ def make_failing_post(fail_times, call_log, exc=requests.exceptions.ConnectionEr
             raise exc("backend unavailable")
         payload = json.loads(kwargs["data"])
         if isinstance(payload, list):
+            # Shaped like a real verbose `getrawtransaction` result: the batch
+            # path now checks it (see `check_raw_transaction_result`).
             return MockResponse(
-                200, [{"id": item["id"], "result": {"txid": "ok"}} for item in payload]
+                200,
+                [{"id": item["id"], "result": {"txid": "ok", "vout": []}} for item in payload],
             )
         return MockResponse(200, {"result": "ok"})
 
@@ -994,7 +997,7 @@ def test_batch_parser_retries_then_recovers(monkeypatch):
 
     result = bitcoind.getrawtransaction_batch(["deadbeef"], verbose=True, return_dict=True)
 
-    assert result == {"deadbeef": {"txid": "ok"}}
+    assert result == {"deadbeef": {"txid": "ok", "vout": []}}
     assert len(calls) == 3  # 2 transient failures + 1 success
 
 
@@ -1180,3 +1183,138 @@ def test_rpc_call_batch_response_is_returned_unchanged(init_mock):
     """A batch reply is a list and each element carries its own result/error;
     getrawtransaction_batch() filters those itself."""
     assert bitcoind.rpc("return_json_list_at_top_level", []) == [{"result": "ok", "id": 0}]
+
+
+# ---------------------------------------------------------------------------
+# A backend result that is *shaped* wrong. `rpc_call()` validates the JSON-RPC
+# envelope; nothing validated what the method put in `result`. A malformed
+# non-null result reached the native deserializer and failed there as a pyo3
+# `TypeError`/`ValueError` -- data-shaped errors that `get_vin_info_legacy()`
+# does not catch (it catches only `BitcoindRPCError`) and that
+# `gettxinfo.MALFORMED_TRANSACTION_ERRORS` then absorbs as "not a Counterparty
+# transaction". The node whose backend glitched would silently drop a confirmed
+# transaction that healthy nodes parse: the block 510556 fork class, one
+# boundary further out than the envelope checks.
+# ---------------------------------------------------------------------------
+def _post_returning(result):
+    def _post(*args, **kwargs):
+        payload = json.loads(kwargs["data"])
+        if isinstance(payload, list):
+            return MockResponse(200, [{"id": item["id"], "result": result} for item in payload])
+        return MockResponse(200, {"result": result})
+
+    return _post
+
+
+@pytest.mark.parametrize(
+    "bad_result", [{"txid": "ok"}, 12345, ["00"], True], ids=["dict", "int", "list", "bool"]
+)
+def test_getrawtransaction_rejects_a_malformed_result(monkeypatch, bad_result):
+    bitcoind.getrawtransaction.cache_clear()
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    monkeypatch.setattr("requests.post", _post_returning(bad_result))
+
+    with pytest.raises(exceptions.BitcoindRPCError, match="Malformed"):
+        bitcoind.getrawtransaction("dd" * 32)
+    bitcoind.getrawtransaction.cache_clear()
+
+
+def test_getrawtransaction_rejects_a_verbose_result_without_vout(monkeypatch):
+    bitcoind.getrawtransaction.cache_clear()
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    monkeypatch.setattr("requests.post", _post_returning({"txid": "ok"}))
+
+    with pytest.raises(exceptions.BitcoindRPCError, match="Malformed verbose"):
+        bitcoind.getrawtransaction("dd" * 32, True)
+    bitcoind.getrawtransaction.cache_clear()
+
+
+def test_a_malformed_result_does_not_poison_the_cache(monkeypatch):
+    """The check runs before the value is cached, so one bad answer cannot make
+    every later lookup of that hash fail for the life of the process."""
+    bitcoind.getrawtransaction.cache_clear()
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    tx_hash = "ee" * 32
+
+    monkeypatch.setattr("requests.post", _post_returning({"txid": "ok"}))
+    with pytest.raises(exceptions.BitcoindRPCError):
+        bitcoind.getrawtransaction(tx_hash)
+
+    monkeypatch.setattr("requests.post", _post_returning("0100"))
+    assert bitcoind.getrawtransaction(tx_hash) == "0100"
+    bitcoind.getrawtransaction.cache_clear()
+
+
+def test_getrawtransaction_batch_rejects_a_malformed_member(monkeypatch):
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    monkeypatch.setattr("requests.post", _post_returning("not-a-dict"))
+
+    with pytest.raises(exceptions.BitcoindRPCError, match="Malformed verbose"):
+        bitcoind.getrawtransaction_batch(["dd" * 32], verbose=True, return_dict=True)
+
+
+@pytest.mark.parametrize("raw_tx", ["zzzz", "", "00"], ids=["not_hex", "empty", "truncated"])
+def test_get_decoded_transaction_reports_a_decode_failure_as_infrastructure(monkeypatch, raw_tx):
+    """`raw_tx` is what the backend answered, not bytes from the block being
+    parsed, so failing to decode it is an infrastructure failure. Left as the
+    deserializer's `ValueError` it would reach the malformed-child net and drop
+    a confirmed transaction on this node alone."""
+    monkeypatch.setattr(bitcoind, "getrawtransaction", lambda *a, **k: raw_tx)
+    bitcoind.TRANSACTIONS_CACHE.clear()
+
+    with pytest.raises(exceptions.BitcoindRPCError, match="Could not deserialize"):
+        bitcoind.get_decoded_transaction("ff" * 32, block_index=1)
+
+
+def test_a_backend_decode_failure_halts_vin_resolution_during_catchup(monkeypatch):
+    """End of the chain: `get_vin_info_legacy()` catches `BitcoindRPCError` and
+    applies the usual policy -- halt while parsing a confirmed block rather than
+    let the transaction be silently reclassified."""
+    monkeypatch.setattr(bitcoind, "getrawtransaction", lambda *a, **k: "zzzz")
+    monkeypatch.setattr(bitcoind.CurrentState, "parsing_mempool", lambda self: False)
+    monkeypatch.setattr(bitcoind.CurrentState, "stopping", lambda self: False)
+    bitcoind.TRANSACTIONS_CACHE.clear()
+
+    with pytest.raises(exceptions.BitcoindRPCError, match="Refusing to silently skip"):
+        bitcoind.get_vin_info_legacy({"hash": "ff" * 32, "n": 0})
+
+
+# ---------------------------------------------------------------------------
+# `is_segwit` on the Python fallback must be computed the way the Rust fetcher
+# computes it. `script.is_segwit_output()` disassembles the script, so it raised
+# `DecodeError` on an empty scriptPubKey -- which `get_tx_info()` turns into "not
+# a Counterparty transaction" -- where the Rust side simply reports non-witness.
+# ---------------------------------------------------------------------------
+def test_empty_prevout_script_is_non_witness_not_a_decode_error(monkeypatch):
+    monkeypatch.setattr(
+        bitcoind,
+        "get_decoded_transaction",
+        lambda *a, **k: {"vout": [{"value": 5, "script_pub_key": b""}], "segwit": False},
+    )
+    monkeypatch.setattr(bitcoind.protocol, "enabled", lambda name, **k: name == "fix_is_segwit")
+
+    assert bitcoind.get_vin_info_legacy({"hash": COMMIT_TXID, "n": 0}) == (5, b"", False)
+
+
+@pytest.mark.parametrize(
+    ("script_pub_key", "expected"),
+    [
+        (b"", False),
+        (b"\x00\x14" + b"\x11" * 20, True),  # P2WPKH
+        (b"\x00\x20" + b"\x11" * 32, True),  # P2WSH
+        (b"\x51\x20" + b"\x11" * 32, True),  # P2TR
+        (b"\x52\x20" + b"\x11" * 32, True),  # witness v2: "UNKNOWN" to get_output_type
+        (b"\x60\x02\x11\x11", True),  # witness v16, minimum length
+        (b"\x51\x28" + b"\x11" * 40, True),  # maximum length
+        (b"\x51\x29" + b"\x11" * 41, False),  # one byte too long
+        (b"\x00\x01\x11", False),  # too short for a witness program
+        (b"\x00\x14" + b"\x11" * 19, False),  # push length does not match
+        (b"\x50\x20" + b"\x11" * 32, False),  # OP_RESERVED is not a witness version
+        (b"\x76\xa9\x14" + b"\x11" * 20 + b"\x88\xac", False),  # P2PKH
+    ],
+)
+def test_is_witness_program_matches_rust_bitcoin(script_pub_key, expected):
+    """Byte-for-byte against rust-bitcoin 0.32's `Script::witness_version()`,
+    which is what `is_witness_program()` calls in `indexer/bitcoin_client.rs`."""
+    assert script.is_witness_program(script_pub_key) is expected
+    assert script.is_witness_program(script_pub_key.hex()) is expected
