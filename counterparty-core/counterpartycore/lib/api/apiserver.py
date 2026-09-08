@@ -749,6 +749,11 @@ def run_apiserver(
                     config.DEFAULT_HEALTHZ_SATURATION_GRACE_SECONDS,
                 ),
                 stop_event=stop_event,
+                # Readiness must not go green during the startup this listener
+                # deliberately runs ahead of: `server_ready_value` is 0 until
+                # the WSGI server is built and about to run, and 2 once it is
+                # stopping (issue #3504).
+                serving_provider=lambda: server_ready_value.value == 1,
             )
             health_server.start()
 

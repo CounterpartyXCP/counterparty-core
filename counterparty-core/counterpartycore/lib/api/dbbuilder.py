@@ -208,6 +208,96 @@ def record_balances_copied_block(state_db):
         )
 
 
+def backfill_address_events(state_db):
+    """Re-derive the ``address_events`` rows the migration re-apply left behind.
+
+    ``MIGRATIONS_AFTER_ROLLBACK`` deliberately omits
+    ``0001.create_and_populate_address_events``: re-applying it would drop the
+    whole table and rebuild it from ``ledger_db.messages``, which loses the
+    UTXO-owner aliases that only the runtime path
+    (``apiwatcher.update_address_events``) adds, for any UTXO that no longer
+    holds a balance.
+
+    But ``0002`` *does* repopulate ``parsed_events`` from the entire Ledger
+    history, so the replay cursor lands on the Ledger tip. Anything the State
+    DB had not parsed yet -- and, after a rollback, everything
+    ``rollback_tables`` just deleted -- is then declared parsed while its
+    address associations are missing, and ``get_next_event_to_parse()`` never
+    comes back for it: ``/v2/addresses/<address>/events`` and ``/credits``
+    silently omit confirmed history until the State DB is rebuilt from scratch.
+
+    So close the gap here instead. Every address-bearing Ledger event with no
+    association at all is re-derived through the same resolver the watcher
+    uses -- which also repairs the holes older releases' refreshes left behind,
+    not just the one this run would have opened. Events that already have
+    associations are left alone, and that is what keeps this from double
+    counting: ``rollback_tables`` deletes whole blocks, so an event either kept
+    all of its rows or lost all of them.
+    """
+    # Imported here rather than at module scope: `apiwatcher` imports this
+    # module, so a top-level import would be circular.
+    # pylint: disable=import-outside-toplevel
+    from counterpartycore.lib.api import apiwatcher  # noqa: PLC0415
+
+    start_time = time.time()
+    cursor = state_db.cursor()
+
+    already_attached = (
+        cursor.execute(
+            "SELECT COUNT(*) AS count FROM pragma_database_list WHERE name = ?", ("ledger_db",)
+        ).fetchone()["count"]
+        > 0
+    )
+    if not already_attached:
+        cursor.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
+
+    event_names = list(apiwatcher.EVENTS_ADDRESS_FIELDS.keys())
+    placeholders = ", ".join(["?"] * len(event_names))
+
+    # Materialised first, and deliberately not streamed straight into the
+    # insert loop: SQLite leaves the result of a query undefined if the table
+    # it is reading -- here `address_events`, through the `NOT EXISTS` probe --
+    # is written to while the query is still open.
+    cursor.execute("DROP TABLE IF EXISTS temp.missing_address_events")
+    cursor.execute(
+        f"""
+        CREATE TEMPORARY TABLE missing_address_events AS
+        SELECT message_index FROM ledger_db.messages
+        WHERE event IN ({placeholders})
+          AND NOT EXISTS (
+              SELECT 1 FROM address_events WHERE event_index = messages.message_index
+          )
+        """,  # noqa S608 # nosec B608
+        event_names,
+    )
+    missing = cursor.execute(
+        "SELECT COUNT(*) AS count FROM temp.missing_address_events"
+    ).fetchone()["count"]
+
+    if missing > 0:
+        logger.info("Backfilling `address_events` for %s events...", missing)
+        backfill_cursor = state_db.cursor()
+        for event in backfill_cursor.execute("""
+            SELECT m.event, m.bindings, m.message_index, m.block_index
+            FROM temp.missing_address_events AS missed
+            JOIN ledger_db.messages AS m ON m.message_index = missed.message_index
+            ORDER BY m.message_index
+        """):
+            apiwatcher.update_address_events(state_db, event)
+        backfill_cursor.close()
+
+    cursor.execute("DROP TABLE temp.missing_address_events")
+    if not already_attached:
+        cursor.execute("DETACH DATABASE ledger_db")
+    cursor.close()
+
+    logger.info(
+        "Backfilled `address_events` for %s events in %.2f seconds",
+        missing,
+        time.time() - start_time,
+    )
+
+
 def rollback_state_db(state_db, block_index):
     """Roll the State DB back to ``block_index - 1``.
 
@@ -258,13 +348,19 @@ def full_rollback_state_db(state_db, block_index):
     start_time = time.time()
 
     with dbstatus.rebuilding(
-        "rollback", "pruning rolled back rows", total=2 * len(MIGRATIONS_AFTER_ROLLBACK)
+        "rollback", "pruning rolled back rows", total=2 * len(MIGRATIONS_AFTER_ROLLBACK) + 1
     ) as progress:
         with state_db:
             with log.Spinner("Rolling back State DB tables..."):
                 rollback_tables(state_db, block_index)
             with log.Spinner("Re-applying migrations..."):
                 reapply_migrations(state_db, MIGRATIONS_AFTER_ROLLBACK, progress=progress)
+            # `rollback_tables` deleted the address associations from
+            # `block_index` on and the re-apply above moved the replay cursor
+            # to the Ledger tip, so nothing would ever replay them.
+            progress.step("backfilling `address_events`", 2 * len(MIGRATIONS_AFTER_ROLLBACK) + 1)
+            with log.Spinner("Backfilling address events..."):
+                backfill_address_events(state_db)
             # Record the ledger_db block index to prevent double-counting of balances
             # during catch-up (see record_balances_copied_block docstring for details)
             record_balances_copied_block(state_db)
@@ -278,11 +374,17 @@ def refresh_state_db(state_db):
     start_time = time.time()
 
     with dbstatus.rebuilding(
-        "refresh", "re-applying migrations", total=2 * len(MIGRATIONS_AFTER_ROLLBACK)
+        "refresh", "re-applying migrations", total=2 * len(MIGRATIONS_AFTER_ROLLBACK) + 1
     ) as progress:
         with state_db:
             with log.Spinner("Re-applying migrations..."):
                 reapply_migrations(state_db, MIGRATIONS_AFTER_ROLLBACK, progress=progress)
+            # The re-apply above moved the replay cursor to the Ledger tip; any
+            # event the State DB had not parsed yet is now declared parsed, so
+            # its address associations have to be derived here or never.
+            progress.step("backfilling `address_events`", 2 * len(MIGRATIONS_AFTER_ROLLBACK) + 1)
+            with log.Spinner("Backfilling address events..."):
+                backfill_address_events(state_db)
             # Record the ledger_db block index to prevent double-counting of balances
             # during catch-up (see record_balances_copied_block docstring for details)
             record_balances_copied_block(state_db)
