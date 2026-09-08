@@ -187,6 +187,19 @@ def get_json_response(response, retry=0):
         ) from e
 
 
+def error_message(response_json):
+    """The backend's error message, whatever shape the error object has.
+
+    `response_json["error"]["message"]` raises KeyError/TypeError on a
+    malformed error object; see the note in `rpc_call()` on why an exception of
+    that shape must never escape this module.
+    """
+    error = response_json.get("error")
+    if isinstance(error, dict):
+        return str(error.get("message", error))
+    return str(error)
+
+
 def rpc_call(payload, retry=0):
     """Calls to bitcoin core and returns the response"""
     # Count this call against the per-request API budget (issue #3461). Only on the
@@ -279,32 +292,63 @@ def rpc_call(payload, retry=0):
     # Handle json decode errors
     response_json = get_json_response(response)
 
-    if "error" in response_json and isinstance(response_json["error"], str):
-        response_json["error"] = {"message": response_json["error"], "code": -1}
+    # Everything below reads the *backend response*, not the transaction bytes,
+    # so every failure here is an infrastructure failure and must surface as
+    # `BitcoindRPCError`. A shape the code below does not expect -- a 200 body
+    # with neither "result" nor "error", an error object without "message", a
+    # non-dict payload -- would otherwise raise KeyError/TypeError, which
+    # `gettxinfo.MALFORMED_TRANSACTION_ERRORS` absorbs as "not a Counterparty
+    # transaction": the node whose backend glitched would silently drop a real
+    # transaction while healthy nodes parse it, i.e. the exact silent fork the
+    # net exists to prevent (block 510556). `safe_rpc_payload()` already makes
+    # this conversion for the API path; the parser path now does too.
+    try:
+        if not isinstance(response_json, (dict, list)):
+            raise exceptions.BitcoindRPCError(
+                f"Unexpected response type from backend: {type(response_json).__name__}"
+            )
 
-    # Batch query returns a list
-    if isinstance(response_json, list):
-        result = response_json
-    elif "error" not in response_json.keys() or response_json["error"] is None:  # noqa: E711
-        result = response_json["result"]
-    elif "Block height out of range" in response_json["error"]["message"]:
-        # this error should be managed by the caller
-        raise exceptions.BlockOutOfRange(response_json["error"]["message"])
-    elif response_json["error"]["code"] in [-28, -8, -5, -2, -1]:
-        # "Verifying blocks..." or "Block height out of range" or "The network does not appear to fully agree!""
-        warning_message = f"Error calling {payload}: {response_json['error']}. Sleeping for ten seconds and retrying."
-        if response_json["error"]["code"] == -5:  # RPC_INVALID_ADDRESS_OR_KEY
-            warning_message += f" Is `txindex` enabled in {config.BTC_NAME} Core?"
-        logger.warning(warning_message, stack_info=config.VERBOSE > 0)
-        if should_retry():
-            # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
-            # seconds to start, this'll hit the maximum recursion depth limit.
-            if not interruptible_sleep(10):
-                raise exceptions.BitcoindRPCError("Shutdown requested during error retry")
-            return rpc_call(payload, retry=retry + 1)
-        raise exceptions.BitcoindRPCError(warning_message)
-    else:
-        raise exceptions.BitcoindRPCError(response_json["error"]["message"])
+        if isinstance(response_json, dict):
+            if "error" in response_json and isinstance(response_json["error"], str):
+                response_json["error"] = {"message": response_json["error"], "code": -1}
+
+        # Batch query returns a list
+        if isinstance(response_json, list):
+            result = response_json
+        elif "error" not in response_json.keys() or response_json["error"] is None:  # noqa: E711
+            if "result" not in response_json:
+                raise exceptions.BitcoindRPCError(
+                    "Malformed response from backend: no `result` and no `error`"
+                )
+            result = response_json["result"]
+            if result is None:
+                # Mirrors safe_rpc_payload(): a null result means the backend
+                # answered but has nothing for us. Returning it would hand a
+                # `None` to the deserializer (pyo3 TypeError) or to a caller
+                # subscripting it -- data-shaped exceptions the net absorbs.
+                raise exceptions.BitcoindRPCError("No result returned")
+        elif "Block height out of range" in error_message(response_json):
+            # this error should be managed by the caller
+            raise exceptions.BlockOutOfRange(error_message(response_json))
+        elif response_json["error"].get("code") in [-28, -8, -5, -2, -1]:
+            # "Verifying blocks..." or "Block height out of range" or "The network does not appear to fully agree!""
+            warning_message = f"Error calling {payload}: {response_json['error']}. Sleeping for ten seconds and retrying."
+            if response_json["error"].get("code") == -5:  # RPC_INVALID_ADDRESS_OR_KEY
+                warning_message += f" Is `txindex` enabled in {config.BTC_NAME} Core?"
+            logger.warning(warning_message, stack_info=config.VERBOSE > 0)
+            if should_retry():
+                # If Bitcoin Core takes more than `sys.getrecursionlimit() * 10 = 9970`
+                # seconds to start, this'll hit the maximum recursion depth limit.
+                if not interruptible_sleep(10):
+                    raise exceptions.BitcoindRPCError("Shutdown requested during error retry")
+                return rpc_call(payload, retry=retry + 1)
+            raise exceptions.BitcoindRPCError(warning_message)
+        else:
+            raise exceptions.BitcoindRPCError(error_message(response_json))
+    except (KeyError, IndexError, TypeError, AttributeError, ValueError) as e:
+        raise exceptions.BitcoindRPCError(
+            f"Malformed response from backend ({type(e).__name__}: {e})"
+        ) from e
 
     if hasattr(logger, "trace"):
         if isinstance(payload, dict):
@@ -776,17 +820,116 @@ def list_unspent(source, allow_unconfirmed_inputs):
     return []
 
 
-def get_vin_info(vin, no_retry=False):
+def raise_unresolved_prevout(prevout_hash, error):
+    """Shared policy for a prevout that could not be fetched from the backend.
+    Never returns: it always raises."""
+    # While parsing the mempool the parent transaction may legitimately be
+    # unavailable (e.g. not yet relayed). Skipping the *unconfirmed* tx is
+    # safe: it will be re-evaluated once it confirms.
+    if CurrentState().parsing_mempool():
+        logger.warning(
+            "Failed to lookup parent transaction %s for VIN resolution. "
+            "Skipping unconfirmed (mempool) transaction.",
+            prevout_hash,
+        )
+        raise exceptions.DecodeError("vin not found") from error
+    # During catch-up the parent of a *confirmed* transaction must exist.
+    # A failure here is an infrastructure error (unhealthy/overloaded
+    # backend, a transient gateway 5xx, missing `txindex`, ...), NOT
+    # evidence that the transaction is non-Counterparty. Silently treating
+    # it as BTC-only would drop a real Counterparty transaction and
+    # permanently fork the ledger from consensus (this is exactly what
+    # happened at block 510556). Halt instead: the surrounding block is
+    # rolled back atomically and retried on the next run, so a transient
+    # blip never corrupts the ledger.
+    if CurrentState().stopping():
+        # A clean shutdown interrupted the lookup; propagate the original
+        # (shutdown) error rather than the consensus-corruption warning.
+        # Re-raised bare (not `from error`, which would make the exception its
+        # own `__cause__`); the caller's traceback is preserved either way.
+        raise error
+    raise exceptions.BitcoindRPCError(
+        f"Failed to resolve parent transaction {prevout_hash} for VIN resolution "
+        "while parsing a confirmed block. Refusing to silently skip a confirmed "
+        "transaction, which would corrupt consensus. Is `txindex` enabled and the "
+        "backend healthy?"
+    ) from error
+
+
+def get_reveal_prevouts(decoded_tx, no_retry=False):
+    """Which (txid, output index) each input of an inscription reveal transaction
+    resolves to.
+
+    A reveal transaction's source is one hop further back than an ordinary
+    input: not the commit output it spends, but the output that funded the
+    *commit* transaction. The Rust deserializer normally performs that rewrite
+    itself (the `is_reveal_tx` branch of `parse_transaction()` in
+    `counterparty-rs/src/indexer/bitcoin_client.rs`) and returns the result as
+    `vin["info"]`. When it cannot, it clears *every* input -- the rewrite is
+    all-or-nothing there -- and resolving `vin["hash"]:vin["n"]` here instead, as
+    if these were ordinary inputs, would give this node a *different* `source`
+    and a different `fee` than every node whose RPC succeeded, with nothing
+    downstream able to notice: a silent, permanent ledger fork. This reproduces
+    the Rust rewrite exactly so that both paths agree, including its treatment of
+    any *other* input that happens to spend the same funding transaction.
+
+    Returns None when there is nothing to override, in which case the inputs
+    resolve normally.
+    """
+    vins = decoded_tx["vin"]
+    if not vins:
+        return None
+    # `vin["hash"]` is never rewritten, so it is the commit txid even when the
+    # Rust side already replaced `vin["info"]` with the commit parent's output.
+    commit_hash = vins[0]["hash"]
+    try:
+        commit_tx = get_decoded_transaction(commit_hash, no_retry=no_retry)
+    except exceptions.BitcoindRPCError as e:
+        raise_unresolved_prevout(commit_hash, e)
+    if not commit_tx["vin"]:
+        # A commit transaction with no input (coinbase) has no funding output.
+        # The Rust side records no commit parent in that case either, so the
+        # inputs resolve normally -- deterministically, on both paths.
+        return None
+    parent_hash = commit_tx["vin"][0]["hash"]
+    parent_n = commit_tx["vin"][0]["n"]
+    return [
+        (parent_hash, parent_n)
+        if index == 0 or vin["hash"] == parent_hash
+        else (vin["hash"], vin["n"])
+        for index, vin in enumerate(vins)
+    ]
+
+
+def get_vin_info(vin, no_retry=False, prevout=None):
+    """`prevout` overrides the (txid, output index) this input resolves to. It is
+    only ever set for an inscription reveal transaction whose deserializer
+    resolution was incomplete -- see `get_reveal_prevouts()`.
+
+    When an override is given it WINS over `vin["info"]`. The deserializer only
+    leaves an input unresolved on a reveal transaction when the commit-parent
+    lookup failed as a whole, and in that state it recorded no
+    `commit_parent_txid`: any `info` it did return for the *other* inputs was
+    therefore computed without the commit-parent rewrite, i.e. at the input's own
+    output index, where a node whose RPC succeeded uses the commit parent's. That
+    difference is invisible downstream but changes `source` and `fee`. Trusting
+    the override for every input keeps this node byte-identical to a healthy one
+    regardless of how far the deserializer got. Costs nothing on the normal path:
+    `get_vin_prevout_overrides()` returns None as soon as every input is
+    resolved, so `prevout` is None for all but a degraded reveal transaction."""
+    if prevout is not None:
+        return get_vin_info_legacy(vin, no_retry=no_retry, prevout=prevout)
     vin_info = vin.get("info")
     if vin_info is None:
         return get_vin_info_legacy(vin, no_retry=no_retry)
     return vin_info["value"], vin_info["script_pub_key"], vin_info["is_segwit"]
 
 
-def get_vin_info_legacy(vin, no_retry=False):
+def get_vin_info_legacy(vin, no_retry=False, prevout=None):
+    prevout_hash, prevout_n = prevout if prevout is not None else (vin["hash"], vin["n"])
     try:
-        vin_ctx = get_decoded_transaction(vin["hash"], no_retry=no_retry)
-        vout = vin_ctx["vout"][vin["n"]]
+        vin_ctx = get_decoded_transaction(prevout_hash, no_retry=no_retry)
+        vout = vin_ctx["vout"][prevout_n]
         # `is_segwit` MUST match the Rust fetcher (indexer/bitcoin_client.rs). Before the
         # `fix_is_segwit` protocol change (block 902000) it is whether the *parent
         # transaction* carries any witness (equivalently `txid != wtxid`), NOT whether
@@ -804,35 +947,7 @@ def get_vin_info_legacy(vin, no_retry=False):
             is_segwit,
         )
     except exceptions.BitcoindRPCError as e:
-        # While parsing the mempool the parent transaction may legitimately be
-        # unavailable (e.g. not yet relayed). Skipping the *unconfirmed* tx is
-        # safe: it will be re-evaluated once it confirms.
-        if CurrentState().parsing_mempool():
-            logger.warning(
-                "Failed to lookup parent transaction %s for VIN resolution. "
-                "Skipping unconfirmed (mempool) transaction.",
-                vin["hash"],
-            )
-            raise exceptions.DecodeError("vin not found") from e
-        # During catch-up the parent of a *confirmed* transaction must exist.
-        # A failure here is an infrastructure error (unhealthy/overloaded
-        # backend, a transient gateway 5xx, missing `txindex`, ...), NOT
-        # evidence that the transaction is non-Counterparty. Silently treating
-        # it as BTC-only would drop a real Counterparty transaction and
-        # permanently fork the ledger from consensus (this is exactly what
-        # happened at block 510556). Halt instead: the surrounding block is
-        # rolled back atomically and retried on the next run, so a transient
-        # blip never corrupts the ledger.
-        if CurrentState().stopping():
-            # A clean shutdown interrupted the lookup; propagate the original
-            # (shutdown) error rather than the consensus-corruption warning.
-            raise
-        raise exceptions.BitcoindRPCError(
-            f"Failed to resolve parent transaction {vin['hash']} for VIN resolution "
-            "while parsing a confirmed block. Refusing to silently skip a confirmed "
-            "transaction, which would corrupt consensus. Is `txindex` enabled and the "
-            "backend healthy?"
-        ) from e
+        raise_unresolved_prevout(prevout_hash, e)
 
 
 def get_transaction(tx_hash: str, result_format: str = "json"):

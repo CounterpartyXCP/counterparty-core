@@ -22,6 +22,7 @@ use crypto::symmetriccipher::SynchronousStreamCipher;
 
 use crate::indexer::block::VinOutput;
 use crate::indexer::rpc_client::{BatchRpcClient, BATCH_CLIENT};
+use tracing::error;
 
 use std::sync::Arc;
 
@@ -86,6 +87,18 @@ impl BlockHasEntries for Block {
 }
 
 fn arc4_decrypt(key: &[u8], data: &[u8]) -> Vec<u8> {
+    // `Rc4::new` asserts a non-empty key, and a failed assert in Rust surfaces
+    // in Python as `PanicException`, which derives from BaseException and so
+    // escapes every `except Exception` in the call chain. The key is the first
+    // input's prevout txid, so it is empty only for a transaction with no
+    // inputs at all: impossible inside a block (a coinbase still has one input
+    // whose prevout txid is all zeros), but reachable through the API paths that
+    // deserialize caller-supplied hex (`apiv1.get_tx_info`, the composer's
+    // `info`). No key means no ARC4 keystream and therefore no recoverable
+    // Counterparty payload; return nothing so every prefix check below fails.
+    if key.is_empty() {
+        return Vec::new();
+    }
     let mut rc4 = Rc4::new(key);
     let mut result: Vec<u8> = repeat(0).take(data.len()).collect();
     rc4.process(data, &mut result);
@@ -203,7 +216,21 @@ fn parse_vout(
             // data[config.prefix.len()..] does not panic on short attacker input.
             let data_len = min(bytes[0] as usize, bytes.len() - 1);
             if data_len < config.prefix.len() {
-                return Ok((ParseOutput::Data(vec![]), None));
+                // NOTE: the dispenser slot MUST stay structurally complete
+                // (`Some`), even when the output carries no usable data. PyO3
+                // maps a `None` element to a genuine Python `None` inside
+                // `parsed_vouts.potential_dispensers`, and the Python consumers
+                // (`get_dispensers_outputs`, `get_dispensers_tx_info`) subscript
+                // every element unconditionally -- a `None` there raises an
+                // uncaught `TypeError` that halts block ingestion on every node.
+                // `destination: None` already means "not a dispenser" to Python.
+                return Ok((
+                    ParseOutput::Data(vec![]),
+                    Some(PotentialDispenser {
+                        destination: None,
+                        value: Some(value),
+                    }),
+                ));
             }
             let data = bytes[1..=data_len].to_vec();
             return Ok((
@@ -324,7 +351,15 @@ fn parse_vout(
             // chunk_len must be >= prefix.len() so chunk[prefix.len()..] does
             // not panic when attacker supplies a small bytes[0].
             if chunk_len < config.prefix.len() {
-                return Ok((ParseOutput::Data(vec![]), None));
+                // See the OP_CHECKSIG branch above: never emit a `None`
+                // dispenser slot, it crashes the Python consumers.
+                return Ok((
+                    ParseOutput::Data(vec![]),
+                    Some(PotentialDispenser {
+                        destination: None,
+                        value: Some(value),
+                    }),
+                ));
             }
             let chunk = bytes[1..=chunk_len].to_vec();
             return Ok((
@@ -670,6 +705,37 @@ fn extract_data_from_witness(script: &Script, allow_metadata_map: bool) -> Resul
     }
 }
 
+/// Applies the commit-parent rewrite to the prevouts fetched for an inscription
+/// reveal transaction, and returns the commit parent's `(txid, output index)`.
+///
+/// All-or-nothing on purpose. When `commit_parent` is `None` the lookup failed,
+/// and *every* slot is cleared rather than only the first: the vin loop in
+/// `parse_transaction()` selects the commit parent's output index for any input
+/// whose resolved prevout txid matches it, and with no commit parent recorded
+/// that match can never happen. Leaving the other slots populated would resolve
+/// an input that also spends the funding transaction at its *own* output index,
+/// while a node whose RPC succeeded resolves it at the commit parent's -- a
+/// silent divergence in `source` and `fee`. Empty slots instead send every input
+/// through `get_reveal_prevouts()` on the Python side, which reproduces the
+/// rewrite for all of them.
+fn apply_commit_parent(
+    prev_txs: &mut [Option<bitcoin::Transaction>],
+    commit_parent: Option<(Txid, usize, bitcoin::Transaction)>,
+) -> Option<(Txid, usize)> {
+    match commit_parent {
+        Some((parent_txid, parent_vout, parent_tx)) => {
+            if let Some(slot) = prev_txs.first_mut() {
+                *slot = Some(parent_tx);
+            }
+            Some((parent_txid, parent_vout))
+        }
+        None => {
+            prev_txs.iter_mut().for_each(|slot| *slot = None);
+            None
+        }
+    }
+}
+
 pub fn parse_transaction(
     tx: &bitcoin::Transaction,
     config: &Config,
@@ -830,19 +896,38 @@ pub fn parse_transaction(
             .as_ref()
             .map_or(false, |p| p.destinations == vec![config.unspendable()])
     {
-        if BATCH_CLIENT.lock().unwrap().is_none() {
-            *BATCH_CLIENT.lock().unwrap() = Some(
-                BatchRpcClient::new(
+        // `Mutex::lock()` returns Err once any thread has panicked while holding
+        // the lock, and `.unwrap()` on that turns a single panic anywhere into a
+        // permanent panic on every later call -- for a `static` mutex, for the
+        // whole process lifetime. Recover the guard instead: the protected value
+        // is an `Option<BatchRpcClient>`, which cannot be left half-written.
+        // Building the client can also fail (a bad reqwest configuration), and
+        // `.unwrap()` on that raised `PanicException` -- a BaseException that no
+        // Python handler catches. Leave the client unset instead: `prev_txs`
+        // stays all-`None` and the Python side resolves the prevouts itself,
+        // which retries and halts rather than guessing.
+        {
+            let mut batch_client = BATCH_CLIENT.lock().unwrap_or_else(|e| e.into_inner());
+            if batch_client.is_none() {
+                match BatchRpcClient::new(
                     config.rpc_address.clone(),
                     config.rpc_user.clone(),
                     config.rpc_password.clone(),
                     config.rpc_api_key.clone(),
-                )
-                .unwrap(),
-            );
+                ) {
+                    Ok(client) => *batch_client = Some(client),
+                    Err(e) => {
+                        error!("Could not create the batch RPC client: {:?}", e);
+                    }
+                }
+            }
         }
 
-        if let Some(batch_client) = BATCH_CLIENT.lock().unwrap().as_ref() {
+        if let Some(batch_client) = BATCH_CLIENT
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+        {
             let input_txids: Vec<_> = tx
                 .input
                 .iter()
@@ -852,19 +937,37 @@ pub fn parse_transaction(
                 .get_transactions(&input_txids)
                 .unwrap_or_default();
 
+            // The source of an inscription reveal transaction is one hop further
+            // back than an ordinary input: not the commit output it spends, but
+            // the output that funded the *commit* transaction. Resolving that is
+            // all-or-nothing. A partial result -- the commit transaction left in
+            // `prev_txs[0]`, or a `commit_parent_txid` recorded without its
+            // transaction -- makes this node compute a different `source` (and a
+            // different `fee`) than a node whose RPC succeeded, with nothing
+            // downstream able to notice: a silent, permanent ledger fork.
+            //
+            // So on any failure we leave *every* input unresolved and record no
+            // commit parent. Python then redoes the same two-hop lookup in
+            // `get_reveal_prevouts()` -- which retries, and halts rather than
+            // guess if the backend is really unavailable. Keep the two in sync.
             if is_reveal_tx && !prev_txs.is_empty() {
-                if let Some(prev_tx) = &prev_txs[0] {
-                    if !prev_tx.input.is_empty() {
-                        commit_parent_txid = prev_tx.input[0].previous_output.txid;
-                        commit_parent_vout = prev_tx.input[0].previous_output.vout as usize;
-                        if let Ok(fetched_txs) =
-                            batch_client.get_transactions(&[commit_parent_txid])
-                        {
-                            if !fetched_txs.is_empty() {
-                                prev_txs[0] = fetched_txs[0].clone();
+                let mut commit_parent = None;
+                if let Some(Some(commit_tx)) = prev_txs.first() {
+                    if !commit_tx.input.is_empty() {
+                        let parent_txid = commit_tx.input[0].previous_output.txid;
+                        let parent_vout = commit_tx.input[0].previous_output.vout as usize;
+                        if let Ok(fetched_txs) = batch_client.get_transactions(&[parent_txid]) {
+                            if let Some(Some(parent_tx)) = fetched_txs.first() {
+                                commit_parent = Some((parent_txid, parent_vout, parent_tx.clone()));
                             }
                         }
                     }
+                }
+                if let Some((parent_txid, parent_vout)) =
+                    apply_commit_parent(&mut prev_txs, commit_parent)
+                {
+                    commit_parent_txid = parent_txid;
+                    commit_parent_vout = parent_vout;
                 }
             }
         }
@@ -1444,5 +1547,95 @@ mod tests {
             Error::ParseVout(msg) => assert_eq!(msg, "xcp array in metadata is empty"),
             other => panic!("expected ParseVout, got {:?}", other),
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // Commit-parent resolution for inscription reveal transactions is
+    // all-or-nothing: a partial result makes this node compute a different
+    // `source` and `fee` than a node whose RPC succeeded, with nothing
+    // downstream able to notice. See GHSA-pmfx-7qj5-fx6c.
+    // -----------------------------------------------------------------------
+    fn commit_parent_test_tx(value: u64) -> Transaction {
+        Transaction {
+            version: Version::ONE,
+            lock_time: LockTime::ZERO,
+            input: vec![],
+            output: vec![TxOut {
+                value: Amount::from_sat(value),
+                script_pubkey: ScriptBuf::new(),
+            }],
+        }
+    }
+
+    fn commit_parent_test_txid(n: u8) -> Txid {
+        Txid::from_raw_hash(sha256d::Hash::from_slice(&test_sha256_hash(n as u32)).unwrap())
+    }
+
+    #[test]
+    fn test_apply_commit_parent_resolved_rewrites_only_the_first_slot() {
+        let parent = commit_parent_test_tx(42);
+        let other = commit_parent_test_tx(7);
+        let mut prev_txs = vec![Some(commit_parent_test_tx(1)), Some(other.clone())];
+        let txid = commit_parent_test_txid(3);
+
+        let resolved = apply_commit_parent(&mut prev_txs, Some((txid, 5, parent.clone())));
+
+        assert_eq!(resolved, Some((txid, 5)));
+        assert_eq!(prev_txs[0], Some(parent));
+        // the other inputs keep their own prevout: the vin loop will pick the
+        // commit parent's output index for them via the `commit_parent_txid`
+        // comparison, exactly as before.
+        assert_eq!(prev_txs[1], Some(other));
+    }
+
+    #[test]
+    fn test_apply_commit_parent_unresolved_clears_every_slot() {
+        // Regression: clearing only `prev_txs[0]` left any *other* input that
+        // spends the funding transaction resolved at its own output index --
+        // while a node whose RPC succeeded resolves it at the commit parent's.
+        // Both `source` and `fee` diverge, and `fee` feeds `txlist_hash`.
+        let mut prev_txs = vec![
+            Some(commit_parent_test_tx(1)),
+            Some(commit_parent_test_tx(2)),
+            Some(commit_parent_test_tx(3)),
+        ];
+
+        let resolved = apply_commit_parent(&mut prev_txs, None);
+
+        assert_eq!(resolved, None);
+        assert!(prev_txs.iter().all(|slot| slot.is_none()));
+    }
+
+    #[test]
+    fn test_apply_commit_parent_tolerates_an_empty_slot_list() {
+        let mut prev_txs: Vec<Option<Transaction>> = vec![];
+        let txid = commit_parent_test_txid(4);
+
+        let resolved =
+            apply_commit_parent(&mut prev_txs, Some((txid, 0, commit_parent_test_tx(1))));
+
+        assert_eq!(resolved, Some((txid, 0)));
+        assert!(prev_txs.is_empty());
+    }
+
+    // -----------------------------------------------------------------------
+    // `Rc4::new` asserts a non-empty key. A failed assert reaches Python as
+    // `PanicException`, which derives from BaseException and escapes every
+    // `except Exception`. The key is empty only for a transaction with no
+    // inputs -- impossible in a block, reachable through the API paths that
+    // deserialize caller-supplied hex.
+    // -----------------------------------------------------------------------
+    #[test]
+    fn test_arc4_decrypt_with_an_empty_key_returns_nothing() {
+        assert_eq!(arc4_decrypt(&[], b"CNTRPRTYpayload"), Vec::<u8>::new());
+    }
+
+    #[test]
+    fn test_arc4_decrypt_with_a_key_is_reversible() {
+        let key = test_sha256_hash(1);
+        let plaintext = b"CNTRPRTYpayload";
+        let ciphertext = arc4_decrypt(&key, plaintext);
+        assert_ne!(ciphertext, plaintext.to_vec());
+        assert_eq!(arc4_decrypt(&key, &ciphertext), plaintext.to_vec());
     }
 }

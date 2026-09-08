@@ -17,6 +17,7 @@ The v2 API uses the following HTTP response codes:
 * `204 No Content` for successful CORS preflight (`OPTIONS`) requests.
 * `400 Bad Request` for invalid parameters, invalid compose/unpack inputs, address or transaction hash validation errors, backend RPC errors returned while handling a request, and other request-level API errors.
 * `404 Not Found` when the requested route or resource does not exist.
+* `409 Conflict` when a compose request is valid on its own but conflicts with an asset operation already in Counterparty's parsed mempool.
 * `500 Internal Server Error` for unexpected server errors before route handling can complete.
 * `503 Service Unavailable` when the API or backend is not ready, or when an unexpected route-handling error is reported as temporarily unavailable.
 

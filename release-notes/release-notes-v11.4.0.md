@@ -1,30 +1,111 @@
-# Release Notes - Counterparty Core v11.4.0 (TBD)
+# Release Notes - Counterparty Core v11.4.0 (2026-09-05)
 
-Counterparty Core v11.4.0 makes State DB rollbacks incremental (#3485), bounds API shutdown and cold startup (#3486), fixes two blind spots in the API watcher's reorganization detection, and puts the address history endpoints back on their indexes.
+Counterparty Core v11.4.0 is a **security release**. It fixes a family of remotely triggerable chain-halt vulnerabilities reported privately as [GHSA-pmfx-7qj5-fx6c](https://github.com/CounterpartyXCP/counterparty-core/security/advisories/GHSA-pmfx-7qj5-fx6c), plus a silent ledger-fork vector in how the source of an inscription reveal transaction is resolved. Each halt vector let an unprivileged attacker stop **every node on the network** at the same block for the price of one or two ordinary transactions, and a halted node restarts onto the same poisoned block and halts again.
 
-Until now a Bitcoin reorganization — however shallow — rebuilt the entire State DB. On mainnet a **one-block reorg took ~33 minutes**, during the last ~6 of which the public API returned 5xx, despite the process having ample CPU and memory headroom. The cost had nothing to do with how deep the reorganization was: `rollback_state_db()` deleted the rows of three tables and then re-applied thirteen migrations, each of which dropped its table and repopulated it from the entire ledger history (`parsed_events` alone is a full copy of `messages`).
+**All node operators should upgrade immediately.**
+
+The release also carries two **protocol changes** — `reject_non_finite_broadcast` and `reject_negative_fee_fraction`, the root-cause fixes for the halt family — both scheduled to activate at mainnet block **966,200**, the same activation height as the fee correction shipped in v11.3.0, so operators get one flag day rather than several. Nodes that have not upgraded by that block will diverge from consensus. There is no database migration and no reparse; the upgrade is a plain restart.
+
+Alongside the security work, this release makes State DB rollbacks incremental (#3485), bounds API shutdown and cold startup (#3486), closes three blind spots in the API watcher's reorganization detection (#3493), and puts the address history endpoints back on their indexes (#3489). It also rejects compositions that conflict with Counterparty's parsed mempool with a new `409` (#3490), reports a stopped watcher on `/healthz/ready` instead of leaving it to the lag signal (#3493), and ships `openapi.json` inside the wheel so `/v2/openapi.json` works from the official container (#3495).
+
+Until now a Bitcoin reorganization — however shallow — rebuilt the entire State DB. On mainnet a **one-block reorg took ~33 minutes**, during the last ~6 of which the public API returned 5xx, despite the process having ample CPU and memory headroom. The cost had nothing to do with how deep the reorganization was: `rollback_state_db()` deleted the rows of three tables and then re-applied twelve migrations, most of which dropped their table and repopulated it from the entire ledger history (`parsed_events` alone is a full copy of `messages`).
 
 Rollbacks now revert what the orphaned blocks actually changed instead of re-deriving everything. A one-block reorg touches a handful of rows instead of tens of millions.
 
-Two passes are still re-derived rather than undone, because the data needed to decrement them disappears from the Ledger DB along with the orphaned blocks: `transaction_types_count` (one grouped scan of `transactions`, whenever a rolled back block held a transaction) and `assets_info` (whenever it held an issuance, a burn, a destruction, a sweep or a dividend — which includes every fairmint). They dominate what a reorg now costs, and they are a fraction of the thirteen migrations they replace, but the result is not zero: expect minutes rather than the previous half hour.
+Two passes are still re-derived rather than undone, because the data needed to decrement them disappears from the Ledger DB along with the orphaned blocks: `transaction_types_count` (one grouped scan of `transactions`, whenever a rolled back block held a transaction) and `assets_info` (whenever it held an issuance, a burn, a destruction, a sweep or a dividend — which includes every fairmint). They dominate what a reorg now costs, and they are a fraction of the twelve migrations they replace, but the result is not zero: expect minutes rather than the previous half hour.
 
 The rebuild that remains — at upgrade, and for the deep rollbacks a new release occasionally requires — is no longer silent. It now reports itself: the dedicated health listener starts **before** it, answers `200` on liveness and `503 rebuilding` on readiness throughout, and names the step under way.
 
 # Upgrading
 
-This release performs a **one-time State DB refresh** on first start (`refresh_state_db`), automatically. It takes roughly as long as one of the old reorg rebuilds. There is no ledger reparse and no protocol change.
+**This release includes two protocol changes** — `reject_non_finite_broadcast` and `reject_negative_fee_fraction` — both activating at block **966,200** on mainnet (approximately September 9, 2026), block 5,166,000 on testnet3, block 153,700 on testnet4 and block 321,300 on signet. **All nodes must upgrade before the activation block.** They apply from the activation block forward, so there is no reparse and no migration.
+
+The security fixes themselves are ungated and take effect as soon as you restart: a transaction that reaches any of them raises on v11.3.0 and earlier, so no historical block can contain one that was ever parsed successfully, and broadening the handling changes no historical state.
+
+This release also performs a **one-time State DB refresh** on first start (`refresh_state_db`), automatically. It takes roughly as long as one of the old reorg rebuilds. There is no ledger reparse.
 
 The refresh is an optimization, not a correctness requirement: it pays the cost of the last full rebuild at a moment you control rather than unpredictably at your next reorg. A State DB that has not been through it is flagged as ineligible for the incremental path and simply takes the old full-rebuild route once, which then flags it as eligible. Nodes therefore converge on the fast path either way — a node upgraded with `--force` (which skips the version check, and so the refresh) is correct, just slower on its first reorg.
 
 **Point your Kubernetes probes at the dedicated health listener before upgrading** (port `4002` on mainnet — `/healthz/live` for liveness, `/healthz/ready` for readiness), if you have not already since v11.3.0. During the refresh the pod reports `200` on liveness and `503 rebuilding` on readiness, so it stays out of rotation and is not restarted. A liveness probe still pointed at the API port would get a connection refusal for the whole refresh and kill the pod, and the next start would begin the work again from zero.
 
+`/healthz/ready` also gains a second new reason: it returns `503 watcher_stopped` from the moment the API watcher dies on an unexpected error, on every node including `--api-only` ones. Alerting that matches on the readiness `reason` field should learn `rebuilding` and `watcher_stopped` alongside the existing values. Liveness stays `200` in both cases.
+
 API consumers of the address history endpoints should check the **Address history endpoints** section below before upgrading: `/v2/addresses/<address>/sends` and `/sends/<asset>` no longer expose `sort`, `offset` is capped at 10,000 on those routes and on `/credits` and `/debits`, and `result_count` is now `null` on cursor pages rather than recomputed for each one. `openapi.json` has been updated to match.
 
-Clients that compose issuances or fairminters should also expect a new `409` response when the parsed mempool already contains a conflicting asset operation — see **Conflicting pending asset compositions** below.
+Clients that compose issuances or fairminters should also expect a new `409 Conflict` response when the parsed mempool already contains a conflicting asset operation — see **Conflicting pending asset compositions** below. It is documented in `openapi.json` alongside the other response codes; clients that treat any non-`200` as a permanent failure should retry a `409` once the conflicting transaction has confirmed or been dropped.
 
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
 
-# Changelog
+With Docker Compose:
+
+```bash
+cd counterparty-core
+git pull
+docker compose stop counterparty-core
+docker compose --profile mainnet up -d
+```
+
+or use `ctrl-c` to interrupt the server:
+
+```bash
+cd counterparty-core
+git pull
+cd counterparty-rs
+pip install -e .
+cd ../counterparty-core
+pip install -e .
+counterparty-server start
+```
+
+# ChangeLog
+
+## Security
+
+- **Fix an RPC-dependent `source` for inscription reveal transactions** (GHSA-pmfx-7qj5-fx6c). The source of a reveal transaction is one hop further back than an ordinary input: the output that funded the *commit* transaction, not the commit output the reveal spends. The Rust deserializer performs that rewrite and hands the result back as `vin["info"]` — but it fetched the two prevouts with `unwrap_or_default()`, so an RPC failure degraded silently in two different ways. If the first batch call failed, `info` came back empty and the Python fallback resolved the input *normally*, yielding the commit output's address. If only the second call failed, `info` came back **populated with the wrong output**, which nothing downstream could detect. Either way that node computed a different `source` **and a different `fee`** than every node whose RPC succeeded — a silent, permanent ledger fork, on a live code path (reveal transactions have been parsed since `taproot_support` at block 902,000).
+
+  The commit-parent lookup is now all-or-nothing: on any failure the deserializer records no commit parent and leaves *every* input unresolved, never a partial result. Clearing all of them matters — with no commit parent recorded, an input that also spends the funding transaction would be resolved at its own output index while a healthy node resolves it at the commit parent's. The Python fallback (`get_reveal_prevouts()`) then reproduces the same two-hop resolution — including the deserializer's treatment of that extra input — so both paths agree, and it takes precedence over any `vin["info"]` the deserializer did return, so the two sides cannot drift even if the all-or-nothing invariant is ever broken. If the backend really is unavailable it raises `BitcoindRPCError` and halts, as the parser already does for any unresolvable prevout, instead of guessing. The block is rolled back atomically and retried, so a transient blip cannot corrupt the ledger.
+
+  No activation gate: the canonical ledger is the one produced when the RPC succeeds, and that path is unchanged. The fix only stops a node whose backend hiccuped from silently diverging from it.
+
+- **Fix fifteen remotely triggerable chain-halt vulnerabilities** (GHSA-pmfx-7qj5-fx6c) — seven reported privately, two found while fixing those, four more across the reporter's two follow-up reviews of the fix, and two turned up by the strengthened fuzz harness. Each of these let an unprivileged attacker halt **every** node on the network at the same block, for the price of one or two ordinary transactions, by making block ingestion raise an exception type nothing catches. Two architectural facts made the class fatal: `parse_tx()` wraps any handler exception into `ParseTransactionError` and `parse_block()` deliberately re-raises it, while at the parse level `get_tx_info()` caught only `DecodeError`/`BTCOnlyError` and `list_tx()` had no handler at all. A halted node restarts onto the same poisoned block and halts again.
+
+  - **`None` element in `potential_dispensers`** — the Rust deserializer's short-data early return in `parse_vout()` emitted a `None` dispenser slot, which PyO3 hands to Python as a genuine `None` list element; `get_dispensers_tx_info()` (reached by the live dispense-prefix route since `enable_dispense_tx`) and `get_dispensers_outputs()` subscripted it. Cost: one dust output. The Rust side now always returns a structurally complete slot, and both Python consumers skip `None` elements.
+  - **Zero-price oracle dispenser** — a broadcast with `value = 0` is valid, and `dispenser.validate()` rejected only `last_price is None`, so opening an oracle dispenser on such a feed reached `mainchainrate / 0`. `validate()` now reports a problem for a zero price, matching the `last_price == 0` guard `is_dispensable()` already had (dead code since `disable_vanilla_btc_dispense`). Scoped to opening and refilling, the only actions that compute an oracle fee: a close never divides by the price, so flagging it there would turn a close that succeeds today into an invalid transaction.
+  - **NULL `fee_fraction_int`** — `calculate_oracle_fee()` computed `last_fee / config.UNIT` on a NULL fee fraction (stored by a "lock" broadcast, by a NaN CBOR float, or by the out-of-range clamp). It now reads a missing fee fraction as zero, like `bet.get_fee_fraction()` already did.
+  - **NULL broadcast `text`** — `get_oracle_last_price()` called `.split()` on the NULL `text` of a locked feed, so a single "lock" broadcast on an oracle address halted every node that later touched that oracle.
+  - **NaN `minted_asset_commission`** — `D(float("nan"))` is `Decimal("NaN")`, and any ordering comparison against it raises `decimal.InvalidOperation` (an `ArithmeticError`, so no existing net applied) inside `fairminter.validate()`, before any DB access. **One** ordinary transaction was enough. NaN is now reported as a validation problem; `±inf`, which never crashed, keeps its historical status string.
+  - **NULL broadcast timestamp** — `bet.validate()` compared `broadcasts[-1]["timestamp"] >= deadline` against a NULL left by a NaN-timestamp broadcast. `bet.parse()` wraps only the `price()` call, so unlike `broadcast.parse()` it had no `broadcast_safe_validate`-style net.
+  - **Int-typed asm elements** — the Rust `script_to_asm()` renders a *pushed* `0xae` byte identically to the `OP_CHECKMULTISIG` opcode, so `script.script_to_asm()` rewrote `asm[0]`/`asm[-2]` into Python ints for a push-only, relay-standard scriptSig such as `OP_0 OP_0 <push 0xae>`; `get_der_signature_sighash_flag()` then evaluated `value[:-1]` on an int. This ran for every data-carrying transaction with no protocol gate, and the relay-standard variant also killed the mempool watcher before confirmation. The flag reader now type-checks its argument.
+  - **`MultiSigAddressError` escaping `get_tx_info()`** — a bare-multisig prevout with `m` outside 1..3 made source resolution raise an `AddressError`, which is not a `DecodeError`, straight through `list_tx()`.
+  - **Non-finite `initial_value` in a CFD settlement** — the CFD branch of `broadcast.parse()` rounds the bet match's `initial_value` and the broadcast's own `value`; `round(nan)` raises `ValueError` and `round(±inf)` raises `OverflowError` once a feed has one pending bet match. Such a match is now left pending. Scoped to the CFD branch: the Equal/NotEqual branch does no arithmetic on `value` and settles successfully today even for a NaN, and must keep doing so.
+  - **Zero-counterwager overbet** — `bet.parse()` guarded the first `price(wager, counterwager)` against a zero counterwager, but not the overbet rescale that divides by `odds`, which is zero on exactly that path. One bet transaction with a zero counterwager and a wager above the sender's XCP balance raised `ZeroDivisionError`. The counterwager now stays at zero and `validate()` rejects it as a non-positive counterwager, which is what a non-overbet zero-counterwager bet already did.
+  - **Zero lot size in a fair minter** — `fairminter.validate()` flags `quantity_by_price < 1` as a problem but does not return, so a zero lot size still reached `hard_cap % quantity_by_price` and raised `ZeroDivisionError`. One ordinary transaction. The modulo is now guarded by `quantity_by_price != 0` — deliberately `!= 0` rather than `> 0`, because a *negative* lot size computes a modulo today without raising and this problem string is stored in the `fairminters` table.
+  - **Negative feed fee fraction** — see `reject_negative_fee_fraction` under Protocol below. The ungated half lives in the settlement loop of `broadcast.parse()`: a negative fee is read as no fee, so the match settles exactly as it does for a zero-fee feed instead of crediting the feed a negative quantity.
+  - **AMM pool quantity above SQLite's integer range** — `pooldeposit` and `poolwithdraw` unpack their quantities as unsigned 64-bit fields (`>Q`), so a message can carry a value up to 2**64-1. `validate()` reports "exceeds maximum value" but leaves the raw value in place, and the invalid-record insert then binds it: sqlite3 raises `OverflowError: int too big to convert`. One transaction of either type halted every node — and `amm_pools` has been live on mainnet since block 952,800. Out-of-range integers are now nulled in the invalid-record bindings, the same defense `issuance` and `broadcast` already applied, now factored into `helpers.null_out_of_range_ints()`.
+  - **Subnormal oracle price** — the zero-price guard above is not enough: float64 admits *finite* subnormals (5e-324), which overflow `oracle_mainchainrate / last_price` to `+inf`, and a zero fee fraction then turns `inf * 0` into NaN. `int()` raises `OverflowError` on the first and `ValueError` on the second, inside `calculate_oracle_fee()`. The arithmetic moved into `oracle_fee_from_price()`, which reports "no usable fee" instead of raising; `validate()` rejects an opening or refilling dispenser whose oracle price yields one, on the same scoping argument as the zero-price guard.
+
+  `get_tx_info()` now also carries a general safety net: exception types that mean "these bytes are not a well-formed Counterparty transaction" (`TypeError`, `ValueError`, `ArithmeticError`, `LookupError`, `AttributeError`, `struct.error`, `AddressError`) are logged and treated as non-Counterparty instead of escaping. This is deliberately an allow-list of *data* errors, not a bare `except Exception`: `BitcoindRPCError` and database errors still propagate, because silently dropping a confirmed transaction whose prevout could not be fetched would fork the ledger permanently (block 510556). The net is scoped to code that derives from the transaction bytes: the ledger reads on either side of it (`get_utxos_info()`, the UTXO-balances cache update) sit outside it, and the one inside it (`is_dispensable()`) re-raises data errors as `DatabaseError` so they halt rather than being absorbed.
+
+  **None of these guards need an activation gate.** A transaction that reaches any of them raises on current code, so every node halts on it, so no historical block can contain one that was ever parsed successfully. Only the two root-cause fixes below change the status of a parse that succeeds today.
+
+  The `fuzz_cbor_test.py` harness excluded NaN and infinity from its float strategy — which is precisely why this family went unnoticed — and now includes them; `fuzz_parse_test.py` now draws 500 examples per message type instead of 100, which is what surfaced the AMM pool overflow above. A dedicated regression suite lives in `counterpartycore/test/units/parser/chain_halt_test.py`.
+
+- **Convert malformed backend responses into `BitcoindRPCError`** (found in review of the safety net above). The net is only sound because everything it covers derives from the transaction bytes — and `get_transaction_sources()` resolves prevouts from inside it, down through `get_vin_info()` to `rpc_call()`. `rpc_call()`'s response handling read the backend's JSON positionally: a 200 body with neither `result` nor `error`, an error object without a `message`, or a `{"result": null}` raised `KeyError`/`TypeError` — types the net absorbs. A node whose backend glitched would then record a real, valid transaction as "not a Counterparty transaction" while every healthy node parsed it: the silent fork the net exists to prevent (block 510556), from an environmental trigger rather than a crafted one. `rpc_call()` now makes the same conversion `safe_rpc_payload()` already made on the API path, and a null single-call result is an error rather than a `None` handed to the deserializer.
+
+- **Remove two `PanicException` sources in the Rust deserializer.** A Rust panic reaches Python as `PanicException`, which derives from `BaseException` and so escapes every `except Exception` in the call chain. `Rc4::new` asserts a non-empty key, and the key is the first input's prevout txid — empty only for a transaction with no inputs, impossible inside a block but reachable through the API paths that deserialize caller-supplied hex (`apiv1.get_tx_info`, the composer's `info`); an empty key now yields no plaintext instead of aborting. Separately, the lazily initialised batch RPC client called `.unwrap()` both on `Mutex::lock()` — so one panic anywhere would poison a `static` mutex and panic every later call for the process's lifetime — and on the client constructor. Both now recover: the prevout batch is left unresolved and the Python side resolves it, retrying and halting rather than guessing.
+
+- **Enforce minimum-version protocol gates at the right height on testnet and signet.** `check.check_change()` compared the local block index against the mainnet `block_index` key on every network, so on testnet3, testnet4 and signet a node too old for an activated protocol change never reached the raise — it logged a warning and kept parsing, forking instead of halting. It now reads the network's own activation height, falling back to the mainnet key for an upstream entry that predates the per-network keys. Regtest keeps the mainnet key deliberately: it has no entry of its own and enables every change from block 0. Pre-existing, and it affects `correct_transaction_fee` (shipped in v11.3.0) identically.
+
+- Bumped `h2` to 0.4.19 in both Rust lockfiles for **RUSTSEC-2026-0258** ("h2 unbounded empty DATA frames"). `counterparty-rs` carried 0.4.8 and `counterparty-client` 0.4.15; the advisory requires >= 0.4.16.
+- Bumped `chacha20` to 0.10.2 in `counterparty-client`. Version 0.10.1 was yanked from crates.io; it reaches the client transitively through `rand` 0.10.2, and `deny.toml` treats a yanked dependency as a build failure rather than a warning.
+
+## Protocol
+
+- **Reject non-finite numbers in broadcasts** (`reject_non_finite_broadcast`, GHSA-pmfx-7qj5-fx6c). Since `taproot_support`, broadcasts are CBOR-decoded, which admits float64 — including **NaN**. `broadcast.validate()` deliberately performs no numeric type check, every comparison against NaN is `False`, so a NaN field validated as `"valid"`; sqlite3 then bound it as **NULL**, and the poisoned row halted every consumer that read it back (the oracle-dispenser and bet failures above). A broadcast carrying a non-finite `timestamp`, `value` or `fee_fraction_int` is now marked invalid, so no new poisoned row can be stored. This flips the status of parses that currently succeed, hence the gate: mainnet block **966,200**, testnet3 5,166,000, testnet4 153,700, signet 321,300. The downstream guards listed under Security are ungated and remain the load-bearing fix for rows predating the activation.
+
+- **Reject a negative fee fraction in broadcasts** (`reject_negative_fee_fraction`, GHSA-pmfx-7qj5-fx6c). `fee_fraction_int` was bounded above (`> MAX_INT`, and `>= 1` since `max_fee_fraction`) but never below. The legacy binary format packs it as an unsigned `I`, so a negative value only became expressible when `taproot_support` made broadcasts CBOR-decoded. Such a broadcast is stored as `"valid"`, its fee fraction is copied onto every bet match on that feed, and the settlement then credits the feed a **negative** quantity — `credit()` raises `CreditError` and every node halts. Four ordinary transactions: the broadcast, two opposing bets, and a settle broadcast. This flips the status of a broadcast that parses today (a negative fee fraction is only fatal once a match settles, so such a row could already be on chain), hence the gate — set to the same heights as `reject_non_finite_broadcast` so operators get one flag day: mainnet **966,200**, testnet3 5,166,000, testnet4 153,700, signet 321,300. The ungated clamp in the settlement loop is what protects rows predating the activation.
+
+- **`ordinals_metadata_support` heights corrected to match the code.** The gate is enforced by the Rust deserializer only (`Heights::new` in `counterparty-rs/src/indexer/config.rs`); nothing in Python reads it. The v11.1.0 release pass bumped the `protocol_changes.json` heights along with every other pending change, but `config.rs` was never updated — so the JSON has been advertising an activation (mainnet 952,800) that never happened, while signet and regtest have had the feature on since block 0. The JSON now states what the code actually enforces. **Scheduling a real activation means changing both files**; signet and regtest must stay at 0 because their bootstrap snapshots depend on it.
 
 ## Incremental State DB rollback (#3485)
 
@@ -32,7 +113,7 @@ To upgrade, download the latest version of `counterparty-core` and restart `coun
 
 - **Append-only tables** (`parsed_events`, `address_events`, `all_expirations`, `pool_matches`) are pruned by `block_index`.
 - **Consolidated tables** (`balances`, `orders`, `dispensers`, `fairminters`, the match tables, the AMM pool tables — one row per object holding its latest version) have the rows touched at or after the rollback point deleted and re-inserted from that object's latest Ledger DB version *strictly below* the rollback point. The block bound matters: when the API watcher reacts to a reorganization the Ledger DB has already rolled back and may have re-parsed part of the new chain, and restoring to the ledger's current tip would leave the State DB ahead of `parsed_events` and cause the forward replay to apply those blocks twice.
-- **Counters** are adjusted rather than recomputed from scratch: `events_count` is decremented by the orphaned events, and `transaction_types_count` / `assets_info` / the `fairminters` aggregates are re-derived only when the orphaned blocks actually contained the relevant events.
+- **Counters** are adjusted rather than recomputed from scratch: `events_count` is decremented by the orphaned events; `transaction_types_count` and `assets_info` — the only two full re-derivations left — run only when the orphaned blocks actually contained the relevant events; and the `fairminters` aggregates are recomputed only for the fairminters whose fairmints were reverted, not for the whole table.
 - Views and indexes are no longer dropped and rebuilt, because the tables they cover are no longer dropped and rebuilt.
 
 A single `logger.info` line now reports what a reorganization cost — how many events and objects were reverted, per table. Previously the 33 minutes were entirely silent at INFO level.
@@ -71,7 +152,7 @@ The shutdown path is bounded rather than hopeful:
 
 Startup diagnostics were added for the parts that remain slow: `apply_outstanding_migration` now logs each phase separately — backend open (which is where WAL recovery lands), migration discovery with the pending count, application, and connection close — along with the WAL size before and after. On the incident node these are what distinguish a multi-minute WAL recovery from a multi-minute migration.
 
-## Reorganization detection
+## Reorganization detection (#3493)
 
 Three ways for the Ledger DB to change branch under the API watcher went undetected. All three are fixed in `counterpartycore/lib/api/apiwatcher.py`.
 
@@ -85,7 +166,7 @@ Detecting that case is only half of it. A reorganization caught mid-block target
 
 `check_reorg()` now also reports when it found the ledger on another branch, and both loops discard the event they were holding when it did: that event was selected against the branch the rollback has just undone.
 
-## A watcher that stops on an error now says so
+## A watcher that stops on an error now says so (#3493)
 
 The API watcher thread is what advances the State DB, and nothing restarts it. An unexpected error inside it was re-raised into `threading.excepthook`, which writes to stderr rather than to the log — so the thread died with its traceback going nowhere, and the process went on serving a State DB frozen at whatever block it had reached, as if nothing had happened.
 
@@ -93,13 +174,9 @@ Such a failure is now logged at `CRITICAL` with its traceback, and `/healthz/rea
 
 ## Packaged OpenAPI document (#3495)
 
-The installed wheel now includes `openapi.json`. Previously `/v2/openapi.json`
-worked from a source checkout but returned `500` from the official container:
-the handler walked four directories upward from `site-packages`, where the
-repository-root file does not exist. The API now resolves the packaged resource
-and retains a source-tree fallback for editable development installs.
+The installed wheel now includes `openapi.json`. Previously `/v2/openapi.json` worked from a source checkout but returned `500` from the official container: the handler walked four directories upward from `site-packages`, where the repository-root file does not exist. The API now resolves the packaged resource and retains a source-tree fallback for editable development installs.
 
-## Address history endpoints
+## Address history endpoints (#3489)
 
 `/v2/addresses/<address>/credits`, `/debits`, `/sends` and `/sends/<asset>` match an address against two or four columns, each of which already has its own index. Neither plan SQLite has for the resulting `OR` predicate followed by `ORDER BY rowid DESC LIMIT` is bounded by the page size. A reverse full-table scan — the right plan only for an address whose newest row sits near the tip — reads millions of unrelated rows before reaching the first match of an address whose history is short or old. The alternative, a multi-index `OR`, does use every index but then has to sort the address's *entire* history to honour the ordering, so a busy address pays for all of it to return one page.
 
@@ -113,7 +190,7 @@ Three request shapes that defeated the bound are now rejected or narrowed on the
 
 The exact result count is computed on the initial page and on offset pages only; on cursor pages `result_count` is `null`. Counting is precisely what the bound above cannot help with — it has to touch every matching row — so later cursor pages stay bounded. The count itself no longer reuses the ordered union either: it lets SQLite combine the address indexes directly, which is substantially cheaper for busy addresses.
 
-## Conflicting pending asset compositions
+## Conflicting pending asset compositions (#3490)
 
 Issuance and fairminter composition only ever validated against confirmed state, so two transactions created seconds apart could both compose successfully and only one of them could ever be valid — the second was broadcast, paid its fee and was rejected by the parser.
 
@@ -123,7 +200,7 @@ The check runs twice, because the mempool moves while a composition is being ass
 
 `validate=false` remains the explicit advanced-user override and skips both passes.
 
-## State DB / Ledger DB consistency fixes
+## State DB / Ledger DB consistency fixes (#3485)
 
 The differential tests above surfaced three ways in which a State DB maintained by the event stream drifted from one built from scratch. All three are fixed in `apiwatcher.update_balances()`, and the one-time refresh normalizes existing rows:
 
@@ -136,17 +213,13 @@ The differential tests above surfaced three ways in which a State DB maintained 
 - The rules for projecting a Ledger DB row into its State DB counterpart — decoding the compact `asset_index` / `address_id` / `(utxo_tx_hash, utxo_vout)` representations — now live in one place, `counterpartycore/lib/api/statetables.py`, shared by the build path (migrations `0004`, `0006`, `0014`) and the rollback path. Two independent copies of these rules would drift, and drift here is a silent divergence no API response would reveal.
 - New State DB migration `0016` adds the missing `block_index` indexes on `addresses`, `rps` and `rps_matches`.
 
-## Security
-
-- Bumped `h2` to 0.4.19 in both Rust lockfiles for **RUSTSEC-2026-0258** ("h2 unbounded empty DATA frames"). `counterparty-rs` carried 0.4.8 and `counterparty-client` 0.4.15; the advisory requires >= 0.4.16.
-- Bumped `chacha20` to 0.10.2 in `counterparty-client`. Version 0.10.1 was yanked from crates.io; it reaches the client transitively through `rand` 0.10.2, and `deny.toml` treats a yanked dependency as a build failure rather than a warning.
-
 ## Bugfixes
 
-- **Fix a resource leak in snapshot signature verification** (`bootstrap` / `prepare-bootstrap`). Every call to `verify_signature()` leaked one `gpg-agent` daemon and one temporary GnuPG home directory, because the cleanup added in f53a7443 was accidentally disabled in 301c37ac ("Fix bootstrap with custom url") — commented out as apparent leftover debugging. The agent is now terminated with `gpgconf --homedir <dir> --kill gpg-agent` before the directory is removed, which avoids the socket/lockfile race that removing a live agent's home directory would otherwise hit. Only the agent spawned by the call itself is terminated; other GnuPG daemons on the machine are unaffected, and a missing `gpgconf` can neither skip the removal nor mask the error that triggered it. Three regression tests now pin the cleanup, so it cannot be silently dropped again.
+- **Fix a resource leak in snapshot signature verification** (#3492) in `bootstrap` / `prepare-bootstrap`. Every call to `verify_signature()` leaked one `gpg-agent` daemon and one temporary GnuPG home directory, because the cleanup added in f53a7443 was accidentally disabled in 301c37ac ("Fix bootstrap with custom url") — commented out as apparent leftover debugging. The agent is now terminated with `gpgconf --homedir <dir> --kill gpg-agent` before the directory is removed, which avoids the socket/lockfile race that removing a live agent's home directory would otherwise hit. Only the agent spawned by the call itself is terminated; other GnuPG daemons on the machine are unaffected, and a missing `gpgconf` can neither skip the removal nor mask the error that triggered it. Three regression tests now pin the cleanup, so it cannot be silently dropped again.
 
 # Credits
 
 - Ouziel Slama
+- Dan Anderson
 - Adam Krellenstein
-- John A. Zoidburg
+- John A. Zoidburg (vulnerability report)

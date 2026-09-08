@@ -16,6 +16,28 @@ from counterpartycore.lib import config
 D = decimal.Decimal
 
 
+def null_out_of_range_ints(bindings):
+    """Replace every int outside SQLite's signed 64-bit range with `None`, in
+    place, and return the bindings.
+
+    sqlite3 raises `OverflowError: int too big to convert` when a binding
+    exceeds 2**63-1, and `insert_record()` is called from message handlers whose
+    exceptions `parse_tx()` wraps and `parse_block()` re-raises -- so one crafted
+    transaction halts every node at the same block. Message formats that unpack
+    unsigned 64-bit fields (`>Q`) admit values up to 2**64-1, and `validate()`
+    only *reports* them as a problem: the raw value still reaches the
+    invalid-record bindings.
+
+    Ungated: a transaction that would be clamped here raises on current code, so
+    no historical block can contain one that was ever recorded.
+    """
+    for key, value in list(bindings.items()):
+        if isinstance(value, int) and not isinstance(value, bool):
+            if value > config.MAX_INT or value < -config.MAX_INT:
+                bindings[key] = None
+    return bindings
+
+
 def chunkify(l, n):  # noqa: E741
     n = max(1, n)
     return [l[i : i + n] for i in range(0, len(l), n)]
