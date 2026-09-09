@@ -26,6 +26,7 @@ from counterpartycore.lib.api import (
     dbstatus,
     healthz,
     healthz_server,
+    parsedevents,
     queries,
     verbose,
     wsgi,
@@ -91,7 +92,7 @@ def is_server_ready():
 
 def api_root():
     with StateDBConnectionPool().connection() as state_db:
-        counterparty_height = apiwatcher.get_last_block_parsed(state_db)
+        counterparty_height = parsedevents.get_last_block_parsed(state_db)
 
     return {
         "server_ready": is_server_ready(),
@@ -368,7 +369,7 @@ def cache_response(uncached, response):
 def execute_api_function(rule, route, function_args):
     # cache everything for one block
     with StateDBConnectionPool().connection() as state_db:
-        current_block_index = apiwatcher.get_last_block_parsed(state_db)
+        current_block_index = parsedevents.get_last_block_parsed(state_db)
     cache_key = f"{current_block_index}:{request.url}"
     # except for blocks
     if request.path.startswith("/v2/blocks/") and not request.path.startswith("/v2/blocks/last"):
@@ -590,7 +591,7 @@ def init_flask_app():
         init_api_access_log(app)
         # Get the last block index
         with StateDBConnectionPool().connection() as state_db:
-            CurrentState().set_current_block_index(apiwatcher.get_last_block_parsed(state_db))
+            CurrentState().set_current_block_index(parsedevents.get_last_block_parsed(state_db))
 
         methods = ["OPTIONS", "GET"]
         # Add routes

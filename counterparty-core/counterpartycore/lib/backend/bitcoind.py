@@ -9,6 +9,7 @@ from collections import OrderedDict
 from decimal import Decimal as D
 from multiprocessing import current_process
 from threading import current_thread, local
+from typing import NoReturn
 
 import requests
 from bitcoinutils.keys import PublicKey
@@ -882,9 +883,12 @@ def list_unspent(source, allow_unconfirmed_inputs):
     return []
 
 
-def raise_unresolved_prevout(prevout_hash, error):
+def raise_unresolved_prevout(prevout_hash, error) -> NoReturn:
     """Shared policy for a prevout that could not be fetched from the backend.
-    Never returns: it always raises."""
+    Never returns: it always raises. The `NoReturn` annotation is what tells
+    static analysis that too -- without it `get_vin_info_legacy()` reads as
+    falling off the end of its `except` branch and returning `None`, which is a
+    prevout resolution silently reported as successful."""
     # While parsing the mempool the parent transaction may legitimately be
     # unavailable (e.g. not yet relayed). Skipping the *unconfirmed* tx is
     # safe: it will be re-evaluated once it confirms.

@@ -17,7 +17,7 @@ from gunicorn.errors import AppImportError, HaltServer
 from werkzeug.serving import make_server
 
 from counterpartycore.lib import config
-from counterpartycore.lib.api import apiwatcher
+from counterpartycore.lib.api import parsedevents
 from counterpartycore.lib.cli import log
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import database, helpers
@@ -47,7 +47,7 @@ class LazyLogger(metaclass=helpers.SingletonMeta):
 
 
 def refresh_current_state(state_db, shared_backend_height):
-    CurrentState().set_current_block_index(apiwatcher.get_last_block_parsed(state_db))
+    CurrentState().set_current_block_index(parsedevents.get_last_block_parsed(state_db))
 
     current_block_index = CurrentState().current_block_index()
     current_backend_height = int(shared_backend_height.value // 10e8)

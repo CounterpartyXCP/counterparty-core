@@ -55,7 +55,7 @@ def test_lazy_logger(caplog, test_helpers):
 
 def test_refresh_current_state_api_only(monkeypatch):
     shared_backend_height = SimpleNamespace(value=0)
-    monkeypatch.setattr(wsgi.apiwatcher, "get_last_block_parsed", lambda _db: 7)
+    monkeypatch.setattr(wsgi.parsedevents, "get_last_block_parsed", lambda _db: 7)
     monkeypatch.setattr(wsgi.CurrentState, "set_current_block_index", lambda _self, _idx: None)
     monkeypatch.setattr(wsgi.CurrentState, "current_block_index", lambda _self: 7)
     monkeypatch.setattr(wsgi.config, "API_ONLY", True)
@@ -70,7 +70,7 @@ def test_refresh_current_state_api_only(monkeypatch):
 
 def test_refresh_current_state_logs(monkeypatch):
     shared_backend_height = SimpleNamespace(value=int(5 * 10e8 + 100))
-    monkeypatch.setattr(wsgi.apiwatcher, "get_last_block_parsed", lambda _db: 1)
+    monkeypatch.setattr(wsgi.parsedevents, "get_last_block_parsed", lambda _db: 1)
     monkeypatch.setattr(wsgi.CurrentState, "set_current_block_index", lambda _self, _idx: None)
     monkeypatch.setattr(wsgi.CurrentState, "current_block_index", lambda _self: 1)
     monkeypatch.setattr(wsgi.config, "API_ONLY", False)

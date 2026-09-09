@@ -38,7 +38,7 @@ import logging
 import time
 
 from counterpartycore.lib import config
-from counterpartycore.lib.api import statetables
+from counterpartycore.lib.api import parsedevents, statetables
 from counterpartycore.lib.utils import database
 from counterpartycore.lib.utils.database import (
     ADDRESS_INDEX_COLUMN_NAMES,
@@ -70,7 +70,7 @@ READY_FLAG = "INCREMENTAL_ROLLBACK_READY"
 # State DB has not caught up to yet), and from ``apiwatcher.check_reorg`` when
 # the ledger invalidates a block the watcher had not started copying.
 #
-# "Below" is measured against ``apiwatcher.get_last_block_touched`` -- the block
+# "Below" is measured against ``parsedevents.get_last_block_touched`` -- the block
 # of the last event copied -- and not against the last block *completed*. A
 # reorganization caught mid-block targets ``last_block_parsed + 1``, so measuring
 # against the completed tip would answer "nothing to roll back" for the very case
@@ -138,10 +138,6 @@ def rollback_reason(state_db, block_index):
     ``config`` or ``parsed_events`` table, say) also selects the full rebuild:
     this function only picks a path, and the full rebuild is always correct.
     """
-    # A local import: apiwatcher imports dbbuilder, which imports this module.
-    # pylint: disable=import-outside-toplevel
-    from counterpartycore.lib.api import apiwatcher  # noqa: PLC0415
-
     if block_index <= config.BLOCK_FIRST:
         return "full rollback requested"
     try:
@@ -152,7 +148,7 @@ def rollback_reason(state_db, block_index):
         # sit one block above the last BLOCK_PARSED. Measuring against the
         # completed tip reports NOTHING_TO_ROLL_BACK for exactly that case and
         # leaves the orphaned rows -- and their applied mutations -- in place.
-        last_block_touched = apiwatcher.get_last_block_touched(state_db)
+        last_block_touched = parsedevents.get_last_block_touched(state_db)
     except Exception as e:  # pylint: disable=broad-except
         # Deliberately broad: this function only picks a path. Anything that
         # stops us inspecting the State DB -- an apsw error on a schema too old
@@ -383,10 +379,6 @@ def rollback(state_db, block_index):
     ``PRAGMA foreign_keys`` is a no-op inside a transaction, so it cannot be set
     here (see :func:`rollback_state_db`).
     """
-    # Local import: apiwatcher imports dbbuilder, which imports this module.
-    # pylint: disable=import-outside-toplevel
-    from counterpartycore.lib.api import apiwatcher  # noqa: PLC0415
-
     # Left attached on exit, like the migration path: this is the long-lived
     # State DB write connection, and DETACH is not valid inside a transaction.
     attach_ledger_db(state_db)
@@ -416,12 +408,12 @@ def rollback(state_db, block_index):
     if reverted.get("fairminters") or "NEW_FAIRMINT" in orphan_events:
         _refresh_fairminter_totals(state_db, block_index)
 
-    asset_events = set(apiwatcher.ASSET_EVENTS) | set(apiwatcher.XCP_DESTROY_EVENTS)
+    asset_events = set(statetables.ASSET_EVENTS) | set(statetables.XCP_DESTROY_EVENTS)
     if orphan_events & asset_events:
         _rebuild_assets_info(state_db, block_index)
 
     # ``parsed_events`` shrank, so the cached tip must be recomputed.
-    apiwatcher.update_last_parsed_events_cache(state_db, event=None)
+    parsedevents.update_last_parsed_events_cache(state_db, event=None)
     # The State DB now sits exactly at ``block_index - 1``, so the
     # double-counting guard a full rebuild needs (which copies balances
     # from the ledger's *current* tip) does not apply here.
