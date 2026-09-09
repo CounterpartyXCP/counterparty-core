@@ -733,7 +733,7 @@ CHECKPOINTS_MAINNET = {
     966186: {
         "ledger_hash": "809edb13e03cda954db7b8f8efe0cc61248c16c38d59f9d5593cea99e56c1883",
         "txlist_hash": "d675bebb850556c3da8fcec7e31a16ce4385108f51c03e3c9a31f57ddc69d6ae",
-    }
+    },
 }
 
 CONSENSUS_HASH_VERSION_TESTNET3 = 7
@@ -957,7 +957,7 @@ CHECKPOINTS_TESTNET4 = {
     151641: {
         "ledger_hash": "d7b00a440e4be0e7fa5c2edc8d16e626db339fdb0780e8e5d97b59561dfd9c1f",
         "txlist_hash": "e528650122184e5a452e858909e6636b212cbed4294b57fae2c9780aa0131d3f",
-    }
+    },
 }
 
 CONSENSUS_HASH_VERSION_SIGNET = 1
@@ -1001,5 +1001,5 @@ CHECKPOINTS_SIGNET = {
     321326: {
         "ledger_hash": "07e87c1d9b1739daafe3cf882cc95e76c44e81cbf67a1dfbf2e151e37339a399",
         "txlist_hash": "0592bb343a15579df4cc4b855f196eccdce6dbb6bed4f47c2dfdb1ea042d4ed8",
-    }
+    },
 }
