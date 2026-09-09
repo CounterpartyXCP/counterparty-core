@@ -105,8 +105,13 @@ class NodeStatusCheckerThread(threading.Thread):
                 raise
             logger.debug("NodeStatusChecker query interrupted during shutdown.")
         finally:
+            # Hand the connection off under the lock and close it outside, so a
+            # close waiting on disk cannot hold `stop()`'s interrupt behind it.
+            # See `stop()` for the ordering this preserves.
             with self.db_lock:
-                self.state_db.close()
+                state_db, self.state_db = self.state_db, None
+            if state_db is not None:
+                state_db.close()
 
     def stop(self, deadline=None):
         self.stop_event.set()
@@ -114,16 +119,20 @@ class NodeStatusCheckerThread(threading.Thread):
             # Under the lock: apsw checks the connection is open and then calls
             # sqlite3_interrupt() while holding the GIL, but close() releases it
             # around sqlite3_close_v2(), so an unsynchronised interrupt can reach
-            # a handle that is already being freed. Held only for the duration of
-            # the interrupt, which never blocks, so the closing thread waits on it
+            # a handle that is already being freed. `run`'s finally clears the
+            # attribute under this same lock before it closes, so this either
+            # interrupts a connection whose close cannot have started, or reads
+            # `None` and skips an interrupt the close has made pointless. Both
+            # critical sections are non-blocking: the closing thread waits on it
             # for microseconds and the join() below cannot deadlock against it.
             with self.db_lock:
-                try:
-                    self.state_db.interrupt()
-                except apsw.Error:
-                    # The checker may finish and close its connection between the
-                    # is_alive() check and this cross-thread interrupt.
-                    pass
+                if self.state_db is not None:
+                    try:
+                        self.state_db.interrupt()
+                    except apsw.Error:
+                        # The checker may finish and close its connection between
+                        # the is_alive() check and this cross-thread interrupt.
+                        pass
             self.join(timeout=helpers.deadline_timeout(deadline, 2))
             if self.is_alive():
                 logger.warning("NodeStatusChecker thread did not stop before its deadline.")

@@ -65,15 +65,60 @@ def test_api_watcher_stop_does_not_interrupt_a_connection_being_closed(monkeypat
     watcher.state_db.close.side_effect = slow_close
     watcher.state_db.interrupt.side_effect = record_interrupt
     watcher.ledger_db.interrupt.side_effect = record_interrupt
+    # `run` hands the connections off before closing them, so hold the mocks.
+    state_db, ledger_db = watcher.state_db, watcher.ledger_db
 
     watcher.start()
     assert closing.wait(timeout=5), "watcher never reached its close"
     watcher.stop(deadline=time.monotonic() + 5)
 
     assert not watcher.is_alive()
-    # Both interrupts waited for the close to finish. Without the lock they run
-    # immediately and see a close in flight.
-    assert overlapped == [False, False]
+    # The watcher cleared both handles under the lock before closing them, so
+    # `stop()` found nothing left to interrupt. Without that handoff the
+    # interrupts reach connections that are in the middle of being freed.
+    assert overlapped == []
+    state_db.interrupt.assert_not_called()
+    ledger_db.interrupt.assert_not_called()
+    # Handing the connections off must not cost the close itself.
+    state_db.close.assert_called_once_with()
+    ledger_db.close.assert_called_once_with()
+
+
+def test_api_watcher_stop_is_not_delayed_by_a_slow_close(monkeypatch):
+    """The close is disk-bound: `state_db` is the last writer once the pools are
+    gone, so it checkpoints the WAL and fsyncs. Holding `db_lock` across it put
+    `stop()` behind that I/O on a mutex no deadline covered, and a slow close
+    could spend the whole shutdown budget before the bounded join was reached."""
+    monkeypatch.setattr(apiwatcher.database, "get_db_connection", lambda *a, **k: MagicMock())
+    monkeypatch.setattr(apiwatcher, "update_last_parsed_events_cache", lambda *a, **k: None)
+
+    watcher = apiwatcher.APIWatcher(MagicMock())
+    # Return straight to `run`'s finally, without entering `follow`.
+    monkeypatch.setattr(apiwatcher, "catch_up", lambda *a, **k: watcher.stop_event.set())
+
+    closing = threading.Event()
+    release = threading.Event()
+
+    def blocking_close():
+        closing.set()
+        release.wait(timeout=5)
+
+    watcher.state_db.close.side_effect = blocking_close
+
+    watcher.start()
+    assert closing.wait(timeout=5), "watcher never reached its close"
+    try:
+        started = time.monotonic()
+        watcher.stop(deadline=time.monotonic() + 0.05)
+        elapsed = time.monotonic() - started
+    finally:
+        release.set()
+
+    # The close was still running: `stop()` was bounded by its own join, not by
+    # the mutex the closing thread holds.
+    assert elapsed < 2, f"stop() waited {elapsed:.2f}s on a close it does not own"
+    watcher.join(timeout=5)
+    assert not watcher.is_alive()
 
 
 def test_api_watcher_is_a_daemon_thread(monkeypatch):
@@ -103,10 +148,14 @@ def test_api_watcher_handles_shutdown_interrupt(monkeypatch):
 
     monkeypatch.setattr(apiwatcher, "catch_up", interrupted_catch_up)
 
+    # `run` hands the connections off before closing them, so hold the mocks.
+    state_db, ledger_db = watcher.state_db, watcher.ledger_db
+
     watcher.run()
 
-    watcher.state_db.close.assert_called_once_with()
-    watcher.ledger_db.close.assert_called_once_with()
+    state_db.close.assert_called_once_with()
+    ledger_db.close.assert_called_once_with()
+    assert watcher.state_db is None and watcher.ledger_db is None
 
 
 # The queries as the production code will actually run them, so that dropping an
@@ -988,14 +1037,16 @@ def test_a_failed_watcher_is_logged_and_flagged(monkeypatch):
     )
     logger = MagicMock()
     monkeypatch.setattr(apiwatcher, "logger", logger)
+    # `run` hands the connections off before closing them, so hold the mocks.
+    state_db, ledger_db = watcher.state_db, watcher.ledger_db
 
     watcher.run()  # must not propagate: nothing above it would handle it
 
     assert apiwatcher.watcher_has_failed() is True
     # With the traceback, or the log says the watcher stopped without saying why.
     assert logger.critical.call_args.kwargs == {"exc_info": True}
-    watcher.state_db.close.assert_called_once_with()
-    watcher.ledger_db.close.assert_called_once_with()
+    state_db.close.assert_called_once_with()
+    ledger_db.close.assert_called_once_with()
 
 
 def test_an_unexpected_interrupt_is_flagged_too(monkeypatch):

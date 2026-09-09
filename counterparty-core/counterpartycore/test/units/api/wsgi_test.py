@@ -337,9 +337,50 @@ def test_node_status_checker_stop_does_not_interrupt_a_connection_being_closed(m
     thread.stop(deadline=time.monotonic() + 5)
 
     assert not thread.is_alive()
-    # The interrupt waited for the close to finish. Without the lock it runs
-    # immediately and sees a close in flight.
-    assert overlapped == [False]
+    # The checker cleared the handle under the lock before closing it, so
+    # `stop()` found nothing left to interrupt. Without that handoff the
+    # interrupt reaches a connection that is in the middle of being freed.
+    assert overlapped == []
+    state_db.interrupt.assert_not_called()
+    # Handing the connection off must not cost the close itself.
+    state_db.close.assert_called_once_with()
+
+
+def test_node_status_checker_stop_is_not_delayed_by_a_slow_close(monkeypatch):
+    """Holding `db_lock` across the close put `stop()` behind disk I/O on a
+    mutex no deadline covered, so a slow close could consume the checker's whole
+    share of the shutdown budget before the bounded join was reached."""
+    state_db = MagicMock()
+    monkeypatch.setattr(wsgi.database, "get_db_connection", lambda _path: state_db)
+
+    thread = wsgi.NodeStatusCheckerThread(SimpleNamespace(value=0))
+    monkeypatch.setattr(
+        wsgi, "refresh_current_state", lambda *_args, **_kwargs: thread.stop_event.set()
+    )
+
+    closing = threading.Event()
+    release = threading.Event()
+
+    def blocking_close():
+        closing.set()
+        release.wait(timeout=5)
+
+    state_db.close.side_effect = blocking_close
+
+    thread.start()
+    assert closing.wait(timeout=5), "checker never reached its close"
+    try:
+        started = time.monotonic()
+        thread.stop(deadline=time.monotonic() + 0.05)
+        elapsed = time.monotonic() - started
+    finally:
+        release.set()
+
+    # The close was still running: `stop()` was bounded by its own join, not by
+    # the mutex the closing thread holds.
+    assert elapsed < 2, f"stop() waited {elapsed:.2f}s on a close it does not own"
+    thread.join(timeout=5)
+    assert not thread.is_alive()
 
 
 def test_gunicorn_stop_reserves_budget_for_the_workers(monkeypatch):
