@@ -184,6 +184,8 @@ The dedicated health listener now starts before State DB maintenance, which is t
 
 Readiness now requires the API process to have reached the point where it serves requests, in both modes, and reports `503 starting` until then. Liveness is unchanged and stays `200` throughout, so a pod that is still coming up is still not killed.
 
+Routine Gunicorn worker retirement preserves the readiness of an otherwise healthy API instance.
+
 ## Packaged OpenAPI document (#3495, #3505)
 
 The installed wheel now includes `openapi.json`. Previously `/v2/openapi.json` worked from a source checkout but returned `500` from the official container: the handler walked four directories upward from `site-packages`, where the repository-root file does not exist. The API now resolves the packaged resource and retains a source-tree fallback for editable development installs.
