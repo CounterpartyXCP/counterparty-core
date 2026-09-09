@@ -942,11 +942,19 @@ class APIWatcher(threading.Thread):
             # nothing had happened.
             self._report_failure("API Watcher stopped on an unexpected error.")
         finally:
+            # Hand the connections off under the lock, close them outside it.
+            # The close is disk-bound -- `state_db` is the last writer once the
+            # pools are gone, so it checkpoints the WAL and fsyncs -- and a
+            # close that runs under this lock makes `stop()` wait on that I/O
+            # before it reaches its own bounded join, outside every deadline.
+            # Clearing the attributes first is what keeps the interrupt and the
+            # close serialized: see `stop()`.
             with self.db_lock:
-                if self.state_db is not None:
-                    self.state_db.close()
-                if self.ledger_db is not None:
-                    self.ledger_db.close()
+                state_db, ledger_db = self.state_db, self.ledger_db
+                self.state_db, self.ledger_db = None, None
+            for connection in (state_db, ledger_db):
+                if connection is not None:
+                    connection.close()
             if self.current_state_thread is not None:
                 self.current_state_thread.stop()
 
@@ -976,9 +984,14 @@ class APIWatcher(threading.Thread):
         # Under the lock: apsw checks the connection is open and then calls
         # sqlite3_interrupt() while holding the GIL, but close() releases it
         # around sqlite3_close_v2(), so an unsynchronised interrupt can reach a
-        # handle that is already being freed. Held only for the duration of the
-        # interrupts, which never block, so the closing thread waits on it for
-        # microseconds and the join() below cannot deadlock against it.
+        # handle that is already being freed. `run`'s finally clears these
+        # attributes under this same lock before it closes, so there are only
+        # two orderings: this wins the lock and interrupts connections whose
+        # close cannot have started, or the watcher wins it and this reads
+        # `None` and skips an interrupt the close has already made pointless.
+        # Both critical sections are a couple of assignments and the interrupts,
+        # which never block -- neither thread waits on the other for more than
+        # microseconds, and the join() below cannot deadlock against it.
         with self.db_lock:
             for connection in (self.state_db, self.ledger_db):
                 if connection is not None:
