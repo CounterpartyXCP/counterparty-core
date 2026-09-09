@@ -697,6 +697,7 @@ class ConnectionPoolMonitor(threading.Thread):
 def run_apiserver(
     args, server_ready_value, stop_event, shared_backend_height, parent_pid, log_stream
 ):
+    api_owner_pid = os.getpid()
     logger.info("Starting API Server process...")
 
     def handle_interrupt_signal(_signum, _frame):
@@ -838,7 +839,10 @@ def run_apiserver(
             memory_profiler.stop_memory_profiler()
 
         logger.info("API Server stopped.")
-        server_ready_value.value = 2
+        # Retiring Gunicorn workers also unwind through this finally block.
+        # Only the API owner can mark the shared server state as stopped.
+        if os.getpid() == api_owner_pid:
+            server_ready_value.value = 2
 
 
 # This thread is used for the following two reasons:
