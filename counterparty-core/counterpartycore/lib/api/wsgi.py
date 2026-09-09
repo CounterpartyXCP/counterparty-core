@@ -114,16 +114,21 @@ class NodeStatusCheckerThread(threading.Thread):
             # Under the lock: apsw checks the connection is open and then calls
             # sqlite3_interrupt() while holding the GIL, but close() releases it
             # around sqlite3_close_v2(), so an unsynchronised interrupt can reach
-            # a handle that is already being freed. Held only for the duration of
-            # the interrupt, which never blocks, so the closing thread waits on it
-            # for microseconds and the join() below cannot deadlock against it.
-            with self.db_lock:
+            # a handle that is already being freed. SQLite close holds this
+            # same lock and can wait on I/O; acquiring it must respect the
+            # deadline too. A daemon still closing can finish independently.
+            if not self.db_lock.acquire(timeout=helpers.deadline_timeout(deadline, 2)):
+                logger.warning("NodeStatusChecker database close exceeded the shutdown deadline.")
+                return
+            try:
                 try:
                     self.state_db.interrupt()
                 except apsw.Error:
                     # The checker may finish and close its connection between the
                     # is_alive() check and this cross-thread interrupt.
                     pass
+            finally:
+                self.db_lock.release()
             self.join(timeout=helpers.deadline_timeout(deadline, 2))
             if self.is_alive():
                 logger.warning("NodeStatusChecker thread did not stop before its deadline.")

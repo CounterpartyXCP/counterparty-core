@@ -976,16 +976,21 @@ class APIWatcher(threading.Thread):
         # Under the lock: apsw checks the connection is open and then calls
         # sqlite3_interrupt() while holding the GIL, but close() releases it
         # around sqlite3_close_v2(), so an unsynchronised interrupt can reach a
-        # handle that is already being freed. Held only for the duration of the
-        # interrupts, which never block, so the closing thread waits on it for
-        # microseconds and the join() below cannot deadlock against it.
-        with self.db_lock:
+        # handle that is already being freed. The closing thread also holds
+        # this lock during SQLite close, which can wait on disk I/O. Include
+        # lock acquisition in the shutdown budget; never interrupt without it.
+        if not self.db_lock.acquire(timeout=deadline_timeout(deadline, 5)):
+            logger.warning("API Watcher database close exceeded the shutdown deadline.")
+            return
+        try:
             for connection in (self.state_db, self.ledger_db):
                 if connection is not None:
                     try:
                         connection.interrupt()
                     except apsw.Error:
                         pass
+        finally:
+            self.db_lock.release()
         self.join(timeout=deadline_timeout(deadline, 5))
         if self.is_alive():
             logger.warning("API Watcher thread did not stop in time, continuing...")

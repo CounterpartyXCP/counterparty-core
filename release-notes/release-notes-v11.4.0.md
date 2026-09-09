@@ -1,5 +1,9 @@
 # Release Notes - Counterparty Core v11.4.0 (2026-09-05)
 
+API shutdown now bounds the wait for the database-close mutex in the watcher
+and node-status threads. A slow SQLite close cannot make that mutex wait bypass
+the caller's shutdown deadline; interrupt remains serialized with close.
+
 Counterparty Core v11.4.0 is a **security release**. It fixes a family of remotely triggerable chain-halt vulnerabilities reported privately as [GHSA-pmfx-7qj5-fx6c](https://github.com/CounterpartyXCP/counterparty-core/security/advisories/GHSA-pmfx-7qj5-fx6c), plus a silent ledger-fork vector in how the source of an inscription reveal transaction is resolved. Each halt vector let an unprivileged attacker stop **every node on the network** at the same block for the price of one or two ordinary transactions, and a halted node restarts onto the same poisoned block and halts again.
 
 **All node operators should upgrade immediately.**
