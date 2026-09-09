@@ -17,7 +17,7 @@ import time
 from unittest.mock import MagicMock
 
 import pytest
-from counterpartycore.lib.api import addressevents, apiwatcher
+from counterpartycore.lib.api import addressevents, apiwatcher, parsedevents
 
 
 def test_api_watcher_stop_interrupts_sqlite_connections():
@@ -113,8 +113,8 @@ def test_api_watcher_handles_shutdown_interrupt(monkeypatch):
 # `INDEXED BY` clause from apiwatcher fails these tests instead of silently
 # regressing to the plan that cost 132s on a cold mainnet State DB.
 BLOCK_PARSED_QUERIES = [
-    ("LAST_BLOCK_PARSED_SQL", apiwatcher.LAST_BLOCK_PARSED_SQL),
-    ("BLOCKS_PARSED_DESC_SQL", apiwatcher.BLOCKS_PARSED_DESC_SQL),
+    ("LAST_BLOCK_PARSED_SQL", parsedevents.LAST_BLOCK_PARSED_SQL),
+    ("BLOCKS_PARSED_DESC_SQL", parsedevents.BLOCKS_PARSED_DESC_SQL),
 ]
 
 # `LAST_PARSED_EVENT_SQL` carries no `event` filter, so the planner reaches for the
@@ -123,7 +123,7 @@ BLOCK_PARSED_QUERIES = [
 # failure if the index is ever dropped -- but it cannot take the premise the test
 # below guards, which is that the *unhinted* query picks the sort.
 EVENT_INDEX_QUERIES = BLOCK_PARSED_QUERIES + [
-    ("LAST_PARSED_EVENT_SQL", apiwatcher.LAST_PARSED_EVENT_SQL),
+    ("LAST_PARSED_EVENT_SQL", parsedevents.LAST_PARSED_EVENT_SQL),
 ]
 
 
@@ -222,7 +222,7 @@ def test_get_last_block_parsed_preserves_event_order(state_db):
         """
     ).fetchone()["block_index"]
 
-    assert apiwatcher.get_last_block_parsed(state_db, no_cache=True) == expected
+    assert parsedevents.get_last_block_parsed(state_db, no_cache=True) == expected
 
 
 def test_block_parsed_queries_fail_loudly_without_their_index(state_db):
@@ -254,13 +254,13 @@ def test_get_last_block_parsed_uses_latest_event_not_highest_block(state_db):
         (max_event_index + 2, "OTHER", "trailing-event", 999),
     )
 
-    assert apiwatcher.get_last_block_parsed(state_db, no_cache=True) == 100
+    assert parsedevents.get_last_block_parsed(state_db, no_cache=True) == 100
 
 
 def test_get_last_block_parsed_empty_table(state_db):
     state_db.execute("DELETE FROM parsed_events")
 
-    assert apiwatcher.get_last_block_parsed(state_db, no_cache=True) == 0
+    assert parsedevents.get_last_block_parsed(state_db, no_cache=True) == 0
 
 
 def test_detach_from_utxo_field_name_correct():
@@ -636,8 +636,10 @@ def test_check_reorg_detects_a_tip_block_replaced_at_the_same_height(reorg_dbs, 
 
     # The premise: everything below the tip is untouched, so a check that skips
     # the tip compares two identical hashes and reports nothing.
-    previous = apiwatcher.fetch_one(state_db, "SELECT * FROM parsed_events WHERE event_index = 20")
-    in_ledger = apiwatcher.fetch_one(ledger_db, "SELECT * FROM messages WHERE message_index = 20")
+    previous = parsedevents.fetch_one(
+        state_db, "SELECT * FROM parsed_events WHERE event_index = 20"
+    )
+    in_ledger = parsedevents.fetch_one(ledger_db, "SELECT * FROM messages WHERE message_index = 20")
     assert previous["event_hash"] == in_ledger["event_hash"]
 
     assert apiwatcher.check_reorg(ledger_db, state_db) is True
@@ -671,8 +673,8 @@ def test_check_reorg_detects_a_reorg_inside_the_block_being_parsed(mid_block_dbs
     ledger_db.execute("UPDATE messages SET event_hash = 'other-3' WHERE message_index = 30")
 
     # The premise: the newest *block* the State DB parsed still matches.
-    last_block = apiwatcher.fetch_one(state_db, apiwatcher.LAST_BLOCK_PARSED_SQL)
-    in_ledger = apiwatcher.fetch_one(
+    last_block = parsedevents.fetch_one(state_db, parsedevents.LAST_BLOCK_PARSED_SQL)
+    in_ledger = parsedevents.fetch_one(
         ledger_db,
         "SELECT * FROM messages WHERE block_index = ? AND event = 'BLOCK_PARSED'",
         (last_block["block_index"],),
@@ -730,18 +732,18 @@ def test_get_last_block_touched_sees_the_block_being_copied(mid_block_dbs, reorg
     _, mid_block_state_db = mid_block_dbs
     _, whole_blocks_state_db = reorg_dbs
 
-    assert apiwatcher.get_last_block_parsed(whole_blocks_state_db, no_cache=True) == 3
-    assert apiwatcher.get_last_block_touched(whole_blocks_state_db) == 3
+    assert parsedevents.get_last_block_parsed(whole_blocks_state_db, no_cache=True) == 3
+    assert parsedevents.get_last_block_touched(whole_blocks_state_db) == 3
 
-    assert apiwatcher.get_last_block_parsed(mid_block_state_db, no_cache=True) == 2
-    assert apiwatcher.get_last_block_touched(mid_block_state_db) == 3
+    assert parsedevents.get_last_block_parsed(mid_block_state_db, no_cache=True) == 2
+    assert parsedevents.get_last_block_touched(mid_block_state_db) == 3
 
 
 def test_get_last_block_touched_is_zero_on_an_empty_state_db(reorg_dbs):
     _, state_db = reorg_dbs
     state_db.execute("DELETE FROM parsed_events")
 
-    assert apiwatcher.get_last_block_touched(state_db) == 0
+    assert parsedevents.get_last_block_touched(state_db) == 0
 
 
 def test_check_reorg_targets_a_block_the_state_db_actually_holds(mid_block_dbs, rollbacks):
@@ -753,7 +755,7 @@ def test_check_reorg_targets_a_block_the_state_db_actually_holds(mid_block_dbs, 
 
     assert apiwatcher.check_reorg(ledger_db, state_db) is True
     assert rollbacks == [3]
-    assert rollbacks[0] <= apiwatcher.get_last_block_touched(state_db)
+    assert rollbacks[0] <= parsedevents.get_last_block_touched(state_db)
 
 
 def test_search_matching_event_starts_at_the_last_parsed_block(reorg_dbs):

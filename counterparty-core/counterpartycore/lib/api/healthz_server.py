@@ -35,7 +35,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional
 
 from counterpartycore.lib import config
-from counterpartycore.lib.api import apiwatcher, dbstatus
+from counterpartycore.lib.api import apiwatcher, dbstatus, parsedevents
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import database, helpers
 
@@ -232,7 +232,7 @@ class HealthSampler(threading.Thread):
             own_db = database.get_db_connection(
                 config.STATE_DATABASE, read_only=True, check_wal=False
             )
-            self._last_parsed_provider = lambda db=own_db: apiwatcher.get_last_block_parsed(db)
+            self._last_parsed_provider = lambda db=own_db: parsedevents.get_last_block_parsed(db)
         except Exception as e:  # pylint: disable=broad-except
             logger.debug("healthz: state DB not ready yet: %s", e)
         return own_db
