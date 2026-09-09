@@ -1,4 +1,7 @@
+import json
+
 from counterpartycore.lib.api import dbbuilder
+from counterpartycore.lib.api.addressevents import EVENTS_ADDRESS_FIELDS
 from counterpartycore.lib.utils import hashcodec
 from counterpartycore.lib.utils.database import (
     ADDRESS_INDEX_COLUMN_NAMES,
@@ -507,3 +510,109 @@ def test_orders_info_join_uses_assets_info_index(state_db):
         d for d in details if d.startswith("SCAN") and ("get_assets" in d or "give_assets" in d)
     ]
     assert not scans, f"orders_info full-scans assets_info instead of an index seek: {details}"
+
+
+# =============================================================================
+# Address history completion after a refresh / full rollback (#3503)
+# =============================================================================
+
+
+ADDRESS_EVENT_ROWS_SQL = "SELECT address, event_index, block_index, event FROM address_events"
+
+
+def address_event_rows(state_db):
+    return {
+        (r["address"], r["event_index"], r["block_index"], r["event"])
+        for r in state_db.execute(ADDRESS_EVENT_ROWS_SQL).fetchall()
+    }
+
+
+def uncovered_event_indexes(state_db, ledger_db):
+    """Ledger events that should have address associations but have none."""
+    covered = {r["event_index"] for r in state_db.execute(ADDRESS_EVENT_ROWS_SQL).fetchall()}
+    uncovered = set()
+    for message in ledger_db.execute(
+        "SELECT event, bindings, message_index FROM messages ORDER BY message_index"
+    ).fetchall():
+        fields = EVENTS_ADDRESS_FIELDS.get(message["event"])
+        if not fields:
+            continue
+        bindings = json.loads(message["bindings"])
+        if not any(field in bindings for field in fields):
+            continue
+        if message["message_index"] not in covered:
+            uncovered.add(message["message_index"])
+    return uncovered
+
+
+def test_backfill_address_events_is_a_no_op_on_a_complete_table(state_db, ledger_db):
+    before = address_event_rows(state_db)
+    dbbuilder.backfill_address_events(state_db)
+    # Nothing is missing, so nothing is re-derived: in particular no row is
+    # inserted a second time.
+    assert address_event_rows(state_db) == before
+
+
+def test_backfill_address_events_repairs_deleted_associations(state_db, ledger_db):
+    before = address_event_rows(state_db)
+    cutoff = state_db.execute(
+        "SELECT MIN(block_index) AS block_index FROM address_events"
+    ).fetchone()["block_index"]
+    state_db.execute("DELETE FROM address_events WHERE block_index >= ?", (cutoff,))
+    assert address_event_rows(state_db) != before
+
+    dbbuilder.backfill_address_events(state_db)
+
+    # The runtime resolver also records UTXO-owner aliases that migration 0001
+    # does not, so it may produce a superset -- but never less.
+    assert before <= address_event_rows(state_db)
+    assert uncovered_event_indexes(state_db, ledger_db) == set()
+
+
+def test_refresh_state_db_keeps_address_history_of_unparsed_events(state_db, ledger_db):
+    """Regression for #3503.
+
+    A State DB that is behind the Ledger used to lose the address history of
+    everything in between: migration 0002 repopulates `parsed_events` from the
+    whole Ledger, moving the replay cursor to the tip, while `address_events`
+    was neither rebuilt nor replayed.
+    """
+    before = address_event_rows(state_db)
+    tip = ledger_db.execute("SELECT MAX(message_index) AS m FROM messages").fetchone()["m"]
+    lagging_cursor = tip // 2
+
+    # Simulate a State DB whose watcher has not caught up with the Ledger.
+    state_db.execute("DELETE FROM parsed_events WHERE event_index > ?", (lagging_cursor,))
+    state_db.execute("DELETE FROM address_events WHERE event_index > ?", (lagging_cursor,))
+    assert uncovered_event_indexes(state_db, ledger_db) != set()
+
+    dbbuilder.refresh_state_db(state_db)
+
+    # The refresh declared everything up to the tip parsed...
+    assert (
+        state_db.execute("SELECT MAX(event_index) AS m FROM parsed_events").fetchone()["m"] == tip
+    )
+    # ...so the address history has to be complete up to the tip as well.
+    assert uncovered_event_indexes(state_db, ledger_db) == set()
+    assert before <= address_event_rows(state_db)
+
+
+def test_full_rollback_state_db_keeps_address_history(state_db, ledger_db):
+    """Regression for #3503, full-rollback path.
+
+    `rollback_tables` prunes `address_events` from the rollback point while the
+    re-applied migration 0002 moves the replay cursor back up to the Ledger
+    tip, which still holds the rolled back blocks (a reorg replaces them, and
+    an `UPGRADE_ACTIONS` rollback does not touch the Ledger at all).
+    """
+    before = address_event_rows(state_db)
+    # Deep enough to prune blocks that actually carry address associations.
+    rollback_to = state_db.execute(
+        "SELECT MIN(block_index) + (MAX(block_index) - MIN(block_index)) / 2 AS b "
+        "FROM address_events"
+    ).fetchone()["b"]
+
+    dbbuilder.full_rollback_state_db(state_db, block_index=rollback_to)
+
+    assert uncovered_event_indexes(state_db, ledger_db) == set()
+    assert before <= address_event_rows(state_db)

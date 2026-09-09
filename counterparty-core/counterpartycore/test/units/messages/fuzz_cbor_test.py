@@ -39,8 +39,23 @@ any_scalar = st.one_of(
     st.booleans(),
     st.text(max_size=32),
     st.binary(max_size=32),
-    st.floats(allow_nan=False, allow_infinity=False, width=32),
+    # NaN and +/-inf are deliberately included: they are the ammunition of the
+    # halt-vector class reported in GHSA-pmfx-7qj5-fx6c. Every comparison against
+    # NaN is False, so a NaN field sails through validate() and is then bound as
+    # NULL by sqlite3, poisoning every consumer that reads the row back. Excluding
+    # them here is exactly why that family went unnoticed.
+    st.floats(allow_nan=True, allow_infinity=True, width=32),
     st.none(),
+    # Types with no SQLite equivalent, which every `validate()` lets through to
+    # the invalid-record bindings: a CBOR array/map decodes to list/dict, and a
+    # CBOR decimal fraction (tag 4) or bigfloat (tag 5) to `decimal.Decimal`.
+    # Binding one raises `TypeError: Bad binding argument type` inside
+    # `insert_record()`, which halts every node at the same block. Their absence
+    # from this strategy is why the family below `null_unbindable_values()` went
+    # unnoticed: only *scalar* poison was ever generated.
+    st.lists(st.integers(min_value=0, max_value=255), max_size=4),
+    st.dictionaries(st.text(max_size=4), st.integers(max_value=2**32), max_size=2),
+    st.decimals(allow_nan=True, allow_infinity=True, places=2),
 )
 
 

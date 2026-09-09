@@ -45,6 +45,13 @@ path = "counterpartycore/lib/config.py"
 [tool.hatch.build.targets.wheel]
 include = ["counterpartycore"]
 
+# `openapi.json` lives at the repository root but ships inside the package.
+# The copy is done by a build hook rather than a `force-include` of
+# `../openapi.json`, which is unresolvable when the wheel is built from an
+# extracted sdist. See `hatch_build.py`.
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"
+
 [tool.hatch.envs.default]
 pre-install-commands = [
   "pip install -e ../counterparty-rs",

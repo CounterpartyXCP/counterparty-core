@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 
+import apsw
 import gunicorn.app.base
 import waitress
 import waitress.server
@@ -16,7 +17,7 @@ from gunicorn.errors import AppImportError, HaltServer
 from werkzeug.serving import make_server
 
 from counterpartycore.lib import config
-from counterpartycore.lib.api import apiwatcher
+from counterpartycore.lib.api import parsedevents
 from counterpartycore.lib.cli import log
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import database, helpers
@@ -46,7 +47,7 @@ class LazyLogger(metaclass=helpers.SingletonMeta):
 
 
 def refresh_current_state(state_db, shared_backend_height):
-    CurrentState().set_current_block_index(apiwatcher.get_last_block_parsed(state_db))
+    CurrentState().set_current_block_index(parsedevents.get_last_block_parsed(state_db))
 
     current_block_index = CurrentState().current_block_index()
     current_backend_height = int(shared_backend_height.value // 10e8)
@@ -82,10 +83,16 @@ def refresh_current_state(state_db, shared_backend_height):
 
 class NodeStatusCheckerThread(threading.Thread):
     def __init__(self, shared_backend_height):
-        threading.Thread.__init__(self, name="NodeStatusChecker")
+        # Daemon for the same reason as APIWatcher: the bounded join below is
+        # only meaningful if a thread that outlives it cannot block interpreter
+        # shutdown. This thread is read-only, so it has nothing to lose at exit.
+        threading.Thread.__init__(self, name="NodeStatusChecker", daemon=True)
         self.shared_backend_height = shared_backend_height
         self.state_db = database.get_db_connection(config.STATE_DATABASE)
         self.stop_event = threading.Event()
+        # See `stop()`: guards the cross-thread interrupt against this thread's
+        # own close().
+        self.db_lock = threading.Lock()
 
     def run(self):
         logger.debug("Starting NodeStatusChecker thread...")
@@ -93,13 +100,42 @@ class NodeStatusCheckerThread(threading.Thread):
             while not self.stop_event.is_set():
                 refresh_current_state(self.state_db, self.shared_backend_height)
                 self.stop_event.wait(timeout=1)
+        except apsw.InterruptError:
+            if not self.stop_event.is_set():
+                raise
+            logger.debug("NodeStatusChecker query interrupted during shutdown.")
         finally:
-            self.state_db.close()
+            # Hand the connection off under the lock and close it outside, so a
+            # close waiting on disk cannot hold `stop()`'s interrupt behind it.
+            # See `stop()` for the ordering this preserves.
+            with self.db_lock:
+                state_db, self.state_db = self.state_db, None
+            if state_db is not None:
+                state_db.close()
 
-    def stop(self):
+    def stop(self, deadline=None):
         self.stop_event.set()
         if self.is_alive():
-            self.join()
+            # Under the lock: apsw checks the connection is open and then calls
+            # sqlite3_interrupt() while holding the GIL, but close() releases it
+            # around sqlite3_close_v2(), so an unsynchronised interrupt can reach
+            # a handle that is already being freed. `run`'s finally clears the
+            # attribute under this same lock before it closes, so this either
+            # interrupts a connection whose close cannot have started, or reads
+            # `None` and skips an interrupt the close has made pointless. Both
+            # critical sections are non-blocking: the closing thread waits on it
+            # for microseconds and the join() below cannot deadlock against it.
+            with self.db_lock:
+                if self.state_db is not None:
+                    try:
+                        self.state_db.interrupt()
+                    except apsw.Error:
+                        # The checker may finish and close its connection between
+                        # the is_alive() check and this cross-thread interrupt.
+                        pass
+            self.join(timeout=helpers.deadline_timeout(deadline, 2))
+            if self.is_alive():
+                logger.warning("NodeStatusChecker thread did not stop before its deadline.")
 
 
 class GunicornArbiter(Arbiter):
@@ -202,19 +238,53 @@ class GunicornArbiter(Arbiter):
             if e.errno != errno.ECHILD:
                 raise
 
-    def kill_all_workers(self):
+    def _worker_exited(self, pid):
+        """Whether `pid` is gone, reaping it if it exited but was not reaped yet.
+
+        `helpers.is_process_alive()` is wrong here: workers are forked by
+        `spawn_worker`, so they are our own children and linger as zombies
+        between their exit and a `waitpid()`, which `kill(pid, 0)` reports as
+        alive. `kill_all_workers` runs off the arbiter loop, so nothing else is
+        guaranteed to reap them while it waits -- without reaping here, a clean
+        stop would burn the whole deadline and then SIGKILL processes that are
+        already dead. Losing the race against the arbiter's own `reap_workers`
+        raises ECHILD, which likewise means the worker is gone.
+        """
+        try:
+            reaped_pid, _status = os.waitpid(pid, os.WNOHANG)
+        except ChildProcessError:
+            return True
+        return reaped_pid != 0
+
+    def kill_all_workers(self, deadline=None):
         if len(self.workers_pids) == 0:
             return
+        if deadline is None:
+            deadline = time.monotonic() + 10
         for pid in self.workers_pids:
             try:
                 os.kill(pid, signal.SIGTERM)
             except ProcessLookupError:
                 pass
+        # Check liveness at least once even when the deadline has already passed,
+        # so workers that exited promptly are not reported as unresponsive and
+        # signalled again.
+        alive = list(self.workers_pids)
         while True:
-            stopped = [not helpers.is_process_alive(pid) for pid in self.workers_pids]
-            if all(stopped):
+            alive = [pid for pid in alive if not self._worker_exited(pid)]
+            if not alive or time.monotonic() >= deadline:
                 break
-        logger.info("All workers killed: %s", self.workers_pids)
+            time.sleep(0.01)
+        if alive:
+            logger.warning("Gunicorn workers did not stop gracefully: %s", alive)
+            for pid in alive:
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            logger.info("Gunicorn workers force-killed: %s", alive)
+        else:
+            logger.info("All workers stopped gracefully: %s", self.workers_pids)
         self.workers_pids = []
 
 
@@ -270,12 +340,17 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):  # pylint: disable
             sys.stderr.flush()
             sys.exit(1)
 
-    def stop(self):
+    def stop(self, deadline=None):
         if self.current_state_thread:
-            self.current_state_thread.stop()
+            # A third of the budget, so a checker that ignores its interrupt
+            # cannot leave the workers with a zero-second grace period and turn
+            # every in-flight request into a SIGKILL.
+            self.current_state_thread.stop(
+                deadline=None if deadline is None else helpers.split_deadline(deadline, 1 / 3)
+            )
         if self.arbiter and self.master_pid == os.getpid():
             logger.info("Stopping Gunicorn")
-            self.arbiter.kill_all_workers()
+            self.arbiter.kill_all_workers(deadline=deadline)
             self.server_ready_value.value = 2
 
     def get_task_dispatcher(self):
@@ -301,8 +376,8 @@ class WerkzeugApplication:
         self.current_state_thread.start()
         self.server.serve_forever()
 
-    def stop(self):
-        self.current_state_thread.stop()
+    def stop(self, deadline=None):
+        self.current_state_thread.stop(deadline=deadline)
         self.server.shutdown()
         self.server.server_close()
         self.server_ready_value.value = 2
@@ -339,8 +414,8 @@ class WaitressApplication:
             else:
                 raise
 
-    def stop(self):
-        self.current_state_thread.stop()
+    def stop(self, deadline=None):
+        self.current_state_thread.stop(deadline=deadline)
         self.server.close()
         self.server_ready_value.value = 2
 
@@ -367,9 +442,9 @@ class WSGIApplication:
         logger.info("Starting WSGI Server thread...")
         self.server.run(server_ready_value, shared_backend_height)
 
-    def stop(self):
+    def stop(self, deadline=None):
         logger.info("Stopping WSGI Server thread...")
-        self.server.stop()
+        self.server.stop(deadline=deadline)
 
     def get_task_dispatcher(self):
         # Returns the underlying server's worker-thread pool for health metrics,

@@ -6,6 +6,7 @@ import mimetypes
 import os
 import string
 import threading
+import time
 from urllib.parse import urlparse
 
 import pygit2
@@ -13,6 +14,49 @@ from bitcoinutils.setup import setup
 from counterpartycore.lib import config
 
 D = decimal.Decimal
+
+
+# apsw/sqlite3 binds exactly these Python types; anything else raises
+# `TypeError: Bad binding argument type` at INSERT time. `bool` is a subclass of
+# `int` and needs no entry of its own.
+BINDABLE_TYPES = (type(None), int, float, str, bytes)
+
+
+def null_unbindable_values(bindings):
+    """Replace every value SQLite cannot bind with `None`, in place, and return
+    the bindings.
+
+    Two kinds of value qualify, and both reach the bindings the same way: from a
+    CBOR-decoded message body, which -- unlike the legacy `struct` formats it
+    replaced after `taproot_support` -- can carry any type at all.
+
+    * An `int` outside SQLite's signed 64-bit range raises `OverflowError: int
+      too big to convert`. Message formats that unpack unsigned 64-bit fields
+      (`>Q`) admit values up to 2**64-1, and `validate()` only *reports* them as
+      a problem: the raw value still reaches the invalid-record bindings.
+    * A value whose type has no SQLite equivalent raises `TypeError: Bad binding
+      argument type`. cbor2 decodes an array as `list`, a map as `dict`, and a
+      decimal fraction (tag 4) or bigfloat (tag 5) as `decimal.Decimal` -- none
+      of which any `validate()` rejects, because comparing them against
+      `config.MAX_INT` either succeeds (`Decimal`) or raises a `TypeError` the
+      per-message safety net normalises for *some* fields but not the rest.
+
+    `insert_record()` is called from message handlers whose exceptions
+    `parse_tx()` wraps and `parse_block()` re-raises -- so one crafted
+    transaction halts every node at the same block.
+
+    Ungated: a transaction that would be changed here raises on current code, so
+    no historical block can contain one that was ever recorded.
+    """
+    for key, value in list(bindings.items()):
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int):
+            if value > config.MAX_INT or value < -config.MAX_INT:
+                bindings[key] = None
+        elif not isinstance(value, BINDABLE_TYPES):
+            bindings[key] = None
+    return bindings
 
 
 def chunkify(l, n):  # noqa: E741
@@ -151,6 +195,54 @@ def is_process_alive(pid):
     except OSError:
         return False
     return True
+
+
+class ShutdownBudget:
+    """One wall-clock budget shared by every step of a shutdown sequence.
+
+    A shutdown can be initiated from more than one place (a watchdog thread
+    noticing the parent is going away, and the `finally` block of the code it
+    interrupts). If each of them starts its own budget, the budgets run back to
+    back and their sum overshoots whatever deadline the caller was trying to
+    respect. Arming is therefore idempotent: the first caller fixes the deadline
+    and everyone after it shares what is left.
+    """
+
+    def __init__(self, total):
+        self.total = total
+        self._deadline = None
+        self._lock = threading.Lock()
+
+    def arm(self):
+        """Return the aggregate deadline, starting the clock on the first call."""
+        with self._lock:
+            if self._deadline is None:
+                self._deadline = time.monotonic() + self.total
+            return self._deadline
+
+    def sub_deadline(self, seconds):
+        """A per-component deadline, never later than the aggregate one."""
+        return min(self.arm(), time.monotonic() + seconds)
+
+
+def split_deadline(deadline, fraction):
+    """Carve `fraction` of the budget still left before `deadline`.
+
+    Serial cleanup steps handed the same deadline let a slow first step starve
+    the ones behind it: it returns exactly at the deadline and every later step
+    computes a zero timeout, turning a graceful stop into an immediate kill.
+    Splitting the remaining budget keeps a guaranteed share for what has yet to
+    run.
+    """
+    now = time.monotonic()
+    return now + max(0.0, deadline - now) * fraction
+
+
+def deadline_timeout(deadline, maximum):
+    """Clamp `deadline` into a join()/wait() timeout of at most `maximum` seconds."""
+    if deadline is None:
+        return maximum
+    return max(0.0, min(maximum, deadline - time.monotonic()))
 
 
 def dhash(text):

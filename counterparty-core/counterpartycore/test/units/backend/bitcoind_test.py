@@ -8,9 +8,13 @@ import requests
 from bitcoinutils.transactions import Script
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.backend import bitcoind
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.parser import gettxinfo
+from counterpartycore.lib.utils import helpers, script
 from counterpartycore.test.fixtures import decodedtxs
-from counterpartycore.test.mocks.bitcoind import original_get_vin_info
+from counterpartycore.test.mocks.bitcoind import (
+    original_get_reveal_prevouts,
+    original_get_vin_info,
+)
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 ORIGINAL_GET_UTXO_ADDRESS_AND_VALUE = bitcoind.get_utxo_address_and_value
@@ -78,6 +82,12 @@ def mock_requests_post(*args, **kwargs):
         return MockResponse(200, "string")
     if payload["method"] == "return_error_string":
         return MockResponse(200, {"error": "an error"})
+    if payload["method"] == "return_error_without_message":
+        return MockResponse(200, {"error": {"code": -32603}})
+    if payload["method"] == "return_error_not_a_dict":
+        return MockResponse(200, {"error": ["boom"]})
+    if payload["method"] == "return_json_list_at_top_level":
+        return MockResponse(200, [{"result": "ok", "id": 0}])
 
 
 @pytest.fixture(scope="function")
@@ -516,6 +526,177 @@ def test_get_vin_info_legacy(monkeypatch):
     )
 
 
+# ---------------------------------------------------------------------------
+# Inscription reveal transactions resolve their source one hop further back: to
+# the output that funded the *commit* transaction, not to the commit output the
+# reveal spends. The Rust deserializer normally does that rewrite and returns it
+# as `vin["info"]`; when its batch RPC call fails it returns no `info`, and the
+# Python fallback must reproduce the rewrite instead of resolving the input
+# normally -- otherwise this node computes a different `source` (and `fee`) than
+# every node whose RPC succeeded, and forks the ledger silently.
+# ---------------------------------------------------------------------------
+COMMIT_TXID = "aa" * 32
+FUNDING_TXID = "bb" * 32
+OTHER_TXID = "cc" * 32
+
+
+def reveal_decoded_tx(vins):
+    # parsed_vouts = (destinations, btc_amount, fee, data, potential_dispensers, is_reveal_tx)
+    return {"vin": vins, "parsed_vouts": ([], 0, 0, b"data", [], True)}
+
+
+def commit_transaction(vin_hash=FUNDING_TXID, vin_n=3):
+    return {"vin": [{"hash": vin_hash, "n": vin_n}], "vout": []}
+
+
+def test_get_reveal_prevouts_points_at_the_commit_parent(monkeypatch):
+    monkeypatch.setattr(
+        bitcoind, "get_decoded_transaction", lambda *args, **kwargs: commit_transaction()
+    )
+    decoded_tx = reveal_decoded_tx([{"hash": COMMIT_TXID, "n": 0, "info": None}])
+    assert original_get_reveal_prevouts(decoded_tx) == [(FUNDING_TXID, 3)]
+
+
+def test_get_reveal_prevouts_mirrors_rust_for_extra_inputs(monkeypatch):
+    """The Rust rewrite keys the output index off the *resolved* prevout txid, so
+    any other input spending the same funding transaction also uses the commit
+    parent's output index. Reproduce that exactly, quirk included."""
+    monkeypatch.setattr(
+        bitcoind, "get_decoded_transaction", lambda *args, **kwargs: commit_transaction()
+    )
+    decoded_tx = reveal_decoded_tx(
+        [
+            {"hash": COMMIT_TXID, "n": 0, "info": None},
+            {"hash": FUNDING_TXID, "n": 7, "info": None},
+            {"hash": OTHER_TXID, "n": 1, "info": None},
+        ]
+    )
+    assert original_get_reveal_prevouts(decoded_tx) == [
+        (FUNDING_TXID, 3),
+        (FUNDING_TXID, 3),
+        (OTHER_TXID, 1),
+    ]
+
+
+def test_get_reveal_prevouts_no_override_for_coinbase_commit(monkeypatch):
+    """A commit transaction with no input has no funding output; the Rust side
+    records no commit parent either, so the inputs resolve normally."""
+    monkeypatch.setattr(
+        bitcoind,
+        "get_decoded_transaction",
+        lambda *args, **kwargs: {"vin": [], "vout": []},
+    )
+    decoded_tx = reveal_decoded_tx([{"hash": COMMIT_TXID, "n": 0, "info": None}])
+    assert original_get_reveal_prevouts(decoded_tx) is None
+
+
+def test_get_reveal_prevouts_error_halts_during_catchup(monkeypatch):
+    """A backend failure on the commit lookup must halt, exactly like any other
+    unresolvable prevout -- never fall back to resolving the commit output."""
+
+    def raise_error(*args, **kwargs):
+        raise exceptions.BitcoindRPCError("No such mempool or blockchain transaction")
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+    monkeypatch.setattr(bitcoind.CurrentState, "parsing_mempool", lambda self: False)
+    monkeypatch.setattr(bitcoind.CurrentState, "stopping", lambda self: False)
+
+    decoded_tx = reveal_decoded_tx([{"hash": COMMIT_TXID, "n": 0, "info": None}])
+    with pytest.raises(exceptions.BitcoindRPCError, match="Refusing to silently skip") as exc:
+        original_get_reveal_prevouts(decoded_tx)
+    assert COMMIT_TXID in str(exc.value)
+
+
+def test_get_reveal_prevouts_error_skips_in_mempool(monkeypatch):
+    def raise_error(*args, **kwargs):
+        raise exceptions.BitcoindRPCError
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", raise_error)
+    monkeypatch.setattr(bitcoind.CurrentState, "parsing_mempool", lambda self: True)
+
+    decoded_tx = reveal_decoded_tx([{"hash": COMMIT_TXID, "n": 0, "info": None}])
+    with pytest.raises(exceptions.DecodeError, match="vin not found"):
+        original_get_reveal_prevouts(decoded_tx, no_retry=True)
+
+
+def test_get_vin_info_uses_the_prevout_override(monkeypatch):
+    """The fallback must fetch the overridden prevout, not the input's own."""
+    fetched = {}
+
+    def fake_get_decoded_transaction(tx_hash, *args, **kwargs):
+        fetched["tx_hash"] = tx_hash
+        return {
+            "vout": [
+                {"value": 0, "script_pub_key": "00"},
+                {"value": 0, "script_pub_key": "00"},
+                {"value": 0, "script_pub_key": "00"},
+                {
+                    "value": 42,
+                    "script_pub_key": "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac",
+                },
+            ],
+            "segwit": False,
+        }
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", fake_get_decoded_transaction)
+    assert original_get_vin_info(
+        {"hash": COMMIT_TXID, "n": 0, "info": None}, prevout=(FUNDING_TXID, 3)
+    ) == (42, "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac", False)
+    assert fetched["tx_hash"] == FUNDING_TXID
+
+
+def test_get_vin_info_prefers_the_override_over_a_stale_info(monkeypatch):
+    """An override only exists when the deserializer failed to resolve the reveal
+    as a whole -- and in that state it recorded no `commit_parent_txid`, so any
+    `info` it *did* return was computed at the input's own output index instead
+    of the commit parent's. A node whose RPC succeeded uses the commit parent's.
+    So the override must win over `info`, or that difference silently reaches
+    `source` and `fee`."""
+    fetched = {}
+
+    def fake_get_decoded_transaction(tx_hash, *args, **kwargs):
+        fetched["tx_hash"] = tx_hash
+        return {
+            "vout": [{"value": 0, "script_pub_key": "00"}] * 3
+            + [
+                {
+                    "value": 42,
+                    "script_pub_key": "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac",
+                }
+            ],
+            "segwit": False,
+        }
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", fake_get_decoded_transaction)
+    stale = {
+        "hash": FUNDING_TXID,
+        "n": 7,
+        "info": {"value": 7, "script_pub_key": "0011", "is_segwit": True},
+    }
+    assert original_get_vin_info(stale, prevout=(FUNDING_TXID, 3)) == (
+        42,
+        "76a914412463039be25be1bef6e6dbc5eb8eb18cf9569488ac",
+        False,
+    )
+    assert fetched["tx_hash"] == FUNDING_TXID
+
+
+def test_get_vin_info_uses_info_when_there_is_no_override(monkeypatch):
+    """The normal path: the deserializer resolved everything, so no override is
+    produced and no extra RPC round-trip happens."""
+
+    def fail(*args, **kwargs):
+        raise AssertionError("should not hit the backend")
+
+    monkeypatch.setattr(bitcoind, "get_decoded_transaction", fail)
+    vin = {
+        "hash": COMMIT_TXID,
+        "n": 0,
+        "info": {"value": 7, "script_pub_key": "0011", "is_segwit": True},
+    }
+    assert original_get_vin_info(vin) == (7, "0011", True)
+
+
 def test_get_vin_info_legacy_error_halts_during_catchup(monkeypatch):
     """During catch-up (a confirmed block) a failure to resolve the parent
     transaction must HALT (raise), never be swallowed into a silent skip.
@@ -729,8 +910,11 @@ def make_failing_post(fail_times, call_log, exc=requests.exceptions.ConnectionEr
             raise exc("backend unavailable")
         payload = json.loads(kwargs["data"])
         if isinstance(payload, list):
+            # Shaped like a real verbose `getrawtransaction` result: the batch
+            # path now checks it (see `check_raw_transaction_result`).
             return MockResponse(
-                200, [{"id": item["id"], "result": {"txid": "ok"}} for item in payload]
+                200,
+                [{"id": item["id"], "result": {"txid": "ok", "vout": []}} for item in payload],
             )
         return MockResponse(200, {"result": "ok"})
 
@@ -813,7 +997,7 @@ def test_batch_parser_retries_then_recovers(monkeypatch):
 
     result = bitcoind.getrawtransaction_batch(["deadbeef"], verbose=True, return_dict=True)
 
-    assert result == {"deadbeef": {"txid": "ok"}}
+    assert result == {"deadbeef": {"txid": "ok", "vout": []}}
     assert len(calls) == 3  # 2 transient failures + 1 success
 
 
@@ -964,3 +1148,173 @@ def test_rpc_accounting_retry_recursion_counts_once(monkeypatch, rpc_budget_rese
     bitcoind.begin_api_rpc_accounting(1)  # budget of 1: a double-count would trip it
     assert bitcoind.rpc("getblockcount", []) == "ok"
     assert bitcoind.end_api_rpc_accounting() == 1
+
+
+# ---------------------------------------------------------------------------
+# A malformed *backend response* is an infrastructure failure, never a data
+# error: `gettxinfo.MALFORMED_TRANSACTION_ERRORS` absorbs KeyError/TypeError as
+# "not a Counterparty transaction", so a KeyError escaping rpc_call would make
+# the node whose backend glitched silently drop a real transaction while healthy
+# nodes parse it. Every shape below must surface as BitcoindRPCError.
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    "method",
+    [
+        "return_empty",  # 200 body with neither "result" nor "error"
+        "return_none_result",  # {"result": null}
+        "return_error_without_message",  # error object with no "message"
+        "return_error_not_a_dict",  # error that is neither str nor dict
+    ],
+)
+def test_rpc_call_malformed_response_raises_backend_error(init_mock, method):
+    with pytest.raises(exceptions.BitcoindRPCError):
+        bitcoind.rpc(method, [])
+
+
+def test_rpc_call_malformed_response_is_outside_the_parser_safety_net(init_mock):
+    """The net must let these through; assert the type relationship directly so
+    a future widening of MALFORMED_TRANSACTION_ERRORS trips this test."""
+    with pytest.raises(exceptions.BitcoindRPCError) as exc_info:
+        bitcoind.rpc("return_empty", [])
+    assert not isinstance(exc_info.value, gettxinfo.MALFORMED_TRANSACTION_ERRORS)
+
+
+def test_rpc_call_batch_response_is_returned_unchanged(init_mock):
+    """A batch reply is a list and each element carries its own result/error;
+    getrawtransaction_batch() filters those itself."""
+    assert bitcoind.rpc("return_json_list_at_top_level", []) == [{"result": "ok", "id": 0}]
+
+
+# ---------------------------------------------------------------------------
+# A backend result that is *shaped* wrong. `rpc_call()` validates the JSON-RPC
+# envelope; nothing validated what the method put in `result`. A malformed
+# non-null result reached the native deserializer and failed there as a pyo3
+# `TypeError`/`ValueError` -- data-shaped errors that `get_vin_info_legacy()`
+# does not catch (it catches only `BitcoindRPCError`) and that
+# `gettxinfo.MALFORMED_TRANSACTION_ERRORS` then absorbs as "not a Counterparty
+# transaction". The node whose backend glitched would silently drop a confirmed
+# transaction that healthy nodes parse: the block 510556 fork class, one
+# boundary further out than the envelope checks.
+# ---------------------------------------------------------------------------
+def _post_returning(result):
+    def _post(*args, **kwargs):
+        payload = json.loads(kwargs["data"])
+        if isinstance(payload, list):
+            return MockResponse(200, [{"id": item["id"], "result": result} for item in payload])
+        return MockResponse(200, {"result": result})
+
+    return _post
+
+
+@pytest.mark.parametrize(
+    "bad_result", [{"txid": "ok"}, 12345, ["00"], True], ids=["dict", "int", "list", "bool"]
+)
+def test_getrawtransaction_rejects_a_malformed_result(monkeypatch, bad_result):
+    bitcoind.getrawtransaction.cache_clear()
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    monkeypatch.setattr("requests.post", _post_returning(bad_result))
+
+    with pytest.raises(exceptions.BitcoindRPCError, match="Malformed"):
+        bitcoind.getrawtransaction("dd" * 32)
+    bitcoind.getrawtransaction.cache_clear()
+
+
+def test_getrawtransaction_rejects_a_verbose_result_without_vout(monkeypatch):
+    bitcoind.getrawtransaction.cache_clear()
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    monkeypatch.setattr("requests.post", _post_returning({"txid": "ok"}))
+
+    with pytest.raises(exceptions.BitcoindRPCError, match="Malformed verbose"):
+        bitcoind.getrawtransaction("dd" * 32, True)
+    bitcoind.getrawtransaction.cache_clear()
+
+
+def test_a_malformed_result_does_not_poison_the_cache(monkeypatch):
+    """The check runs before the value is cached, so one bad answer cannot make
+    every later lookup of that hash fail for the life of the process."""
+    bitcoind.getrawtransaction.cache_clear()
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    tx_hash = "ee" * 32
+
+    monkeypatch.setattr("requests.post", _post_returning({"txid": "ok"}))
+    with pytest.raises(exceptions.BitcoindRPCError):
+        bitcoind.getrawtransaction(tx_hash)
+
+    monkeypatch.setattr("requests.post", _post_returning("0100"))
+    assert bitcoind.getrawtransaction(tx_hash) == "0100"
+    bitcoind.getrawtransaction.cache_clear()
+
+
+def test_getrawtransaction_batch_rejects_a_malformed_member(monkeypatch):
+    monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
+    monkeypatch.setattr("requests.post", _post_returning("not-a-dict"))
+
+    with pytest.raises(exceptions.BitcoindRPCError, match="Malformed verbose"):
+        bitcoind.getrawtransaction_batch(["dd" * 32], verbose=True, return_dict=True)
+
+
+@pytest.mark.parametrize("raw_tx", ["zzzz", "", "00"], ids=["not_hex", "empty", "truncated"])
+def test_get_decoded_transaction_reports_a_decode_failure_as_infrastructure(monkeypatch, raw_tx):
+    """`raw_tx` is what the backend answered, not bytes from the block being
+    parsed, so failing to decode it is an infrastructure failure. Left as the
+    deserializer's `ValueError` it would reach the malformed-child net and drop
+    a confirmed transaction on this node alone."""
+    monkeypatch.setattr(bitcoind, "getrawtransaction", lambda *a, **k: raw_tx)
+    bitcoind.TRANSACTIONS_CACHE.clear()
+
+    with pytest.raises(exceptions.BitcoindRPCError, match="Could not deserialize"):
+        bitcoind.get_decoded_transaction("ff" * 32, block_index=1)
+
+
+def test_a_backend_decode_failure_halts_vin_resolution_during_catchup(monkeypatch):
+    """End of the chain: `get_vin_info_legacy()` catches `BitcoindRPCError` and
+    applies the usual policy -- halt while parsing a confirmed block rather than
+    let the transaction be silently reclassified."""
+    monkeypatch.setattr(bitcoind, "getrawtransaction", lambda *a, **k: "zzzz")
+    monkeypatch.setattr(bitcoind.CurrentState, "parsing_mempool", lambda self: False)
+    monkeypatch.setattr(bitcoind.CurrentState, "stopping", lambda self: False)
+    bitcoind.TRANSACTIONS_CACHE.clear()
+
+    with pytest.raises(exceptions.BitcoindRPCError, match="Refusing to silently skip"):
+        bitcoind.get_vin_info_legacy({"hash": "ff" * 32, "n": 0})
+
+
+# ---------------------------------------------------------------------------
+# `is_segwit` on the Python fallback must be computed the way the Rust fetcher
+# computes it. `script.is_segwit_output()` disassembles the script, so it raised
+# `DecodeError` on an empty scriptPubKey -- which `get_tx_info()` turns into "not
+# a Counterparty transaction" -- where the Rust side simply reports non-witness.
+# ---------------------------------------------------------------------------
+def test_empty_prevout_script_is_non_witness_not_a_decode_error(monkeypatch):
+    monkeypatch.setattr(
+        bitcoind,
+        "get_decoded_transaction",
+        lambda *a, **k: {"vout": [{"value": 5, "script_pub_key": b""}], "segwit": False},
+    )
+    monkeypatch.setattr(bitcoind.protocol, "enabled", lambda name, **k: name == "fix_is_segwit")
+
+    assert bitcoind.get_vin_info_legacy({"hash": COMMIT_TXID, "n": 0}) == (5, b"", False)
+
+
+@pytest.mark.parametrize(
+    ("script_pub_key", "expected"),
+    [
+        (b"", False),
+        (b"\x00\x14" + b"\x11" * 20, True),  # P2WPKH
+        (b"\x00\x20" + b"\x11" * 32, True),  # P2WSH
+        (b"\x51\x20" + b"\x11" * 32, True),  # P2TR
+        (b"\x52\x20" + b"\x11" * 32, True),  # witness v2: "UNKNOWN" to get_output_type
+        (b"\x60\x02\x11\x11", True),  # witness v16, minimum length
+        (b"\x51\x28" + b"\x11" * 40, True),  # maximum length
+        (b"\x51\x29" + b"\x11" * 41, False),  # one byte too long
+        (b"\x00\x01\x11", False),  # too short for a witness program
+        (b"\x00\x14" + b"\x11" * 19, False),  # push length does not match
+        (b"\x50\x20" + b"\x11" * 32, False),  # OP_RESERVED is not a witness version
+        (b"\x76\xa9\x14" + b"\x11" * 20 + b"\x88\xac", False),  # P2PKH
+    ],
+)
+def test_is_witness_program_matches_rust_bitcoin(script_pub_key, expected):
+    """Byte-for-byte against rust-bitcoin 0.32's `Script::witness_version()`,
+    which is what `is_witness_program()` calls in `indexer/bitcoin_client.rs`."""
+    assert script.is_witness_program(script_pub_key) is expected
+    assert script.is_witness_program(script_pub_key.hex()) is expected

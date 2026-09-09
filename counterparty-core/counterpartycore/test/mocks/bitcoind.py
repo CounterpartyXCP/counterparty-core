@@ -53,7 +53,12 @@ class BlockchainMock(metaclass=helpers.SingletonMeta):
             }
         ]
 
-    def get_vin_info(self, vin):
+    def get_vin_info(self, vin, prevout=None):
+        # `prevout` is the (txid, output index) an inscription reveal transaction
+        # resolves to instead of its own prevout; the mock keys everything off
+        # the txid, so only that half matters here.
+        if prevout is not None:
+            vin = {"hash": prevout[0], "n": prevout[1]}
         if vin["hash"] in self.source_by_txid:
             source = self.source_by_txid[vin["hash"]]
         elif vin["hash"] == "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff":
@@ -159,11 +164,20 @@ def list_unspent(source, allow_unconfirmed_inputs=True):
     return BlockchainMock().list_unspent(source, allow_unconfirmed_inputs)
 
 
-def get_vin_info(vin, no_retry=False):
+def get_vin_info(vin, no_retry=False, prevout=None):
     try:
-        return BlockchainMock().get_vin_info(vin)
+        return BlockchainMock().get_vin_info(vin, prevout=prevout)
     except KeyError as e:
         raise exceptions.DecodeError("vin not found") from e
+
+
+def get_reveal_prevouts(decoded_tx, no_retry=False):
+    # The real implementation walks one hop back through the commit transaction
+    # to find what funded it. This mock resolves sources from a flat
+    # `source_by_txid` map and models no commit/parent chain, so there is nothing
+    # to override; returning None makes inputs resolve normally, as before. The
+    # two-hop rewrite itself is covered in test/units/backend/bitcoind_test.py.
+    return None
 
 
 def get_utxo_address_and_value(utxo, no_retry=False):
@@ -228,6 +242,7 @@ def monkeymodule():
 
 original_is_valid_der = parser.gettxinfo.is_valid_der
 original_get_vin_info = backend.bitcoind.get_vin_info
+original_get_reveal_prevouts = backend.bitcoind.get_reveal_prevouts
 
 
 @pytest.fixture(scope="session")
@@ -238,6 +253,7 @@ def bitcoind_mock(monkeymodule):
     monkeymodule.setattr(f"{bitcoind_module}.list_unspent", list_unspent)
     monkeymodule.setattr(f"{bitcoind_module}.satoshis_per_vbyte", satoshis_per_vbyte)
     monkeymodule.setattr(f"{bitcoind_module}.get_vin_info", get_vin_info)
+    monkeymodule.setattr(f"{bitcoind_module}.get_reveal_prevouts", get_reveal_prevouts)
     monkeymodule.setattr(f"{bitcoind_module}.convert_to_psbt", lambda x: x)
     monkeymodule.setattr(
         f"{bitcoind_module}.get_utxo_address_and_value", get_utxo_address_and_value

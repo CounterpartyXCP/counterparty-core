@@ -7,6 +7,7 @@ import time
 from yoyo.migrations import topological_sort
 
 from counterpartycore.lib import config
+from counterpartycore.lib.api import addressevents, dbstatus, staterollback
 from counterpartycore.lib.cli import log
 from counterpartycore.lib.utils import database
 
@@ -35,6 +36,9 @@ MIGRATIONS_AFTER_ROLLBACK = [
     "0013.add_performance_indexes",
     "0014.add_pool_consolidated_tables",
     "0015.add_dispenser_origin_index",
+    # 0016 indexes tables that 0006 drops and recreates, so it must be
+    # re-applied with them.
+    "0016.add_rollback_block_index_indexes",
 ]
 
 ROLLBACKABLE_TABLES = [
@@ -73,21 +77,40 @@ def rollback_migration(state_db, migration_id):
     module.rollback(state_db)
 
 
-def rollback_migrations(state_db, migration_ids):
-    for migration_id in reversed(migration_ids):
-        logger.debug("Rolling back migration `%s`...", migration_id)
-        rollback_migration(state_db, migration_id)
+def rollback_migrations(state_db, migration_ids, progress=None, offset=0):
+    for index, migration_id in enumerate(reversed(migration_ids)):
+        _run_migration_step(
+            state_db, rollback_migration, "Rolling back", migration_id, progress, offset + index
+        )
 
 
-def apply_migrations(state_db, migration_ids):
-    for migration_id in migration_ids:
-        logger.debug("Applying migration `%s`...", migration_id)
-        apply_migration(state_db, migration_id)
+def apply_migrations(state_db, migration_ids, progress=None, offset=0):
+    for index, migration_id in enumerate(migration_ids):
+        _run_migration_step(
+            state_db, apply_migration, "Applying", migration_id, progress, offset + index
+        )
 
 
-def reapply_migrations(state_db, migration_ids):
-    rollback_migrations(state_db, migration_ids)
-    apply_migrations(state_db, migration_ids)
+def _run_migration_step(state_db, run, verb, migration_id, progress, index):
+    """Run one migration, reporting it to the operator and to the health probes.
+
+    Reported at INFO, not DEBUG: these steps are what a State DB rebuild
+    actually spends its tens of minutes on, and their absence from the log is
+    why the 33-minute rebuild in #3485 was indistinguishable from a hang.
+    """
+    if progress is not None:
+        progress.step(f"{verb.lower()} `{migration_id}`", index + 1)
+    logger.info("%s migration `%s`...", verb, migration_id)
+    start_time = time.time()
+    run(state_db, migration_id)
+    logger.info("%s migration `%s` in %.2f seconds", verb, migration_id, time.time() - start_time)
+
+
+def reapply_migrations(state_db, migration_ids, progress=None):
+    # Each migration is dropped and re-applied, hence 2 * len(migration_ids)
+    # reportable steps.
+    rollback_migrations(state_db, migration_ids, progress=progress)
+    apply_migrations(state_db, migration_ids, progress=progress, offset=len(migration_ids))
 
 
 def rollback_tables(state_db, block_index):
@@ -116,16 +139,27 @@ def build_state_db():
     # migration 0010). Make sure the Ledger DB is fully migrated before
     # building the State DB so this command works against bootstrap snapshots
     # that predate the latest Ledger DB migrations.
-    with log.Spinner("Applying Ledger DB migrations"):
-        database.apply_outstanding_migration(config.DATABASE, config.LEDGER_DB_MIGRATIONS_DIR)
+    # Published for the health probes: this runs before the API listener exists,
+    # so ``rebuilding`` is the only thing that distinguishes a pod that is busy
+    # from one that is wedged (see ``api/dbstatus.py``).
+    with dbstatus.rebuilding("build", "applying Ledger DB migrations") as progress:
+        with log.Spinner("Applying Ledger DB migrations"):
+            database.apply_outstanding_migration(config.DATABASE, config.LEDGER_DB_MIGRATIONS_DIR)
 
-    with log.Spinner("Applying migrations"):
-        database.apply_outstanding_migration(config.STATE_DATABASE, config.STATE_DB_MIGRATIONS_DIR)
+        progress.step("applying State DB migrations")
+        with log.Spinner("Applying migrations"):
+            database.apply_outstanding_migration(
+                config.STATE_DATABASE, config.STATE_DB_MIGRATIONS_DIR
+            )
 
-    with log.Spinner("Vacuuming State DB..."):
-        state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
-        database.vacuum(state_db)
-        state_db.close()
+        progress.step("vacuuming")
+        with log.Spinner("Vacuuming State DB..."):
+            state_db = database.get_db_connection(config.STATE_DATABASE, read_only=False)
+            database.vacuum(state_db)
+            # Every table was just derived from the Ledger DB, so the invariants
+            # the incremental rollback relies on hold (see ``staterollback``).
+            staterollback.mark_ready(state_db)
+            state_db.close()
 
     logger.info("State DB built in %.2f seconds", time.time() - start_time)
 
@@ -174,18 +208,158 @@ def record_balances_copied_block(state_db):
         )
 
 
+def backfill_address_events(state_db):
+    """Re-derive the ``address_events`` rows the migration re-apply left behind.
+
+    ``MIGRATIONS_AFTER_ROLLBACK`` deliberately omits
+    ``0001.create_and_populate_address_events``: re-applying it would drop the
+    whole table and rebuild it from ``ledger_db.messages``, which loses the
+    UTXO-owner aliases that only the runtime path
+    (``addressevents.update_address_events``) adds, for any UTXO that no longer
+    holds a balance.
+
+    But ``0002`` *does* repopulate ``parsed_events`` from the entire Ledger
+    history, so the replay cursor lands on the Ledger tip. Anything the State
+    DB had not parsed yet -- and, after a rollback, everything
+    ``rollback_tables`` just deleted -- is then declared parsed while its
+    address associations are missing, and ``get_next_event_to_parse()`` never
+    comes back for it: ``/v2/addresses/<address>/events`` and ``/credits``
+    silently omit confirmed history until the State DB is rebuilt from scratch.
+
+    So close the gap here instead. Every address-bearing Ledger event with no
+    association at all is re-derived through the same resolver the watcher
+    uses -- which also repairs the holes older releases' refreshes left behind,
+    not just the one this run would have opened. Events that already have
+    associations are left alone, and that is what keeps this from double
+    counting: ``rollback_tables`` deletes whole blocks, so an event either kept
+    all of its rows or lost all of them.
+    """
+    start_time = time.time()
+    cursor = state_db.cursor()
+
+    already_attached = (
+        cursor.execute(
+            "SELECT COUNT(*) AS count FROM pragma_database_list WHERE name = ?", ("ledger_db",)
+        ).fetchone()["count"]
+        > 0
+    )
+    if not already_attached:
+        cursor.execute("ATTACH DATABASE ? AS ledger_db", (config.DATABASE,))
+
+    event_names = list(addressevents.EVENTS_ADDRESS_FIELDS.keys())
+    placeholders = ", ".join(["?"] * len(event_names))
+
+    # Materialised first, and deliberately not streamed straight into the
+    # insert loop: SQLite leaves the result of a query undefined if the table
+    # it is reading -- here `address_events`, through the `NOT EXISTS` probe --
+    # is written to while the query is still open.
+    cursor.execute("DROP TABLE IF EXISTS temp.missing_address_events")
+    cursor.execute(
+        f"""
+        CREATE TEMPORARY TABLE missing_address_events AS
+        SELECT message_index FROM ledger_db.messages
+        WHERE event IN ({placeholders})
+          AND NOT EXISTS (
+              SELECT 1 FROM address_events WHERE event_index = messages.message_index
+          )
+        """,  # noqa S608 # nosec B608
+        event_names,
+    )
+    missing = cursor.execute(
+        "SELECT COUNT(*) AS count FROM temp.missing_address_events"
+    ).fetchone()["count"]
+
+    if missing > 0:
+        logger.info("Backfilling `address_events` for %s events...", missing)
+        backfill_cursor = state_db.cursor()
+        for event in backfill_cursor.execute("""
+            SELECT m.event, m.bindings, m.message_index, m.block_index
+            FROM temp.missing_address_events AS missed
+            JOIN ledger_db.messages AS m ON m.message_index = missed.message_index
+            ORDER BY m.message_index
+        """):
+            addressevents.update_address_events(state_db, event)
+        backfill_cursor.close()
+
+    cursor.execute("DROP TABLE temp.missing_address_events")
+    if not already_attached:
+        cursor.execute("DETACH DATABASE ledger_db")
+    cursor.close()
+
+    logger.info(
+        "Backfilled `address_events` for %s events in %.2f seconds",
+        missing,
+        time.time() - start_time,
+    )
+
+
 def rollback_state_db(state_db, block_index):
+    """Roll the State DB back to ``block_index - 1``.
+
+    Prefers the incremental path (:mod:`counterpartycore.lib.api.staterollback`),
+    whose cost is proportional to the number of rows the rolled back blocks
+    touched. Falls back to :func:`full_rollback_state_db` -- which re-derives
+    every table from the entire ledger history -- for a deep rollback, for a
+    State DB predating the invariants the incremental path relies on, and if the
+    incremental path raises for any reason at all.
+
+    The ``UPGRADE_ACTIONS`` rollbacks do not come through here: they call
+    :func:`full_rollback_state_db` directly (see
+    ``apiserver.execute_upgrade_actions``), because a release that ships one may
+    also have changed the derivation rules themselves, and only the full rebuild
+    re-applies those.
+    """
+    reason = staterollback.rollback_reason(state_db, block_index)
+    if reason is None:
+        try:
+            staterollback.rollback_state_db(state_db, block_index)
+            return
+        except Exception as e:  # pylint: disable=broad-except
+            # The incremental path is an optimization; the full rebuild is the
+            # ground truth and is always correct. Anything unexpected -- a State
+            # DB whose schema the projection does not fit, a SQL error in a
+            # table this release has never seen -- must degrade to the slow path
+            # rather than propagate: the caller is `apiwatcher.check_reorg()`,
+            # running on the watcher thread, which has no handler for it and
+            # would die, leaving the State DB frozen behind the Ledger DB.
+            logger.warning(
+                "Incremental State DB rollback failed (%s); falling back to the full rebuild.",
+                e,
+                exc_info=True,
+            )
+    elif reason == staterollback.NOTHING_TO_ROLL_BACK:
+        # Re-deriving every table from the entire ledger history to undo nothing
+        # would be the most expensive no-op available. The watcher replays
+        # forward from where the State DB actually is.
+        logger.info("State DB is already below block index %s; nothing to roll back.", block_index)
+        return
+    else:
+        logger.info("Full State DB rebuild required: %s.", reason)
+    full_rollback_state_db(state_db, block_index)
+
+
+def full_rollback_state_db(state_db, block_index):
     logger.info("Rolling back State DB to block index %s...", block_index)
     start_time = time.time()
 
-    with state_db:
-        with log.Spinner("Rolling back State DB tables..."):
-            rollback_tables(state_db, block_index)
-        with log.Spinner("Re-applying migrations..."):
-            reapply_migrations(state_db, MIGRATIONS_AFTER_ROLLBACK)
-        # Record the ledger_db block index to prevent double-counting of balances
-        # during catch-up (see record_balances_copied_block docstring for details)
-        record_balances_copied_block(state_db)
+    with dbstatus.rebuilding(
+        "rollback", "pruning rolled back rows", total=2 * len(MIGRATIONS_AFTER_ROLLBACK) + 1
+    ) as progress:
+        with state_db:
+            with log.Spinner("Rolling back State DB tables..."):
+                rollback_tables(state_db, block_index)
+            with log.Spinner("Re-applying migrations..."):
+                reapply_migrations(state_db, MIGRATIONS_AFTER_ROLLBACK, progress=progress)
+            # `rollback_tables` deleted the address associations from
+            # `block_index` on and the re-apply above moved the replay cursor
+            # to the Ledger tip, so nothing would ever replay them.
+            progress.step("backfilling `address_events`", 2 * len(MIGRATIONS_AFTER_ROLLBACK) + 1)
+            with log.Spinner("Backfilling address events..."):
+                backfill_address_events(state_db)
+            # Record the ledger_db block index to prevent double-counting of balances
+            # during catch-up (see record_balances_copied_block docstring for details)
+            record_balances_copied_block(state_db)
+            staterollback.mark_ready(state_db)
 
     logger.info("State DB rolled back in %.2f seconds", time.time() - start_time)
 
@@ -194,11 +368,21 @@ def refresh_state_db(state_db):
     logger.info("Rebuilding non rollbackable tables in State DB...")
     start_time = time.time()
 
-    with state_db:
-        with log.Spinner("Re-applying migrations..."):
-            reapply_migrations(state_db, MIGRATIONS_AFTER_ROLLBACK)
-        # Record the ledger_db block index to prevent double-counting of balances
-        # during catch-up (see record_balances_copied_block docstring for details)
-        record_balances_copied_block(state_db)
+    with dbstatus.rebuilding(
+        "refresh", "re-applying migrations", total=2 * len(MIGRATIONS_AFTER_ROLLBACK) + 1
+    ) as progress:
+        with state_db:
+            with log.Spinner("Re-applying migrations..."):
+                reapply_migrations(state_db, MIGRATIONS_AFTER_ROLLBACK, progress=progress)
+            # The re-apply above moved the replay cursor to the Ledger tip; any
+            # event the State DB had not parsed yet is now declared parsed, so
+            # its address associations have to be derived here or never.
+            progress.step("backfilling `address_events`", 2 * len(MIGRATIONS_AFTER_ROLLBACK) + 1)
+            with log.Spinner("Backfilling address events..."):
+                backfill_address_events(state_db)
+            # Record the ledger_db block index to prevent double-counting of balances
+            # during catch-up (see record_balances_copied_block docstring for details)
+            record_balances_copied_block(state_db)
+            staterollback.mark_ready(state_db)
 
     logger.info("State DB refreshed in %.2f seconds", time.time() - start_time)

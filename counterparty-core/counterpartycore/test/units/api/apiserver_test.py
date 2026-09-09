@@ -1,14 +1,105 @@
+import inspect
 import json
-from unittest.mock import Mock
+import os
+import threading
+import time
+from unittest.mock import Mock, call, patch
 
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.api import apiserver, apiwatcher, blockcache, composer
+from counterpartycore.lib.api import (
+    apiserver,
+    apiwatcher,
+    blockcache,
+    compose,
+    composer,
+    queries,
+)
 from counterpartycore.lib.api.routes import ALL_ROUTES, ROUTES, get_routes
 from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.lib.parser import blocks
 from counterpartycore.lib.utils import hashcodec, helpers
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
+
+
+def test_parent_process_checker_stops_wsgi_inside_the_shared_budget():
+    """The checker is the shutdown trigger on the usual path, so it must arm and
+    spend the same budget the `finally` block later draws from -- not its own."""
+    budget = helpers.ShutdownBudget(total=8)
+    stop_event = threading.Event()
+    wsgi_server = Mock()
+    stop_event.set()
+
+    checker = apiserver.ParentProcessChecker(wsgi_server, stop_event, os.getpid(), budget)
+    checker.run()
+
+    deadline = wsgi_server.stop.call_args.kwargs["deadline"]
+    assert deadline is not None
+    assert deadline <= budget.arm()
+    # The budget was armed by the checker, not left for the finally block to start over.
+    assert budget.arm() - time.monotonic() < 8
+
+
+def test_parent_process_checker_wakes_on_stop_event_without_waiting_out_the_poll():
+    """`stop_event` is set before the parent signals; sleeping through the poll
+    interval instead of waiting on it spends a second of the ten-second budget
+    doing nothing."""
+    budget = helpers.ShutdownBudget(total=8)
+    stop_event = threading.Event()
+    wsgi_server = Mock()
+
+    checker = apiserver.ParentProcessChecker(wsgi_server, stop_event, os.getpid(), budget)
+    checker.start()
+    try:
+        started_at = time.monotonic()
+        stop_event.set()
+        checker.join(timeout=5)
+        elapsed = time.monotonic() - started_at
+    finally:
+        stop_event.set()
+
+    assert not checker.is_alive()
+    assert elapsed < 0.5
+    wsgi_server.stop.assert_called_once()
+
+
+def test_api_server_stop_waits_for_graceful_exit():
+    server = apiserver.APIServer(Mock(), Mock())
+    server.process = Mock()
+    server.process.pid = 123
+    server.process.is_alive.side_effect = [True, False, False]
+
+    with patch.object(apiserver.os, "kill") as kill:
+        server.stop()
+
+    kill.assert_called_once_with(123, apiserver.signal.SIGTERM)
+    server.process.join.assert_called_once_with(timeout=10)
+    server.process.kill.assert_not_called()
+
+
+def test_api_server_stop_has_bounded_forced_kill():
+    server = apiserver.APIServer(Mock(), Mock())
+    server.process = Mock()
+    server.process.pid = 123
+    server.process.is_alive.side_effect = [True, True, False]
+
+    with patch.object(apiserver.os, "kill"):
+        server.stop()
+
+    assert server.process.join.call_args_list == [call(timeout=10), call(timeout=5)]
+    server.process.kill.assert_called_once_with()
+
+
+def test_api_server_stop_reports_process_that_survives_kill():
+    server = apiserver.APIServer(Mock(), Mock())
+    server.process = Mock()
+    server.process.pid = 123
+    server.process.is_alive.side_effect = [True, True, True]
+
+    with patch.object(apiserver.os, "kill"), patch.object(apiserver.logger, "critical") as critical:
+        server.stop()
+
+    critical.assert_called_once()
 
 
 def test_apiserver_root(apiv2_client, current_block_index):
@@ -47,6 +138,67 @@ def test_apiserver_openapi_spec(apiv2_client):
         "openapi.json contains regtest (bcrt1) data; scrub it with "
         "genapidoc.convert_doc_to_mainnet()"
     )
+
+
+def test_openapi_file_is_available_to_the_running_package():
+    assert os.path.isfile(apiserver.OPENAPI_FILEPATH)
+    assert apiserver.OPENAPI_FILEPATH.endswith("openapi.json")
+
+
+def test_openapi_documents_the_composition_conflict():
+    """Regression for #3507.
+
+    `_compose_with_pending_asset_guard` raises `ComposeConflictError`, which
+    `handle_route` turns into a 409. The generator only ever sees the happy
+    path, so the declaration comes from `genapidoc.ERROR_RESPONSES`; without
+    it the contract advertised only 200 and schema-driven clients had no way
+    to discover the response.
+    """
+    with open(apiserver.OPENAPI_FILEPATH, "r", encoding="utf-8") as f:
+        spec = json.load(f)
+
+    guarded = {
+        "compose_issuance": "/v2/addresses/{address}/compose/issuance",
+        "compose_fairminter": "/v2/addresses/{address}/compose/fairminter",
+    }
+    declared = set()
+    for path, operations in spec["paths"].items():
+        for operation in operations.values():
+            if "409" in operation.get("responses", {}):
+                declared.add(operation["operationId"])
+                assert path == guarded[operation["operationId"]]
+                schema = operation["responses"]["409"]["content"]["application/json"]["schema"]
+                assert schema["required"] == ["error"]
+                assert schema["properties"]["error"] == {"type": "string"}
+
+    # Exactly the guarded operations: `compose_fairmint` and the other compose
+    # routes do not call the guard and must not advertise a 409.
+    assert declared == set(guarded)
+
+
+def test_compose_conflict_guard_callers_are_documented():
+    """The 409 declarations are keyed by handler name; keep them in step with
+    the handlers that can actually raise the conflict."""
+    source = inspect.getsource(compose)
+    callers = set()
+    current = None
+    for line in source.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("def "):
+            current = stripped[len("def ") :].split("(")[0]
+        if "_compose_with_pending_asset_guard(" in stripped and not stripped.startswith("def "):
+            callers.add(current)
+    assert callers == {"compose_issuance", "compose_fairminter"}
+
+
+def test_openapi_prefers_the_packaged_resource(monkeypatch, tmp_path):
+    package_root = tmp_path / "counterpartycore"
+    package_root.mkdir()
+    packaged_spec = package_root / "openapi.json"
+    packaged_spec.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(apiserver.resources, "files", lambda _package: package_root)
+
+    assert apiserver.get_openapi_filepath() == os.fspath(packaged_spec)
 
 
 def _sort_arg(route):
@@ -112,6 +264,12 @@ def test_routes_do_not_expose_unsupported_sort():
     # get_balances_by_addresses builds its own SQL and cannot honour `sort`
     # (its result is grouped/aggregated), so the route must not expose it at all.
     assert _sort_arg("/v2/addresses/balances") is None
+    # The address-history sends routes resolve each address OR branch through
+    # its own index and take a bounded top-K slice per branch. An arbitrary
+    # global sort cannot be bounded that way, so `sort` is not offered: a
+    # documented-but-always-rejected parameter would make the spec lie.
+    assert _sort_arg("/v2/addresses/<address>/sends") is None
+    assert _sort_arg("/v2/addresses/<address>/sends/<asset>") is None
 
 
 def get_route_args(route, name):
@@ -502,8 +660,20 @@ def test_check_database_version(state_db, ledger_db, test_helpers, caplog, monke
     def refresh_mock(db):
         apiserver.logger.info("Refreshing state database")
 
-    monkeypatch.setattr("counterpartycore.lib.api.dbbuilder.rollback_state_db", rollback_mock)
+    # `full_rollback_state_db`, not `rollback_state_db`: an upgrade action must
+    # never take the incremental fast path (the derivation rules themselves may
+    # have changed in the release that ships the action).
+    monkeypatch.setattr("counterpartycore.lib.api.dbbuilder.full_rollback_state_db", rollback_mock)
     monkeypatch.setattr("counterpartycore.lib.api.dbbuilder.refresh_state_db", refresh_mock)
+    # Guard the intent: if `execute_upgrade_actions` ever goes back through the
+    # dispatcher, this mock fires and the test fails loudly instead of silently
+    # running an incremental rollback.
+    monkeypatch.setattr(
+        "counterpartycore.lib.api.dbbuilder.rollback_state_db",
+        lambda db, block_index: pytest.fail(
+            "upgrade actions must call full_rollback_state_db, not the dispatcher"
+        ),
+    )
 
     with test_helpers.capture_log(
         caplog,
@@ -1213,6 +1383,25 @@ def test_limit_param_capped_to_api_limit_rows(apiv2_client, monkeypatch):
     response = apiv2_client.get("/v2/transactions?limit=99999")
     assert response.status_code == 200
     assert len(response.json["result"]) <= 5
+
+
+def test_indexed_address_history_cost_guards_return_400(apiv2_client, defaults):
+    address = defaults["addresses"][0]
+    deep_offset = queries.ADDRESS_HISTORY_MAX_OFFSET + 1
+
+    offset_response = apiv2_client.get(f"/v2/addresses/{address}/credits?offset={deep_offset}")
+    negative_response = apiv2_client.get(f"/v2/addresses/{address}/credits?offset=-1")
+    sort_response = apiv2_client.get(f"/v2/addresses/{address}/sends?sort=quantity:asc")
+
+    assert offset_response.status_code == 400
+    assert "offset must be between" in offset_response.json["error"]
+    assert negative_response.status_code == 400
+    assert "offset must be between" in negative_response.json["error"]
+    # `sort` was withdrawn from these routes rather than accepted and rejected,
+    # so it is now an unknown parameter -- still a 400, and the spec no longer
+    # advertises it. See `test_routes_do_not_expose_unsupported_sort`.
+    assert sort_response.status_code == 400
+    assert "Unrecognized parameter(s): sort" in sort_response.json["error"]
 
 
 def test_api_cache_size_bounds_block_cache(apiv2_client, monkeypatch):

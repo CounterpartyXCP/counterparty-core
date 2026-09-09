@@ -6,7 +6,7 @@ import logging
 import time
 
 from counterpartycore.lib import config
-from counterpartycore.lib.api.apiwatcher import EVENTS_ADDRESS_FIELDS
+from counterpartycore.lib.api.addressevents import EVENTS_ADDRESS_FIELDS
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)

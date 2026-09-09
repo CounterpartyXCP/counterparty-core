@@ -4,7 +4,7 @@ import json
 import counterpartycore.lib.parser.mempool as mempool_module
 import pytest
 from counterpartycore.lib import config
-from counterpartycore.lib.api import apiwatcher
+from counterpartycore.lib.api import addressevents
 
 
 @pytest.mark.parametrize(
@@ -78,9 +78,9 @@ def test_parse_mempool_transactions_with_various_events(
     mock_ledger_blocks.return_value = None
 
     # Mock pour EVENTS_ADDRESS_FIELDS si l'événement est 'send'
-    original_events_address_fields = getattr(apiwatcher, "EVENTS_ADDRESS_FIELDS", {})
+    original_events_address_fields = getattr(addressevents, "EVENTS_ADDRESS_FIELDS", {})
     try:
-        apiwatcher.EVENTS_ADDRESS_FIELDS = {"send": ["source", "destination"]}
+        addressevents.EVENTS_ADDRESS_FIELDS = {"send": ["source", "destination"]}
 
         # Exécution de la fonction avec une transaction
         raw_tx_list = ["raw_tx_data"]
@@ -103,7 +103,7 @@ def test_parse_mempool_transactions_with_various_events(
         assert result == []
     finally:
         # Restaurer EVENTS_ADDRESS_FIELDS
-        apiwatcher.EVENTS_ADDRESS_FIELDS = original_events_address_fields
+        addressevents.EVENTS_ADDRESS_FIELDS = original_events_address_fields
 
 
 @pytest.mark.parametrize(
