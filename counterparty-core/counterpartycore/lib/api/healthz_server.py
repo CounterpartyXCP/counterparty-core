@@ -118,6 +118,7 @@ class HealthSampler(threading.Thread):
         backend_height_provider=None,
         block_time_provider=None,
         api_only_provider=None,
+        serving_provider=None,
     ):
         super().__init__(name="HealthSampler", daemon=True)
         self.dispatcher = dispatcher
@@ -159,6 +160,16 @@ class HealthSampler(threading.Thread):
         self._api_only_provider = api_only_provider or (
             lambda: bool(getattr(config, "API_ONLY", False))
         )
+        # The listener is started *before* State DB maintenance and WSGI
+        # construction, so that probes get an answer during the tens of minutes
+        # a mainnet rebuild takes (#3460). Readiness must therefore be told
+        # separately when the public API is actually able to serve: without it,
+        # the window between the end of maintenance and `wsgi_server.run()` --
+        # watcher startup, Flask app construction, binding the socket -- reports
+        # ready, and an orchestrator routes traffic to a pod that answers
+        # nothing. Defaults to "serving", so a sampler constructed without the
+        # lifecycle signal (the tests, and any embedder) behaves as before.
+        self._serving_provider = serving_provider or (lambda: True)
 
         self.stop_event = threading.Event()
         self._snapshot = HealthSnapshot(
@@ -264,6 +275,12 @@ class HealthSampler(threading.Thread):
         if rebuild is not None:
             caught_up, lag, ledger_reason = False, None, "rebuilding"
             backend_height, last_parsed = self._backend_height_provider(), None
+        elif not self._is_serving():
+            # Maintenance is over but the public API is not up yet. Liveness
+            # stays green -- the process is healthy and making progress -- while
+            # readiness keeps traffic away until the WSGI server is running.
+            caught_up, lag, ledger_reason = False, None, "starting"
+            backend_height, last_parsed = self._backend_height_provider(), None
         else:
             caught_up, lag, ledger_reason, backend_height, last_parsed = self._compute_caught_up(
                 now
@@ -295,6 +312,15 @@ class HealthSampler(threading.Thread):
             rebuild=rebuild,
         )
         self._maybe_log_worker_stats(now, workers, saturation_seconds)
+
+    def _is_serving(self):
+        try:
+            return bool(self._serving_provider())
+        except Exception as e:  # pylint: disable=broad-except
+            # A lifecycle signal that cannot be read is not evidence of
+            # readiness; keep shedding rather than guess.
+            logger.debug("healthz: could not read the serving state: %s", e)
+            return False
 
     def _sample_workers(self, now):
         if self.dispatcher is None:
@@ -546,11 +572,22 @@ class HealthCheckServer:
     a failure to bind must never reduce API availability (the legacy in-API ``/healthz`` remains).
     """
 
-    def __init__(self, host, port, dispatcher=None, saturation_grace=None, stop_event=None):
+    def __init__(
+        self,
+        host,
+        port,
+        dispatcher=None,
+        saturation_grace=None,
+        stop_event=None,
+        serving_provider=None,
+    ):
         self.host = host
         self.port = port
         self.dispatcher = dispatcher
         self.saturation_grace = saturation_grace
+        # Readiness stays false until this reports that the public API can
+        # serve requests; see `HealthSampler.__init__` (issue #3504).
+        self.serving_provider = serving_provider
         # stop_event is accepted for symmetry with the other server threads; the health server
         # is a daemon and is torn down explicitly via stop(), so it is not otherwise used.
         self.stop_event = stop_event
@@ -580,7 +617,9 @@ class HealthCheckServer:
         try:
             _instrument_dispatcher(self.dispatcher)
             self.sampler = HealthSampler(
-                dispatcher=self.dispatcher, saturation_grace=self.saturation_grace
+                dispatcher=self.dispatcher,
+                saturation_grace=self.saturation_grace,
+                serving_provider=self.serving_provider,
             )
             self.sampler.start()
 

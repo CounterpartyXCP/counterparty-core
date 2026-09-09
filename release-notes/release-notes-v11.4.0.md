@@ -24,11 +24,11 @@ The security fixes themselves are ungated and take effect as soon as you restart
 
 This release also performs a **one-time State DB refresh** on first start (`refresh_state_db`), automatically. It takes roughly as long as one of the old reorg rebuilds. There is no ledger reparse.
 
-The refresh is an optimization, not a correctness requirement: it pays the cost of the last full rebuild at a moment you control rather than unpredictably at your next reorg. A State DB that has not been through it is flagged as ineligible for the incremental path and simply takes the old full-rebuild route once, which then flags it as eligible. Nodes therefore converge on the fast path either way — a node upgraded with `--force` (which skips the version check, and so the refresh) is correct, just slower on its first reorg.
+The refresh also repairs the address-history holes described under **Complete address history after a refresh or a full rollback** below, which earlier releases' refreshes could leave behind. Otherwise it is an optimization, not a correctness requirement: it pays the cost of the last full rebuild at a moment you control rather than unpredictably at your next reorg. A State DB that has not been through it is flagged as ineligible for the incremental path and simply takes the old full-rebuild route once, which then flags it as eligible. Nodes therefore converge on the fast path either way — a node upgraded with `--force` (which skips the version check, and so the refresh) is correct, just slower on its first reorg.
 
 **Point your Kubernetes probes at the dedicated health listener before upgrading** (port `4002` on mainnet — `/healthz/live` for liveness, `/healthz/ready` for readiness), if you have not already since v11.3.0. During the refresh the pod reports `200` on liveness and `503 rebuilding` on readiness, so it stays out of rotation and is not restarted. A liveness probe still pointed at the API port would get a connection refusal for the whole refresh and kill the pod, and the next start would begin the work again from zero.
 
-`/healthz/ready` also gains a second new reason: it returns `503 watcher_stopped` from the moment the API watcher dies on an unexpected error, on every node including `--api-only` ones. Alerting that matches on the readiness `reason` field should learn `rebuilding` and `watcher_stopped` alongside the existing values. Liveness stays `200` in both cases.
+`/healthz/ready` also gains two new reasons: it returns `503 watcher_stopped` from the moment the API watcher dies on an unexpected error, on every node including `--api-only` ones, and `503 starting` until the public API is actually able to serve requests. Alerting that matches on the readiness `reason` field should learn `rebuilding`, `watcher_stopped` and `starting` alongside the existing values. Liveness stays `200` in all three cases.
 
 API consumers of the address history endpoints should check the **Address history endpoints** section below before upgrading: `/v2/addresses/<address>/sends` and `/sends/<asset>` no longer expose `sort`, `offset` is capped at 10,000 on those routes and on `/credits` and `/debits`, and `result_count` is now `null` on cursor pages rather than recomputed for each one. `openapi.json` has been updated to match.
 
@@ -178,9 +178,19 @@ The API watcher thread is what advances the State DB, and nothing restarts it. A
 
 Such a failure is now logged at `CRITICAL` with its traceback, and `/healthz/ready` returns `503` with `reason: "watcher_stopped"` from that moment. Previously the only symptom was the lag signal drifting past the ready threshold minutes later — and on an `--api-only` node, which does not compare itself to the backend tip, never at all. Liveness deliberately stays `200`: the process is internally alive, and the remedy is to shed traffic and page an operator, not to have Kubernetes kill a pod mid-request.
 
-## Packaged OpenAPI document (#3495)
+## Readiness waits for the public API (#3504)
+
+The dedicated health listener now starts before State DB maintenance, which is the whole point of it — but its readiness predicate had no notion of whether the public API had finished coming up. Between the end of maintenance and `wsgi_server.run()` — watcher startup, Flask app construction, binding the socket — a caught-up ledger was enough to report `200` on `/healthz/ready`, and on an `--api-only` node, which skips the backend-lag comparison entirely, readiness was green from the first sample onwards. An orchestrator could route traffic to a pod that answered nothing.
+
+Readiness now requires the API process to have reached the point where it serves requests, in both modes, and reports `503 starting` until then. Liveness is unchanged and stays `200` throughout, so a pod that is still coming up is still not killed.
+
+Routine Gunicorn worker retirement preserves the readiness of an otherwise healthy API instance.
+
+## Packaged OpenAPI document (#3495, #3505)
 
 The installed wheel now includes `openapi.json`. Previously `/v2/openapi.json` worked from a source checkout but returned `500` from the official container: the handler walked four directories upward from `site-packages`, where the repository-root file does not exist. The API now resolves the packaged resource and retains a source-tree fallback for editable development installs.
+
+The document is carried into both distributions by a Hatch build hook rather than a `force-include` of `../openapi.json`. That path exists in the repository but not in an extracted source distribution, which has no parent checkout — so `pip wheel` on a fresh sdist failed with `Forced include not found`, breaking the source-distribution channel. The sdist now contains the document, and the wheel build resolves it from whichever layout it is running in.
 
 ## Address history endpoints (#3489)
 
@@ -206,6 +216,12 @@ The check runs twice, because the mempool moves while a composition is being ass
 
 `validate=false` remains the explicit advanced-user override and skips both passes.
 
+## Complete address history after a refresh or a full rollback (#3503)
+
+A State DB refresh, and the full rebuild that a deep or ineligible rollback still falls back to, re-applies the migrations that re-derive the State DB from the Ledger DB. One of them, `0002`, repopulates `parsed_events` from the *entire* Ledger history, which moves the replay cursor to the Ledger tip. `address_events` is not among the tables it rebuilds — re-deriving it wholesale would be as expensive as a full State DB build and would drop the UTXO-owner aliases only the event stream records — so anything the State DB had not parsed yet, and after a rollback everything the prune had just deleted, was declared parsed with no address associations behind it. `get_next_event_to_parse()` never came back for it, and `/v2/addresses/<address>/events`, `/credits` and `/debits` returned `200` while silently omitting confirmed history, until the operator rebuilt the State DB from scratch.
+
+Both paths now backfill the missing associations before publishing the new cursor, through the same resolver the watcher uses. Only events that have no association at all are re-derived, so nothing is counted twice and existing rows — including the UTXO-owner aliases — are left alone. Because the repair is defined by what is missing rather than by what this run would have removed, the one-time v11.4.0 refresh also closes the equivalent holes left behind by earlier releases' refreshes. Ledger data and balances are untouched.
+
 ## State DB / Ledger DB consistency fixes (#3485)
 
 The differential tests above surfaced three ways in which a State DB maintained by the event stream drifted from one built from scratch. All three are fixed in `apiwatcher.update_balances()`, and the one-time refresh normalizes existing rows:
@@ -221,6 +237,8 @@ The differential tests above surfaced three ways in which a State DB maintained 
 
 ## Bugfixes
 
+- **Document the composition conflict in `openapi.json`** (#3507). `compose_issuance` and `compose_fairminter` can return the new `409`, but the generator only ever observes the happy path, so both operations advertised `200` alone and schema-driven consumers had no way to discover the response. The declaration now comes from the generator itself, so it survives regeneration, and it is added to those two operations only — the other compose routes do not go through the pending-asset guard.
+- **Pin the release under test in `docker-compose.yml`** (#3506). The Compose file still selected `v11.3.0` while `config.VERSION_STRING` was `11.4.0`, so the Docker integration's version substitution matched nothing and the scenario silently exercised whatever image the stale tag pointed at. The tag is updated, and the test now fails loudly if the Compose file does not pin the release it is testing.
 - **Fix a resource leak in snapshot signature verification** (#3492) in `bootstrap` / `prepare-bootstrap`. Every call to `verify_signature()` leaked one `gpg-agent` daemon and one temporary GnuPG home directory, because the cleanup added in f53a7443 was accidentally disabled in 301c37ac ("Fix bootstrap with custom url") — commented out as apparent leftover debugging. The agent is now terminated with `gpgconf --homedir <dir> --kill gpg-agent` before the directory is removed, which avoids the socket/lockfile race that removing a live agent's home directory would otherwise hit. Only the agent spawned by the call itself is terminated; other GnuPG daemons on the machine are unaffected, and a missing `gpgconf` can neither skip the removal nor mask the error that triggered it. Three regression tests now pin the cleanup, so it cannot be silently dropped again.
 
 # Credits

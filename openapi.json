@@ -16079,6 +16079,24 @@
                                 }
                             }
                         }
+                    },
+                    "409": {
+                        "description": "A parsed pending asset change conflicts with this composition.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "error"
+                                    ],
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -18296,6 +18314,24 @@
                                             "premint_quantity_normalized": "0.00000000"
                                         },
                                         "name": "fairminter"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "A parsed pending asset change conflicts with this composition.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "error"
+                                    ],
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
                                     }
                                 }
                             }

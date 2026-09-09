@@ -6,6 +6,7 @@ providers and a fake task dispatcher, and the HTTP layer is exercised against a 
 """
 
 import http.client
+import inspect
 import json
 import socket
 import threading
@@ -47,6 +48,7 @@ def make_sampler(
     block_time=None,
     api_only=False,
     saturation_grace=5,
+    serving=True,
 ):
     return HealthSampler(
         dispatcher=dispatcher,
@@ -55,6 +57,7 @@ def make_sampler(
         backend_height_provider=lambda: backend_height,
         block_time_provider=lambda: block_time,
         api_only_provider=lambda: api_only,
+        serving_provider=lambda: serving,
     )
 
 
@@ -104,6 +107,66 @@ def test_api_only_skips_lag_axis():
     assert snap.ready is True
     assert snap.reason is None
     assert snap.backend_height is None
+
+
+# --------------------------------------------------------------------------------------------
+# Sampler: service lifecycle axis (issue #3504)
+# --------------------------------------------------------------------------------------------
+
+
+def test_not_ready_before_the_public_api_serves():
+    # The listener starts before WSGI construction, so a caught-up ledger is
+    # not on its own evidence that requests can be answered.
+    sampler = make_sampler(backend_height=100, last_parsed=100, serving=False)
+    sampler._tick()
+    snap = sampler.current_snapshot()
+    assert snap.ready is False
+    assert snap.reason == "starting"
+
+
+def test_api_only_does_not_bypass_the_lifecycle_axis():
+    # `--api-only` skips the backend-lag comparison, not service initialization.
+    sampler = make_sampler(api_only=True, backend_height=0, last_parsed=999, serving=False)
+    sampler._tick()
+    snap = sampler.current_snapshot()
+    assert snap.ready is False
+    assert snap.reason == "starting"
+
+
+def test_ready_once_the_public_api_serves():
+    sampler = make_sampler(backend_height=100, last_parsed=100, serving=False)
+    sampler._tick()
+    assert sampler.current_snapshot().ready is False
+
+    sampler._serving_provider = lambda: True
+    sampler._tick()
+    assert sampler.current_snapshot().ready is True
+
+
+def test_unreadable_serving_signal_sheds():
+    def boom():
+        raise RuntimeError("shared value gone")
+
+    sampler = make_sampler(backend_height=100, last_parsed=100)
+    sampler._serving_provider = boom
+    sampler._tick()
+    assert sampler.current_snapshot().ready is False
+    assert sampler.current_snapshot().reason == "starting"
+
+
+def test_liveness_stays_available_while_starting():
+    # Early liveness is the whole point of starting the listener first: a probe
+    # must not kill a pod that is still coming up.
+    sampler = make_sampler(backend_height=100, last_parsed=100, serving=False)
+    sampler._tick()
+    fx = _HttpServerFixture(sampler)
+    try:
+        assert fx.get("/healthz/live")[0] == 200
+        code, body = fx.get("/healthz/ready")
+        assert code == 503
+        assert body["reason"] == "starting"
+    finally:
+        fx.close()
 
 
 # --------------------------------------------------------------------------------------------
@@ -364,6 +427,40 @@ def test_bind_failure_is_non_fatal():
         server.stop()  # also must not raise
     finally:
         sock.close()
+
+
+def test_server_accepts_the_apiserver_construction_kwargs():
+    """`run_apiserver` is the only caller and is not covered by the unit suite,
+    so nothing here would otherwise catch a keyword it passes that
+    `HealthCheckServer` does not accept -- the constructor raises inside the
+    API process and the node never becomes ready."""
+    signature = inspect.signature(HealthCheckServer.__init__)
+    assert {
+        "host",
+        "port",
+        "saturation_grace",
+        "stop_event",
+        "serving_provider",
+    } <= set(signature.parameters)
+
+
+def test_server_hands_the_serving_signal_to_its_sampler():
+    server = HealthCheckServer(
+        host="127.0.0.1",
+        port=0,
+        dispatcher=None,
+        saturation_grace=5,
+        serving_provider=lambda: False,
+    )
+    try:
+        server.start()
+        assert server.sampler is not None
+        server.sampler._tick()  # pylint: disable=protected-access
+        snap = server.sampler.current_snapshot()
+        assert snap.ready is False
+        assert snap.reason == "starting"
+    finally:
+        server.stop()
 
 
 def test_stop_reserves_budget_for_the_serve_thread(monkeypatch):
