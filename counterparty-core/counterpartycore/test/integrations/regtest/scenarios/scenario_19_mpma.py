@@ -1,5 +1,11 @@
 from binascii import hexlify
 
+# Taproot destinations for the `mpma_taproot_support` step below. The regtest wallet only hands
+# out bech32 and legacy addresses, and an MPMA destination is only ever credited in the ledger --
+# it never has to be spendable -- so these are literals rather than `$ADDRESS_n`.
+P2TR_1 = "bcrt1ps7gfq0h0hwu2cql9azz0wcf8rphr6xxeeyenrugd6yf263pxg9tqzsj5ec"
+P2TR_2 = "bcrt1pw9jnqadndm3aydgm2kqanwvs2usuhlnqkuwwyfgpux6ya5p6j6zqv8fklm"
+
 
 def to_hex(x):
     return hexlify(x.encode()).decode()
@@ -312,6 +318,48 @@ SCENARIO = [
                             "send_type": "send",
                         },
                         "tx_hash": "$TX_HASH",
+                    },
+                ],
+            },
+        ],
+    },
+    {
+        "title": "Send MPMA to Taproot destinations",
+        "transaction": "mpma",
+        "source": "$ADDRESS_1",
+        "params": {
+            "assets": "XCP,XCP,MPMASSET",
+            "quantities": "10,20,30",
+            "destinations": f"{P2TR_1},{P2TR_2},$ADDRESS_2",
+            "memo": "taproot airdrop",
+        },
+        "controls": [
+            # Balances rather than events: this asserts the destinations were credited, which is
+            # the thing that could not happen before, and it does not depend on how many events
+            # the transaction happens to emit.
+            {
+                "url": f"addresses/{P2TR_1}/balances",
+                "result": [
+                    {
+                        "address": P2TR_1,
+                        "asset": "XCP",
+                        "asset_longname": None,
+                        "quantity": 10,
+                        "utxo": None,
+                        "utxo_address": None,
+                    },
+                ],
+            },
+            {
+                "url": f"addresses/{P2TR_2}/balances",
+                "result": [
+                    {
+                        "address": P2TR_2,
+                        "asset": "XCP",
+                        "asset_longname": None,
+                        "quantity": 20,
+                        "utxo": None,
+                        "utxo_address": None,
                     },
                 ],
             },

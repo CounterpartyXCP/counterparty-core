@@ -4,9 +4,17 @@ import struct
 
 from bitstring import BitArray, ConstBitStream
 from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
+
+# Size of a legacy address lookup table entry: a one byte prefix and a 20 byte hash.
+LEGACY_BYTES_PER_ADDRESS = 21
+
+# A witness entry's length depends on the witness version as well as the 0x03 marker (20 bytes of
+# program for V0 P2WPKH, 32 for V1 Taproot), so the version belongs in the group key.
+WITNESS_PREFIX = 0x03
 
 ## encoding functions
 
@@ -21,8 +29,30 @@ def _encode_construct_base_assets(sends):
     return sorted(list(set(t[0] for t in sends)))  # Sorted to make list determinist
 
 
-def _encode_construct_lut(sends):
+def _lut_group_prefix(packed):
+    """The bytes an address lookup table group shares, and which its entries therefore omit."""
+    if packed[0] == WITNESS_PREFIX:
+        return packed[0:2]
+    return packed[0:1]
+
+
+def _encode_group_lut(addrs):
+    """Order the lookup table by address kind, so entries of one kind can share a header."""
+    groups = {}
+    for addr in addrs:
+        groups.setdefault(_lut_group_prefix(address.pack(addr)), []).append(addr)
+    # `addrs` arrives sorted and grouping preserves that order within each group, so the result is
+    # a deterministic function of the send list — which it must be, to be consensus-critical.
+    return [addr for prefix in sorted(groups) for addr in groups[prefix]]
+
+
+def _encode_construct_lut(sends, block_index=None):
     base_lut = _encode_construct_base_lut(sends)
+
+    if protocol.enabled("mpma_taproot_support", block_index=block_index):
+        # The send lists index into the lookup table by position, so the grouping has to be applied
+        # here, before those indices are handed out — not when the table is serialized.
+        base_lut = _encode_group_lut(base_lut)
 
     # What's this? It calculates the minimal number of bits needed to represent an item index inside the base_lut
     lut_nbits = math.ceil(math.log2(len(base_lut)))
@@ -30,11 +60,43 @@ def _encode_construct_lut(sends):
     return {"nbits": lut_nbits, "addrs": base_lut}
 
 
-def _encode_compress_lut(lut):
+def _encode_compress_lut(lut, block_index=None):
+    # `pack_legacy` emits a fixed 21 bytes, which holds a 20 byte hash or witness program and
+    # nothing longer, so a Taproot (32 byte program) or P2WSH destination could not be encoded at
+    # all. `address.pack` emits the self-describing form introduced with `taproot_support`
+    # (0x01/0x02 plus a hash, or 0x03 plus a witness version and program), which is variable
+    # length. Entries of one kind are emitted as a group under a shared header, so the kind and
+    # the length are paid for once per group instead of once per address.
+    if protocol.enabled("mpma_taproot_support", block_index=block_index):
+        parts = [struct.pack(">H", len(lut["addrs"]))]
+        for prefix, entries in _encode_lut_groups(lut["addrs"]):
+            parts.append(struct.pack(">B", len(prefix)))
+            parts.append(prefix)
+            parts.append(struct.pack(">B", len(entries[0])))
+            parts.append(struct.pack(">H", len(entries)))
+            parts.extend(entries)
+        return b"".join(parts)
+
     return b"".join(
         [struct.pack(">H", len(lut["addrs"]))]
         + [address.pack_legacy(addr) for addr in lut["addrs"]]
     )
+
+
+def _encode_lut_groups(addrs):
+    """Consecutive runs of one address kind, as (shared prefix, entries without that prefix)."""
+    groups = []
+    for addr in addrs:
+        packed = address.pack(addr)
+        prefix = _lut_group_prefix(packed)
+        entry = packed[len(prefix) :]
+        # A run rather than a dict lookup: `_encode_group_lut` has already brought every address of
+        # one kind together, and a group header is only valid for entries of a single length.
+        if groups and groups[-1][0] == prefix and len(groups[-1][1][0]) == len(entry):
+            groups[-1][1].append(entry)
+        else:
+            groups.append((prefix, [entry]))
+    return groups
 
 
 def _encode_memo(memo=None, is_hex=False):
@@ -108,8 +170,8 @@ def _encode_compress_send_list(db, nbits, send):
     return r
 
 
-def _encode_construct_sends(sends):
-    lut = _encode_construct_lut(sends)
+def _encode_construct_sends(sends, block_index=None):
+    lut = _encode_construct_lut(sends, block_index=block_index)
     assets = _encode_construct_base_assets(sends)
 
     send_lists = [
@@ -120,8 +182,8 @@ def _encode_construct_sends(sends):
     return {"lut": lut, "sendLists": send_lists}
 
 
-def _encode_compress_sends(db, mpma_send, memo=None, memo_is_hex=False):
-    compressed_lut = _encode_compress_lut(mpma_send["lut"])
+def _encode_compress_sends(db, mpma_send, memo=None, memo_is_hex=False, block_index=None):
+    compressed_lut = _encode_compress_lut(mpma_send["lut"], block_index=block_index)
     memo_arr = _encode_memo(memo, memo_is_hex).bin
 
     isends = (
@@ -145,9 +207,11 @@ def _encode_compress_sends(db, mpma_send, memo=None, memo_is_hex=False):
     return b"".join([compressed_lut, barr.bytes])
 
 
-def _encode_mpma_send(db, sends, memo=None, memo_is_hex=False):
-    mpma = _encode_construct_sends(sends)
-    send = _encode_compress_sends(db, mpma, memo=memo, memo_is_hex=memo_is_hex)
+def _encode_mpma_send(db, sends, memo=None, memo_is_hex=False, block_index=None):
+    mpma = _encode_construct_sends(sends, block_index=block_index)
+    send = _encode_compress_sends(
+        db, mpma, memo=memo, memo_is_hex=memo_is_hex, block_index=block_index
+    )
 
     return send
 
@@ -155,19 +219,50 @@ def _encode_mpma_send(db, sends, memo=None, memo_is_hex=False):
 ## decoding functions
 
 
-def _decode_decode_lut(data):
+def _decode_read(data, p, size, what):
+    """Read exactly `size` bytes, so a truncated table cannot be mistaken for a shorter one."""
+    chunk = data[p : p + size]
+    if len(chunk) != size:
+        raise exceptions.DecodeError(f"truncated {what}")
+    return chunk, p + size
+
+
+def _decode_decode_lut(data, block_index=None):
     (num_addresses,) = struct.unpack(">H", data[0:2])
     if num_addresses == 0:
         raise exceptions.DecodeError("address list can't be empty")
     p = 2
     address_list = []
-    bytes_per_address = 21
 
-    for _i in range(0, num_addresses):  # noqa: B007
-        addr_raw = data[p : p + bytes_per_address]
+    if protocol.enabled("mpma_taproot_support", block_index=block_index):
+        while len(address_list) < num_addresses:
+            chunk, p = _decode_read(data, p, 1, "address list")
+            (prefix_len,) = struct.unpack(">B", chunk)
+            if prefix_len == 0:
+                raise exceptions.DecodeError("address group prefix can't be empty")
+            prefix, p = _decode_read(data, p, prefix_len, "address group prefix")
 
-        address_list.append(address.unpack_legacy(addr_raw))
-        p += bytes_per_address
+            chunk, p = _decode_read(data, p, 1, "address list")
+            (entry_len,) = struct.unpack(">B", chunk)
+            if entry_len == 0:
+                raise exceptions.DecodeError("address can't be empty")
+
+            chunk, p = _decode_read(data, p, 2, "address list")
+            (group_count,) = struct.unpack(">H", chunk)
+            if group_count == 0:
+                raise exceptions.DecodeError("address group can't be empty")
+            if len(address_list) + group_count > num_addresses:
+                raise exceptions.DecodeError("address group overflows the address list")
+
+            for _i in range(0, group_count):  # noqa: B007
+                entry, p = _decode_read(data, p, entry_len, "address")
+                address_list.append(address.unpack(prefix + entry))
+    else:
+        for _i in range(0, num_addresses):  # noqa: B007
+            addr_raw = data[p : p + LEGACY_BYTES_PER_ADDRESS]
+
+            address_list.append(address.unpack_legacy(addr_raw))
+            p += LEGACY_BYTES_PER_ADDRESS
 
     lut_nbits = math.ceil(math.log2(num_addresses))
 
@@ -228,8 +323,8 @@ def _decode_memo(stream):
     return None, None
 
 
-def _decode_mpma_send_decode(data):
-    lut, nbits, remain = _decode_decode_lut(data)
+def _decode_mpma_send_decode(data, block_index=None):
+    lut, nbits, remain = _decode_decode_lut(data, block_index=block_index)
     stream = ConstBitStream(remain)
     memo, is_hex = _decode_memo(stream)
     sends = _decode_decode_sends(stream, nbits, lut)
