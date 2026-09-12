@@ -4,9 +4,31 @@ import re
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.messages.versions import mpma
-from counterpartycore.lib.utils.mpmaencoding import _decode_mpma_send_decode, _encode_mpma_send
+from counterpartycore.lib.utils import address
+from counterpartycore.lib.utils.mpmaencoding import (
+    _decode_decode_lut,
+    _decode_mpma_send_decode,
+    _encode_compress_lut,
+    _encode_construct_lut,
+    _encode_mpma_send,
+)
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
+@pytest.fixture
+def without_taproot_support():
+    """Encode and decode the address lookup table as nodes did before `mpma_taproot_support`.
+
+    Unit tests run with `REGTEST` set, where `protocol.enabled()` answers True for every change
+    regardless of block index. The messages hard-coded in the tests below are all encodings that
+    exist on mainnet today, so without this they would be read under the post-activation rules and
+    stop testing what they were written to test: that those blocks keep parsing as they always have.
+    """
+    with ProtocolChangesDisabled(["mpma_taproot_support"]):
+        yield
+
+
+@pytest.mark.usefixtures("without_taproot_support")
 def test_unpack(defaults, current_block_index):
     with pytest.raises(exceptions.UnpackError, match="could not unpack"):
         mpma.unpack(b"")
@@ -174,6 +196,123 @@ def test_utf8_memo_roundtrip(defaults, monkeypatch):
     }
 
 
+def test_compose_taproot_destination(ledger_db, defaults):
+    """After activation a Taproot destination composes, and the message says so on the wire."""
+    # The lookup table is `uint16` entry count, then each address as a one byte length and that
+    # many bytes of `address.pack` output: `22` (34) for the Taproot entry, `15` (21) for the
+    # P2PKH one. Before activation the entries were a fixed 21 bytes with no length, which is why
+    # a 32 byte witness program could not be carried at all.
+    assert mpma.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        [
+            ("XCP", defaults["p2tr_addresses"][0], defaults["quantity"]),
+            ("XCP", defaults["addresses"][1], defaults["quantity"]),
+        ],
+        None,
+        None,
+    ) == (
+        defaults["addresses"][0],
+        [],
+        binascii.unhexlify(
+            "0300022203018790903eefbbb8ac03e5e884f76127186e3d18d9c93331f10dd112ad4426415615018d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e10040000000017d78400"
+        ),
+    )
+
+    # Two Taproot destinations, which is the shape an airdrop actually has.
+    assert mpma.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        [
+            ("XCP", defaults["p2tr_addresses"][0], defaults["quantity"]),
+            ("XCP", defaults["p2tr_addresses"][1], defaults["quantity"]),
+        ],
+        None,
+        None,
+    ) == (
+        defaults["addresses"][0],
+        [],
+        binascii.unhexlify(
+            "0300022203018790903eefbbb8ac03e5e884f76127186e3d18d9c93331f10dd112ad4426415622030171653075b36ee3d2351b5581d9b9905721cbfe60b71ce22501e1b44ed03a9684400000000000000060000000005f5e10040000000017d78400"
+        ),
+    )
+
+
+@pytest.mark.usefixtures("without_taproot_support")
+def test_compose_taproot_destination_before_activation(ledger_db, defaults):
+    """Before activation the destination is still refused, rather than encoded as something else."""
+    with pytest.raises(
+        exceptions.ComposeError,
+        match=re.escape(f"Address not supported by MPMA send: {defaults['p2tr_addresses'][0]}"),
+    ):
+        mpma.compose(
+            ledger_db,
+            defaults["addresses"][0],
+            [
+                ("XCP", defaults["p2tr_addresses"][0], defaults["quantity"]),
+                ("XCP", defaults["addresses"][1], defaults["quantity"]),
+            ],
+            None,
+            None,
+        )
+
+
+def test_lut_roundtrips_every_address_kind(defaults, monkeypatch):
+    """Every kind `address.pack` can represent survives the lookup table.
+
+    P2WSH is included deliberately: it has the same 32 byte witness program as Taproot and was
+    refused by the same `pack_legacy` branch ("p2wsh still not supported for sending").
+    """
+    monkeypatch.setattr(ledger.issuances, "resolve_subasset_longname", lambda db, asset: asset)
+    monkeypatch.setattr(ledger.issuances, "get_asset_id", lambda db, asset: 1)
+
+    p2wsh = address.unpack(b"\x03\x00" + b"\x11" * 32)
+    destinations = [
+        defaults["addresses"][1],
+        defaults["p2sh_addresses"][0],
+        defaults["p2wpkh_addresses"][0],
+        defaults["p2tr_addresses"][0],
+        defaults["p2tr_addresses"][1],
+        p2wsh,
+    ]
+    sends = [("XCP", destination, i + 1) for i, destination in enumerate(destinations)]
+
+    decoded = _decode_mpma_send_decode(_encode_mpma_send(None, sends))
+
+    assert sorted(decoded["XCP"]) == sorted((d, i + 1) for i, d in enumerate(destinations))
+
+
+def test_lut_encoding_is_deterministic(defaults):
+    """The lookup table must not depend on the order the destinations were given in.
+
+    It is consensus-critical: two nodes composing the same send have to produce the same bytes.
+    (The send list itself is deliberately *not* reordered — its order is the order of the sends.)
+    """
+    sends = [
+        ("XCP", defaults["p2tr_addresses"][0], 1),
+        ("XCP", defaults["addresses"][1], 2),
+        ("XCP", defaults["p2wpkh_addresses"][0], 3),
+    ]
+
+    encoded = _encode_compress_lut(_encode_construct_lut(sends))
+    assert encoded == _encode_compress_lut(_encode_construct_lut(list(reversed(sends))))
+
+    # And it must still describe the same table.
+    addresses, _nbits, remainder = _decode_decode_lut(encoded)
+    assert sorted(addresses) == sorted(send[1] for send in sends)
+    assert remainder == b""
+
+
+def test_decode_rejects_truncated_address_list(defaults):
+    """A short lookup table must be refused, not read out of whatever bytes follow it."""
+    with pytest.raises(exceptions.DecodeError):
+        # Announces two addresses and then stops in the middle of the first.
+        _decode_mpma_send_decode(binascii.unhexlify("0002220301879090"))
+
+    with pytest.raises(exceptions.DecodeError, match="address list can't be empty"):
+        _decode_mpma_send_decode(binascii.unhexlify("0000"))
+
+
 def test_validate(ledger_db, defaults, current_block_index):
     assert mpma.validate(ledger_db, []) == (["send list cannot be empty"])
 
@@ -274,6 +413,7 @@ def test_validate(ledger_db, defaults, current_block_index):
     ) == ([f"destination {defaults['addresses'][6]} requires memo"])
 
 
+@pytest.mark.usefixtures("without_taproot_support")
 def test_compose_valid(ledger_db, defaults):
     assert mpma.compose(
         ledger_db,
@@ -431,6 +571,7 @@ def test_compose_valid(ledger_db, defaults):
     )
 
 
+@pytest.mark.usefixtures("without_taproot_support")
 def test_compose_invalid(ledger_db, defaults, monkeypatch):
     with pytest.raises(exceptions.ComposeError, match="insufficient funds for XCP"):
         mpma.compose(
@@ -551,6 +692,7 @@ def test_compose_invalid(ledger_db, defaults, monkeypatch):
         )
 
 
+@pytest.mark.usefixtures("without_taproot_support")
 def test_parse_2_sends(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     message = binascii.unhexlify(
@@ -632,6 +774,7 @@ def test_parse_2_sends(ledger_db, blockchain_mock, defaults, test_helpers, curre
     )
 
 
+@pytest.mark.usefixtures("without_taproot_support")
 def test_parse_2_sends_with_memo(
     ledger_db, blockchain_mock, defaults, test_helpers, current_block_index
 ):
@@ -715,6 +858,7 @@ def test_parse_2_sends_with_memo(
     )
 
 
+@pytest.mark.usefixtures("without_taproot_support")
 def test_parse_2_assets(ledger_db, blockchain_mock, defaults, test_helpers, current_block_index):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
     message = binascii.unhexlify(

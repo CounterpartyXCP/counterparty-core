@@ -1,6 +1,6 @@
 # Release Notes - Counterparty Core v11.4.0 (TBD)
 
-Counterparty Core v11.4.0 makes State DB rollbacks incremental (#3485), bounds API shutdown and cold startup (#3486), fixes two blind spots in the API watcher's reorganization detection, and puts the address history endpoints back on their indexes.
+Counterparty Core v11.4.0 makes State DB rollbacks incremental (#3485), bounds API shutdown and cold startup (#3486), fixes two blind spots in the API watcher's reorganization detection, puts the address history endpoints back on their indexes, and lets an MPMA send pay Taproot destinations (#3208).
 
 Until now a Bitcoin reorganization — however shallow — rebuilt the entire State DB. On mainnet a **one-block reorg took ~33 minutes**, during the last ~6 of which the public API returned 5xx, despite the process having ample CPU and memory headroom. The cost had nothing to do with how deep the reorganization was: `rollback_state_db()` deleted the rows of three tables and then re-applied thirteen migrations, each of which dropped its table and repopulated it from the entire ledger history (`parsed_events` alone is a full copy of `messages`).
 
@@ -12,7 +12,9 @@ The rebuild that remains — at upgrade, and for the deep rollbacks a new releas
 
 # Upgrading
 
-This release performs a **one-time State DB refresh** on first start (`refresh_state_db`), automatically. It takes roughly as long as one of the old reorg rebuilds. There is no ledger reparse and no protocol change.
+This release performs a **one-time State DB refresh** on first start (`refresh_state_db`), automatically. It takes roughly as long as one of the old reorg rebuilds. There is no ledger reparse.
+
+This release **does** carry a protocol change, `mpma_taproot_support` — see **Protocol Changes** below. Nodes must be upgraded before its activation height.
 
 The refresh is an optimization, not a correctness requirement: it pays the cost of the last full rebuild at a moment you control rather than unpredictably at your next reorg. A State DB that has not been through it is flagged as ineligible for the incremental path and simply takes the old full-rebuild route once, which then flags it as eligible. Nodes therefore converge on the fast path either way — a node upgraded with `--force` (which skips the version check, and so the refresh) is correct, just slower on its first reorg.
 
@@ -25,6 +27,16 @@ Clients that compose issuances or fairminters should also expect a new `409` res
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
 
 # Changelog
+
+## Protocol Changes
+
+The activation block heights are TBD.
+
+- `mpma_taproot_support`: an MPMA send can pay a Taproot (or P2WSH) destination. Its address lookup table previously packed every entry into a fixed 21 bytes via `address.pack_legacy`, which holds a 20 byte hash or witness program and nothing longer, so a 32 byte witness program could not be represented and `compose_mpma` rejected the destination outright ("Address not supported by MPMA send"). The table now uses the self-describing `address.pack` encoding introduced with `taproot_support`, laid out as a one byte length followed by that many bytes of `address.pack` output (21 for P2PKH and P2SH, 22 for P2WPKH, 34 for Taproot). Before the activation height the table is written and read exactly as before, including the exception a truncated one raises — which ends up in a recorded status, and so is itself consensus-visible.
+
+  MPMA was the last message type still on the legacy packing for a destination; enhanced sends and sweeps moved to `address.pack` with `taproot_support` in v11.0.0. (Dispenser oracle addresses remain on the legacy packing and are unchanged here.)
+
+  Taproot destinations cost more table space than the 20 byte kinds, because their witness program is 32 bytes rather than 20. A 500 destination Taproot table is 17,502 bytes, against 11,002 for the same number of P2PKH destinations. An MPMA composed with `encoding=taproot` carries that table in the witness, where it is discounted four to one.
 
 ## Incremental State DB rollback (#3485)
 

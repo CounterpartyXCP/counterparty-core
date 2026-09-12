@@ -29,9 +29,9 @@ def py34_tuple_append(first_elem, t):
 
 
 ## expected functions for message version
-def unpack(message):
+def unpack(message, block_index=None):
     try:
-        unpacked = _decode_mpma_send_decode(message)
+        unpacked = _decode_mpma_send_decode(message, block_index=block_index)
     except struct.error as e:
         raise exceptions.UnpackError("could not unpack") from e
     except (exceptions.AssetNameError, exceptions.AssetIDError) as e:
@@ -142,11 +142,12 @@ def compose(
 
     cursor = db.cursor()
 
-    for send in asset_dest_quant_list:
-        destination = send[1]
+    if not protocol.enabled("mpma_taproot_support"):
+        for send in asset_dest_quant_list:
+            destination = send[1]
 
-        if len(address.pack(destination)) > 22:
-            raise exceptions.ComposeError(f"Address not supported by MPMA send: {destination}")
+            if len(address.pack(destination)) > 22:
+                raise exceptions.ComposeError(f"Address not supported by MPMA send: {destination}")
 
     if memo and not isinstance(memo, str):
         raise exceptions.ComposeError("`memo` must be a string")
@@ -184,7 +185,7 @@ def compose(
 
 def parse(db, tx, message):
     try:
-        unpacked = unpack(message)
+        unpacked = unpack(message, block_index=tx["block_index"])
         status = "valid"
     except struct.error:
         status = "invalid: truncated message"

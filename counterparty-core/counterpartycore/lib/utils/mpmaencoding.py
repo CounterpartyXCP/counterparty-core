@@ -4,9 +4,13 @@ import struct
 
 from bitstring import BitArray, ConstBitStream
 from counterpartycore.lib import config, exceptions, ledger
+from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
+
+# Size of a legacy address lookup table entry: a one byte prefix and a 20 byte hash.
+LEGACY_BYTES_PER_ADDRESS = 21
 
 ## encoding functions
 
@@ -30,7 +34,20 @@ def _encode_construct_lut(sends):
     return {"nbits": lut_nbits, "addrs": base_lut}
 
 
-def _encode_compress_lut(lut):
+def _encode_compress_lut(lut, block_index=None):
+    # `pack_legacy` emits a fixed 21 bytes, which holds a 20 byte hash or witness program and
+    # nothing longer, so a Taproot (32 byte program) or P2WSH destination could not be encoded at
+    # all. `address.pack` emits the self-describing form introduced with `taproot_support`
+    # (0x01/0x02 plus a hash, or 0x03 plus a witness version and program), which is variable
+    # length, so each entry is prefixed with its own length.
+    if protocol.enabled("mpma_taproot_support", block_index=block_index):
+        entries = []
+        for addr in lut["addrs"]:
+            packed = address.pack(addr)
+            entries.append(struct.pack(">B", len(packed)))
+            entries.append(packed)
+        return b"".join([struct.pack(">H", len(lut["addrs"]))] + entries)
+
     return b"".join(
         [struct.pack(">H", len(lut["addrs"]))]
         + [address.pack_legacy(addr) for addr in lut["addrs"]]
@@ -120,8 +137,8 @@ def _encode_construct_sends(sends):
     return {"lut": lut, "sendLists": send_lists}
 
 
-def _encode_compress_sends(db, mpma_send, memo=None, memo_is_hex=False):
-    compressed_lut = _encode_compress_lut(mpma_send["lut"])
+def _encode_compress_sends(db, mpma_send, memo=None, memo_is_hex=False, block_index=None):
+    compressed_lut = _encode_compress_lut(mpma_send["lut"], block_index=block_index)
     memo_arr = _encode_memo(memo, memo_is_hex).bin
 
     isends = (
@@ -145,9 +162,11 @@ def _encode_compress_sends(db, mpma_send, memo=None, memo_is_hex=False):
     return b"".join([compressed_lut, barr.bytes])
 
 
-def _encode_mpma_send(db, sends, memo=None, memo_is_hex=False):
+def _encode_mpma_send(db, sends, memo=None, memo_is_hex=False, block_index=None):
     mpma = _encode_construct_sends(sends)
-    send = _encode_compress_sends(db, mpma, memo=memo, memo_is_hex=memo_is_hex)
+    send = _encode_compress_sends(
+        db, mpma, memo=memo, memo_is_hex=memo_is_hex, block_index=block_index
+    )
 
     return send
 
@@ -155,19 +174,37 @@ def _encode_mpma_send(db, sends, memo=None, memo_is_hex=False):
 ## decoding functions
 
 
-def _decode_decode_lut(data):
+def _decode_decode_lut(data, block_index=None):
     (num_addresses,) = struct.unpack(">H", data[0:2])
     if num_addresses == 0:
         raise exceptions.DecodeError("address list can't be empty")
     p = 2
     address_list = []
-    bytes_per_address = 21
 
-    for _i in range(0, num_addresses):  # noqa: B007
-        addr_raw = data[p : p + bytes_per_address]
+    if protocol.enabled("mpma_taproot_support", block_index=block_index):
+        for _i in range(0, num_addresses):  # noqa: B007
+            # Each entry carries its own length; see `_encode_compress_lut`.
+            (bytes_per_address,) = struct.unpack(">B", data[p : p + 1])
+            p += 1
+            if bytes_per_address == 0:
+                raise exceptions.DecodeError("address can't be empty")
 
-        address_list.append(address.unpack_legacy(addr_raw))
-        p += bytes_per_address
+            addr_raw = data[p : p + bytes_per_address]
+            # A truncated list would otherwise unpack whatever bytes remain as if they were a
+            # whole address, so the length is checked rather than trusted.
+            if len(addr_raw) != bytes_per_address:
+                raise exceptions.DecodeError("truncated address list")
+
+            address_list.append(address.unpack(addr_raw))
+            p += bytes_per_address
+    else:
+        # Left exactly as it was: this branch decides how blocks already on chain are read, and
+        # even the exception it raises for a truncated message ends up in a recorded status.
+        for _i in range(0, num_addresses):  # noqa: B007
+            addr_raw = data[p : p + LEGACY_BYTES_PER_ADDRESS]
+
+            address_list.append(address.unpack_legacy(addr_raw))
+            p += LEGACY_BYTES_PER_ADDRESS
 
     lut_nbits = math.ceil(math.log2(num_addresses))
 
@@ -228,8 +265,8 @@ def _decode_memo(stream):
     return None, None
 
 
-def _decode_mpma_send_decode(data):
-    lut, nbits, remain = _decode_decode_lut(data)
+def _decode_mpma_send_decode(data, block_index=None):
+    lut, nbits, remain = _decode_decode_lut(data, block_index=block_index)
     stream = ConstBitStream(remain)
     memo, is_hex = _decode_memo(stream)
     sends = _decode_decode_sends(stream, nbits, lut)
