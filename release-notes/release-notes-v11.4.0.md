@@ -77,6 +77,7 @@ All changes are enabled on regtest. The activation heights for `correct_transact
 
 - Use incremental State DB rollback for reorganizations up to 1,000 blocks, with a full rebuild as fallback. Reorganizations may change default listing order; restart active pagination cursors after a reorganization (#3485).
 - Speed up API watcher startup and reorganization checks by using indexed event lookups (#3486).
+- Avoid multi-minute API startup delays by disabling automatic SQLite optimization during database connection creation. Existing indexes, query statistics and explicit optimization calls are preserved (#3517).
 - Bound API shutdown to a shared eight-second budget and interrupt pending database reads. Gunicorn requests still running when its drain deadline expires may be dropped (#3486, #3513).
 - Report State DB rebuild progress, migration timings and shutdown failures in logs.
 
