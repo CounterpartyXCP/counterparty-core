@@ -952,10 +952,9 @@ def get_reveal_prevouts(decoded_tx, no_retry=False):
         commit_tx = get_decoded_transaction(commit_hash, no_retry=no_retry)
     except exceptions.BitcoindRPCError as e:
         raise_unresolved_prevout(commit_hash, e)
-    if not commit_tx["vin"]:
-        # A commit transaction with no input (coinbase) has no funding output.
-        # The Rust side records no commit parent in that case either, so the
-        # inputs resolve normally -- deterministically, on both paths.
+    if commit_tx.get("coinbase", False) or not commit_tx["vin"]:
+        # A coinbase has one null-prevout input, but no funding transaction.
+        # Keep the reveal's actual prevouts, as the Rust deserializer does.
         return None
     parent_hash = commit_tx["vin"][0]["hash"]
     parent_n = commit_tx["vin"][0]["n"]

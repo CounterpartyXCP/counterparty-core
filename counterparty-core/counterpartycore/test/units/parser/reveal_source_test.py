@@ -15,9 +15,15 @@ The commit-parent lookup itself is covered in
 when (and only when) it is needed, and threads the answer into every input.
 """
 
+import pytest
+from bitcoin.core import CMutableTransaction, CMutableTxIn, CMutableTxOut, COutPoint
+from bitcoin.core.script import CScript
 from counterpartycore.lib import backend
-from counterpartycore.lib.parser import gettxinfo
-from counterpartycore.test.mocks.bitcoind import original_get_vin_info
+from counterpartycore.lib.parser import deserialize, gettxinfo
+from counterpartycore.test.mocks.bitcoind import (
+    original_get_reveal_prevouts,
+    original_get_vin_info,
+)
 
 COMMIT_TXID = "aa" * 32
 FUNDING_TXID = "bb" * 32
@@ -146,3 +152,45 @@ def test_override_reaches_inputs_the_deserializer_did_resolve(monkeypatch):
     # 2 x 100, i.e. the commit parent's output 3 -- not RESOLVED_INFO's value of 1
     assert outputs_value == 200
     assert sources == "mmTPoijZbv5sLkCpbG6JkjFkWR89WCJL7G"
+
+
+@pytest.mark.parametrize("resolved", [(False, False), (True, False), (False, True), (True, True)])
+def test_coinbase_reveal_sources_agree_for_resolved_and_fallback_inputs(monkeypatch, resolved):
+    # Use a serialized transaction and the real Rust decoder: a coinbase has
+    # one null-prevout input, not the empty vin list the old fixture assumed.
+    script_pub_key = bytes.fromhex(
+        "512079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+    )
+    coinbase = CMutableTransaction(
+        [CMutableTxIn(COutPoint(), CScript([100]))],
+        [
+            CMutableTxOut(11000, CScript(script_pub_key)),
+            CMutableTxOut(22000, CScript(script_pub_key)),
+        ],
+    )
+    assert coinbase.is_coinbase()
+    commit = deserialize.deserialize_tx(coinbase.serialize().hex())
+    assert commit["coinbase"]
+    assert len(commit["vin"]) == 1
+    assert commit["vin"][0]["hash"] == "00" * 32
+    assert commit["vin"][0]["n"] == 0xFFFFFFFF
+    commit_id = commit["tx_id"]
+    requested = []
+
+    def lookup(tx_hash, **_kwargs):
+        requested.append(tx_hash)
+        assert tx_hash == commit_id, "a coinbase has no funding transaction to fetch"
+        return commit
+
+    monkeypatch.setattr(backend.bitcoind, "get_decoded_transaction", lookup)
+    monkeypatch.setattr(backend.bitcoind, "get_reveal_prevouts", original_get_reveal_prevouts)
+    monkeypatch.setattr(backend.bitcoind, "get_vin_info", original_get_vin_info)
+    vins = []
+    for n, has_info in zip((1, 0), resolved, strict=True):
+        info = dict(commit["vout"][n], is_segwit=True) if has_info else None
+        vins.append({"hash": commit_id, "n": n, "info": info})
+
+    sources, input_value = gettxinfo.get_transaction_sources(decoded_tx(vins))
+    assert sources == gettxinfo.script_to_address(script_pub_key)
+    assert input_value == 33000
+    assert bool(requested) == (not all(resolved))

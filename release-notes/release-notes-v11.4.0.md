@@ -59,9 +59,11 @@ All changes are enabled on regtest. The activation heights for `correct_transact
 
 ## Protocol
 
-- Reject broadcasts with non-finite or unstorable numeric values (`reject_non_finite_broadcast`).
+These three changes take effect at the activation heights listed above:
+
+- Reject broadcasts whose timestamp, value or fee fraction is NaN, infinite or a decimal value that cannot be stored in the ledger (`reject_non_finite_broadcast`).
 - Reject broadcasts with negative fee fractions (`reject_negative_fee_fraction`).
-- Activate Counterparty messages in Ordinals inscription metadata (`ordinals_metadata_support`) on mainnet, testnet3 and testnet4 (#3502).
+- Enable Counterparty messages in the `xcp` field of an Ordinals inscription metadata map (`ordinals_metadata_support`) on mainnet, testnet3 and testnet4. This format was previously documented but not activated on those networks (#3502).
 
 ## API
 
@@ -82,6 +84,7 @@ All changes are enabled on regtest. The activation heights for `correct_transact
 
 ## Bugfixes
 
+- Fix source resolution for inscription reveals spending coinbase outputs.
 - Detect reorganizations at the chain tip, during catch-up and while partially through a block (#3493).
 - Restore missing address history after State DB refreshes and full rollbacks, including gaps left by earlier releases (#3503).
 - Keep balance block indexes, transaction indexes, subasset names and zero-quantity updates consistent between rebuilt and streamed State DBs (#3485).
