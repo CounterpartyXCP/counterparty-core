@@ -17,7 +17,17 @@ from termcolor import cprint
 from yoyo import get_backend, read_migrations
 from yoyo.exceptions import LockTimeout
 
-apsw.bestpractice.apply(apsw.bestpractice.recommended)  # includes WAL mode
+# The optimize hook runs synchronously inside every writable Connection()
+# constructor. On a cold mainnet State DB it can block API startup for minutes,
+# before callers can install a progress handler or log the operation. Keep the
+# other recommended settings (including WAL), but leave statistics maintenance
+# to explicit optimize() calls rather than making it a connection prerequisite.
+_CONNECTION_BEST_PRACTICES = tuple(
+    practice
+    for practice in apsw.bestpractice.recommended
+    if practice is not apsw.bestpractice.connection_optimize
+)
+apsw.bestpractice.apply(_CONNECTION_BEST_PRACTICES)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 apsw.ext.log_sqlite(logger=logger)
