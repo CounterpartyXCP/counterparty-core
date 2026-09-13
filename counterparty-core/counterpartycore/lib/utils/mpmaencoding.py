@@ -9,9 +9,6 @@ from counterpartycore.lib.utils import address
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
-# Size of a legacy address lookup table entry: a one byte prefix and a 20 byte hash.
-LEGACY_BYTES_PER_ADDRESS = 21
-
 ## encoding functions
 
 
@@ -200,11 +197,13 @@ def _decode_decode_lut(data, block_index=None):
     else:
         # Left exactly as it was: this branch decides how blocks already on chain are read, and
         # even the exception it raises for a truncated message ends up in a recorded status.
+        bytes_per_address = 21
+
         for _i in range(0, num_addresses):  # noqa: B007
-            addr_raw = data[p : p + LEGACY_BYTES_PER_ADDRESS]
+            addr_raw = data[p : p + bytes_per_address]
 
             address_list.append(address.unpack_legacy(addr_raw))
-            p += LEGACY_BYTES_PER_ADDRESS
+            p += bytes_per_address
 
     lut_nbits = math.ceil(math.log2(num_addresses))
 

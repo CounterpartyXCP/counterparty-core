@@ -142,6 +142,9 @@ def compose(
 
     cursor = db.cursor()
 
+    # Until `mpma_taproot_support` activates the lookup table cannot carry a witness program
+    # longer than 20 bytes, so a compose that accepted one would produce a message the network
+    # cannot parse. After activation `address.pack` decides what is representable.
     if not protocol.enabled("mpma_taproot_support"):
         for send in asset_dest_quant_list:
             destination = send[1]
