@@ -159,6 +159,13 @@ def build_state_db():
             # Every table was just derived from the Ledger DB, so the invariants
             # the incremental rollback relies on hold (see ``staterollback``).
             staterollback.mark_ready(state_db)
+
+        # Connections no longer run ``PRAGMA optimize`` when they open (see
+        # ``database``), so nothing else would give the new tables planner
+        # statistics.
+        progress.step("optimizing")
+        with log.Spinner("Optimizing State DB..."):
+            database.optimize(state_db)
             state_db.close()
 
     logger.info("State DB built in %.2f seconds", time.time() - start_time)
@@ -369,7 +376,7 @@ def refresh_state_db(state_db):
     start_time = time.time()
 
     with dbstatus.rebuilding(
-        "refresh", "re-applying migrations", total=2 * len(MIGRATIONS_AFTER_ROLLBACK) + 1
+        "refresh", "re-applying migrations", total=2 * len(MIGRATIONS_AFTER_ROLLBACK) + 2
     ) as progress:
         with state_db:
             with log.Spinner("Re-applying migrations..."):
@@ -384,5 +391,11 @@ def refresh_state_db(state_db):
             # during catch-up (see record_balances_copied_block docstring for details)
             record_balances_copied_block(state_db)
             staterollback.mark_ready(state_db)
+
+        # The re-applied migrations recreated their tables without planner
+        # statistics, and connections no longer rebuild them when they open.
+        progress.step("optimizing", 2 * len(MIGRATIONS_AFTER_ROLLBACK) + 2)
+        with log.Spinner("Optimizing State DB..."):
+            database.optimize(state_db)
 
     logger.info("State DB refreshed in %.2f seconds", time.time() - start_time)

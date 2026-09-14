@@ -36,6 +36,46 @@ from counterpartycore.lib.utils.helpers import SingletonMeta
 from yoyo.exceptions import LockTimeout
 
 
+def test_connection_best_practices_only_exclude_optimize():
+    assert database._CONNECTION_BEST_PRACTICES == tuple(
+        practice
+        for practice in apsw.bestpractice.recommended
+        if practice is not apsw.bestpractice.connection_optimize
+    )
+
+
+@pytest.mark.parametrize("read_only", [False, True])
+def test_connection_does_not_run_optimize(temp_db_file, read_only):
+    statements = []
+
+    def trace(_cursor, sql, _bindings):
+        statements.append(sql.lower())
+        return True
+
+    def install_trace(connection):
+        connection.set_exec_trace(trace)
+
+    # Install before the application's hook: tracing only after Connection()
+    # returns would miss the very optimization that delayed startup.
+    apsw.connection_hooks.insert(0, install_trace)
+    try:
+        connection = get_db_connection(temp_db_file, read_only=read_only)
+        try:
+            assert not any("optimize" in sql for sql in statements)
+            assert connection.pragma("journal_mode") == "wal"
+            assert connection.pragma("foreign_keys") == 1
+            assert connection.pragma("recursive_triggers") == 1
+            if not read_only:
+                assert connection.pragma("synchronous") == 1
+                assert connection.pragma("journal_size_limit") == 6144000
+                optimize(connection)
+                assert any("optimize" in sql for sql in statements)
+        finally:
+            connection.close()
+    finally:
+        apsw.connection_hooks.remove(install_trace)
+
+
 def test_version(ledger_db, test_helpers):
     update_version(ledger_db)
     test_helpers.check_records(
