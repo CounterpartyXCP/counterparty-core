@@ -7,7 +7,15 @@ import apsw
 
 from counterpartycore.lib import config
 from counterpartycore.lib.api import dbbuilder
-from counterpartycore.lib.parser import utxosinfo
+from counterpartycore.lib.api.addressevents import update_address_events
+from counterpartycore.lib.api.parsedevents import (
+    BLOCKS_PARSED_DESC_SQL,
+    LAST_PARSED_EVENT_SQL,
+    fetch_one,
+    get_last_parsed_event_index,
+    update_last_parsed_events_cache,
+)
+from counterpartycore.lib.api.statetables import ASSET_EVENTS, XCP_DESTROY_EVENTS
 from counterpartycore.lib.utils import database, hashcodec
 from counterpartycore.lib.utils.helpers import deadline_timeout, format_duration
 
@@ -28,78 +36,6 @@ def watcher_has_failed():
     return WATCHER_FAILED.is_set()
 
 
-# `parsed_events` carries an index on `event` (`parsed_events_event_idx`) and a
-# unique index on `event_index` (`parsed_events_event_index_idx`). For a query
-# filtered on `event = 'BLOCK_PARSED'` and ordered by `event_index DESC`, SQLite
-# picks the `event` index and then builds a temporary B-tree to sort every
-# BLOCK_PARSED row it found -- on a cold mainnet State DB that is minutes of I/O
-# to return a single row, on paths that run at every API process start
-# (`APIWatcher.__init__` -> `get_last_block_parsed`, then `catch_up` ->
-# `check_reorg`) and on every reorganization check afterwards.
-#
-# Forcing the event-index index instead makes SQLite reverse-scan from the newest
-# event and stop as soon as the LIMIT is satisfied. The ORDER BY and LIMIT are
-# unchanged, so the ordering semantics are identical; only the access path differs.
-#
-# `LAST_PARSED_EVENT_SQL` carries no `event` filter, so that plan was never open to
-# it; it is pinned to the same index anyway, to keep one access path across all
-# three queries and to fail loudly if the index is ever dropped.
-#
-# `INDEXED BY` is a hard requirement rather than a hint: `parsed_events_event_index_idx`
-# is created by migration 0002 and dropping or renaming it makes these queries fail
-# outright instead of silently regressing to the slow plan.
-LAST_BLOCK_PARSED_SQL = """
-    SELECT block_index
-    FROM parsed_events INDEXED BY parsed_events_event_index_idx
-    WHERE event = 'BLOCK_PARSED'
-    ORDER BY event_index DESC
-    LIMIT 1
-"""
-
-# The last event the State DB parsed, whole row: what `check_reorg` compares
-# against the Ledger DB. Neither restriction the historical query carried is safe
-# here, and each one hid a different reorganization:
-#
-#   - `LIMIT 1 OFFSET 1` skipped to the block *before* the last one parsed, which
-#     makes the shallowest and by far the most common reorganization -- the tip
-#     block replaced by another at the same height -- invisible: the only parsed
-#     event whose hash changed is the one the comparison steps over, and the next
-#     block on the new branch then appends on top of the orphaned one.
-#
-#   - `WHERE event = 'BLOCK_PARSED'` compared the last *block* rather than the last
-#     *event*. The watcher advances one event at a time (`get_next_event_to_parse`
-#     orders by `message_index`, not by block), so between two blocks it sits with
-#     part of a block copied and that block's BLOCK_PARSED not yet written. A
-#     rollback landing in that window leaves the last BLOCK_PARSED -- the previous
-#     block's, untouched by the reorganization -- matching, so the check passes
-#     while the State DB holds orphaned events of the block it was in the middle
-#     of. Nothing ever repairs that: every BLOCK_PARSED compared afterwards comes
-#     from the new branch and matches.
-#
-# Comparing the newest row cannot yield a false positive: the State DB only ever
-# copies events the Ledger DB has committed, whatever their type, so the hash at
-# that `message_index` differs only if the ledger really did roll back.
-#
-# `search_matching_event` keeps the `BLOCK_PARSED` filter -- it looks for the
-# rollback *target*, which is a block index.
-LAST_PARSED_EVENT_SQL = """
-    SELECT *
-    FROM parsed_events INDEXED BY parsed_events_event_index_idx
-    ORDER BY event_index DESC
-    LIMIT 1
-"""
-
-# Same plan, unbounded: `search_matching_event` walks back until it finds a
-# BLOCK_PARSED row whose hash still matches the Ledger DB. The reverse scan also
-# lets that walk stop after the first few blocks in the common shallow-reorg case,
-# instead of first sorting every BLOCK_PARSED row ever written.
-BLOCKS_PARSED_DESC_SQL = """
-    SELECT *
-    FROM parsed_events INDEXED BY parsed_events_event_index_idx
-    WHERE event = 'BLOCK_PARSED'
-    ORDER BY event_index DESC
-"""
-
 UPDATE_EVENTS_ID_FIELDS = {
     "BLOCK_PARSED": ["block_index"],
     "TRANSACTION_PARSED": ["tx_hash"],
@@ -116,43 +52,6 @@ UPDATE_EVENTS_ID_FIELDS = {
     "POOL_UPDATE": ["asset_a", "asset_b"],
 }
 
-EVENTS_ADDRESS_FIELDS = {
-    "NEW_TRANSACTION": ["source", "destination"],
-    "DEBIT": ["address"],
-    "CREDIT": ["address"],
-    "ENHANCED_SEND": ["source", "destination"],
-    "MPMA_SEND": ["source", "destination"],
-    "SEND": ["source", "destination"],
-    "ASSET_TRANSFER": ["source", "issuer"],
-    "SWEEP": ["source", "destination"],
-    "ASSET_DIVIDEND": ["source"],
-    "RESET_ISSUANCE": ["source", "issuer"],
-    "ASSET_ISSUANCE": ["source", "issuer"],
-    "ASSET_DESTRUCTION": ["source"],
-    "OPEN_ORDER": ["source"],
-    "ORDER_MATCH": ["tx0_address", "tx1_address"],
-    "BTC_PAY": ["source", "destination"],
-    "CANCEL_ORDER": ["source"],
-    "ORDER_EXPIRATION": ["source"],
-    "ORDER_MATCH_EXPIRATION": ["tx0_address", "tx1_address"],
-    "OPEN_DISPENSER": ["source", "origin", "oracle_address"],
-    "DISPENSER_UPDATE": ["source"],
-    "REFILL_DISPENSER": ["source", "destination"],
-    "DISPENSE": ["source", "destination"],
-    "BROADCAST": ["source"],
-    "BURN": ["source"],
-    "NEW_FAIRMINT": ["source"],
-    "NEW_FAIRMINTER": ["source"],
-    "ATTACH_TO_UTXO": ["source", "destination_address"],
-    "DETACH_FROM_UTXO": ["source_address", "destination"],
-    "UTXO_MOVE": ["source_address", "destination_address"],
-    "OPEN_POOL": ["source"],
-    "POOL_UPDATE": [],
-    "NEW_POOL_DEPOSIT": ["source"],
-    "NEW_POOL_WITHDRAWAL": ["source"],
-    "POOL_MATCH": ["source"],
-}
-
 EXPIRATION_EVENTS_OBJECT_ID = {
     "ORDER_EXPIRATION": "order_hash",
     "ORDER_MATCH_EXPIRATION": "order_match_id",
@@ -161,22 +60,6 @@ EXPIRATION_EVENTS_OBJECT_ID = {
     "BET_EXPIRATION": "bet_hash",
     "BET_MATCH_EXPIRATION": "bet_match_id",
 }
-
-ASSET_EVENTS = [
-    "ASSET_CREATION",
-    "ASSET_ISSUANCE",
-    "ASSET_DESTRUCTION",
-    "RESET_ISSUANCE",
-    "ASSET_TRANSFER",
-    "BURN",
-]
-
-XCP_DESTROY_EVENTS = [
-    "ASSET_ISSUANCE",
-    "ASSET_DESTRUCTION",
-    "SWEEP",
-    "ASSET_DIVIDEND",
-]
 
 STATE_DB_TABLES = [
     # consolidated from ledger_db
@@ -208,12 +91,6 @@ def fetch_all(db, query, bindings=None):
     cursor = db.cursor()
     cursor.execute(query, bindings)
     return cursor.fetchall()
-
-
-def fetch_one(db, query, bindings=None):
-    cursor = db.cursor()
-    cursor.execute(query, bindings)
-    return cursor.fetchone()
 
 
 def delete_all(db, query, bindings=None):
@@ -406,52 +283,6 @@ def event_to_sql(event, ledger_db=None):
     if event["command"] in ["update", "parse"]:
         return update_event_to_sql(event, ledger_db=ledger_db)
     return None, []
-
-
-def search_address_from_utxo(state_db, utxo):
-    cursor = state_db.cursor()
-    sql = "SELECT utxo_address FROM balances WHERE utxo = ? LIMIT 1"
-    cursor.execute(sql, (utxo,))
-    address = cursor.fetchone()
-    if address is not None:
-        return address["utxo_address"]
-    return None
-
-
-def update_address_events(state_db, event):
-    if event["event"] not in EVENTS_ADDRESS_FIELDS:
-        return
-    event_bindings = json.loads(event["bindings"])
-    cursor = state_db.cursor()
-    for field in EVENTS_ADDRESS_FIELDS[event["event"]]:
-        if field not in event_bindings:
-            continue
-        address = event_bindings[field]
-        sql = """
-            INSERT INTO address_events (address, event_index, block_index, event)
-            VALUES (:address, :event_index, :block_index, :event)
-            """
-        cursor.execute(
-            sql,
-            {
-                "address": address,
-                "event_index": event["message_index"],
-                "block_index": event["block_index"],
-                "event": event["event"],
-            },
-        )
-        if utxosinfo.is_utxo_format(address):
-            utxo_address = search_address_from_utxo(state_db, address)
-            if utxo_address is not None:
-                cursor.execute(
-                    sql,
-                    {
-                        "address": utxo_address,
-                        "event_index": event["message_index"],
-                        "block_index": event["block_index"],
-                        "event": event["event"],
-                    },
-                )
 
 
 def update_all_expiration(state_db, event):
@@ -747,20 +578,6 @@ def update_state_db_tables(state_db, event, ledger_db=None):
         update_consolidated_tables(state_db, event, ledger_db=ledger_db)
 
 
-def update_last_parsed_events_cache(state_db, event=None):
-    if event is None:
-        last_event_parsed = get_last_parsed_event_index(state_db, no_cache=True)
-        last_block_parsed = get_last_block_parsed(state_db, no_cache=True)
-        database.set_config_value(state_db, "LAST_BLOCK_PARSED", last_block_parsed)
-        database.set_config_value(state_db, "LAST_EVENT_PARSED", last_event_parsed)
-    else:
-        last_event_parsed = event["message_index"]
-        last_block_parsed = event["block_index"]
-        if event["event"] == "BLOCK_PARSED":
-            database.set_config_value(state_db, "LAST_BLOCK_PARSED", last_block_parsed)
-        database.set_config_value(state_db, "LAST_EVENT_PARSED", last_event_parsed)
-
-
 def update_last_parsed_events(state_db, event):
     sql = """
     INSERT INTO parsed_events (event_index, event, event_hash, block_index)
@@ -779,56 +596,6 @@ def update_last_parsed_events(state_db, event):
         if balances_copied_at_block is not None:
             if event["block_index"] >= int(balances_copied_at_block):
                 database.set_config_value(state_db, "BALANCES_COPIED_AT_BLOCK", None)
-
-
-def get_last_parsed_event_index(state_db, no_cache=False):
-    if not no_cache:
-        event_index = database.get_config_value(state_db, "LAST_EVENT_PARSED")
-        if event_index is not None:
-            return int(event_index)
-    cursor = state_db.cursor()
-    cursor.execute("SELECT event_index FROM parsed_events ORDER BY event_index DESC LIMIT 1")
-    parsed_event = cursor.fetchone()
-    if parsed_event:
-        return parsed_event["event_index"]
-    return 0
-
-
-def get_last_block_parsed(state_db, no_cache=False):
-    if not no_cache:
-        block_index = database.get_config_value(state_db, "LAST_BLOCK_PARSED")
-        if block_index is not None:
-            return int(block_index)
-    cursor = state_db.cursor()
-    cursor.execute(LAST_BLOCK_PARSED_SQL)
-    parsed_event = cursor.fetchone()
-    if parsed_event:
-        return parsed_event["block_index"]
-    return 0
-
-
-def get_last_block_touched(state_db):
-    """The block index of the last event the State DB copied, finished or not.
-
-    Differs from `get_last_block_parsed` exactly while a block is half copied:
-    that one reports the last block *completed* -- the one whose BLOCK_PARSED is
-    written -- while this one reports the block the watcher is currently inside.
-
-    A rollback target has to be compared against this one. The orphaned rows of a
-    half-copied block sit one block above the completed tip, so measuring against
-    the completed tip reads them as "already below the target" and leaves them in
-    place -- which is precisely the case `check_reorg` aims at when it rolls back
-    to `last_block_parsed + 1`. See `staterollback.rollback_reason`.
-
-    Deliberately uncached: `LAST_BLOCK_PARSED` only advances on a BLOCK_PARSED
-    event, which is what makes it the wrong number here, and there is no cached
-    counterpart for a block still being copied. Callers are on the rollback path,
-    where one index lookup does not matter.
-    """
-    last_event_parsed = fetch_one(state_db, LAST_PARSED_EVENT_SQL)
-    if last_event_parsed is None:
-        return 0
-    return last_event_parsed["block_index"]
 
 
 def parse_event(state_db, event, ledger_db=None):
@@ -1025,11 +792,19 @@ class APIWatcher(threading.Thread):
             # nothing had happened.
             self._report_failure("API Watcher stopped on an unexpected error.")
         finally:
+            # Hand the connections off under the lock, close them outside it.
+            # The close is disk-bound -- `state_db` is the last writer once the
+            # pools are gone, so it checkpoints the WAL and fsyncs -- and a
+            # close that runs under this lock makes `stop()` wait on that I/O
+            # before it reaches its own bounded join, outside every deadline.
+            # Clearing the attributes first is what keeps the interrupt and the
+            # close serialized: see `stop()`.
             with self.db_lock:
-                if self.state_db is not None:
-                    self.state_db.close()
-                if self.ledger_db is not None:
-                    self.ledger_db.close()
+                state_db, ledger_db = self.state_db, self.ledger_db
+                self.state_db, self.ledger_db = None, None
+            for connection in (state_db, ledger_db):
+                if connection is not None:
+                    connection.close()
             if self.current_state_thread is not None:
                 self.current_state_thread.stop()
 
@@ -1059,9 +834,14 @@ class APIWatcher(threading.Thread):
         # Under the lock: apsw checks the connection is open and then calls
         # sqlite3_interrupt() while holding the GIL, but close() releases it
         # around sqlite3_close_v2(), so an unsynchronised interrupt can reach a
-        # handle that is already being freed. Held only for the duration of the
-        # interrupts, which never block, so the closing thread waits on it for
-        # microseconds and the join() below cannot deadlock against it.
+        # handle that is already being freed. `run`'s finally clears these
+        # attributes under this same lock before it closes, so there are only
+        # two orderings: this wins the lock and interrupts connections whose
+        # close cannot have started, or the watcher wins it and this reads
+        # `None` and skips an interrupt the close has already made pointless.
+        # Both critical sections are a couple of assignments and the interrupts,
+        # which never block -- neither thread waits on the other for more than
+        # microseconds, and the join() below cannot deadlock against it.
         with self.db_lock:
             for connection in (self.state_db, self.ledger_db):
                 if connection is not None:

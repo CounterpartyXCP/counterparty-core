@@ -26,6 +26,7 @@ Endpoints (all GET, JSON):
 import contextlib
 import json
 import logging
+import os
 import threading
 import time
 from collections import deque
@@ -34,7 +35,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional
 
 from counterpartycore.lib import config
-from counterpartycore.lib.api import apiwatcher, dbstatus
+from counterpartycore.lib.api import apiwatcher, dbstatus, parsedevents
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import database, helpers
 
@@ -117,6 +118,7 @@ class HealthSampler(threading.Thread):
         backend_height_provider=None,
         block_time_provider=None,
         api_only_provider=None,
+        serving_provider=None,
     ):
         super().__init__(name="HealthSampler", daemon=True)
         self.dispatcher = dispatcher
@@ -158,6 +160,16 @@ class HealthSampler(threading.Thread):
         self._api_only_provider = api_only_provider or (
             lambda: bool(getattr(config, "API_ONLY", False))
         )
+        # The listener is started *before* State DB maintenance and WSGI
+        # construction, so that probes get an answer during the tens of minutes
+        # a mainnet rebuild takes (#3460). Readiness must therefore be told
+        # separately when the public API is actually able to serve: without it,
+        # the window between the end of maintenance and `wsgi_server.run()` --
+        # watcher startup, Flask app construction, binding the socket -- reports
+        # ready, and an orchestrator routes traffic to a pod that answers
+        # nothing. Defaults to "serving", so a sampler constructed without the
+        # lifecycle signal (the tests, and any embedder) behaves as before.
+        self._serving_provider = serving_provider or (lambda: True)
 
         self.stop_event = threading.Event()
         self._snapshot = HealthSnapshot(
@@ -220,7 +232,7 @@ class HealthSampler(threading.Thread):
             own_db = database.get_db_connection(
                 config.STATE_DATABASE, read_only=True, check_wal=False
             )
-            self._last_parsed_provider = lambda db=own_db: apiwatcher.get_last_block_parsed(db)
+            self._last_parsed_provider = lambda db=own_db: parsedevents.get_last_block_parsed(db)
         except Exception as e:  # pylint: disable=broad-except
             logger.debug("healthz: state DB not ready yet: %s", e)
         return own_db
@@ -263,6 +275,12 @@ class HealthSampler(threading.Thread):
         if rebuild is not None:
             caught_up, lag, ledger_reason = False, None, "rebuilding"
             backend_height, last_parsed = self._backend_height_provider(), None
+        elif not self._is_serving():
+            # Maintenance is over but the public API is not up yet. Liveness
+            # stays green -- the process is healthy and making progress -- while
+            # readiness keeps traffic away until the WSGI server is running.
+            caught_up, lag, ledger_reason = False, None, "starting"
+            backend_height, last_parsed = self._backend_height_provider(), None
         else:
             caught_up, lag, ledger_reason, backend_height, last_parsed = self._compute_caught_up(
                 now
@@ -294,6 +312,15 @@ class HealthSampler(threading.Thread):
             rebuild=rebuild,
         )
         self._maybe_log_worker_stats(now, workers, saturation_seconds)
+
+    def _is_serving(self):
+        try:
+            return bool(self._serving_provider())
+        except Exception as e:  # pylint: disable=broad-except
+            # A lifecycle signal that cannot be read is not evidence of
+            # readiness; keep shedding rather than guess.
+            logger.debug("healthz: could not read the serving state: %s", e)
+            return False
 
     def _sample_workers(self, now):
         if self.dispatcher is None:
@@ -545,17 +572,30 @@ class HealthCheckServer:
     a failure to bind must never reduce API availability (the legacy in-API ``/healthz`` remains).
     """
 
-    def __init__(self, host, port, dispatcher=None, saturation_grace=None, stop_event=None):
+    def __init__(
+        self,
+        host,
+        port,
+        dispatcher=None,
+        saturation_grace=None,
+        stop_event=None,
+        serving_provider=None,
+    ):
         self.host = host
         self.port = port
         self.dispatcher = dispatcher
         self.saturation_grace = saturation_grace
+        # Readiness stays false until this reports that the public API can
+        # serve requests; see `HealthSampler.__init__` (issue #3504).
+        self.serving_provider = serving_provider
         # stop_event is accepted for symmetry with the other server threads; the health server
         # is a daemon and is torn down explicitly via stop(), so it is not otherwise used.
         self.stop_event = stop_event
         self.httpd = None
         self.sampler = None
         self._serve_thread = None
+        # PID of the process that actually bound the listener; see stop().
+        self._owner_pid = None
         self.started_at_monotonic = time.monotonic()
 
     def attach_dispatcher(self, dispatcher):
@@ -577,7 +617,9 @@ class HealthCheckServer:
         try:
             _instrument_dispatcher(self.dispatcher)
             self.sampler = HealthSampler(
-                dispatcher=self.dispatcher, saturation_grace=self.saturation_grace
+                dispatcher=self.dispatcher,
+                saturation_grace=self.saturation_grace,
+                serving_provider=self.serving_provider,
             )
             self.sampler.start()
 
@@ -592,6 +634,7 @@ class HealthCheckServer:
                 target=self.httpd.serve_forever, name="HealthCheckServer", daemon=True
             )
             self._serve_thread.start()
+            self._owner_pid = os.getpid()
             logger.info(
                 "Health check server listening on %s:%s (isolated from the API worker pool)",
                 self.host,
@@ -619,10 +662,28 @@ class HealthCheckServer:
         self.sampler = None
         self.httpd = None
         self._serve_thread = None
+        self._owner_pid = None
 
     def stop(self, deadline=None):
         if deadline is None:
             deadline = time.monotonic() + 5
+        if self._owner_pid is not None and os.getpid() != self._owner_pid:
+            # An inherited copy of this object in a forked child, i.e. a Gunicorn
+            # worker: the arbiter forks from inside `wsgi_server.run()`, which sits
+            # in the same `try` as the `start()` above, so a worker retiring on
+            # `max_requests` raises SystemExit and unwinds through
+            # `run_apiserver()`'s `finally` -- reaching here, before the PID guard
+            # in `GunicornApplication.stop()`.
+            #
+            # It must not touch the server. `serve_forever` runs only in the
+            # parent, and `socketserver.BaseServer.shutdown()` waits on an `Event`
+            # that only `serve_forever` sets; the child's copy was inherited
+            # *cleared* and nothing in the child will ever set it, so the call
+            # blocks forever and the worker never exits. Nothing here belongs to
+            # the child anyway: the listener, its handler threads and the sampler
+            # all live in the parent, which stops them on its own shutdown.
+            logger.trace("Health check server belongs to another process; nothing to stop.")
+            return
         if self.httpd is not None:
             try:
                 # shutdown() must be called from a different thread than serve_forever().

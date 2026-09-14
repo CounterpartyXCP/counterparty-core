@@ -6,6 +6,7 @@ import requests
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages.data import checkpoints
+from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.utils import database
 from counterpartycore.lib.utils.helpers import dhash_string
 
@@ -128,11 +129,22 @@ def check_change(protocol_change, change_name):
                 passed = False
 
     if not passed:
+        # The activation height is per network. Reading the mainnet
+        # `block_index` on testnet3/testnet4/signet compares the local height
+        # against a height that network will never reach, so min-version
+        # enforcement silently degraded to a warning there -- a node too old for
+        # an activated change would keep parsing and fork instead of halting.
+        # Regtest keeps the mainnet key on purpose: it has no entry of its own
+        # and enables every change from block 0, so enforcing at 0 would halt
+        # every regtest node running anything but the newest version.
+        activation_block_index = protocol_change.get(
+            protocol.network_block_index_name(), protocol_change["block_index"]
+        )
         explanation = f"Your version of {config.APP_NAME} is v{config.VERSION_STRING}, but, "
-        explanation += f"as of block {protocol_change['block_index']}, the minimum version is "
+        explanation += f"as of block {activation_block_index}, the minimum version is "
         explanation += f"v{protocol_change['minimum_version_major']}.{protocol_change['minimum_version_minor']}.{protocol_change['minimum_version_revision']}. "
         explanation += f"Reason: ' {change_name} '. Please upgrade to the latest version and restart the server."
-        if CurrentState().current_block_index() >= protocol_change["block_index"]:
+        if CurrentState().current_block_index() >= activation_block_index:
             raise exceptions.VersionUpdateRequiredError(explanation)
         logger.warning(explanation)
 

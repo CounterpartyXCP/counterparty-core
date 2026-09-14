@@ -12,6 +12,22 @@ with open(CURR_DIR + "/../../protocol_changes.json", encoding="utf-8") as protoc
     PROTOCOL_CHANGES = json.load(protocol_file)
 
 
+def network_block_index_name():
+    """Key under which `protocol_changes.json` stores the activation height for
+    the network this node runs on.
+
+    Regtest has no entry of its own (every change is enabled from block 0 there),
+    so it keeps reading the mainnet key; see `check.check_change()`.
+    """
+    if config.TESTNET3:
+        return "testnet3_block_index"
+    if config.TESTNET4:
+        return "testnet4_block_index"
+    if config.SIGNET:
+        return "signet_block_index"
+    return "block_index"
+
+
 def enabled(change_name, block_index=None):
     """Return True if protocol change is enabled."""
 
@@ -29,16 +45,7 @@ def enabled(change_name, block_index=None):
                 return False
         return True  # All changes are always enabled on REGTEST
 
-    if config.TESTNET3:
-        index_name = "testnet3_block_index"
-    elif config.TESTNET4:
-        index_name = "testnet4_block_index"
-    elif config.SIGNET:
-        index_name = "signet_block_index"
-    else:
-        index_name = "block_index"
-
-    enable_block_index = PROTOCOL_CHANGES[change_name][index_name]
+    enable_block_index = PROTOCOL_CHANGES[change_name][network_block_index_name()]
 
     if not block_index:
         block_index = CurrentState().current_block_index()
@@ -52,16 +59,7 @@ def get_change_block_index(change_name):
     if config.REGTEST:
         return 0
 
-    if config.TESTNET3:
-        index_name = "testnet3_block_index"
-    elif config.TESTNET4:
-        index_name = "testnet4_block_index"
-    elif config.SIGNET:
-        index_name = "signet_block_index"
-    else:
-        index_name = "block_index"
-
-    return PROTOCOL_CHANGES[change_name][index_name]
+    return PROTOCOL_CHANGES[change_name][network_block_index_name()]
 
 
 def get_value_by_block_index(change_name, block_index=None):

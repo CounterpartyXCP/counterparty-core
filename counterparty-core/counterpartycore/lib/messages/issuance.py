@@ -1216,13 +1216,13 @@ def parse(db, tx, message, message_type_id):
         if "cannot issue during fair minting" in status:
             bindings["fair_minting"] = True
         if "integer overflow" not in status:
-            # Final safety clamp: any remaining int that exceeds SQLite's signed
-            # 64-bit range would raise OverflowError inside insert_record. This
-            # happens in practice when CBOR-encoded hand-rolled txs supply huge
-            # values that flow through validate() into the invalid-record bindings.
-            for _k, _v in list(bindings.items()):
-                if isinstance(_v, int) and (_v > config.MAX_INT or _v < -config.MAX_INT):
-                    bindings[_k] = None
+            # Final binding-safety clamp: a CBOR-encoded hand-rolled tx can put
+            # a huge int (OverflowError) or a list/dict/Decimal (TypeError: bad
+            # binding argument type) in any field, and validate() only *reports*
+            # the value as a problem -- it leaves it in the invalid-record
+            # bindings. `_clamp` above covers the numeric fields it knows about;
+            # this covers the whole record.
+            helpers.null_unbindable_values(bindings)
             # Intern the asset name so the compact ``issuances.asset`` FK resolves
             # even for INVALID issuances. Valid creations register the asset via
             # the ASSET_CREATION event above, and reissuances reuse the existing

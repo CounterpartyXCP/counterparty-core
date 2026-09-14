@@ -132,6 +132,14 @@ def validate(
         problems.append("feed doesn't exist")
     elif not broadcasts[-1]["text"]:
         problems.append("feed is locked")
+    elif broadcasts[-1]["timestamp"] is None:
+        # A CBOR broadcast carrying a NaN float timestamp validates as "valid"
+        # (every comparison against NaN is False, and `min(nan, MAX_INT)` returns
+        # NaN) and sqlite3 then binds NaN as NULL. `None >= deadline` is a
+        # TypeError raised inside validate(), which parse() does not wrap --
+        # unlike broadcast.parse(), which has the `broadcast_safe_validate` net.
+        # It escapes as ParseTransactionError and halts every node.
+        problems.append("feed has no usable timestamp")
     elif broadcasts[-1]["timestamp"] >= deadline:
         problems.append("deadline in that feed's past")
 
@@ -328,7 +336,21 @@ def parse(db, tx, message):
         else:
             if balance < wager_quantity:
                 wager_quantity = balance
-                counterwager_quantity = int(ledger.issuances.price(wager_quantity, odds))
+                try:
+                    counterwager_quantity = int(ledger.issuances.price(wager_quantity, odds))
+                except ZeroDivisionError:
+                    # `odds` is zero on exactly one path: the message carried a
+                    # zero `counterwager_quantity`, so the `price()` call above
+                    # raised and fell back to 0. The overbet rescale then divides
+                    # by it again -- uncaught, so a single bet transaction with a
+                    # zero counterwager and a wager above the sender's XCP balance
+                    # halts every node (ParseTransactionError re-raised by
+                    # parse_block). Keep the counterwager at zero: validate()
+                    # below rejects it as "non-positive counterwager", which is
+                    # what a non-overbet zero-counterwager bet already does.
+                    # Ungated: such a transaction raises on current code, so no
+                    # historical block can contain one that parsed successfully.
+                    counterwager_quantity = 0
 
         problems, leverage = validate(
             db,

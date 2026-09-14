@@ -1,3 +1,4 @@
+import inspect
 import json
 import os
 import threading
@@ -6,7 +7,14 @@ from unittest.mock import Mock, call, patch
 
 import pytest
 from counterpartycore.lib import config, exceptions, ledger
-from counterpartycore.lib.api import apiserver, apiwatcher, blockcache, composer, queries
+from counterpartycore.lib.api import (
+    apiserver,
+    apiwatcher,
+    blockcache,
+    compose,
+    composer,
+    queries,
+)
 from counterpartycore.lib.api.routes import ALL_ROUTES, ROUTES, get_routes
 from counterpartycore.lib.messages import dispense, dividend, sweep
 from counterpartycore.lib.parser import blocks
@@ -135,6 +143,52 @@ def test_apiserver_openapi_spec(apiv2_client):
 def test_openapi_file_is_available_to_the_running_package():
     assert os.path.isfile(apiserver.OPENAPI_FILEPATH)
     assert apiserver.OPENAPI_FILEPATH.endswith("openapi.json")
+
+
+def test_openapi_documents_the_composition_conflict():
+    """Regression for #3507.
+
+    `_compose_with_pending_asset_guard` raises `ComposeConflictError`, which
+    `handle_route` turns into a 409. The generator only ever sees the happy
+    path, so the declaration comes from `genapidoc.ERROR_RESPONSES`; without
+    it the contract advertised only 200 and schema-driven clients had no way
+    to discover the response.
+    """
+    with open(apiserver.OPENAPI_FILEPATH, "r", encoding="utf-8") as f:
+        spec = json.load(f)
+
+    guarded = {
+        "compose_issuance": "/v2/addresses/{address}/compose/issuance",
+        "compose_fairminter": "/v2/addresses/{address}/compose/fairminter",
+    }
+    declared = set()
+    for path, operations in spec["paths"].items():
+        for operation in operations.values():
+            if "409" in operation.get("responses", {}):
+                declared.add(operation["operationId"])
+                assert path == guarded[operation["operationId"]]
+                schema = operation["responses"]["409"]["content"]["application/json"]["schema"]
+                assert schema["required"] == ["error"]
+                assert schema["properties"]["error"] == {"type": "string"}
+
+    # Exactly the guarded operations: `compose_fairmint` and the other compose
+    # routes do not call the guard and must not advertise a 409.
+    assert declared == set(guarded)
+
+
+def test_compose_conflict_guard_callers_are_documented():
+    """The 409 declarations are keyed by handler name; keep them in step with
+    the handlers that can actually raise the conflict."""
+    source = inspect.getsource(compose)
+    callers = set()
+    current = None
+    for line in source.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("def "):
+            current = stripped[len("def ") :].split("(")[0]
+        if "_compose_with_pending_asset_guard(" in stripped and not stripped.startswith("def "):
+            callers.add(current)
+    assert callers == {"compose_issuance", "compose_fairminter"}
 
 
 def test_openapi_prefers_the_packaged_resource(monkeypatch, tmp_path):

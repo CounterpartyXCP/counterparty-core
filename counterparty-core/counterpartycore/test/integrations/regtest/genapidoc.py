@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 import re
@@ -253,6 +254,30 @@ def gen_tags(db):
     return tags
 
 
+# `apiserver.handle_route` turns `ComposeConflictError` into a 409, but the
+# generator only ever observes the happy path, so nothing here can discover
+# that response by calling the route. Declare it for the handlers that raise
+# it -- and only those: `compose_fairmint` and the other compose routes do not
+# go through `_compose_with_pending_asset_guard`.
+CONFLICT_RESPONSE = {
+    "description": "A parsed pending asset change conflicts with this composition.",
+    "content": {
+        "application/json": {
+            "schema": {
+                "type": "object",
+                "required": ["error"],
+                "properties": {"error": {"type": "string"}},
+            }
+        }
+    },
+}
+
+ERROR_RESPONSES = {
+    "compose_issuance": {"409": CONFLICT_RESPONSE},
+    "compose_fairminter": {"409": CONFLICT_RESPONSE},
+}
+
+
 def gen_paths(db):
     paths = {}
     operation_ids = set()
@@ -311,7 +336,8 @@ def gen_paths(db):
             "description": route["description"].strip(),
             "tags": [group.capitalize()],
             "parameters": parameters,
-            "responses": {"200": {"description": "Successful response"}},
+            "responses": {"200": {"description": "Successful response"}}
+            | copy.deepcopy(ERROR_RESPONSES.get(route["function"].__name__, {})),
         }
 
         if (

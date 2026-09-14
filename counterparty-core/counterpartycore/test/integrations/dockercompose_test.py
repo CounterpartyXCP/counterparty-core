@@ -12,6 +12,9 @@ from counterpartycore.lib import config
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(CURR_DIR, "../../../../")
 
+# The published image this scenario upgrades from.
+PREVIOUS_RELEASE = "11.0.4"
+
 
 def print_docker_output(out, printed_line_count):
     unprinted_lines = out.getvalue().splitlines()[printed_line_count:]
@@ -54,9 +57,20 @@ def test_docker_compose():
 
         with open(os.path.join(BASE_DIR, "docker-compose.yml"), "r") as f:
             docker_compose_file = f.read()
+        # This scenario deliberately starts an *older* published image to prove
+        # the Compose file still works for an operator upgrading into this
+        # release. That only means anything if the file actually pins the
+        # release under test: a stale tag left over from the previous release
+        # used to make the replacement below a silent no-op, and the test then
+        # exercised an image nobody was reviewing (issue #3506).
+        current_image = f"image: counterparty/counterparty:v{config.VERSION_STRING}"
+        assert current_image in docker_compose_file, (
+            f"docker-compose.yml does not pin {current_image}; "
+            "update the image tag as part of release preparation"
+        )
         docker_compose_file = docker_compose_file.replace(
-            f"image: counterparty/counterparty:v{config.VERSION_STRING}",
-            "image: counterparty/counterparty:v11.0.4",
+            current_image,
+            f"image: counterparty/counterparty:v{PREVIOUS_RELEASE}",
         )
         with open(os.path.join(BASE_DIR, "docker-compose-test.yml"), "w") as f:
             f.write(docker_compose_file)
