@@ -597,6 +597,24 @@ def test_refresh_state_db_keeps_address_history_of_unparsed_events(state_db, led
     assert before <= address_event_rows(state_db)
 
 
+def test_refresh_state_db_optimizes_recreated_tables(state_db, ledger_db, monkeypatch):
+    """Connections no longer run ``PRAGMA optimize`` on open (#3517), so the
+    refresh has to rebuild planner statistics for the tables it recreated."""
+    optimized = []
+    real_optimize = dbbuilder.database.optimize
+
+    def spy(db):
+        optimized.append(db)
+        real_optimize(db)
+
+    monkeypatch.setattr(dbbuilder.database, "optimize", spy)
+
+    dbbuilder.refresh_state_db(state_db)
+
+    assert optimized == [state_db]
+    assert state_db.execute("SELECT COUNT(*) AS c FROM sqlite_stat1").fetchone()["c"] > 0
+
+
 def test_full_rollback_state_db_keeps_address_history(state_db, ledger_db):
     """Regression for #3503, full-rollback path.
 
