@@ -736,6 +736,27 @@ fn apply_commit_parent(
     }
 }
 
+/// Resolve a reveal's commit parent, preserving ordinary prevouts for coinbase
+/// commits. The fetch callback is not called for a commit with no parent.
+fn resolve_commit_parent(
+    prev_txs: &mut [Option<bitcoin::Transaction>],
+    fetch_parent: impl FnOnce(Txid) -> Option<bitcoin::Transaction>,
+) -> Option<(Txid, usize)> {
+    let commit_parent = match prev_txs.first().and_then(Option::as_ref) {
+        Some(commit_tx) if commit_tx.is_coinbase() || commit_tx.input.is_empty() => {
+            // Coinbase inputs contain a null outpoint, not a funding transaction.
+            // Preserve all available inputs, including other spends of this coinbase.
+            return None;
+        }
+        Some(commit_tx) => {
+            let prevout = commit_tx.input[0].previous_output;
+            fetch_parent(prevout.txid).map(|parent| (prevout.txid, prevout.vout as usize, parent))
+        }
+        None => None,
+    };
+    apply_commit_parent(prev_txs, commit_parent)
+}
+
 pub fn parse_transaction(
     tx: &bitcoin::Transaction,
     config: &Config,
@@ -949,22 +970,16 @@ pub fn parse_transaction(
             // So on any failure we leave *every* input unresolved and record no
             // commit parent. Python then redoes the same two-hop lookup in
             // `get_reveal_prevouts()` -- which retries, and halts rather than
-            // guess if the backend is really unavailable. Keep the two in sync.
+            // guess if the backend is really unavailable. A coinbase commit has
+            // no parent and keeps its ordinary prevouts. Keep the two in sync.
             if is_reveal_tx && !prev_txs.is_empty() {
-                let mut commit_parent = None;
-                if let Some(Some(commit_tx)) = prev_txs.first() {
-                    if !commit_tx.input.is_empty() {
-                        let parent_txid = commit_tx.input[0].previous_output.txid;
-                        let parent_vout = commit_tx.input[0].previous_output.vout as usize;
-                        if let Ok(fetched_txs) = batch_client.get_transactions(&[parent_txid]) {
-                            if let Some(Some(parent_tx)) = fetched_txs.first() {
-                                commit_parent = Some((parent_txid, parent_vout, parent_tx.clone()));
-                            }
-                        }
-                    }
-                }
                 if let Some((parent_txid, parent_vout)) =
-                    apply_commit_parent(&mut prev_txs, commit_parent)
+                    resolve_commit_parent(&mut prev_txs, |parent_txid| {
+                        batch_client
+                            .get_transactions(&[parent_txid])
+                            .ok()
+                            .and_then(|txs| txs.into_iter().next().flatten())
+                    })
                 {
                     commit_parent_txid = parent_txid;
                     commit_parent_vout = parent_vout;
@@ -1616,6 +1631,78 @@ mod tests {
 
         assert_eq!(resolved, Some((txid, 0)));
         assert!(prev_txs.is_empty());
+    }
+
+    fn coinbase_commit() -> Transaction {
+        let mut tx = commit_parent_test_tx(42);
+        tx.input.push(TxIn {
+            previous_output: OutPoint::null(),
+            script_sig: ScriptBuf::from_bytes(vec![1, 1]),
+            sequence: Sequence::MAX,
+            witness: Witness::default(),
+        });
+        assert!(tx.is_coinbase());
+        assert_eq!(tx.input.len(), 1);
+        tx
+    }
+
+    #[test]
+    fn test_coinbase_commit_preserves_prevouts_without_parent_lookup() {
+        let coinbase = coinbase_commit();
+        // Another input may spend a different output of the same coinbase.
+        let mut prev_txs = vec![Some(coinbase.clone()), Some(coinbase)];
+        let expected = prev_txs.clone();
+        assert_eq!(
+            resolve_commit_parent(&mut prev_txs, |_| panic!("coinbase has no parent")),
+            None
+        );
+        assert_eq!(prev_txs, expected);
+    }
+
+    #[test]
+    fn test_coinbase_commit_preserves_partial_resolution() {
+        let mut prev_txs = vec![Some(coinbase_commit()), None];
+        let expected = prev_txs.clone();
+        assert_eq!(
+            resolve_commit_parent(&mut prev_txs, |_| panic!("coinbase has no parent")),
+            None
+        );
+        assert_eq!(prev_txs, expected);
+    }
+
+    #[test]
+    fn test_missing_commit_clears_other_prevouts_without_parent_lookup() {
+        let mut prev_txs = vec![None, Some(commit_parent_test_tx(7))];
+        assert_eq!(
+            resolve_commit_parent(&mut prev_txs, |_| panic!("commit is unavailable")),
+            None
+        );
+        assert!(prev_txs.iter().all(Option::is_none));
+    }
+
+    #[test]
+    fn test_funded_commit_resolves_parent_and_clears_on_failure() {
+        let mut commit = coinbase_commit();
+        let parent_id = commit_parent_test_txid(4);
+        commit.input[0].previous_output = OutPoint {
+            txid: parent_id,
+            vout: 3,
+        };
+        assert!(!commit.is_coinbase());
+        let parent = commit_parent_test_tx(100);
+        let other = commit_parent_test_tx(7);
+        let mut prev_txs = vec![Some(commit.clone()), Some(other.clone())];
+        assert_eq!(
+            resolve_commit_parent(&mut prev_txs, |txid| {
+                assert_eq!(txid, parent_id);
+                Some(parent.clone())
+            }),
+            Some((parent_id, 3))
+        );
+        assert_eq!(prev_txs, vec![Some(parent), Some(other.clone())]);
+        let mut unresolved = vec![Some(commit), Some(other)];
+        assert_eq!(resolve_commit_parent(&mut unresolved, |_| None), None);
+        assert!(unresolved.iter().all(Option::is_none));
     }
 
     // -----------------------------------------------------------------------

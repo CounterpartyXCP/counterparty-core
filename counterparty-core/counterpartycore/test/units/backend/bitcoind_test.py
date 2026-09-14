@@ -579,12 +579,15 @@ def test_get_reveal_prevouts_mirrors_rust_for_extra_inputs(monkeypatch):
 
 
 def test_get_reveal_prevouts_no_override_for_coinbase_commit(monkeypatch):
-    """A commit transaction with no input has no funding output; the Rust side
-    records no commit parent either, so the inputs resolve normally."""
+    """A coinbase has one null-prevout input but no funding transaction."""
     monkeypatch.setattr(
         bitcoind,
         "get_decoded_transaction",
-        lambda *args, **kwargs: {"vin": [], "vout": []},
+        lambda *args, **kwargs: {
+            "coinbase": True,
+            "vin": [{"hash": "00" * 32, "n": 0xFFFFFFFF}],
+            "vout": [],
+        },
     )
     decoded_tx = reveal_decoded_tx([{"hash": COMMIT_TXID, "n": 0, "info": None}])
     assert original_get_reveal_prevouts(decoded_tx) is None
