@@ -237,6 +237,13 @@ def test_routes_only_document_available_verbose_args():
     assert compose_verbose_args[0]["category"] == "secondary"
 
 
+def test_compose_attach_documents_destination_vout_as_int():
+    # The API coerces a query value by the documented type, and `attach.validate()`
+    # accepts an integer only.
+    (arg,) = get_route_args("/v2/addresses/<address>/compose/attach", "destination_vout")
+    assert arg["type"] == "int"
+
+
 def test_routes_only_document_available_show_unconfirmed_args():
     assert get_route_args("/v2/transactions", "show_unconfirmed")
     assert get_route_args("/v2/blocks/<int:block_index>/transactions", "show_unconfirmed")

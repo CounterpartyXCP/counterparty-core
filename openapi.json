@@ -19662,7 +19662,7 @@
                         "required": false,
                         "description": "The vout of the destination output",
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         }
                     },
                     {

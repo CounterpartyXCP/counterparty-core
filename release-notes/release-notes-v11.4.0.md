@@ -145,8 +145,11 @@ The differential tests above surfaced three ways in which a State DB maintained 
 
 - **Fix a resource leak in snapshot signature verification** (`bootstrap` / `prepare-bootstrap`). Every call to `verify_signature()` leaked one `gpg-agent` daemon and one temporary GnuPG home directory, because the cleanup added in f53a7443 was accidentally disabled in 301c37ac ("Fix bootstrap with custom url") — commented out as apparent leftover debugging. The agent is now terminated with `gpgconf --homedir <dir> --kill gpg-agent` before the directory is removed, which avoids the socket/lockfile race that removing a live agent's home directory would otherwise hit. Only the agent spawned by the call itself is terminated; other GnuPG daemons on the machine are unaffected, and a missing `gpgconf` can neither skip the removal nor mask the error that triggered it. Three regression tests now pin the cleanup, so it cannot be silently dropped again.
 
+- **`destination_vout` on `compose/attach` was unusable through the API.** The route declared the parameter as a string, and the API coerces query values by their declared type only, so the value reached `attach.validate()` as text and failed its integer check with `if provided destination must be an integer` — for every value. It is now declared as an integer, like `utxo_value`, so an attach can name the output it lands on instead of taking the first non-`OP_RETURN` output. `openapi.json` follows.
+
 # Credits
 
 - Ouziel Slama
 - Adam Krellenstein
 - John A. Zoidburg
+- Dan Anderson

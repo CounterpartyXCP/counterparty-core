@@ -839,7 +839,7 @@ def compose_attach(
     asset: str,
     quantity: int,
     utxo_value: int = None,
-    destination_vout: str = None,
+    destination_vout: int = None,
     **construct_params,
 ):
     """
