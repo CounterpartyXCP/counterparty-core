@@ -3,6 +3,7 @@ import math
 import struct
 
 from bitstring import BitArray, ConstBitStream
+from counterparty_rs import utils  # pylint: disable=no-name-in-module
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.parser import protocol
 from counterpartycore.lib.utils import address
@@ -34,13 +35,14 @@ def _encode_construct_lut(sends):
 def _encode_compress_lut(lut, block_index=None):
     # `pack_legacy` emits a fixed 21 bytes, which holds a 20 byte hash or witness program and
     # nothing longer, so a Taproot (32 byte program) or P2WSH destination could not be encoded at
-    # all. `address.pack` emits the self-describing form introduced with `taproot_support`
+    # all. The Rust packer emits the self-describing form introduced with `taproot_support`
     # (0x01/0x02 plus a hash, or 0x03 plus a witness version and program), which is variable
-    # length, so each entry is prefixed with its own length.
+    # length, so each entry is prefixed with its own length. It is called directly rather than
+    # through `address.pack`, whose legacy fallback would write bytes the decoder refuses.
     if protocol.enabled("mpma_taproot_support", block_index=block_index):
         entries = []
         for addr in lut["addrs"]:
-            packed = address.pack(addr)
+            packed = bytes(utils.pack_address(addr, config.NETWORK_NAME))
             entries.append(struct.pack(">B", len(packed)))
             entries.append(packed)
         return b"".join([struct.pack(">H", len(lut["addrs"]))] + entries)
@@ -192,7 +194,13 @@ def _decode_decode_lut(data, block_index=None):
             if len(addr_raw) != bytes_per_address:
                 raise exceptions.DecodeError("truncated address list")
 
-            address_list.append(address.unpack(addr_raw))
+            # The Rust unpacker only, without `address.unpack`'s legacy fallback: that fallback
+            # would accept other byte layouts of the same address, and arbitrary bytes as a base58
+            # payload, so the table would not be canonical.
+            try:
+                address_list.append(utils.unpack_address(addr_raw, config.NETWORK_NAME))
+            except ValueError as e:
+                raise exceptions.DecodeError(f"invalid address: {e}") from e
             p += bytes_per_address
     else:
         # Left exactly as it was: this branch decides how blocks already on chain are read, and

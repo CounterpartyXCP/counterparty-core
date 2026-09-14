@@ -313,6 +313,67 @@ def test_decode_rejects_truncated_address_list(defaults):
         _decode_mpma_send_decode(binascii.unhexlify("0000"))
 
 
+def test_decode_rejects_non_canonical_address(defaults):
+    """Each address has exactly one byte layout in the table.
+
+    `address.unpack` falls back to the legacy decoding, which would accept the old 21 byte packing
+    of an address (and read arbitrary bytes as a base58 payload) behind a length byte. The decoder
+    refuses anything the Rust unpacker does not accept.
+    """
+    legacy_entry = address.pack_legacy(defaults["addresses"][1])
+    with pytest.raises(exceptions.DecodeError, match="invalid address"):
+        _decode_decode_lut(b"\x00\x01" + bytes([len(legacy_entry)]) + legacy_entry)
+
+    with pytest.raises(exceptions.DecodeError, match="invalid address"):
+        _decode_decode_lut(b"\x00\x01\x05" + b"\x05" * 5)
+
+
+def test_compose_encodes_for_next_block(ledger_db, defaults, monkeypatch):
+    """A compose is encoded under the rules of the block the transaction can next be mined in."""
+    captured = {}
+
+    def fake_encode(db, sends, memo=None, memo_is_hex=False, block_index=None):
+        captured["block_index"] = block_index
+        return b""
+
+    monkeypatch.setattr(mpma, "_encode_mpma_send", fake_encode)
+    mpma.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        [
+            ("XCP", defaults["addresses"][1], defaults["quantity"]),
+            ("XCP", defaults["addresses"][2], defaults["quantity"]),
+        ],
+        None,
+        None,
+    )
+
+    assert captured["block_index"] == ledger.blocks.last_db_index(ledger_db) + 1
+
+
+def test_parse_mempool_decodes_for_next_block(ledger_db, blockchain_mock, defaults, monkeypatch):
+    """A mempool transaction is decoded under the next block's rules, not `MEMPOOL_BLOCK_INDEX`.
+
+    The mempool is parsed in a fake block at `MEMPOOL_BLOCK_INDEX`, which is above every activation
+    height, so without this every MPMA in the mempool would be read with the new table before
+    activation.
+    """
+    captured = {}
+
+    def fake_unpack(message, block_index=None):
+        captured["block_index"] = block_index
+        raise exceptions.UnpackError("stop")
+
+    monkeypatch.setattr(mpma, "unpack", fake_unpack)
+    tx = dict(
+        blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0]),
+        block_index=config.MEMPOOL_BLOCK_INDEX,
+    )
+    mpma.parse(ledger_db, tx, b"")
+
+    assert captured["block_index"] == ledger.blocks.last_db_index(ledger_db) + 1
+
+
 def test_validate(ledger_db, defaults, current_block_index):
     assert mpma.validate(ledger_db, []) == (["send list cannot be empty"])
 

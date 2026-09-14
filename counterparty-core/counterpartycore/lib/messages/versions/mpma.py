@@ -142,10 +142,15 @@ def compose(
 
     cursor = db.cursor()
 
+    # The transaction can be mined at the earliest in the next block, so it is encoded under that
+    # block's rules: a message composed just below the activation height must not use the legacy
+    # table if it is going to be parsed with the new one.
+    next_block_index = ledger.blocks.last_db_index(db) + 1
+
     # Until `mpma_taproot_support` activates the lookup table cannot carry a witness program
     # longer than 20 bytes, so a compose that accepted one would produce a message the network
-    # cannot parse. After activation `address.pack` decides what is representable.
-    if not protocol.enabled("mpma_taproot_support"):
+    # cannot parse. After activation the Rust packer decides what is representable.
+    if not protocol.enabled("mpma_taproot_support", block_index=next_block_index):
         for send in asset_dest_quant_list:
             destination = send[1]
 
@@ -179,7 +184,13 @@ def compose(
     data = messagetype.pack(ID)
 
     try:
-        data += _encode_mpma_send(db, asset_dest_quant_list, memo=memo, memo_is_hex=memo_is_hex)
+        data += _encode_mpma_send(
+            db,
+            asset_dest_quant_list,
+            memo=memo,
+            memo_is_hex=memo_is_hex,
+            block_index=next_block_index,
+        )
     except Exception as e:  # pylint: disable=broad-except
         raise exceptions.ComposeError(f"couldn't encode MPMA send: {e}") from e
 
@@ -187,8 +198,14 @@ def compose(
 
 
 def parse(db, tx, message):
+    block_index = tx["block_index"]
+    if block_index == config.MEMPOOL_BLOCK_INDEX:
+        # The mempool is parsed in a fake block above every activation height; decode a pending
+        # transaction under the rules of the block it can next be mined in.
+        block_index = ledger.blocks.last_db_index(db) + 1
+
     try:
-        unpacked = unpack(message, block_index=tx["block_index"])
+        unpacked = unpack(message, block_index=block_index)
         status = "valid"
     except struct.error:
         status = "invalid: truncated message"
