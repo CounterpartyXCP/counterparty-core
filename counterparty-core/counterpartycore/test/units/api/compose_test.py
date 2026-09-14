@@ -2019,7 +2019,10 @@ def test_unpack_mpma(apiv2_client):
     # Using a valid MPMA message from the mpma_test.py tests
     mpma_data = "00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e10040000000017d78400"
     datahex = f"00000003{mpma_data}"
-    result = apiv2_client.get(f"/v2/transactions/unpack?datahex={datahex}&block_index=784320")
+    # A pre-`mpma_taproot_support` address lookup table, as `block_index` says. On regtest every
+    # protocol change is active whatever block index is asked for, so the era has to be set here.
+    with ProtocolChangesDisabled(["mpma_taproot_support"]):
+        result = apiv2_client.get(f"/v2/transactions/unpack?datahex={datahex}&block_index=784320")
     assert result.status_code == 200
     assert result.json["result"]["message_type"] == "mpma_send"
     assert result.json["result"]["message_type_id"] == 3

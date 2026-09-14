@@ -37,7 +37,7 @@ Bootstrap snapshots for v11.4.0 include the State DB refresh and are selected au
 
 The protocol changes activate at the following block heights:
 
-| Network | Broadcast validation changes | Ordinals metadata support |
+| Network | Broadcast validation and MPMA changes | Ordinals metadata support |
 | --- | ---: | ---: |
 | Mainnet | 970,000 | 970,000 |
 | Testnet3 | 5,166,000 | 5,166,000 |
@@ -59,11 +59,12 @@ All changes are enabled on regtest. The activation heights for `correct_transact
 
 ## Protocol
 
-These three changes take effect at the activation heights listed above:
+These four changes take effect at the activation heights listed above:
 
 - Reject broadcasts whose timestamp, value or fee fraction is NaN, infinite or a decimal value that cannot be stored in the ledger (`reject_non_finite_broadcast`).
 - Reject broadcasts with negative fee fractions (`reject_negative_fee_fraction`).
 - Enable Counterparty messages in the `xcp` field of an Ordinals inscription metadata map (`ordinals_metadata_support`) on mainnet, testnet3 and testnet4. This format was previously documented but not activated on those networks (#3502).
+- Allow an MPMA send to pay Taproot and P2WSH destinations (`mpma_taproot_support`). The address table switches from the fixed 21-byte legacy packing to a length byte followed by the self-describing address packing already used by enhanced sends and sweeps. Before activation, tables are written and read exactly as before. Wallets that decode MPMA sends must support the new table by the activation height (#3208).
 
 ## API
 
