@@ -2,6 +2,7 @@ import getpass
 import glob
 import io
 import os
+import shutil
 import sqlite3
 import subprocess  # nosec B404
 import sys
@@ -69,7 +70,25 @@ def verify_signature(public_key_data, signature_path, snapshot_path):
         with open(signature_path, "rb") as s:
             verified = gpg.verify_file(s, snapshot_path, close_file=False)
     finally:
-        pass
+        # Each gnupg.GPG(gnupghome=...) call spawns a persistent gpg-agent
+        # daemon for that homedir; kill it before removing the directory so
+        # repeated bootstrap runs don't leak agents and temp dirs. Removing
+        # the directory out from under a running agent races with socket /
+        # lockfile creation, so the kill must come first. check=False because
+        # the agent may legitimately not have started (e.g. import_keys
+        # raised); ignore_errors guards against gpg transiently recreating a
+        # file during shutdown. Nothing here may raise: an OSError from a
+        # missing `gpgconf` would both skip the removal below and mask the
+        # exception that brought us into this block.
+        try:
+            subprocess.run(  # noqa: S603
+                ["gpgconf", "--homedir", temp_dir, "--kill", "gpg-agent"],  # noqa: S607  # nosec B603, B607
+                check=False,
+                capture_output=True,
+            )
+        except OSError:  # `gpgconf` not on PATH
+            pass
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
     return verified
 

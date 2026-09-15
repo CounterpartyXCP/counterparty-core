@@ -3,7 +3,7 @@ import logging
 import time
 
 from counterpartycore.lib import backend, config, exceptions, ledger
-from counterpartycore.lib.api.apiwatcher import EVENTS_ADDRESS_FIELDS
+from counterpartycore.lib.api.addressevents import EVENTS_ADDRESS_FIELDS
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import blocks, deserialize
 from counterpartycore.lib.utils import database, hashcodec
