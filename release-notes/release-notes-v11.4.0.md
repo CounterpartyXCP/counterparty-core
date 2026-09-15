@@ -93,6 +93,7 @@ These four changes take effect at the activation heights listed above:
 - Fix Gunicorn worker retirement hanging on health-listener shutdown.
 - Clean up temporary GnuPG directories and agents after snapshot signature verification (#3492).
 - Update the Docker Compose image to v11.4.0 and verify the version in integration tests (#3506).
+- Fix `destination_vout` on `compose/attach`, which rejected every value because the parameter was declared as a string. It is now an integer, so an attach can target a specific output (#3519).
 
 ## Codebase
 

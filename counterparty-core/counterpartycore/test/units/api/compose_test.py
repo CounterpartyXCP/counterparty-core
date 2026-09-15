@@ -588,6 +588,25 @@ def test_compose_attach(apiv2_client, defaults):
     assert response.status_code in [200, 400]
 
 
+def test_compose_attach_destination_vout(apiv2_client, defaults):
+    """The route declared `destination_vout` as a string, so the query value reached
+    `attach.validate()` untouched and failed its integer check whatever it was."""
+    address = defaults["addresses"][0]
+    response = apiv2_client.get(
+        f"/v2/addresses/{address}/compose/attach"
+        "?asset=XCP&quantity=1000&destination_vout=1&return_only_data=true"
+    )
+    assert response.status_code == 200, response.json
+    assert bytes.fromhex(response.json["result"]["data"]) == b"CNTRPRTYeXCP|1000|1"
+
+    response = apiv2_client.get(
+        f"/v2/addresses/{address}/compose/attach"
+        "?asset=XCP&quantity=1000&destination_vout=one&return_only_data=true"
+    )
+    assert response.status_code == 400
+    assert response.json["error"] == "Invalid integer: destination_vout"
+
+
 def test_get_attach_estimate_xcp_fee(apiv2_client, defaults):
     """Test get_attach_estimate_xcp_fee function via API."""
     address = defaults["addresses"][0]
