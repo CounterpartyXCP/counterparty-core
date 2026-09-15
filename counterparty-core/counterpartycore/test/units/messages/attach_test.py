@@ -39,6 +39,12 @@ def test_compose(ledger_db, defaults):
         [],
         b"eXCP|100|1",
     )
+    # vout 0 is a valid destination and must be packed, not dropped as falsy
+    assert attach.compose(ledger_db, address_0, "XCP", 100, None, 0) == (
+        address_0,
+        [],
+        b"eXCP|100|0",
+    )
     assert attach.compose(ledger_db, address_0, "XCP", 100, 666) == (
         address_0,
         [(address_0, 666)],
