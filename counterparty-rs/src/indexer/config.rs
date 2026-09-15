@@ -117,7 +117,7 @@ impl Heights {
                 multisig_addresses: 333500,
                 taproot_support: 902000,
                 fix_is_segwit: 902000,
-                ordinals_metadata_support: 999999999,
+                ordinals_metadata_support: 970000,
                 correct_transaction_fee: 966200,
             },
             Network::Testnet3 => Heights {
@@ -128,7 +128,7 @@ impl Heights {
                 multisig_addresses: 0,
                 taproot_support: 4410000,
                 fix_is_segwit: 4410000,
-                ordinals_metadata_support: 999999999,
+                ordinals_metadata_support: 5166000,
                 correct_transaction_fee: 5166000,
             },
             Network::Testnet4 => Heights {
@@ -139,7 +139,7 @@ impl Heights {
                 multisig_addresses: 0,
                 taproot_support: 85000,
                 fix_is_segwit: 85000,
-                ordinals_metadata_support: 999999999,
+                ordinals_metadata_support: 155500,
                 correct_transaction_fee: 153700,
             },
             Network::Regtest => Heights {

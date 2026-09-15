@@ -78,7 +78,7 @@ def apply(db):
         SELECT message_index AS event_index, event, hex_lower(event_hash) AS event_hash, block_index
         FROM ledger_db.messages
         """,
-        # Do not drop or rename: `apiwatcher` names this index in `INDEXED BY`
+        # Do not drop or rename: `parsedevents` names this index in `INDEXED BY`
         # clauses (LAST_BLOCK_PARSED_SQL and friends) to keep SQLite from sorting
         # every BLOCK_PARSED row to return one. `INDEXED BY` is a requirement, not
         # a hint, so removing this index makes those queries fail outright.

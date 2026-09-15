@@ -9,7 +9,13 @@ rollback followed by the watcher's forward replay is a no-op.
 
 import pytest
 from counterpartycore.lib import config
-from counterpartycore.lib.api import apiwatcher, dbbuilder, staterollback, statetables
+from counterpartycore.lib.api import (
+    apiwatcher,
+    dbbuilder,
+    parsedevents,
+    staterollback,
+    statetables,
+)
 from counterpartycore.lib.parser import blocks
 from counterpartycore.lib.utils import database
 
@@ -222,7 +228,7 @@ def test_full_rebuild_for_block_zero(state_db, ledger_db):
 
 
 def test_full_rebuild_for_deep_rollback(state_db, ledger_db):
-    last_block = apiwatcher.get_last_block_parsed(state_db, no_cache=True)
+    last_block = parsedevents.get_last_block_parsed(state_db, no_cache=True)
     target = max(1, last_block - staterollback.MAX_INCREMENTAL_DEPTH)
     reason = staterollback.rollback_reason(state_db, target)
     assert reason is not None and "exceeds" in reason
@@ -263,8 +269,8 @@ def test_rollback_undoes_a_half_copied_block(state_db, ledger_db):
 
     # The premise: the last block *completed* is still the one below the target,
     # untouched by the reorganization -- only the last block *touched* sees it.
-    assert apiwatcher.get_last_block_parsed(state_db, no_cache=True) == target - 1
-    assert apiwatcher.get_last_block_touched(state_db) == target
+    assert parsedevents.get_last_block_parsed(state_db, no_cache=True) == target - 1
+    assert parsedevents.get_last_block_touched(state_db) == target
 
     assert staterollback.rollback_reason(state_db, target) is None
     dbbuilder.rollback_state_db(state_db, target)
@@ -278,7 +284,7 @@ def test_nothing_to_roll_back_is_a_noop(state_db, ledger_db, monkeypatch):
     """A target above the State DB's own tip has nothing to undo. Re-deriving
     every table from the whole ledger history to achieve that would be the most
     expensive no-op available -- the watcher just replays forward instead."""
-    target = apiwatcher.get_last_block_touched(state_db) + 1
+    target = parsedevents.get_last_block_touched(state_db) + 1
     assert staterollback.rollback_reason(state_db, target) == staterollback.NOTHING_TO_ROLL_BACK
 
     before = _dump_state_db(state_db)
@@ -326,7 +332,7 @@ def test_unreadable_state_db_selects_the_full_rebuild(state_db, ledger_db, monke
     def boom(*args, **kwargs):
         raise ValueError("invalid literal for int()")
 
-    monkeypatch.setattr(apiwatcher, "get_last_block_touched", boom)
+    monkeypatch.setattr(parsedevents, "get_last_block_touched", boom)
     reason = staterollback.rollback_reason(state_db, _last_block(ledger_db))
     assert reason is not None and "cannot be inspected" in reason
 

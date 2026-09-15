@@ -26,6 +26,7 @@ from counterpartycore.lib.api import (
     dbstatus,
     healthz,
     healthz_server,
+    parsedevents,
     queries,
     verbose,
     wsgi,
@@ -91,7 +92,7 @@ def is_server_ready():
 
 def api_root():
     with StateDBConnectionPool().connection() as state_db:
-        counterparty_height = apiwatcher.get_last_block_parsed(state_db)
+        counterparty_height = parsedevents.get_last_block_parsed(state_db)
 
     return {
         "server_ready": is_server_ready(),
@@ -368,7 +369,7 @@ def cache_response(uncached, response):
 def execute_api_function(rule, route, function_args):
     # cache everything for one block
     with StateDBConnectionPool().connection() as state_db:
-        current_block_index = apiwatcher.get_last_block_parsed(state_db)
+        current_block_index = parsedevents.get_last_block_parsed(state_db)
     cache_key = f"{current_block_index}:{request.url}"
     # except for blocks
     if request.path.startswith("/v2/blocks/") and not request.path.startswith("/v2/blocks/last"):
@@ -590,7 +591,7 @@ def init_flask_app():
         init_api_access_log(app)
         # Get the last block index
         with StateDBConnectionPool().connection() as state_db:
-            CurrentState().set_current_block_index(apiwatcher.get_last_block_parsed(state_db))
+            CurrentState().set_current_block_index(parsedevents.get_last_block_parsed(state_db))
 
         methods = ["OPTIONS", "GET"]
         # Add routes
@@ -697,6 +698,7 @@ class ConnectionPoolMonitor(threading.Thread):
 def run_apiserver(
     args, server_ready_value, stop_event, shared_backend_height, parent_pid, log_stream
 ):
+    api_owner_pid = os.getpid()
     logger.info("Starting API Server process...")
 
     def handle_interrupt_signal(_signum, _frame):
@@ -749,6 +751,11 @@ def run_apiserver(
                     config.DEFAULT_HEALTHZ_SATURATION_GRACE_SECONDS,
                 ),
                 stop_event=stop_event,
+                # Readiness must not go green during the startup this listener
+                # deliberately runs ahead of: `server_ready_value` is 0 until
+                # the WSGI server is built and about to run, and 2 once it is
+                # stopping (issue #3504).
+                serving_provider=lambda: server_ready_value.value == 1,
             )
             health_server.start()
 
@@ -833,7 +840,10 @@ def run_apiserver(
             memory_profiler.stop_memory_profiler()
 
         logger.info("API Server stopped.")
-        server_ready_value.value = 2
+        # Retiring Gunicorn workers also unwind through this finally block.
+        # Only the API owner can mark the shared server state as stopped.
+        if os.getpid() == api_owner_pid:
+            server_ready_value.value = 2
 
 
 # This thread is used for the following two reasons:

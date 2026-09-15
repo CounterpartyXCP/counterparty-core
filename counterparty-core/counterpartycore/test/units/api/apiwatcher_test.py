@@ -17,7 +17,7 @@ import time
 from unittest.mock import MagicMock
 
 import pytest
-from counterpartycore.lib.api import apiwatcher
+from counterpartycore.lib.api import addressevents, apiwatcher, parsedevents
 
 
 def test_api_watcher_stop_interrupts_sqlite_connections():
@@ -65,15 +65,60 @@ def test_api_watcher_stop_does_not_interrupt_a_connection_being_closed(monkeypat
     watcher.state_db.close.side_effect = slow_close
     watcher.state_db.interrupt.side_effect = record_interrupt
     watcher.ledger_db.interrupt.side_effect = record_interrupt
+    # `run` hands the connections off before closing them, so hold the mocks.
+    state_db, ledger_db = watcher.state_db, watcher.ledger_db
 
     watcher.start()
     assert closing.wait(timeout=5), "watcher never reached its close"
     watcher.stop(deadline=time.monotonic() + 5)
 
     assert not watcher.is_alive()
-    # Both interrupts waited for the close to finish. Without the lock they run
-    # immediately and see a close in flight.
-    assert overlapped == [False, False]
+    # The watcher cleared both handles under the lock before closing them, so
+    # `stop()` found nothing left to interrupt. Without that handoff the
+    # interrupts reach connections that are in the middle of being freed.
+    assert overlapped == []
+    state_db.interrupt.assert_not_called()
+    ledger_db.interrupt.assert_not_called()
+    # Handing the connections off must not cost the close itself.
+    state_db.close.assert_called_once_with()
+    ledger_db.close.assert_called_once_with()
+
+
+def test_api_watcher_stop_is_not_delayed_by_a_slow_close(monkeypatch):
+    """The close is disk-bound: `state_db` is the last writer once the pools are
+    gone, so it checkpoints the WAL and fsyncs. Holding `db_lock` across it put
+    `stop()` behind that I/O on a mutex no deadline covered, and a slow close
+    could spend the whole shutdown budget before the bounded join was reached."""
+    monkeypatch.setattr(apiwatcher.database, "get_db_connection", lambda *a, **k: MagicMock())
+    monkeypatch.setattr(apiwatcher, "update_last_parsed_events_cache", lambda *a, **k: None)
+
+    watcher = apiwatcher.APIWatcher(MagicMock())
+    # Return straight to `run`'s finally, without entering `follow`.
+    monkeypatch.setattr(apiwatcher, "catch_up", lambda *a, **k: watcher.stop_event.set())
+
+    closing = threading.Event()
+    release = threading.Event()
+
+    def blocking_close():
+        closing.set()
+        release.wait(timeout=5)
+
+    watcher.state_db.close.side_effect = blocking_close
+
+    watcher.start()
+    assert closing.wait(timeout=5), "watcher never reached its close"
+    try:
+        started = time.monotonic()
+        watcher.stop(deadline=time.monotonic() + 0.05)
+        elapsed = time.monotonic() - started
+    finally:
+        release.set()
+
+    # The close was still running: `stop()` was bounded by its own join, not by
+    # the mutex the closing thread holds.
+    assert elapsed < 2, f"stop() waited {elapsed:.2f}s on a close it does not own"
+    watcher.join(timeout=5)
+    assert not watcher.is_alive()
 
 
 def test_api_watcher_is_a_daemon_thread(monkeypatch):
@@ -103,18 +148,22 @@ def test_api_watcher_handles_shutdown_interrupt(monkeypatch):
 
     monkeypatch.setattr(apiwatcher, "catch_up", interrupted_catch_up)
 
+    # `run` hands the connections off before closing them, so hold the mocks.
+    state_db, ledger_db = watcher.state_db, watcher.ledger_db
+
     watcher.run()
 
-    watcher.state_db.close.assert_called_once_with()
-    watcher.ledger_db.close.assert_called_once_with()
+    state_db.close.assert_called_once_with()
+    ledger_db.close.assert_called_once_with()
+    assert watcher.state_db is None and watcher.ledger_db is None
 
 
 # The queries as the production code will actually run them, so that dropping an
 # `INDEXED BY` clause from apiwatcher fails these tests instead of silently
 # regressing to the plan that cost 132s on a cold mainnet State DB.
 BLOCK_PARSED_QUERIES = [
-    ("LAST_BLOCK_PARSED_SQL", apiwatcher.LAST_BLOCK_PARSED_SQL),
-    ("BLOCKS_PARSED_DESC_SQL", apiwatcher.BLOCKS_PARSED_DESC_SQL),
+    ("LAST_BLOCK_PARSED_SQL", parsedevents.LAST_BLOCK_PARSED_SQL),
+    ("BLOCKS_PARSED_DESC_SQL", parsedevents.BLOCKS_PARSED_DESC_SQL),
 ]
 
 # `LAST_PARSED_EVENT_SQL` carries no `event` filter, so the planner reaches for the
@@ -123,7 +172,7 @@ BLOCK_PARSED_QUERIES = [
 # failure if the index is ever dropped -- but it cannot take the premise the test
 # below guards, which is that the *unhinted* query picks the sort.
 EVENT_INDEX_QUERIES = BLOCK_PARSED_QUERIES + [
-    ("LAST_PARSED_EVENT_SQL", apiwatcher.LAST_PARSED_EVENT_SQL),
+    ("LAST_PARSED_EVENT_SQL", parsedevents.LAST_PARSED_EVENT_SQL),
 ]
 
 
@@ -222,7 +271,7 @@ def test_get_last_block_parsed_preserves_event_order(state_db):
         """
     ).fetchone()["block_index"]
 
-    assert apiwatcher.get_last_block_parsed(state_db, no_cache=True) == expected
+    assert parsedevents.get_last_block_parsed(state_db, no_cache=True) == expected
 
 
 def test_block_parsed_queries_fail_loudly_without_their_index(state_db):
@@ -254,20 +303,20 @@ def test_get_last_block_parsed_uses_latest_event_not_highest_block(state_db):
         (max_event_index + 2, "OTHER", "trailing-event", 999),
     )
 
-    assert apiwatcher.get_last_block_parsed(state_db, no_cache=True) == 100
+    assert parsedevents.get_last_block_parsed(state_db, no_cache=True) == 100
 
 
 def test_get_last_block_parsed_empty_table(state_db):
     state_db.execute("DELETE FROM parsed_events")
 
-    assert apiwatcher.get_last_block_parsed(state_db, no_cache=True) == 0
+    assert parsedevents.get_last_block_parsed(state_db, no_cache=True) == 0
 
 
 def test_detach_from_utxo_field_name_correct():
     """DETACH_FROM_UTXO must reference `source_address` (not the legacy typo
     `sourc_address`); the streamed handler keys off this dict and silently
     dropped the source row for every detach until the typo was fixed."""
-    fields = apiwatcher.EVENTS_ADDRESS_FIELDS["DETACH_FROM_UTXO"]
+    fields = addressevents.EVENTS_ADDRESS_FIELDS["DETACH_FROM_UTXO"]
     assert "source_address" in fields
     assert "sourc_address" not in fields
     assert "destination" in fields
@@ -460,7 +509,7 @@ def test_pool_events_in_events_address_fields():
         "NEW_POOL_WITHDRAWAL",
         "POOL_MATCH",
     ):
-        assert event in apiwatcher.EVENTS_ADDRESS_FIELDS
+        assert event in addressevents.EVENTS_ADDRESS_FIELDS
 
 
 def test_pool_tables_in_state_db_tables():
@@ -516,7 +565,7 @@ def test_events_address_fields_keys_are_lowercase_underscore():
     look like a real binding key (lowercase + underscores). This would
     have caught the original `sourc_address` typo."""
     pattern = re.compile(r"^[a-z][a-z0-9_]*$")
-    for event_name, fields in apiwatcher.EVENTS_ADDRESS_FIELDS.items():
+    for event_name, fields in addressevents.EVENTS_ADDRESS_FIELDS.items():
         for field in fields:
             assert pattern.match(field), f"{event_name} declares a malformed field name {field!r}"
 
@@ -636,8 +685,10 @@ def test_check_reorg_detects_a_tip_block_replaced_at_the_same_height(reorg_dbs, 
 
     # The premise: everything below the tip is untouched, so a check that skips
     # the tip compares two identical hashes and reports nothing.
-    previous = apiwatcher.fetch_one(state_db, "SELECT * FROM parsed_events WHERE event_index = 20")
-    in_ledger = apiwatcher.fetch_one(ledger_db, "SELECT * FROM messages WHERE message_index = 20")
+    previous = parsedevents.fetch_one(
+        state_db, "SELECT * FROM parsed_events WHERE event_index = 20"
+    )
+    in_ledger = parsedevents.fetch_one(ledger_db, "SELECT * FROM messages WHERE message_index = 20")
     assert previous["event_hash"] == in_ledger["event_hash"]
 
     assert apiwatcher.check_reorg(ledger_db, state_db) is True
@@ -671,8 +722,8 @@ def test_check_reorg_detects_a_reorg_inside_the_block_being_parsed(mid_block_dbs
     ledger_db.execute("UPDATE messages SET event_hash = 'other-3' WHERE message_index = 30")
 
     # The premise: the newest *block* the State DB parsed still matches.
-    last_block = apiwatcher.fetch_one(state_db, apiwatcher.LAST_BLOCK_PARSED_SQL)
-    in_ledger = apiwatcher.fetch_one(
+    last_block = parsedevents.fetch_one(state_db, parsedevents.LAST_BLOCK_PARSED_SQL)
+    in_ledger = parsedevents.fetch_one(
         ledger_db,
         "SELECT * FROM messages WHERE block_index = ? AND event = 'BLOCK_PARSED'",
         (last_block["block_index"],),
@@ -730,18 +781,18 @@ def test_get_last_block_touched_sees_the_block_being_copied(mid_block_dbs, reorg
     _, mid_block_state_db = mid_block_dbs
     _, whole_blocks_state_db = reorg_dbs
 
-    assert apiwatcher.get_last_block_parsed(whole_blocks_state_db, no_cache=True) == 3
-    assert apiwatcher.get_last_block_touched(whole_blocks_state_db) == 3
+    assert parsedevents.get_last_block_parsed(whole_blocks_state_db, no_cache=True) == 3
+    assert parsedevents.get_last_block_touched(whole_blocks_state_db) == 3
 
-    assert apiwatcher.get_last_block_parsed(mid_block_state_db, no_cache=True) == 2
-    assert apiwatcher.get_last_block_touched(mid_block_state_db) == 3
+    assert parsedevents.get_last_block_parsed(mid_block_state_db, no_cache=True) == 2
+    assert parsedevents.get_last_block_touched(mid_block_state_db) == 3
 
 
 def test_get_last_block_touched_is_zero_on_an_empty_state_db(reorg_dbs):
     _, state_db = reorg_dbs
     state_db.execute("DELETE FROM parsed_events")
 
-    assert apiwatcher.get_last_block_touched(state_db) == 0
+    assert parsedevents.get_last_block_touched(state_db) == 0
 
 
 def test_check_reorg_targets_a_block_the_state_db_actually_holds(mid_block_dbs, rollbacks):
@@ -753,7 +804,7 @@ def test_check_reorg_targets_a_block_the_state_db_actually_holds(mid_block_dbs, 
 
     assert apiwatcher.check_reorg(ledger_db, state_db) is True
     assert rollbacks == [3]
-    assert rollbacks[0] <= apiwatcher.get_last_block_touched(state_db)
+    assert rollbacks[0] <= parsedevents.get_last_block_touched(state_db)
 
 
 def test_search_matching_event_starts_at_the_last_parsed_block(reorg_dbs):
@@ -988,14 +1039,16 @@ def test_a_failed_watcher_is_logged_and_flagged(monkeypatch):
     )
     logger = MagicMock()
     monkeypatch.setattr(apiwatcher, "logger", logger)
+    # `run` hands the connections off before closing them, so hold the mocks.
+    state_db, ledger_db = watcher.state_db, watcher.ledger_db
 
     watcher.run()  # must not propagate: nothing above it would handle it
 
     assert apiwatcher.watcher_has_failed() is True
     # With the traceback, or the log says the watcher stopped without saying why.
     assert logger.critical.call_args.kwargs == {"exc_info": True}
-    watcher.state_db.close.assert_called_once_with()
-    watcher.ledger_db.close.assert_called_once_with()
+    state_db.close.assert_called_once_with()
+    ledger_db.close.assert_called_once_with()
 
 
 def test_an_unexpected_interrupt_is_flagged_too(monkeypatch):

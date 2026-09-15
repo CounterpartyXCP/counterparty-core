@@ -31,6 +31,25 @@ from counterpartycore.lib.utils.database import (
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
+# Which events make `assets_info` stale. Read by the watcher, which applies them
+# forward, and by the rollback, which re-derives the table when an orphaned block
+# contained one -- so the two must not drift.
+ASSET_EVENTS = [
+    "ASSET_CREATION",
+    "ASSET_ISSUANCE",
+    "ASSET_DESTRUCTION",
+    "RESET_ISSUANCE",
+    "ASSET_TRANSFER",
+    "BURN",
+]
+
+XCP_DESTROY_EVENTS = [
+    "ASSET_ISSUANCE",
+    "ASSET_DESTRUCTION",
+    "SWEEP",
+    "ASSET_DIVIDEND",
+]
+
 
 # Consolidated tables copied from ``ledger_db`` by migration 0006, mapped to
 # the column list that identifies a unique object. The Ledger DB keeps every
