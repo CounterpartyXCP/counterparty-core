@@ -1308,7 +1308,7 @@
         "minimum_version_major": 11,
         "minimum_version_minor": 4,
         "minimum_version_revision": 0,
-        "block_index": 970000,
+        "block_index": 971700,
         "testnet3_block_index": 5166000,
         "testnet4_block_index": 155500,
         "signet_block_index": 0
@@ -1497,7 +1497,7 @@
         "minimum_version_major": 11,
         "minimum_version_minor": 4,
         "minimum_version_revision": 0,
-        "block_index": 970000,
+        "block_index": 971700,
         "testnet3_block_index": 5166000,
         "testnet4_block_index": 155500,
         "signet_block_index": 325500
@@ -1506,7 +1506,7 @@
         "minimum_version_major": 11,
         "minimum_version_minor": 4,
         "minimum_version_revision": 0,
-        "block_index": 970000,
+        "block_index": 971700,
         "testnet3_block_index": 5166000,
         "testnet4_block_index": 155500,
         "signet_block_index": 325500
@@ -1515,7 +1515,7 @@
         "minimum_version_major": 11,
         "minimum_version_minor": 4,
         "minimum_version_revision": 0,
-        "block_index": 970000,
+        "block_index": 971700,
         "testnet3_block_index": 5166000,
         "testnet4_block_index": 155500,
         "signet_block_index": 325500
