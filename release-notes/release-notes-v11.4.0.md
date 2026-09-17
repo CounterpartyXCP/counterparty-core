@@ -1,8 +1,8 @@
-# Release Notes - Counterparty Core v11.4.0 (2026-09-09)
+# Release Notes - Counterparty Core v11.4.0 (2026-09-18)
 
 This is a security release that fixes vulnerabilities which could halt the network or cause nodes to disagree on ledger state. It also improves reorganization handling, API performance and startup and shutdown times.
 
-**All node operators should upgrade immediately. This release includes protocol changes that activate at mainnet block 970,000 (approximately October 5, 2026).**
+**All node operators should upgrade immediately. This release includes protocol changes that activate at mainnet block 971,700 (approximately October 17, 2026).**
 
 # Upgrading
 
@@ -39,7 +39,7 @@ The protocol changes activate at the following block heights:
 
 | Network | Broadcast validation and MPMA changes | Ordinals metadata support |
 | --- | ---: | ---: |
-| Mainnet | 970,000 | 970,000 |
+| Mainnet | 971,700 | 971,700 |
 | Testnet3 | 5,166,000 | 5,166,000 |
 | Testnet4 | 155,500 | 155,500 |
 | Signet | 325,500 | Already active |
