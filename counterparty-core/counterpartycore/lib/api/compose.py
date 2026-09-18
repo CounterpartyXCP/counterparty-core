@@ -1174,16 +1174,17 @@ def unpack(db, datahex: str, block_index: int = None):
             message_type_name = "mpma_send"
             mpma_message_data = messages.versions.mpma.unpack(message, block_index=block_index)
             message_data = []
-            for asset_name, send_info in mpma_message_data.items():
-                message_data.append(
-                    {
-                        "asset": asset_name,
-                        "destination": send_info[0][0],
-                        "quantity": send_info[0][1],
-                        "memo": send_info[0][2] if len(send_info[0]) > 2 else None,
-                        "memo_is_hex": send_info[0][3] if len(send_info[0]) > 3 else None,
-                    }
-                )
+            for asset_name, sends in mpma_message_data.items():
+                for send_info in sends:
+                    message_data.append(
+                        {
+                            "asset": asset_name,
+                            "destination": send_info[0],
+                            "quantity": send_info[1],
+                            "memo": send_info[2] if len(send_info) > 2 else None,
+                            "memo_is_hex": send_info[3] if len(send_info) > 3 else None,
+                        }
+                    )
         # RPS
         elif message_type_id == messages.rps.ID:
             message_type_name = "rps"

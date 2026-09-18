@@ -75,6 +75,7 @@ These four changes take effect at the activation heights listed above:
 - Return `409 Conflict` when composing an issuance or fairminter that conflicts with an asset operation in Counterparty's parsed mempool. Retry after the pending transaction confirms or leaves the mempool. `validate=false` bypasses this check (#3490).
 - Add readiness reasons `rebuilding`, `starting` and `watcher_stopped`. Readiness returns `503` while rebuilding, before the API can serve requests or after the watcher fails, including in `--api-only` mode (#3485, #3493, #3504).
 - Include `openapi.json` in wheels and source distributions, fixing `/v2/openapi.json` in the official container. Document the pagination changes and composition conflicts (#3495, #3505, #3507).
+- Return all recipients, quantities, and memos when unpacking MPMA transactions, rather than only the first recipient for each asset.
 
 ## Performance
 

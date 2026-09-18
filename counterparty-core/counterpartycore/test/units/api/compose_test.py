@@ -4,6 +4,7 @@ import pytest
 from counterpartycore.lib import exceptions, ledger
 from counterpartycore.lib.api import compose
 from counterpartycore.lib.messages import pooldeposit
+from counterpartycore.lib.messages.versions import mpma
 from counterpartycore.lib.utils import hashcodec, script
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
@@ -2030,7 +2031,7 @@ def test_unpack_dividend(apiv2_client):
     assert result.json["result"]["message_type_id"] == 50
 
 
-def test_unpack_mpma(apiv2_client):
+def test_unpack_mpma(apiv2_client, defaults):
     """Test unpack MPMA message type."""
     # MPMA message: ID 3
     # This is a complex packed format using a real MPMA message
@@ -2043,11 +2044,88 @@ def test_unpack_mpma(apiv2_client):
     with ProtocolChangesDisabled(["mpma_taproot_support"]):
         result = apiv2_client.get(f"/v2/transactions/unpack?datahex={datahex}&block_index=784320")
     assert result.status_code == 200
-    assert result.json["result"]["message_type"] == "mpma_send"
-    assert result.json["result"]["message_type_id"] == 3
-    # Verify the message_data contains the unpacked sends
-    assert isinstance(result.json["result"]["message_data"], list)
-    assert len(result.json["result"]["message_data"]) > 0
+    assert result.json == {
+        "result": {
+            "message_type": "mpma_send",
+            "message_type_id": mpma.ID,
+            "message_data": [
+                {
+                    "asset": "XCP",
+                    "destination": defaults["addresses"][2],
+                    "quantity": defaults["quantity"],
+                    "memo": None,
+                    "memo_is_hex": None,
+                },
+                {
+                    "asset": "XCP",
+                    "destination": defaults["addresses"][1],
+                    "quantity": defaults["quantity"],
+                    "memo": None,
+                    "memo_is_hex": None,
+                },
+            ],
+        }
+    }
+
+
+@pytest.mark.parametrize("legacy", [True, False], ids=["legacy", "taproot"])
+@pytest.mark.parametrize(
+    ("memo", "memo_is_hex"),
+    [(None, False), ("shared memo", False), ("cafe", True)],
+    ids=["no-default-memo", "text-default-memo", "hex-default-memo"],
+)
+def test_unpack_mpma_returns_all_recipients_and_memos(
+    apiv2_client, ledger_db, defaults, legacy, memo, memo_is_hex
+):
+    """Expose every send in wire order, including recipient-specific and inherited memos."""
+    last_destination = defaults["addresses"][3] if legacy else defaults["p2tr_addresses"][0]
+    sends = [
+        ("XCP", defaults["addresses"][1], 7),
+        ("DIVISIBLE", defaults["addresses"][2], 11, "recipient ✓", False),
+        ("XCP", last_destination, 13, "deadbeef", True),
+        ("DIVISIBLE", defaults["addresses"][3], 17),
+    ]
+    with ProtocolChangesDisabled(["mpma_taproot_support"] if legacy else []):
+        _, _, data = mpma.compose(
+            ledger_db, defaults["addresses"][0], sends, memo=memo, memo_is_hex=memo_is_hex
+        )
+        response = apiv2_client.get("/v2/transactions/unpack", query_string={"datahex": data.hex()})
+
+    assert response.status_code == 200
+    assert response.json["result"] == {
+        "message_type": "mpma_send",
+        "message_type_id": mpma.ID,
+        "message_data": [
+            {
+                "asset": "DIVISIBLE",
+                "destination": defaults["addresses"][2],
+                "quantity": 11,
+                "memo": "recipient ✓",
+                "memo_is_hex": False,
+            },
+            {
+                "asset": "DIVISIBLE",
+                "destination": defaults["addresses"][3],
+                "quantity": 17,
+                "memo": memo,
+                "memo_is_hex": memo_is_hex if memo is not None else None,
+            },
+            {
+                "asset": "XCP",
+                "destination": defaults["addresses"][1],
+                "quantity": 7,
+                "memo": memo,
+                "memo_is_hex": memo_is_hex if memo is not None else None,
+            },
+            {
+                "asset": "XCP",
+                "destination": last_destination,
+                "quantity": 13,
+                "memo": "deadbeef",
+                "memo_is_hex": True,
+            },
+        ],
+    }
 
 
 def test_unpack_rps(apiv2_client):
