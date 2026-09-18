@@ -1172,6 +1172,10 @@ def unpack(db, datahex: str, block_index: int = None):
         # MPMA send
         elif message_type_id == messages.versions.mpma.ID:
             message_type_name = "mpma_send"
+            if block_index == config.MEMPOOL_BLOCK_INDEX:
+                # Match mpma.parse(): the mempool sentinel is above future
+                # activations, but pending data uses the next block's format.
+                block_index = ledger.blocks.last_db_index(db) + 1
             mpma_message_data = messages.versions.mpma.unpack(message, block_index=block_index)
             message_data = []
             for asset_name, send_info in mpma_message_data.items():
