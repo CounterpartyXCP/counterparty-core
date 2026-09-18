@@ -100,7 +100,7 @@ def compose(
             for value in [
                 asset,
                 quantity,
-                destination_vout or "",
+                "" if destination_vout is None else destination_vout,
             ]
         ]
     ).encode("utf-8")

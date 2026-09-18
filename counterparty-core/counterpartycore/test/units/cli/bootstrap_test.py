@@ -21,6 +21,81 @@ def test_verify_signature():
     assert not verify_signature(public_key_data, signature_path, other_path)
 
 
+def record_temp_dirs(monkeypatch):
+    """Collect the GnuPG homes `verify_signature()` creates, to assert they are removed."""
+    temp_dirs = []
+    real_mkdtemp = bootstrap.tempfile.mkdtemp
+
+    def recording_mkdtemp(*args, **kwargs):
+        temp_dir = real_mkdtemp(*args, **kwargs)
+        temp_dirs.append(temp_dir)
+        return temp_dir
+
+    monkeypatch.setattr(bootstrap.tempfile, "mkdtemp", recording_mkdtemp)
+    return temp_dirs
+
+
+def signature_fixtures():
+    dir = os.path.dirname(os.path.abspath(__file__))
+    fixtures_dir = os.path.join(dir, "..", "..", "fixtures")
+    with open(os.path.join(fixtures_dir, "test_public_key.asc"), "rb") as f:
+        public_key_data = f.read()
+    return (
+        public_key_data,
+        os.path.join(fixtures_dir, "test_snapshot.sig"),
+        os.path.join(fixtures_dir, "test_snapshot.tar.gz"),
+    )
+
+
+def test_verify_signature_removes_temp_dir(monkeypatch):
+    # Regression test for 301c37ac, which left one gpg-agent and one temporary
+    # GnuPG home behind on every call.
+    public_key_data, signature_path, snapshot_path = signature_fixtures()
+    temp_dirs = record_temp_dirs(monkeypatch)
+
+    assert verify_signature(public_key_data, signature_path, snapshot_path)
+
+    assert temp_dirs
+    assert not os.path.exists(temp_dirs[0])
+
+
+def test_verify_signature_removes_temp_dir_on_error(monkeypatch):
+    public_key_data, signature_path, snapshot_path = signature_fixtures()
+    temp_dirs = record_temp_dirs(monkeypatch)
+
+    def raising_gpg(*args, **kwargs):
+        raise RuntimeError("gpg unavailable")
+
+    monkeypatch.setattr(bootstrap.gnupg, "GPG", raising_gpg)
+
+    with pytest.raises(RuntimeError, match="gpg unavailable"):
+        verify_signature(public_key_data, signature_path, snapshot_path)
+
+    assert temp_dirs
+    assert not os.path.exists(temp_dirs[0])
+
+
+def test_verify_signature_cleanup_survives_missing_gpgconf(monkeypatch):
+    # A missing `gpgconf` must neither skip the removal nor mask the original error.
+    public_key_data, signature_path, snapshot_path = signature_fixtures()
+    temp_dirs = record_temp_dirs(monkeypatch)
+
+    def raising_gpg(*args, **kwargs):
+        raise RuntimeError("gpg unavailable")
+
+    def missing_gpgconf(*args, **kwargs):
+        raise FileNotFoundError(2, "No such file or directory", "gpgconf")
+
+    monkeypatch.setattr(bootstrap.gnupg, "GPG", raising_gpg)
+    monkeypatch.setattr(bootstrap.subprocess, "run", missing_gpgconf)
+
+    with pytest.raises(RuntimeError, match="gpg unavailable"):
+        verify_signature(public_key_data, signature_path, snapshot_path)
+
+    assert temp_dirs
+    assert not os.path.exists(temp_dirs[0])
+
+
 def test_generate_urls():
     version = config.BOOTSTRAP_VERSION
     counterparty_url = f"https://example.com/counterparty.db.{version}.zst"

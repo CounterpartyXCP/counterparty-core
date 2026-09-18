@@ -6,15 +6,17 @@ providers and a fake task dispatcher, and the HTTP layer is exercised against a 
 """
 
 import http.client
+import inspect
 import json
 import socket
 import threading
 import time
 from collections import deque
+from unittest.mock import MagicMock
 
 import pytest
 from counterpartycore.lib import config
-from counterpartycore.lib.api import healthz_server
+from counterpartycore.lib.api import apiwatcher, healthz_server
 from counterpartycore.lib.api.healthz_server import (
     HealthCheckServer,
     HealthRequestHandler,
@@ -46,6 +48,7 @@ def make_sampler(
     block_time=None,
     api_only=False,
     saturation_grace=5,
+    serving=True,
 ):
     return HealthSampler(
         dispatcher=dispatcher,
@@ -54,6 +57,7 @@ def make_sampler(
         backend_height_provider=lambda: backend_height,
         block_time_provider=lambda: block_time,
         api_only_provider=lambda: api_only,
+        serving_provider=lambda: serving,
     )
 
 
@@ -103,6 +107,66 @@ def test_api_only_skips_lag_axis():
     assert snap.ready is True
     assert snap.reason is None
     assert snap.backend_height is None
+
+
+# --------------------------------------------------------------------------------------------
+# Sampler: service lifecycle axis (issue #3504)
+# --------------------------------------------------------------------------------------------
+
+
+def test_not_ready_before_the_public_api_serves():
+    # The listener starts before WSGI construction, so a caught-up ledger is
+    # not on its own evidence that requests can be answered.
+    sampler = make_sampler(backend_height=100, last_parsed=100, serving=False)
+    sampler._tick()
+    snap = sampler.current_snapshot()
+    assert snap.ready is False
+    assert snap.reason == "starting"
+
+
+def test_api_only_does_not_bypass_the_lifecycle_axis():
+    # `--api-only` skips the backend-lag comparison, not service initialization.
+    sampler = make_sampler(api_only=True, backend_height=0, last_parsed=999, serving=False)
+    sampler._tick()
+    snap = sampler.current_snapshot()
+    assert snap.ready is False
+    assert snap.reason == "starting"
+
+
+def test_ready_once_the_public_api_serves():
+    sampler = make_sampler(backend_height=100, last_parsed=100, serving=False)
+    sampler._tick()
+    assert sampler.current_snapshot().ready is False
+
+    sampler._serving_provider = lambda: True
+    sampler._tick()
+    assert sampler.current_snapshot().ready is True
+
+
+def test_unreadable_serving_signal_sheds():
+    def boom():
+        raise RuntimeError("shared value gone")
+
+    sampler = make_sampler(backend_height=100, last_parsed=100)
+    sampler._serving_provider = boom
+    sampler._tick()
+    assert sampler.current_snapshot().ready is False
+    assert sampler.current_snapshot().reason == "starting"
+
+
+def test_liveness_stays_available_while_starting():
+    # Early liveness is the whole point of starting the listener first: a probe
+    # must not kill a pod that is still coming up.
+    sampler = make_sampler(backend_height=100, last_parsed=100, serving=False)
+    sampler._tick()
+    fx = _HttpServerFixture(sampler)
+    try:
+        assert fx.get("/healthz/live")[0] == 200
+        code, body = fx.get("/healthz/ready")
+        assert code == 503
+        assert body["reason"] == "starting"
+    finally:
+        fx.close()
 
 
 # --------------------------------------------------------------------------------------------
@@ -365,6 +429,77 @@ def test_bind_failure_is_non_fatal():
         sock.close()
 
 
+def test_server_accepts_the_apiserver_construction_kwargs():
+    """`run_apiserver` is the only caller and is not covered by the unit suite,
+    so nothing here would otherwise catch a keyword it passes that
+    `HealthCheckServer` does not accept -- the constructor raises inside the
+    API process and the node never becomes ready."""
+    signature = inspect.signature(HealthCheckServer.__init__)
+    assert {
+        "host",
+        "port",
+        "saturation_grace",
+        "stop_event",
+        "serving_provider",
+    } <= set(signature.parameters)
+
+
+def test_server_hands_the_serving_signal_to_its_sampler():
+    server = HealthCheckServer(
+        host="127.0.0.1",
+        port=0,
+        dispatcher=None,
+        saturation_grace=5,
+        serving_provider=lambda: False,
+    )
+    try:
+        server.start()
+        assert server.sampler is not None
+        server.sampler._tick()  # pylint: disable=protected-access
+        snap = server.sampler.current_snapshot()
+        assert snap.ready is False
+        assert snap.reason == "starting"
+    finally:
+        server.stop()
+
+
+def test_stop_reserves_budget_for_the_serve_thread(monkeypatch):
+    """The sampler and the serve thread are stopped one after the other. Handing
+    both the same deadline lets a stuck sampler leave the serve thread a zero
+    timeout, so it is abandoned rather than joined."""
+    server = HealthCheckServer(host="127.0.0.1", port=0, dispatcher=None, saturation_grace=5)
+    server.httpd = None
+    server.sampler = MagicMock()
+    server._serve_thread = MagicMock()  # pylint: disable=protected-access
+    server._serve_thread.is_alive.return_value = False  # pylint: disable=protected-access
+
+    deadline = time.monotonic() + 4
+    server.stop(deadline=deadline)
+
+    sampler_deadline = server.sampler.stop.call_args.kwargs["deadline"]
+    assert sampler_deadline < deadline
+    join_timeout = server._serve_thread.join.call_args.kwargs[  # pylint: disable=protected-access
+        "timeout"
+    ]
+    assert join_timeout > 1
+
+
+def test_stop_warns_when_the_serve_thread_outlives_its_deadline(monkeypatch):
+    server = HealthCheckServer(host="127.0.0.1", port=0, dispatcher=None, saturation_grace=5)
+    server.httpd = None
+    server.sampler = None
+    server._serve_thread = MagicMock()  # pylint: disable=protected-access
+    server._serve_thread.is_alive.return_value = True  # pylint: disable=protected-access
+    warnings = []
+    monkeypatch.setattr(
+        healthz_server.logger, "warning", lambda msg, *args: warnings.append(msg % args)
+    )
+
+    server.stop(deadline=time.monotonic())
+
+    assert any("did not stop before its deadline" in message for message in warnings)
+
+
 def test_start_stop_serves_requests(monkeypatch):
     monkeypatch.setattr(config, "API_ONLY", True, raising=False)
     server = HealthCheckServer(host="127.0.0.1", port=0, dispatcher=None, saturation_grace=5)
@@ -378,3 +513,102 @@ def test_start_stop_serves_requests(monkeypatch):
         conn.close()
     finally:
         server.stop()
+
+
+# --------------------------------------------------------------------------------------------
+# Sampler: the stopped-watcher readiness axis
+# --------------------------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def clear_watcher_failure():
+    apiwatcher.WATCHER_FAILED.clear()
+    yield
+    apiwatcher.WATCHER_FAILED.clear()
+
+
+def test_a_stopped_watcher_makes_the_pod_unready():
+    """Nothing restarts the watcher, so from the moment it dies the State DB is
+    frozen at whatever block it had reached. Waiting for the lag to cross the
+    ready threshold serves stale reads in the meantime."""
+    sampler = make_sampler(backend_height=100, last_parsed=100)
+    sampler._tick()
+    assert sampler.current_snapshot().ready is True
+
+    apiwatcher.WATCHER_FAILED.set()
+    sampler._tick()
+    snap = sampler.current_snapshot()
+
+    assert snap.ready is False
+    assert snap.reason == "watcher_stopped"
+    # Still published, since it is what an operator needs to see how far behind
+    # the frozen snapshot is.
+    assert snap.last_parsed == 100
+
+
+def test_a_stopped_watcher_is_reported_on_an_api_only_node():
+    """An `--api-only` node does not compare itself to the backend tip, so the
+    lag signal would never report this at all."""
+    sampler = make_sampler(api_only=True)
+    sampler._tick()
+    assert sampler.current_snapshot().ready is True
+
+    apiwatcher.WATCHER_FAILED.set()
+    sampler._tick()
+
+    assert sampler.current_snapshot().reason == "watcher_stopped"
+
+
+def test_a_rebuild_still_wins_over_a_stopped_watcher():
+    """The watcher stops itself for the duration of a rebuild; reporting that as
+    a failure would hide the operation actually under way."""
+    sampler = make_sampler()
+    apiwatcher.WATCHER_FAILED.set()
+    healthz_server.dbstatus.start("rollback", "pruning")
+    try:
+        sampler._tick()
+    finally:
+        healthz_server.dbstatus.finish()
+
+    assert sampler.current_snapshot().reason == "rebuilding"
+
+
+def test_liveness_survives_a_stopped_watcher():
+    """Liveness answers "is this process internally alive?", and it is: the
+    remedy is to shed traffic and page an operator, not to have Kubernetes kill
+    a pod mid-request."""
+    sampler = make_sampler()
+    apiwatcher.WATCHER_FAILED.set()
+    sampler._tick()
+
+    assert sampler.heartbeat_age() < sampler.liveness_heartbeat_timeout
+
+
+def test_stop_from_another_process_touches_nothing(monkeypatch):
+    """A Gunicorn worker retires by raising SystemExit, which unwinds through
+    `run_apiserver()`'s `finally` and calls `health_server.stop()` in the
+    *forked child* -- the arbiter forks from inside `wsgi_server.run()`, in the
+    same `try` as the listener's own `start()`.
+
+    `serve_forever` only ever ran in the parent, and
+    `socketserver.BaseServer.shutdown()` waits on an `Event` that only
+    `serve_forever` sets: the child inherited it cleared and nothing in the
+    child will ever set it, so without the owner-PID guard the call blocks
+    forever (verified directly against a forked child; not reproduced here
+    because forking a multi-threaded pytest process is itself deadlock-prone).
+    The guard is checked here by standing in for the child's PID: `stop()` must
+    return having touched neither the listener nor the sampler.
+    """
+    server = HealthCheckServer(host="127.0.0.1", port=0, saturation_grace=0)
+    server.start()
+    assert server.httpd is not None, "could not bind the health check server"
+    try:
+        monkeypatch.setattr(healthz_server.os, "getpid", lambda: server._owner_pid + 1)
+        server.stop()
+        # Untouched: still serving, sampler still ticking.
+        assert server._serve_thread.is_alive()
+        assert server.sampler.is_alive()
+    finally:
+        monkeypatch.undo()
+        server.stop()
+        assert not server._serve_thread.is_alive()

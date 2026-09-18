@@ -512,6 +512,19 @@ TransactionType = Literal[
     "unknown",
 ]
 SendType = Literal["all", "send", "attach", "move", "detach"]
+ADDRESS_HISTORY_MAX_OFFSET = 10_000
+_SEND_TYPES = tuple(typing.get_args(SendType))
+
+# The four ``sends`` columns an address history matches against, each with the
+# index that resolves it. Order matters: a branch is attributed to the first
+# address column it carries. Keep in sync with the ``CREATE INDEX`` statements
+# in ``ledger.migrations`` / ``ledger.migration_data.compact_hash_schema``.
+SENDS_ADDRESS_INDEXES = {
+    "source": "sends_source_idx",
+    "source_address": "sends_source_address",
+    "destination": "sends_destination_idx",
+    "destination_address": "sends_destination_address",
+}
 
 SUPPORTED_SORT_FIELDS = {
     "balances": ["address", "asset", "asset_longname", "quantity"],
@@ -705,6 +718,7 @@ def select_rows(
     wrap_where=None,
     sort=None,
     with_count=True,
+    where_index_hints=None,
 ):
     if offset is not None or sort is not None:
         last_cursor = None
@@ -718,6 +732,8 @@ def select_rows(
         where = [{}]
     if isinstance(where, dict):
         where = [where]
+    if where_index_hints is not None and len(where_index_hints) != len(where):
+        raise ValueError("where_index_hints must match the number of OR branches")
 
     bindings = []
 
@@ -828,7 +844,9 @@ def select_rows(
         return f"({' OR '.join(clauses)})", extra
 
     or_where = []
-    for where_dict in where:
+    index_union_branches = []
+    for where_index, where_dict in enumerate(where):
+        branch_bindings_start = len(bindings)
         where_field = []
         for key, value in where_dict.items():
             if key.endswith("__gt"):
@@ -951,12 +969,26 @@ def select_rows(
                     field = "tx_index"
                 elif _is_address_index_col(key):
                     # Ledger DB: address columns store the compact ``address_id``;
-                    # rewrite the (possibly comma-separated) address value(s) to
-                    # an ``address_list`` subquery. On a State DB connection
-                    # ``_is_address_index_col`` is False and the TEXT branches
-                    # below handle it.
+                    # index-union branches need the compact id as a plain binding
+                    # so SQLite can plan each forced address-index lookup directly.
+                    # Keep the established single-statement subquery everywhere
+                    # else: the Python resolver is an optimization implementation
+                    # detail and should not broaden the behaviour of generic
+                    # ``select_rows`` callers.
                     values = value.split(",") if isinstance(value, str) else [value]
-                    if len(values) > 1:
+                    if where_index_hints is not None:
+                        address_indexes = [
+                            database.address_index_from_name(db, item) for item in values
+                        ]
+                        if len(values) > 1:
+                            where_field.append(
+                                f"{_qualify(key)} IN ({','.join(['?'] * len(values))})"
+                            )
+                            bindings += address_indexes
+                        else:
+                            where_field.append(f"{_qualify(key)} = ?")
+                            bindings.append(address_indexes[0])
+                    elif len(values) > 1:
                         where_field.append(
                             f"{_qualify(key)} IN (SELECT address_id FROM {_address_index_table} "  # noqa: S608  # nosec B608
                             f"WHERE address IN ({','.join(['?'] * len(values))}))"
@@ -1006,16 +1038,73 @@ def select_rows(
             and_where_clause = " AND ".join(where_field)
             and_where_clause = f"({and_where_clause})"
             or_where.append(and_where_clause)
+            if where_index_hints is not None:
+                index_hint = where_index_hints[where_index]
+                if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", index_hint):
+                    raise ValueError(f"Invalid SQLite index hint: {index_hint!r}")
+                index_union_branches.append(
+                    (
+                        index_hint,
+                        and_where_clause,
+                        list(bindings[branch_bindings_start:]),
+                    )
+                )
 
     where_clause = ""
-    if or_where:
+    if index_union_branches:
+        # SQLite often chooses a reverse full-table scan for OR predicates
+        # followed by ``ORDER BY rowid DESC LIMIT``. That is disastrous for a
+        # short address history whose newest row is old: the credits/debits/
+        # sends endpoints can scan millions of unrelated rows despite having a
+        # suitable index for every OR branch. For the normal rowid ordering,
+        # take only the first page-sized slice from each index before merging.
+        # The global top K distinct rows must be present in the top K of at
+        # least one branch, so this bounds temporary work without changing the
+        # result. Arbitrary sorts cannot use that theorem and retain the full
+        # index union for correctness.
+        index_union_where = []
+        row_bindings = []
+        bounded_index_union = (
+            sort is None and cursor_field == "rowid" and not group_by and wrap_where is None
+        )
+        branch_limit = limit + (offset or 0) + 1
+        for index_hint, and_where_clause, branch_bindings in index_union_branches:
+            branch_query = (
+                f"SELECT rowid FROM {table} INDEXED BY {index_hint} "  # noqa: S608  # nosec B608
+                f"WHERE {and_where_clause}"
+            )
+            row_bindings += branch_bindings
+            if bounded_index_union:
+                if offset is None and last_cursor is not None:
+                    cursor_operator = ">=" if order == "ASC" else "<="
+                    branch_query += f" AND rowid {cursor_operator} ?"
+                    row_bindings.append(last_cursor)
+                branch_query += f" ORDER BY rowid {order} LIMIT ?"
+                row_bindings.append(branch_limit)
+                branch_query = f"SELECT rowid FROM ({branch_query})"  # noqa: S608  # nosec B608
+            index_union_where.append(branch_query)
+        where_clause = f"rowid IN ({' UNION '.join(index_union_where)})"
+        bindings = row_bindings
+    elif or_where:
         where_clause = " OR ".join(or_where)
 
-    if where_clause:
-        where_clause_count = f"WHERE {where_clause} "
+    # Counting does not need row ordering. Let SQLite combine the address
+    # indexes directly instead of materializing the complete deduplicated
+    # UNION a second time; this is substantially cheaper for hot addresses.
+    count_where_clause = " OR ".join(or_where)
+    if count_where_clause:
+        where_clause_count = f"WHERE {count_where_clause} "
     else:
         where_clause_count = ""
-    bindings_count = list(bindings)
+    bindings_count = (
+        [
+            binding
+            for _index_hint, _and_where_clause, branch_bindings in index_union_branches
+            for binding in branch_bindings
+        ]
+        if index_union_branches
+        else list(bindings)
+    )
 
     cursor_field_qualified = _qualify(cursor_field)
     if offset is None and last_cursor is not None:
@@ -2163,14 +2252,23 @@ def get_credits_by_address(
     :param str action: The action to filter by
     :param int cursor: The last index of the credits to return
     :param int limit: The maximum number of credits to return (e.g. 5)
-    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter).
+        Capped at 10,000 on this route because skipped rows must still be materialized; use `cursor` to page further.
     """
+    _validate_address_history_offset(offset)
     where = [{"address": address, "quantity__gt": 0}, {"utxo_address": address, "quantity__gt": 0}]
     if action:
         where[0]["calling_function"] = action
         where[1]["calling_function"] = action
     return select_rows(
-        ledger_db, "credits", where=where, last_cursor=cursor, limit=limit, offset=offset
+        ledger_db,
+        "credits",
+        where=where,
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+        where_index_hints=["credits_address_idx", "credits_utxo_address_idx"],
+        with_count=cursor is None or offset is not None,
     )
 
 
@@ -2241,14 +2339,23 @@ def get_debits_by_address(
     :param str action: The action to filter by
     :param int cursor: The last index of the debits to return
     :param int limit: The maximum number of debits to return (e.g. 5)
-    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter).
+        Capped at 10,000 on this route because skipped rows must still be materialized; use `cursor` to page further.
     """
+    _validate_address_history_offset(offset)
     where = [{"address": address, "quantity__gt": 0}, {"utxo_address": address, "quantity__gt": 0}]
     if action:
         where[0]["action"] = action
         where[1]["action"] = action
     return select_rows(
-        ledger_db, "debits", where=where, last_cursor=cursor, limit=limit, offset=offset
+        ledger_db,
+        "debits",
+        where=where,
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+        where_index_hints=["debits_address_idx", "debits_utxo_address_idx"],
+        with_count=cursor is None or offset is not None,
     )
 
 
@@ -2277,27 +2384,72 @@ def get_debits_by_asset(
 
 
 def prepare_sends_where(send_type: SendType, other_conditions=None):
+    requested_types = send_type.split(",")
+    invalid_types = sorted(set(requested_types) - set(_SEND_TYPES))
+    if invalid_types:
+        raise ValueError(f"Invalid send type(s): {', '.join(invalid_types)}")
+    if "all" in requested_types:
+        requested_types = ["all"]
+    else:
+        # Preserve caller order but collapse repeats: ``send_type=send,send,...``
+        # is accepted by the CSV enum parser and would otherwise amplify into one
+        # (indexed) union branch per repetition. After the check above every
+        # remaining member is one of the four real send types, so this also
+        # bounds the branch count.
+        requested_types = list(dict.fromkeys(requested_types))
+
     where = []
-    send_type_list = send_type.split(",")
-    for type_send in send_type_list:
+    for type_send in requested_types:
         if type_send == "all":
             if isinstance(other_conditions, dict):
                 where = [other_conditions]
             elif isinstance(other_conditions, list):
                 where = other_conditions
             break
-        if type_send in typing.get_args(SendType):
-            where_send = {"send_type": type_send}
-            if other_conditions:
-                if isinstance(other_conditions, dict):
-                    where_send.update(other_conditions)
-                    where.append(where_send)
-                elif isinstance(other_conditions, list):
-                    for other_condition in other_conditions:
-                        where.append(other_condition | where_send)
-            else:
+        where_send = {"send_type": type_send}
+        if other_conditions:
+            if isinstance(other_conditions, dict):
+                where_send.update(other_conditions)
                 where.append(where_send)
+            elif isinstance(other_conditions, list):
+                for other_condition in other_conditions:
+                    where.append(other_condition | where_send)
+        else:
+            where.append(where_send)
     return where
+
+
+def _validate_address_history_offset(offset):
+    """Bound deep offset pagination on the indexed address-history routes.
+
+    Offsets are materialized and discarded row by row, which the per-branch
+    bound in ``select_rows`` cannot help with; past the cap, callers must use
+    cursor pagination.
+    """
+    if offset is not None and (offset < 0 or offset > ADDRESS_HISTORY_MAX_OFFSET):
+        raise ValueError(
+            f"offset must be between 0 and {ADDRESS_HISTORY_MAX_OFFSET} for address history"
+        )
+
+
+def _sends_address_index_hints(where):
+    """Map each ``sends`` address-history branch to the index that resolves it.
+
+    ``prepare_sends_where`` builds one branch per (address column, send type)
+    pair, so every branch carries exactly one of ``SENDS_ADDRESS_INDEXES``.
+    Raise explicitly rather than letting ``next()`` surface a bare
+    ``StopIteration``, which the API layer reports as an opaque 503.
+    """
+    hints = []
+    for branch in where:
+        hint = next(
+            (index for field, index in SENDS_ADDRESS_INDEXES.items() if field in branch),
+            None,
+        )
+        if hint is None:
+            raise ValueError(f"No indexed address column in sends branch: {sorted(branch)}")
+        hints.append(hint)
+    return hints
 
 
 def get_sends(
@@ -3420,7 +3572,6 @@ def get_sends_by_address(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
-    sort: str = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of an address
@@ -3428,25 +3579,28 @@ def get_sends_by_address(
     :param str send_type: The type of sends to return
     :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
-    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
-    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter).
+        Capped at 10,000 on this route because skipped rows must still be materialized; use `cursor` to page further.
     """
+    _validate_address_history_offset(offset)
+    where = prepare_sends_where(
+        send_type,
+        [
+            {"source": address},
+            {"source_address": address},
+            {"destination": address},
+            {"destination_address": address},
+        ],
+    )
     return select_rows(
         ledger_db,
         "sends",
-        where=prepare_sends_where(
-            send_type,
-            [
-                {"source": address},
-                {"source_address": address},
-                {"destination": address},
-                {"destination_address": address},
-            ],
-        ),
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        sort=sort,
+        where_index_hints=_sends_address_index_hints(where),
+        with_count=cursor is None or offset is not None,
     )
 
 
@@ -3458,7 +3612,6 @@ def get_sends_by_address_and_asset(
     cursor: int = None,
     limit: int = 100,
     offset: int = None,
-    sort: str = None,
 ):
     """
     Returns the sends, include Enhanced and MPMA sends, of an address and asset
@@ -3467,25 +3620,28 @@ def get_sends_by_address_and_asset(
     :param str send_type: The type of sends to return
     :param int cursor: The last index of the sends to return
     :param int limit: The maximum number of sends to return (e.g. 5)
-    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
-    :param str sort: The sort order of the results to return (overrides the `cursor` parameter) (e.g. quantity:desc)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter).
+        Capped at 10,000 on this route because skipped rows must still be materialized; use `cursor` to page further.
     """
+    _validate_address_history_offset(offset)
+    where = prepare_sends_where(
+        send_type,
+        [
+            {"source": address, "asset": asset.upper()},
+            {"source_address": address, "asset": asset.upper()},
+            {"destination": address, "asset": asset.upper()},
+            {"destination_address": address, "asset": asset.upper()},
+        ],
+    )
     return select_rows(
         ledger_db,
         "sends",
-        where=prepare_sends_where(
-            send_type,
-            [
-                {"source": address, "asset": asset.upper()},
-                {"source_address": address, "asset": asset.upper()},
-                {"destination": address, "asset": asset.upper()},
-                {"destination_address": address, "asset": asset.upper()},
-            ],
-        ),
+        where=where,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
-        sort=sort,
+        where_index_hints=_sends_address_index_hints(where),
+        with_count=cursor is None or offset is not None,
     )
 
 

@@ -75,6 +75,42 @@ def test_check_change_version_warning_future_block(ledger_db, current_block_inde
     check.check_change(protocol_change, "test_change")
 
 
+def test_check_change_uses_the_network_activation_height(
+    ledger_db, current_block_index, monkeypatch
+):
+    """The minimum-version gate must fire at the height of the network the node
+    runs on. Reading the mainnet `block_index` on signet/testnet compares against
+    a height that network never reaches, so enforcement silently degraded to a
+    warning and an outdated node would fork instead of halting."""
+    protocol_change = {
+        "block_index": 999999999,  # mainnet: far in the future
+        "signet_block_index": 1,  # signet: already active
+        "minimum_version_major": config.VERSION_MAJOR + 1,
+        "minimum_version_minor": 0,
+        "minimum_version_revision": 0,
+    }
+
+    # On mainnet the change is not active yet: warn only.
+    check.check_change(protocol_change, "test_change")
+
+    monkeypatch.setattr(config, "SIGNET", True)
+    with pytest.raises(exceptions.VersionUpdateRequiredError, match="as of block 1,"):
+        check.check_change(protocol_change, "test_change")
+
+
+def test_check_change_falls_back_to_the_mainnet_height(ledger_db, current_block_index, monkeypatch):
+    """An upstream entry predating the per-network keys must still be enforced."""
+    protocol_change = {
+        "block_index": 1,
+        "minimum_version_major": config.VERSION_MAJOR + 1,
+        "minimum_version_minor": 0,
+        "minimum_version_revision": 0,
+    }
+    monkeypatch.setattr(config, "TESTNET4", True)
+    with pytest.raises(exceptions.VersionUpdateRequiredError):
+        check.check_change(protocol_change, "test_change")
+
+
 def test_software_version_force_mode():
     """Test software_version with FORCE mode enabled."""
     original_force = config.FORCE

@@ -7,7 +7,7 @@ UNIT = 100000000  # The same across assets.
 
 
 # Semantic Version
-__version__ = "11.3.0"  # for hatch
+__version__ = "11.4.0"  # for hatch
 VERSION_STRING = __version__
 version = VERSION_STRING.split("-", maxsplit=1)[0].split(".")
 VERSION_MAJOR = int(version[0])
@@ -40,6 +40,11 @@ UPGRADE_ACTIONS = {
         "11.0.4": [("rollback", 926807)],
         "11.1.0": [("rollback", 941000)],
         "11.2.0": [("refresh_state_db", 0)],
+        # The incremental State DB rollback (#3485) needs
+        # ``balances.block_index`` to be up to date on every row; a
+        # refresh re-derives the State DB from the Ledger DB so the
+        # first reorg after the upgrade is already on the fast path.
+        "11.4.0": [("refresh_state_db", 0)],
     },
     "testnet3": {
         "10.3.0": [("reparse", 0)],
@@ -58,6 +63,7 @@ UPGRADE_ACTIONS = {
         "11.0.4": [("reparse", 4017708)],
         "11.1.0": [("refresh_state_db", 0)],
         "11.2.0": [("refresh_state_db", 0)],
+        "11.4.0": [("refresh_state_db", 0)],
     },
     "testnet4": {
         "10.10.0": [("rollback", 64492)],
@@ -67,12 +73,14 @@ UPGRADE_ACTIONS = {
         "11.0.3": [("reparse", 99290)],
         "11.1.0": [("refresh_state_db", 0)],
         "11.2.0": [("refresh_state_db", 0)],
+        "11.4.0": [("refresh_state_db", 0)],
     },
     "signet": {
         "11.0.2": [("refresh_state_db", 0)],
         "11.0.3": [("reparse", 266993)],
         "11.1.0": [("refresh_state_db", 0)],
         "11.2.0": [("refresh_state_db", 0)],
+        "11.4.0": [("refresh_state_db", 0)],
     },
 }
 
@@ -278,12 +286,12 @@ PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"
 
 
 BOOTSTRAP_URL_BASE = "https://storage.googleapis.com/counterparty-bootstrap"
-# Version tag embedded in the bootstrap snapshot file names (e.g. "v11.3.0").
+# Version tag embedded in the bootstrap snapshot file names (e.g. "v11.4.0").
 # Versioned names let several releases coexist in the bucket. This tag tracks the
 # latest *published* snapshot set, which may lag behind VERSION_STRING when a
 # release needs no new snapshots (no database migration) or when they have not
 # been uploaded yet — bump it when new snapshots are published to the bucket.
-BOOTSTRAP_VERSION = "v11.3.0"
+BOOTSTRAP_VERSION = "v11.4.0"
 
 # Ledger / state database base file names per network (as stored in the bucket).
 # testnet3 is intentionally absent: it is deprecated and no snapshots are produced

@@ -1,8 +1,11 @@
+import json
+
 import pytest
 from counterpartycore.lib import exceptions, ledger
 from counterpartycore.lib.api import compose
 from counterpartycore.lib.messages import pooldeposit
-from counterpartycore.lib.utils import script
+from counterpartycore.lib.messages.versions import mpma
+from counterpartycore.lib.utils import hashcodec, script
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 # ============================================================================
@@ -140,6 +143,292 @@ def test_compose_issuance(apiv2_client, defaults):
         f"&description=Test asset"
     )
     assert response.status_code in [200, 400]
+
+
+def _insert_mempool_event(ledger_db, tx_hash, event, bindings):
+    ledger_db.execute(
+        "INSERT INTO mempool (tx_hash, command, category, bindings, timestamp, event, addresses) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (
+            hashcodec.hash_to_db(tx_hash),
+            "insert",
+            event.lower(),
+            bindings if isinstance(bindings, str) else json.dumps(bindings),
+            0,
+            event,
+            "",
+        ),
+    )
+
+
+def test_compose_issuance_rejects_real_pending_creation_bundle(apiv2_client, ledger_db, defaults):
+    asset = "PENDINGASSET"
+    tx_hash = "ab" * 32
+    _insert_mempool_event(
+        ledger_db,
+        tx_hash,
+        "ASSET_CREATION",
+        {"asset_id": "123", "asset_name": asset, "asset_longname": None},
+    )
+    _insert_mempool_event(
+        ledger_db,
+        tx_hash,
+        "ASSET_ISSUANCE",
+        {
+            "asset": asset,
+            "asset_longname": None,
+            "source": defaults["addresses"][0],
+            "status": "valid",
+            "asset_events": "creation",
+        },
+    )
+
+    response = apiv2_client.get(
+        f"/v2/addresses/{defaults['addresses'][0]}/compose/issuance"
+        f"?asset={asset}&quantity=1000&return_only_data=true"
+    )
+
+    assert response.status_code == 409
+    assert "pending" in response.json["error"].lower()
+    assert asset in response.json["error"]
+    assert tx_hash in response.json["error"]
+    assert response.json["error"].count(tx_hash) == 1
+
+
+@pytest.mark.parametrize(
+    ("event", "bindings"),
+    [
+        ("ASSET_CREATION", {"asset_name": "PENDINGASSET"}),
+        (
+            "ASSET_ISSUANCE",
+            {
+                "asset": "PENDINGASSET",
+                "status": "valid",
+                "asset_events": "transfer",
+                "transfer": True,
+            },
+        ),
+        (
+            "NEW_FAIRMINTER",
+            {"asset": "PENDINGASSET", "status": "open", "source": "issuer"},
+        ),
+        (
+            "NEW_FAIRMINTER",
+            {"asset": "PENDINGASSET", "status": "pending", "source": "issuer"},
+        ),
+        (
+            "RESET_ISSUANCE",
+            {"asset": "PENDINGASSET", "status": "valid", "asset_events": "reset"},
+        ),
+    ],
+)
+def test_pending_asset_conflict_uses_real_event_semantics(ledger_db, event, bindings):
+    _insert_mempool_event(ledger_db, "bc" * 32, event, bindings)
+
+    with pytest.raises(exceptions.ComposeConflictError, match="PENDINGASSET"):
+        compose._reject_pending_asset_conflict(ledger_db, "PENDINGASSET")
+
+
+def test_pending_compatible_reissuance_does_not_block(ledger_db, defaults):
+    _insert_mempool_event(
+        ledger_db,
+        "cd" * 32,
+        "ASSET_ISSUANCE",
+        {
+            "asset": "DIVISIBLE",
+            "source": defaults["addresses"][0],
+            "issuer": defaults["addresses"][0],
+            "quantity": 1000,
+            "status": "valid",
+            "asset_events": "reissuance change_description",
+        },
+    )
+
+    result = compose.compose_issuance(
+        ledger_db,
+        defaults["addresses"][0],
+        "DIVISIBLE",
+        1000,
+        divisible=True,
+        return_only_data=True,
+    )
+
+    assert result["data"].startswith(b"CNTRPRTY")
+
+
+@pytest.mark.parametrize("malformed", ["{", "[]", '"text"', "1", "null"])
+def test_pending_asset_conflict_ignores_malformed_or_non_object_bindings(ledger_db, malformed):
+    _insert_mempool_event(ledger_db, "de" * 32, "ASSET_CREATION", malformed)
+
+    compose._reject_pending_asset_conflict(ledger_db, "PENDINGASSET")
+
+
+def test_pending_asset_conflict_ignores_invalid_status_and_other_asset(ledger_db):
+    _insert_mempool_event(
+        ledger_db,
+        "ef" * 32,
+        "ASSET_ISSUANCE",
+        {
+            "asset": "PENDINGASSET",
+            "status": "invalid: conflict",
+            "asset_events": "creation",
+        },
+    )
+    _insert_mempool_event(
+        ledger_db,
+        "f0" * 32,
+        "NEW_FAIRMINTER",
+        {"asset": "PENDINGASSET", "status": "valid"},
+    )
+    _insert_mempool_event(
+        ledger_db,
+        "f1" * 32,
+        "NEW_FAIRMINTER",
+        {"asset": "OTHERASSET", "status": "open"},
+    )
+
+    compose._reject_pending_asset_conflict(ledger_db, "PENDINGASSET")
+
+
+def test_compose_issuance_validate_false_bypasses_pending_guard(ledger_db, defaults, monkeypatch):
+    _insert_mempool_event(ledger_db, "12" * 32, "ASSET_CREATION", {"asset_name": "PENDINGASSET"})
+    expected = {"data": b"advanced-user-override"}
+    monkeypatch.setattr(compose.composer, "compose_transaction", lambda *_args, **_kwargs: expected)
+
+    result = compose.compose_issuance(
+        ledger_db,
+        defaults["addresses"][0],
+        "PENDINGASSET",
+        1000,
+        validate=False,
+        return_only_data=True,
+    )
+
+    assert result == expected
+
+
+def test_compose_fairminter_has_symmetric_pending_guard(ledger_db, defaults, monkeypatch):
+    _insert_mempool_event(
+        ledger_db,
+        "23" * 32,
+        "ASSET_CREATION",
+        {"asset_name": "A123", "asset_longname": "PARENT.CHILD"},
+    )
+    monkeypatch.setattr(
+        compose.composer,
+        "compose_transaction",
+        lambda *_args, **_kwargs: pytest.fail("composition must not start"),
+    )
+
+    with pytest.raises(exceptions.ComposeConflictError, match="PARENT.CHILD"):
+        compose.compose_fairminter(
+            ledger_db,
+            defaults["addresses"][0],
+            "CHILD",
+            asset_parent="PARENT",
+            max_mint_per_tx=100,
+        )
+
+
+def test_compose_issuance_final_recheck_catches_new_pending_event(ledger_db, defaults, monkeypatch):
+    asset = "PENDINGASSET"
+    compose_data_calls = []
+
+    def fake_compose_data(*args, **kwargs):
+        compose_data_calls.append((args, kwargs))
+        return defaults["addresses"][0], [], b"data"
+
+    def fake_compose_transaction(_db, _name, _params, _construct_params, final_validator=None):
+        _insert_mempool_event(ledger_db, "34" * 32, "ASSET_CREATION", {"asset_name": asset})
+        final_validator((defaults["addresses"][0], [], b"original"))
+        pytest.fail("final validator should reject the new conflict")
+
+    monkeypatch.setattr(compose.composer, "compose_data", fake_compose_data)
+    monkeypatch.setattr(compose.composer, "compose_transaction", fake_compose_transaction)
+
+    with pytest.raises(exceptions.ComposeConflictError, match=asset):
+        compose.compose_issuance(
+            ledger_db,
+            defaults["addresses"][0],
+            asset,
+            1000,
+        )
+
+    assert len(compose_data_calls) == 1
+
+
+def test_pending_reissuance_quantity_detects_cumulative_overflow(ledger_db, monkeypatch):
+    asset = "NEARMAX"
+    _insert_mempool_event(
+        ledger_db,
+        "35" * 32,
+        "ASSET_ISSUANCE",
+        {
+            "asset": asset,
+            "quantity": 100,
+            "status": "valid",
+            "asset_events": "reissuance",
+        },
+    )
+    monkeypatch.setattr(
+        compose.ledger.issuances,
+        "get_issuances",
+        lambda *_args, **_kwargs: [{"quantity": compose.config.MAX_INT - 150}],
+    )
+
+    with pytest.raises(exceptions.ComposeConflictError, match="maximum total quantity"):
+        compose._reject_pending_asset_conflict(
+            ledger_db,
+            asset,
+            name="issuance",
+            params={"quantity": 100, "reset": False},
+        )
+
+
+def test_pending_quantity_lock_allows_zero_quantity_transfer(ledger_db):
+    asset = "LOCKINGASSET"
+    _insert_mempool_event(
+        ledger_db,
+        "36" * 32,
+        "ASSET_ISSUANCE",
+        {
+            "asset": asset,
+            "quantity": 0,
+            "status": "valid",
+            "asset_events": "lock_quantity",
+        },
+    )
+
+    compose._reject_pending_asset_conflict(
+        ledger_db,
+        asset,
+        name="issuance",
+        params={"quantity": 0, "reset": False, "transfer_destination": "destination"},
+    )
+    with pytest.raises(exceptions.ComposeConflictError, match="lock_quantity"):
+        compose._reject_pending_asset_conflict(
+            ledger_db,
+            asset,
+            name="issuance",
+            params={"quantity": 1, "reset": False},
+        )
+
+
+def test_fairminter_pending_guard_returns_http_409(apiv2_client, ledger_db, defaults):
+    asset = "FAIRCONFLICT"
+    _insert_mempool_event(
+        ledger_db,
+        "37" * 32,
+        "NEW_FAIRMINTER",
+        {"asset": asset, "status": "open", "source": defaults["addresses"][0]},
+    )
+
+    response = apiv2_client.get(
+        f"/v2/addresses/{defaults['addresses'][0]}/compose/fairminter"
+        f"?asset={asset}&max_mint_per_tx=100&return_only_data=true"
+    )
+    assert response.status_code == 409
+    assert asset in response.json["error"]
 
 
 def test_compose_mpma(apiv2_client, defaults):
@@ -298,6 +587,25 @@ def test_compose_attach(apiv2_client, defaults):
     address = defaults["addresses"][0]
     response = apiv2_client.get(f"/v2/addresses/{address}/compose/attach?asset=XCP&quantity=1000")
     assert response.status_code in [200, 400]
+
+
+def test_compose_attach_destination_vout(apiv2_client, defaults):
+    """The route declared `destination_vout` as a string, so the query value reached
+    `attach.validate()` untouched and failed its integer check whatever it was."""
+    address = defaults["addresses"][0]
+    response = apiv2_client.get(
+        f"/v2/addresses/{address}/compose/attach"
+        "?asset=XCP&quantity=1000&destination_vout=1&return_only_data=true"
+    )
+    assert response.status_code == 200, response.json
+    assert bytes.fromhex(response.json["result"]["data"]) == b"CNTRPRTYeXCP|1000|1"
+
+    response = apiv2_client.get(
+        f"/v2/addresses/{address}/compose/attach"
+        "?asset=XCP&quantity=1000&destination_vout=one&return_only_data=true"
+    )
+    assert response.status_code == 400
+    assert response.json["error"] == "Invalid integer: destination_vout"
 
 
 def test_get_attach_estimate_xcp_fee(apiv2_client, defaults):
@@ -1723,7 +2031,7 @@ def test_unpack_dividend(apiv2_client):
     assert result.json["result"]["message_type_id"] == 50
 
 
-def test_unpack_mpma(apiv2_client):
+def test_unpack_mpma(apiv2_client, defaults):
     """Test unpack MPMA message type."""
     # MPMA message: ID 3
     # This is a complex packed format using a real MPMA message
@@ -1731,13 +2039,93 @@ def test_unpack_mpma(apiv2_client):
     # Using a valid MPMA message from the mpma_test.py tests
     mpma_data = "00026f4e5638a01efbb2f292481797ae1dcfcdaeb98d006f8d6ae8a3b381663118b4e1eff4cfc7d0954dd6ec400000000000000060000000005f5e10040000000017d78400"
     datahex = f"00000003{mpma_data}"
-    result = apiv2_client.get(f"/v2/transactions/unpack?datahex={datahex}&block_index=784320")
+    # A pre-`mpma_taproot_support` address lookup table, as `block_index` says. On regtest every
+    # protocol change is active whatever block index is asked for, so the era has to be set here.
+    with ProtocolChangesDisabled(["mpma_taproot_support"]):
+        result = apiv2_client.get(f"/v2/transactions/unpack?datahex={datahex}&block_index=784320")
     assert result.status_code == 200
-    assert result.json["result"]["message_type"] == "mpma_send"
-    assert result.json["result"]["message_type_id"] == 3
-    # Verify the message_data contains the unpacked sends
-    assert isinstance(result.json["result"]["message_data"], list)
-    assert len(result.json["result"]["message_data"]) > 0
+    assert result.json == {
+        "result": {
+            "message_type": "mpma_send",
+            "message_type_id": mpma.ID,
+            "message_data": [
+                {
+                    "asset": "XCP",
+                    "destination": defaults["addresses"][2],
+                    "quantity": defaults["quantity"],
+                    "memo": None,
+                    "memo_is_hex": None,
+                },
+                {
+                    "asset": "XCP",
+                    "destination": defaults["addresses"][1],
+                    "quantity": defaults["quantity"],
+                    "memo": None,
+                    "memo_is_hex": None,
+                },
+            ],
+        }
+    }
+
+
+@pytest.mark.parametrize("legacy", [True, False], ids=["legacy", "taproot"])
+@pytest.mark.parametrize(
+    ("memo", "memo_is_hex"),
+    [(None, False), ("shared memo", False), ("cafe", True)],
+    ids=["no-default-memo", "text-default-memo", "hex-default-memo"],
+)
+def test_unpack_mpma_returns_all_recipients_and_memos(
+    apiv2_client, ledger_db, defaults, legacy, memo, memo_is_hex
+):
+    """Expose every send in wire order, including recipient-specific and inherited memos."""
+    last_destination = defaults["addresses"][3] if legacy else defaults["p2tr_addresses"][0]
+    sends = [
+        ("XCP", defaults["addresses"][1], 7),
+        ("DIVISIBLE", defaults["addresses"][2], 11, "recipient ✓", False),
+        ("XCP", last_destination, 13, "deadbeef", True),
+        ("DIVISIBLE", defaults["addresses"][3], 17),
+    ]
+    with ProtocolChangesDisabled(["mpma_taproot_support"] if legacy else []):
+        _, _, data = mpma.compose(
+            ledger_db, defaults["addresses"][0], sends, memo=memo, memo_is_hex=memo_is_hex
+        )
+        response = apiv2_client.get("/v2/transactions/unpack", query_string={"datahex": data.hex()})
+
+    assert response.status_code == 200
+    assert response.json["result"] == {
+        "message_type": "mpma_send",
+        "message_type_id": mpma.ID,
+        "message_data": [
+            {
+                "asset": "DIVISIBLE",
+                "destination": defaults["addresses"][2],
+                "quantity": 11,
+                "memo": "recipient ✓",
+                "memo_is_hex": False,
+            },
+            {
+                "asset": "DIVISIBLE",
+                "destination": defaults["addresses"][3],
+                "quantity": 17,
+                "memo": memo,
+                "memo_is_hex": memo_is_hex if memo is not None else None,
+            },
+            {
+                "asset": "XCP",
+                "destination": defaults["addresses"][1],
+                "quantity": 7,
+                "memo": memo,
+                "memo_is_hex": memo_is_hex if memo is not None else None,
+            },
+            {
+                "asset": "XCP",
+                "destination": last_destination,
+                "quantity": 13,
+                "memo": "deadbeef",
+                "memo_is_hex": True,
+            },
+        ],
+    }
 
 
 def test_unpack_rps(apiv2_client):

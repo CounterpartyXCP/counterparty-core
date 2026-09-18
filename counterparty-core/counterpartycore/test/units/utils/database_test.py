@@ -36,6 +36,46 @@ from counterpartycore.lib.utils.helpers import SingletonMeta
 from yoyo.exceptions import LockTimeout
 
 
+def test_connection_best_practices_only_exclude_optimize():
+    assert database._CONNECTION_BEST_PRACTICES == tuple(
+        practice
+        for practice in apsw.bestpractice.recommended
+        if practice is not apsw.bestpractice.connection_optimize
+    )
+
+
+@pytest.mark.parametrize("read_only", [False, True])
+def test_connection_does_not_run_optimize(temp_db_file, read_only):
+    statements = []
+
+    def trace(_cursor, sql, _bindings):
+        statements.append(sql.lower())
+        return True
+
+    def install_trace(connection):
+        connection.set_exec_trace(trace)
+
+    # Install before the application's hook: tracing only after Connection()
+    # returns would miss the very optimization that delayed startup.
+    apsw.connection_hooks.insert(0, install_trace)
+    try:
+        connection = get_db_connection(temp_db_file, read_only=read_only)
+        try:
+            assert not any("optimize" in sql for sql in statements)
+            assert connection.pragma("journal_mode") == "wal"
+            assert connection.pragma("foreign_keys") == 1
+            assert connection.pragma("recursive_triggers") == 1
+            if not read_only:
+                assert connection.pragma("synchronous") == 1
+                assert connection.pragma("journal_size_limit") == 6144000
+                optimize(connection)
+                assert any("optimize" in sql for sql in statements)
+        finally:
+            connection.close()
+    finally:
+        apsw.connection_hooks.remove(install_trace)
+
+
 def test_version(ledger_db, test_helpers):
     update_version(ledger_db)
     test_helpers.check_records(
@@ -1275,6 +1315,28 @@ def test_apply_outstanding_migration_lock_timeout(temp_db_file):
 
         # break_lock should have been called
         mock_backend.break_lock.assert_called_once()
+    finally:
+        os.rmdir(migration_dir)
+
+
+def test_apply_outstanding_migration_logs_phase_timings(temp_db_file):
+    migration_dir = tempfile.mkdtemp()
+    mock_backend = MagicMock()
+    mock_backend.to_apply.return_value = []
+
+    try:
+        with patch("counterpartycore.lib.utils.database.get_backend", return_value=mock_backend):
+            with patch("counterpartycore.lib.utils.database.read_migrations", return_value=[]):
+                with patch(
+                    "counterpartycore.lib.utils.database._wal_size", side_effect=[4096, 1024]
+                ):
+                    with patch.object(database.logger, "info") as log_info:
+                        apply_outstanding_migration(temp_db_file, migration_dir)
+
+        messages = [call.args[0] % call.args[1:] for call in log_info.call_args_list]
+        assert any("0 pending" in message for message in messages)
+        assert any("WAL: 4096 -> 1024 bytes" in message for message in messages)
+        mock_backend.connection.close.assert_called_once_with()
     finally:
         os.rmdir(migration_dir)
 

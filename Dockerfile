@@ -62,6 +62,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry \
     pip3 install /wheels/*.whl
 
 # Build Python components
+COPY ./openapi.json /counterparty-core/openapi.json
 COPY ./counterparty-core /counterparty-core/counterparty-core
 WORKDIR /counterparty-core/counterparty-core
 RUN pip3 install .

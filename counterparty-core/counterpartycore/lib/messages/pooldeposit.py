@@ -7,7 +7,7 @@ from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import gas
 from counterpartycore.lib.parser import messagetype, protocol
-from counterpartycore.lib.utils import assetnames
+from counterpartycore.lib.utils import assetnames, helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -299,6 +299,11 @@ def parse(db, tx, message):
             "quantity_minted": 0,
             "status": status,
         }
+        # `quantity_a`/`quantity_b` are `>Q` fields, so they can be up to
+        # 2**64-1; validate() reports them as a problem but leaves the raw values
+        # in place, and binding them raises OverflowError inside insert_record()
+        # (or TypeError, for a CBOR list/dict/Decimal).
+        helpers.null_unbindable_values(bindings)
         ledger.events.insert_record(db, "pool_deposits", bindings, "NEW_POOL_DEPOSIT")
         logger.info("Pool deposit %(tx_hash)s is invalid: %(status)s", bindings)
         ledger.blocks.set_transaction_status(db, tx["tx_index"], False)
