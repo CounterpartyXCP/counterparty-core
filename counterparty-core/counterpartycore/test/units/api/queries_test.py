@@ -919,6 +919,72 @@ def test_select_rows_non_balance_asset_sort_uses_asset_field(state_db):
     assert result is not None
 
 
+@pytest.mark.parametrize("divisible", [False, True])
+def test_dispenser_price_age_sort_across_pages(state_db, apiv2_client, divisible):
+    """The public endpoint orders equal unit prices by opening tx, not latest update."""
+    asset = "SORTDISPENSERS"
+    scale = 100_000_000 if divisible else 1
+    state_db.execute("INSERT INTO assets_info (asset, divisible) VALUES (?, ?)", (asset, divisible))
+    # Newest first in storage. Every listing costs 10 sats per unit, despite different
+    # batch sizes; update heights deliberately run opposite to opening order.
+    rows = [
+        (
+            900000 + i,
+            f"{900000 + i:064x}",
+            1000 - i,
+            "source",
+            asset,
+            (i + 1) * scale,
+            10 * (i + 1),
+            0,
+            100 * scale,
+            None,
+        )
+        for i in reversed(range(22))
+    ]
+    # A genuinely cheaper listing must precede all ties. Closed/oracle offers must
+    # not consume slots in the wallet's fixed-rate open-dispenser pages.
+    rows += [
+        (900100, f"{900100:064x}", 1000, "source", asset, scale, 5, 0, scale, None),
+        (900101, f"{900101:064x}", 1000, "source", asset, scale, 1, 10, 0, None),
+        (900102, f"{900102:064x}", 1000, "source", asset, scale, 1, 0, scale, "oracle"),
+    ]
+    state_db.executemany(
+        """INSERT INTO dispensers
+        (tx_index, tx_hash, block_index, source, asset, give_quantity, satoshirate,
+         status, give_remaining, oracle_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        rows,
+    )
+
+    def page(offset, sort="price:asc,tx_index:asc"):
+        response = apiv2_client.get(
+            f"/v2/assets/{asset}/dispensers",
+            query_string={
+                "status": "open",
+                "exclude_with_oracle": "true",
+                "sort": sort,
+                "limit": 20,
+                "offset": offset,
+            },
+        )
+        assert response.status_code == 200
+        return response.json
+
+    try:
+        first, second = page(0), page(20)
+        expected = [900100, *range(900000, 900022)]
+        assert first["result_count"] == second["result_count"] == 23
+        assert [r["tx_index"] for r in first["result"]] == expected[:20]
+        assert [r["tx_index"] for r in second["result"]] == expected[20:]
+        assert [r["tx_index"] for r in page(0, "price:asc,tx_index:desc")["result"]] == [
+            900100,
+            *range(900021, 900002, -1),
+        ]
+    finally:
+        state_db.execute("DELETE FROM dispensers WHERE asset = ?", (asset,))
+        state_db.execute("DELETE FROM assets_info WHERE asset = ?", (asset,))
+
+
 def test_select_rows_with_unsupported_sort_field(state_db):
     """Test select_rows with unsupported sort field (line 310-311)."""
     result = queries.select_rows(

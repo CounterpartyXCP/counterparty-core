@@ -549,6 +549,8 @@ SUPPORTED_SORT_FIELDS = {
         "get_price",
     ],
     "dispensers": [
+        # Original opening order; block_index changes when the dispenser is updated.
+        "tx_index",
         "block_index",
         "asset",
         "give_quantity",
