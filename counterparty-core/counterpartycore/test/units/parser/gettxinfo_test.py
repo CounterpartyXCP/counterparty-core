@@ -3,6 +3,8 @@ import struct
 
 import pytest
 from arc4 import ARC4
+from bitcoinutils.keys import PrivateKey
+from bitcoinutils.transactions import Transaction, TxInput, TxWitnessInput
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger import markets
@@ -1562,9 +1564,28 @@ def test_get_tx_info_taproot(ledger_db, current_block_index, defaults, blockchai
     data = b"Hello world"
     source = defaults["addresses"][0]
     db = None
-    envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, {})
+    reveal_tx_pk = PrivateKey(secret_exponent=1)
+    envelope_script = composer.generate_envelope_script(data, reveal_tx_pk.get_public_key(), {})
     outputs = composer.get_reveal_outputs(db, source, envelope_script, [], {})
-    reveal_tx = composer.get_dummy_signed_reveal_tx(outputs, envelope_script, reveal_tx_pk)
+    # a reveal spending a dummy commit output, signed with the envelope key
+    reveal_tx = Transaction([TxInput("F" * 64, 0)], outputs)
+    reveal_tx.has_segwit = True
+    commit_address = reveal_tx_pk.get_public_key().get_taproot_address([[envelope_script]])
+    sig = reveal_tx_pk.sign_taproot_input(
+        reveal_tx,
+        0,
+        [commit_address.to_script_pub_key()],
+        [config.DEFAULT_SEGWIT_DUST_SIZE],
+        script_path=True,
+        tapleaf_script=envelope_script,
+        tweak=False,
+    )
+    control_block = composer.get_reveal_control_block(
+        reveal_tx_pk.get_public_key(), envelope_script
+    )
+    reveal_tx.witnesses.append(
+        TxWitnessInput([sig, envelope_script.to_hex(), control_block.to_hex()])
+    )
     reveal_tx_hex = reveal_tx.serialize()
     decoded_tx = deserialize.deserialize_tx(
         reveal_tx_hex,

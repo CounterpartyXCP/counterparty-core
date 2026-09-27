@@ -7,6 +7,7 @@ import bitcoin as bitcoinlib
 import pytest
 from arc4 import ARC4  # pylint: disable=no-name-in-module
 from bitcoinutils.keys import PrivateKey
+from bitcoinutils.transactions import Transaction, TxInput, TxWitnessInput
 from counterparty_rs import utils as pycoin_rs_utils
 from counterpartycore.lib import config
 from counterpartycore.lib.api import composer
@@ -242,26 +243,36 @@ def test_deserialize_error():
         )
 
 
-def test_desrialize_reveal_tx(ledger_db, defaults, monkeypatch):
-    monkeypatch.setattr(
-        composer, "generate_random_private_key", lambda: PrivateKey(secret_exponent=1)
+def dummy_signed_reveal_tx(outputs, envelope_script, source_pubkey):
+    """A reveal spending a dummy commit through `envelope_script`, with a
+    placeholder signature: the deserializer only looks at the shape."""
+    reveal_tx = Transaction([TxInput("F" * 64, 0)], outputs)
+    reveal_tx.has_segwit = True
+    control_block = composer.get_reveal_control_block(source_pubkey, envelope_script)
+    reveal_tx.witnesses.append(
+        TxWitnessInput(["00" * 64, envelope_script.to_hex(), control_block.to_hex()])
     )
+    return reveal_tx
+
+
+def test_desrialize_reveal_tx(ledger_db, defaults):
     deserialize.Deserializer.reset_instance()
     unspent_list = []
     construct_params = {"inscription": True}
     source = defaults["addresses"][0]
+    source_pubkey = PrivateKey(secret_exponent=1).get_public_key()
     db = None
 
     for data in [
         b"Hello, World!",
         b"a" * 1024 * 400,
     ]:
-        envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
+        envelope_script = composer.generate_envelope_script(data, source_pubkey, construct_params)
         outputs = composer.get_reveal_outputs(
             db, source, envelope_script, unspent_list, construct_params
         )
 
-        reveal_tx = composer.get_dummy_signed_reveal_tx(outputs, envelope_script, reveal_tx_pk)
+        reveal_tx = dummy_signed_reveal_tx(outputs, envelope_script, source_pubkey)
         reveal_tx_hex = reveal_tx.serialize()
         decoded_tx = deserialize_rust(reveal_tx_hex)
         assert decoded_tx["parsed_vouts"] == (
@@ -274,11 +285,11 @@ def test_desrialize_reveal_tx(ledger_db, defaults, monkeypatch):
         )
 
     data = b"Z\x93\x1b\x00\x00\x18\xc0\xfd\xcd\xeb_\x00\x00\x01\n\x00\x19\x03\xe8\x18d\x1a\x00\x0c5\x00\x1a\x00\r\xbb\xa0\x182\x1a\x00\x0c\xf8P\x1a\x00\x98\x96\x80\xf4\xf4\xf5\xf5`Sune asset super top"
-    envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
+    envelope_script = composer.generate_envelope_script(data, source_pubkey, construct_params)
     outputs = composer.get_reveal_outputs(
         db, source, envelope_script, unspent_list, construct_params
     )
-    reveal_tx = composer.get_dummy_signed_reveal_tx(outputs, envelope_script, reveal_tx_pk)
+    reveal_tx = dummy_signed_reveal_tx(outputs, envelope_script, source_pubkey)
     reveal_tx_hex = reveal_tx.serialize()
     decoded_tx = deserialize_rust(reveal_tx_hex)
     assert decoded_tx["parsed_vouts"] == (
@@ -292,11 +303,11 @@ def test_desrialize_reveal_tx(ledger_db, defaults, monkeypatch):
     )
 
     data = b"\x16\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`X1description much much much longer than 42 letters"
-    envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
+    envelope_script = composer.generate_envelope_script(data, source_pubkey, construct_params)
     outputs = composer.get_reveal_outputs(
         db, source, envelope_script, unspent_list, construct_params
     )
-    reveal_tx = composer.get_dummy_signed_reveal_tx(outputs, envelope_script, reveal_tx_pk)
+    reveal_tx = dummy_signed_reveal_tx(outputs, envelope_script, source_pubkey)
     reveal_tx_hex = reveal_tx.serialize()
     decoded_tx = deserialize_rust(reveal_tx_hex)
     assert decoded_tx["parsed_vouts"] == (
@@ -310,11 +321,11 @@ def test_desrialize_reveal_tx(ledger_db, defaults, monkeypatch):
     )
 
     data = b"\x16\x87\x1a\x00\x0b\xfc\xe3\x19\x03\xe8\xf5\xf4\xf4`X1description much much much longer than 42 letters"
-    envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
+    envelope_script = composer.generate_envelope_script(data, source_pubkey, construct_params)
     outputs = composer.get_reveal_outputs(
         db, source, envelope_script, unspent_list, construct_params
     )
-    reveal_tx = composer.get_dummy_signed_reveal_tx(outputs, envelope_script, reveal_tx_pk)
+    reveal_tx = dummy_signed_reveal_tx(outputs, envelope_script, source_pubkey)
     reveal_tx_hex = reveal_tx.serialize()
     decoded_tx = deserialize_rust(reveal_tx_hex)
     assert decoded_tx["parsed_vouts"] == (
@@ -328,11 +339,11 @@ def test_desrialize_reveal_tx(ledger_db, defaults, monkeypatch):
     )
 
     data = b""
-    envelope_script, reveal_tx_pk = composer.generate_envelope_script(data, construct_params)
+    envelope_script = composer.generate_envelope_script(data, source_pubkey, construct_params)
     outputs = composer.get_reveal_outputs(
         db, source, envelope_script, unspent_list, construct_params
     )
-    reveal_tx = composer.get_dummy_signed_reveal_tx(outputs, envelope_script, reveal_tx_pk)
+    reveal_tx = dummy_signed_reveal_tx(outputs, envelope_script, source_pubkey)
     reveal_tx_hex = reveal_tx.serialize()
     decoded_tx = deserialize_rust(reveal_tx_hex)
     assert decoded_tx["parsed_vouts"] == ([], 0, 0, b"", [(None, None)], False)

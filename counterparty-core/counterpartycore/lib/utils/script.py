@@ -92,6 +92,33 @@ def is_witness_program(script_pub_key):
     return version_opbyte == 0 or _OP_PUSHNUM_1 <= version_opbyte <= _OP_PUSHNUM_16
 
 
+def _to_bytes(value):
+    if isinstance(value, str):
+        return binascii.unhexlify(value)
+    return bytes(value)
+
+
+def reveal_source_signature_error(commit_script_pubkey, source_script_pubkey, witness):
+    """Why input 0 of an inscription reveal transaction is NOT provably signed by
+    its source, or None when it is (protocol change
+    `require_reveal_source_signature`).
+
+    `commit_script_pubkey` is the scriptPubKey of the output the reveal actually
+    spends, `source_script_pubkey` that of the output which funded the commit
+    transaction -- the source -- and `witness` the witness stack of input 0.
+    Each may be given as bytes or as a hex string.
+
+    The rule itself lives in one place, `counterparty-rs/src/reveal.rs`, and is
+    consensus-critical: this wrapper only normalises its arguments and must stay
+    byte-preserving.
+    """
+    return utils.reveal_source_signature_error(
+        _to_bytes(commit_script_pubkey),
+        _to_bytes(source_script_pubkey),
+        [_to_bytes(item) for item in witness],
+    )
+
+
 def _script_to_address(scriptpubkey, use_legacy=False):
     if isinstance(scriptpubkey, str):
         scriptpubkey = binascii.unhexlify(scriptpubkey)

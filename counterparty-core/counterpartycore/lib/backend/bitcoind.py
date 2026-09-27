@@ -966,6 +966,24 @@ def get_reveal_prevouts(decoded_tx, no_retry=False):
     ]
 
 
+def get_reveal_commit_script_pubkey(decoded_tx, no_retry=False):
+    """scriptPubKey of the output input 0 of an inscription reveal transaction
+    actually spends: the commit output.
+
+    The reveal's *source* is resolved one hop further back (see
+    `get_reveal_prevouts()`), which is why `vin[0]["info"]` never describes this
+    output. `require_reveal_source_signature` needs it to check that the reveal
+    is a genuine tapscript spend of a P2TR commit, so it is fetched here at its
+    own outpoint. Only reached for reveal-shaped transactions; the commit
+    transaction is normally already in `TRANSACTIONS_CACHE`. A backend failure
+    follows the usual policy: skip while parsing the mempool, halt otherwise.
+    """
+    _value, script_pub_key, _is_segwit = get_vin_info_legacy(
+        decoded_tx["vin"][0], no_retry=no_retry
+    )
+    return script_pub_key
+
+
 def get_vin_info(vin, no_retry=False, prevout=None):
     """`prevout` overrides the (txid, output index) this input resolves to. It is
     only ever set for an inscription reveal transaction whose deserializer

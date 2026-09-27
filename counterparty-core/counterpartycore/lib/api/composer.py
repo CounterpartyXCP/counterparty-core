@@ -18,7 +18,6 @@ from bitcoinutils.keys import (
     P2shAddress,
     P2trAddress,
     P2wpkhAddress,
-    PrivateKey,
     PublicKey,
 )
 from bitcoinutils.script import Script, b_to_h
@@ -364,45 +363,128 @@ def get_reveal_outputs(db, source, envelope_script, unspent_list, construct_para
     return outputs
 
 
-def get_signed_reveal_tx(inputs, outputs, commit_value, envelope_script, reveal_tx_pk):
-    # build transaction
-    reveal_tx = Transaction(inputs, outputs)
-    reveal_tx.has_segwit = True
-    # sign the input containing the inscription script
-    source_pubkey = reveal_tx_pk.get_public_key()
+def get_reveal_control_block(source_pubkey, envelope_script):
+    """Control block of the single-leaf commit `P2TR(source_pubkey, [envelope])`."""
     commit_address = source_pubkey.get_taproot_address([[envelope_script]])
-    sig = reveal_tx_pk.sign_taproot_input(
-        tx=reveal_tx,
-        txin_index=0,
-        utxo_scripts=[commit_address.to_script_pub_key()],
-        amounts=[commit_value],
-        script_path=True,
-        tapleaf_script=envelope_script,
-        tweak=False,
-    )
-    # generate the control block
-    control_block = ControlBlock(
+    return ControlBlock(
         source_pubkey,
         scripts=[envelope_script],
         index=0,
         is_odd=commit_address.is_odd(),
     )
-    # add the witness to the transaction
+
+
+def get_reveal_transaction_vsize(outputs, envelope_script, source_pubkey):
+    """Virtual size of the reveal transaction once the wallet has signed it.
+
+    The witness is `<signature> <envelope> <control block>`. The signature is
+    counted as 65 bytes (SIGHASH_ALL spelled out) rather than the 64 of
+    SIGHASH_DEFAULT: the reveal fee is paid out of the commit output and cannot
+    be raised afterwards, so the estimate errs on the side of the wallet.
+    """
+    reveal_tx = Transaction([TxInput("F" * 64, 0)], outputs)
+    reveal_tx.has_segwit = True
+    control_block = get_reveal_control_block(source_pubkey, envelope_script)
     reveal_tx.witnesses.append(
-        TxWitnessInput([sig, envelope_script.to_hex(), control_block.to_hex()])
+        TxWitnessInput(["00" * 65, envelope_script.to_hex(), control_block.to_hex()])
     )
-    return reveal_tx
-
-
-def get_dummy_signed_reveal_tx(outputs, envelope_script, reveal_tx_pk):
-    inputs = [TxInput("F" * 64, 0)]
-    commit_value = config.DEFAULT_SEGWIT_DUST_SIZE
-    return get_signed_reveal_tx(inputs, outputs, commit_value, envelope_script, reveal_tx_pk)
-
-
-def get_reveal_transaction_vsize_and_value(outputs, envelope_script, reveal_tx_pk):
-    reveal_tx = get_dummy_signed_reveal_tx(outputs, envelope_script, reveal_tx_pk)
     return reveal_tx.get_vsize()
+
+
+def _pubkey_from_hex(pubkey_hex):
+    """bitcoinutils `PublicKey` for a compressed, uncompressed or x-only hex key,
+    or None when it is not a valid key. An x-only key is lifted with even parity;
+    every caller only ever uses its x coordinate."""
+    if not isinstance(pubkey_hex, str):
+        return None
+    if len(pubkey_hex) == 64:
+        pubkey_hex = "02" + pubkey_hex
+    if not is_valid_pubkey(pubkey_hex):
+        return None
+    return PublicKey.from_hex(pubkey_hex)
+
+
+def xonly_matches_script_pub_key(xonly_hex, script_pub_key):
+    """Whether the x-only key `xonly_hex` is a key of the P2WPKH or P2TR output
+    `script_pub_key` (hex), i.e. a key the parser accepts in the envelope of a
+    reveal from that address (`counterparty-rs/src/reveal.rs`): for P2WPKH the
+    key hashing to the program (either parity), for P2TR the BIP86 internal key
+    or the output key itself."""
+    output_type = get_output_type(script_pub_key)
+    if output_type == "P2WPKH":
+        for prefix in ("02", "03"):
+            if not is_valid_pubkey(prefix + xonly_hex):
+                continue
+            candidate = PublicKey.from_hex(prefix + xonly_hex)
+            if candidate.get_segwit_address().to_script_pub_key().to_hex() == script_pub_key:
+                return True
+        return False
+    if output_type == "P2TR":
+        output_key = b_to_h(script.script_to_asm(script_pub_key)[1])
+        if xonly_hex == output_key:
+            return True
+        pubkey = _pubkey_from_hex(xonly_hex)
+        if pubkey is None:
+            return False
+        return pubkey.get_taproot_address().to_script_pub_key().to_hex() == script_pub_key
+    return False
+
+
+def get_reveal_source_pubkey(source, unspent_list, construct_params):
+    """The key the reveal transaction must be signed with: a key of `source`.
+
+    Since `require_reveal_source_signature` an inscription reveal is only parsed
+    when the `OP_CHECKSIG` key of its envelope belongs to the source -- that is
+    how Bitcoin itself ends up proving the source signed the message -- so the
+    wallet signs the reveal with its own key instead of the node signing it with
+    a throwaway one (GHSA-q27c-r246-f6qw).
+
+    The key is taken from `multisig_pubkey`, else from a matching entry of
+    `pubkeys`, else searched in the source's past transactions. A P2TR source
+    with no known key falls back to its output key, which the wallet signs for
+    with its tweaked private key.
+    """
+    script_pub_key = address_to_script_pub_key(source, unspent_list, construct_params).to_hex()
+    output_type = get_output_type(script_pub_key)
+    if output_type not in ("P2WPKH", "P2TR"):
+        raise exceptions.ComposeError("`taproot` encoding requires a P2WPKH or P2TR source address")
+
+    multisig_pubkey = construct_params.get("multisig_pubkey")
+    if multisig_pubkey:
+        pubkey = _pubkey_from_hex(multisig_pubkey)
+        if pubkey is None:
+            raise exceptions.ComposeError(f"Invalid multisig pubkey: {multisig_pubkey}")
+        if not xonly_matches_script_pub_key(pubkey.to_x_only_hex(), script_pub_key):
+            raise exceptions.ComposeError(
+                "`multisig_pubkey` is not a key of the source address; "
+                "the reveal transaction must be signed by the source"
+            )
+        return pubkey
+
+    for candidate in (construct_params.get("pubkeys") or "").split(","):
+        pubkey = _pubkey_from_hex(candidate)
+        if pubkey is not None and xonly_matches_script_pub_key(
+            pubkey.to_x_only_hex(), script_pub_key
+        ):
+            return pubkey
+
+    if output_type == "P2WPKH":
+        tx_hashes = [utxo["txid"] for utxo in unspent_list]
+        pubkey = _pubkey_from_hex(backend.search_pubkey(source, tx_hashes))
+        if pubkey is not None and xonly_matches_script_pub_key(
+            pubkey.to_x_only_hex(), script_pub_key
+        ):
+            return pubkey
+        raise exceptions.ComposeError(
+            f"Pubkey not found for {source}, please provide it with the `multisig_pubkey` parameter"
+        )
+
+    # P2TR: the output key is a key the source can sign with (tweaked private key)
+    output_key = b_to_h(script.script_to_asm(script_pub_key)[1])
+    pubkey = _pubkey_from_hex(output_key)
+    if pubkey is None:
+        raise exceptions.ComposeError(f"Invalid taproot output key for {source}")
+    return pubkey
 
 
 def generate_ordinal_envelope_script(message_data, message_type_id, content, source_pubkey):
@@ -436,15 +518,12 @@ def generate_ordinal_envelope_script(message_data, message_type_id, content, sou
     return Script(script_array)
 
 
-# for testing purposes
-def generate_random_private_key():
-    return PrivateKey()
+def generate_envelope_script(data, source_pubkey, construct_params):
+    """Envelope leaf carrying `data`, closed by `<source key> OP_CHECKSIG`.
 
-
-def generate_envelope_script(data, construct_params):
-    # generate random private key
-    private_key = generate_random_private_key()
-    source_pubkey = private_key.get_public_key()
+    `source_pubkey` is the key returned by `get_reveal_source_pubkey()`: the
+    reveal is valid only when signed by the source (see that function).
+    """
     envelope_script = None
 
     message_type_id, message = messagetype.unpack(data)
@@ -472,26 +551,26 @@ def generate_envelope_script(data, construct_params):
             ["OP_FALSE", "OP_IF", *datas, "OP_ENDIF", source_pubkey.to_x_only_hex(), "OP_CHECKSIG"]
         )
 
-    return envelope_script, private_key
+    return envelope_script
 
 
 def prepare_taproot_output(db, source, data, unspent_list, construct_params):
-    # Build inscription envelope script
-    envelope_script, reveal_tx_pk = generate_envelope_script(data, construct_params)
-    source_pubkey = reveal_tx_pk.get_public_key()
+    # the reveal must be signed by the source: its key closes the envelope
+    source_pubkey = get_reveal_source_pubkey(source, unspent_list, construct_params)
+    envelope_script = generate_envelope_script(data, source_pubkey, construct_params)
     # generate the reveal outputs
     outputs = get_reveal_outputs(db, source, envelope_script, unspent_list, construct_params)
     # get output values and tx size
     outputs_value = sum(output.amount for output in outputs)
     # commit value must pay fees for the reveal tx
-    reveal_tx_vsize = get_reveal_transaction_vsize_and_value(outputs, envelope_script, reveal_tx_pk)
+    reveal_tx_vsize = get_reveal_transaction_vsize(outputs, envelope_script, source_pubkey)
     reveal_tx_fees = math.ceil(reveal_tx_vsize * get_sat_per_vbyte(construct_params))
     commit_value = reveal_tx_fees + outputs_value
     commit_value = max(commit_value, config.DEFAULT_SEGWIT_DUST_SIZE)
-    # build output
+    # build output: a single-leaf taproot tree with the source key as internal key
     commit_address = source_pubkey.get_taproot_address([[envelope_script]])
     tx_out = TxOutput(commit_value, commit_address.to_script_pub_key())
-    return [tx_out], (outputs, envelope_script, reveal_tx_pk)
+    return [tx_out], (outputs, envelope_script, source_pubkey)
 
 
 def prepare_data_outputs(db, source, destinations, data, unspent_list, construct_params):
@@ -1145,6 +1224,18 @@ def compose_data(db, name, params, accept_missing_params=False, skip_validation=
     return compose_method(db, **params)
 
 
+# Result fields of a `taproot` encoded transaction, on top of the commit
+# `rawtransaction`: the unsigned reveal and what the wallet needs to sign it.
+REVEAL_RESULT_KEYS = (
+    "reveal_rawtransaction",
+    "envelope_script",
+    "reveal_control_block",
+    "reveal_pubkey",
+    "reveal_lock_scripts",
+    "reveal_inputs_values",
+)
+
+
 def construct(db, tx_info, construct_params, final_validator=None):
     source, destinations, data = tx_info
 
@@ -1239,16 +1330,69 @@ def construct(db, tx_info, construct_params, final_validator=None):
                     "Reveal transaction is not supported for legacy inputs"
                 )
 
-        inputs = [TxInput(tx.get_txid(), 0)]
-        outputs, envelope_script, reveal_tx_pk = reveal_tx_info
-        commit_value = tx.outputs[0].amount
-        signed_reveal_tx = get_signed_reveal_tx(
-            inputs, outputs, commit_value, envelope_script, reveal_tx_pk
-        )
-        result["signed_reveal_rawtransaction"] = signed_reveal_tx.to_hex()
+        # The reveal spends the commit's first output through the envelope leaf
+        # and must be signed by the source key that closes the envelope (see
+        # `get_reveal_source_pubkey()`), so it is returned unsigned together
+        # with everything the wallet needs to add the witness
+        # `<signature> <envelope_script> <reveal_control_block>`.
+        outputs, envelope_script, source_pubkey = reveal_tx_info
+        reveal_tx = Transaction([TxInput(tx.get_txid(), 0)], outputs)
+        control_block = get_reveal_control_block(source_pubkey, envelope_script)
+        result["reveal_rawtransaction"] = reveal_tx.serialize()
         result["envelope_script"] = envelope_script.to_hex()
+        result["reveal_control_block"] = control_block.to_hex()
+        result["reveal_pubkey"] = source_pubkey.to_x_only_hex()
+        result["reveal_lock_scripts"] = [tx.outputs[0].script_pubkey.to_hex()]
+        result["reveal_inputs_values"] = [tx.outputs[0].amount]
 
     return result, unspent_list
+
+
+def check_reveal_sanity(source, data, decoded_tx, composed_tx, unspent_list, construct_params):
+    """The commit/reveal pair must carry `data` in an envelope closed by a key of
+    `source` -- otherwise the reveal is either unsignable by the wallet or, once
+    `require_reveal_source_signature` is active, ignored by the network."""
+    elements = Script.from_raw(composed_tx["envelope_script"]).script
+    if (
+        len(elements) < 5
+        or elements[-1] != "OP_CHECKSIG"
+        or not isinstance(elements[-2], str)
+        or len(elements[-2]) != 64
+    ):
+        raise exceptions.ComposeError("Sanity check error: envelope script does not match the data")
+    reveal_pubkey = _pubkey_from_hex(elements[-2])
+    if reveal_pubkey is None:
+        raise exceptions.ComposeError("Sanity check error: invalid envelope key")
+
+    source_script_pub_key = address_to_script_pub_key(
+        source, unspent_list, construct_params
+    ).to_hex()
+    if not xonly_matches_script_pub_key(reveal_pubkey.to_x_only_hex(), source_script_pub_key):
+        raise exceptions.ComposeError(
+            "Sanity check error: envelope key does not belong to the source"
+        )
+
+    envelope_script = generate_envelope_script(data, reveal_pubkey, construct_params)
+    if envelope_script.to_hex() != composed_tx["envelope_script"]:
+        raise exceptions.ComposeError("Sanity check error: envelope script does not match the data")
+
+    commit_script_pub_key = (
+        reveal_pubkey.get_taproot_address([[envelope_script]]).to_script_pub_key().to_hex()
+    )
+    if b_to_h(decoded_tx["vout"][0]["script_pub_key"]) != commit_script_pub_key:
+        raise exceptions.ComposeError(
+            "Sanity check error: commit output does not commit to the envelope"
+        )
+
+    reveal_tx = Transaction.from_raw(composed_tx["reveal_rawtransaction"])
+    if (
+        len(reveal_tx.inputs) != 1
+        or reveal_tx.inputs[0].txid != decoded_tx["tx_id"]
+        or reveal_tx.inputs[0].txout_index != 0
+    ):
+        raise exceptions.ComposeError(
+            "Sanity check error: reveal transaction does not spend the commit output"
+        )
 
 
 def check_transaction_sanity(tx_info, composed_tx, unspent_list, construct_params):  # pylint: disable=unused-argument
@@ -1299,16 +1443,10 @@ def check_transaction_sanity(tx_info, composed_tx, unspent_list, construct_param
 
     # check if data matches the output data
     if data:
-        if "signed_reveal_rawtransaction" in composed_tx:
-            envelope_script, _reveal_tx_pk = generate_envelope_script(data, construct_params)
-            composed_envelope_script = Script.from_raw(composed_tx["envelope_script"])
-            # remove the random pubkey from the envelope script
-            envelope_script.script = envelope_script.script[0:-2]
-            composed_envelope_script.script = composed_envelope_script.script[0:-2]
-            if envelope_script.to_hex() != composed_envelope_script.to_hex():
-                raise exceptions.ComposeError(
-                    "Sanity check error: envelope script does not match the data"
-                )
+        if "reveal_rawtransaction" in composed_tx:
+            check_reveal_sanity(
+                source, data, decoded_tx, composed_tx, unspent_list, construct_params
+            )
         else:
             if isinstance(decoded_tx["parsed_vouts"], Exception):
                 raise exceptions.ComposeError(
@@ -1367,7 +1505,7 @@ CONSTRUCT_PARAMS = {
     "multisig_pubkey": (
         str,
         None,
-        "The reedem public key to use for multisig encoding, by default it is searched for the source address",
+        "The public key of the source address. Used as the redeem key of `multisig` encoding and as the key a `taproot` reveal transaction must be signed with; by default it is searched for the source address (a P2TR source falls back to its output key)",
     ),
     "change_address": (str, None, "The address to send the change to"),
     "more_outputs": (
@@ -1506,9 +1644,9 @@ def compose_transaction(db, name, params, construct_parameters, final_validator=
         }
     else:
         final_result = {}
-        if "signed_reveal_rawtransaction" in result:
-            final_result["signed_reveal_rawtransaction"] = result["signed_reveal_rawtransaction"]
-            final_result["envelope_script"] = result["envelope_script"]
+        for key in REVEAL_RESULT_KEYS:
+            if key in result:
+                final_result[key] = result[key]
         final_result["rawtransaction"] = result["rawtransaction"]
 
     if len(warnings) > 0:
