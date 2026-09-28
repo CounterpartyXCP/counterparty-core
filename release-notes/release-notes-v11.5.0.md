@@ -1,6 +1,6 @@
 # Release Notes - Counterparty Core v11.5.0 (2026-09-28)
 
-This is a security release that fixes a vulnerability allowing an attacker to sweep the assets of any address that pays them plain BTC. It introduces one protocol change and changes how taproot-encoded transactions are composed and signed.
+This is a security release that fixes a vulnerability allowing an attacker to sweep the assets of any address that pays them plain BTC. It introduces one protocol change and changes how taproot-encoded transactions are composed and signed. It also includes reliability fixes for mempool parsing and API startup.
 
 **All node operators should upgrade immediately. The protocol change activates at the block height each chain had reached when this release was published (mainnet block 968,846), so it is already in force; nodes that upgrade later roll back to that height automatically. Wallets that use `encoding=taproot` must be updated to sign the reveal transaction themselves; until then their taproot-encoded transactions are rejected.**
 
@@ -69,6 +69,12 @@ Until the network has upgraded, users should avoid paying BTC to unknown P2TR or
 - **Breaking:** `compose` with `encoding=taproot` no longer signs the reveal transaction. The node does not hold the source key, so `signed_reveal_rawtransaction` is removed. The result now carries the unsigned reveal in `reveal_rawtransaction`, plus everything needed to sign it: `envelope_script`, `reveal_control_block`, `reveal_pubkey` (the x-only key that closes the envelope), `reveal_lock_scripts` and `reveal_inputs_values` (the commit output the reveal spends). Wallets must add the witness `<signature> <envelope_script> <reveal_control_block>` to the reveal, signing the envelope leaf (BIP342 script path, `SIGHASH_DEFAULT` or `SIGHASH_ALL`) with the private key of `reveal_pubkey`, then broadcast the commit followed by the reveal.
 - The envelope is closed by the source key. Pass the source public key as `multisig_pubkey` (compressed or x-only); it is otherwise looked up in the source's transactions. A P2TR source without a known key falls back to its output key, which the wallet signs for with its BIP86-tweaked private key. `taproot` encoding now requires a P2WPKH or P2TR source.
 - `compose` rejects a `multisig_pubkey` that is not a key of the source address, and the composed commit, envelope and reveal are cross-checked against the source before being returned.
+
+## Reliability
+
+- Fix missing mempool transactions or parent lookups blocking confirmed-block processing indefinitely. Failed mempool batches roll back without marking their transactions unsupported.
+- Report mempool parsing that makes no progress for two minutes through the liveness health check, allowing supervisors to restart the node. Confirmed-block processing, startup and State DB rebuilds do not trigger this safeguard. Mempool support remains enabled.
+- Refuse to start the API when stored ledger or transaction-list hashes disagree with known checkpoints, including in API-only mode. Report the mismatching checkpoint and recovery guidance without automatically changing ledger data.
 
 ## Client
 

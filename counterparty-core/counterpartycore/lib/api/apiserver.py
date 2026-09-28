@@ -696,7 +696,13 @@ class ConnectionPoolMonitor(threading.Thread):
 
 
 def run_apiserver(
-    args, server_ready_value, stop_event, shared_backend_height, parent_pid, log_stream
+    args,
+    server_ready_value,
+    stop_event,
+    shared_backend_height,
+    parent_pid,
+    log_stream,
+    mempool_progress=None,
 ):
     api_owner_pid = os.getpid()
     logger.info("Starting API Server process...")
@@ -756,6 +762,9 @@ def run_apiserver(
                 # the WSGI server is built and about to run, and 2 once it is
                 # stopping (issue #3504).
                 serving_provider=lambda: server_ready_value.value == 1,
+                mempool_progress_provider=(lambda: mempool_progress.value)
+                if mempool_progress is not None
+                else None,
             )
             health_server.start()
 
@@ -878,11 +887,12 @@ class ParentProcessChecker(threading.Thread):
 
 
 class APIServer:
-    def __init__(self, stop_event, shared_backend_height):
+    def __init__(self, stop_event, shared_backend_height, mempool_progress=None):
         self.process = None
         self.server_ready_value = Value("I", 0)
         self.stop_event = stop_event
         self.shared_backend_height = shared_backend_height
+        self.mempool_progress = mempool_progress
 
     def start(self, args, log_stream):
         if self.process is not None:
@@ -897,6 +907,7 @@ class APIServer:
                 self.shared_backend_height,
                 os.getpid(),
                 log_stream,
+                self.mempool_progress,
             ),
         )
         try:

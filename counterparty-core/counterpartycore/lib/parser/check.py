@@ -7,10 +7,73 @@ from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages.data import checkpoints
 from counterpartycore.lib.parser import protocol
-from counterpartycore.lib.utils import database
+from counterpartycore.lib.utils import database, hashcodec
 from counterpartycore.lib.utils.helpers import dhash_string
 
 logger = logging.getLogger(config.LOGGER_NAME)
+
+
+def _network_checkpoints():
+    if config.TESTNET3:
+        return checkpoints.CHECKPOINTS_TESTNET3
+    if config.TESTNET4:
+        return checkpoints.CHECKPOINTS_TESTNET4
+    if config.REGTEST:
+        return checkpoints.CHECKPOINTS_REGTEST
+    if config.SIGNET:
+        return checkpoints.CHECKPOINTS_SIGNET
+    return checkpoints.CHECKPOINTS_MAINNET
+
+
+def stored_checkpoints(db):
+    """Reject inconsistent stored history before serving, including API-only mode.
+
+    Check both enforced hashes at every applicable checkpoint in one read
+    snapshot. A newly introduced checkpoint may be behind the existing tip and
+    would never be visited by normal forward parsing. This checks stored hashes,
+    not all historical transactions, and never repairs or rewrites the ledger.
+    """
+    checked = 0
+    with db:
+        cursor = db.cursor()
+        try:
+            # Fetched-but-unparsed blocks have neither hash. A partially missing
+            # checkpoint hash must still be checked if the other hash exists.
+            tip = cursor.execute(
+                """SELECT MAX(block_index) AS block_index FROM blocks
+                   WHERE block_index != ?
+                     AND (ledger_hash IS NOT NULL OR txlist_hash IS NOT NULL)""",
+                (config.MEMPOOL_BLOCK_INDEX,),
+            ).fetchone()["block_index"]
+            if tip is None:
+                return 0
+            for height, expected in sorted(_network_checkpoints().items()):
+                if not config.BLOCK_FIRST <= height <= tip:
+                    continue
+                row = cursor.execute(
+                    "SELECT ledger_hash, txlist_hash FROM blocks WHERE block_index = ?",
+                    (height,),
+                ).fetchone()
+                for field in ("ledger_hash", "txlist_hash"):
+                    value = row[field] if row else None
+                    try:
+                        actual = hashcodec.hash_from_db(value)
+                    except TypeError:
+                        actual = f"<invalid {type(value).__name__}>"
+                    if actual != expected[field]:
+                        raise exceptions.ConsensusError(
+                            f"Stored {field} checkpoint mismatch at block {height}: "
+                            f"found {str(actual)[:128]}, expected {expected[field]}. "
+                            "Refusing to start the API with inconsistent ledger history. "
+                            "Restore a verified ledger snapshot or use rollback/reparse "
+                            "from a verified earlier point. A State DB refresh alone "
+                            "does not repair ledger history."
+                        )
+                checked += 1
+        finally:
+            cursor.close()
+    logger.info("Validated %d stored ledger checkpoints through block %d.", checked, tip)
+    return checked
 
 
 def consensus_hash(db, field, previous_consensus_hash, content):
@@ -69,16 +132,7 @@ def consensus_hash(db, field, previous_consensus_hash, content):
             )
 
     # Check against checkpoints.
-    if config.TESTNET3:
-        network_checkpoints = checkpoints.CHECKPOINTS_TESTNET3
-    elif config.TESTNET4:
-        network_checkpoints = checkpoints.CHECKPOINTS_TESTNET4
-    elif config.REGTEST:
-        network_checkpoints = checkpoints.CHECKPOINTS_REGTEST
-    elif config.SIGNET:
-        network_checkpoints = checkpoints.CHECKPOINTS_SIGNET
-    else:
-        network_checkpoints = checkpoints.CHECKPOINTS_MAINNET
+    network_checkpoints = _network_checkpoints()
 
     if (
         field != "messages_hash"
