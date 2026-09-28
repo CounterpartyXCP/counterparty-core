@@ -51,7 +51,7 @@ from counterpartycore.lib.messages.versions import enhancedsend, mpma
 from counterpartycore.lib.monitors.profiler import Profiler
 from counterpartycore.lib.parser import check, deserialize, messagetype, protocol
 from counterpartycore.lib.parser.gettxinfo import get_tx_info
-from counterpartycore.lib.utils import database, hashcodec, helpers
+from counterpartycore.lib.utils import database, hashcodec, helpers, parserhealth
 
 D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -395,6 +395,8 @@ def parse_block(
     for tx in transactions:
         try:
             parse_tx(db, tx)
+            if block_index == config.MEMPOOL_BLOCK_INDEX:
+                parserhealth.progress()
             data = binascii.hexlify(tx["data"]).decode("UTF-8") if tx["data"] else ""
             txlist.append(
                 f"{tx['tx_hash']}{tx['source']}{tx['destination']}{tx['btc_amount']}{tx['fee']}{data}"

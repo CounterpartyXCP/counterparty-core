@@ -12,9 +12,9 @@ no bitcoind RPC, no lock — so responses are deterministically fast.
 
 Endpoints (all GET, JSON):
 
-* ``/healthz/live``    — liveness: is the process internally alive? 200 unless the sampler
-                         heartbeat is stale (a genuine deadlock). Never reflects ledger lag or
-                         saturation, so a busy-but-alive pod is never restarted.
+* ``/healthz/live``    — 503 if the sampler heartbeat is stale, or speculative mempool
+                         parsing makes no progress for 120 seconds. Never based on block
+                         arrival time, confirmed-block duration, lag or worker saturation.
 * ``/healthz/ready``   — readiness: should this pod receive traffic? 503 when a State DB
                          rebuild is under way, when the API watcher has stopped on an error,
                          when the ledger is behind the backend, or when the worker pool has
@@ -37,7 +37,7 @@ from typing import Optional
 from counterpartycore.lib import config
 from counterpartycore.lib.api import apiwatcher, dbstatus, parsedevents
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.utils import database, helpers
+from counterpartycore.lib.utils import database, helpers, parserhealth
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -70,6 +70,7 @@ class HealthSnapshot:
     # Set while a State DB build/refresh/rollback is under way (issue #3485): the
     # pod is healthy and working, but must not receive traffic yet.
     rebuild: Optional[dbstatus.RebuildProgress] = None
+    mempool_progress_at: Optional[float] = None
 
 
 def _instrument_dispatcher(dispatcher):
@@ -119,6 +120,7 @@ class HealthSampler(threading.Thread):
         block_time_provider=None,
         api_only_provider=None,
         serving_provider=None,
+        mempool_progress_provider=None,
     ):
         super().__init__(name="HealthSampler", daemon=True)
         self.dispatcher = dispatcher
@@ -170,6 +172,7 @@ class HealthSampler(threading.Thread):
         # nothing. Defaults to "serving", so a sampler constructed without the
         # lifecycle signal (the tests, and any embedder) behaves as before.
         self._serving_provider = serving_provider or (lambda: True)
+        self._mempool_progress_provider = mempool_progress_provider or (lambda: 0)
 
         self.stop_event = threading.Event()
         self._snapshot = HealthSnapshot(
@@ -310,6 +313,11 @@ class HealthSampler(threading.Thread):
             saturation_seconds=saturation_seconds,
             workers=workers,
             rebuild=rebuild,
+            mempool_progress_at=(
+                self._mempool_progress_provider()
+                if rebuild is None and self._is_serving() and not self._api_only_provider()
+                else None
+            ),
         )
         self._maybe_log_worker_stats(now, workers, saturation_seconds)
 
@@ -495,6 +503,13 @@ class HealthRequestHandler(BaseHTTPRequestHandler):
                 "reason": "heartbeat_stale",
                 "heartbeat_age_seconds": round(age, 1),
             }
+        progress_at = sampler.current_snapshot().mempool_progress_at
+        if progress_at and time.monotonic() - progress_at > parserhealth.STALL_TIMEOUT_SECONDS:
+            return 503, {
+                "status": "unhealthy",
+                "reason": "mempool_parser_stalled",
+                "progress_age_seconds": round(time.monotonic() - progress_at, 1),
+            }
         return 200, {"status": "alive"}
 
     def _readiness(self):
@@ -580,6 +595,7 @@ class HealthCheckServer:
         saturation_grace=None,
         stop_event=None,
         serving_provider=None,
+        mempool_progress_provider=None,
     ):
         self.host = host
         self.port = port
@@ -588,6 +604,7 @@ class HealthCheckServer:
         # Readiness stays false until this reports that the public API can
         # serve requests; see `HealthSampler.__init__` (issue #3504).
         self.serving_provider = serving_provider
+        self.mempool_progress_provider = mempool_progress_provider
         # stop_event is accepted for symmetry with the other server threads; the health server
         # is a daemon and is torn down explicitly via stop(), so it is not otherwise used.
         self.stop_event = stop_event
@@ -620,6 +637,7 @@ class HealthCheckServer:
                 dispatcher=self.dispatcher,
                 saturation_grace=self.saturation_grace,
                 serving_provider=self.serving_provider,
+                mempool_progress_provider=self.mempool_progress_provider,
             )
             self.sampler.start()
 
