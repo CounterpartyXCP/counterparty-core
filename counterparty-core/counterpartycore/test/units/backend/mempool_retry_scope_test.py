@@ -13,6 +13,7 @@ from counterpartycore.lib.utils import parserhealth
 
 @pytest.fixture(autouse=True)
 def watchdog_is_cleared_on_exit():
+    original_state = CurrentState().state.copy()
     shared = SimpleNamespace(value=0)
     parserhealth.configure(shared)
     yield
@@ -20,6 +21,8 @@ def watchdog_is_cleared_on_exit():
         assert shared.value == 0
     finally:
         parserhealth.configure(None)
+        CurrentState().state.clear()
+        CurrentState().state.update(original_state)
 
 
 def test_scope_is_nested_exception_safe_and_thread_local(monkeypatch):
