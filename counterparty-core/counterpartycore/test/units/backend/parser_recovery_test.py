@@ -1,6 +1,9 @@
 """No live node, database or network is required by these recovery tests."""
 
+import http.client
+import json
 import multiprocessing
+import time
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -122,3 +125,51 @@ def test_api_process_receives_shared_progress(monkeypatch):
     api.start(SimpleNamespace(), None)
     assert factory.call_args.kwargs["args"][-1] is shared
     assert factory.call_args.kwargs["target"] is apiserver.run_apiserver
+
+
+def test_live_http_listener_detects_stall_and_recovers_without_height_change(monkeypatch):
+    shared = multiprocessing.get_context("spawn").Value("d", 0)
+    real_sampler = healthz_server.HealthSampler
+
+    def isolated_sampler(**kwargs):
+        return real_sampler(
+            last_parsed_provider=lambda: 100,
+            backend_height_provider=lambda: 100,
+            block_time_provider=lambda: None,
+            api_only_provider=lambda: False,
+            **kwargs,
+        )
+
+    monkeypatch.setattr(healthz_server, "HealthSampler", isolated_sampler)
+    server = healthz_server.HealthCheckServer(
+        "127.0.0.1", 0, mempool_progress_provider=lambda: shared.value
+    )
+    server.start()
+    try:
+        assert server.httpd is not None
+
+        def assert_response(expected, reason):
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                connection = http.client.HTTPConnection(
+                    "127.0.0.1", server.httpd.server_address[1], timeout=1
+                )
+                try:
+                    connection.request("GET", "/healthz/live")
+                    response = connection.getresponse()
+                    body = json.loads(response.read())
+                    if response.status == expected:
+                        assert body.get("reason", body["status"]) == reason
+                        return
+                finally:
+                    connection.close()
+                time.sleep(0.05)
+            pytest.fail(f"health listener did not return {expected} {reason}")
+
+        assert_response(200, "alive")
+        shared.value = time.monotonic() - parserhealth.STALL_TIMEOUT_SECONDS - 1
+        assert_response(503, "mempool_parser_stalled")
+        shared.value = 0
+        assert_response(200, "alive")
+    finally:
+        server.stop()
