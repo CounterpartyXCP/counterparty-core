@@ -508,6 +508,51 @@ def test_check_transaction_sanity(ledger_db, defaults):
         composer.check_transaction_sanity(tx_info, tampered, [], construct_params)
 
 
+def test_compose_transaction_inputs_set_not_from_source(ledger_db, defaults):
+    """The parser attributes a reveal to the address that funded input 0 of the
+    commit and requires the envelope key to belong to it. The composer closes
+    the envelope with a key of `source`, so a commit funded through `inputs_set`
+    by another address would be signable by the wallet yet ignored by the
+    network: it must be refused at compose time, whatever `validate` says."""
+    source = defaults["p2wpkh_addresses"][0]
+    params = {
+        "memo": "0102030405",
+        "memo_is_hex": True,
+        "source": source,
+        "destination": defaults["addresses"][1],
+        "asset": "XCP",
+        "quantity": defaults["small"],
+    }
+
+    def utxo_of(address):
+        script_pub_key = composer.address_to_script_pub_key(address).to_hex()
+        return f"{'a' * 64}:0:{10 * config.UNIT}:{script_pub_key}"
+
+    # another segwit address of the same wallet funds the commit
+    for validate in (True, False):
+        construct_params = {
+            "encoding": "taproot",
+            "inputs_set": utxo_of(defaults["p2tr_addresses"][0]),
+            "validate": validate,
+            "disable_utxo_locks": True,
+        }
+        with pytest.raises(
+            exceptions.ComposeError,
+            match="Sanity check error: source address does not match the first input address",
+        ):
+            composer.compose_transaction(ledger_db, "send", params, construct_params)
+
+    # the same UTXO owned by the source composes normally
+    construct_params = {
+        "encoding": "taproot",
+        "inputs_set": utxo_of(source),
+        "disable_utxo_locks": True,
+    }
+    result = composer.compose_transaction(ledger_db, "send", params, construct_params)
+    assert result["reveal_pubkey"] == DEFAULTS["pubkey"][source][2:]
+    assert Transaction.from_raw(result["rawtransaction"]).inputs[0].txid == "a" * 64
+
+
 def test_get_sat_per_vbyte(monkeypatch):
     monkeypatch.setattr(composer, "prepare_fee_parameters", lambda x: (None, None, None))
     sat_per_vbyte = composer.get_sat_per_vbyte({})
