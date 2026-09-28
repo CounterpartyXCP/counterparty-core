@@ -107,6 +107,7 @@ class CounterpartyServer(threading.Thread):
         # so the run() finally block knows the shutdown was requested
         # explicitly and must NOT raise KeyboardInterrupt in the main thread.
         self.stop_requested = False
+        self.startup_checkpoint_error = None
 
         # Log all config parameters, sorted by key
         # Filter out default values, these should be set in a different way
@@ -183,6 +184,14 @@ class CounterpartyServer(threading.Thread):
         blocks.create_events_indexes(self.db)
         CurrentState().set_current_block_index(ledger.blocks.last_db_index(self.db))
         blocks.check_database_version(self.db)
+        # Version migration alone does not validate an imported/already-parsed
+        # ledger against checkpoints introduced after it was originally built.
+        # Run before either API starts, also with --api-only and --force.
+        try:
+            check.stored_checkpoints(self.db)
+        except exceptions.ConsensusError as error:
+            self.startup_checkpoint_error = error
+            raise
         database.optimize(self.db)
 
         # Check software version
@@ -358,6 +367,11 @@ def start_all(args, log_stream=None, stop_when_ready=False):
                 break
             except KeyboardInterrupt:
                 logger.warning("KeyboardInterrupt received during shutdown, retrying stop...")
+
+    # run() interrupts the main thread to stop cleanly. Do not let that turn a
+    # rejected ledger into a successful CLI exit indistinguishable from Ctrl-C.
+    if server.startup_checkpoint_error is not None:
+        raise server.startup_checkpoint_error
 
 
 def rebuild(args):
