@@ -1,16 +1,16 @@
-# Release Notes - Counterparty Core v11.5.0 (2026-09-30)
+# Release Notes - Counterparty Core v11.5.0 (2026-09-28)
 
 This is a security release that fixes a vulnerability allowing an attacker to sweep the assets of any address that pays them plain BTC. It introduces one protocol change and changes how taproot-encoded transactions are composed and signed.
 
 **All node operators should upgrade immediately. The protocol change activates at the block height each chain had reached when this release was published (mainnet block 968,846), so it is already in force; nodes that upgrade later roll back to that height automatically. Wallets that use `encoding=taproot` must be updated to sign the reveal transaction themselves; until then their taproot-encoded transactions are rejected.**
 
-<!-- RELEASE STEP: replace the four activation heights below, in protocol_changes.json and in the `11.5.0` rollback of UPGRADE_ACTIONS (config.py), with the current heights just before publishing. -->
-
 # Upgrading
 
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
 
-**No reparse or State DB refresh is required when upgrading from v11.4.0.** On first start the node rolls back to the activation height and re-parses the blocks mined since the release, which takes a few minutes at most. Nodes upgrading from an earlier version also go through the v11.4.0 State DB refresh (approximately 30 minutes on mainnet).
+**No reparse is required. On first start the node rolls the Ledger DB back to the activation height, re-parses the blocks mined since the release and rebuilds the State DB. Allow approximately 30 minutes on mainnet, during which the API is unavailable.** The rollback re-parses with the new rule the blocks that a v11.4.0 node may have parsed with the old one, so that every node agrees on the ledger. The State DB rebuild runs even when the node has not yet reached the activation height, for example after a bootstrap.
+
+For Kubernetes deployments, the dedicated health listener (`/healthz/live` and `/healthz/ready`, port `4002` by default on mainnet) reports the rebuild as in v11.4.0: liveness returns `200` and readiness returns `503 rebuilding`.
 
 With Docker Compose:
 
@@ -33,7 +33,7 @@ pip install -e .
 counterparty-server start
 ```
 
-The v11.4.0 bootstrap snapshots remain valid and are selected automatically by `counterparty-server bootstrap`.
+The v11.4.0 bootstrap snapshots remain valid and are selected automatically by `counterparty-server bootstrap`; a freshly bootstrapped node goes through the State DB rebuild described above on its first start.
 
 The protocol change activates at the following block heights, the heights of each chain at the time of the release:
 
