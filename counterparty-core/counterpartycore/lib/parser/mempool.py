@@ -21,7 +21,10 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
     cursor = db.cursor()
     not_supported_txs = []
     try:
-        with db:
+        # A transaction (or its parent) can leave Bitcoin's mempool after we
+        # fetched it. No nested RPC may hold up confirmed-block processing by
+        # retrying that speculative lookup indefinitely.
+        with backend.bitcoind.no_rpc_retry(), db:
             # insert fake block. block_hash is the "mempool" sentinel, NOT a
             # real hash: store it as the TEXT value as-is. Do NOT call
             # hash_to_db -- it would UTF-8-encode the sentinel into a 7-byte
@@ -171,6 +174,11 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
                 )""",
                 tx_for_insert,
             )
+    except exceptions.BitcoindRPCError as e:
+        # The speculative DB transaction has rolled back. Do not blacklist
+        # this batch as unsupported: a later mempool refresh may resolve it.
+        not_supported_txs = []
+        logger.warning("Mempool batch deferred after backend lookup failure: %s", e)
     except exceptions.ParseTransactionError as e:
         # A mempool tx that would halt the chain on confirmation must NOT
         # halt the watcher pre-confirmation -- the `with db:` context already
