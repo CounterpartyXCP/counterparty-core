@@ -36,7 +36,8 @@ def test_nested_lookup_fails_fast_but_confirmed_rpc_keeps_retry_path(monkeypatch
     normal.assert_called_once()
 
 
-def test_mempool_rpc_failure_rolls_back_without_blacklisting(monkeypatch):
+@pytest.mark.parametrize("wrapped", [False, True])
+def test_mempool_rpc_failure_rolls_back_without_blacklisting(monkeypatch, wrapped):
     monkeypatch.setattr(mempool, "logger", MagicMock())
     monkeypatch.setattr(bitcoind, "is_api_request", lambda: False)
     db = MagicMock()
@@ -51,13 +52,19 @@ def test_mempool_rpc_failure_rolls_back_without_blacklisting(monkeypatch):
 
     def missing_parent(*args, **kwargs):
         assert bitcoind.skip_rpc_retry()
+        if wrapped:
+            try:
+                raise exceptions.BitcoindRPCError("Parent disappeared")
+            except exceptions.BitcoindRPCError as error:
+                raise exceptions.ParseTransactionError(str(error)) from error
         raise exceptions.BitcoindRPCError("Parent disappeared")
 
     monkeypatch.setattr(mempool.blocks, "list_tx", missing_parent)
     monkeypatch.setattr(mempool.database, "reset_asset_caches", MagicMock())
     monkeypatch.setattr(mempool.database, "reset_address_caches", MagicMock())
     assert mempool.parse_mempool_transactions(db, ["raw"]) == []
-    assert db.__exit__.call_args.args[0] is exceptions.BitcoindRPCError
+    expected_error = exceptions.ParseTransactionError if wrapped else exceptions.BitcoindRPCError
+    assert db.__exit__.call_args.args[0] is expected_error
     assert not bitcoind.skip_rpc_retry()
     assert not CurrentState().parsing_mempool()
     assert not any("INSERT INTO mempool " in str(c) for c in cursor.execute.call_args_list)

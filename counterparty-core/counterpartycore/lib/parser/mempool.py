@@ -180,11 +180,17 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
         not_supported_txs = []
         logger.warning("Mempool batch deferred after backend lookup failure: %s", e)
     except exceptions.ParseTransactionError as e:
-        # A mempool tx that would halt the chain on confirmation must NOT
-        # halt the watcher pre-confirmation -- the `with db:` context already
-        # rolled back the speculative inserts. Log and drop this batch; the
-        # tx will halt the chain only if/when it actually confirms.
-        logger.warning("mempool parse skipped on halt-class tx: %s", e)
+        if isinstance(e.__cause__, exceptions.BitcoindRPCError):
+            # parse_tx wraps message-handler exceptions. A missing parent
+            # inside a handler is still transient, not an unsupported tx.
+            not_supported_txs = []
+            logger.warning("Mempool batch deferred after backend lookup failure: %s", e)
+        else:
+            # A mempool tx that would halt the chain on confirmation must NOT
+            # halt the watcher pre-confirmation -- the `with db:` context already
+            # rolled back the speculative inserts. Log and drop this batch; the
+            # tx will halt the chain only if/when it actually confirms.
+            logger.warning("mempool parse skipped on halt-class tx: %s", e)
     finally:
         # Set unconditionally so a non-MempoolError exit doesn't leave the
         # singleton stuck in mempool mode (which would silently disable UTXO
