@@ -1525,9 +1525,9 @@
         "minimum_version_major": 11,
         "minimum_version_minor": 5,
         "minimum_version_revision": 0,
-        "block_index": 968846,
-        "testnet3_block_index": 5151305,
-        "testnet4_block_index": 154138,
-        "signet_block_index": 323915
+        "block_index": 969018,
+        "testnet3_block_index": 5151460,
+        "testnet4_block_index": 154240,
+        "signet_block_index": 324050
     }
 }

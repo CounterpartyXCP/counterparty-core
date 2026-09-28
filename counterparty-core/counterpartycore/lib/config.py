@@ -52,7 +52,7 @@ UPGRADE_ACTIONS = {
         # composed the old way in between (throwaway envelope key) are then
         # rejected everywhere alike. RELEASE STEP: keep these heights equal to
         # the ones in protocol_changes.json.
-        "11.5.0": [("rollback", 968846)],
+        "11.5.0": [("rollback", 969018)],
     },
     "testnet3": {
         "10.3.0": [("reparse", 0)],
@@ -72,7 +72,7 @@ UPGRADE_ACTIONS = {
         "11.1.0": [("refresh_state_db", 0)],
         "11.2.0": [("refresh_state_db", 0)],
         "11.4.0": [("refresh_state_db", 0)],
-        "11.5.0": [("rollback", 5151305)],
+        "11.5.0": [("rollback", 5151460)],
     },
     "testnet4": {
         "10.10.0": [("rollback", 64492)],
@@ -83,7 +83,7 @@ UPGRADE_ACTIONS = {
         "11.1.0": [("refresh_state_db", 0)],
         "11.2.0": [("refresh_state_db", 0)],
         "11.4.0": [("refresh_state_db", 0)],
-        "11.5.0": [("rollback", 154138)],
+        "11.5.0": [("rollback", 154240)],
     },
     "signet": {
         "11.0.2": [("refresh_state_db", 0)],
@@ -91,7 +91,7 @@ UPGRADE_ACTIONS = {
         "11.1.0": [("refresh_state_db", 0)],
         "11.2.0": [("refresh_state_db", 0)],
         "11.4.0": [("refresh_state_db", 0)],
-        "11.5.0": [("rollback", 323915)],
+        "11.5.0": [("rollback", 324050)],
     },
 }
 

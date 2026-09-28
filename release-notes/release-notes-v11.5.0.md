@@ -2,7 +2,7 @@
 
 This is a security release that fixes a vulnerability allowing an attacker to sweep the assets of any address that pays them plain BTC. It introduces one protocol change and changes how taproot-encoded transactions are composed and signed. It also includes reliability fixes for mempool parsing and API startup.
 
-**All node operators should upgrade immediately. The protocol change activates at the block height each chain had reached when this release was published (mainnet block 968,846), so it is already in force; nodes that upgrade later roll back to that height automatically. Wallets that use `encoding=taproot` must be updated to sign the reveal transaction themselves; until then their taproot-encoded transactions are rejected.**
+**All node operators should upgrade immediately. The protocol change activates at the block height each chain had reached when this release was published (mainnet block 969,018), so it is already in force; nodes that upgrade later roll back to that height automatically. Wallets that use `encoding=taproot` must be updated to sign the reveal transaction themselves; until then their taproot-encoded transactions are rejected.**
 
 # Upgrading
 
@@ -39,10 +39,10 @@ The protocol change activates at the following block heights, the heights of eac
 
 | Network | `require_reveal_source_signature` |
 | --- | ---: |
-| Mainnet | 968,846 |
-| Testnet3 | 5,151,305 |
-| Testnet4 | 154,138 |
-| Signet | 323,915 |
+| Mainnet | 969,018 |
+| Testnet3 | 5,151,460 |
+| Testnet4 | 154,240 |
+| Signet | 324,050 |
 
 It is enabled from block 0 on regtest.
 
