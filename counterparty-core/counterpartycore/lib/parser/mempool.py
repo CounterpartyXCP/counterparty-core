@@ -6,7 +6,7 @@ from counterpartycore.lib import backend, config, exceptions, ledger
 from counterpartycore.lib.api.addressevents import EVENTS_ADDRESS_FIELDS
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import blocks, deserialize
-from counterpartycore.lib.utils import database, hashcodec
+from counterpartycore.lib.utils import database, hashcodec, parserhealth
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -21,6 +21,7 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
     cursor = db.cursor()
     not_supported_txs = []
     try:
+        parserhealth.begin()
         # A transaction (or its parent) can leave Bitcoin's mempool after we
         # fetched it. No nested RPC may hold up confirmed-block processing by
         # retrying that speculative lookup indefinitely.
@@ -96,6 +97,7 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
                     decoded_tx=decoded_tx,
                 )
                 decoded_tx_count += 1
+                parserhealth.progress()
             logger.trace(f"{decoded_tx_count} transactions inserted from the mempool")
 
             # parse fake block
@@ -192,6 +194,7 @@ def parse_mempool_transactions(db, raw_tx_list, timestamps=None):
             # tx will halt the chain only if/when it actually confirms.
             logger.warning("mempool parse skipped on halt-class tx: %s", e)
     finally:
+        parserhealth.finish()
         # Set unconditionally so a non-MempoolError exit doesn't leave the
         # singleton stuck in mempool mode (which would silently disable UTXO
         # cache eviction in subsequent block parsing).

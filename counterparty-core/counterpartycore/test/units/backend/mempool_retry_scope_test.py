@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import apsw
@@ -7,6 +8,18 @@ from counterpartycore.lib import exceptions
 from counterpartycore.lib.backend import bitcoind
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import mempool
+from counterpartycore.lib.utils import parserhealth
+
+
+@pytest.fixture(autouse=True)
+def watchdog_is_cleared_on_exit():
+    shared = SimpleNamespace(value=0)
+    parserhealth.configure(shared)
+    yield
+    try:
+        assert shared.value == 0
+    finally:
+        parserhealth.configure(None)
 
 
 def test_scope_is_nested_exception_safe_and_thread_local(monkeypatch):
