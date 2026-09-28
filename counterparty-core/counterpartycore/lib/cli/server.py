@@ -25,7 +25,7 @@ from counterpartycore.lib.ledger.backendheight import BackendHeight
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.monitors import memory_profiler, slack
 from counterpartycore.lib.parser import blocks, check, follow
-from counterpartycore.lib.utils import database, helpers
+from counterpartycore.lib.utils import database, helpers, parserhealth
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -208,8 +208,12 @@ class CounterpartyServer(threading.Thread):
 
         # API Server v2
         self.api_stop_event = multiprocessing.Event()
+        mempool_progress = multiprocessing.Value("d", 0)
+        parserhealth.configure(mempool_progress)
         self.apiserver_v2 = api_v2.APIServer(
-            self.api_stop_event, self.backend_height_thread.shared_backend_height
+            self.api_stop_event,
+            self.backend_height_thread.shared_backend_height,
+            mempool_progress=mempool_progress,
         )
         self.apiserver_v2.start(self.args, self.log_stream)
         while not self.apiserver_v2.is_ready():

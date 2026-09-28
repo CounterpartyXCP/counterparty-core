@@ -6,6 +6,7 @@ import random
 import re
 import time
 from collections import OrderedDict
+from contextlib import contextmanager
 from decimal import Decimal as D
 from multiprocessing import current_process
 from threading import current_thread, local
@@ -51,6 +52,22 @@ _JITTER_RNG = random.SystemRandom()
 # with the parser, which has no Flask app context. It is armed ONLY for API requests,
 # so the parser is never bounded — bounding it would corrupt consensus.
 _api_rpc_accounting = local()
+_rpc_retry_policy = local()
+
+
+@contextmanager
+def no_rpc_retry():
+    """Fail fast for speculative work, including nested UTXO/parent lookups.
+
+    Thread-local and nestable: an API/mempool worker must never change the
+    retry policy of a concurrent confirmed-block parser.
+    """
+    previous = getattr(_rpc_retry_policy, "disabled", False)
+    _rpc_retry_policy.disabled = True
+    try:
+        yield
+    finally:
+        _rpc_retry_policy.disabled = previous
 
 
 def begin_api_rpc_accounting(limit):
@@ -135,10 +152,11 @@ def skip_rpc_retry(no_retry=False):
 
     True for synchronous public API requests (which must never pin a Waitress/
     Gunicorn worker while a degraded backend retries) and whenever the caller
-    explicitly opts out of retries. False for the parser/indexing path, which
+    explicitly opts out of retries or a speculative-work scope disables them.
+    False for the confirmed parser/indexing path, which
     must keep retrying to preserve consensus correctness (a skipped VIN would
     fork the ledger)."""
-    return no_retry or is_api_request()
+    return no_retry or getattr(_rpc_retry_policy, "disabled", False) or is_api_request()
 
 
 def retry_backoff(tries):
