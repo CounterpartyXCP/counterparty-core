@@ -86,7 +86,10 @@ impl fmt::Display for RevealError {
                 write!(f, "unsupported taproot leaf version 0x{:02x}", v)
             }
             RevealError::CommitmentMismatch => {
-                write!(f, "control block does not commit the leaf to the output key")
+                write!(
+                    f,
+                    "control block does not commit the leaf to the output key"
+                )
             }
             RevealError::NotAnEnvelope(reason) => {
                 write!(f, "leaf is not a canonical envelope ({})", reason)
@@ -177,7 +180,11 @@ fn envelope_leaf_key(script: &Script) -> Result<XOnlyPublicKey, RevealError> {
     }
     match instructions.next() {
         Some(Ok(Instruction::Op(OP_IF))) => {}
-        _ => return Err(RevealError::NotAnEnvelope("OP_FALSE must be followed by OP_IF")),
+        _ => {
+            return Err(RevealError::NotAnEnvelope(
+                "OP_FALSE must be followed by OP_IF",
+            ))
+        }
     }
     loop {
         match instructions.next() {
@@ -205,10 +212,16 @@ fn envelope_leaf_key(script: &Script) -> Result<XOnlyPublicKey, RevealError> {
     };
     match instructions.next() {
         Some(Ok(Instruction::Op(OP_CHECKSIG))) => {}
-        _ => return Err(RevealError::NotAnEnvelope("key must be followed by OP_CHECKSIG")),
+        _ => {
+            return Err(RevealError::NotAnEnvelope(
+                "key must be followed by OP_CHECKSIG",
+            ))
+        }
     }
     if instructions.next().is_some() {
-        return Err(RevealError::NotAnEnvelope("trailing bytes after OP_CHECKSIG"));
+        return Err(RevealError::NotAnEnvelope(
+            "trailing bytes after OP_CHECKSIG",
+        ));
     }
     Ok(key)
 }
