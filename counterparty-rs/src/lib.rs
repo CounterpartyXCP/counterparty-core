@@ -1,5 +1,6 @@
 mod b58;
 mod indexer;
+mod reveal;
 mod utils;
 
 use b58::register_b58_module;

@@ -13,6 +13,7 @@ from counterpartycore.lib.api import (
     blockcache,
     compose,
     composer,
+    parsedevents,
     queries,
 )
 from counterpartycore.lib.api.routes import ALL_ROUTES, ROUTES, get_routes
@@ -694,6 +695,45 @@ def test_check_database_version(state_db, ledger_db, test_helpers, caplog, monke
         apiserver.check_database_version(state_db)
 
     config.VERSION_STRING = version_string
+
+
+def test_upgrade_rollback_above_the_state_db_tip_skips_the_full_rebuild(state_db, monkeypatch):
+    """A protocol change activating ahead of every chain tip must not cost a rebuild.
+
+    `blocks.rollback()` already returns early when the target is above the
+    Ledger DB tip, so the ledger is untouched; re-deriving every State DB table
+    to undo nothing would be a pure API outage for every operator.
+    """
+    calls = []
+    monkeypatch.setattr(
+        "counterpartycore.lib.api.dbbuilder.full_rollback_state_db",
+        lambda db, block_index: calls.append(("full_rollback", block_index)),
+    )
+    monkeypatch.setattr(
+        "counterpartycore.lib.api.dbbuilder.refresh_state_db",
+        lambda db: calls.append(("refresh",)),
+    )
+    monkeypatch.setattr(
+        "counterpartycore.lib.api.dbbuilder.rollback_state_db",
+        lambda db, block_index: pytest.fail("upgrade actions must never go incremental"),
+    )
+    tip = parsedevents.get_last_block_touched(state_db)
+    assert tip > config.BLOCK_FIRST
+
+    # Above the tip: skipped, and the loop must `continue` rather than `break`
+    # so an explicit `refresh_state_db` shipped alongside it still runs.
+    apiserver.execute_upgrade_actions(state_db, [("rollback", tip + 1), ("refresh_state_db", 0)])
+    assert calls == [("refresh",)]
+
+    # At the tip there is real work, and it short-circuits the rest.
+    calls.clear()
+    apiserver.execute_upgrade_actions(state_db, [("rollback", tip), ("refresh_state_db", 0)])
+    assert calls == [("full_rollback", tip)]
+
+    # A `0` height still means the unconditional full rebuild.
+    calls.clear()
+    apiserver.execute_upgrade_actions(state_db, [("reparse", 0)])
+    assert calls == [("full_rollback", 0)]
 
 
 def test_show_unconfirmed(apiv2_client, ledger_db):

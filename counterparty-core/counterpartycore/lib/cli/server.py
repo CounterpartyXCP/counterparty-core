@@ -25,7 +25,7 @@ from counterpartycore.lib.ledger.backendheight import BackendHeight
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.monitors import memory_profiler, slack
 from counterpartycore.lib.parser import blocks, check, follow
-from counterpartycore.lib.utils import database, helpers
+from counterpartycore.lib.utils import database, helpers, parserhealth
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -107,6 +107,7 @@ class CounterpartyServer(threading.Thread):
         # so the run() finally block knows the shutdown was requested
         # explicitly and must NOT raise KeyboardInterrupt in the main thread.
         self.stop_requested = False
+        self.startup_checkpoint_error = None
 
         # Log all config parameters, sorted by key
         # Filter out default values, these should be set in a different way
@@ -183,6 +184,14 @@ class CounterpartyServer(threading.Thread):
         blocks.create_events_indexes(self.db)
         CurrentState().set_current_block_index(ledger.blocks.last_db_index(self.db))
         blocks.check_database_version(self.db)
+        # Version migration alone does not validate an imported/already-parsed
+        # ledger against checkpoints introduced after it was originally built.
+        # Run before either API starts, also with --api-only and --force.
+        try:
+            check.stored_checkpoints(self.db)
+        except exceptions.ConsensusError as error:
+            self.startup_checkpoint_error = error
+            raise
         database.optimize(self.db)
 
         # Check software version
@@ -199,8 +208,12 @@ class CounterpartyServer(threading.Thread):
 
         # API Server v2
         self.api_stop_event = multiprocessing.Event()
+        mempool_progress = multiprocessing.Value("d", 0)
+        parserhealth.configure(mempool_progress)
         self.apiserver_v2 = api_v2.APIServer(
-            self.api_stop_event, self.backend_height_thread.shared_backend_height
+            self.api_stop_event,
+            self.backend_height_thread.shared_backend_height,
+            mempool_progress=mempool_progress,
         )
         self.apiserver_v2.start(self.args, self.log_stream)
         while not self.apiserver_v2.is_ready():
@@ -358,6 +371,11 @@ def start_all(args, log_stream=None, stop_when_ready=False):
                 break
             except KeyboardInterrupt:
                 logger.warning("KeyboardInterrupt received during shutdown, retrying stop...")
+
+    # run() interrupts the main thread to stop cleanly. Do not let that turn a
+    # rejected ledger into a successful CLI exit indistinguishable from Ctrl-C.
+    if server.startup_checkpoint_error is not None:
+        raise server.startup_checkpoint_error
 
 
 def rebuild(args):

@@ -454,6 +454,28 @@ pub fn unpack_address(packed: Vec<u8>, network: &str) -> PyResult<String> {
     Ok(address.to_string())
 }
 
+/// Why input 0 of an inscription reveal transaction is NOT provably signed by
+/// the source address, or `None` when it is. See `reveal.rs` for the rule
+/// (protocol change `require_reveal_source_signature`).
+///
+/// `commit_script_pubkey` is the scriptPubKey of the output the reveal actually
+/// spends, `source_script_pubkey` that of the output which funded the commit
+/// transaction (the source), `witness` the witness stack of input 0.
+#[pyfunction]
+pub fn reveal_source_signature_error(
+    commit_script_pubkey: Vec<u8>,
+    source_script_pubkey: Vec<u8>,
+    witness: Vec<Vec<u8>>,
+) -> Option<String> {
+    crate::reveal::check_reveal_source_signature(
+        &commit_script_pubkey,
+        &source_script_pubkey,
+        &witness,
+    )
+    .err()
+    .map(|error| error.to_string())
+}
+
 pub fn register_utils_module(parent_module: &Bound<'_, PyModule>) -> PyResult<()> {
     let m = PyModule::new(parent_module.py(), "utils")?;
     m.add_function(wrap_pyfunction!(inverse_hash, &m)?)?;
@@ -462,6 +484,7 @@ pub fn register_utils_module(parent_module: &Bound<'_, PyModule>) -> PyResult<()
     m.add_function(wrap_pyfunction!(script_to_address_legacy, &m)?)?;
     m.add_function(wrap_pyfunction!(pack_address, &m)?)?;
     m.add_function(wrap_pyfunction!(unpack_address, &m)?)?;
+    m.add_function(wrap_pyfunction!(reveal_source_signature_error, &m)?)?;
     parent_module.add_submodule(&m)?;
     Ok(())
 }

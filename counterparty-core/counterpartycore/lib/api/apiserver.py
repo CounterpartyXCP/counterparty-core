@@ -28,6 +28,7 @@ from counterpartycore.lib.api import (
     healthz_server,
     parsedevents,
     queries,
+    staterollback,
     verbose,
     wsgi,
 )
@@ -646,6 +647,24 @@ def init_flask_app():
 def execute_upgrade_actions(state_db, upgrade_actions):
     for action in upgrade_actions:
         if action[0] in ["rollback", "reparse"]:
+            # Mirror `blocks.rollback()`, which returns early when the target is
+            # above the Ledger DB tip. A release whose activation height is
+            # ahead of every chain tip (so that operators get a window to
+            # upgrade before the rule bites) leaves the Ledger DB untouched;
+            # re-deriving every State DB table to undo nothing would be the most
+            # expensive no-op available, and it is what makes such an upgrade
+            # cost every operator an API outage. Only the node that really did
+            # parse past the activation height has anything to roll back.
+            #
+            # A release that changes how the State DB is derived from the Ledger
+            # DB must therefore ship an explicit `refresh_state_db` action next
+            # to its rollback: that one always runs, this one may be skipped.
+            if (
+                staterollback.rollback_reason(state_db, action[1])
+                == staterollback.NOTHING_TO_ROLL_BACK
+            ):
+                logger.info("State DB has not reached block %s; no rollback needed.", action[1])
+                continue
             # Deliberately the *full* rebuild, not `dbbuilder.rollback_state_db()`
             # and its incremental fast path: a release that ships a rollback
             # action may also have changed how the State DB is derived from the
@@ -696,7 +715,13 @@ class ConnectionPoolMonitor(threading.Thread):
 
 
 def run_apiserver(
-    args, server_ready_value, stop_event, shared_backend_height, parent_pid, log_stream
+    args,
+    server_ready_value,
+    stop_event,
+    shared_backend_height,
+    parent_pid,
+    log_stream,
+    mempool_progress=None,
 ):
     api_owner_pid = os.getpid()
     logger.info("Starting API Server process...")
@@ -756,6 +781,9 @@ def run_apiserver(
                 # the WSGI server is built and about to run, and 2 once it is
                 # stopping (issue #3504).
                 serving_provider=lambda: server_ready_value.value == 1,
+                mempool_progress_provider=(lambda: mempool_progress.value)
+                if mempool_progress is not None
+                else None,
             )
             health_server.start()
 
@@ -878,11 +906,12 @@ class ParentProcessChecker(threading.Thread):
 
 
 class APIServer:
-    def __init__(self, stop_event, shared_backend_height):
+    def __init__(self, stop_event, shared_backend_height, mempool_progress=None):
         self.process = None
         self.server_ready_value = Value("I", 0)
         self.stop_event = stop_event
         self.shared_backend_height = shared_backend_height
+        self.mempool_progress = mempool_progress
 
     def start(self, args, log_stream):
         if self.process is not None:
@@ -897,6 +926,7 @@ class APIServer:
                 self.shared_backend_height,
                 os.getpid(),
                 log_stream,
+                self.mempool_progress,
             ),
         )
         try:

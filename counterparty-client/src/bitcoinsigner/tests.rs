@@ -563,6 +563,121 @@ fn signs_p2tr_script_path_input() {
     );
 }
 
+/// `OP_FALSE OP_IF <data> OP_ENDIF <key> OP_CHECKSIG`: the envelope leaf of a
+/// Counterparty taproot commit, whose reveal the source key must sign.
+fn envelope_tapscript(xonly: &XOnlyPublicKey, body: &[bitcoin::opcodes::Opcode]) -> ScriptBuf {
+    let mut builder = bitcoin::script::Builder::new()
+        .push_opcode(bitcoin::opcodes::OP_FALSE)
+        .push_opcode(bitcoin::opcodes::all::OP_IF)
+        .push_slice(b"some counterparty message");
+    for opcode in body {
+        builder = builder.push_opcode(*opcode);
+    }
+    builder
+        .push_opcode(bitcoin::opcodes::all::OP_ENDIF)
+        .push_slice(xonly.serialize())
+        .push_opcode(bitcoin::opcodes::all::OP_CHECKSIG)
+        .into_script()
+}
+
+fn script_path_utxo(leaf_script: &ScriptBuf, internal_key: XOnlyPublicKey, source: &str) -> UTXO {
+    let secp = Secp256k1::new();
+    let spend_info = TaprootBuilder::new()
+        .add_leaf(0, leaf_script.clone())
+        .unwrap()
+        .finalize(&secp, internal_key)
+        .unwrap();
+    let mut utxo = UTXO::new(
+        UTXO_AMOUNT,
+        ScriptBuf::new_p2tr_tweaked(spend_info.output_key()),
+    );
+    utxo.leaf_script = Some(leaf_script.clone());
+    utxo.source_address = Some(source.to_string());
+    utxo
+}
+
+#[test]
+fn signs_p2tr_script_path_envelope_leaf() {
+    // The reveal of a taproot data commit: the wallet signs the envelope leaf
+    // closed by its own key (protocol change `require_reveal_source_signature`).
+    let k = test_key();
+    let leaf_script = envelope_tapscript(&k.xonly, &[]);
+    let source_address = "p2tr-envelope-source".to_string();
+    let mut utxos = UTXOList::new();
+    utxos.add(script_path_utxo(&leaf_script, k.xonly, &source_address));
+
+    let tx = unsigned_tx();
+    let addresses = address_map(
+        &source_address,
+        &k.wif,
+        "taproot",
+        &k.public_key.to_string(),
+    );
+    let signed = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap();
+
+    let parsed = parse_signed(&signed);
+    let witness: Vec<&[u8]> = parsed.input[0].witness.iter().collect();
+    assert_eq!(witness.len(), 3, "<sig> <envelope> <control block>");
+    assert_eq!(witness[0].len(), 64, "SIGHASH_DEFAULT => 64-byte signature");
+    assert_eq!(witness[1], leaf_script.as_bytes());
+    assert_eq!(
+        witness[2].len(),
+        33,
+        "single leaf: version|parity + internal key"
+    );
+    assert_eq!(&witness[2][1..], &k.xonly.serialize());
+
+    // An OP_PUSHNUM tag inside the envelope (ordinals style) is still a push.
+    let ord_leaf = envelope_tapscript(&k.xonly, &[bitcoin::opcodes::all::OP_PUSHNUM_1]);
+    let mut utxos = UTXOList::new();
+    utxos.add(script_path_utxo(&ord_leaf, k.xonly, &source_address));
+    assert!(sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).is_ok());
+}
+
+#[test]
+fn rejects_envelope_leaves_the_source_key_does_not_control() {
+    let k = test_key();
+    let secp = Secp256k1::new();
+    let other_sk = SecretKey::from_slice(&[0x33u8; 32]).unwrap();
+    let other_pk = PublicKey::from_private_key(&secp, &PrivateKey::new(other_sk, NETWORK));
+    let other_xonly = XOnlyPublicKey::from_slice(&other_pk.to_bytes()[1..33]).unwrap();
+    let source_address = "p2tr-bad-envelope-source".to_string();
+    let addresses = address_map(
+        &source_address,
+        &k.wif,
+        "taproot",
+        &k.public_key.to_string(),
+    );
+    let tx = unsigned_tx();
+
+    let rejected = [
+        // closed by someone else's key: the reported sweep-by-payment attack
+        envelope_tapscript(&other_xonly, &[]),
+        // an OP_SUCCESSx inside the envelope makes the leaf spendable by anyone
+        envelope_tapscript(&k.xonly, &[bitcoin::opcodes::all::OP_RESERVED]),
+        envelope_tapscript(&k.xonly, &[bitcoin::opcodes::all::OP_CAT]),
+        // a non-push opcode inside the envelope
+        envelope_tapscript(&k.xonly, &[bitcoin::opcodes::all::OP_NOP]),
+        // something after OP_CHECKSIG
+        {
+            let mut bytes = envelope_tapscript(&k.xonly, &[]).into_bytes();
+            bytes.push(bitcoin::opcodes::all::OP_NOP.to_u8());
+            ScriptBuf::from_bytes(bytes)
+        },
+    ];
+    for leaf_script in rejected {
+        let mut utxos = UTXOList::new();
+        utxos.add(script_path_utxo(&leaf_script, k.xonly, &source_address));
+        let err = sign_transaction(&addresses, &raw_hex(&tx), &utxos, NETWORK).unwrap_err();
+        assert!(
+            err.to_string().contains("inscription envelope"),
+            "{}: {}",
+            leaf_script,
+            err
+        );
+    }
+}
+
 #[test]
 fn rejects_p2tr_script_path_leaf_committing_to_a_different_key() {
     let k = test_key();

@@ -15,9 +15,13 @@ use crate::config::AppConfig;
 use crate::helpers;
 use crate::wallet::BitcoinWallet;
 
-/// Information needed for reveal transaction
+/// What the compose API returns for a taproot (commit/reveal) transaction on
+/// top of the commit: the reveal, unsigned, and the envelope leaf it spends
+/// through. The reveal must be signed by the *source* key -- the key that closes
+/// the envelope -- so the server cannot sign it; this wallet does.
 struct RevealTransactionInfo<'a> {
-    signed_tx: &'a str,
+    raw_tx: &'a str,
+    envelope_script: &'a str,
 }
 
 /// Absolute ceiling on the miner fee the client will sign without complaint
@@ -30,11 +34,11 @@ const MAX_REASONABLE_FEE_SAT: u64 = 1_000_000;
 
 /// Absolute ceiling (0.01 BTC) on the value of the commit's first output
 /// (`commit:0`) — the envelope a taproot data reveal spends. The reveal is
-/// composed AND signed by the server and broadcast verbatim (its outputs are
-/// never independently verified), so the value of the single output it spends is
-/// all that bounds how much it can pay away. A legitimate reveal needs only
-/// enough to cover its own miner fee, far below this; a larger `commit:0` is a
-/// server bug or a siphon attempt. Defense-in-depth behind the human review
+/// composed by the server; this wallet signs it, but its outputs are never
+/// independently verified, so the value of the single output it spends is all
+/// that bounds how much it can pay away. A legitimate reveal needs only enough
+/// to cover its own miner fee, far below this; a larger `commit:0` is a server
+/// bug or a siphon attempt. Defense-in-depth behind the human review
 /// (commit/reveal are `Unverified`, so `--yes` cannot skip that review).
 const MAX_REVEAL_ENVELOPE_SAT: u64 = 1_000_000;
 
@@ -632,20 +636,37 @@ fn extract_transaction_details(
 
 /// Extract reveal transaction information if present.
 ///
-/// For commit/reveal (taproot-envelope) composes the server returns an already
-/// signed reveal transaction, which is broadcast verbatim. Its fund exposure is
-/// bounded: the reveal can only spend the commit's first output — a dust amount
-/// the user already reviewed and signed for in the commit transaction — so it
-/// cannot move any other UTXO. The commit itself still goes through the normal
-/// verification, summary and confirmation gate above.
+/// For commit/reveal (taproot-envelope) composes the server returns the reveal
+/// transaction unsigned (`reveal_rawtransaction`) together with the envelope
+/// leaf it spends through (`envelope_script`). The wallet signs it with the
+/// source key: since protocol change `require_reveal_source_signature` the node
+/// attributes a reveal to the address that funded the commit only when that
+/// address' key closes the envelope and signed the spend, so a throwaway
+/// server-side key no longer works. Its fund exposure stays bounded: the reveal
+/// can only spend the commit's first output — a dust amount the user already
+/// reviewed and signed for in the commit transaction — so it cannot move any
+/// other UTXO. The commit itself still goes through the normal verification,
+/// summary and confirmation gate above.
 fn extract_reveal_transaction_info(
     api_result: &serde_json::Value,
 ) -> Option<RevealTransactionInfo<'_>> {
-    let signed_reveal_tx = api_result.get("signed_reveal_rawtransaction")?.as_str()?;
+    let raw_tx = api_result.get("reveal_rawtransaction")?.as_str()?;
+    let envelope_script = api_result.get("envelope_script")?.as_str()?;
 
     Some(RevealTransactionInfo {
-        signed_tx: signed_reveal_tx,
+        raw_tx,
+        envelope_script,
     })
+}
+
+/// The address whose key signs: the `source` (or `address`) the user composed
+/// for. Read before any synthetic `address` is dropped from `params`.
+fn get_source_address(params: &HashMap<String, String>) -> Result<String> {
+    params
+        .get("source")
+        .or_else(|| params.get("address"))
+        .cloned()
+        .ok_or_else(|| anyhow!("Address parameter not found"))
 }
 
 /// Decode a hex-encoded script
@@ -707,9 +728,18 @@ async fn broadcast_transactions(
     Ok(())
 }
 
-/// Build UTXOList for reveal transaction from the commit transaction
-/// The reveal transaction spends the first output of the commit transaction
-fn build_reveal_utxo_list(commit_tx_hex: &str) -> Result<bitcoinsigner::UTXOList> {
+/// Build the UTXOList of the reveal transaction: its single input spends the
+/// first output of the commit transaction through the tapscript leaf
+/// `envelope_script`, signed by the key of `source_address`. The script-path
+/// signer rebuilds the single-leaf tree from that leaf and the signing key and
+/// refuses to sign unless it reconstructs `commit:0` exactly, so a commit the
+/// server built around any other key or leaf is caught before anything is
+/// signed.
+fn build_reveal_utxo_list(
+    commit_tx_hex: &str,
+    envelope_script_hex: &str,
+    source_address: &str,
+) -> Result<bitcoinsigner::UTXOList> {
     // Decode the commit transaction from hex
     let tx_bytes = hex::decode(commit_tx_hex)
         .map_err(|e| anyhow!("Failed to decode commit transaction hex: {}", e))?;
@@ -735,8 +765,10 @@ fn build_reveal_utxo_list(commit_tx_hex: &str) -> Result<bitcoinsigner::UTXOList
     // Create a new UTXOList
     let mut utxo_list = bitcoinsigner::UTXOList::new();
 
-    // Create a UTXO for the first output
-    let utxo = bitcoinsigner::UTXO::new(amount, script_pubkey);
+    // Create a UTXO for the first output, spent through the envelope leaf
+    let mut utxo = bitcoinsigner::UTXO::new(amount, script_pubkey);
+    utxo.leaf_script = Some(decode_script(envelope_script_hex)?);
+    utxo.source_address = Some(source_address.to_string());
 
     // Add the UTXO to the list
     utxo_list.add(utxo);
@@ -744,18 +776,17 @@ fn build_reveal_utxo_list(commit_tx_hex: &str) -> Result<bitcoinsigner::UTXOList
     Ok(utxo_list)
 }
 
-/// Verify a server-supplied, pre-signed reveal transaction spends **only** the
+/// Verify a server-composed reveal transaction spends **only** the
 /// commit transaction's first output (`commit_txid:0`) — the envelope the user
 /// just reviewed and signed for — **and** that that output's value is within the
-/// [`MAX_REVEAL_ENVELOPE_SAT`] limit. The reveal is broadcast verbatim and its
-/// outputs are never checked, so both the outpoint *and* the value it spends
-/// bound its exposure: a hostile server can neither return a "reveal" that spends
-/// some other wallet UTXO nor have the user fund an oversized envelope for it to
-/// siphon. `signed_commit_hex` is the
-/// locally-signed commit; its txid is final for segwit/taproot funding inputs
-/// (whose witness is excluded from the txid), and a legacy-funded commit whose
-/// txid changed on signing correctly fails this check (its pre-signed reveal
-/// would be invalid on-chain anyway).
+/// [`MAX_REVEAL_ENVELOPE_SAT`] limit. The reveal's outputs are never checked, so
+/// both the outpoint *and* the value it spends bound its exposure: a hostile
+/// server can neither return a "reveal" that spends some other wallet UTXO nor
+/// have the user fund an oversized envelope for it to siphon. `signed_commit_hex`
+/// is the locally-signed commit; its txid is final for segwit/taproot funding
+/// inputs (whose witness is excluded from the txid), and a legacy-funded commit
+/// whose txid changed on signing correctly fails this check (the reveal would be
+/// invalid on-chain anyway).
 fn ensure_reveal_spends_commit_first_output(
     signed_commit_hex: &str,
     reveal_hex: &str,
@@ -788,9 +819,9 @@ fn ensure_reveal_spends_commit_first_output(
     if envelope_value > MAX_REVEAL_ENVELOPE_SAT {
         return Err(anyhow!(
             "SECURITY: the commit's first output is {envelope_value} sats, above the \
-             {MAX_REVEAL_ENVELOPE_SAT}-sat reveal-envelope limit. The server-signed reveal spends \
-             this output verbatim, so refusing to broadcast it. The API server may be \
-             malfunctioning or malicious."
+             {MAX_REVEAL_ENVELOPE_SAT}-sat reveal-envelope limit. The server-composed reveal \
+             spends this output, so refusing to sign it. The API server may be malfunctioning \
+             or malicious."
         ));
     }
     Ok(())
@@ -841,7 +872,10 @@ pub async fn handle_transaction_command(
     // divisibility (the compose API expects satoshi integers).
     super::quantity::normalize_quantities(config, transaction_name, &mut params).await?;
 
-    // Get address and public key
+    // Get address and public key. The public key is passed as `multisig_pubkey`:
+    // for a taproot (commit/reveal) compose the server closes the envelope with
+    // it, and the reveal is then signed below with this same address' key.
+    let source_address = get_source_address(&params)?;
     let public_key = get_address_and_public_key(&params, wallet)?;
     params.insert("multisig_pubkey".to_string(), public_key.to_string());
 
@@ -927,23 +961,29 @@ pub async fn handle_transaction_command(
     // summary is shown here — the raw signed hex itself is withheld until after
     // the user confirms below (see the note there).
     if let Some(reveal_tx_info) = extract_reveal_transaction_info(&api_result) {
-        let reveal_hex = reveal_tx_info.signed_tx;
-
-        // The reveal is composed AND signed by the server and broadcast verbatim.
-        // Its exposure is only bounded if it spends nothing but the commit's first
-        // output (the dust envelope the user just reviewed and signed for), so
-        // assert exactly that before trusting it — otherwise a hostile server
+        // The reveal is composed by the server and signed here with the source
+        // key. Its exposure is only bounded if it spends nothing but the commit's
+        // first output (the dust envelope the user just reviewed and signed for),
+        // so assert exactly that before signing it — otherwise a hostile server
         // could hand back a "reveal" that spends some other wallet UTXO.
-        ensure_reveal_spends_commit_first_output(&signed_tx, reveal_hex)?;
+        ensure_reveal_spends_commit_first_output(&signed_tx, reveal_tx_info.raw_tx)?;
+
+        // Sign the reveal: a tapscript spend of `commit:0` through the envelope
+        // leaf, with the source key. The signer refuses a leaf that is not closed
+        // by that key or a commit output that does not commit to that leaf.
+        let reveal_utxo_list =
+            build_reveal_utxo_list(&signed_tx, reveal_tx_info.envelope_script, &source_address)?;
+        let signed_reveal = wallet
+            .sign_transaction(reveal_tx_info.raw_tx, &reveal_utxo_list)
+            .map_err(|e| anyhow!("Failed to sign the reveal transaction: {}", e))?;
 
         helpers::print_success("Commit transaction summary:", None);
         display_transaction_summary(&signed_tx, &utxo_list, config.network)?;
 
-        signed_reveal_tx = Some(reveal_hex.to_string());
-
         helpers::print_success("Reveal transaction summary:", None);
-        let reveal_utxo_list = build_reveal_utxo_list(&signed_tx)?;
-        display_transaction_summary(reveal_hex, &reveal_utxo_list, config.network)?;
+        display_transaction_summary(&signed_reveal, &reveal_utxo_list, config.network)?;
+
+        signed_reveal_tx = Some(signed_reveal);
     } else {
         helpers::print_success("Transaction summary:", None);
         display_transaction_summary(&signed_tx, &utxo_list, config.network)?;
@@ -1932,14 +1972,20 @@ mod tests {
                 script_pubkey: spk,
             },
         ]);
-        let list = build_reveal_utxo_list(&commit_hex).unwrap();
+        let list = build_reveal_utxo_list(&commit_hex, "0063", "bcrt1qsource").unwrap();
         assert_eq!(list.len(), 1);
-        assert_eq!(list.get(0).unwrap().amount, 4321);
+        let utxo = list.get(0).unwrap();
+        assert_eq!(utxo.amount, 4321);
+        // Spent through the envelope leaf by the source key: a script-path input.
+        assert_eq!(utxo.leaf_script.as_ref().unwrap().as_bytes(), &[0x00, 0x63]);
+        assert_eq!(utxo.source_address.as_deref(), Some("bcrt1qsource"));
+        assert_eq!(utxo.get_type(), bitcoinsigner::UTXOType::P2TRSPS);
 
-        // Bad hex and no-output cases are errors.
-        assert!(build_reveal_utxo_list("zz").is_err());
+        // Bad hex, bad envelope hex and no-output cases are errors.
+        assert!(build_reveal_utxo_list("zz", "0063", "bcrt1qsource").is_err());
+        assert!(build_reveal_utxo_list(&commit_hex, "zz", "bcrt1qsource").is_err());
         let no_out = raw_tx_hex(vec![]);
-        assert!(build_reveal_utxo_list(&no_out).is_err());
+        assert!(build_reveal_utxo_list(&no_out, "0063", "bcrt1qsource").is_err());
     }
 
     // ---- parse_utxos_from_json ----
@@ -2046,13 +2092,28 @@ mod tests {
 
     #[test]
     fn reveal_info_present_and_absent() {
-        let with = json!({"signed_reveal_rawtransaction": "cafe"});
-        assert_eq!(
-            extract_reveal_transaction_info(&with).unwrap().signed_tx,
-            "cafe"
-        );
+        let with = json!({"reveal_rawtransaction": "cafe", "envelope_script": "0063"});
+        let info = extract_reveal_transaction_info(&with).unwrap();
+        assert_eq!(info.raw_tx, "cafe");
+        assert_eq!(info.envelope_script, "0063");
         let without = json!({"rawtransaction": "aa"});
         assert!(extract_reveal_transaction_info(&without).is_none());
+        // A pre-11.5 server signs the reveal itself with a throwaway key: that
+        // reveal is not ours to sign and would be ignored by the network.
+        let legacy = json!({"signed_reveal_rawtransaction": "cafe", "envelope_script": "0063"});
+        assert!(extract_reveal_transaction_info(&legacy).is_none());
+        let no_envelope = json!({"reveal_rawtransaction": "cafe"});
+        assert!(extract_reveal_transaction_info(&no_envelope).is_none());
+    }
+
+    #[test]
+    fn get_source_address_prefers_source_then_address() {
+        let mut params = HashMap::new();
+        assert!(get_source_address(&params).is_err());
+        params.insert("address".to_string(), "addr".to_string());
+        assert_eq!(get_source_address(&params).unwrap(), "addr");
+        params.insert("source".to_string(), "src".to_string());
+        assert_eq!(get_source_address(&params).unwrap(), "src");
     }
 
     // ---- find_compose_endpoint ----

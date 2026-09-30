@@ -7,7 +7,7 @@ UNIT = 100000000  # The same across assets.
 
 
 # Semantic Version
-__version__ = "11.4.0"  # for hatch
+__version__ = "11.5.0"  # for hatch
 VERSION_STRING = __version__
 version = VERSION_STRING.split("-", maxsplit=1)[0].split(".")
 VERSION_MAJOR = int(version[0])
@@ -45,6 +45,15 @@ UPGRADE_ACTIONS = {
         # refresh re-derives the State DB from the Ledger DB so the
         # first reorg after the upgrade is already on the fast path.
         "11.4.0": [("refresh_state_db", 0)],
+        # `require_reveal_source_signature` activates ahead of every chain tip
+        # (see protocol_changes.json), so a node that upgrades before that
+        # height has nothing to undo: `rollback()` is a no-op when the target is
+        # above the current tip. The entry is there for a node that stayed on
+        # v11.4.0 past the activation height and parsed those blocks with the
+        # old rule -- it is rolled back to the activation height and re-parses
+        # them, instead of silently keeping a divergent ledger. RELEASE STEP:
+        # keep these heights equal to the ones in protocol_changes.json.
+        "11.5.0": [("rollback", 969320)],
     },
     "testnet3": {
         "10.3.0": [("reparse", 0)],
@@ -64,6 +73,7 @@ UPGRADE_ACTIONS = {
         "11.1.0": [("refresh_state_db", 0)],
         "11.2.0": [("refresh_state_db", 0)],
         "11.4.0": [("refresh_state_db", 0)],
+        "11.5.0": [("rollback", 5151805)],
     },
     "testnet4": {
         "10.10.0": [("rollback", 64492)],
@@ -74,6 +84,7 @@ UPGRADE_ACTIONS = {
         "11.1.0": [("refresh_state_db", 0)],
         "11.2.0": [("refresh_state_db", 0)],
         "11.4.0": [("refresh_state_db", 0)],
+        "11.5.0": [("rollback", 154564)],
     },
     "signet": {
         "11.0.2": [("refresh_state_db", 0)],
@@ -81,6 +92,7 @@ UPGRADE_ACTIONS = {
         "11.1.0": [("refresh_state_db", 0)],
         "11.2.0": [("refresh_state_db", 0)],
         "11.4.0": [("refresh_state_db", 0)],
+        "11.5.0": [("rollback", 324359)],
     },
 }
 
