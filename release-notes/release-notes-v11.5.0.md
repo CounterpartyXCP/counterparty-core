@@ -8,9 +8,9 @@ This is a security release that fixes a vulnerability allowing an attacker to sw
 
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
 
-**No reparse is required, but the first start rebuilds the State DB. Allow approximately 30 minutes on mainnet, during which the API is unavailable.** The Ledger DB itself is left alone when the node upgrades before the activation height, which is the expected case: the rule activates ahead of every chain tip, so there is nothing to undo. A node that stayed on v11.4.0 past the activation height is rolled back to it and re-parses those blocks with the new rule, so that every node agrees on the ledger.
+**No reparse, rollback or State DB rebuild is required, and the API stays available throughout — as long as the node upgrades before the activation height.** The rule activates ahead of every chain tip, so there is nothing to undo: both databases are left untouched and the node simply applies the new rule when it reaches that height.
 
-For Kubernetes deployments, the dedicated health listener (`/healthz/live` and `/healthz/ready`, port `4002` by default on mainnet) reports the rebuild as in v11.4.0: liveness returns `200` and readiness returns `503 rebuilding`.
+A node that stayed on v11.4.0 past the activation height has parsed those blocks with the old rule. It is rolled back to the activation height and re-parses them, which also rebuilds the State DB: approximately 30 minutes on mainnet, during which the API is unavailable. For Kubernetes deployments, the dedicated health listener (`/healthz/live` and `/healthz/ready`, port `4002` by default on mainnet) reports that rebuild as in v11.4.0: liveness returns `200` and readiness returns `503 rebuilding`.
 
 With Docker Compose:
 
@@ -33,7 +33,7 @@ pip install -e .
 counterparty-server start
 ```
 
-The v11.4.0 bootstrap snapshots remain valid and are selected automatically by `counterparty-server bootstrap`; a freshly bootstrapped node goes through the State DB rebuild described above on its first start.
+The v11.4.0 bootstrap snapshots remain valid and are selected automatically by `counterparty-server bootstrap`; a freshly bootstrapped node builds its State DB on first start as usual.
 
 The protocol change activates at the following block heights, the blocks each chain is expected to reach at 15:00 UTC on 2026-09-30:
 
@@ -75,6 +75,7 @@ Until the activation height is reached, users should avoid paying BTC to unknown
 - Fix missing mempool transactions or parent lookups blocking confirmed-block processing indefinitely. Failed mempool batches roll back without marking their transactions unsupported.
 - Report mempool parsing that makes no progress for two minutes through the liveness health check, allowing supervisors to restart the node. Confirmed-block processing, startup and State DB rebuilds do not trigger this safeguard. Mempool support remains enabled.
 - Refuse to start the API when stored ledger or transaction-list hashes disagree with known checkpoints, including in API-only mode. Report the mismatching checkpoint and recovery guidance without automatically changing ledger data.
+- Skip the State DB rebuild of an `UPGRADE_ACTIONS` rollback when the State DB has not reached the target height, mirroring the Ledger DB rollback, which already does nothing in that case. A protocol change that activates ahead of the chain tip no longer costs every operator an API outage.
 
 ## Client
 

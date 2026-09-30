@@ -28,6 +28,7 @@ from counterpartycore.lib.api import (
     healthz_server,
     parsedevents,
     queries,
+    staterollback,
     verbose,
     wsgi,
 )
@@ -646,6 +647,24 @@ def init_flask_app():
 def execute_upgrade_actions(state_db, upgrade_actions):
     for action in upgrade_actions:
         if action[0] in ["rollback", "reparse"]:
+            # Mirror `blocks.rollback()`, which returns early when the target is
+            # above the Ledger DB tip. A release whose activation height is
+            # ahead of every chain tip (so that operators get a window to
+            # upgrade before the rule bites) leaves the Ledger DB untouched;
+            # re-deriving every State DB table to undo nothing would be the most
+            # expensive no-op available, and it is what makes such an upgrade
+            # cost every operator an API outage. Only the node that really did
+            # parse past the activation height has anything to roll back.
+            #
+            # A release that changes how the State DB is derived from the Ledger
+            # DB must therefore ship an explicit `refresh_state_db` action next
+            # to its rollback: that one always runs, this one may be skipped.
+            if (
+                staterollback.rollback_reason(state_db, action[1])
+                == staterollback.NOTHING_TO_ROLL_BACK
+            ):
+                logger.info("State DB has not reached block %s; no rollback needed.", action[1])
+                continue
             # Deliberately the *full* rebuild, not `dbbuilder.rollback_state_db()`
             # and its incremental fast path: a release that ships a rollback
             # action may also have changed how the State DB is derived from the
