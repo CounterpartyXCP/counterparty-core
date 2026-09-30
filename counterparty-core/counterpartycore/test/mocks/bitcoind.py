@@ -171,6 +171,13 @@ def get_vin_info(vin, no_retry=False, prevout=None):
         raise exceptions.DecodeError("vin not found") from e
 
 
+def get_reveal_commit_script_pubkey(decoded_tx, no_retry=False):
+    # No commit/parent chain is modelled here either (see `get_reveal_prevouts`),
+    # so the commit output of a reveal cannot be looked up: behave like a
+    # missing prevout instead of reaching for a backend that does not exist.
+    raise exceptions.DecodeError("vin not found")
+
+
 def get_reveal_prevouts(decoded_tx, no_retry=False):
     # The real implementation walks one hop back through the commit transaction
     # to find what funded it. This mock resolves sources from a flat
@@ -254,6 +261,9 @@ def bitcoind_mock(monkeymodule):
     monkeymodule.setattr(f"{bitcoind_module}.satoshis_per_vbyte", satoshis_per_vbyte)
     monkeymodule.setattr(f"{bitcoind_module}.get_vin_info", get_vin_info)
     monkeymodule.setattr(f"{bitcoind_module}.get_reveal_prevouts", get_reveal_prevouts)
+    monkeymodule.setattr(
+        f"{bitcoind_module}.get_reveal_commit_script_pubkey", get_reveal_commit_script_pubkey
+    )
     monkeymodule.setattr(f"{bitcoind_module}.convert_to_psbt", lambda x: x)
     monkeymodule.setattr(
         f"{bitcoind_module}.get_utxo_address_and_value", get_utxo_address_and_value

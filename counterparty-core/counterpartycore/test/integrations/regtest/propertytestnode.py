@@ -85,10 +85,37 @@ class PropertyTestNode:
             print(f"Error sign_taproot_transaction {e}")
             raise
 
+    def sign_and_broadcast_reveal(self, source_address, result):
+        """The wallet side of a taproot-encoded transaction: the reveal comes
+        back unsigned and must be signed by the source key, which closes the
+        envelope (`require_reveal_source_signature`)."""
+        source_private_key, _utxo = self.taproot_addresses[source_address]
+        reveal_tx = Transaction.from_raw(result["reveal_rawtransaction"])
+        reveal_tx.has_segwit = True
+        envelope_script = Script.from_raw(result["envelope_script"])
+        sig = source_private_key.sign_taproot_input(
+            reveal_tx,
+            0,
+            [Script.from_raw(result["reveal_lock_scripts"][0])],
+            [result["reveal_inputs_values"][0]],
+            script_path=True,
+            tapleaf_script=envelope_script,
+            tweak=False,
+        )
+        reveal_tx.witnesses.append(
+            TxWitnessInput([sig, envelope_script.to_hex(), result["reveal_control_block"]])
+        )
+        self.node.bitcoin_wallet("sendrawtransaction", reveal_tx.serialize(), 0)
+
     def send_transaction(self, source, transaction_name, params, taproot_encoding=False):
         tx_params = params.copy() | {"disable_utxo_locks": True}
-        if taproot_encoding:
+        # The reveal of a taproot-encoded transaction is signed by the source
+        # key; this harness only holds the keys of its taproot addresses.
+        if taproot_encoding and source in self.taproot_addresses:
             tx_params["encoding"] = "taproot"
+            tx_params["multisig_pubkey"] = (
+                self.taproot_addresses[source][0].get_public_key().to_hex()
+            )
 
         try:
             tx_hash, _block_hash, _block_time, result = self.node.send_transaction(
@@ -103,10 +130,8 @@ class PropertyTestNode:
             result = e.result
             tx_hash = self.sign_taproot_transaction(source, result["result"]["rawtransaction"])
 
-        if "signed_reveal_rawtransaction" in result["result"]:
-            self.node.bitcoin_wallet(
-                "sendrawtransaction", result["result"]["signed_reveal_rawtransaction"], 0
-            )
+        if "reveal_rawtransaction" in result["result"]:
+            self.sign_and_broadcast_reveal(source, result["result"])
 
         return tx_hash
 

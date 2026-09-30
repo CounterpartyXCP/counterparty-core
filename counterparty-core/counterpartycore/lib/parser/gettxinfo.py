@@ -251,6 +251,62 @@ def script_to_address(script_pubkey):
     return script.script_to_address_legacy(script_pubkey)
 
 
+def is_reveal_transaction(decoded_tx):
+    """Whether the deserializer flagged `decoded_tx` as an inscription reveal
+    (an `OP_RETURN CNTRPRTY` output plus a three-element witness on input 0)."""
+    parsed_vouts = decoded_tx.get("parsed_vouts")
+    if not isinstance(parsed_vouts, (list, tuple)) or len(parsed_vouts) < 6:
+        return False
+    return bool(parsed_vouts[5])
+
+
+class RevealSourceSignatureError(DecodeError):
+    pass
+
+
+def check_reveal_source_signature(decoded_tx, source_script_pubkey, block_index=None):
+    """Reject an inscription reveal that is not provably signed by its source
+    (protocol change `require_reveal_source_signature`, GHSA-q27c-r246-f6qw).
+
+    A reveal is recognised by shape alone and attributed to the address that
+    funded the commit transaction. Until this change nothing tied that address
+    to the envelope: an attacker could publish a P2TR address whose hidden leaf
+    carried a `sweep`, get a victim to pay plain BTC to it, and spend the payment
+    in a reveal that the parser attributed to the victim.
+
+    The rule -- the reveal must be a tapscript spend of a P2TR commit through a
+    canonical envelope whose `OP_CHECKSIG` key is a key of the source, so that
+    Bitcoin's own validation proves the source signed it -- is implemented once,
+    in `counterparty-rs/src/reveal.rs`. `source_script_pubkey` is the resolved
+    prevout of input 0 (the commit's funder); the commit output is fetched here.
+    Raises a `DecodeError`, so the transaction is treated as non-Counterparty.
+    """
+    if not is_reveal_transaction(decoded_tx):
+        return
+    if not protocol.enabled("require_reveal_source_signature", block_index):
+        return
+    witness = []
+    if decoded_tx.get("segwit") and decoded_tx.get("vtxinwit"):
+        witness = decoded_tx["vtxinwit"][0]
+    commit_script_pubkey = backend.bitcoind.get_reveal_commit_script_pubkey(
+        decoded_tx, no_retry=CurrentState().parsing_mempool()
+    )
+    error = script.reveal_source_signature_error(
+        commit_script_pubkey, source_script_pubkey, witness
+    )
+    if error is None:
+        return
+    message = (
+        f"Reveal transaction {decoded_tx.get('tx_id')} ignored: not signed by its source ({error})"
+    )
+    # The mempool is re-scanned continuously; keep the noise there at debug level.
+    if CurrentState().parsing_mempool():
+        logger.debug(message)
+    else:
+        logger.warning(message)
+    raise RevealSourceSignatureError(message)
+
+
 def get_vin_prevout_overrides(decoded_tx):
     """The (txid, output index) each input resolves to, when that differs from the
     input's own prevout -- or None when nothing needs overriding.
@@ -268,11 +324,7 @@ def get_vin_prevout_overrides(decoded_tx):
     invariant does not hold -- and it would have been computed without the
     commit-parent rewrite.
     """
-    parsed_vouts = decoded_tx.get("parsed_vouts")
-    if not isinstance(parsed_vouts, (list, tuple)) or len(parsed_vouts) < 6:
-        return None
-    is_reveal_tx = parsed_vouts[5]
-    if not is_reveal_tx:
+    if not is_reveal_transaction(decoded_tx):
         return None
     # Nothing to redo when the deserializer resolved every input itself.
     if all(vin.get("info") is not None for vin in decoded_tx["vin"]):
@@ -282,7 +334,7 @@ def get_vin_prevout_overrides(decoded_tx):
     )
 
 
-def get_transaction_sources(decoded_tx):
+def get_transaction_sources(decoded_tx, block_index=None, composing=False):
     sources = []
     outputs_value = 0
     prevouts = get_vin_prevout_overrides(decoded_tx)
@@ -295,6 +347,12 @@ def get_transaction_sources(decoded_tx):
         )
 
         outputs_value += vout_value
+
+        # An inscription reveal is only attributed to the funder of its commit
+        # when that funder signed it. Skipped while composing: the transaction
+        # is unsigned then, exactly like `check_signatures_sighash_flag`.
+        if vin_index == 0 and not composing:
+            check_reveal_source_signature(decoded_tx, script_pubkey, block_index)
 
         if protocol.enabled("first_input_is_source") and len(sources) > 0:
             continue
@@ -498,7 +556,7 @@ def get_tx_info_new(db, decoded_tx, block_index, p2sh_is_segwit=False, composing
     if p2sh_encoding_source is None:
         if not composing:
             check_signatures_sighash_flag(decoded_tx)
-        sources, outputs_value = get_transaction_sources(decoded_tx)
+        sources, outputs_value = get_transaction_sources(decoded_tx, block_index, composing)
         if not fee_added:
             fee += outputs_value
     else:  # use the source from the p2sh data source

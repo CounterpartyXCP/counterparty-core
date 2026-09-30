@@ -3,20 +3,80 @@ import os
 import time
 
 import pytest
-from bitcoinutils.keys import PrivateKey
+from bitcoinutils.keys import P2wpkhAddress, PrivateKey
+from bitcoinutils.script import Script
 from bitcoinutils.setup import setup
-from bitcoinutils.transactions import Transaction, TxWitnessInput
+from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
+from bitcoinutils.utils import ControlBlock
 from counterpartycore.lib import exceptions
 from regtestnode import RegtestNodeThread, rpc_call
 
 SENDS_COUNT = {}
 
 
+def source_address_for(source_private_key, source_type):
+    source_pubkey = source_private_key.get_public_key()
+    if source_type == "p2wpkh":
+        return source_pubkey.get_segwit_address()
+    return source_pubkey.get_taproot_address()
+
+
+def sign_commit_input(commit_tx, source_private_key, utxo, source_type):
+    source_pubkey = source_private_key.get_public_key()
+    source_address = source_address_for(source_private_key, source_type)
+    if source_type == "p2wpkh":
+        sig = source_private_key.sign_segwit_input(
+            commit_tx, 0, source_pubkey.get_address().to_script_pub_key(), utxo["value"]
+        )
+        commit_tx.witnesses.append(TxWitnessInput([sig, source_pubkey.to_hex()]))
+    else:
+        sig = source_private_key.sign_taproot_input(
+            commit_tx, 0, [source_address.to_script_pub_key()], [utxo["value"]]
+        )
+        commit_tx.witnesses.append(TxWitnessInput([sig]))
+
+
+def sign_reveal_transaction(compose_result, commit_tx, source_private_key):
+    """The wallet side of a taproot-encoded transaction: add the witness
+    `<signature> <envelope_script> <reveal_control_block>` to the unsigned
+    reveal returned by the composer. The envelope is closed by the source key
+    and the node attributes the reveal to the source only when that key signed
+    it (`require_reveal_source_signature`)."""
+    reveal_tx = Transaction.from_raw(compose_result["reveal_rawtransaction"])
+    reveal_tx.has_segwit = True
+    envelope_script = Script.from_raw(compose_result["envelope_script"])
+    assert envelope_script.script[-2] == source_private_key.get_public_key().to_x_only_hex()
+    assert compose_result["reveal_pubkey"] == envelope_script.script[-2]
+    commit_output = commit_tx.outputs[0]
+    assert commit_output.script_pubkey.to_hex() == compose_result["reveal_lock_scripts"][0]
+    assert commit_output.amount == compose_result["reveal_inputs_values"][0]
+    sig = source_private_key.sign_taproot_input(
+        reveal_tx,
+        0,
+        [commit_output.script_pubkey],
+        [commit_output.amount],
+        script_path=True,
+        tapleaf_script=envelope_script,
+        tweak=False,
+    )
+    reveal_tx.witnesses.append(
+        TxWitnessInput([sig, envelope_script.to_hex(), compose_result["reveal_control_block"]])
+    )
+    return reveal_tx
+
+
 def send_taproot_transaction(
-    node, utxo, source_private_key, tx_name, params, inputs_set=None, invalid_sig=False
+    node,
+    utxo,
+    source_private_key,
+    tx_name,
+    params,
+    inputs_set=None,
+    invalid_sig=False,
+    source_type="p2tr",
 ):
     source_pubkey = source_private_key.get_public_key()
-    source_address = source_pubkey.get_taproot_address()
+    source_address = source_address_for(source_private_key, source_type)
 
     # send XCP from the source address
     source = source_address.to_string()
@@ -38,21 +98,17 @@ def send_taproot_transaction(
     # sign commit tx
     commit_tx = Transaction.from_raw(result["rawtransaction"])
     commit_tx.has_segwit = True
-    # sign the input
-    sig = source_private_key.sign_taproot_input(
-        commit_tx, 0, [source_address.to_script_pub_key()], [utxo["value"]]
-    )
-    # add the witness to the transaction
-    commit_tx.witnesses.append(TxWitnessInput([sig]))
+    sign_commit_input(commit_tx, source_private_key, utxo, source_type)
     node.broadcast_transaction(commit_tx.serialize())
 
     print("Commit TX Broadcasted:", commit_tx.get_txid(), commit_tx.serialize())
 
-    signed_reveal_rawtransaction_hex = result["signed_reveal_rawtransaction"]
-    signed_reveal_rawtransaction = Transaction.from_raw(signed_reveal_rawtransaction_hex)
-    node.broadcast_transaction(signed_reveal_rawtransaction_hex, use_rpc=True)
+    # the node no longer signs the reveal: the source does
+    assert "signed_reveal_rawtransaction" not in result
+    reveal_tx = sign_reveal_transaction(result, commit_tx, source_private_key)
+    node.broadcast_transaction(reveal_tx.serialize(), use_rpc=True)
 
-    print("Reveal TX Broadcasted:", signed_reveal_rawtransaction.get_txid())
+    print("Reveal TX Broadcasted:", reveal_tx.get_txid())
 
     return {
         "txid": commit_tx.get_txid(),
@@ -101,6 +157,138 @@ def generate_taproot_funded_address(node):
         "n": n,
         "value": int(1 * 10**8),
     }
+
+
+def generate_p2wpkh_funded_address(node):
+    """A P2WPKH source whose key this test holds, funded with BTC and XCP."""
+    source_private_key = PrivateKey(b=os.urandom(32))
+    source_address = source_private_key.get_public_key().get_segwit_address()
+    txid = node.bitcoin_wallet("sendtoaddress", source_address.to_string(), 1).strip()
+    node.mine_blocks(1)
+    raw_tx = rpc_call("getrawtransaction", [txid, 1])["result"]
+    n = next(
+        i
+        for i, vout in enumerate(raw_tx["vout"])
+        if vout["scriptPubKey"]["address"] == source_address.to_string()
+    )
+    node.send_transaction(
+        node.addresses[0],
+        "send",
+        {"destination": source_address.to_string(), "quantity": 10 * 10**8, "asset": "XCP"},
+    )
+    return source_private_key, {"txid": txid, "n": n, "value": int(1 * 10**8)}
+
+
+def check_send_from_p2wpkh(node, source_private_key, utxo, quantity):
+    """A P2WPKH source signs both the commit (segwit v0) and the reveal (the
+    tapscript leaf) with the same key."""
+    source_address = source_private_key.get_public_key().get_segwit_address().to_string()
+    new_utxo = send_taproot_transaction(
+        node,
+        utxo,
+        source_private_key,
+        "send",
+        {"destination": node.addresses[1], "quantity": quantity, "asset": "XCP"},
+        source_type="p2wpkh",
+    )
+    # `/sends` also lists the incoming XCP funding send: keep the outgoing ones
+    result = node.api_call(f"addresses/{source_address}/sends")
+    sends = [send for send in result["result"] if send["source"] == source_address]
+    assert len(sends) == 1
+    assert sends[0]["asset"] == "XCP"
+    assert sends[0]["quantity"] == quantity
+    assert sends[0]["destination"] == node.addresses[1]
+    return new_utxo
+
+
+def check_unauthorized_reveal_is_ignored(node, victim_private_key, victim_utxo):
+    """GHSA-q27c-r246-f6qw replayed: the attacker publishes a commit address
+    whose hidden leaf carries a sweep of the victim closed by the *attacker's*
+    key, the victim pays plain BTC to it, and the attacker reveals. The node
+    must not attribute that reveal to the victim."""
+    victim_pubkey = victim_private_key.get_public_key()
+    victim_address = victim_pubkey.get_taproot_address()
+    attacker_private_key = PrivateKey(b=os.urandom(32))
+    attacker_pubkey = attacker_private_key.get_public_key()
+    attacker_address = attacker_pubkey.get_segwit_address().to_string()
+
+    balances_before = node.api_call(f"addresses/{victim_address.to_string()}/balances")["result"]
+    assert len(balances_before) > 0
+
+    # the sweep message the attacker wants attributed to the victim
+    data = node.send_transaction(
+        victim_address.to_string(),
+        "sweep",
+        {"destination": attacker_address, "flags": 3, "memo": ""},
+        return_only_data=True,
+    )
+    message = binascii.unhexlify(data)[len(b"CNTRPRTY") :]
+    envelope_script = Script(
+        [
+            "OP_FALSE",
+            "OP_IF",
+            binascii.hexlify(message).decode("ascii"),
+            "OP_ENDIF",
+            attacker_pubkey.to_x_only_hex(),
+            "OP_CHECKSIG",
+        ]
+    )
+    commit_address = attacker_pubkey.get_taproot_address([[envelope_script]])
+
+    # the victim makes an ordinary BTC payment to the attacker's address
+    commit_value = 100000
+    change_value = victim_utxo["value"] - commit_value - 10000
+    commit_tx = Transaction(
+        [TxInput(victim_utxo["txid"], victim_utxo["n"])],
+        [
+            TxOutput(commit_value, commit_address.to_script_pub_key()),
+            TxOutput(change_value, victim_address.to_script_pub_key()),
+        ],
+    )
+    commit_tx.has_segwit = True
+    sig = victim_private_key.sign_taproot_input(
+        commit_tx, 0, [victim_address.to_script_pub_key()], [victim_utxo["value"]]
+    )
+    commit_tx.witnesses.append(TxWitnessInput([sig]))
+    node.broadcast_transaction(commit_tx.serialize())
+
+    # the attacker spends it in a reveal-shaped transaction
+    reveal_tx = Transaction(
+        [TxInput(commit_tx.get_txid(), 0)],
+        [
+            TxOutput(0, Script(["OP_RETURN", binascii.hexlify(b"CNTRPRTY").decode("ascii")])),
+            TxOutput(commit_value - 5000, P2wpkhAddress(attacker_address).to_script_pub_key()),
+        ],
+    )
+    reveal_tx.has_segwit = True
+    sig = attacker_private_key.sign_taproot_input(
+        reveal_tx,
+        0,
+        [commit_address.to_script_pub_key()],
+        [commit_value],
+        script_path=True,
+        tapleaf_script=envelope_script,
+        tweak=False,
+    )
+    control_block = ControlBlock(
+        attacker_pubkey, scripts=[envelope_script], index=0, is_odd=commit_address.is_odd()
+    )
+    reveal_tx.witnesses.append(
+        TxWitnessInput([sig, envelope_script.to_hex(), control_block.to_hex()])
+    )
+    node.broadcast_transaction(reveal_tx.serialize(), use_rpc=True)
+    print("Unauthorized reveal broadcasted:", reveal_tx.get_txid())
+
+    # Bitcoin accepted it; Counterparty must have ignored it
+    result = node.api_call(f"transactions/{reveal_tx.get_txid()}")
+    assert "error" in result, result
+    assert "not signed by its source" in node.server_out.getvalue()
+    balances_after = node.api_call(f"addresses/{victim_address.to_string()}/balances")["result"]
+    assert balances_after == balances_before
+    attacker_balances = node.api_call(f"addresses/{attacker_address}/balances")["result"]
+    assert attacker_balances == []
+
+    return {"txid": commit_tx.get_txid(), "n": 1, "value": change_value}
 
 
 def check_send(node, source_private_key, utxo, quantity, invalid_sig=False):
@@ -599,6 +787,9 @@ def test_p2ptr_inscription():
 
         utxo = check_send(node, source_private_key, utxo, 10)
         utxo = check_send(node, source_private_key, utxo, 20)
+        utxo = check_unauthorized_reveal_is_ignored(node, source_private_key, utxo)
+        p2wpkh_private_key, p2wpkh_utxo = generate_p2wpkh_funded_address(node)
+        check_send_from_p2wpkh(node, p2wpkh_private_key, p2wpkh_utxo, 30)
         utxo = check_mpma_send(node, source_private_key, utxo, 10)
         utxo = check_broadcast(node, source_private_key, utxo, "a" * 10000)
         utxo = check_fairminter(node, source_private_key, utxo)

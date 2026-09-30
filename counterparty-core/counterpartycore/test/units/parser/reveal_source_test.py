@@ -31,6 +31,14 @@ OTHER_TXID = "cc" * 32
 RESOLVED_INFO = {"value": 1, "script_pub_key": "0011", "is_segwit": False}
 
 
+@pytest.fixture(autouse=True)
+def no_reveal_source_signature_check(monkeypatch):
+    """These synthetic reveals carry no envelope, and the source-signature rule
+    (`require_reveal_source_signature`) fetches the commit output from the
+    backend; it has its own tests in `reveal_source_signature_test.py`."""
+    monkeypatch.setattr(gettxinfo, "check_reveal_source_signature", lambda *args, **kwargs: None)
+
+
 def decoded_tx(vins, is_reveal_tx=True):
     # parsed_vouts = (destinations, btc_amount, fee, data, potential_dispensers, is_reveal_tx)
     return {"vin": vins, "parsed_vouts": ([], 0, 0, b"data", [], is_reveal_tx)}

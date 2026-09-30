@@ -1,9 +1,11 @@
 use bitcoin::blockdata::witness::Witness;
+use bitcoin::opcodes::all::{OP_CHECKSIG, OP_ENDIF, OP_IF};
 use bitcoin::psbt::Input as PsbtInput;
+use bitcoin::script::Instruction;
 use bitcoin::secp256k1::{Keypair, Secp256k1, SecretKey};
 use bitcoin::sighash::{Prevouts, SighashCache};
 use bitcoin::taproot::{ControlBlock, LeafVersion, TapLeafHash, TaprootBuilder, TaprootSpendInfo};
-use bitcoin::{PublicKey, ScriptBuf, Transaction, TxOut, XOnlyPublicKey};
+use bitcoin::{PublicKey, Script, ScriptBuf, Transaction, TxOut, XOnlyPublicKey};
 
 use super::common::{
     create_empty_script_sig, create_message_from_tap_sighash, get_tap_sighash_type,
@@ -15,6 +17,62 @@ use crate::wallet::WalletError;
 /// Generate a TapLeafHash from a script
 fn taproot_leaf_hash(script: &ScriptBuf) -> TapLeafHash {
     TapLeafHash::from_script(script, LeafVersion::TapScript)
+}
+
+/// `OP_1NEGATE` and `OP_1`..`OP_16`: the only non-data opcodes allowed inside an
+/// inscription envelope. They only push a number and none is an `OP_SUCCESSx`.
+fn is_pushnum(opcode: bitcoin::Opcode) -> bool {
+    let byte = opcode.to_u8();
+    byte == 0x4f || (0x51..=0x60).contains(&byte)
+}
+
+/// Whether `leaf` is one of the two tapscript shapes the client signs. Both end
+/// in `<signer_xonly> OP_CHECKSIG`, so the signature made with the signer's key
+/// is exactly what the leaf's `OP_CHECKSIG` verifies on-chain:
+///
+/// * `<signer_xonly> OP_CHECKSIG` -- the single-key leaf;
+/// * `OP_FALSE OP_IF <push-only data> OP_ENDIF <signer_xonly> OP_CHECKSIG` -- the
+///   inscription envelope of a Counterparty taproot commit. Its reveal must be
+///   signed by the *source* key (protocol change
+///   `require_reveal_source_signature`), which is why the server returns it
+///   unsigned and this wallet signs it.
+///
+/// Anything else is refused: a leaf pushing another key would reconstruct the
+/// output yet reject this signature (an unspendable input), a non-push opcode
+/// inside the envelope could be an `OP_SUCCESSx` that makes the leaf spendable
+/// without any signature, and anything after `OP_CHECKSIG` could discard its
+/// result. The node applies the same canonical-envelope rule.
+pub(crate) fn leaf_is_signed_by_key(leaf: &Script, signer: &XOnlyPublicKey) -> bool {
+    let mut instructions = leaf.instructions();
+    let mut next = match instructions.next() {
+        Some(Ok(instruction)) => instruction,
+        _ => return false,
+    };
+    // Optional envelope prefix: OP_FALSE (an empty push) OP_IF <pushes> OP_ENDIF.
+    if matches!(next, Instruction::PushBytes(push) if push.is_empty()) {
+        if !matches!(instructions.next(), Some(Ok(Instruction::Op(OP_IF)))) {
+            return false;
+        }
+        loop {
+            match instructions.next() {
+                Some(Ok(Instruction::PushBytes(_))) => {}
+                Some(Ok(Instruction::Op(OP_ENDIF))) => break,
+                Some(Ok(Instruction::Op(opcode))) if is_pushnum(opcode) => {}
+                _ => return false,
+            }
+        }
+        next = match instructions.next() {
+            Some(Ok(instruction)) => instruction,
+            _ => return false,
+        };
+    }
+    if !matches!(next, Instruction::PushBytes(push) if push.as_bytes() == signer.serialize()) {
+        return false;
+    }
+    if !matches!(instructions.next(), Some(Ok(Instruction::Op(OP_CHECKSIG)))) {
+        return false;
+    }
+    instructions.next().is_none()
 }
 
 /// Create a single-leaf TaprootBuilder for the given script.
@@ -142,21 +200,18 @@ impl InputSigner for P2TRSPSSigner {
             .as_ref()
             .ok_or(WalletError::MissingScript("leaf"))?;
 
-        // The client signs only the single-key tapscript `<signer_xonly>
-        // OP_CHECKSIG`. The output-key reconstruction below proves the *address*
-        // commits to this leaf and internal key, but NOT that the leaf's CHECKSIG
-        // actually verifies against the signing key — a leaf pushing a *different*
-        // key would still reconstruct the output, yet the signature (made with the
-        // signing key) would be rejected by that CHECKSIG on-chain, yielding an
-        // unspendable input. Validate the leaf shape explicitly before signing.
-        let expected_leaf = bitcoin::script::Builder::new()
-            .push_slice(xonly_pubkey.serialize())
-            .push_opcode(bitcoin::opcodes::all::OP_CHECKSIG)
-            .into_script();
-        if *leaf_script != expected_leaf {
+        // The client signs only leaves ending in `<signer_xonly> OP_CHECKSIG`
+        // (bare, or closing an inscription envelope). The output-key
+        // reconstruction below proves the *address* commits to this leaf and
+        // internal key, but NOT that the leaf's CHECKSIG actually verifies against
+        // the signing key — a leaf pushing a *different* key would still
+        // reconstruct the output, yet the signature (made with the signing key)
+        // would be rejected by that CHECKSIG on-chain, yielding an unspendable
+        // input. Validate the leaf shape explicitly before signing.
+        if !leaf_is_signed_by_key(leaf_script, &xonly_pubkey) {
             return Err(WalletError::UnsupportedScript(
-                "taproot script-path leaf is not the supported `<signer_key> OP_CHECKSIG` \
-                 single-key tapscript"
+                "taproot script-path leaf is neither `<signer_key> OP_CHECKSIG` nor an \
+                 inscription envelope closed by `<signer_key> OP_CHECKSIG`"
                     .to_string(),
             ));
         }
