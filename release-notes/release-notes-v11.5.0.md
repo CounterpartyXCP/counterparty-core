@@ -1,16 +1,14 @@
-# Release Notes - Counterparty Core v11.5.0 (2026-09-28)
+# Release Notes - Counterparty Core v11.5.0 (2026-09-30)
 
 This is a security release that fixes a vulnerability allowing an attacker to sweep the assets of any address that pays them plain BTC. It introduces one protocol change and changes how taproot-encoded transactions are composed and signed. It also includes reliability fixes for mempool parsing and API startup.
 
-**All node operators should upgrade immediately. The protocol change activates at the block height each chain had reached when this release was published (mainnet block 969,018), so it is already in force; nodes that upgrade later roll back to that height automatically. Wallets that use `encoding=taproot` must be updated to sign the reveal transaction themselves; until then their taproot-encoded transactions are rejected.**
+**All node operators must upgrade before mainnet block 969,320, expected around 15:00 UTC on 2026-09-30, about two hours after this release. A node still running v11.4.0 when that block is mined will diverge from the network. Wallets that use `encoding=taproot` must be updated to sign the reveal transaction themselves; until then their taproot-encoded transactions are rejected.**
 
 # Upgrading
 
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
 
-**No reparse is required. On first start the node rolls the Ledger DB back to the activation height, re-parses the blocks mined since the release and rebuilds the State DB. Allow approximately 30 minutes on mainnet, during which the API is unavailable.** The rollback re-parses with the new rule the blocks that a v11.4.0 node may have parsed with the old one, so that every node agrees on the ledger. The State DB rebuild runs even when the node has not yet reached the activation height, for example after a bootstrap.
-
-For Kubernetes deployments, the dedicated health listener (`/healthz/live` and `/healthz/ready`, port `4002` by default on mainnet) reports the rebuild as in v11.4.0: liveness returns `200` and readiness returns `503 rebuilding`.
+**No reparse, rollback or State DB rebuild is required, and the API stays available throughout.** The rule activates ahead of every chain tip, so no block has been parsed under the old rule: the node simply picks it up as it reaches the activation height. Upgrade before that height rather than after it — a node that crosses it on v11.4.0 has to be rolled back by hand.
 
 With Docker Compose:
 
@@ -33,16 +31,16 @@ pip install -e .
 counterparty-server start
 ```
 
-The v11.4.0 bootstrap snapshots remain valid and are selected automatically by `counterparty-server bootstrap`; a freshly bootstrapped node goes through the State DB rebuild described above on its first start.
+The v11.4.0 bootstrap snapshots remain valid and are selected automatically by `counterparty-server bootstrap`.
 
-The protocol change activates at the following block heights, the heights of each chain at the time of the release:
+The protocol change activates at the following block heights, the blocks each chain is expected to reach at 15:00 UTC on 2026-09-30:
 
 | Network | `require_reveal_source_signature` |
 | --- | ---: |
-| Mainnet | 969,018 |
-| Testnet3 | 5,151,460 |
-| Testnet4 | 154,240 |
-| Signet | 324,050 |
+| Mainnet | 969,320 |
+| Testnet3 | 5,151,805 |
+| Testnet4 | 154,564 |
+| Signet | 324,359 |
 
 It is enabled from block 0 on regtest.
 
@@ -52,7 +50,7 @@ A Counterparty message carried by a taproot envelope is published in two steps: 
 
 Nothing tied that address to the envelope. An attacker could publish a P2TR address whose hidden leaf carried a `sweep` of all balances and asset ownerships, have a victim pay ordinary BTC to it, and then spend the payment in a reveal that Counterparty attributed to the victim. The victim never signed anything related to Counterparty, and the malicious script was invisible in the address they paid. A P2WSH output with a three-element witness worked the same way, without any real signature at all. The attack was confirmed on regtest against v11.3.0; the same code paths are active on mainnet since the activation of `taproot_support` at block 902,000.
 
-Until the network has upgraded, users should avoid paying BTC to unknown P2TR or P2WSH addresses from an address that holds Counterparty assets or XCP.
+Until the activation height is reached, users should avoid paying BTC to unknown P2TR or P2WSH addresses from an address that holds Counterparty assets or XCP.
 
 # ChangeLog
 
@@ -83,6 +81,7 @@ Until the network has upgraded, users should avoid paying BTC to unknown P2TR or
 ## Codebase
 
 - Add `require_reveal_source_signature` unit tests for the Rust rule, the Python parser wiring and the composer, and replay the reported attack in the regtest taproot suite.
+- Bump `Flask-HTTPAuth` to 4.8.1 (GHSA-p44q-vqpr-4xmg, CVE-2026-34531). The API only uses `HTTPBasicAuth`, which is not affected.
 
 # Credits
 
