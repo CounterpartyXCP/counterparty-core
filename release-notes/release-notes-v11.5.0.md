@@ -8,7 +8,9 @@ This is a security release that fixes a vulnerability allowing an attacker to sw
 
 To upgrade, download the latest version of `counterparty-core` and restart `counterparty-server`.
 
-**No reparse, rollback or State DB rebuild is required, and the API stays available throughout.** The rule activates ahead of every chain tip, so no block has been parsed under the old rule: the node simply picks it up as it reaches the activation height. Upgrade before that height rather than after it — a node that crosses it on v11.4.0 has to be rolled back by hand.
+**No reparse is required, but the first start rebuilds the State DB. Allow approximately 30 minutes on mainnet, during which the API is unavailable.** The Ledger DB itself is left alone when the node upgrades before the activation height, which is the expected case: the rule activates ahead of every chain tip, so there is nothing to undo. A node that stayed on v11.4.0 past the activation height is rolled back to it and re-parses those blocks with the new rule, so that every node agrees on the ledger.
+
+For Kubernetes deployments, the dedicated health listener (`/healthz/live` and `/healthz/ready`, port `4002` by default on mainnet) reports the rebuild as in v11.4.0: liveness returns `200` and readiness returns `503 rebuilding`.
 
 With Docker Compose:
 
@@ -31,7 +33,7 @@ pip install -e .
 counterparty-server start
 ```
 
-The v11.4.0 bootstrap snapshots remain valid and are selected automatically by `counterparty-server bootstrap`.
+The v11.4.0 bootstrap snapshots remain valid and are selected automatically by `counterparty-server bootstrap`; a freshly bootstrapped node goes through the State DB rebuild described above on its first start.
 
 The protocol change activates at the following block heights, the blocks each chain is expected to reach at 15:00 UTC on 2026-09-30:
 
