@@ -24,8 +24,9 @@ from counterpartycore.lib.cli import bootstrap, log
 from counterpartycore.lib.ledger.backendheight import BackendHeight
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.monitors import memory_profiler, slack
+from counterpartycore.lib.monitors.protocolversion import ProtocolVersionMonitor
 from counterpartycore.lib.parser import blocks, check, follow
-from counterpartycore.lib.utils import database, helpers, parserhealth
+from counterpartycore.lib.utils import database, helpers, parserhealth, protocolstatus
 
 logger = logging.getLogger(config.LOGGER_NAME)
 D = decimal.Decimal
@@ -108,6 +109,9 @@ class CounterpartyServer(threading.Thread):
         # explicitly and must NOT raise KeyboardInterrupt in the main thread.
         self.stop_requested = False
         self.startup_checkpoint_error = None
+        self.protocol_status = protocolstatus.ProtocolStatus()
+        protocolstatus.configure(self.protocol_status)
+        self.protocol_monitor = None
 
         # Log all config parameters, sorted by key
         # Filter out default values, these should be set in a different way
@@ -194,8 +198,10 @@ class CounterpartyServer(threading.Thread):
             raise
         database.optimize(self.db)
 
-        # Check software version
-        check.software_version()
+        self.protocol_monitor = ProtocolVersionMonitor()
+        if not config.FORCE:
+            self.protocol_monitor.refresh(required=True)
+        self.protocol_monitor.start()
 
         self.backend_height_thread = BackendHeight()
         self.backend_height_thread.daemon = True
@@ -214,6 +220,7 @@ class CounterpartyServer(threading.Thread):
             self.api_stop_event,
             self.backend_height_thread.shared_backend_height,
             mempool_progress=mempool_progress,
+            protocol_status=self.protocol_status,
         )
         self.apiserver_v2.start(self.args, self.log_stream)
         while not self.apiserver_v2.is_ready():
@@ -223,15 +230,16 @@ class CounterpartyServer(threading.Thread):
                 return
             time.sleep(0.1)
 
-        if self.args.api_only:
-            # Loop must check the event so stop() actually exits the loop;
-            # without this, even after self.api_stop_event.set() the wait()
-            # just returns and we re-enter the wait. Daemon=True eventually
-            # tears the process down, but there's no clean SIGTERM round.
-            while not self.api_stop_event.is_set():
-                self.api_stop_event.wait(1)
-            return
+        try:
+            self.protocol_status.require_supported(CurrentState().current_block_index() or 0)
+            if not self.args.api_only:
+                self._run_parser()
+                return
+        except exceptions.VersionUpdateRequiredError as error:
+            logger.error("%s Parsing disabled; diagnostic API remains available.", error)
+        self._wait_for_shutdown()
 
+    def _run_parser(self):
         # Backend
         ensure_backend_is_up()
 
@@ -282,6 +290,10 @@ class CounterpartyServer(threading.Thread):
         self.follower_daemon = follow.start_blockchain_watcher(self.db)
         self.follower_daemon.start()
 
+    def _wait_for_shutdown(self):
+        while not self.api_stop_event.is_set():
+            self.api_stop_event.wait(1)
+
     def run(self):
         try:
             self.run_server()
@@ -309,6 +321,8 @@ class CounterpartyServer(threading.Thread):
         logger.info("Shutting down...")
 
         CurrentState().set_stopping()
+        if self.protocol_monitor:
+            self.protocol_monitor.stop()
         rsfetcher.RSFetcher().stop()
 
         # Ensure all threads are stopped

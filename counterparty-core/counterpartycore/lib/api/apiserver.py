@@ -32,6 +32,7 @@ from counterpartycore.lib.api import (
     verbose,
     wsgi,
 )
+from counterpartycore.lib.api import protocol as protocol_http
 from counterpartycore.lib.api.blockcache import BLOCK_CACHE, cache_insert
 from counterpartycore.lib.api.routes import ROUTES, function_needs_db
 from counterpartycore.lib.backend import bitcoind
@@ -40,7 +41,7 @@ from counterpartycore.lib.cli.log import init_api_access_log
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.monitors import memory_profiler, sentry
 from counterpartycore.lib.parser import check
-from counterpartycore.lib.utils import address, database, helpers
+from counterpartycore.lib.utils import address, database, helpers, protocolstatus
 from counterpartycore.lib.utils.database import LedgerDBConnectionPool, StateDBConnectionPool
 
 multiprocessing.set_start_method("spawn", force=True)
@@ -72,6 +73,8 @@ def verify_password(username, password):
 
 
 def is_server_ready():
+    if not protocolstatus.can_serve():
+        return False
     backend_height = CurrentState().current_backend_height()
     block_index = CurrentState().current_block_index()
 
@@ -155,6 +158,10 @@ def set_cors_headers(response):
         response.headers["Access-Control-Allow-Origin"] = "*"
         response.headers["Access-Control-Allow-Headers"] = "*"
         response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Expose-Headers"] = (
+            "X-COUNTERPARTY-HEIGHT, X-COUNTERPARTY-READY, X-COUNTERPARTY-VERSION, "
+            "X-BITCOIN-HEIGHT, X-LEDGER-STATE"
+        )
 
 
 def set_sentry_api_response_context(http_code, error):
@@ -198,8 +205,19 @@ def return_result(
     result_count=None,
     start_time=None,
     query_args=None,
+    protocol_info=None,
 ):
     assert result is None or error is None
+    status = protocol_info or protocolstatus.summary()
+    flask.g.protocol_response_status = status
+    blocked = protocolstatus.error(status)
+    rule = request.url_rule.rule if request.url_rule else request.path
+    if http_code == 200:
+        if rule == "/v2/":
+            result = {**result, "protocol_status": status}
+            result["server_ready"] = result["server_ready"] and not blocked
+        elif blocked and not protocol_http.is_diagnostic(rule):
+            http_code, result, error = 503, None, blocked
     api_result = {}
     if result is not None:
         api_result["result"] = result
@@ -208,6 +226,8 @@ def return_result(
             api_result["result_count"] = result_count
     if error is not None:
         api_result["error"] = error
+        if blocked and error == blocked:
+            api_result["protocol_status"] = status
     response = flask.make_response(helpers.to_json(api_result), http_code)
     response.headers["X-COUNTERPARTY-HEIGHT"] = CurrentState().current_block_index()
     response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
@@ -438,15 +458,22 @@ def handle_route(**kwargs):
         logger.trace(f"API Request - {request.remote_addr} {request.method} {request.url}")
         logger.debug(get_log_prefix(query_args))
 
-        if not config.FORCE and CurrentState().current_backend_height() is None:
+        rule = str(request.url_rule.rule)
+        status = protocolstatus.summary()
+        blocked = protocolstatus.error(status)
+        if blocked and not protocol_http.is_diagnostic(rule):
+            return return_result(503, error=blocked, start_time=start_time, protocol_info=status)
+        if (
+            not config.FORCE
+            and CurrentState().current_backend_height() is None
+            and not protocol_http.is_diagnostic(rule)
+        ):
             return return_result(
                 503,
                 error="Backend still not ready. Please try again later.",
                 start_time=start_time,
                 query_args=query_args,
             )
-
-        rule = str(request.url_rule.rule)
 
         with configure_sentry_scope() as scope:
             scope.set_transaction_name(get_transaction_name(rule))
@@ -456,6 +483,7 @@ def handle_route(**kwargs):
             and not is_server_ready()
             and not return_result_if_not_ready(rule)
             and not config.API_ONLY
+            and not protocol_http.is_diagnostic(rule)
         ):
             return return_result(
                 503, error="Counterparty not ready", start_time=start_time, query_args=query_args
@@ -586,6 +614,12 @@ def handle_options():
 
 def init_flask_app():
     app = Flask(config.APP_NAME)
+
+    protocol_http.install(
+        app,
+        lambda status: return_result(503, error=protocolstatus.error(status), protocol_info=status),
+        set_cors_headers,
+    )
 
     with app.app_context():
         # Initialise the API access log
@@ -722,6 +756,7 @@ def run_apiserver(
     parent_pid,
     log_stream,
     mempool_progress=None,
+    protocol_status=None,
 ):
     api_owner_pid = os.getpid()
     logger.info("Starting API Server process...")
@@ -745,6 +780,9 @@ def run_apiserver(
         # Initialize Sentry, logging, config, etc.
         sentry.init()
         initialise_log_and_config(argparse.Namespace(**args), api=True, log_stream=log_stream)
+        protocolstatus.configure(protocol_status)
+        # Share the tip before either health or public API listeners start.
+        CurrentState().set_backend_height_value(shared_backend_height)
 
         # Start memory profiler if enabled via --memory-profile flag
         if getattr(config, "MEMORY_PROFILE", False):
@@ -811,11 +849,6 @@ def run_apiserver(
 
         app = init_flask_app()
         app.shared_backend_height = shared_backend_height
-
-        # Set backend height value BEFORE creating the WSGI server
-        # The WSGI server starts listening as soon as it's created,
-        # so the value must be set before any requests can come in
-        CurrentState().set_backend_height_value(shared_backend_height)
 
         try:
             wsgi_server = wsgi.WSGIApplication(app, args=args)
@@ -906,12 +939,15 @@ class ParentProcessChecker(threading.Thread):
 
 
 class APIServer:
-    def __init__(self, stop_event, shared_backend_height, mempool_progress=None):
+    def __init__(
+        self, stop_event, shared_backend_height, mempool_progress=None, protocol_status=None
+    ):
         self.process = None
         self.server_ready_value = Value("I", 0)
         self.stop_event = stop_event
         self.shared_backend_height = shared_backend_height
         self.mempool_progress = mempool_progress
+        self.protocol_status = protocol_status
 
     def start(self, args, log_stream):
         if self.process is not None:
@@ -927,6 +963,7 @@ class APIServer:
                 os.getpid(),
                 log_stream,
                 self.mempool_progress,
+                self.protocol_status,
             ),
         )
         try:
