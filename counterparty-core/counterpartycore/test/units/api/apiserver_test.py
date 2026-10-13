@@ -118,7 +118,7 @@ def test_apiserver_root(apiv2_client, current_block_index):
             "routes": "http://localhost/v2/routes",
             "openapi": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/openapi.json",
             "current_commit": helpers.get_current_commit_hash(),
-            "protocol_status": protocolstatus.summary(apiserver.protocol_height()),
+            "protocol_status": protocolstatus.summary(),
         }
     }
 
@@ -785,7 +785,7 @@ def test_ledger_state(apiv2_client, current_block_index, ledger_db):
             "backend_height": ledger.currentstate.CurrentState().current_backend_height(),
             "counterparty_height": current_block_index,
             "ledger_state": "Rolling Back",
-            "protocol_status": protocolstatus.summary(apiserver.protocol_height()),
+            "protocol_status": protocolstatus.summary(),
             "documentation": "https://apidocs.counterparty.io/",
             "routes": "http://localhost/v2/routes",
             "openapi": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/openapi.json",
@@ -804,7 +804,7 @@ def test_ledger_state(apiv2_client, current_block_index, ledger_db):
             "backend_height": ledger.currentstate.CurrentState().current_backend_height(),
             "counterparty_height": current_block_index,
             "ledger_state": "Reparsing",
-            "protocol_status": protocolstatus.summary(apiserver.protocol_height()),
+            "protocol_status": protocolstatus.summary(),
             "documentation": "https://apidocs.counterparty.io/",
             "routes": "http://localhost/v2/routes",
             "openapi": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/openapi.json",

@@ -289,9 +289,21 @@ class TestBlockchainWatcher:
 
         asyncio.run(watcher.handle())
 
-        assert watcher.upgrade_required is True
+        assert isinstance(watcher.upgrade_error, exceptions.VersionUpdateRequiredError)
         stop.assert_called_once()
         report.assert_not_called()
+
+    def test_start_propagates_upgrade_after_closing_event_loop(self, watcher_setup):
+        watcher, _db, _backend, state = watcher_setup
+        watcher.loop = asyncio.new_event_loop()
+        state.current_block_count.return_value = 100
+        protocolstatus.current().publish(
+            [{"change_name": "upgrade", "version": [12, 0, 0], "activation_height": 100}]
+        )
+        with pytest.raises(exceptions.VersionUpdateRequiredError):
+            watcher.start()
+        assert watcher.loop.is_closed()
+        assert watcher.stop_event.is_set()
 
     def test_receive_hashtx(self, watcher_setup):
         """Test receive_hashtx stores hash by sequence"""

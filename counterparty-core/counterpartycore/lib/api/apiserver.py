@@ -32,6 +32,7 @@ from counterpartycore.lib.api import (
     verbose,
     wsgi,
 )
+from counterpartycore.lib.api import protocol as protocol_http
 from counterpartycore.lib.api.blockcache import BLOCK_CACHE, cache_insert
 from counterpartycore.lib.api.routes import ROUTES, function_needs_db
 from counterpartycore.lib.backend import bitcoind
@@ -72,7 +73,7 @@ def verify_password(username, password):
 
 
 def is_server_ready():
-    if not protocolstatus.can_serve(protocol_height()):
+    if not protocolstatus.can_serve():
         return False
     backend_height = CurrentState().current_backend_height()
     block_index = CurrentState().current_block_index()
@@ -93,26 +94,6 @@ def is_server_ready():
     return False
 
 
-def protocol_height():
-    return max(CurrentState().current_block_count() or 0, CurrentState().current_block_index() or 0)
-
-
-def protocol_view():
-    return protocolstatus.summary(protocol_height())
-
-
-def protocol_error(status):
-    return (
-        "protocol_upgrade_required"
-        if status["status"] == "incompatible"
-        else "protocol_status_unknown"
-    )
-
-
-def protocol_diagnostic_route(rule):
-    return rule in ("/v2/", "/v2/routes", "/v2/openapi.json")
-
-
 def api_root():
     with StateDBConnectionPool().connection() as state_db:
         counterparty_height = parsedevents.get_last_block_parsed(state_db)
@@ -128,7 +109,6 @@ def api_root():
         "routes": f"{request.url_root}v2/routes",
         "openapi": "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/openapi.json",
         "current_commit": config.CURRENT_COMMIT,
-        "protocol_status": protocol_view(),
     }
 
 
@@ -180,8 +160,7 @@ def set_cors_headers(response):
         response.headers["Access-Control-Allow-Methods"] = "*"
         response.headers["Access-Control-Expose-Headers"] = (
             "X-COUNTERPARTY-HEIGHT, X-COUNTERPARTY-READY, X-COUNTERPARTY-VERSION, "
-            "X-BITCOIN-HEIGHT, X-LEDGER-STATE, X-COUNTERPARTY-PROTOCOL-STATUS, "
-            "X-COUNTERPARTY-REQUIRED-VERSION"
+            "X-BITCOIN-HEIGHT, X-LEDGER-STATE"
         )
 
 
@@ -229,6 +208,16 @@ def return_result(
     protocol_info=None,
 ):
     assert result is None or error is None
+    status = protocol_info or protocolstatus.summary()
+    flask.g.protocol_response_status = status
+    blocked = protocolstatus.error(status)
+    rule = request.url_rule.rule if request.url_rule else request.path
+    if http_code == 200:
+        if rule == "/v2/":
+            result = {**result, "protocol_status": status}
+            result["server_ready"] = result["server_ready"] and not blocked
+        elif blocked and not protocol_http.is_diagnostic(rule):
+            http_code, result, error = 503, None, blocked
     api_result = {}
     if result is not None:
         api_result["result"] = result
@@ -237,8 +226,8 @@ def return_result(
             api_result["result_count"] = result_count
     if error is not None:
         api_result["error"] = error
-        if error in ("protocol_upgrade_required", "protocol_status_unknown"):
-            api_result["protocol_status"] = protocol_info or protocol_view()
+        if blocked and error == blocked:
+            api_result["protocol_status"] = status
     response = flask.make_response(helpers.to_json(api_result), http_code)
     response.headers["X-COUNTERPARTY-HEIGHT"] = CurrentState().current_block_index()
     response.headers["X-COUNTERPARTY-READY"] = is_server_ready()
@@ -470,15 +459,14 @@ def handle_route(**kwargs):
         logger.debug(get_log_prefix(query_args))
 
         rule = str(request.url_rule.rule)
-        status = protocol_view()
-        if status["status"] in ("incompatible", "unknown") and not protocol_diagnostic_route(rule):
-            return return_result(
-                503, error=protocol_error(status), start_time=start_time, protocol_info=status
-            )
+        status = protocolstatus.summary()
+        blocked = protocolstatus.error(status)
+        if blocked and not protocol_http.is_diagnostic(rule):
+            return return_result(503, error=blocked, start_time=start_time, protocol_info=status)
         if (
             not config.FORCE
             and CurrentState().current_backend_height() is None
-            and not protocol_diagnostic_route(rule)
+            and not protocol_http.is_diagnostic(rule)
         ):
             return return_result(
                 503,
@@ -495,7 +483,7 @@ def handle_route(**kwargs):
             and not is_server_ready()
             and not return_result_if_not_ready(rule)
             and not config.API_ONLY
-            and not protocol_diagnostic_route(rule)
+            and not protocol_http.is_diagnostic(rule)
         ):
             return return_result(
                 503, error="Counterparty not ready", start_time=start_time, query_args=query_args
@@ -627,33 +615,11 @@ def handle_options():
 def init_flask_app():
     app = Flask(config.APP_NAME)
 
-    @app.after_request
-    def add_protocol_signal(response):
-        # Include auth/404/OPTIONS and legacy-proxy responses too. Recheck
-        # before returning a success, so a cached/in-flight data response
-        # cannot conceal an upgrade barrier discovered during the request.
-        status = protocol_view()
-        rule = str(request.url_rule.rule) if request.url_rule else request.path
-        if rule == "/v2/" and response.status_code == 200:
-            body = response.get_json()
-            body["result"]["protocol_status"] = status
-            if status["status"] in ("incompatible", "unknown"):
-                body["result"]["server_ready"] = False
-            response.set_data(helpers.to_json(body))
-        if (
-            response.status_code == 200
-            and status["status"] in ("incompatible", "unknown")
-            and not protocol_diagnostic_route(rule)
-        ):
-            response = return_result(503, error=protocol_error(status), protocol_info=status)
-        response.headers["X-COUNTERPARTY-PROTOCOL-STATUS"] = status["status"]
-        if status["required_version"]:
-            response.headers["X-COUNTERPARTY-REQUIRED-VERSION"] = status["required_version"]
-        if status["status"] in ("incompatible", "unknown"):
-            response.headers["Cache-Control"] = "no-store"
-            response.headers["X-COUNTERPARTY-READY"] = "False"
-        set_cors_headers(response)
-        return response
+    protocol_http.install(
+        app,
+        lambda status: return_result(503, error=protocolstatus.error(status), protocol_info=status),
+        set_cors_headers,
+    )
 
     with app.app_context():
         # Initialise the API access log
@@ -815,6 +781,7 @@ def run_apiserver(
         sentry.init()
         initialise_log_and_config(argparse.Namespace(**args), api=True, log_stream=log_stream)
         protocolstatus.configure(protocol_status)
+        # Share the tip before either health or public API listeners start.
         CurrentState().set_backend_height_value(shared_backend_height)
 
         # Start memory profiler if enabled via --memory-profile flag
@@ -882,11 +849,6 @@ def run_apiserver(
 
         app = init_flask_app()
         app.shared_backend_height = shared_backend_height
-
-        # Set backend height value BEFORE creating the WSGI server
-        # The WSGI server starts listening as soon as it's created,
-        # so the value must be set before any requests can come in
-        CurrentState().set_backend_height_value(shared_backend_height)
 
         try:
             wsgi_server = wsgi.WSGIApplication(app, args=args)

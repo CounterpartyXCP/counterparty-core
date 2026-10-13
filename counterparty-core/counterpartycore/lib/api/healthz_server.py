@@ -300,15 +300,8 @@ class HealthSampler(threading.Thread):
             last_parsed or 0, backend_height or 0, CurrentState().current_block_count() or 0
         )
         protocol_info = protocolstatus.summary(protocol_height)
-        if protocol_info["status"] in ("incompatible", "unknown"):
-            caught_up, ledger_reason = (
-                False,
-                (
-                    "protocol_upgrade_required"
-                    if protocol_info["status"] == "incompatible"
-                    else "protocol_status_unknown"
-                ),
-            )
+        if protocolstatus.error(protocol_info):
+            caught_up, ledger_reason = False, protocolstatus.error(protocol_info)
         ready = caught_up and not over_saturated
         if ready:
             reason = None

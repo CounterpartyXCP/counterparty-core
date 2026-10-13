@@ -112,7 +112,6 @@ class CounterpartyServer(threading.Thread):
         self.protocol_status = protocolstatus.ProtocolStatus()
         protocolstatus.configure(self.protocol_status)
         self.protocol_monitor = None
-        self.upgrade_required = False
 
         # Log all config parameters, sorted by key
         # Filter out default values, these should be set in a different way
@@ -199,13 +198,9 @@ class CounterpartyServer(threading.Thread):
             raise
         database.optimize(self.db)
 
-        # Check software version
-        try:
-            check.software_version()
-        except exceptions.VersionUpdateRequiredError as error:
-            logger.error("%s Parsing disabled; diagnostic API remains available.", error)
-            self.upgrade_required = True
         self.protocol_monitor = ProtocolVersionMonitor()
+        if not config.FORCE:
+            self.protocol_monitor.refresh(required=True)
         self.protocol_monitor.start()
 
         self.backend_height_thread = BackendHeight()
@@ -235,10 +230,16 @@ class CounterpartyServer(threading.Thread):
                 return
             time.sleep(0.1)
 
-        if self.args.api_only or self.upgrade_required:
-            self._wait_for_shutdown()
-            return
+        try:
+            self.protocol_status.require_supported(CurrentState().current_block_index() or 0)
+            if not self.args.api_only:
+                self._run_parser()
+                return
+        except exceptions.VersionUpdateRequiredError as error:
+            logger.error("%s Parsing disabled; diagnostic API remains available.", error)
+        self._wait_for_shutdown()
 
+    def _run_parser(self):
         # Backend
         ensure_backend_is_up()
 
@@ -277,12 +278,7 @@ class CounterpartyServer(threading.Thread):
         blocks.reset_rust_fetcher_database()
 
         # Catch Up
-        try:
-            blocks.catch_up(self.db)
-        except exceptions.VersionUpdateRequiredError as error:
-            logger.error("%s Parsing disabled; diagnostic API remains available.", error)
-            self._wait_for_shutdown()
-            return
+        blocks.catch_up(self.db)
 
         if self.stop_when_ready:
             self.stop()  # stop here
@@ -293,8 +289,6 @@ class CounterpartyServer(threading.Thread):
         logger.info("Watching for new blocks...")
         self.follower_daemon = follow.start_blockchain_watcher(self.db)
         self.follower_daemon.start()
-        if self.follower_daemon.upgrade_required:
-            self._wait_for_shutdown()
 
     def _wait_for_shutdown(self):
         while not self.api_stop_event.is_set():

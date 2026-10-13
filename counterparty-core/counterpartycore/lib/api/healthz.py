@@ -61,10 +61,7 @@ def healthz_heavy(db):
 
 
 def healthz(db, check_type: str = "light"):
-    height = max(
-        CurrentState().current_block_count() or 0, CurrentState().current_block_index() or 0
-    )
-    if not protocolstatus.can_serve(height):
+    if not protocolstatus.can_serve():
         return False
     try:
         if check_type == "heavy":
@@ -89,19 +86,10 @@ def handle_healthz_route(db, check_type: str = "light"):
         msg, code = "Unhealthy", 503
     result = {"result": msg, "success": code == 200}
     if code != 200:
-        height = max(
-            CurrentState().current_block_count() or 0, CurrentState().current_block_index() or 0
-        )
-        status = protocolstatus.summary(height)
-        if status["status"] in ("incompatible", "unknown"):
-            result["error"] = (
-                "protocol_upgrade_required"
-                if status["status"] == "incompatible"
-                else "protocol_status_unknown"
-            )
+        status = protocolstatus.summary()
+        result["error"] = protocolstatus.error(status) or msg
+        if protocolstatus.error(status):
             result["protocol_status"] = status
-        else:
-            result["error"] = msg
     return flask.Response(helpers.to_json(result), code, mimetype="application/json")
 
 

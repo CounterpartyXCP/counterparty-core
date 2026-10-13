@@ -33,6 +33,7 @@ from counterpartycore.lib import (
     ledger,
 )
 from counterpartycore.lib.api import composer, healthz
+from counterpartycore.lib.api import protocol as protocol_http
 from counterpartycore.lib.api.apiwatcher import STATE_DB_TABLES
 from counterpartycore.lib.cli.log import init_api_access_log
 from counterpartycore.lib.ledger.currentstate import CurrentState
@@ -542,37 +543,13 @@ def create_app():
     app = flask.Flask(__name__)
     auth = HTTPBasicAuth()
 
-    def protocol_view():
-        height = max(
-            CurrentState().current_block_count() or 0, CurrentState().current_block_index() or 0
-        )
-        return protocolstatus.summary(height)
-
     def protocol_error(status):
-        message = (
-            "protocol_upgrade_required"
-            if status["status"] == "incompatible"
-            else "protocol_status_unknown"
-        )
         body = {
             "jsonrpc": "2.0",
             "id": None,
-            "error": {"code": -32000, "message": message, "data": status},
+            "error": {"code": -32000, "message": protocolstatus.error(status), "data": status},
         }
         return flask.Response(helpers.to_json(body), 503, mimetype="application/json")
-
-    @app.after_request
-    def add_protocol_signal(response):
-        status = protocol_view()
-        if status["status"] in ("incompatible", "unknown"):
-            if response.status_code == 200:
-                response = protocol_error(status)
-            response.headers["Cache-Control"] = "no-store"
-        response.headers["X-COUNTERPARTY-PROTOCOL-STATUS"] = status["status"]
-        if status["required_version"]:
-            response.headers["X-COUNTERPARTY-REQUIRED-VERSION"] = status["required_version"]
-        _set_cors_headers(response)
-        return response
 
     @auth.get_password
     def get_pw(username):
@@ -1087,9 +1064,8 @@ def create_app():
             response.headers["Access-Control-Allow-Headers"] = (
                 "DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
             )
-            response.headers["Access-Control-Expose-Headers"] = (
-                "X-COUNTERPARTY-PROTOCOL-STATUS, X-COUNTERPARTY-REQUIRED-VERSION"
-            )
+
+    protocol_http.install(app, protocol_error, _set_cors_headers)
 
     ##### REST ROUTES #####
 
@@ -1107,8 +1083,8 @@ def create_app():
     @conditional_decorator(auth.login_required, hasattr(config, "RPC_PASSWORD"))
     def handle_root(args_path):
         """Handle all paths, decide where to forward the query."""
-        status = protocol_view()
-        if request.method != "OPTIONS" and status["status"] in ("incompatible", "unknown"):
+        status = protocolstatus.summary()
+        if request.method != "OPTIONS" and protocolstatus.error(status):
             return protocol_error(status)
         request_path = args_path.lower()
         if (

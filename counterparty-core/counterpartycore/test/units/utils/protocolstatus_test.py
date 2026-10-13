@@ -71,6 +71,8 @@ def test_guard_and_api_report_strongest_active_version():
     with pytest.raises(exceptions.VersionUpdateRequiredError, match=f"v{config.VERSION_MAJOR + 2}"):
         state.require_supported(110)
     assert state.summary(110)["required_version"] == f"{config.VERSION_MAJOR + 2}.0.0"
+    state.publish([requirement()], 110)
+    assert state.summary(110)["required_version"] == f"{config.VERSION_MAJOR + 2}.0.0"
     state.publish([])
     assert state.summary(0)["required_version"] == f"{config.VERSION_MAJOR + 2}.0.0"
 
@@ -121,13 +123,18 @@ def test_periodic_monitor_is_independent_of_watcher_activity(monkeypatch):
     )
 
 
-def test_monitor_retries_metadata_errors_without_dropping_cache(monkeypatch):
+@pytest.mark.parametrize("required", [False, True])
+def test_monitor_retries_metadata_errors_without_dropping_cache(monkeypatch, required):
     state = protocolstatus.current()
     state.publish([requirement()])
     monkeypatch.setattr(
         check, "software_version", MagicMock(side_effect=exceptions.VersionCheckError("offline"))
     )
-    assert ProtocolVersionMonitor().refresh() == protocolstatus.RETRY_INTERVAL
+    if required:
+        with pytest.raises(exceptions.VersionCheckError):
+            ProtocolVersionMonitor().refresh(required=True)
+    else:
+        assert ProtocolVersionMonitor().refresh() == protocolstatus.RETRY_INTERVAL
     assert state.summary(100)["status"] == "incompatible"
 
 
@@ -215,7 +222,8 @@ def test_monitor_stop_is_interruptible_without_waiting_for_next_poll():
     assert time.monotonic() - started < 1
 
 
-def test_startup_incompatibility_is_latched_before_diagnostic_api(monkeypatch):
+@pytest.mark.parametrize("enforce", [False, True])
+def test_startup_incompatibility_is_latched_before_diagnostic_api(monkeypatch, enforce):
     height = check.CurrentState().current_block_index()
     response = requests.Response()
     response.status_code = 200
@@ -230,13 +238,16 @@ def test_startup_incompatibility_is_latched_before_diagnostic_api(monkeypatch):
         }
     ).encode()
     monkeypatch.setattr(check.requests, "get", MagicMock(return_value=response))
-    with pytest.raises(exceptions.VersionUpdateRequiredError):
-        check.software_version()
+    if enforce:
+        with pytest.raises(exceptions.VersionUpdateRequiredError):
+            check.software_version()
+    else:
+        check.software_version(enforce=False)
     protocolstatus.current().publish([])
     assert protocolstatus.summary(0)["status"] == "incompatible"
 
 
-@pytest.mark.parametrize("phase", ["startup", "catch_up", "watcher"])
+@pytest.mark.parametrize("phase", ["startup", "catch_up", "watcher_setup", "watcher"])
 def test_server_parks_parser_but_keeps_diagnostic_api_running(monkeypatch, phase):
     monkeypatch.setattr(config, "MEMORY_PROFILE", False)
     monkeypatch.setattr(config, "ENABLE_API_V1", False)
@@ -254,11 +265,6 @@ def test_server_parks_parser_but_keeps_diagnostic_api_running(monkeypatch, phase
     monkeypatch.setattr(server.check, "stored_checkpoints", MagicMock())
     upgrade = exceptions.VersionUpdateRequiredError("upgrade required")
     monkeypatch.setattr(
-        server.check,
-        "software_version",
-        MagicMock(side_effect=upgrade if phase == "startup" else None),
-    )
-    monkeypatch.setattr(
         server.blocks, "catch_up", MagicMock(side_effect=upgrade if phase == "catch_up" else None)
     )
     monkeypatch.setattr(server.ledger.blocks, "last_db_index", MagicMock(return_value=99))
@@ -271,11 +277,17 @@ def test_server_parks_parser_but_keeps_diagnostic_api_running(monkeypatch, phase
     api = MagicMock()
     api.is_ready.return_value = True
     monkeypatch.setattr(server.api_v2, "APIServer", MagicMock(return_value=api))
-    watcher = MagicMock(upgrade_required=True)
-    monkeypatch.setattr(server.follow, "start_blockchain_watcher", MagicMock(return_value=watcher))
+    watcher = MagicMock()
+    watcher.start.side_effect = upgrade if phase == "watcher" else None
+    monkeypatch.setattr(
+        server.follow,
+        "start_blockchain_watcher",
+        MagicMock(return_value=watcher, side_effect=upgrade if phase == "watcher_setup" else None),
+    )
     app = server.CounterpartyServer(
         SimpleNamespace(catch_up="normal", bootstrap_url=None, api_only=False)
     )
+    app.protocol_status.publish([requirement(1)] if phase == "startup" else [], 99)
     monkeypatch.setattr(app, "_start_pool_monitor", MagicMock())
     wait = MagicMock()
     monkeypatch.setattr(app, "_wait_for_shutdown", wait)

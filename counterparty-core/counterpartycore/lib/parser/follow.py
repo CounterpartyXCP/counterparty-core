@@ -98,7 +98,7 @@ class BlockchainWatcher:
         self.raw_tx_cache = {}
         self.hash_by_sequence = {}
         self.last_block_check_time = 0
-        self.upgrade_required = False
+        self.upgrade_error = None
         self.last_mempool_parsing_time = 0
         # catch up and clean mempool before starting
         self.stop_event = threading.Event()
@@ -431,8 +431,7 @@ class BlockchainWatcher:
                 # Yield control to the event loop to allow other tasks to run
                 await asyncio.sleep(0)
             except exceptions.VersionUpdateRequiredError as error:
-                self.upgrade_required = True
-                logger.error("%s Stopping parser until software is upgraded.", error)
+                self.upgrade_error = error
                 self.stop()
                 break
             except asyncio.CancelledError:
@@ -459,6 +458,8 @@ class BlockchainWatcher:
             self.loop.run_forever()
         finally:
             self.loop.close()
+        if self.upgrade_error is not None:
+            raise self.upgrade_error
 
     def stop(self):
         # Protect entire shutdown from KeyboardInterrupt

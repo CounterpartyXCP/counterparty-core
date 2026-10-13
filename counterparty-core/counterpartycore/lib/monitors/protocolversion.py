@@ -4,7 +4,6 @@ import logging
 import threading
 
 from counterpartycore.lib import config, exceptions
-from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.parser import check
 from counterpartycore.lib.utils import protocolstatus
 
@@ -17,11 +16,10 @@ class ProtocolVersionMonitor(threading.Thread):
         self.stop_event = threading.Event()
         self.last_warning = None
 
-    def refresh(self):
+    def refresh(self, *, required=False):
         try:
             check.software_version(enforce=False)
-            height = CurrentState().current_block_count() or CurrentState().current_block_index()
-            status = protocolstatus.summary(height)
+            status = protocolstatus.summary()
             warning = (status["status"], status["required_version"], status["activation_height"])
             if (
                 status["status"] in ("upgrade_pending", "incompatible")
@@ -35,14 +33,8 @@ class ProtocolVersionMonitor(threading.Thread):
                 self.last_warning = warning
             return protocolstatus.CHECK_INTERVAL
         except exceptions.VersionCheckError as error:
-            state = protocolstatus.current()
-            if state is not None:
-                try:
-                    state.unavailable()
-                except exceptions.VersionCheckError:
-                    # A broken shared-state lock is already exposed as unknown
-                    # by its readers. Keep the monitor alive to retry.
-                    logger.error("Could not publish protocol metadata failure")
+            if required:
+                raise
             logger.warning(
                 "Protocol metadata refresh failed; retaining cached requirements: %s", error
             )
