@@ -177,6 +177,9 @@ def test_software_version_json_decode_error(monkeypatch):
         status_code = 200
         text = "not valid json"
 
+        def raise_for_status(self):
+            pass
+
     def mock_get(*args, **kwargs):
         return MockResponse()
 
@@ -210,6 +213,9 @@ def test_software_version_success(monkeypatch):
                 }
             }
         )
+
+        def raise_for_status(self):
+            pass
 
     def mock_get(*args, **kwargs):
         return MockResponse()

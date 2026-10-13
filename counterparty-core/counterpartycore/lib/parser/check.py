@@ -7,7 +7,7 @@ from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages.data import checkpoints
 from counterpartycore.lib.parser import protocol
-from counterpartycore.lib.utils import database, hashcodec
+from counterpartycore.lib.utils import database, hashcodec, protocolstatus
 from counterpartycore.lib.utils.helpers import dhash_string
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -203,8 +203,8 @@ def check_change(protocol_change, change_name):
         logger.warning(explanation)
 
 
-def software_version():
-    if config.FORCE:
+def software_version(*, enforce=True):
+    if config.FORCE and enforce:
         return True
     logger.debug("Checking Counterparty version...")
 
@@ -212,15 +212,18 @@ def software_version():
         response = requests.get(
             config.PROTOCOL_CHANGES_URL, headers={"cache-control": "no-cache"}, timeout=10
         )
+        response.raise_for_status()
         versions = json.loads(response.text)
     except (
-        requests.exceptions.ConnectionError,
+        requests.exceptions.RequestException,
         ConnectionRefusedError,
         ValueError,
         requests.exceptions.ReadTimeout,
         TimeoutError,
         json.decoder.JSONDecodeError,
     ) as e:
+        if protocolstatus.current() is not None:
+            protocolstatus.current().unavailable()
         logger.error(
             "Unable to check Counterparty version from %s: %s", config.PROTOCOL_CHANGES_URL, e
         )
@@ -229,18 +232,39 @@ def software_version():
             "Use --force to ignore verification."
         ) from e
 
-    # check_change reads dict keys ("minimum_version_major" etc.) and
-    # compares them with `<` to ints. A malformed upstream JSON (compromised
-    # counterparty.io / DNS poisoning / TLS-chain attack) where any of those
-    # values is a string or missing would raise TypeError/KeyError. That isn't
-    # in the except tuple above, so it would propagate through software_version
-    # -> follow.handle()'s broad except -> self.stop() and halt the watcher
-    # on a single bad upstream response.
+    # Validate the complete manifest before publishing. A malformed response
+    # must not replace previously verified requirements or kill the monitor.
     try:
+        requirements = []
+        current_version = (config.VERSION_MAJOR, config.VERSION_MINOR, config.VERSION_REVISION)
+        if not isinstance(versions, dict) or not versions:
+            raise TypeError("Protocol manifest must be a non-empty object")
+        for change_name, change in versions.items():
+            version = [change[f"minimum_version_{part}"] for part in ("major", "minor", "revision")]
+            height = change.get(protocol.network_block_index_name(), change["block_index"])
+            if any(type(value) is not int or value < 0 for value in (*version, height)):
+                raise TypeError(
+                    "Protocol versions and activation heights must be non-negative integers"
+                )
+            if tuple(version) > current_version:
+                requirements.append(
+                    {"change_name": change_name, "version": version, "activation_height": height}
+                )
+        if protocolstatus.current() is not None:
+            protocolstatus.current().publish(requirements, CurrentState().current_block_index())
+            if enforce and not config.FORCE:
+                # Latch startup incompatibility too, so a later refresh cannot
+                # make a deliberately parked parser advertise ready again.
+                protocolstatus.current().require_supported(
+                    CurrentState().current_block_index() or 0
+                )
         for change_name in versions:
             protocol_change = versions[change_name]
-            check_change(protocol_change, change_name)
+            if enforce and not config.FORCE:
+                check_change(protocol_change, change_name)
     except (KeyError, TypeError, AttributeError) as e:
+        if protocolstatus.current() is not None:
+            protocolstatus.current().unavailable()
         logger.error("Malformed protocol_changes.json from upstream: %s", e)
         raise exceptions.VersionCheckError(
             "Malformed Counterparty version response. Use --force to ignore verification."
