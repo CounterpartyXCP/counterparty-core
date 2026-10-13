@@ -1,9 +1,10 @@
+import time
 from unittest.mock import MagicMock
 
 import pytest
 from counterpartycore.lib import config
 from counterpartycore.lib.api import apiserver, apiv1, healthz_server
-from counterpartycore.lib.utils import protocolstatus
+from counterpartycore.lib.utils import parserhealth, protocolstatus
 
 
 def publish_upgrade(height):
@@ -90,19 +91,28 @@ def test_unknown_stale_and_force_are_distinct(apiv2_client, monkeypatch):
 
 def test_readiness_rejects_protocol_upgrade_without_changing_liveness(monkeypatch):
     publish_upgrade(100)
+    stopped_progress = time.monotonic() - parserhealth.STALL_TIMEOUT_SECONDS - 1
     sampler = healthz_server.HealthSampler(
         last_parsed_provider=lambda: 100,
         backend_height_provider=lambda: 100,
         block_time_provider=lambda: None,
+        mempool_progress_provider=lambda: stopped_progress,
     )
     sampler._tick()
     snap = sampler.current_snapshot()
     assert snap.ready is False
     assert snap.reason == "protocol_upgrade_required"
+    assert snap.mempool_progress_at is None
     handler = object.__new__(healthz_server.HealthRequestHandler)
     handler.server = MagicMock(sampler=sampler)
     assert handler._readiness()[0] == 503
     assert handler._liveness()[0] == 200
+    # Only the deliberate upgrade halt suppresses the stall signal. Once
+    # compatible, an actually stuck mempool must still fail liveness.
+    protocolstatus.current().publish([])
+    sampler._tick()
+    assert handler._liveness()[0] == 503
+    assert handler._liveness()[1]["reason"] == "mempool_parser_stalled"
 
 
 def test_legacy_api_cannot_bypass_upgrade_guard(apiv1_client, current_block_index):

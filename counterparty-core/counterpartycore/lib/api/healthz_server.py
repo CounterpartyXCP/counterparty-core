@@ -329,7 +329,12 @@ class HealthSampler(threading.Thread):
             rebuild=rebuild,
             mempool_progress_at=(
                 self._mempool_progress_provider()
-                if rebuild is None and self._is_serving() and not self._api_only_provider()
+                if rebuild is None
+                and self._is_serving()
+                and not self._api_only_provider()
+                # A deliberately parked parser cannot advance its heartbeat;
+                # restarting an incompatible binary will not repair it.
+                and protocol_info["status"] != "incompatible"
                 else None
             ),
             protocol_status=protocol_info,
