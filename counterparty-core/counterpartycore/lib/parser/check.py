@@ -232,7 +232,7 @@ def software_version(*, enforce=True):
             "Use --force to ignore verification."
         ) from e
 
-    # Validate the complete manifest before publishing. A malformed response
+    # Validate applicable requirements before publishing. A malformed response
     # must not replace previously verified requirements or kill the monitor.
     try:
         requirements = []
@@ -240,16 +240,25 @@ def software_version(*, enforce=True):
         if not isinstance(versions, dict) or not versions:
             raise TypeError("Protocol manifest must be a non-empty object")
         for change_name, change in versions.items():
+            major = change["minimum_version_major"]
+            if type(major) is not int or major < 0:
+                raise TypeError("Protocol minimum versions must be non-negative integers")
+            # Like check_change, a supported older major needs no remaining
+            # fields. The manifest also contains parameter-only entries with
+            # major=0 and no version triplet or activation height.
+            if major < current_version[0]:
+                continue
             version = [change[f"minimum_version_{part}"] for part in ("major", "minor", "revision")]
+            if any(type(value) is not int or value < 0 for value in version):
+                raise TypeError("Protocol minimum versions must be non-negative integers")
+            if tuple(version) <= current_version:
+                continue
             height = change.get(protocol.network_block_index_name(), change["block_index"])
-            if any(type(value) is not int or value < 0 for value in (*version, height)):
-                raise TypeError(
-                    "Protocol versions and activation heights must be non-negative integers"
-                )
-            if tuple(version) > current_version:
-                requirements.append(
-                    {"change_name": change_name, "version": version, "activation_height": height}
-                )
+            if type(height) is not int or height < 0:
+                raise TypeError("Protocol activation heights must be non-negative integers")
+            requirements.append(
+                {"change_name": change_name, "version": version, "activation_height": height}
+            )
         if protocolstatus.current() is not None:
             protocolstatus.current().publish(requirements, CurrentState().current_block_index())
             if enforce and not config.FORCE:

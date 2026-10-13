@@ -185,6 +185,27 @@ def test_malformed_manifest_preserves_verified_requirement(monkeypatch, payload)
     assert state.summary(100)["status"] == "incompatible"
 
 
+def test_parameter_entries_in_published_manifest_do_not_require_version_triplets(monkeypatch):
+    response = requests.Response()
+    response.status_code = 200
+    response._content = json.dumps(check.protocol.PROTOCOL_CHANGES).encode()
+    monkeypatch.setattr(check.requests, "get", MagicMock(return_value=response))
+    assert check.software_version() is True
+    assert protocolstatus.summary(0)["status"] == "compatible"
+
+
+def test_newer_major_still_requires_a_complete_version_and_activation(monkeypatch):
+    response = requests.Response()
+    response.status_code = 200
+    response._content = json.dumps(
+        {"upgrade": {"minimum_version_major": config.VERSION_MAJOR + 1}}
+    ).encode()
+    monkeypatch.setattr(check.requests, "get", MagicMock(return_value=response))
+    with pytest.raises(exceptions.VersionCheckError):
+        check.software_version(enforce=False)
+    assert protocolstatus.summary(0)["status"] == "stale"
+
+
 def test_monitor_stop_is_interruptible_without_waiting_for_next_poll():
     monitor = ProtocolVersionMonitor()
     monitor.start()
