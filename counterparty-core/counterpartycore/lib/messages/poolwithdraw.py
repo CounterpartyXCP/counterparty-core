@@ -222,15 +222,7 @@ def parse(db, tx, message):
     # pay gas fee and increment counter
     fee = gas.get_transaction_fee(db, ID, tx["block_index"])
     if fee > 0:
-        ledger.events.debit(
-            db,
-            tx["source"],
-            config.XCP,
-            fee,
-            tx["tx_index"],
-            action="pool withdraw fee",
-            event=tx["tx_hash"],
-        )
+        gas.pay_fee(db, tx, tx["source"], fee, "pool withdraw fee")
     gas.increment_counter(db, ID, tx["block_index"])
 
     # execute withdrawal
