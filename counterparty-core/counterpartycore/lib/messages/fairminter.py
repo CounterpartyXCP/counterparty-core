@@ -946,15 +946,7 @@ def parse(db, tx, message):
     if pool_quantity > 0:
         pool_deposit_fee = gas.get_transaction_fee(db, pooldeposit.ID, tx["block_index"])
         if pool_deposit_fee > 0:
-            ledger.events.debit(
-                db,
-                tx["source"],
-                config.XCP,
-                pool_deposit_fee,
-                tx["tx_index"],
-                action="fairminter pool fee",
-                event=tx["tx_hash"],
-            )
+            gas.pay_fee(db, tx, tx["source"], pool_deposit_fee, "fairminter pool fee")
         gas.increment_counter(db, pooldeposit.ID, tx["block_index"])
 
 
