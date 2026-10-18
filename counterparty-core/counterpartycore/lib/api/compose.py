@@ -1095,7 +1095,7 @@ def unpack(db, datahex: str, block_index: int = None):
     """
     Unpacks Counterparty data in hex format and returns the message type and data.
     :param datahex: Data in hex format (e.g. 020000000001016a65c1624e53f4d33ce02e726a6606faed60cc014d5b1a578ba3e09b4b3f8f890100000000ffffffff020000000000000000176a150d55e8b6118808b7b663b365473f142274028b8af60245092701000000160014a3df8a5a83d4e2827b59b43f5ce6ce5d2e52093f0247304402204b7a2859cbce34e725a1132fec2dd4b075503dadff0a0c407ae7c22a7712fe4d0220563ceb2ceebdf649343bb24819fc808639cce7781305b4588ffbe4a20390d2780121020ace9adf60fe4ec05dab922ccdc5727cbf664cafc7cdb845de534855266314c800000000)
-    :param block_index: Block index of the transaction containing this data
+    :param block_index: Original transaction height; defaults to the current height if omitted.
     """
     try:
         data = binascii.unhexlify(datahex)
@@ -1233,7 +1233,7 @@ def unpack(db, datahex: str, block_index: int = None):
         elif message_type_id == messages.poolwithdraw.ID:
             message_type_name = "poolwithdraw"
             message_data = messages.poolwithdraw.unpack(db, message, return_dict=True)
-    except (exceptions.UnpackError, UnicodeDecodeError) as e:
+    except (exceptions.UnpackError, exceptions.DecodeError, UnicodeDecodeError) as e:
         message_data = {"error": str(e)}
 
     return {
