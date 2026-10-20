@@ -187,6 +187,12 @@ class CounterpartyServer(threading.Thread):
         # for fully-indexed databases.
         blocks.create_events_indexes(self.db)
         CurrentState().set_current_block_index(ledger.blocks.last_db_index(self.db))
+        # Verify upgrade metadata before UPGRADE_ACTIONS can reparse: every
+        # parsed block is checked against it, and an unverified status halts.
+        self.protocol_monitor = ProtocolVersionMonitor()
+        if not config.FORCE:
+            self.protocol_monitor.refresh(required=True)
+        self.protocol_monitor.start()
         blocks.check_database_version(self.db)
         # Version migration alone does not validate an imported/already-parsed
         # ledger against checkpoints introduced after it was originally built.
@@ -197,11 +203,6 @@ class CounterpartyServer(threading.Thread):
             self.startup_checkpoint_error = error
             raise
         database.optimize(self.db)
-
-        self.protocol_monitor = ProtocolVersionMonitor()
-        if not config.FORCE:
-            self.protocol_monitor.refresh(required=True)
-        self.protocol_monitor.start()
 
         self.backend_height_thread = BackendHeight()
         self.backend_height_thread.daemon = True

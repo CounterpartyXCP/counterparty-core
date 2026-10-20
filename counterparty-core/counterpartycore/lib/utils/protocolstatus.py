@@ -60,13 +60,19 @@ class ProtocolStatus:
         # Only requirements newer than this binary are stored, not the whole
         # protocol manifest. No Manager process or DB writes are necessary.
         self.buffer = Array("c", 32768)
+        # Last snapshot this process read or wrote. A reader that cannot take
+        # the shared lock in time (a busy API process, a spinning watcher) keeps
+        # this policy instead of degrading to "unknown", which would turn lock
+        # contention into 503s and parser halts.
+        self.last_read = None
 
     def read(self):
         if not self.buffer.get_lock().acquire(timeout=0.1):
-            return None
+            return self.last_read
         try:
             value = self.buffer.value
-            return json.loads(value) if value else {}
+            self.last_read = json.loads(value) if value else {}
+            return self.last_read
         finally:
             self.buffer.get_lock().release()
 
@@ -89,6 +95,7 @@ class ProtocolStatus:
             if len(encoded) >= len(self.buffer):
                 raise exceptions.VersionCheckError("Protocol requirements exceed the status limit")
             self.buffer.value = encoded
+            self.last_read = stored
         finally:
             self.buffer.get_lock().release()
 
@@ -117,7 +124,12 @@ class ProtocolStatus:
         if status["status"] == "unknown":
             raise exceptions.VersionCheckError("Protocol status has not been verified")
         if status["status"] == "incompatible":
-            self.update({"blocked": selected})
+            try:
+                self.update({"blocked": selected})
+            except exceptions.VersionCheckError:
+                # Latching is best effort: the barrier applies to this call
+                # either way and must not surface as a metadata failure.
+                pass
             raise exceptions.VersionUpdateRequiredError(
                 f"Protocol upgrade required: {selected['change_name']} activates at block "
                 f"{selected['activation_height']}; install v{status['required_version']} or newer."

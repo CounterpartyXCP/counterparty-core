@@ -99,6 +99,7 @@ class BlockchainWatcher:
         self.hash_by_sequence = {}
         self.last_block_check_time = 0
         self.upgrade_error = None
+        self.last_protocol_check_time = 0
         self.last_mempool_parsing_time = 0
         # catch up and clean mempool before starting
         self.stop_event = threading.Event()
@@ -371,11 +372,16 @@ class BlockchainWatcher:
 
         while not self.stop_event.is_set():
             try:
-                height = (
-                    CurrentState().current_block_count() or CurrentState().current_block_index()
-                )
-                if height is not None:
-                    protocolstatus.require_supported(height)
+                # Blocks are guarded in parse_new_block(); this only parks the
+                # watcher once the tip reaches a barrier. Throttled because the
+                # --no-mempool loop spins and every check takes a shared lock.
+                if time.time() - self.last_protocol_check_time >= 1:
+                    self.last_protocol_check_time = time.time()
+                    height = (
+                        CurrentState().current_block_count() or CurrentState().current_block_index()
+                    )
+                    if height is not None:
+                        protocolstatus.require_supported(height)
                 if not config.NO_MEMPOOL:
                     if len(RAW_MEMPOOL) > 0:
                         mempool_block = RAW_MEMPOOL.pop(0)

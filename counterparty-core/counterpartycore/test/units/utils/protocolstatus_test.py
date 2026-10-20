@@ -1,5 +1,6 @@
 import json
 import multiprocessing
+import threading
 import time
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -61,6 +62,31 @@ def test_activation_barrier_is_sticky_across_refresh_and_height_lag():
     assert state.summary(99)["status"] == "incompatible"
     with pytest.raises(exceptions.VersionUpdateRequiredError):
         state.require_supported(99)
+
+
+def test_lock_contention_keeps_the_last_verified_policy():
+    state = protocolstatus.ProtocolStatus()
+    state.publish([requirement()])
+    held, release = threading.Event(), threading.Event()
+
+    def hold_lock():
+        with state.buffer.get_lock():
+            held.set()
+            release.wait(5)
+
+    holder = threading.Thread(target=hold_lock)
+    holder.start()
+    try:
+        assert held.wait(5)
+        # Neither readers nor the parser guard may degrade to "unknown", and a
+        # failed latch must not mask the activation barrier.
+        assert state.summary(99)["status"] == "upgrade_pending"
+        state.require_supported(99)
+        with pytest.raises(exceptions.VersionUpdateRequiredError):
+            state.require_supported(100)
+    finally:
+        release.set()
+        holder.join(5)
 
 
 def test_guard_and_api_report_strongest_active_version():
@@ -177,7 +203,13 @@ def test_manifest_uses_network_activation_height(monkeypatch, flag, key):
 
 
 @pytest.mark.parametrize(
-    "payload", [{}, [], {"upgrade": {"block_index": 1, "minimum_version_major": "12"}}]
+    "payload",
+    [
+        {},
+        [],
+        {"upgrade": {"block_index": 1, "minimum_version_major": "12"}},
+        {"upgrade": {"block_index": 1, "minimum_version_major": True}},
+    ],
 )
 def test_malformed_manifest_preserves_verified_requirement(monkeypatch, payload):
     state = protocolstatus.current()
@@ -299,3 +331,34 @@ def test_server_parks_parser_but_keeps_diagnostic_api_running(monkeypatch, phase
     api.stop.assert_not_called()
     app.protocol_monitor.start.assert_called_once()
     assert watcher.start.call_count == (1 if phase == "watcher" else 0)
+
+
+def test_metadata_is_verified_before_upgrade_actions_reparse(monkeypatch):
+    # UPGRADE_ACTIONS reparses go through parse_block(), whose guard halts on
+    # unverified metadata: the startup refresh must come first.
+    monkeypatch.setattr(config, "MEMORY_PROFILE", False)
+    monkeypatch.setattr(server, "should_bootstrap_database", lambda *_: False)
+    for name in ("apply_outstanding_migration", "initialise_db"):
+        monkeypatch.setattr(server.database, name, MagicMock())
+    monkeypatch.setattr(server.blocks, "create_events_indexes", MagicMock())
+    monkeypatch.setattr(server.ledger.blocks, "last_db_index", MagicMock(return_value=99))
+    monkeypatch.setattr(server.CurrentState, "set_current_block_index", MagicMock())
+    order = []
+    monitor = MagicMock()
+    monitor.refresh.side_effect = lambda **_: order.append("refresh")
+    monkeypatch.setattr(server, "ProtocolVersionMonitor", MagicMock(return_value=monitor))
+
+    def upgrade_actions(_db):
+        order.append("upgrade_actions")
+        raise RuntimeError("stop after upgrade actions")
+
+    monkeypatch.setattr(server.blocks, "check_database_version", upgrade_actions)
+    app = server.CounterpartyServer(
+        SimpleNamespace(catch_up="normal", bootstrap_url=None, api_only=False)
+    )
+
+    with pytest.raises(RuntimeError, match="stop after upgrade actions"):
+        app.run_server()
+
+    assert order == ["refresh", "upgrade_actions"]
+    monitor.refresh.assert_called_once_with(required=True)
