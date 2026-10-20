@@ -22,6 +22,11 @@
   (RUSTSEC-2026-0338 to -0342, RUSTSEC-2026-0346 to -0349), and triage the
   unmaintained `unsafe-libyaml` and standalone `zbus` crates in the audit
   configuration.
+- Bump `pyo3` to 0.29.3 (RUSTSEC-2026-0176, RUSTSEC-2026-0177), `rustls` to
+  0.23.46 and `rustls-webpki` to 0.103.16 (RUSTSEC-2026-0049, -0098, -0099,
+  -0104, -0285, -0346, -0348, -0349) in `counterparty-rs`.
+- Bump `Werkzeug` to 3.1.9 (GHSA-g6x2-hccm-hh4m). The advisory only affects
+  nodes running on Windows.
 
 ## Bootstrap
 
