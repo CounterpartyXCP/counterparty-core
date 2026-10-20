@@ -1,5 +1,28 @@
 # Unreleased
 
+## Upgrade compatibility
+
+- Refresh published minimum-version requirements in a background thread every
+  five minutes, including API-only mode. The watcher no longer relies on a
+  once-at-startup call to an otherwise unused daily timer.
+- Expose cached protocol compatibility in the API root, response headers and
+  health readiness. Before activation, report a pending upgrade without blocking
+  service. At a known unsupported activation height, stop parsing before writing
+  the block and return `503 protocol_upgrade_required` for ordinary API requests;
+  diagnostic endpoints remain available and liveness stays separate.
+- Retain known upgrade requirements during metadata outages and report stale or
+  unknown verification explicitly. `--force` remains an explicit, advertised
+  unsafe bypass. No protocol rules, activation heights or ledger formats change.
+- Verify upgrade metadata at startup before any `UPGRADE_ACTIONS` reparse, so
+  reparsed blocks are checked against the published requirements.
+
+## Codebase
+
+- Bump `quinn-proto` to 0.11.19 and `rustls` to 0.23.46 in `counterparty-client`
+  (RUSTSEC-2026-0338 to -0342, RUSTSEC-2026-0346 to -0349), and triage the
+  unmaintained `unsafe-libyaml` and standalone `zbus` crates in the audit
+  configuration.
+
 ## Bootstrap
 
 - Download signed bootstrap snapshots from `https://bootstrap.counterparty.io`

@@ -375,13 +375,17 @@ def test_update_transaction_unsupported(ledger_db, defaults, blockchain_mock, te
     assert result["supported"] == 0
 
 
-def test_update_transaction_unsupported_mempool(ledger_db, defaults, blockchain_mock, caplog):
+def test_update_transaction_unsupported_mempool(ledger_db, defaults, blockchain_mock, monkeypatch):
     """Test update_transaction for mempool transactions (no log)"""
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0], data=b"\x00\x00")
     tx["block_index"] = config.MEMPOOL_BLOCK_INDEX
+    # Watch the logger call itself: caplog.text has been seen on slow CI runners
+    # carrying the previous test's identical "Unsupported transaction" record.
+    calls = []
+    monkeypatch.setattr(blocks.logger, "info", lambda msg, *args, **kwargs: calls.append(msg))
     # Should not log for mempool transactions
     blocks.update_transaction(ledger_db, tx, supported=False)
-    assert "Unsupported transaction" not in caplog.text
+    assert not any("Unsupported transaction" in msg for msg in calls)
 
 
 # Test for parse_tx with struct.error (lines 135-137)
