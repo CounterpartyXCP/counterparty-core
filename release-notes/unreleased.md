@@ -18,9 +18,12 @@
 
 ## API
 
-- Return MPMA decoding failures through the unpack endpoint's existing
-  `message_data.error` response (HTTP 200), rather than a generic HTTP 503 and
-  unexpected-error reports. Historical data still requires its original
+- Return MPMA decoding failures, including malformed address tables and
+  recipient indexes past the end of the table, through the existing
+  `message_data.error` response (HTTP 200) of `/v2/transactions/unpack` and
+  `/v2/transactions/info`, rather than a generic HTTP 503 and unexpected-error
+  reports. Verbose `unpacked_data` reports the specific error instead of the
+  generic "Could not unpack data". Historical data still requires its original
   `block_index`; omitting it uses the current height's protocol rules. This does
   not change consensus decoding or accept legacy messages under current rules.
 

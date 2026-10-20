@@ -1176,7 +1176,12 @@ def unpack(db, datahex: str, block_index: int = None):
                 # Match mpma.parse(): the mempool sentinel is above future
                 # activations, but pending data uses the next block's format.
                 block_index = ledger.blocks.last_db_index(db) + 1
-            mpma_message_data = messages.versions.mpma.unpack(message, block_index=block_index)
+            try:
+                mpma_message_data = messages.versions.mpma.unpack(message, block_index=block_index)
+            except IndexError as e:
+                # A recipient index past the address table. Handled here rather than in
+                # mpma.unpack(), whose exception text ends up in recorded statuses.
+                raise exceptions.UnpackError("address index out of range") from e
             message_data = []
             for asset_name, sends in mpma_message_data.items():
                 for send_info in sends:
