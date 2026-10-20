@@ -46,7 +46,13 @@ class ProtocolVersionMonitor(threading.Thread):
         if state is not None and not (state.read() or {}).get("last_successful_check"):
             delay = 0
         while not self.stop_event.wait(delay):
-            delay = self.refresh()
+            try:
+                delay = self.refresh()
+            except Exception as error:  # pylint: disable=broad-except
+                # A dead monitor would silently stop fetching new mandatory
+                # upgrades; keep retrying and leave the status to go stale.
+                logger.error("Protocol metadata refresh crashed: %s", error)
+                delay = protocolstatus.RETRY_INTERVAL
 
     def stop(self):
         self.stop_event.set()

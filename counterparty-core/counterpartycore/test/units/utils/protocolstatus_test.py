@@ -149,6 +149,18 @@ def test_periodic_monitor_is_independent_of_watcher_activity(monkeypatch):
     )
 
 
+def test_monitor_survives_unexpected_refresh_errors(monkeypatch):
+    monitor = ProtocolVersionMonitor()
+    monitor.stop_event = MagicMock()
+    monitor.stop_event.wait.side_effect = [False, False, True]
+    refresh = MagicMock(side_effect=[RuntimeError("boom"), protocolstatus.CHECK_INTERVAL])
+    monkeypatch.setattr(monitor, "refresh", refresh)
+    monitor.run()
+    assert refresh.call_count == 2
+    delays = [call.args[0] for call in monitor.stop_event.wait.call_args_list]
+    assert delays[1:] == [protocolstatus.RETRY_INTERVAL, protocolstatus.CHECK_INTERVAL]
+
+
 @pytest.mark.parametrize("required", [False, True])
 def test_monitor_retries_metadata_errors_without_dropping_cache(monkeypatch, required):
     state = protocolstatus.current()
