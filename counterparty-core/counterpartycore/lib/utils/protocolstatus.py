@@ -14,7 +14,7 @@ from counterpartycore.lib.ledger.currentstate import CurrentState
 CHECK_INTERVAL = 300
 RETRY_INTERVAL = 60
 MAX_METADATA_AGE = CHECK_INTERVAL * 2
-_state = None
+_state = None  # pylint: disable=invalid-name
 
 
 def evaluate(cached, height):
@@ -75,17 +75,17 @@ class ProtocolStatus:
             raise exceptions.VersionCheckError("Protocol status is unavailable")
         try:
             value = self.buffer.value
-            current = json.loads(value) if value else {}
+            stored = json.loads(value) if value else {}
             # Read/modify/write under one lock: a refresh must never erase a
             # parser's concurrently recorded activation barrier.
-            if current.get("blocked") and fields.get("blocked"):
+            if stored.get("blocked") and fields.get("blocked"):
                 fields = fields | {
                     "blocked": max(
-                        (current["blocked"], fields["blocked"]), key=lambda entry: entry["version"]
+                        (stored["blocked"], fields["blocked"]), key=lambda entry: entry["version"]
                     )
                 }
-            current.update(fields)
-            encoded = json.dumps(current).encode()
+            stored.update(fields)
+            encoded = json.dumps(stored).encode()
             if len(encoded) >= len(self.buffer):
                 raise exceptions.VersionCheckError("Protocol requirements exceed the status limit")
             self.buffer.value = encoded
@@ -125,7 +125,7 @@ class ProtocolStatus:
 
 
 def configure(state):
-    global _state  # noqa: PLW0603
+    global _state  # noqa: PLW0603  # pylint: disable=global-statement
     _state = state
 
 

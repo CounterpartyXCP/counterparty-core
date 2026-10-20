@@ -170,6 +170,11 @@ def asset_conservation(db, stop_event=None):
     logger.debug("All assets have been conserved.")
 
 
+def _is_non_negative_int(value):
+    # bool is an int subclass; a manifest `true` must not read as version 1.
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
 def software_version(*, enforce=True):
     if config.FORCE and enforce:
         return True
@@ -188,21 +193,21 @@ def software_version(*, enforce=True):
             raise TypeError("Protocol manifest must be a non-empty object")
         for change_name, change in versions.items():
             major = change["minimum_version_major"]
-            if type(major) is not int or major < 0:
+            if not _is_non_negative_int(major):
                 raise TypeError("Protocol minimum versions must be non-negative integers")
             # Parameter-only entries have major=0 and no other version fields.
             # Older major versions are already supported by this binary.
             if major < current_version[0]:
                 continue
             version = [change[f"minimum_version_{part}"] for part in ("major", "minor", "revision")]
-            if any(type(value) is not int or value < 0 for value in version):
+            if not all(_is_non_negative_int(value) for value in version):
                 raise TypeError("Protocol minimum versions must be non-negative integers")
             if tuple(version) <= current_version:
                 continue
             activation_height = change.get(
                 protocol.network_block_index_name(), change["block_index"]
             )
-            if type(activation_height) is not int or activation_height < 0:
+            if not _is_non_negative_int(activation_height):
                 raise TypeError("Protocol activation heights must be non-negative integers")
             requirements.append(
                 {
