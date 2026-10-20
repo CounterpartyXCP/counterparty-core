@@ -10,60 +10,33 @@ from counterpartycore.lib.messages.data import checkpoints
 from counterpartycore.lib.parser import check
 
 
-def test_check_change_version_ok():
-    """Test check_change when version is acceptable."""
-    protocol_change = {
-        "block_index": 100,
-        "minimum_version_major": config.VERSION_MAJOR,
-        "minimum_version_minor": config.VERSION_MINOR,
-        "minimum_version_revision": config.VERSION_REVISION,
-    }
+@pytest.fixture
+def check_requirement(monkeypatch):
+    def run(change):
+        response = requests.Response()
+        response.status_code = 200
+        response._content = json.dumps({"test_change": change}).encode()
+        monkeypatch.setattr(check.requests, "get", lambda *a, **k: response)
+        return check.software_version()
 
-    # Should not raise any exception
-    check.check_change(protocol_change, "test_change")
-
-
-def test_check_change_version_major_too_low(ledger_db, current_block_index):
-    """Test check_change when major version is too low."""
-    protocol_change = {
-        "block_index": 1,  # In the past
-        "minimum_version_major": config.VERSION_MAJOR + 1,
-        "minimum_version_minor": 0,
-        "minimum_version_revision": 0,
-    }
-
-    with pytest.raises(exceptions.VersionUpdateRequiredError):
-        check.check_change(protocol_change, "test_change")
+    return run
 
 
-def test_check_change_version_minor_too_low(ledger_db, current_block_index):
-    """Test check_change when minor version is too low."""
-    protocol_change = {
-        "block_index": 1,  # In the past
-        "minimum_version_major": config.VERSION_MAJOR,
-        "minimum_version_minor": config.VERSION_MINOR + 1,
-        "minimum_version_revision": 0,
-    }
-
-    with pytest.raises(exceptions.VersionUpdateRequiredError):
-        check.check_change(protocol_change, "test_change")
-
-
-def test_check_change_version_revision_too_low(ledger_db, current_block_index):
-    """Test check_change when revision version is too low."""
-    protocol_change = {
-        "block_index": 1,  # In the past
-        "minimum_version_major": config.VERSION_MAJOR,
-        "minimum_version_minor": config.VERSION_MINOR,
-        "minimum_version_revision": config.VERSION_REVISION + 1,
-    }
-
-    with pytest.raises(exceptions.VersionUpdateRequiredError):
-        check.check_change(protocol_change, "test_change")
+@pytest.mark.parametrize("bump", [None, "major", "minor", "revision"])
+def test_software_version_requirement(check_requirement, bump):
+    change = {"block_index": 1}
+    for part in ("major", "minor", "revision"):
+        change[f"minimum_version_{part}"] = getattr(config, f"VERSION_{part.upper()}")
+    if bump is None:
+        assert check_requirement(change) is True
+    else:
+        change[f"minimum_version_{bump}"] += 1
+        with pytest.raises(exceptions.VersionUpdateRequiredError):
+            check_requirement(change)
 
 
-def test_check_change_version_warning_future_block(ledger_db, current_block_index, caplog):
-    """Test check_change logs warning when block is in the future."""
+def test_software_version_warning_future_block(check_requirement, caplog, monkeypatch):
+    monkeypatch.setattr(check.logger, "propagate", True)
     protocol_change = {
         "block_index": 999999999,  # Far in the future
         "minimum_version_major": config.VERSION_MAJOR + 1,
@@ -72,12 +45,11 @@ def test_check_change_version_warning_future_block(ledger_db, current_block_inde
     }
 
     # Should not raise, just log a warning (block is in the future)
-    check.check_change(protocol_change, "test_change")
+    check_requirement(protocol_change)
+    assert "before block 999999999" in caplog.text
 
 
-def test_check_change_uses_the_network_activation_height(
-    ledger_db, current_block_index, monkeypatch
-):
+def test_software_version_uses_the_network_activation_height(check_requirement, monkeypatch):
     """The minimum-version gate must fire at the height of the network the node
     runs on. Reading the mainnet `block_index` on signet/testnet compares against
     a height that network never reaches, so enforcement silently degraded to a
@@ -91,14 +63,14 @@ def test_check_change_uses_the_network_activation_height(
     }
 
     # On mainnet the change is not active yet: warn only.
-    check.check_change(protocol_change, "test_change")
+    check_requirement(protocol_change)
 
     monkeypatch.setattr(config, "SIGNET", True)
-    with pytest.raises(exceptions.VersionUpdateRequiredError, match="as of block 1,"):
-        check.check_change(protocol_change, "test_change")
+    with pytest.raises(exceptions.VersionUpdateRequiredError, match="activates at block 1;"):
+        check_requirement(protocol_change)
 
 
-def test_check_change_falls_back_to_the_mainnet_height(ledger_db, current_block_index, monkeypatch):
+def test_software_version_falls_back_to_the_mainnet_height(check_requirement, monkeypatch):
     """An upstream entry predating the per-network keys must still be enforced."""
     protocol_change = {
         "block_index": 1,
@@ -108,7 +80,7 @@ def test_check_change_falls_back_to_the_mainnet_height(ledger_db, current_block_
     }
     monkeypatch.setattr(config, "TESTNET4", True)
     with pytest.raises(exceptions.VersionUpdateRequiredError):
-        check.check_change(protocol_change, "test_change")
+        check_requirement(protocol_change)
 
 
 def test_software_version_force_mode():
@@ -177,6 +149,9 @@ def test_software_version_json_decode_error(monkeypatch):
         status_code = 200
         text = "not valid json"
 
+        def raise_for_status(self):
+            pass
+
     def mock_get(*args, **kwargs):
         return MockResponse()
 
@@ -210,6 +185,9 @@ def test_software_version_success(monkeypatch):
                 }
             }
         )
+
+        def raise_for_status(self):
+            pass
 
     def mock_get(*args, **kwargs):
         return MockResponse()

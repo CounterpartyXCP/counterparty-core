@@ -37,7 +37,7 @@ from typing import Optional
 from counterpartycore.lib import config
 from counterpartycore.lib.api import apiwatcher, dbstatus, parsedevents
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.utils import database, helpers, parserhealth
+from counterpartycore.lib.utils import database, helpers, parserhealth, protocolstatus
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -71,6 +71,7 @@ class HealthSnapshot:
     # pod is healthy and working, but must not receive traffic yet.
     rebuild: Optional[dbstatus.RebuildProgress] = None
     mempool_progress_at: Optional[float] = None
+    protocol_status: Optional[dict] = None
 
 
 def _instrument_dispatcher(dispatcher):
@@ -295,6 +296,12 @@ class HealthSampler(threading.Thread):
                 # an `--api-only` node, where `_compute_caught_up` reports ready
                 # unconditionally, that would otherwise be never.
                 caught_up, ledger_reason = False, "watcher_stopped"
+        protocol_height = max(
+            last_parsed or 0, backend_height or 0, CurrentState().current_block_count() or 0
+        )
+        protocol_info = protocolstatus.summary(protocol_height)
+        if protocolstatus.error(protocol_info):
+            caught_up, ledger_reason = False, protocolstatus.error(protocol_info)
         ready = caught_up and not over_saturated
         if ready:
             reason = None
@@ -315,9 +322,15 @@ class HealthSampler(threading.Thread):
             rebuild=rebuild,
             mempool_progress_at=(
                 self._mempool_progress_provider()
-                if rebuild is None and self._is_serving() and not self._api_only_provider()
+                if rebuild is None
+                and self._is_serving()
+                and not self._api_only_provider()
+                # A deliberately parked parser cannot advance its heartbeat;
+                # restarting an incompatible binary will not repair it.
+                and protocol_info["status"] != "incompatible"
                 else None
             ),
+            protocol_status=protocol_info,
         )
         self._maybe_log_worker_stats(now, workers, saturation_seconds)
 
@@ -515,8 +528,13 @@ class HealthRequestHandler(BaseHTTPRequestHandler):
     def _readiness(self):
         snap = self.server.sampler.current_snapshot()
         if snap.ready:
-            return 200, {"status": "ready"}
+            body = {"status": "ready"}
+            if snap.protocol_status is not None:
+                body["protocol_status"] = snap.protocol_status
+            return 200, body
         body = {"status": "degraded", "reason": snap.reason}
+        if snap.protocol_status is not None:
+            body["protocol_status"] = snap.protocol_status
         if snap.rebuild is not None:
             body["rebuild"] = snap.rebuild.as_dict()
         if snap.backend_height is not None:

@@ -7,7 +7,7 @@ from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages.data import checkpoints
 from counterpartycore.lib.parser import protocol
-from counterpartycore.lib.utils import database, hashcodec
+from counterpartycore.lib.utils import database, hashcodec, protocolstatus
 from counterpartycore.lib.utils.helpers import dhash_string
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -170,82 +170,83 @@ def asset_conservation(db, stop_event=None):
     logger.debug("All assets have been conserved.")
 
 
-def check_change(protocol_change, change_name):
-    # Check client version.
-    passed = True
-    if config.VERSION_MAJOR < protocol_change["minimum_version_major"]:
-        passed = False
-    elif config.VERSION_MAJOR == protocol_change["minimum_version_major"]:
-        if config.VERSION_MINOR < protocol_change["minimum_version_minor"]:
-            passed = False
-        elif config.VERSION_MINOR == protocol_change["minimum_version_minor"]:
-            if config.VERSION_REVISION < protocol_change["minimum_version_revision"]:
-                passed = False
-
-    if not passed:
-        # The activation height is per network. Reading the mainnet
-        # `block_index` on testnet3/testnet4/signet compares the local height
-        # against a height that network will never reach, so min-version
-        # enforcement silently degraded to a warning there -- a node too old for
-        # an activated change would keep parsing and fork instead of halting.
-        # Regtest keeps the mainnet key on purpose: it has no entry of its own
-        # and enables every change from block 0, so enforcing at 0 would halt
-        # every regtest node running anything but the newest version.
-        activation_block_index = protocol_change.get(
-            protocol.network_block_index_name(), protocol_change["block_index"]
-        )
-        explanation = f"Your version of {config.APP_NAME} is v{config.VERSION_STRING}, but, "
-        explanation += f"as of block {activation_block_index}, the minimum version is "
-        explanation += f"v{protocol_change['minimum_version_major']}.{protocol_change['minimum_version_minor']}.{protocol_change['minimum_version_revision']}. "
-        explanation += f"Reason: ' {change_name} '. Please upgrade to the latest version and restart the server."
-        if CurrentState().current_block_index() >= activation_block_index:
-            raise exceptions.VersionUpdateRequiredError(explanation)
-        logger.warning(explanation)
+def _is_non_negative_int(value):
+    # bool is an int subclass; a manifest `true` must not read as version 1.
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
 
 
-def software_version():
-    if config.FORCE:
+def software_version(*, enforce=True):
+    if config.FORCE and enforce:
         return True
     logger.debug("Checking Counterparty version...")
-
+    state = protocolstatus.current() or protocolstatus.ProtocolStatus()
     try:
         response = requests.get(
             config.PROTOCOL_CHANGES_URL, headers={"cache-control": "no-cache"}, timeout=10
         )
+        response.raise_for_status()
         versions = json.loads(response.text)
+        # Validate every applicable requirement before replacing the cache.
+        requirements = []
+        current_version = (config.VERSION_MAJOR, config.VERSION_MINOR, config.VERSION_REVISION)
+        if not isinstance(versions, dict) or not versions:
+            raise TypeError("Protocol manifest must be a non-empty object")
+        for change_name, change in versions.items():
+            major = change["minimum_version_major"]
+            if not _is_non_negative_int(major):
+                raise TypeError("Protocol minimum versions must be non-negative integers")
+            # Parameter-only entries have major=0 and no other version fields.
+            # Older major versions are already supported by this binary.
+            if major < current_version[0]:
+                continue
+            version = [change[f"minimum_version_{part}"] for part in ("major", "minor", "revision")]
+            if not all(_is_non_negative_int(value) for value in version):
+                raise TypeError("Protocol minimum versions must be non-negative integers")
+            if tuple(version) <= current_version:
+                continue
+            activation_height = change.get(
+                protocol.network_block_index_name(), change["block_index"]
+            )
+            if not _is_non_negative_int(activation_height):
+                raise TypeError("Protocol activation heights must be non-negative integers")
+            requirements.append(
+                {
+                    "change_name": change_name,
+                    "version": version,
+                    "activation_height": activation_height,
+                }
+            )
+        height = CurrentState().current_block_index() or 0
+        state.publish(requirements, height)
     except (
-        requests.exceptions.ConnectionError,
+        requests.exceptions.RequestException,
         ConnectionRefusedError,
-        ValueError,
-        requests.exceptions.ReadTimeout,
         TimeoutError,
-        json.decoder.JSONDecodeError,
+        ValueError,
+        KeyError,
+        TypeError,
+        AttributeError,
+        exceptions.VersionCheckError,
     ) as e:
-        logger.error(
-            "Unable to check Counterparty version from %s: %s", config.PROTOCOL_CHANGES_URL, e
-        )
+        try:
+            state.unavailable()
+        except exceptions.VersionCheckError:
+            logger.error("Could not publish protocol metadata failure")
         raise exceptions.VersionCheckError(
             f"Unable to check Counterparty version from {config.PROTOCOL_CHANGES_URL}: {e}. "
             "Use --force to ignore verification."
         ) from e
 
-    # check_change reads dict keys ("minimum_version_major" etc.) and
-    # compares them with `<` to ints. A malformed upstream JSON (compromised
-    # counterparty.io / DNS poisoning / TLS-chain attack) where any of those
-    # values is a string or missing would raise TypeError/KeyError. That isn't
-    # in the except tuple above, so it would propagate through software_version
-    # -> follow.handle()'s broad except -> self.stop() and halt the watcher
-    # on a single bad upstream response.
-    try:
-        for change_name in versions:
-            protocol_change = versions[change_name]
-            check_change(protocol_change, change_name)
-    except (KeyError, TypeError, AttributeError) as e:
-        logger.error("Malformed protocol_changes.json from upstream: %s", e)
-        raise exceptions.VersionCheckError(
-            "Malformed Counterparty version response. Use --force to ignore verification."
-        ) from e
-
+    if enforce:
+        state.require_supported(height)
+        status = state.summary(height)
+        if status["status"] == "upgrade_pending":
+            logger.warning(
+                "Upgrade to v%s before block %s (%s)",
+                status["required_version"],
+                status["activation_height"],
+                status["change_name"],
+            )
     logger.debug("Version check passed.")
     return True
 
