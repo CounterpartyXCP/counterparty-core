@@ -312,7 +312,14 @@ def parse(db, tx, message):
     # pay gas fee and increment counter
     fee = gas.get_transaction_fee(db, ID, tx["block_index"])
     if fee > 0:
-        gas.pay_fee(db, tx, tx["source"], fee, "pool deposit fee")
+        gas.pay_fee(
+            db,
+            tx,
+            tx["source"],
+            fee,
+            "pool deposit fee",
+            destroy=protocol.enabled("fix_pool_fee_destruction", tx["block_index"]),
+        )
     gas.increment_counter(db, ID, tx["block_index"])
 
     # execute deposit — remap to sorted pair order

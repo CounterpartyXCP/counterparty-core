@@ -946,7 +946,14 @@ def parse(db, tx, message):
     if pool_quantity > 0:
         pool_deposit_fee = gas.get_transaction_fee(db, pooldeposit.ID, tx["block_index"])
         if pool_deposit_fee > 0:
-            gas.pay_fee(db, tx, tx["source"], pool_deposit_fee, "fairminter pool fee")
+            gas.pay_fee(
+                db,
+                tx,
+                tx["source"],
+                pool_deposit_fee,
+                "fairminter pool fee",
+                destroy=protocol.enabled("fix_pool_fee_destruction", tx["block_index"]),
+            )
         gas.increment_counter(db, pooldeposit.ID, tx["block_index"])
 
 

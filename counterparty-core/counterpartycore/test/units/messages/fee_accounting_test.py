@@ -8,6 +8,7 @@ from counterpartycore.lib.api import apiwatcher, statetables
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import attach, fairminter, gas, pooldeposit, poolwithdraw, utxo
 from counterpartycore.lib.parser import blocks, check
+from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
 def _new_transaction(db, blockchain_mock, source):
@@ -157,6 +158,36 @@ def test_fee_accounting(ledger_db, state_db, defaults, blockchain_mock, monkeypa
     assert _api_xcp_supply(state_db) == ledger.supplies.xcp_supply(db)
 
     check.asset_conservation(db)
+
+
+@pytest.mark.parametrize("kind", ["deposit", "withdraw", "fairminter", "attach", "utxo"])
+def test_fee_destruction_before_activation(ledger_db, defaults, blockchain_mock, monkeypatch, kind):
+    db = ledger_db
+    tx, handler, message = _prepare_fee_action(db, blockchain_mock, defaults, kind)
+    supply_before = ledger.supplies.xcp_supply(db)
+    held_before = ledger.supplies.held(db)[config.XCP]
+    monkeypatch.setattr(gas, "get_transaction_count_for_last_period", lambda *args: 8064)
+    fee_id = pooldeposit.ID if kind == "fairminter" else handler.ID
+    fee = gas.get_transaction_fee(db, fee_id, tx["block_index"])
+    assert fee > 0
+    with ProtocolChangesDisabled(["fix_pool_fee_destruction"]):
+        handler.parse(db, tx, message)
+
+    issuance_fee = config.UNIT // 2 if kind == "fairminter" else 0
+    # The fee is debited either way.
+    assert held_before - ledger.supplies.held(db)[config.XCP] == fee + issuance_fee
+    destructions = db.execute(
+        "SELECT * FROM destructions WHERE tx_index = ?", (tx["tx_index"],)
+    ).fetchall()
+    xcp_burns = [row["quantity"] for row in destructions if row["asset"] == config.XCP]
+    if kind in ("attach", "utxo"):
+        # Attach and utxo fees were destroyed before the gate and are not affected by it.
+        assert xcp_burns == [fee]
+        assert supply_before - ledger.supplies.xcp_supply(db) == fee
+    else:
+        # Below the activation height a pool fee is debited without a destruction.
+        assert xcp_burns == []
+        assert supply_before - ledger.supplies.xcp_supply(db) == issuance_fee
 
 
 @pytest.mark.parametrize("kind", ["deposit", "withdraw", "fairminter"])

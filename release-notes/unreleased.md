@@ -3,9 +3,11 @@
 ## Protocol
 
 - Record XCP destruction when a nonzero pool deposit, pool withdrawal, or
-  fairminter pool-creation fee is charged. This keeps XCP supply and asset
-  conservation consistent with the debited balances, including the API's supply
-  projection. Trading fees retained in pool reserves are unaffected.
+  fairminter pool-creation fee is charged (`fix_pool_fee_destruction`). This
+  keeps XCP supply and asset conservation consistent with the debited balances,
+  including the API's supply projection. Trading fees retained in pool reserves
+  are unaffected. No such fee has been charged on mainnet, testnet4 or signet,
+  so no historical block is affected.
 
 ## Upgrade compatibility
 

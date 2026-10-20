@@ -6,7 +6,7 @@ import struct
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import gas
-from counterpartycore.lib.parser import messagetype
+from counterpartycore.lib.parser import messagetype, protocol
 from counterpartycore.lib.utils import helpers
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -222,7 +222,14 @@ def parse(db, tx, message):
     # pay gas fee and increment counter
     fee = gas.get_transaction_fee(db, ID, tx["block_index"])
     if fee > 0:
-        gas.pay_fee(db, tx, tx["source"], fee, "pool withdraw fee")
+        gas.pay_fee(
+            db,
+            tx,
+            tx["source"],
+            fee,
+            "pool withdraw fee",
+            destroy=protocol.enabled("fix_pool_fee_destruction", tx["block_index"]),
+        )
     gas.increment_counter(db, ID, tx["block_index"])
 
     # execute withdrawal
