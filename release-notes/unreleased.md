@@ -36,6 +36,15 @@
   `block_index`; omitting it uses the current height's protocol rules. This does
   not change consensus decoding or accept legacy messages under current rules.
 
+## Mempool
+
+- Compact the unsupported-transaction cache to 900,000 entries at its
+  1,000,000-entry limit, including when restoring a full cache. New hashes
+  append between compactions instead of triggering a full-file rewrite on
+  every mempool batch. Snapshots are written to a temporary file and atomically
+  replaced, preserving the previous file if writing or replacement fails.
+  The cache format and transaction validation rules are unchanged.
+
 ## Codebase
 
 - Bump `quinn-proto` to 0.11.19 and `rustls` to 0.23.46 in `counterparty-client`

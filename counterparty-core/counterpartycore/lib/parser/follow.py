@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import struct
+import tempfile
 import threading
 import time
 
@@ -598,6 +599,8 @@ class NotSupportedTransactionsCache(metaclass=helpers.SingletonMeta):
             deduped_reversed.reverse()
             self._ordered_txs = deduped_reversed[-self.MAX_SIZE :]
             self.not_suppported_txs = set(self._ordered_txs)
+            if len(self._ordered_txs) >= self.MAX_SIZE:
+                self._trim()
             # Rewrite once at startup: compacts the file and guarantees the
             # trailing-newline format that add() relies on when appending
             # (legacy files were written without a trailing newline).
@@ -607,11 +610,35 @@ class NotSupportedTransactionsCache(metaclass=helpers.SingletonMeta):
             )
 
     def backup(self):
-        with open(self.cache_path, "w", encoding="utf-8") as f:
-            f.writelines(tx_hash + "\n" for tx_hash in self._ordered_txs)
+        # Keep the old snapshot intact until the new one is completely written.
+        # The temporary file must share its filesystem for atomic replacement.
+        temporary = tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=os.path.dirname(self.cache_path),
+            prefix=os.path.basename(self.cache_path) + ".",
+            suffix=".tmp",
+            delete=False,
+        )
+        try:
+            with temporary as f:
+                f.writelines(tx_hash + "\n" for tx_hash in self._ordered_txs)
+            os.replace(temporary.name, self.cache_path)
+        finally:
+            if os.path.exists(temporary.name):
+                os.remove(temporary.name)
         logger.trace(
             f"Backed up {len(self.not_suppported_txs)} not supported transactions to cache"
         )
+
+    def _trim(self):
+        # Leave 10% headroom so subsequent additions append instead of
+        # rewriting the full cache on every mempool batch.
+        keep = max(1, self.MAX_SIZE * 9 // 10)
+        evicted = self._ordered_txs[:-keep]
+        self._ordered_txs = self._ordered_txs[-keep:]
+        for tx_hash in evicted:
+            self.not_suppported_txs.discard(tx_hash)
 
     def clear(self):
         self.not_suppported_txs = set()
@@ -630,10 +657,7 @@ class NotSupportedTransactionsCache(metaclass=helpers.SingletonMeta):
             return
         if len(self._ordered_txs) > self.MAX_SIZE:
             # Evict oldest entries and compact the file.
-            evicted = self._ordered_txs[: -self.MAX_SIZE]
-            self._ordered_txs = self._ordered_txs[-self.MAX_SIZE :]
-            for tx_hash in evicted:
-                self.not_suppported_txs.discard(tx_hash)
+            self._trim()
             self.backup()
         else:
             # Append only the new hashes instead of rewriting the whole file.
