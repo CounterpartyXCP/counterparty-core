@@ -1,5 +1,14 @@
 # Unreleased
 
+## Protocol
+
+- Record XCP destruction when a nonzero pool deposit, pool withdrawal, or
+  fairminter pool-creation fee is charged (`fix_pool_fee_destruction`). This
+  keeps XCP supply and asset conservation consistent with the debited balances,
+  including the API's supply projection. Trading fees retained in pool reserves
+  are unaffected. No such fee has been charged on mainnet, testnet4 or signet,
+  so no historical block is affected.
+
 ## Upgrade compatibility
 
 - Refresh published minimum-version requirements in a background thread every
@@ -38,6 +47,8 @@
   -0104, -0285, -0346, -0348, -0349) in `counterparty-rs`.
 - Bump `Werkzeug` to 3.1.9 (GHSA-g6x2-hccm-hh4m). The advisory only affects
   nodes running on Windows.
+- Bump `rustls-webpki` to 0.103.16 (RUSTSEC-2026-0382) and `webpki-root-certs`
+  to 1.0.10 (RUSTSEC-2026-0383) in `counterparty-client`.
 
 ## Bootstrap
 

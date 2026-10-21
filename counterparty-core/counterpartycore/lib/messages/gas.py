@@ -10,6 +10,33 @@ logger = logging.getLogger(config.LOGGER_NAME)
 PERIOD_DURATION = 2016  # blocks, around 2 weeks
 
 
+def pay_fee(db, tx, fee_payer, fee, action, destroy=True):
+    """Debit an XCP usage fee and, unless `destroy` is False, record its destruction."""
+    ledger.events.debit(
+        db,
+        fee_payer,
+        config.XCP,
+        fee,
+        tx["tx_index"],
+        action=action,
+        event=tx["tx_hash"],
+    )
+    if not destroy:
+        return
+    destroy_bindings = {
+        "tx_index": tx["tx_index"],
+        "tx_hash": tx["tx_hash"],
+        "block_index": tx["block_index"],
+        # tx["source"], not fee_payer: the bindings attach and utxo have always used.
+        "source": tx["source"],
+        "asset": config.XCP,
+        "quantity": fee,
+        "tag": action,
+        "status": "valid",
+    }
+    ledger.events.insert_record(db, "destructions", destroy_bindings, "ASSET_DESTRUCTION")
+
+
 def get_transaction_count_by_block(db, transaction_id, block_index):
     cursor = db.cursor()
     sql = """

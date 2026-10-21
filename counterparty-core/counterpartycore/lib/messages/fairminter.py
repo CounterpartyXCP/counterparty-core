@@ -946,14 +946,13 @@ def parse(db, tx, message):
     if pool_quantity > 0:
         pool_deposit_fee = gas.get_transaction_fee(db, pooldeposit.ID, tx["block_index"])
         if pool_deposit_fee > 0:
-            ledger.events.debit(
+            gas.pay_fee(
                 db,
+                tx,
                 tx["source"],
-                config.XCP,
                 pool_deposit_fee,
-                tx["tx_index"],
-                action="fairminter pool fee",
-                event=tx["tx_hash"],
+                "fairminter pool fee",
+                destroy=protocol.enabled("fix_pool_fee_destruction", tx["block_index"]),
             )
         gas.increment_counter(db, pooldeposit.ID, tx["block_index"])
 
