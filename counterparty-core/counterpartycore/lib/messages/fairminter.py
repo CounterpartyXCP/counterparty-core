@@ -1,4 +1,6 @@
+import bisect
 import decimal
+import hashlib
 import logging
 import math
 import struct
@@ -16,6 +18,11 @@ D = decimal.Decimal
 
 ID = 90
 MIN_MINTED_ASSET_COMMISSION = D("0.0000001")
+# Fairminter cards: the parsed fairminter creates one card subasset per entry,
+# so the count is bounded; a mint draws at most `max_mint_per_tx` cards, one
+# hash per draw, so that is bounded too.
+MAX_CARDS = 1000
+MAX_CARDS_PER_MINT = 1000
 
 
 def _is_nan(number):
@@ -51,6 +58,8 @@ def validate(
     mime_type="",
     pool_quantity=0,
     lp_asset="",
+    cards=None,
+    lock_cards=False,
     block_index=None,
 ):
     problems = []
@@ -173,8 +182,13 @@ def validate(
             and existing_asset["description"] != description
         ):
             problems.append(f"Description of asset `{asset_name}` is locked.")
-        # check if hard cap is already reached
-        if hard_cap and existing_asset["supply"] + premint_quantity + pool_quantity >= hard_cap:
+        # check if hard cap is already reached (a card fairminter's hard cap
+        # counts cards, not the parent's supply: see `validate_cards`)
+        if (
+            hard_cap
+            and not cards
+            and existing_asset["supply"] + premint_quantity + pool_quantity >= hard_cap
+        ):
             problems.append(f"Hard cap of asset `{asset_name}` is already reached.")
         if existing_asset["divisible"] != divisible:
             problems.append(f"Divisibility of asset `{asset_name}` is different.")
@@ -296,7 +310,204 @@ def validate(
     if protocol.enabled("fairminter_v2", block_index=block_index):
         problems += helpers.check_content(mime_type, description, block_index=block_index)
 
+    if cards:
+        problems += validate_cards(
+            db,
+            source,
+            asset_name,
+            cards,
+            price,
+            max_mint_per_tx,
+            hard_cap,
+            premint_quantity,
+            soft_cap,
+            minted_asset_commission,
+            pool_quantity,
+            divisible,
+            lock_cards,
+            block_index=block_index,
+        )
+    elif lock_cards:
+        problems.append("lock_cards requires cards")
+
     return problems
+
+
+def _is_int(value):
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def card_name(card, card_index):
+    """The subasset child name of a card entry: its explicit name
+    (`[weight, max_supply, name]`) or its number (`[weight, max_supply]`)."""
+    if len(card) > 2 and card[2]:
+        return card[2]
+    return str(card_index)
+
+
+def card_longname(asset_name, card, card_index):
+    """Name of a card of a fairminter whose (long)name is `asset_name`:
+    `<asset_name>.<name or card_index>`."""
+    return f"{asset_name}.{card_name(card, card_index)}"
+
+
+def pack_cards(cards):
+    """Normalize card entries for the wire: `[weight, max_supply]`, plus the
+    name when one is given."""
+    packed = []
+    for card in cards:
+        entry = [int(card[0]), int(card[1])]
+        if len(card) > 2 and card[2]:
+            entry.append(str(card[2]))
+        packed.append(entry)
+    return packed
+
+
+def validate_cards(
+    db,
+    source,
+    asset_name,
+    cards,
+    price,
+    max_mint_per_tx,
+    hard_cap,
+    premint_quantity,
+    soft_cap,
+    minted_asset_commission,
+    pool_quantity,
+    divisible,
+    lock_cards=False,
+    block_index=None,
+):
+    """Validate the `cards` of a fairminter: a list of `[weight, max_supply]`
+    pairs, one per card subasset `<asset_name>.1` .. `<asset_name>.N`.
+    `weight` is the card's relative draw probability; `max_supply` caps the
+    card asset's supply (0: unlimited). Everything that would complicate the
+    draws (premint, soft cap, commission, pool, divisibility) is refused."""
+    if not protocol.enabled("fairminter_cards", block_index=block_index):
+        return ["cards are not yet enabled"]
+    problems = validate_card_entries(cards, start_index=1)
+    if problems:
+        return problems
+    if not isinstance(lock_cards, bool):
+        problems.append("`lock_cards` must be a boolean.")
+
+    if divisible:
+        problems.append("cards require divisible = False")
+    if premint_quantity > 0:
+        problems.append("cards are incompatible with premint_quantity")
+    if soft_cap > 0:
+        problems.append("cards are incompatible with soft_cap")
+    # (a NaN commission is reported above; an ordering comparison on it raises)
+    if (
+        minted_asset_commission is not None
+        and not _is_nan(minted_asset_commission)
+        and minted_asset_commission > 0
+    ):
+        problems.append("cards are incompatible with minted_asset_commission")
+    if pool_quantity > 0:
+        problems.append("cards are incompatible with pool_quantity")
+    # one hash per drawn card: bound the work a single mint can require
+    if max_mint_per_tx <= 0:
+        problems.append("cards require max_mint_per_tx > 0")
+    elif max_mint_per_tx > MAX_CARDS_PER_MINT:
+        problems.append(f"cards require max_mint_per_tx <= {MAX_CARDS_PER_MINT}")
+
+    card_problems, remaining_supply, all_capped = validate_card_assets(
+        db, source, asset_name, cards, start_index=1, block_index=block_index
+    )
+    problems += card_problems
+
+    # a mint must always find a card to draw: when every card is capped the
+    # hard cap (the number of cards this fairminter may mint) is required and
+    # cannot exceed what the cards can still supply
+    if all_capped:
+        if hard_cap == 0:
+            problems.append("hard_cap is required when every card has a max_supply")
+        elif hard_cap > remaining_supply:
+            problems.append("hard_cap exceeds the remaining supply of the cards")
+    if price == 0 and hard_cap > 0 and max_mint_per_tx > hard_cap:
+        problems.append("max_mint_per_tx must be <= hard_cap")
+
+    return problems
+
+
+def validate_card_entries(cards, start_index, existing_names=()):
+    """Check the shape of a `cards` list: `[weight, max_supply]` integer pairs,
+    optionally followed by the card's name (a subasset child name, by default
+    the card's number), numbered from `start_index` (1 for a new fairminter,
+    `N + 1` when adding cards to one that already has `N`). Names must be
+    unique, including against `existing_names`."""
+    if not isinstance(cards, (list, tuple)) or len(cards) == 0:
+        return ["cards must be a non-empty list"]
+    if start_index - 1 + len(cards) > MAX_CARDS:
+        return [f"too many cards (maximum {MAX_CARDS})"]
+    total_weight = 0
+    names = set(existing_names)
+    for card_index, card in enumerate(cards, start=start_index):
+        if (
+            not isinstance(card, (list, tuple))
+            or len(card) not in (2, 3)
+            or not _is_int(card[0])
+            or not _is_int(card[1])
+            or (len(card) == 3 and not isinstance(card[2], str))
+        ):
+            return [f"card {card_index} must be [weight, max_supply] or [weight, max_supply, name]"]
+        weight, max_supply = card[0], card[1]
+        name = card_name(card, card_index)
+        if name in names:
+            return [f"card {card_index}: duplicate card name `{name}`"]
+        names.add(name)
+        if weight < 1 or weight > config.MAX_INT:
+            return [f"card {card_index}: weight must be between 1 and {config.MAX_INT}"]
+        if max_supply < 0 or max_supply > config.MAX_INT:
+            return [f"card {card_index}: max_supply must be between 0 and {config.MAX_INT}"]
+        total_weight += weight
+    if total_weight > config.MAX_INT:
+        return ["total card weight exceeds maximum value"]
+    return []
+
+
+def validate_card_assets(db, source, asset_name, cards, start_index, block_index=None):
+    """Check the card subassets `<asset_name>.<start_index>` ..: either new, or
+    existing ones owned by `source`, unlocked, non-divisible and not already
+    fair minting. Returns `(problems, remaining_supply, all_capped)`, where
+    `remaining_supply` is what the capped cards can still supply."""
+    problems = []
+    allow_numerics = protocol.enabled("allow_subassets_on_numerics", block_index=block_index)
+    remaining_supply = 0
+    all_capped = True
+    for card_index, card in enumerate(cards, start=start_index):
+        max_supply = card[1]
+        longname = card_longname(asset_name, card, card_index)
+        try:
+            assetnames.parse_subasset_from_asset_name(longname, allow_numerics)
+        except exceptions.AssetNameError as e:
+            problems.append(f"invalid card asset name `{longname}`: {e}")
+            if "parent" in str(e):
+                # every card of this fairminter fails the same way
+                return problems, 0, False
+            continue
+        supply = 0
+        existing_card = ledger.issuances.get_asset(db, longname)
+        if existing_card:
+            if existing_card["issuer"] != source:
+                problems.append(f"card asset `{longname}` is not issued by `{source}`")
+            if existing_card["fair_minting"]:
+                problems.append(f"Fair minter already opened for card asset `{longname}`.")
+            if existing_card["locked"]:
+                problems.append(f"card asset `{longname}` is locked")
+            if existing_card["divisible"]:
+                problems.append(f"card asset `{longname}` is divisible")
+            supply = existing_card["supply"]
+        if max_supply > 0:
+            if supply >= max_supply:
+                problems.append(f"card asset `{longname}` already reached its max_supply")
+            else:
+                remaining_supply += max_supply - supply
+        else:
+            all_capped = False
+    return problems, remaining_supply, all_capped
 
 
 def compose(
@@ -323,6 +534,8 @@ def compose(
     mime_type: str = "",
     pool_quantity: int = 0,
     lp_asset: str = "",
+    cards: list = None,
+    lock_cards: bool = False,
     skip_validation: bool = False,
 ):
     if pool_quantity > 0 and not lp_asset:
@@ -354,6 +567,8 @@ def compose(
         mime_type,
         pool_quantity,
         lp_asset,
+        cards=cards,
+        lock_cards=lock_cards,
         block_index=CurrentState().current_block_index(),
     )
     if len(problems) > 0 and not skip_validation:
@@ -403,14 +618,21 @@ def compose(
             lock_quantity,
             divisible,
         ]
-        if pool_quantity > 0:
+        # The cards come after the (then mandatory) pool fields and before
+        # mime_type/description, for the same ord-inscription reason: the
+        # array tail must stay `mime_type, content`.
+        if pool_quantity > 0 or cards:
             fields += [pool_quantity, lp_asset_id]
+        if cards:
+            fields += [pack_cards(cards), lock_cards]
         fields += [
             mime_type,
             helpers.content_to_bytes(description, mime_type or "text/plain"),
         ]
         data += cbor2.dumps(fields)
     else:
+        if cards:
+            raise exceptions.ComposeError(["cards require fairminter_v2"])
         packed_value += []
         packed_value += [
             asset,
@@ -472,7 +694,18 @@ def unpack_new(message, return_dict=False, block_index=None):
         ) = fields[:17]
         # Pool-enabled fairminters carry two extra fields (pool_quantity, lp_asset_id)
         # inserted between `divisible` and `mime_type` — see compose() for why.
-        if len(fields) >= 21:
+        # Card fairminters carry the pool fields (zero), the cards list and
+        # the `lock_cards` flag.
+        cards = []
+        lock_cards = False
+        if len(fields) >= 23:
+            pool_quantity = int(fields[17])
+            lp_asset_id = int(fields[18])
+            cards = fields[19]
+            lock_cards = bool(int(fields[20]))
+            mime_type = fields[21]
+            description = fields[22]
+        elif len(fields) >= 21:
             pool_quantity = int(fields[17])
             lp_asset_id = int(fields[18])
             mime_type = fields[19]
@@ -518,6 +751,8 @@ def unpack_new(message, return_dict=False, block_index=None):
                 "description": description,
                 "pool_quantity": pool_quantity,
                 "lp_asset": lp_asset,
+                "cards": cards,
+                "lock_cards": lock_cards,
             }
 
         return (
@@ -542,6 +777,8 @@ def unpack_new(message, return_dict=False, block_index=None):
             description,
             pool_quantity,
             lp_asset,
+            cards,
+            lock_cards,
         )
     except Exception:  # pylint: disable=broad-exception-caught
         return (
@@ -566,6 +803,8 @@ def unpack_new(message, return_dict=False, block_index=None):
             "",
             0,
             None,
+            [],
+            False,
         )
 
 
@@ -597,6 +836,8 @@ def unpack_legacy(message, return_dict=False):
         mime_type = ""
         pool_quantity = 0
         lp_asset = None
+        cards = []
+        lock_cards = False
 
         minted_asset_commission = D(minted_asset_commission_int) / D(1e8)
 
@@ -625,6 +866,8 @@ def unpack_legacy(message, return_dict=False):
                 "description": description,
                 "pool_quantity": pool_quantity,
                 "lp_asset": lp_asset,
+                "cards": cards,
+                "lock_cards": lock_cards,
             }
 
         return (
@@ -649,6 +892,8 @@ def unpack_legacy(message, return_dict=False):
             description,
             pool_quantity,
             lp_asset,
+            cards,
+            lock_cards,
         )
     except Exception:  # pylint: disable=broad-exception-caught
         return (
@@ -673,6 +918,8 @@ def unpack_legacy(message, return_dict=False):
             "",
             0,
             None,
+            [],
+            False,
         )
 
 
@@ -699,6 +946,8 @@ def parse(db, tx, message):
         description,
         pool_quantity,
         lp_asset,
+        cards,
+        lock_cards,
     ) = unpack(message, block_index=tx["block_index"])
 
     problems = validate(
@@ -725,6 +974,8 @@ def parse(db, tx, message):
         mime_type,
         pool_quantity,
         lp_asset,
+        cards=cards,
+        lock_cards=lock_cards,
         block_index=tx["block_index"],
     )
 
@@ -843,6 +1094,10 @@ def parse(db, tx, message):
         "pool_quantity": pool_quantity,
         "lp_asset": lp_asset or None,
     }
+    if cards:
+        # only card fairminters carry the flag (the column defaults to 0), so
+        # the journal of every other fairminter is unchanged
+        bindings["lock_cards"] = lock_cards
     if not existing_asset:
         # Pre-create the asset row (DB only, no event) so the fairminters record
         # below can resolve its compact asset_index. The ASSET_CREATION event is
@@ -894,6 +1149,9 @@ def parse(db, tx, message):
         "mime_type": mime_type,
     }
     ledger.events.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
+
+    if cards:
+        open_fairminter_cards(db, tx, tx["tx_hash"], asset_longname or asset_name, cards)
 
     if pre_minted:
         # issuer is credited with the preminted quantity
@@ -957,6 +1215,209 @@ def parse(db, tx, message):
         gas.increment_counter(db, pooldeposit.ID, tx["block_index"])
 
 
+def open_fairminter_cards(db, tx, fairminter_tx_hash, asset_name, cards, start_index=1):
+    """Create (or take over) the card subassets `<asset_name>.<start_index>`
+    .. of the fairminter `fairminter_tx_hash` and record them in
+    `fairminter_cards`. Like the fairminter's own asset, a card is
+    `fair_minting` until the fairminter closes, so its issuer cannot issue it
+    meanwhile. The transaction `tx` (the fairminter, or an `addcards`)
+    carries one issuance per card, at `msg_index = card_index` (the parent's
+    open issuance is `msg_index = 0`)."""
+    for card_index, card in enumerate(cards, start=start_index):
+        weight, max_supply = card[0], card[1]
+        longname = card_longname(asset_name, card, card_index)
+        existing_card = ledger.issuances.get_asset(db, longname)
+        if existing_card is None:
+            card_asset = assetnames.deterministic_random_asset_name(db, longname)
+            bindings = {
+                "asset_id": str(ledger.issuances.generate_asset_id(card_asset)),
+                "asset_name": card_asset,
+                "block_index": tx["block_index"],
+                "asset_longname": longname,
+            }
+            ledger.events.insert_record(db, "assets", bindings, "ASSET_CREATION")
+            description = ""
+            mime_type = "text/plain"
+            description_locked = False
+        else:
+            card_asset = existing_card["asset"]
+            description = existing_card["description"]
+            mime_type = existing_card["mime_type"]
+            description_locked = existing_card["description_locked"]
+        bindings = {
+            "tx_index": tx["tx_index"],
+            "tx_hash": tx["tx_hash"],
+            "msg_index": card_index,
+            "block_index": tx["block_index"],
+            "asset": card_asset,
+            "quantity": 0,
+            "divisible": False,
+            "source": tx["source"],
+            "issuer": tx["source"],
+            "transfer": False,
+            "callable": False,
+            "call_date": 0,
+            "call_price": 0,
+            "description": description,
+            "fee_paid": 0,
+            "locked": False,
+            "reset": False,
+            "status": "valid",
+            "asset_longname": longname,
+            "description_locked": description_locked,
+            "fair_minting": True,
+            "asset_events": "open_fairminter",
+            "mime_type": mime_type,
+        }
+        ledger.events.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
+        bindings = {
+            "fairminter_tx_hash": fairminter_tx_hash,
+            "block_index": tx["block_index"],
+            "card_index": card_index,
+            "asset": card_asset,
+            "asset_longname": longname,
+            "weight": weight,
+            "max_supply": max_supply,
+        }
+        ledger.events.insert_record(db, "fairminter_cards", bindings, "NEW_FAIRMINTER_CARD")
+    logger.info("%s card(s) opened for %s by %s.", len(cards), asset_name, tx["source"])
+
+
+def close_fairminter_cards(db, fairminter, cards, block_index):
+    """Close a card fairminter: one closing issuance for the parent asset and
+    one per card. Like `close_fairminter`, each is carried by the transaction
+    of the asset's last issuance (so it stays the last one), at
+    `msg_index = MAX_CARDS + 1 + card_index` (parent: `card_index = 0`): the
+    open, draw and `addcards` issuances all use `msg_index <= MAX_CARDS`, so a
+    closing issuance cannot collide with them whatever transaction it rides."""
+    assets = [(0, fairminter["asset"])] + [(card["card_index"], card["asset"]) for card in cards]
+    for card_index, asset in assets:
+        last_issuance = ledger.issuances.get_asset(db, asset)
+        last_issuance["msg_index"] = MAX_CARDS + 1 + card_index
+        last_issuance["block_index"] = block_index
+        last_issuance["quantity"] = 0
+        last_issuance["fee_paid"] = 0
+        last_issuance["fair_minting"] = False
+        if fairminter["lock_quantity"]:
+            last_issuance["locked"] = True
+        if fairminter["lock_description"]:
+            last_issuance["description_locked"] = True
+        last_issuance["asset_events"] = "close_fairminter"
+        del last_issuance["supply"]
+        ledger.events.insert_record(db, "issuances", last_issuance, "ASSET_ISSUANCE")
+
+
+def draw_cards(db, block_hash, tx_hash, cards, count):
+    """Draw `count` cards for the fairmint `tx_hash`, resolved in the block
+    `block_hash`. The i-th draw picks a card with probability proportional to
+    its weight among the cards whose supply is not exhausted, from the 64 high
+    bits of `sha256(block_hash || tx_hash || i)`. Returns `{card_index: count}`.
+
+    The seed is unknown when the mint is sent (the block that resolves it is
+    not mined yet) and the same for every node, so draws are unpredictable for
+    the minter and deterministic for the consensus."""
+    seed_prefix = bytes.fromhex(block_hash) + bytes.fromhex(tx_hash)
+    supplies = {
+        card["card_index"]: ledger.supplies.asset_supply(db, card["asset"])
+        for card in cards
+        if card["max_supply"] > 0
+    }
+    drawn = {}
+
+    def available_cards():
+        return [
+            card
+            for card in cards
+            if card["max_supply"] == 0
+            or supplies[card["card_index"]] + drawn.get(card["card_index"], 0) < card["max_supply"]
+        ]
+
+    def cumulative_weights(available):
+        cumulative, total = [], 0
+        for card in available:
+            total += card["weight"]
+            cumulative.append(total)
+        return cumulative, total
+
+    available = available_cards()
+    cumulative, total_weight = cumulative_weights(available)
+    for i in range(count):
+        if not available:
+            # Unreachable: `validate_cards` requires a hard cap no larger than
+            # the remaining supply when every card is capped, and
+            # `fairmint.validate` reserves the hard cap at mint time. Halt
+            # rather than silently drop the paid draws.
+            raise exceptions.ParseTransactionError(
+                f"fairmint {tx_hash}: no card left to draw at block {block_hash}"
+            )
+        digest = hashlib.sha256(seed_prefix + i.to_bytes(4, "big")).digest()
+        position = int.from_bytes(digest[:8], "big") % total_weight
+        card = available[bisect.bisect_right(cumulative, position)]
+        drawn[card["card_index"]] = drawn.get(card["card_index"], 0) + 1
+        if (
+            card["max_supply"] > 0
+            and supplies[card["card_index"]] + drawn[card["card_index"]] >= card["max_supply"]
+        ):
+            # the card is exhausted: it leaves the draw
+            available = available_cards()
+            cumulative, total_weight = cumulative_weights(available)
+    return drawn
+
+
+def resolve_card_draws(db, block_index):
+    """Draw and credit the cards of every card fairmint confirmed in the
+    previous block, seeded by this block's hash. Each drawn card is issued to
+    the minter by an issuance carried by the fairmint transaction at
+    `msg_index = card_index`."""
+    if block_index == config.MEMPOOL_BLOCK_INDEX:
+        return
+    if not protocol.enabled("fairminter_cards", block_index=block_index):
+        return
+    fairmints = ledger.issuances.get_card_fairmints_to_resolve(db, block_index - 1)
+    if not fairmints:
+        return
+    block_hash = ledger.blocks.get_block_hash(db, block_index)
+    for fairmint in fairmints:
+        fairminter = ledger.issuances.get_fairminter_by_tx_index(
+            db, fairmint["fairminter_tx_index"]
+        )
+        cards = ledger.issuances.get_fairminter_cards(db, fairminter)
+        drawn = draw_cards(db, block_hash, fairmint["tx_hash"], cards, fairmint["earn_quantity"])
+        for card in cards:
+            quantity = drawn.get(card["card_index"], 0)
+            if quantity == 0:
+                continue
+            ledger.events.credit(
+                db,
+                fairmint["source"],
+                card["asset"],
+                quantity,
+                fairmint["tx_index"],
+                action="fairmint",
+                event=fairmint["tx_hash"],
+            )
+            last_issuance = ledger.issuances.get_last_issuance(db, card["asset"])
+            bindings = last_issuance | {
+                "tx_index": fairmint["tx_index"],
+                "tx_hash": fairmint["tx_hash"],
+                "msg_index": card["card_index"],
+                "block_index": block_index,
+                "quantity": quantity,
+                "source": fairmint["source"],
+                "status": "valid",
+                "fee_paid": 0,
+                "asset_events": "fairmint",
+            }
+            ledger.events.insert_record(db, "issuances", bindings, "ASSET_ISSUANCE")
+        logger.info(
+            "%s card(s) of %s drawn for %s (fairmint %s)",
+            fairmint["earn_quantity"],
+            fairminter["asset"],
+            fairmint["source"],
+            fairmint["tx_hash"],
+        )
+
+
 def unescrow_premint(db, fairminter, destroy=False):
     # unescrow premint quantity...
     ledger.events.debit(
@@ -1001,6 +1462,11 @@ def open_fairminters(db, block_index):
 def close_fairminter(db, fairminter, block_index):
     # update status to closed
     ledger.issuances.update_fairminter(db, fairminter["tx_hash"], {"status": "closed"})
+    if protocol.enabled("fairminter_cards", block_index=block_index):
+        cards = ledger.issuances.get_fairminter_cards(db, fairminter)
+        if cards:
+            close_fairminter_cards(db, fairminter, cards, block_index)
+            return
     # unlock issuance when fair minter is closed
     last_issuance = ledger.issuances.get_asset(db, fairminter["asset"])
     last_issuance["quantity"] = 0
@@ -1206,6 +1672,7 @@ def perform_fairminter_soft_cap_operations(db, block_index):
 # This function is called on each block BEFORE parsing the transactions
 def before_block(db, block_index):
     open_fairminters(db, block_index)
+    resolve_card_draws(db, block_index)
 
 
 # This function is called on each block AFTER parsing the transactions

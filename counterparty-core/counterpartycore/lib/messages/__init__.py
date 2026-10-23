@@ -18,6 +18,8 @@
 # 80 rps
 # 81 rpsresolve
 # 90 fairminter
+# 91 fairmint
+# 92 addcards
 # 100 utxo attach and dettach
 # 110 destroy
 # 120 pooldeposit

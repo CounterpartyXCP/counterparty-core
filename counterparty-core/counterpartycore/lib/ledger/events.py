@@ -85,6 +85,7 @@ HASH_TO_TX_INDEX_FK = {
     "dispenses": {"dispenser_tx_hash": "dispenser_tx_index"},
     "dispenser_refills": {"dispenser_tx_hash": "dispenser_tx_index"},
     "fairmints": {"fairminter_tx_hash": "fairminter_tx_index"},
+    "fairminter_cards": {"fairminter_tx_hash": "fairminter_tx_index"},
     "pool_matches": {"order_tx_hash": "order_tx_index"},
     "cancels": {"offer_hash": "offer_tx_index"},
 }

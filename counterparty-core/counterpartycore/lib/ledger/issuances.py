@@ -420,10 +420,19 @@ def get_last_issuance(db, asset):
 def get_asset(db, asset):
     cursor = db.cursor()
     name_field = "asset_longname" if "." in asset else "asset"
+    # Several issuances of an asset can share a `tx_index` (a fairminter's
+    # closing issuance rides the transaction of the previous one, and a card
+    # fairminter's transactions carry one issuance per card): from
+    # `fairminter_cards` on, the latest row wins the tie, so that the closing
+    # issuance (or the last draw) is the one returned. Before, the order among
+    # equal `tx_index` was left to SQLite.
+    order = "tx_index DESC"
+    if protocol.enabled("fairminter_cards"):
+        order = "tx_index DESC, rowid DESC"
     query = f"""
         SELECT * FROM issuances
         WHERE ({name_field} = ? AND status = ?)
-        ORDER BY tx_index DESC
+        ORDER BY {order}
     """  # nosec B608  # noqa: S608 # nosec B608
     # ``asset_longname`` stays TEXT; only the ``asset`` column is the index FK.
     bind_asset = (
@@ -588,3 +597,45 @@ def get_valid_fairmints(db, fairminter_tx_hash):
 
 def update_fairminter(db, tx_hash, update_data):
     insert_update(db, "fairminters", "tx_hash", tx_hash, update_data, "FAIRMINTER_UPDATE")
+
+
+def get_fairminter_by_tx_index(db, tx_index):
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM fairminters
+        WHERE tx_index = ?
+        ORDER BY rowid DESC LIMIT 1
+    """
+    cursor.execute(query, (tx_index,))
+    return cursor.fetchone()
+
+
+def get_fairminter_cards(db, fairminter):
+    """Return the cards of a fairminter row, ordered by ``card_index``
+    (empty for a fairminter without cards)."""
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM fairminter_cards
+        WHERE fairminter_tx_index = ?
+        ORDER BY card_index
+    """
+    cursor.execute(query, (fairminter["tx_index"],))
+    return cursor.fetchall()
+
+
+def get_card_fairmints_to_resolve(db, block_index):
+    """Return the valid fairmints of card fairminters confirmed in
+    ``block_index``, in transaction order: their cards are drawn in the
+    following block (see ``fairminter.resolve_card_draws``)."""
+    cursor = db.cursor()
+    query = """
+        SELECT * FROM fairmints
+        WHERE block_index = ? AND status = 'valid'
+        AND EXISTS (
+            SELECT 1 FROM fairminter_cards
+            WHERE fairminter_cards.fairminter_tx_index = fairmints.fairminter_tx_index
+        )
+        ORDER BY tx_index
+    """
+    cursor.execute(query, (block_index,))
+    return cursor.fetchall()

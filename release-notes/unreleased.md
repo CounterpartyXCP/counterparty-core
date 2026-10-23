@@ -2,6 +2,30 @@
 
 ## Protocol
 
+- Add fairminter cards (`fairminter_cards`): a fairminter can distribute a set
+  of card subassets (`<asset>.<name>`, by default numbered `<asset>.1` ..
+  `<asset>.N`, at most 1000) instead of one asset, like a trading card game
+  booster. Each card has a draw weight, an optional `max_supply` and an optional
+  name; a fairmint pays as usual and its cards are drawn
+  in the block that follows the mint, seeded by that block's hash and the
+  fairmint hash, so a draw is unpredictable for the minter and the same on every
+  node. A card whose supply is exhausted leaves the draw. `hard_cap`,
+  `max_mint_per_tx` (required, at most 1000) and `max_mint_per_address` count
+  cards; `premint_quantity`, `soft_cap`, `minted_asset_commission`,
+  `pool_quantity` and divisible assets are refused. A card subasset that already
+  exists is taken over if its issuer opens the fairminter, so cards can be
+  issued with their artwork beforehand. The cards are
+  `fair_minting` (not issuable by their owner) until the fairminter closes;
+  `lock_quantity` and `lock_description` then apply to them as to the parent.
+- Add the `addcards` message (type 92): the issuer of an open card fairminter
+  may append cards to it, and/or set `lock_cards`, after which no card can be
+  added. A fairminter opened with `lock_cards` never changes its cards, which
+  minters can rely on.
+- From the same activation, among several issuances of an asset sharing a
+  `tx_index` (a fairminter's closing issuance, a card fairminter's open and draw
+  issuances), the latest one is the asset's current issuance. Before, the choice
+  was left to SQLite.
+
 - Record XCP destruction when a nonzero pool deposit, pool withdrawal, or
   fairminter pool-creation fee is charged (`fix_pool_fee_destruction`). This
   keeps XCP supply and asset conservation consistent with the debited balances,
@@ -27,6 +51,12 @@
 
 ## API
 
+- Add the `cards` and `lock_cards` parameters to `compose/fairminter`, the
+  `compose/addcards` endpoint, `/v2/fairminters/<tx_hash>/cards` (the cards of
+  a fairminter, with the card asset's supply under `asset_info` in verbose
+  mode) and the `lock_cards` field of fairminters. The `NEW_FAIRMINTER_CARD`
+  event records each card; drawn cards appear as `fairmint` issuances and
+  credits carried by the fairmint transaction.
 - Return MPMA decoding failures, including malformed address tables and
   recipient indexes past the end of the table, through the existing
   `message_data.error` response (HTTP 200) of `/v2/transactions/unpack` and

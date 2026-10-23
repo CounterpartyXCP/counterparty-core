@@ -665,6 +665,8 @@ def compose_fairminter(
     mime_type: str = "",
     pool_quantity: int = 0,
     lp_asset: str = "",
+    cards: str = "",
+    lock_cards: bool = False,
     price: int = 0,
     quantity_by_price: int = 1,
     **construct_params,
@@ -693,6 +695,8 @@ def compose_fairminter(
     :param mime_type: The MIME type of the description. For binary MIME type, the `description` must be in hexadecimal format (default: text/plain).
     :param pool_quantity: Amount of asset reserved for the AMM pool; paired with all raised XCP at soft cap resolution to create a TOKEN/XCP pool (LP tokens are permanently locked)
     :param lp_asset: The numeric asset name to use for the pool's LP token (e.g. A95428956661682177); if empty and pool_quantity > 0, one is generated automatically
+    :param cards: Comma-separated list of cards, one `weight[:max_supply[:name]]` entry per card (e.g. 50:0:COMMON,30:10:RARE,1:1:LEGENDARY). The fairminter then distributes the card subassets `<asset>.<name>` (by default the card's number: `<asset>.1` .. `<asset>.N`) instead of `asset`: each fairmint draws `quantity` cards in the next block, a card with a probability proportional to its weight, and a card whose supply reached `max_supply` (0: unlimited) leaves the draw. A card subasset that already exists must be issued by `address`. `hard_cap`, `max_mint_per_tx` (required, at most 1000) and `max_mint_per_address` count cards; requires `divisible` false and no `premint_quantity`, `soft_cap`, `minted_asset_commission` or `pool_quantity`
+    :param lock_cards: If true, no cards can be added to the fairminter later; otherwise the issuer may add cards with `addcards` until it locks them
     :param price: alias for `lot_price`
     :param quantity_by_price: alias for `lot_size`
     """
@@ -722,9 +726,50 @@ def compose_fairminter(
         "mime_type": mime_type,
         "pool_quantity": pool_quantity,
         "lp_asset": lp_asset,
+        "cards": parse_cards(cards),
+        "lock_cards": lock_cards,
     }
     asset_name = f"{asset_parent}.{asset}" if asset_parent else asset
     return _compose_with_pending_asset_guard(db, "fairminter", params, asset_name, construct_params)
+
+
+def parse_cards(cards):
+    """`"50,30:10,1:1:LEGENDARY"` -> `[[50, 0], [30, 10], [1, 1, "LEGENDARY"]]`
+    (see `compose_fairminter`)."""
+    if not cards:
+        return None
+    parsed = []
+    for entry in cards.split(","):
+        parts = [part.strip() for part in entry.split(":")]
+        if len(parts) > 3 or not all(part.isdigit() for part in parts[:2]):
+            raise exceptions.ComposeError(
+                f"Invalid card `{entry}`: expected `weight`, `weight:max_supply`"
+                " or `weight:max_supply:name`"
+            )
+        card = [int(parts[0]), int(parts[1]) if len(parts) > 1 else 0]
+        if len(parts) == 3 and parts[2]:
+            card.append(parts[2])
+        parsed.append(card)
+    return parsed
+
+
+def compose_addcards(
+    db, address: str, asset: str, cards: str = "", lock_cards: bool = False, **construct_params
+):
+    """
+    Composes a transaction to add cards to a card fairminter, and/or to lock its cards. Only the issuer of an open fairminter whose cards are not locked can do so.
+    :param address: The address that issued the fairminter (e.g. $ADDRESS_1)
+    :param asset: The asset of the fairminter (e.g. MYASSET)
+    :param cards: Comma-separated list of cards to add, one `weight[:max_supply[:name]]` entry per card, numbered after the existing cards (e.g. 50:0:UNCOMMON,30:10)
+    :param lock_cards: If true, no more cards can be added to the fairminter afterwards
+    """
+    params = {
+        "source": address,
+        "asset": asset,
+        "cards": parse_cards(cards),
+        "lock_cards": lock_cards,
+    }
+    return composer.compose_transaction(db, "addcards", params, construct_params)
 
 
 def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construct_params):
@@ -1218,6 +1263,10 @@ def unpack(db, datahex: str, block_index: int = None):
             message_data = messages.fairmint.unpack(
                 message, return_dict=True, block_index=block_index
             )
+        # Add Cards
+        elif message_type_id == messages.addcards.ID:
+            message_type_name = "addcards"
+            message_data = messages.addcards.unpack(message, return_dict=True)
         # utxo
         elif message_type_id == messages.utxo.ID:
             message_type_name = "utxo"

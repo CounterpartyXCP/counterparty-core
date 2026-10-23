@@ -196,6 +196,7 @@ ALL_ROUTES = {
     "/v2/addresses/<address>/compose/dispense": (compose.compose_dispense, "compose"),
     "/v2/addresses/<address>/compose/fairminter": (compose.compose_fairminter, "compose"),
     "/v2/addresses/<address>/compose/fairmint": (compose.compose_fairmint, "compose"),
+    "/v2/addresses/<address>/compose/addcards": (compose.compose_addcards, "compose"),
     "/v2/addresses/<address>/compose/pooldeposit": (compose.compose_pooldeposit, "compose"),
     "/v2/addresses/<address>/compose/pooldeposit/estimatexcpfees": (
         compose.get_pool_deposit_estimate_xcp_fee,
@@ -309,6 +310,7 @@ ALL_ROUTES = {
     "/v2/fairminters": (queries.get_all_fairminters, "fairminters"),
     "/v2/fairminters/<tx_hash>": (queries.get_fairminter, "fairminters"),
     "/v2/fairminters/<tx_hash>/fairmints": (queries.get_fairmints_by_fairminter, "fairminters"),
+    "/v2/fairminters/<tx_hash>/cards": (queries.get_fairminter_cards, "fairminters"),
     ### /fairmints ###
     "/v2/fairmints": (queries.get_all_fairmints, "fairminters"),
     "/v2/fairmints/<tx_hash>": (queries.get_fairmint, "fairminters"),
