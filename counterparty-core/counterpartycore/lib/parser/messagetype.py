@@ -63,6 +63,7 @@ def get_transaction_type(data: bytes, destination: str, utxos_info: list, block_
         messages.sweep.ID: "sweep",
         messages.fairminter.ID: "fairminter",
         messages.fairmint.ID: "fairmint",
+        messages.addcards.ID: "addcards",
         messages.utxo.ID: "utxo",
         messages.attach.ID: "attach",
         messages.detach.ID: "detach",

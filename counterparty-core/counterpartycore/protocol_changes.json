@@ -1539,5 +1539,15 @@
         "testnet3_block_index": 9999999,
         "testnet4_block_index": 999999,
         "signet_block_index": 999999
+    },
+    "fairminter_cards": {
+        "_comment": "Fairminters may distribute a set of numbered card subassets (`<asset>.1` .. `<asset>.N`) instead of one asset: each card has a draw weight and an optional supply cap, and a fairmint draws its cards in the block that follows the mint, seeded by that block's hash and the fairmint hash (see fairminter.resolve_card_draws). Placeholder heights until the release that ships it is scheduled. Enforced by the Python parser only.",
+        "minimum_version_major": 11,
+        "minimum_version_minor": 6,
+        "minimum_version_revision": 0,
+        "block_index": 999999,
+        "testnet3_block_index": 9999999,
+        "testnet4_block_index": 999999,
+        "signet_block_index": 999999
     }
 }

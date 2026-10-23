@@ -1312,6 +1312,7 @@ ASSET_NAME_COLUMNS = {
     # the saving would be marginal. It stays a TEXT asset name.
     "fairminters": ("asset", "asset_parent"),
     "fairmints": ("asset",),
+    "fairminter_cards": ("asset",),
     "destructions": ("asset",),
     "pools": ("asset_a", "asset_b"),
     "pool_deposits": ("asset_a", "asset_b"),

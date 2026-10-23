@@ -191,6 +191,7 @@ _LEGACY_HASH_TO_TX_INDEX_FK = {
     "dispenses": {"dispenser_tx_hash": ("dispenser_tx_index", "transactions")},
     "dispenser_refills": {"dispenser_tx_hash": ("dispenser_tx_index", "transactions")},
     "fairmints": {"fairminter_tx_hash": ("fairminter_tx_index", "transactions")},
+    "fairminter_cards": {"fairminter_tx_hash": ("fairminter_tx_index", "transactions")},
     "pool_matches": {"order_tx_hash": ("order_tx_index", "transactions")},
 }
 

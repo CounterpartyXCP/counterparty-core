@@ -53,6 +53,11 @@ def validate(
         problems.append(f"fairminter is not open for asset: `{asset}`")
 
     asset_supply = ledger.supplies.asset_supply(db, fairminter["asset"])
+    if get_cards(db, fairminter, block_index):
+        # a card fairminter's hard cap counts the cards minted by its
+        # fairmints (including those drawn in the next block), not the
+        # supply of the parent asset, which never gets any
+        asset_supply, _paid = ledger.issuances.get_fairmint_quantities(db, fairminter["tx_hash"])
 
     if fairminter["max_mint_per_address"] is not None and fairminter["max_mint_per_address"] > 0:
         alread_minted = ledger.issuances.get_fairmint_by_address(db, fairminter["tx_hash"], source)
@@ -102,6 +107,13 @@ def validate(
                 problems.append("asset supply quantity exceeds hard cap")
 
     return problems
+
+
+def get_cards(db, fairminter, block_index=None):
+    """The cards of a card fairminter, or an empty list (see `fairminter.validate_cards`)."""
+    if not protocol.enabled("fairminter_cards", block_index=block_index):
+        return []
+    return ledger.issuances.get_fairminter_cards(db, fairminter)
 
 
 def compose(db, source: str, asset: str, quantity: int = 0, skip_validation: bool = False):
@@ -229,6 +241,7 @@ def parse(db, tx, message):
 
     # get corresponding fairminter
     fairminter = ledger.issuances.get_fairminter_by_asset(db, asset)
+    cards = get_cards(db, fairminter, tx["block_index"])
 
     # determine if the soft cap has been reached
     soft_cap_not_reached = (
@@ -265,6 +278,10 @@ def parse(db, tx, message):
         paid_quantity = 0
         if protocol.enabled("partial_mint_to_reach_hard_cap"):
             asset_supply = ledger.supplies.asset_supply(db, fairminter["asset"])
+            if cards:
+                asset_supply, _paid = ledger.issuances.get_fairmint_quantities(
+                    db, fairminter["tx_hash"]
+                )
             if (
                 fairminter["hard_cap"] > 0
                 and asset_supply + fairminter["max_mint_per_tx"] > fairminter["hard_cap"]
@@ -312,7 +329,11 @@ def parse(db, tx, message):
             }
             ledger.events.insert_record(db, "destructions", bindings, "ASSET_DESTRUCTION")
 
-    if asset_destination == config.UNSPENDABLE:
+    if cards:
+        # the cards are drawn and credited in the next block
+        # (`fairminter.resolve_card_draws`): nothing to credit now
+        pass
+    elif asset_destination == config.UNSPENDABLE:
         # the minted amount and commission are escrowed
         ledger.events.credit(
             db,
@@ -354,6 +375,22 @@ def parse(db, tx, message):
         "status": status,
     }
     ledger.events.insert_record(db, "fairmints", bindings, "NEW_FAIRMINT")
+
+    if cards:
+        # no issuance of the parent asset: the cards are issued when drawn.
+        # The hard cap is reached as soon as it is reserved by the fairmints.
+        if fairminter["hard_cap"] > 0:
+            minted, _paid = ledger.issuances.get_fairmint_quantities(db, fairminter["tx_hash"])
+            if minted == fairminter["hard_cap"]:
+                fairminter_mod.close_fairminter(db, fairminter, tx["block_index"])
+        logger.info(
+            "%s card(s) of %s minted for %s XCP by %s, drawn in the next block",
+            earn_quantity,
+            asset,
+            paid_quantity,
+            tx["source"],
+        )
+        return
 
     # we prepare the new issuance
     last_issuance = ledger.issuances.get_last_issuance(db, asset)

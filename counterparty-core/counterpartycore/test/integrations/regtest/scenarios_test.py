@@ -40,6 +40,7 @@ from scenarios import (
     scenario_26_pools,
     scenario_27_fairminter_pool,
     scenario_28_indefinite_orders,
+    scenario_29_fairminter_cards,
     scenario_last_mempool,
 )
 from termcolor import colored
@@ -73,6 +74,7 @@ SCENARIOS += scenario_25_issuance.SCENARIO
 SCENARIOS += scenario_28_indefinite_orders.SCENARIO
 SCENARIOS += scenario_26_pools.SCENARIO
 SCENARIOS += scenario_27_fairminter_pool.SCENARIO
+SCENARIOS += scenario_29_fairminter_cards.SCENARIO
 # more scenarios before this one
 SCENARIOS += scenario_last_mempool.SCENARIO
 

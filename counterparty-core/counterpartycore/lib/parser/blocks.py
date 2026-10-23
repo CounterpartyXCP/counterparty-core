@@ -23,6 +23,7 @@ from counterpartycore.lib.backend import rsfetcher
 from counterpartycore.lib.cli import log
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.messages import (
+    addcards,
     attach,
     bet,
     broadcast,
@@ -90,6 +91,7 @@ TABLES = ["balances", "credits", "debits", "messages"] + [
     "dispenser_refills",
     "fairminters",
     "fairmints",
+    "fairminter_cards",
     "transaction_count",
     "pools",
     "pool_deposits",
@@ -231,6 +233,10 @@ def parse_tx(db, tx):
                 "fairminter", block_index=tx["block_index"]
             ):
                 fairmint.parse(db, tx, message)
+            elif message_type_id == addcards.ID and protocol.enabled(
+                "fairminter_cards", block_index=tx["block_index"]
+            ):
+                addcards.parse(db, tx, message)
             elif (
                 message_type_id == utxo.ID
                 and protocol.enabled("utxo_support", block_index=tx["block_index"])

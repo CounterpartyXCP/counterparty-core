@@ -60,6 +60,7 @@ _HASH_FK_PROJECTIONS = {
     "dispenses": ("dispenser_tx_index", "dispenser_tx_hash"),
     "dispenser_refills": ("dispenser_tx_index", "dispenser_tx_hash"),
     "fairmints": ("fairminter_tx_index", "fairminter_tx_hash"),
+    "fairminter_cards": ("fairminter_tx_index", "fairminter_tx_hash"),
     "pool_matches": ("order_tx_index", "order_tx_hash"),
     "cancels": ("offer_tx_index", "offer_hash"),
 }
@@ -4818,6 +4819,26 @@ def get_fairmints_by_fairminter(
     return select_rows(
         ledger_db,
         "fairmints",
+        where={"fairminter_tx_hash": tx_hash},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_fairminter_cards(
+    ledger_db, tx_hash: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the cards of a fairminter (empty for a fairminter without cards)
+    :param str fairminter_hash: The hash of the fairminter to return (e.g. $LAST_FAIRMINTER_TX_HASH)
+    :param int cursor: The last index of the cards to return
+    :param int limit: The maximum number of cards to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "fairminter_cards",
         where={"fairminter_tx_hash": tx_hash},
         last_cursor=cursor,
         limit=limit,

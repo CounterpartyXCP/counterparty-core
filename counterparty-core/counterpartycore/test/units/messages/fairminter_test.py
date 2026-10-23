@@ -944,6 +944,8 @@ def test_compose_long_description(ledger_db, defaults):
         "a" * 30,  # description
         0,  # pool_quantity
         None,  # lp_asset
+        [],  # cards
+        False,  # lock_cards
     )
 
     result = fairminter.unpack(data)
@@ -979,6 +981,8 @@ def test_unpack():
         "description": "une asset super top",
         "pool_quantity": 40,
         "lp_asset": "A95428956661682177",
+        "cards": [],
+        "lock_cards": False,
     }
 
     assert fairminter.unpack(
@@ -1006,6 +1010,8 @@ def test_unpack():
         "une asset super top",
         40,
         "A95428956661682177",
+        [],
+        False,
     )
 
     # Legacy 19-element array still unpacks (non-pool fairminters)
@@ -1034,12 +1040,38 @@ def test_unpack():
         "une asset super top",
         0,
         None,
+        [],
+        False,
     )
 
     assert fairminter.unpack(
         b"\x06_\xeb\xcd\xfd\xc0\x18\x00\x00\x03\x01d\x03\x005\x0c\x03\xa0\xbb\r\x012\x03P\xf8\x0c\x03\x80\x96\x98\x01\x01\x01\x01\x13une asset super top",
         False,
-    ) == ("", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0, False, False, False, False, "", "", 0, None)
+    ) == (
+        "",
+        "",
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0.0,
+        False,
+        False,
+        False,
+        False,
+        "",
+        "",
+        0,
+        None,
+        [],
+        False,
+    )
 
 
 def test_parse_fairminter_start_block(
