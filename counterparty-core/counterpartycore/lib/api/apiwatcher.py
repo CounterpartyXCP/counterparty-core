@@ -50,6 +50,7 @@ UPDATE_EVENTS_ID_FIELDS = {
     "ADDRESS_OPTIONS_UPDATE": ["address"],
     "FAIRMINTER_UPDATE": ["tx_hash"],
     "POOL_UPDATE": ["asset_a", "asset_b"],
+    "FAIRBOOSTER_UPDATE": ["tx_hash"],
 }
 
 EXPIRATION_EVENTS_OBJECT_ID = {
@@ -77,6 +78,7 @@ STATE_DB_TABLES = [
     "pool_deposits",
     "pool_withdrawals",
     "pool_matches",
+    "fairboosters",
     # only in state_db
     "address_events",
     "all_expirations",

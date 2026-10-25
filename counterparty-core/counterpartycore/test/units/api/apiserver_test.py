@@ -17,7 +17,7 @@ from counterpartycore.lib.api import (
     queries,
 )
 from counterpartycore.lib.api.routes import ALL_ROUTES, ROUTES, get_routes
-from counterpartycore.lib.messages import dispense, dividend, sweep
+from counterpartycore.lib.messages import buybooster, dispense, dividend, fairbooster, sweep
 from counterpartycore.lib.parser import blocks
 from counterpartycore.lib.utils import hashcodec, helpers, protocolstatus
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
@@ -369,6 +369,9 @@ def prepare_url(db, current_block_index, defaults, rawtransaction, route):
     last_broadcast = db.execute("SELECT * FROM broadcasts ORDER BY rowid DESC LIMIT 1").fetchone()
     last_fairminter = db.execute("SELECT * FROM fairminters ORDER BY rowid DESC LIMIT 1").fetchone()
     last_fairmint = db.execute("SELECT * FROM fairmints ORDER BY rowid DESC LIMIT 1").fetchone()
+    last_booster = db.execute(
+        "SELECT * FROM fairbooster_purchases ORDER BY rowid DESC LIMIT 1"
+    ).fetchone()
 
     asset, asset1, asset2 = "XCP", "XCP", "DIVISIBLE"
     datahex = "00000014000000a25be34b66000000174876e800010000000000000000000f446976697369626c65206173736574"
@@ -382,6 +385,8 @@ def prepare_url(db, current_block_index, defaults, rawtransaction, route):
     url = url.replace("<int:tx_index>", str(last_tx["tx_index"]))
     url = url.replace("<int:event_index>", str(last_event["message_index"]))
     url = url.replace("<event>", str(last_event["event"]))
+    if url.startswith("/v2/fairboosters/"):
+        asset = "BOOSTERTEST"
     url = url.replace("<asset>", asset)
     url = url.replace("<asset1>", asset1)
     url = url.replace("<asset2>", asset2)
@@ -398,6 +403,8 @@ def prepare_url(db, current_block_index, defaults, rawtransaction, route):
         url = url.replace("<tx_hash>", last_fairminter["tx_hash"])
     elif url.startswith("/v2/fairmints/"):
         url = url.replace("<tx_hash>", last_fairmint["tx_hash"])
+    elif url.startswith("/v2/boosters/"):
+        url = url.replace("<tx_hash>", last_booster["tx_hash"])
     else:
         url = url.replace("<tx_hash>", last_tx["tx_hash"])
 
@@ -438,6 +445,28 @@ def test_all_routes(
     )
     message = data[1:]
     sweep.parse(ledger_db, tx, message)
+
+    # a fairbooster and a purchase, for the /fairboosters and /boosters routes
+    # (addresses[0] has just swept its XCP to addresses[1]); the creation needs
+    # a transaction that carries no issuance yet
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][1], transaction_type="order")
+    _source, _destination, data = fairbooster.compose(
+        ledger_db,
+        defaults["addresses"][1],
+        "BOOSTERTEST",
+        price=1000,
+        max_boosters=10,
+        cards_per_booster=2,
+        cards_base_url="https://example.com/cards",
+        cards_image_extension="png",
+        cards=f"1:Common:{'11' * 32}:10:0",
+    )
+    fairbooster.parse(ledger_db, tx, data[1:])
+    tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][1])
+    _source, _destination, data = buybooster.compose(
+        ledger_db, defaults["addresses"][1], "BOOSTERTEST"
+    )
+    buybooster.parse(ledger_db, tx, data[1:])
     apiwatcher.catch_up(ledger_db, state_db)
 
     rawtransaction = composer.compose_transaction(

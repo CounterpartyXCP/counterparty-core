@@ -67,6 +67,12 @@ def get_transaction_type(data: bytes, destination: str, utxos_info: list, block_
         messages.attach.ID: "attach",
         messages.detach.ID: "detach",
     }
+    if protocol.enabled("fairboosters", block_index=block_index):
+        type_by_id |= {
+            messages.fairbooster.ID: "fairbooster",
+            messages.updatefairbooster.ID: "updatefairbooster",
+            messages.buybooster.ID: "buybooster",
+        }
 
     if not data:
         if destination == config.UNSPENDABLE and block_index <= config.BURN_END:

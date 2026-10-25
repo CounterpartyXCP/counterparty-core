@@ -71,6 +71,11 @@ HASH_COLUMNS_BY_TABLE = {
     "pool_deposits": ["tx_hash"],
     "pool_withdrawals": ["tx_hash"],
     "pool_matches": ["tx_hash"],
+    "fairboosters": ["tx_hash"],
+    "fairbooster_cards": ["tx_hash"],
+    "fairbooster_updates": ["tx_hash"],
+    "fairbooster_purchases": ["tx_hash"],
+    "fairbooster_draws": ["tx_hash"],
 }
 
 

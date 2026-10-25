@@ -165,6 +165,15 @@ ALL_ROUTES = {
     "/v2/addresses/<address>/orders": (queries.get_orders_by_address, "addresses"),
     "/v2/addresses/<address>/fairminters": (queries.get_fairminters_by_address, "addresses"),
     "/v2/addresses/<address>/fairmints": (queries.get_fairmints_by_address, "addresses"),
+    "/v2/addresses/<address>/fairboosters": (queries.get_fairboosters_by_address, "addresses"),
+    "/v2/addresses/<address>/boosters": (
+        queries.get_fairbooster_purchases_by_address,
+        "addresses",
+    ),
+    "/v2/addresses/<address>/booster_cards": (
+        queries.get_fairbooster_draws_by_address,
+        "addresses",
+    ),
     "/v2/addresses/<address>/fairmints/<asset>": (
         queries.get_fairmints_by_address_and_asset,
         "addresses",
@@ -196,6 +205,12 @@ ALL_ROUTES = {
     "/v2/addresses/<address>/compose/dispense": (compose.compose_dispense, "compose"),
     "/v2/addresses/<address>/compose/fairminter": (compose.compose_fairminter, "compose"),
     "/v2/addresses/<address>/compose/fairmint": (compose.compose_fairmint, "compose"),
+    "/v2/addresses/<address>/compose/fairbooster": (compose.compose_fairbooster, "compose"),
+    "/v2/addresses/<address>/compose/updatefairbooster": (
+        compose.compose_updatefairbooster,
+        "compose",
+    ),
+    "/v2/addresses/<address>/compose/buybooster": (compose.compose_buybooster, "compose"),
     "/v2/addresses/<address>/compose/pooldeposit": (compose.compose_pooldeposit, "compose"),
     "/v2/addresses/<address>/compose/pooldeposit/estimatexcpfees": (
         compose.get_pool_deposit_estimate_xcp_fee,
@@ -309,6 +324,15 @@ ALL_ROUTES = {
     "/v2/fairminters": (queries.get_all_fairminters, "fairminters"),
     "/v2/fairminters/<tx_hash>": (queries.get_fairminter, "fairminters"),
     "/v2/fairminters/<tx_hash>/fairmints": (queries.get_fairmints_by_fairminter, "fairminters"),
+    ### /fairboosters ###
+    "/v2/fairboosters": (queries.get_all_fairboosters, "fairboosters"),
+    "/v2/fairboosters/<asset>": (queries.get_fairbooster, "fairboosters"),
+    "/v2/fairboosters/<asset>/cards": (queries.get_fairbooster_cards, "fairboosters"),
+    "/v2/fairboosters/<asset>/updates": (queries.get_fairbooster_updates, "fairboosters"),
+    "/v2/fairboosters/<asset>/purchases": (queries.get_fairbooster_purchases, "fairboosters"),
+    "/v2/fairboosters/<asset>/draws": (queries.get_fairbooster_draws, "fairboosters"),
+    "/v2/boosters/<tx_hash>": (queries.get_fairbooster_purchase, "fairboosters"),
+    "/v2/boosters/<tx_hash>/draws": (queries.get_fairbooster_draws_by_purchase, "fairboosters"),
     ### /fairmints ###
     "/v2/fairmints": (queries.get_all_fairmints, "fairminters"),
     "/v2/fairmints/<tx_hash>": (queries.get_fairmint, "fairminters"),

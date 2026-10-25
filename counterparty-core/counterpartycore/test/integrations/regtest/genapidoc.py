@@ -643,6 +643,11 @@ def generate_regtest_fixtures(db):
     regtest_fixtures["$LAST_FAIRMINT_BLOCK"] = row["block_index"]
     regtest_fixtures["$LAST_FAIRMINT_TX_HASH"] = row["tx_hash"]
 
+    # tx with booster purchase
+    cursor.execute("SELECT tx_hash FROM fairbooster_purchases ORDER BY rowid DESC LIMIT 1")
+    row = cursor.fetchone()
+    regtest_fixtures["$LAST_BOOSTER_PURCHASE_TX_HASH"] = row["tx_hash"]
+
     # open fairminter asset
     cursor.execute("SELECT asset FROM fairminters WHERE status='open' ORDER BY rowid DESC LIMIT 1")
     row = cursor.fetchone()

@@ -10,6 +10,16 @@ from counterpartycore.lib import backend, config, exceptions
 # These functions are tested indirectly through other tests
 
 
+@pytest.fixture(autouse=True)
+def restore_backend_module():
+    # `importlib.reload(backend)` replaces the session-level mocks set on the
+    # module (`backend.search_pubkey`), so later tests that compose would hit a
+    # real bitcoind and retry forever: put the module back as it was.
+    saved = dict(vars(backend))
+    yield
+    vars(backend).update(saved)
+
+
 def test_list_unspent_from_bitcoind_direct(monkeypatch):
     """Test list_unspent when Bitcoin Core returns UTXOs - direct test."""
     expected_utxos = [{"txid": "abc123", "vout": 0, "value": 100000}]

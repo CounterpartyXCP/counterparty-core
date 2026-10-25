@@ -18,6 +18,8 @@ from counterpartycore.lib.api import (
 )
 from counterpartycore.lib.parser import blocks
 from counterpartycore.lib.utils import database
+from counterpartycore.test.mocks import bitcoind as bitcoind_mock
+from counterpartycore.test.mocks.counterpartydbs import run_scenario
 
 # Tables whose contents are not derived from the ledger (yoyo bookkeeping) or
 # whose contents legitimately differ between a rebuild and a rollback (the
@@ -374,6 +376,7 @@ def test_state_keys_agree_with_ledger_keys():
     the single documented exception of ``balances``' utxo pair."""
     ledger_keys = dict(statetables.LEDGER_CONSOLIDATED_KEYS)
     ledger_keys.update(statetables.LEDGER_POOL_KEYS)
+    ledger_keys.update(statetables.LEDGER_FAIRBOOSTER_KEYS)
     # ``pool_matches`` is append-only (keyed on rowid); it is pruned, not restored.
     del ledger_keys["pool_matches"]
 
@@ -450,3 +453,58 @@ def test_orphan_events_drive_the_optional_passes(state_db, ledger_db):
     state_db.execute("DROP TABLE temp.rollback_events")
     assert counts, "the fixture's last block should produce events"
     assert counts["BLOCK_PARSED"] == 1
+
+
+def test_fairboosters_rollback_matches_full_rebuild(state_db, ledger_db, defaults):
+    """`fairboosters` is updated in place (parameters, boosters sold): a
+    rollback must restore the version before the orphaned blocks, like a
+    rebuild."""
+    owner, buyer = defaults["addresses"][0], defaults["addresses"][1]
+
+    def send(name, params):
+        run_scenario(ledger_db, bitcoind_mock, [[name, params, {"encoding": "multisig"}]])
+
+    send(
+        "fairbooster",
+        {
+            "source": owner,
+            "asset": "BOOSTER",
+            "price": 1000,
+            "max_boosters": 10,
+            "cards_per_booster": 2,
+            "cards_base_url": "https://example.com/cards",
+            "cards_image_extension": "png",
+            "cards": f"1:Common:{'11' * 32}:1:0",
+        },
+    )
+    send("buybooster", {"source": buyer, "asset": "BOOSTER"})
+    target = _last_block(ledger_db) + 1
+    send("updatefairbooster", {"source": owner, "asset": "BOOSTER", "price": 2000})
+    send("buybooster", {"source": buyer, "asset": "BOOSTER"})
+    bitcoind_mock.mine_block(ledger_db, [])
+    apiwatcher.catch_up(ledger_db, state_db)
+
+    def current(db):
+        return db.execute("SELECT * FROM fairboosters WHERE asset = 'BOOSTER'").fetchone()
+
+    assert current(state_db)["price"] == 2000
+    assert current(state_db)["boosters_sold"] == 2
+    before = _dump_state_db(state_db)
+
+    blocks.rollback(ledger_db, block_index=target, force=True)
+    assert staterollback.rollback_reason(state_db, target) is None
+    dbbuilder.rollback_state_db(state_db, target)
+    assert current(state_db)["price"] == 1000
+    assert current(state_db)["boosters_sold"] == 1
+    incremental = _dump_state_db(state_db)
+
+    state_db.close()
+    database.StateDBConnectionPool().close()
+    dbbuilder.build_state_db()
+    rebuilt_db = database.get_db_connection(config.STATE_DATABASE, read_only=True)
+    try:
+        rebuilt = _dump_state_db(rebuilt_db)
+    finally:
+        rebuilt_db.close()
+    _assert_same_state(rebuilt, incremental, f"fairboosters: rollback to block {target}")
+    assert incremental != before

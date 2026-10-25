@@ -59,6 +59,7 @@ ASSET_INDEX_COLUMN_NAMES = frozenset(
         "asset_parent",
         "asset_a",
         "asset_b",
+        "fairbooster",
     }
 )
 

@@ -192,6 +192,11 @@ def validate(
             existing_parent = ledger.issuances.get_asset(db, asset_parent)
             if existing_parent is None:
                 problems.append("Asset parent does not exist")
+            # the subassets of a fairbooster are its cards, created by its draws
+            elif protocol.enabled(
+                "fairboosters", block_index=block_index
+            ) and ledger.fairboosters.is_fairbooster_asset(db, asset_parent):
+                problems.append("subassets of a fairbooster are reserved for its cards")
         elif not asset.startswith("A"):
             fee = 0.5 * config.UNIT
             balance = ledger.balances.get_balance(db, source, config.XCP)

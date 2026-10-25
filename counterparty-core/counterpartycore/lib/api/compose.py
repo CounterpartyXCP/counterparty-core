@@ -738,6 +738,100 @@ def compose_fairmint(db, address: str, asset: str, quantity: int = 0, **construc
     return composer.compose_transaction(db, "fairmint", params, construct_params)
 
 
+def compose_fairbooster(
+    db,
+    address: str,
+    asset: str,
+    price: int,
+    max_boosters: int,
+    cards_per_booster: int,
+    cards_base_url: str,
+    cards_image_extension: str,
+    cards: str,
+    description: str = "",
+    image_url: str = "",
+    **construct_params,
+):
+    """
+    Composes a transaction to create a fairbooster: boosters of trading cards sold for XCP. Each card drawn from a booster becomes an asset `<asset>.<card_id>.<card_name>.<serial>` with a supply of 1, locked. Creating a fairbooster costs 0.001 XCP per card it can sell (`max_boosters` * `cards_per_booster`).
+    :param address: The address that will create the fairbooster and receive the payments (e.g. $ADDRESS_1)
+    :param asset: The name of the fairbooster, a free named asset created with a supply of 1, locked (e.g. BOOSTERTEST)
+    :param price: The price of a booster in XCP (in satoshis, hence integer) (e.g. 10000000)
+    :param max_boosters: The maximum number of boosters that can be sold (e.g. 100)
+    :param cards_per_booster: The number of cards in a booster (e.g. 3)
+    :param cards_base_url: The base URL of the card images: the image of a card is `<cards_base_url>/<card_id>.<cards_image_extension>` (e.g. https://www.example.com/booster/images/)
+    :param cards_image_extension: The extension of the card images (e.g. png)
+    :param cards: The cards, as `<id>:<name>:<image_hash>:<weight>:<supply>` separated by commas. `id` is a unique integer, `name` may contain spaces (they become `_` in the card asset names), `image_hash` is the unique SHA-256 of the card image (hex), `weight` the relative draw probability and `supply` the maximum number of copies (0 for unlimited) (e.g. 1:Common Card:9b2a0c0e1d7b5cd9a8c1f1f2e7d1c4a0b3c3d1e2f4a5b6c7d8e9f0a1b2c3d4e5:10:0,2:Rare Card:1f3e5d7c9b0a2c4e6f8d0b2a4c6e8f0a1b3d5f7e9c0a2b4d6f8e0c1a3b5d7f9e:1:10)
+    :param description: The description of the fairbooster (e.g. My first fairbooster)
+    :param image_url: The URL of the fairbooster image (e.g. https://www.example.com/booster/booster.png)
+    """
+    params = {
+        "source": address,
+        "asset": asset,
+        "price": price,
+        "max_boosters": max_boosters,
+        "cards_per_booster": cards_per_booster,
+        "cards_base_url": cards_base_url,
+        "cards_image_extension": cards_image_extension,
+        "cards": cards,
+        "description": description,
+        "image_url": image_url,
+    }
+    return composer.compose_transaction(db, "fairbooster", params, construct_params)
+
+
+def compose_updatefairbooster(
+    db,
+    address: str,
+    asset: str,
+    description: str = None,
+    image_url: str = None,
+    price: int = None,
+    max_boosters: int = None,
+    cards_per_booster: int = None,
+    cards_base_url: str = None,
+    cards_image_extension: str = None,
+    cards: str = None,
+    **construct_params,
+):
+    """
+    Composes a transaction to update a fairbooster and/or add cards to it. Only the owner of the fairbooster asset can update it; omitted parameters are left unchanged. Raising `max_boosters` * `cards_per_booster` above what was already paid for costs 0.001 XCP per added card.
+    :param address: The owner of the fairbooster (e.g. $ADDRESS_1)
+    :param asset: The name of the fairbooster (e.g. BOOSTERTEST)
+    :param description: The new description of the fairbooster
+    :param image_url: The new URL of the fairbooster image
+    :param price: The new price of a booster in XCP (in satoshis, hence integer) (e.g. 20000000)
+    :param max_boosters: The new maximum number of boosters, at least the number of boosters sold
+    :param cards_per_booster: The new number of cards in a booster
+    :param cards_base_url: The new base URL of the card images
+    :param cards_image_extension: The new extension of the card images
+    :param cards: Cards to add, in the same format as for `compose/fairbooster`
+    """
+    params = {
+        "source": address,
+        "asset": asset,
+        "description": description,
+        "image_url": image_url,
+        "price": price,
+        "max_boosters": max_boosters,
+        "cards_per_booster": cards_per_booster,
+        "cards_base_url": cards_base_url,
+        "cards_image_extension": cards_image_extension,
+        "cards": cards,
+    }
+    return composer.compose_transaction(db, "updatefairbooster", params, construct_params)
+
+
+def compose_buybooster(db, address: str, asset: str, **construct_params):
+    """
+    Composes a transaction to buy one booster of a fairbooster. The price is paid to the owner of the fairbooster, and the cards are drawn and credited in the next block.
+    :param address: The address that will buy the booster (e.g. $ADDRESS_2)
+    :param asset: The name of the fairbooster (e.g. BOOSTERTEST)
+    """
+    params = {"source": address, "asset": asset}
+    return composer.compose_transaction(db, "buybooster", params, construct_params)
+
+
 def compose_pooldeposit(
     db,
     address: str,
@@ -1238,6 +1332,18 @@ def unpack(db, datahex: str, block_index: int = None):
         elif message_type_id == messages.poolwithdraw.ID:
             message_type_name = "poolwithdraw"
             message_data = messages.poolwithdraw.unpack(db, message, return_dict=True)
+        # Fairbooster
+        elif message_type_id == messages.fairbooster.ID:
+            message_type_name = "fairbooster"
+            message_data = messages.fairbooster.unpack(message, return_dict=True)
+        # Fairbooster update
+        elif message_type_id == messages.updatefairbooster.ID:
+            message_type_name = "updatefairbooster"
+            message_data = messages.updatefairbooster.unpack(message, return_dict=True)
+        # Booster purchase
+        elif message_type_id == messages.buybooster.ID:
+            message_type_name = "buybooster"
+            message_data = messages.buybooster.unpack(message, return_dict=True)
     except (exceptions.UnpackError, exceptions.DecodeError, UnicodeDecodeError) as e:
         message_data = {"error": str(e)}
 

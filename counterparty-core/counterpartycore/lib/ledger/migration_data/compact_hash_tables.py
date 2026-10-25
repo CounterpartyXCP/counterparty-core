@@ -1317,6 +1317,13 @@ ASSET_NAME_COLUMNS = {
     "pool_deposits": ("asset_a", "asset_b"),
     "pool_withdrawals": ("asset_a", "asset_b"),
     "pool_matches": ("asset_a", "asset_b", "forward_asset", "backward_asset"),
+    # created after this migration (ledger migration 0012), listed for the
+    # write and read paths
+    "fairboosters": ("asset",),
+    "fairbooster_cards": ("fairbooster",),
+    "fairbooster_updates": ("fairbooster",),
+    "fairbooster_purchases": ("fairbooster",),
+    "fairbooster_draws": ("fairbooster", "asset"),
 }
 
 
@@ -1380,6 +1387,10 @@ ADDRESS_NAME_COLUMNS = {
     "pool_deposits": ("source",),
     "pool_withdrawals": ("source",),
     "pool_matches": ("source",),
+    "fairboosters": ("source",),
+    "fairbooster_updates": ("source",),
+    "fairbooster_purchases": ("source",),
+    "fairbooster_draws": ("source",),
 }
 
 

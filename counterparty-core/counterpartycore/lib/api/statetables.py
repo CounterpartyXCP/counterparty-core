@@ -81,6 +81,11 @@ LEDGER_POOL_KEYS = {
     "pool_matches": "rowid",
 }
 
+# Same, for the fairboosters table added by migration 0017.
+LEDGER_FAIRBOOSTER_KEYS = {
+    "fairboosters": "tx_hash",
+}
+
 # The same keys expressed in **State DB** column names, for the rollback path
 # (which starts from a State DB row and looks up its Ledger DB ancestor).
 # Identical to the two dicts above except for ``balances``, where the State DB
@@ -100,6 +105,7 @@ STATE_CONSOLIDATED_KEYS = {
     "pools": ["asset_a", "asset_b"],
     "pool_deposits": ["tx_hash"],
     "pool_withdrawals": ["tx_hash"],
+    "fairboosters": ["tx_hash"],
 }
 
 # State DB columns that have no Ledger DB counterpart and must be derived by

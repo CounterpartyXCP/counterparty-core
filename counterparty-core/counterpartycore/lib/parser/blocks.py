@@ -28,12 +28,14 @@ from counterpartycore.lib.messages import (
     broadcast,
     btcpay,
     burn,
+    buybooster,
     cancel,
     destroy,
     detach,
     dispense,
     dispenser,
     dividend,
+    fairbooster,
     fairmint,
     fairminter,
     issuance,
@@ -45,6 +47,7 @@ from counterpartycore.lib.messages import (
     rpsresolve,
     send,
     sweep,
+    updatefairbooster,
     utxo,
 )
 from counterpartycore.lib.messages.versions import enhancedsend, mpma
@@ -95,6 +98,11 @@ TABLES = ["balances", "credits", "debits", "messages"] + [
     "pool_deposits",
     "pool_withdrawals",
     "pool_matches",
+    "fairboosters",
+    "fairbooster_cards",
+    "fairbooster_updates",
+    "fairbooster_purchases",
+    "fairbooster_draws",
 ]
 
 
@@ -249,6 +257,18 @@ def parse_tx(db, tx):
                 "amm_pools", block_index=tx["block_index"]
             ):
                 poolwithdraw.parse(db, tx, message)
+            elif message_type_id == fairbooster.ID and protocol.enabled(
+                "fairboosters", block_index=tx["block_index"]
+            ):
+                fairbooster.parse(db, tx, message)
+            elif message_type_id == updatefairbooster.ID and protocol.enabled(
+                "fairboosters", block_index=tx["block_index"]
+            ):
+                updatefairbooster.parse(db, tx, message)
+            elif message_type_id == buybooster.ID and protocol.enabled(
+                "fairboosters", block_index=tx["block_index"]
+            ):
+                buybooster.parse(db, tx, message)
             else:
                 supported = False
 
@@ -391,6 +411,11 @@ def parse_block(
     t0 = time.perf_counter()
     fairminter.before_block(db, block_index)
     timings["fairminter.before_block"] = time.perf_counter() - t0
+
+    # Draw the cards of the boosters bought in the previous block
+    t0 = time.perf_counter()
+    fairbooster.before_block(db, block_index)
+    timings["fairbooster.before_block"] = time.perf_counter() - t0
 
     txlist = []
     t0 = time.perf_counter()

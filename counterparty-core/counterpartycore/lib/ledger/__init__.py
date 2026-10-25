@@ -4,6 +4,7 @@ from . import (
     caches,  # noqa F401
     currentstate,  # noqa F401
     events,  # noqa F401
+    fairboosters,  # noqa F401
     issuances,  # noqa F401
     markets,  # noqa F401
     other,  # noqa F401

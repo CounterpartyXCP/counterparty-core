@@ -415,6 +415,7 @@ DispenserStatus = Literal["all", "open", "closed", "closing", "open_empty_addres
 DispenserStatusNumber = {"open": 0, "closed": 10, "closing": 11, "open_empty_address": 1}  # pylint: disable=invalid-name
 DispenserStatusNumberInverted = {value: key for key, value in DispenserStatusNumber.items()}  # pylint: disable=invalid-name
 FairmintersStatus = Literal["all", "open", "closed", "pending"]
+FairboostersStatus = Literal["all", "open", "closed"]
 IssuancesAssetEvents = Literal[
     "all",
     "creation",
@@ -426,6 +427,8 @@ IssuancesAssetEvents = Literal[
     "open_fairminter",
     "fairmint",
     "lock_description",
+    "open_fairbooster",
+    "fairbooster_draw",
 ]
 
 BetMatchesStatus = Literal[
@@ -509,6 +512,9 @@ TransactionType = Literal[
     "attach",
     "detach",
     "utxomove",
+    "fairbooster",
+    "updatefairbooster",
+    "buybooster",
     "unknown",
 ]
 SendType = Literal["all", "send", "attach", "move", "detach"]
@@ -4896,6 +4902,214 @@ def get_fairmint(ledger_db, tx_hash: str):
         ledger_db,
         "fairmints",
         where={"tx_hash": tx_hash},
+    )
+
+
+def prepare_fairboosters_where(status, other_conditions=None):
+    return prepare_where_status(status, FairboostersStatus, other_conditions=other_conditions)
+
+
+def get_all_fairboosters(
+    state_db,
+    status: FairboostersStatus = "all",
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns all fairboosters
+    :param str status: The status of the fairboosters to return
+    :param int cursor: The last index of the fairboosters to return
+    :param int limit: The maximum number of fairboosters to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    where = prepare_fairboosters_where(status)
+    return select_rows(
+        state_db, "fairboosters", where=where, last_cursor=cursor, limit=limit, offset=offset
+    )
+
+
+def get_fairbooster(state_db, asset: str):
+    """
+    Returns a fairbooster by its name
+    :param str asset: The name of the fairbooster to return (e.g. BOOSTERTEST)
+    """
+    return select_row(state_db, "fairboosters", where={"asset": asset})
+
+
+def get_fairboosters_by_address(
+    state_db,
+    address: str,
+    status: FairboostersStatus = "all",
+    cursor: int = None,
+    limit: int = 100,
+    offset: int = None,
+):
+    """
+    Returns the fairboosters created by an address
+    :param str address: The address of the creator of the fairboosters (e.g. $ADDRESS_1)
+    :param str status: The status of the fairboosters to return
+    :param int cursor: The last index of the fairboosters to return
+    :param int limit: The maximum number of fairboosters to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    where = prepare_fairboosters_where(status, {"source": address})
+    return select_rows(
+        state_db, "fairboosters", where=where, last_cursor=cursor, limit=limit, offset=offset
+    )
+
+
+def get_fairbooster_cards(
+    ledger_db, asset: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the cards of a fairbooster, with the number of copies drawn so far
+    :param str asset: The name of the fairbooster (e.g. BOOSTERTEST)
+    :param int cursor: The last index of the cards to return
+    :param int limit: The maximum number of cards to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "fairbooster_cards",
+        where={"fairbooster": asset},
+        select=(
+            "*, (SELECT COUNT(*) FROM fairbooster_draws d "
+            "WHERE d.fairbooster = fairbooster_cards.fairbooster "
+            "AND d.card_id = fairbooster_cards.card_id) AS drawn"
+        ),
+        order="ASC",
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_fairbooster_updates(
+    ledger_db, asset: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the updates of a fairbooster
+    :param str asset: The name of the fairbooster (e.g. BOOSTERTEST)
+    :param int cursor: The last index of the updates to return
+    :param int limit: The maximum number of updates to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "fairbooster_updates",
+        where={"fairbooster": asset},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_fairbooster_purchases(
+    ledger_db, asset: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the boosters bought from a fairbooster
+    :param str asset: The name of the fairbooster (e.g. BOOSTERTEST)
+    :param int cursor: The last index of the purchases to return
+    :param int limit: The maximum number of purchases to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "fairbooster_purchases",
+        where={"fairbooster": asset},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_fairbooster_draws(
+    ledger_db, asset: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the cards drawn from a fairbooster, one per card asset
+    :param str asset: The name of the fairbooster (e.g. BOOSTERTEST)
+    :param int cursor: The last index of the draws to return
+    :param int limit: The maximum number of draws to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "fairbooster_draws",
+        where={"fairbooster": asset},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_fairbooster_purchase(ledger_db, tx_hash: str):
+    """
+    Returns a booster purchase by its hash
+    :param str tx_hash: The hash of the purchase (e.g. $LAST_BOOSTER_PURCHASE_TX_HASH)
+    """
+    return select_row(ledger_db, "fairbooster_purchases", where={"tx_hash": tx_hash})
+
+
+def get_fairbooster_draws_by_purchase(
+    ledger_db, tx_hash: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the cards drawn for a booster purchase
+    :param str tx_hash: The hash of the purchase (e.g. $LAST_BOOSTER_PURCHASE_TX_HASH)
+    :param int cursor: The last index of the draws to return
+    :param int limit: The maximum number of draws to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "fairbooster_draws",
+        where={"tx_hash": tx_hash},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_fairbooster_purchases_by_address(
+    ledger_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the boosters bought by an address
+    :param str address: The address of the buyer (e.g. $ADDRESS_2)
+    :param int cursor: The last index of the purchases to return
+    :param int limit: The maximum number of purchases to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "fairbooster_purchases",
+        where={"source": address},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def get_fairbooster_draws_by_address(
+    ledger_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
+):
+    """
+    Returns the cards drawn for an address
+    :param str address: The address of the buyer (e.g. $ADDRESS_2)
+    :param int cursor: The last index of the draws to return
+    :param int limit: The maximum number of draws to return (e.g. 5)
+    :param int offset: The number of lines to skip before returning results (overrides the `cursor` parameter)
+    """
+    return select_rows(
+        ledger_db,
+        "fairbooster_draws",
+        where={"source": address},
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
     )
 
 

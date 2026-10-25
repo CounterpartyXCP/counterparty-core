@@ -163,6 +163,8 @@ def inject_normalized_quantity(item, field_name, asset_info):
             if "satoshirate" in item:  # dispenser
                 price = D(item["satoshirate_normalized"]) / D(item["give_quantity_normalized"])
                 item[field_name + "_normalized"] = normalize_price(price)
+            elif "cards_per_booster" in item:  # fairbooster: XCP per booster
+                item[field_name + "_normalized"] = helpers.divide(item[field_name], 10**8)
             elif "premint_quantity" in item:  # fairminter
                 price = D(item["price"]) / D(item["quantity_by_price"])
                 if not asset_info["divisible"]:
@@ -400,6 +402,10 @@ def inject_normalized_quantities(result_list):
                 item["dispenser"] = inject_normalized_quantity(  # noqa
                     item["dispenser"], field_name, asset_info
                 )
+
+        if "card_count" in item and "paid_quantity" in item:
+            # booster purchases: the price paid is an XCP quantity
+            item = inject_normalized_quantity(item, "paid_quantity", {"divisible": True})
 
         if "get_quantity" in item and "give_quantity" in item and "market_dir" in item:
             if item["market_dir"] == "SELL":

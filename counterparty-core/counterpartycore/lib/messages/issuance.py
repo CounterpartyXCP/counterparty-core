@@ -181,6 +181,11 @@ def validate(
                 problems.append("parent asset owned by another address")
         else:
             problems.append("parent asset not found")
+        # the subassets of a fairbooster are its cards, created by its draws
+        if protocol.enabled(
+            "fairboosters", block_index=block_index
+        ) and ledger.fairboosters.is_fairbooster_asset(db, subasset_parent):
+            problems.append("subassets of a fairbooster are reserved for its cards")
 
     # validate subasset issuance is not a duplicate
     if subasset_longname is not None and not reissuance:
