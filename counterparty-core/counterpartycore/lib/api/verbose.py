@@ -218,6 +218,8 @@ def inject_normalized_quantities(result_list):
         "commission": {"asset_field": "asset_info", "divisible": None},
         "paid_quantity": {"asset_field": "asset_info", "divisible": None},
         "pool_quantity": {"asset_field": "asset_info", "divisible": None},
+        # buybooster: the highest XCP price of a booster
+        "max_price": {"asset_field": None, "divisible": True},
         "give_price": {"asset_field": "give_asset_info", "divisible": None},
         "get_price": {"asset_field": "get_asset_info", "divisible": None},
         "forward_price": {"asset_field": "forward_asset_info", "divisible": None},

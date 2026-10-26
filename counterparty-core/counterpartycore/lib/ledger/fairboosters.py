@@ -44,18 +44,24 @@ def get_fairbooster_cards(db, asset):
 
 
 def get_drawn_cards(db, asset):
-    """`{card_id: (copies drawn, highest serial)}` for the fairbooster `asset`."""
+    """`{card_id: (copies drawn, highest serial)}` for the fairbooster `asset`,
+    read from the last draw of each card (its `copy_number` and `serial` only
+    grow): one index lookup per card, whatever the number of draws."""
     cursor = db.cursor()
     cursor.execute(
         """
-        SELECT card_id, COUNT(*) AS drawn, MAX(serial) AS last_serial
-        FROM fairbooster_draws
-        WHERE fairbooster = ?
-        GROUP BY card_id
+        SELECT d.card_id, d.copy_number, d.serial
+        FROM fairbooster_cards c
+        JOIN fairbooster_draws d ON d.rowid = (
+            SELECT rowid FROM fairbooster_draws
+            WHERE fairbooster = c.fairbooster AND card_id = c.card_id
+            ORDER BY serial DESC LIMIT 1
+        )
+        WHERE c.fairbooster = ?
         """,
         (database.asset_index_from_name(db, asset),),
     )
-    return {row["card_id"]: (row["drawn"], row["last_serial"]) for row in cursor.fetchall()}
+    return {row["card_id"]: (row["copy_number"], row["serial"]) for row in cursor.fetchall()}
 
 
 def get_card_supply(db, asset):

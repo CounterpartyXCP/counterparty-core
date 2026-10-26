@@ -149,11 +149,24 @@ SCENARIO = [
         "expected_error": ["subassets of a fairbooster are reserved for its cards"],
     },
     {
+        "title": "A purchase states the highest price it pays",
+        "transaction": "buybooster",
+        "source": "$ADDRESS_2",
+        "params": {
+            "asset": "BOOSTERTEST",
+            "max_price": 999,
+        },
+        "expected_error": ["the price of a booster (1000) is above `max_price` (999)"],
+    },
+    {
         "title": "Buy a BOOSTERTEST booster (drawn in the next block)",
         "transaction": "buybooster",
         "source": "$ADDRESS_2",
         "params": {
             "asset": "BOOSTERTEST",
+            "max_price": 1000,
+            "cards_per_booster": 2,
+            "card_count": 2,
         },
         "set_variables": {
             "BOOSTER_1_TX_HASH": "$TX_HASH",

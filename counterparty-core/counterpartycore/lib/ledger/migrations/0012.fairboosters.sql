@@ -90,7 +90,9 @@ CREATE INDEX IF NOT EXISTS fairbooster_purchases_block_index_status_idx ON fairb
 
 -- One row per drawn card: `asset` is the card asset created for it
 -- (`<fairbooster>.<card_id>.<name>.<serial>`, supply 1, locked), `tx_index`/
--- `tx_hash` the purchase, `block_index` the block that drew it.
+-- `tx_hash` the purchase, `block_index` the block that drew it. `copy_number`
+-- counts the copies of the card drawn so far, this one included: the serial
+-- unless a serial was skipped (`fairbooster.next_free_serial`).
 CREATE TABLE IF NOT EXISTS fairbooster_draws(
     tx_index INTEGER,
     tx_hash BLOB,
@@ -98,11 +100,13 @@ CREATE TABLE IF NOT EXISTS fairbooster_draws(
     source INTEGER,
     fairbooster INTEGER,
     card_id INTEGER,
+    copy_number INTEGER,
     serial INTEGER,
     asset INTEGER
 );
 CREATE INDEX IF NOT EXISTS fairbooster_draws_tx_hash_idx ON fairbooster_draws (tx_hash);
--- covers `ledger.fairboosters.get_drawn_cards`
+-- the last draw of a card, for `ledger.fairboosters.get_drawn_cards` and the
+-- `drawn` count of the API
 CREATE INDEX IF NOT EXISTS fairbooster_draws_fairbooster_card_id_serial_idx ON fairbooster_draws (fairbooster, card_id, serial);
 CREATE INDEX IF NOT EXISTS fairbooster_draws_source_idx ON fairbooster_draws (source);
 CREATE INDEX IF NOT EXISTS fairbooster_draws_asset_idx ON fairbooster_draws (asset);

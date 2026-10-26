@@ -13,9 +13,8 @@ from counterpartycore.lib.api.statetables import (
     LEDGER_FAIRBOOSTER_KEYS as FAIRBOOSTER_TABLES,
 )
 from counterpartycore.lib.api.statetables import (
-    consolidated_projection,
+    copy_consolidated_table,
 )
-from counterpartycore.lib.utils.database import text_affinitize_index_columns
 from yoyo import step  # pylint: disable=wrong-import-order
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -26,33 +25,6 @@ __depends__ = {"0016.add_rollback_block_index_indexes"}
 def dict_factory(cursor, row):
     fields = [column[0] for column in cursor.description]
     return dict(zip(fields, row, strict=True))
-
-
-def build_table(state_db, table_name, group_by):
-    """Copy the latest version of each row of a ledger table into the State DB."""
-    # table_name comes from the hardcoded FAIRBOOSTER_TABLES dict, not user input
-    rows = state_db.execute(f"""
-        SELECT sql, type FROM ledger_db.sqlite_master
-        WHERE tbl_name='{table_name}'
-        AND type != 'trigger'
-    """).fetchall()  # noqa: S608  # nosec B608
-    indexes = [row["sql"] for row in rows if row["type"] == "index" and row["sql"]]
-    for row in rows:
-        if row["type"] != "index":
-            # the State DB stores asset names and addresses, not their indexes
-            state_db.execute(text_affinitize_index_columns(row["sql"]))
-
-    names, expressions = consolidated_projection(state_db, table_name)
-    state_db.execute(f"""
-        INSERT INTO {table_name} ({", ".join(names)})
-        SELECT {", ".join(expressions)}
-        FROM ledger_db.{table_name} b
-        WHERE b.rowid IN (
-            SELECT MAX(rowid) FROM ledger_db.{table_name} GROUP BY {group_by}
-        )
-    """)  # noqa: S608  # nosec B608
-    for index_sql in indexes:
-        state_db.execute(index_sql)
 
 
 def apply(db):
@@ -84,7 +56,7 @@ def apply(db):
         if table_name not in ledger_tables:
             logger.debug("Ledger table `%s` does not exist yet, skipping.", table_name)
             continue
-        build_table(db, table_name, group_by)
+        copy_consolidated_table(db, table_name, group_by)
 
     logger.debug("Fairboosters table added in %.2f seconds", time.time() - start_time)
 

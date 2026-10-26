@@ -52,6 +52,11 @@ EVENTS_ADDRESS_FIELDS = {
     "NEW_POOL_DEPOSIT": ["source"],
     "NEW_POOL_WITHDRAWAL": ["source"],
     "POOL_MATCH": ["source"],
+    "NEW_FAIRBOOSTER": ["source"],
+    "FAIRBOOSTER_UPDATE": [],
+    "NEW_FAIRBOOSTER_UPDATE": ["source"],
+    "NEW_FAIRBOOSTER_PURCHASE": ["source"],
+    "NEW_FAIRBOOSTER_DRAW": ["source"],
 }
 
 

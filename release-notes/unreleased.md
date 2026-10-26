@@ -15,16 +15,26 @@
   average number of cards per block it brings the last 2016 blocks to: free up
   to about 45, 0.5 XCP at 55, about 1 XCP from 60 to 100, then growing. A large
   capacity therefore pays for the usage it creates, whether it is bought in one
-  transaction or in several. Both fees are destroyed.
-- `buybooster` (message 132) buys one booster. The price goes to the owner of
-  the fairbooster (the issuer of its asset), and the cards are drawn in the next
-  block. Each card is picked with a probability proportional to its weight
-  among the cards that are not exhausted, seeded by that block's hash and the
-  purchase hash, so a draw is unpredictable for the buyer and the same on every
-  node. Every drawn card becomes an asset of its own,
+  transaction or in several. Both fees are destroyed: the asset fee as the
+  `fee_paid` of the issuance, like an issuance fee, and the gas fee as a
+  destruction. A name that an active fairminter earmarked as its `lp_asset`
+  cannot be used.
+- `buybooster` (message 132) buys one booster. It carries the terms the buyer
+  accepts: the highest price paid (`max_price`), the number of cards of a
+  booster and the number of cards of the fairbooster. An update of the
+  fairbooster confirmed before the purchase, in an earlier block or earlier in
+  the same one, therefore makes it invalid instead of changing what the buyer
+  pays or gets. The price goes to the owner of the fairbooster (the issuer of
+  its asset), and the cards are drawn in the next block, among the cards the
+  fairbooster had when the booster was bought. Each card is picked with a
+  probability proportional to its weight among the cards that are not
+  exhausted, seeded by that block's hash and the purchase hash, so a draw is
+  unpredictable for the buyer and the same on every node. Every drawn card
+  becomes an asset of its own,
   `<fairbooster>.<card_id>.<card_name>.<serial>` (spaces in the name become
   `_`), with a supply of 1, locked quantity and description, issued to the
-  buyer. A purchase is refused when every booster is sold or when the cards
+  buyer; its numeric asset name skips the names earmarked as an `lp_asset`. A
+  purchase is refused when every booster is sold or when the cards
   left, after those of the pending purchases, cannot fill a booster; the
   fairbooster is then `closed` until an update reopens it.
 - `updatefairbooster` (message 131) lets the owner change every parameter but
@@ -62,14 +72,20 @@
 
 - Add the `compose/fairbooster`, `compose/updatefairbooster` and
   `compose/buybooster` endpoints. The cards are passed as
-  `<id>:<name>:<image_hash>:<weight>:<supply>` separated by commas.
+  `<id>:<name>:<image_hash>:<weight>:<supply>` separated by commas. The first
+  two return the XCP fee they charge (`xcp_fee`), also available from their
+  `estimatexcpfees` sub-routes, and `compose/fairbooster` refuses an asset
+  that a parsed mempool transaction already creates (HTTP 409). The terms of
+  `compose/buybooster` default to the current ones of the fairbooster.
 - Add `/v2/fairboosters`, `/v2/fairboosters/<asset>` and its `/cards` (with the
   number of copies drawn), `/updates`, `/purchases` and `/draws`,
   `/v2/boosters/<tx_hash>` and its `/draws`, and
-  `/v2/addresses/<address>/fairboosters`, `/boosters` and `/booster_cards`. The
-  new events are `NEW_FAIRBOOSTER`, `FAIRBOOSTER_UPDATE`,
-  `NEW_FAIRBOOSTER_CARD`, `NEW_FAIRBOOSTER_UPDATE`, `NEW_FAIRBOOSTER_PURCHASE`
-  and `NEW_FAIRBOOSTER_DRAW`.
+  `/v2/addresses/<address>/fairboosters`, `/boosters` and `/booster_cards`. A
+  draw records the copy number of its card (`copy_number`). The new events are
+  `NEW_FAIRBOOSTER`, `FAIRBOOSTER_UPDATE`, `NEW_FAIRBOOSTER_CARD`,
+  `NEW_FAIRBOOSTER_UPDATE`, `NEW_FAIRBOOSTER_PURCHASE` and
+  `NEW_FAIRBOOSTER_DRAW`; those with a `source` are listed in
+  `/v2/addresses/<address>/events`.
 - Return MPMA decoding failures, including malformed address tables and
   recipient indexes past the end of the table, through the existing
   `message_data.error` response (HTTP 200) of `/v2/transactions/unpack` and

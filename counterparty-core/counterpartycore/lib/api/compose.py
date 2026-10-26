@@ -777,7 +777,31 @@ def compose_fairbooster(
         "description": description,
         "image_url": image_url,
     }
-    return composer.compose_transaction(db, "fairbooster", params, construct_params)
+    return _add_xcp_fee(
+        _compose_with_pending_asset_guard(db, "fairbooster", params, asset, construct_params),
+        messages.fairbooster.get_fee(
+            db, asset, max_boosters, cards_per_booster, CurrentState().current_block_index()
+        ),
+    )
+
+
+def get_fairbooster_estimate_xcp_fee(
+    db,
+    address: str,  # noqa  # pylint: disable=W0613
+    asset: str,
+    max_boosters: int,
+    cards_per_booster: int,
+):
+    """
+    Returns the estimated XCP fee of a fairbooster creation: 0.5 XCP when `asset` is a named asset, plus the gas fee of the cards it can sell (`max_boosters` * `cards_per_booster`). Returns null when the fee exceeds the maximum quantity.
+    :param address: The address that will create the fairbooster (e.g. $ADDRESS_1)
+    :param asset: The name of the fairbooster (e.g. BOOSTERTEST)
+    :param max_boosters: The maximum number of boosters that can be sold (e.g. 100)
+    :param cards_per_booster: The number of cards in a booster (e.g. 3)
+    """
+    return messages.fairbooster.get_fee(
+        db, asset, max_boosters, cards_per_booster, CurrentState().current_block_index()
+    )
 
 
 def compose_updatefairbooster(
@@ -819,16 +843,53 @@ def compose_updatefairbooster(
         "cards_image_extension": cards_image_extension,
         "cards": cards,
     }
-    return composer.compose_transaction(db, "updatefairbooster", params, construct_params)
+    return _add_xcp_fee(
+        composer.compose_transaction(db, "updatefairbooster", params, construct_params),
+        messages.updatefairbooster.get_fee(db, asset, max_boosters, cards_per_booster),
+    )
 
 
-def compose_buybooster(db, address: str, asset: str, **construct_params):
+def get_updatefairbooster_estimate_xcp_fee(
+    db,
+    address: str,  # noqa  # pylint: disable=W0613
+    asset: str,
+    max_boosters: int = None,
+    cards_per_booster: int = None,
+):
     """
-    Composes a transaction to buy one booster of a fairbooster. The price is paid to the owner of the fairbooster, and the cards are drawn and credited in the next block.
+    Returns the estimated XCP fee of a fairbooster update: the gas fee of the cards it adds above the capacity already paid for. Returns null when the fee exceeds the maximum quantity.
+    :param address: The owner of the fairbooster (e.g. $ADDRESS_1)
+    :param asset: The name of the fairbooster (e.g. BOOSTERTEST)
+    :param max_boosters: The new maximum number of boosters, unchanged if omitted (e.g. 10)
+    :param cards_per_booster: The new number of cards in a booster, unchanged if omitted
+    """
+    return messages.updatefairbooster.get_fee(db, asset, max_boosters, cards_per_booster)
+
+
+def compose_buybooster(
+    db,
+    address: str,
+    asset: str,
+    max_price: int = None,
+    cards_per_booster: int = None,
+    card_count: int = None,
+    **construct_params,
+):
+    """
+    Composes a transaction to buy one booster of a fairbooster. The price is paid to the owner of the fairbooster, and the cards are drawn and credited in the next block, among the cards the fairbooster has when the booster is bought. The transaction carries the terms of the purchase, by default the current ones of the fairbooster: it is invalid if the fairbooster is updated before it is confirmed with a higher price, another number of cards per booster or new cards.
     :param address: The address that will buy the booster (e.g. $ADDRESS_2)
     :param asset: The name of the fairbooster (e.g. BOOSTERTEST)
+    :param max_price: The highest price paid for the booster, in XCP (in satoshis, hence integer); the current price if omitted
+    :param cards_per_booster: The number of cards of the booster; the current one if omitted
+    :param card_count: The number of cards of the fairbooster (its `card_count`); the current one if omitted
     """
-    params = {"source": address, "asset": asset}
+    params = {
+        "source": address,
+        "asset": asset,
+        "max_price": max_price,
+        "cards_per_booster": cards_per_booster,
+        "card_count": card_count,
+    }
     return composer.compose_transaction(db, "buybooster", params, construct_params)
 
 

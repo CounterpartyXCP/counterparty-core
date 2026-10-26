@@ -9,9 +9,8 @@ from counterpartycore.lib.api.statetables import (
     LEDGER_POOL_KEYS as POOL_TABLES,
 )
 from counterpartycore.lib.api.statetables import (
-    consolidated_projection,
+    copy_consolidated_table,
 )
-from counterpartycore.lib.utils.database import text_affinitize_index_columns
 from yoyo import step
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -22,70 +21,6 @@ __depends__ = {"0013.add_performance_indexes"}
 def dict_factory(cursor, row):
     fields = [column[0] for column in cursor.description]
     return dict(zip(fields, row, strict=True))
-
-
-def build_table(state_db, table_name, group_by):
-    """Copy latest state of a ledger table into state DB (consolidated)."""
-    logger.debug("Copying consolidated table `%s` to State DB...", table_name)
-    start_time = time.time()
-
-    # Recreate schema from ledger DB
-    sqls = []
-    indexes = []
-    # table_name comes from the hardcoded POOL_TABLES dict, not user input
-    for row in state_db.execute(f"""
-        SELECT sql, type FROM ledger_db.sqlite_master
-        WHERE tbl_name='{table_name}'
-        AND type != 'trigger'
-    """).fetchall():  # noqa: S608  # nosec B608
-        if row["type"] == "index":
-            indexes.append(row["sql"])
-        else:
-            sqls.append(row["sql"])
-
-    for sql in sqls:
-        # The State DB stores the decoded asset name / address string in the
-        # asset/address columns, so retype them from the ledger's compact
-        # ``INTEGER`` to ``TEXT`` (matching ``assets_info.asset``) -- otherwise
-        # the affinity mismatch defeats the index on joins/subqueries against
-        # ``assets_info`` and degrades into full scans.
-        state_db.execute(text_affinitize_index_columns(sql))
-
-    # Get latest row per group
-    # table_name and group_by come from the hardcoded POOL_TABLES dict, not user input
-    state_db.execute(f"""
-        CREATE TEMP TABLE latest_ids AS
-        SELECT {group_by}, MAX(rowid) as max_id
-        FROM ledger_db.{table_name}
-        GROUP BY {group_by}
-    """)  # noqa: S608  # nosec B608
-    state_db.execute("CREATE INDEX temp.latest_ids_idx ON latest_ids(max_id)")
-
-    # The State DB stores decoded asset names / addresses where the Ledger DB
-    # stores compact indexes. The projection is shared with the incremental
-    # rollback path so the two can never drift apart -- see
-    # ``api/statetables.py``.
-    names, expressions = consolidated_projection(state_db, table_name)
-
-    # table_name comes from POOL_TABLES; the projection is built from PRAGMA
-    # table_info results
-    state_db.execute(f"""
-        INSERT INTO {table_name} ({", ".join(names)})
-        SELECT {", ".join(expressions)}
-        FROM ledger_db.{table_name} b
-        JOIN latest_ids l ON b.rowid = l.max_id
-    """)  # noqa: S608  # nosec B608
-    state_db.execute("DROP TABLE latest_ids")
-
-    for idx_sql in indexes:
-        if idx_sql:
-            state_db.execute(idx_sql)
-
-    logger.debug(
-        "Copied consolidated table `%s` in %.2f seconds",
-        table_name,
-        time.time() - start_time,
-    )
 
 
 def apply(db):
@@ -118,7 +53,7 @@ def apply(db):
         if table_name not in ledger_tables:
             logger.debug("Ledger table `%s` does not exist yet, skipping.", table_name)
             continue
-        build_table(db, table_name, group_by)
+        copy_consolidated_table(db, table_name, group_by)
 
     # Rebuild asset_holders view to include pool reserves
     if "pools" in ledger_tables:

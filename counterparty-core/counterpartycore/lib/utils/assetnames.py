@@ -247,10 +247,12 @@ def asset_exists(db, name):
     return False
 
 
-def deterministic_random_asset_name(db, seed):
+def deterministic_random_asset_name(db, seed, is_reserved=None):
+    """A numeric asset name derived from `seed` that has no issuance and, when
+    `is_reserved` is given, for which `is_reserved(name)` is false."""
     asset_name = gen_random_asset_name(seed)
     add = 0
-    while asset_exists(db, asset_name):
+    while asset_exists(db, asset_name) or (is_reserved is not None and is_reserved(asset_name)):
         asset_name = gen_random_asset_name(seed, add=add)
         add += 1
     return asset_name

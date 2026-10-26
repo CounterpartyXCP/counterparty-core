@@ -275,6 +275,7 @@ CONFLICT_RESPONSE = {
 ERROR_RESPONSES = {
     "compose_issuance": {"409": CONFLICT_RESPONSE},
     "compose_fairminter": {"409": CONFLICT_RESPONSE},
+    "compose_fairbooster": {"409": CONFLICT_RESPONSE},
 }
 
 

@@ -206,8 +206,16 @@ ALL_ROUTES = {
     "/v2/addresses/<address>/compose/fairminter": (compose.compose_fairminter, "compose"),
     "/v2/addresses/<address>/compose/fairmint": (compose.compose_fairmint, "compose"),
     "/v2/addresses/<address>/compose/fairbooster": (compose.compose_fairbooster, "compose"),
+    "/v2/addresses/<address>/compose/fairbooster/estimatexcpfees": (
+        compose.get_fairbooster_estimate_xcp_fee,
+        "compose",
+    ),
     "/v2/addresses/<address>/compose/updatefairbooster": (
         compose.compose_updatefairbooster,
+        "compose",
+    ),
+    "/v2/addresses/<address>/compose/updatefairbooster/estimatexcpfees": (
+        compose.get_updatefairbooster_estimate_xcp_fee,
         "compose",
     ),
     "/v2/addresses/<address>/compose/buybooster": (compose.compose_buybooster, "compose"),

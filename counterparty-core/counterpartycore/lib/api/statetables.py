@@ -3,8 +3,9 @@
 Two independent code paths populate those tables from ``ledger_db``:
 
   * the **build** path -- API migrations ``0004`` (``assets_info``), ``0006``
-    (consolidated tables) and ``0014`` (AMM pool tables) -- which recreates
-    every table from the full ledger history, and
+    (consolidated tables), ``0014`` (AMM pool tables) and ``0017``
+    (``fairboosters``) -- which recreates every table from the full ledger
+    history, and
   * the **incremental rollback** path (:mod:`counterpartycore.lib.api.staterollback`),
     which reverts only the rows a reorganization invalidated.
 
@@ -22,11 +23,13 @@ connection outside the usual apsw plumbing.
 """
 
 import logging
+import time
 
 from counterpartycore.lib import config
 from counterpartycore.lib.utils.database import (
     ADDRESS_INDEX_COLUMN_NAMES,
     ASSET_INDEX_COLUMN_NAMES,
+    text_affinitize_index_columns,
 )
 
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -187,6 +190,71 @@ def consolidated_projection(db, table_name):
         # else: a State DB-only column with no derivation rule; skipped.
 
     return names, expressions
+
+
+def copy_consolidated_table(state_db, table_name, group_by):
+    """Create ``table_name`` in the State DB from ``ledger_db.<table_name>``
+    (attached to ``state_db``), keeping the latest row (``MAX(rowid)``) of
+    each ``group_by`` key, for the migrations that add consolidated tables.
+    ``table_name`` and ``group_by`` come from the hardcoded key dicts above,
+    not from user input."""
+    logger.debug("Copying consolidated table `%s` to State DB...", table_name)
+    start_time = time.time()
+
+    # Recreate schema from ledger DB
+    sqls = []
+    indexes = []
+    for row in _rows(
+        state_db,
+        f"""
+        SELECT sql, type FROM ledger_db.sqlite_master
+        WHERE tbl_name='{table_name}'
+        AND type != 'trigger'
+        """,  # noqa: S608  # nosec B608
+    ):
+        if row["type"] == "index":
+            indexes.append(row["sql"])
+        else:
+            sqls.append(row["sql"])
+
+    for sql in sqls:
+        # The State DB stores the decoded asset name / address string in the
+        # asset/address columns, so retype them from the ledger's compact
+        # ``INTEGER`` to ``TEXT`` (matching ``assets_info.asset``) -- otherwise
+        # the affinity mismatch defeats the index on joins/subqueries against
+        # ``assets_info`` and degrades into full scans.
+        state_db.execute(text_affinitize_index_columns(sql))
+
+    # Get latest row per group
+    state_db.execute(f"""
+        CREATE TEMP TABLE latest_ids AS
+        SELECT {group_by}, MAX(rowid) as max_id
+        FROM ledger_db.{table_name}
+        GROUP BY {group_by}
+    """)  # noqa: S608  # nosec B608
+    state_db.execute("CREATE INDEX temp.latest_ids_idx ON latest_ids(max_id)")
+
+    # The State DB stores decoded asset names / addresses where the Ledger DB
+    # stores compact indexes; the projection is shared with the incremental
+    # rollback path so the two can never drift apart.
+    names, expressions = consolidated_projection(state_db, table_name)
+    state_db.execute(f"""
+        INSERT INTO {table_name} ({", ".join(names)})
+        SELECT {", ".join(expressions)}
+        FROM ledger_db.{table_name} b
+        JOIN latest_ids l ON b.rowid = l.max_id
+    """)  # noqa: S608  # nosec B608
+    state_db.execute("DROP TABLE latest_ids")
+
+    for idx_sql in indexes:
+        if idx_sql:
+            state_db.execute(idx_sql)
+
+    logger.debug(
+        "Copied consolidated table `%s` in %.2f seconds",
+        table_name,
+        time.time() - start_time,
+    )
 
 
 # -----------------------------------------------------------------------------

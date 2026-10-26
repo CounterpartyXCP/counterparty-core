@@ -74,6 +74,28 @@ def validate(db, source, asset, params, cards, block_index=None):
     return problems, fee, capacity
 
 
+def get_fee(db, asset, max_boosters=None, cards_per_booster=None, block_index=None):
+    """The gas fee of setting the fairbooster `asset` to `max_boosters` and
+    `cards_per_booster` (None: unchanged), that of the cards it adds above the
+    paid capacity. None when the capacity or the fee exceeds `config.MAX_INT`."""
+    fairbooster = ledger.fairboosters.get_fairbooster(db, asset)
+    if fairbooster is None:
+        return 0
+    capacity = fairbooster_mod.capacity(
+        fairbooster["max_boosters"] if max_boosters is None else max_boosters,
+        fairbooster["cards_per_booster"] if cards_per_booster is None else cards_per_booster,
+        fairbooster["boosters_sold"],
+        fairbooster["cards_sold"],
+    )
+    if capacity > config.MAX_INT:
+        return None
+    return fairbooster_mod.capacity_fee(
+        db,
+        block_index or CurrentState().current_block_index(),
+        capacity - fairbooster["paid_capacity"],
+    )
+
+
 def compose(
     db,
     source: str,

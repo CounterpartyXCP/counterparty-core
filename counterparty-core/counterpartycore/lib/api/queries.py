@@ -4973,10 +4973,12 @@ def get_fairbooster_cards(
         ledger_db,
         "fairbooster_cards",
         where={"fairbooster": asset},
+        # the copies drawn: the `copy_number` of the last draw of the card
         select=(
-            "*, (SELECT COUNT(*) FROM fairbooster_draws d "
+            "*, COALESCE((SELECT d.copy_number FROM fairbooster_draws d "
             "WHERE d.fairbooster = fairbooster_cards.fairbooster "
-            "AND d.card_id = fairbooster_cards.card_id) AS drawn"
+            "AND d.card_id = fairbooster_cards.card_id "
+            "ORDER BY d.serial DESC LIMIT 1), 0) AS drawn"
         ),
         order="ASC",
         last_cursor=cursor,
