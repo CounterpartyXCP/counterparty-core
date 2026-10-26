@@ -247,3 +247,30 @@ def test_get_transaction_fee_for_count(ledger_db, monkeypatch):
         lambda *args: None,
     )
     assert gas.get_transaction_fee_for_count(ledger_db, TRANSACTION_ID, block_index, 2**70) == 0
+
+
+def test_get_transaction_fee_for_count_bounded(ledger_db):
+    """`min_unit_fee` and `max_unit_fee` (fairboosters, 130) bound the price of
+    a unit: the curve is rescaled between them and capped at `max_unit_fee`."""
+    min_fee, max_fee = 100000, 10000000
+
+    def unit_fee(x):
+        return gas.get_unit_fee(x, 10, 100, 1, 1, min_fee, max_fee)
+
+    assert unit_fee(0) == unit_fee(10) == min_fee
+    assert unit_fee(55) == min_fee + (max_fee - min_fee) // 2
+    assert all(unit_fee(x) <= unit_fee(x + 1) for x in range(200))
+    assert unit_fee(100) < max_fee
+    assert unit_fee(101) == unit_fee(10**6) == max_fee
+
+    block_index = 4000000
+    assert gas.get_transaction_fee_for_count(ledger_db, 130, block_index, 2016) == 2016 * min_fee
+    # past the cap every unit left pays `max_fee`, priced in one step however
+    # many units there are
+    count = 10**15
+    expected = sum(2016 * unit_fee(x) for x in range(101)) + (count - 101 * 2016) * max_fee
+    assert (
+        gas.get_transaction_fee_for_count(ledger_db, 130, block_index, count, limit=2**80)
+        == expected
+    )
+    assert gas.get_transaction_fee_for_count(ledger_db, 130, block_index, count) is None

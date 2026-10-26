@@ -111,9 +111,16 @@ def get_transaction_fee(db, transaction_id, block_index):
 
 
 @functools.lru_cache(maxsize=4096)
-def get_unit_fee(x, a, b, base_fee, k):
-    """`get_transaction_fee` for an average of `x` transactions per block."""
-    return int(calculate_fee(x, a, b, base_fee, k) * config.UNIT)
+def get_unit_fee(x, a, b, base_fee, k, min_fee=0, max_fee=None):
+    """`get_transaction_fee` for an average of `x` transactions per block.
+    With `max_fee`, the curve is bounded: rescaled to rise from `min_fee`
+    (below `a`) to `max_fee` (at `base_fee`, around `b`) and capped there,
+    both in satoshis."""
+    fee = calculate_fee(x, a, b, base_fee, k)
+    if max_fee is None:
+        return int(fee * config.UNIT)
+    share = min(D(fee) / D(base_fee), D(1))
+    return min_fee + int((max_fee - min_fee) * share)
 
 
 def get_transaction_fee_for_count(db, transaction_id, block_index, count, limit=config.MAX_INT):
@@ -122,27 +129,35 @@ def get_transaction_fee_for_count(db, transaction_id, block_index, count, limit=
     period to once the units before it are counted: those of the last period,
     those already counted in this block and the previous units of `count`. A
     bulk purchase therefore pays for the usage it creates, whether it is made
-    in one transaction or split across several of the same block. Returns None
-    when the fee exceeds `limit`."""
+    in one transaction or split across several of the same block. The
+    optional `min_unit_fee` and `max_unit_fee` fee parameters bound the price
+    of a unit (see `get_unit_fee`). Returns None when the fee exceeds
+    `limit`."""
     fee_params = protocol.get_value_by_block_index("fee_parameters", block_index)
     if fee_params is None or count <= 0:
         return 0
 
-    a = int(fee_params[str(transaction_id)]["fee_lower_threshold"])
-    b = int(fee_params[str(transaction_id)]["fee_upper_threshold"])
-    base_fee = int(fee_params[str(transaction_id)]["base_fee"])
-    k = int(fee_params[str(transaction_id)]["fee_sigmoid_k"])
+    params = fee_params[str(transaction_id)]
+    a = int(params["fee_lower_threshold"])
+    b = int(params["fee_upper_threshold"])
+    base_fee = int(params["base_fee"])
+    k = int(params["fee_sigmoid_k"])
+    min_fee = int(params.get("min_unit_fee", 0))
+    max_fee = int(params["max_unit_fee"]) if "max_unit_fee" in params else None
 
     position = get_transaction_count_for_last_period(db, transaction_id, block_index)
     position += get_transaction_count_by_block(db, transaction_id, block_index)
     end = position + count
     fee = 0
-    # the average changes every PERIOD_DURATION units: price them by slice.
-    # Above the upper threshold the unit fee grows faster than linearly, so
-    # `limit` bounds the number of slices.
+    # The average changes every PERIOD_DURATION units: price them by slice.
+    # Above the upper threshold the unit fee either grows faster than
+    # linearly, so that `limit` bounds the number of slices, or is capped at
+    # `max_fee`, the price of every unit left since the curve only grows.
     while position < end:
         slice_end = min(end, (position // PERIOD_DURATION + 1) * PERIOD_DURATION)
-        unit_fee = get_unit_fee(position // PERIOD_DURATION, a, b, base_fee, k)
+        unit_fee = get_unit_fee(position // PERIOD_DURATION, a, b, base_fee, k, min_fee, max_fee)
+        if max_fee is not None and unit_fee >= max_fee:
+            slice_end = end
         fee += (slice_end - position) * unit_fee
         if fee > limit:
             return None

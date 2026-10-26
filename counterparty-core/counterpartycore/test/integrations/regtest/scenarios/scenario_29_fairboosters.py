@@ -68,8 +68,9 @@ SCENARIO = [
                     "boosters_sold": 0,
                     "cards_sold": 0,
                     "paid_capacity": 6,
-                    # 0.5 XCP for the named asset; the gas fee of 6 cards is 0
-                    "fee_paid": 50000000,
+                    # 0.5 XCP for the named asset, and 0.001 XCP for each of
+                    # its 6 cards while few cards are sold
+                    "fee_paid": 50600000,
                     "status": "open",
                 },
             },
@@ -278,7 +279,8 @@ SCENARIO = [
                     "boosters_sold": 1,
                     "cards_sold": 2,
                     "paid_capacity": 8,
-                    "fee_paid": 50000000,
+                    # and 0.001 XCP for each of the 2 cards added to the capacity
+                    "fee_paid": 50800000,
                     "status": "open",
                 },
             },
@@ -299,7 +301,7 @@ SCENARIO = [
                         "cards_base_url": None,
                         "cards_image_extension": None,
                         "cards_added": 1,
-                        "fee_paid": 0,
+                        "fee_paid": 200000,
                         "status": "valid",
                     }
                 ],
@@ -336,7 +338,7 @@ SCENARIO = [
                     "boosters_sold": 2,
                     "cards_sold": 4,
                     "paid_capacity": 8,
-                    "fee_paid": 50000000,
+                    "fee_paid": 50800000,
                     "status": "open",
                 },
             },

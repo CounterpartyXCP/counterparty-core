@@ -27,6 +27,9 @@ HASH_3 = "33" * 32
 # <id>:<name>:<image_hash>:<weight>:<supply> (supply 0: unlimited)
 CARDS = f"1:Common Card:{HASH_1}:70:0, 2:Rare Card:{HASH_2}:25:5, 3:Legend:{HASH_3}:5:1"
 ASSET_FEE = fairbooster.ASSET_FEE
+# the gas fee of a card while few cards are sold: `min_unit_fee` (0.001 XCP)
+CARD_FEE = 100000
+MAX_CARD_FEE = 10000000
 BOOSTER_ID = 481982037  # generate_asset_id("BOOSTER")
 DIVISIBLE_ID = 697326324582  # generate_asset_id("DIVISIBLE")
 PRICE = 1000
@@ -201,21 +204,29 @@ def test_validate(ledger_db, defaults):
     assert fairbooster.asset_fee("BOOSTER") == ASSET_FEE
     assert fairbooster.asset_fee("A95428956661682178") == 0
     block_index = ledger.blocks.last_db_index(ledger_db) + 1
-    assert fairbooster.get_fee(ledger_db, "BOOSTER", 10, 3, block_index) == ASSET_FEE
-    assert fairbooster.get_fee(ledger_db, "A95428956661682178", 10, 3, block_index) == 0
+    # each of the 30 cards pays 0.001 XCP while few cards are sold
+    assert (
+        fairbooster.get_fee(ledger_db, "BOOSTER", 10, 3, block_index) == ASSET_FEE + 30 * CARD_FEE
+    )
+    assert fairbooster.get_fee(ledger_db, "A95428956661682178", 10, 3, block_index) == 30 * CARD_FEE
     assert fairbooster.get_fee(ledger_db, "BOOSTER", config.MAX_INT, 3, block_index) is None
+    # and never more than 0.1 XCP
     assert fairbooster.get_fee(ledger_db, "BOOSTER", config.MAX_INT // 3, 3, block_index) is None
+    big_fee = fairbooster.get_fee(ledger_db, "A95428956661682178", 10**6, 100, block_index)
+    assert 10**8 * CARD_FEE < big_fee < 10**8 * MAX_CARD_FEE
     # the fee is returned with the problems
     assert fairbooster.validate(
         ledger_db, defaults["addresses"][0], "BOOSTER", creation_params(), wire_cards()
-    ) == ([], 0)
-    assert fairbooster.validate_capacity(ledger_db, block_index, 30, 0, ASSET_FEE, ASSET_FEE) == (
+    ) == ([], 30 * CARD_FEE)
+    balance = ASSET_FEE + 30 * CARD_FEE
+    assert fairbooster.validate_capacity(ledger_db, block_index, 30, 0, balance, ASSET_FEE) == (
         [],
+        30 * CARD_FEE,
+    )
+    assert fairbooster.validate_capacity(ledger_db, block_index, 30, 0, balance - 1, ASSET_FEE) == (
+        ["insufficient XCP balance to pay the fee"],
         0,
     )
-    assert fairbooster.validate_capacity(
-        ledger_db, block_index, 30, 0, ASSET_FEE - 1, ASSET_FEE
-    ) == (["insufficient XCP balance to pay the fee"], 0)
 
     # cards
     assert validate(ledger_db, defaults, cards=[]) == ["a fairbooster needs at least one card"]
@@ -405,6 +416,7 @@ def test_create_buy_and_draw(ledger_db, defaults):
     owner_xcp = ledger.balances.get_balance(ledger_db, owner, config.XCP)
     xcp_supply = ledger.supplies.xcp_supply(ledger_db)
     destructions = len(rows(ledger_db, "SELECT * FROM destructions"))
+    debits = len(rows(ledger_db, "SELECT * FROM debits"))
     row = create(ledger_db, defaults)
     assert row["status"] == "open"
     assert row["source"] == owner
@@ -412,20 +424,24 @@ def test_create_buy_and_draw(ledger_db, defaults):
     assert row["boosters_sold"] == 0
     assert row["cards_sold"] == 0
     assert row["paid_capacity"] == 30
-    # the asset fee; the gas fee of 30 cards is 0 while few cards are sold
-    assert row["fee_paid"] == ASSET_FEE
+    # the asset fee and the gas fee of 30 cards, 0.001 XCP each while few
+    # cards are sold
+    fee = ASSET_FEE + 30 * CARD_FEE
+    assert row["fee_paid"] == fee
     assert row["price"] == PRICE
-    assert ledger.balances.get_balance(ledger_db, owner, config.XCP) == owner_xcp - ASSET_FEE
-    # the asset fee is destroyed once: as the `fee_paid` of the issuance, like
-    # an issuance fee, not also as a destruction
-    assert ledger.supplies.xcp_supply(ledger_db) == xcp_supply - ASSET_FEE
-    assert len(rows(ledger_db, "SELECT * FROM destructions")) == destructions
-    debit = last_row(ledger_db, "debits")
-    assert (debit["asset"], debit["quantity"], debit["action"]) == (
-        config.XCP,
-        ASSET_FEE,
-        "fairbooster asset fee",
-    )
+    assert ledger.balances.get_balance(ledger_db, owner, config.XCP) == owner_xcp - fee
+    # both fees are destroyed once: the asset fee as the `fee_paid` of the
+    # issuance, like an issuance fee, and the gas fee as a destruction
+    assert ledger.supplies.xcp_supply(ledger_db) == xcp_supply - fee
+    new_debits = rows(ledger_db, "SELECT * FROM debits ORDER BY rowid")[debits:]
+    assert [(d["asset"], d["quantity"], d["action"]) for d in new_debits] == [
+        (config.XCP, ASSET_FEE, "fairbooster asset fee"),
+        (config.XCP, 30 * CARD_FEE, "fairbooster fee"),
+    ]
+    new_destructions = rows(ledger_db, "SELECT * FROM destructions ORDER BY rowid")[destructions:]
+    assert [(d["asset"], d["quantity"], d["tag"]) for d in new_destructions] == [
+        (config.XCP, 30 * CARD_FEE, "fairbooster fee")
+    ]
     check.asset_conservation(ledger_db)
     assert last_row(ledger_db, "transaction_count")["transaction_id"] == fairbooster.ID
     assert last_row(ledger_db, "transaction_count")["count"] == 30
@@ -611,11 +627,11 @@ def test_update(ledger_db, defaults):
         "invalid parameters"
     ]
 
-    # raising the capacity pays the gas fee of the added cards only, 0 while
-    # few cards are sold
+    # raising the capacity pays the gas fee of the added cards only, 0.001 XCP
+    # each while few cards are sold
     assert updatefairbooster.validate(ledger_db, owner, "BOOSTER", {"max_boosters": 20}, []) == (
         [],
-        0,
+        30 * CARD_FEE,
         60,
     )
     assert updatefairbooster.validate(ledger_db, owner, "BOOSTER", {"max_boosters": 5}, []) == (
@@ -648,8 +664,8 @@ def test_update(ledger_db, defaults):
     assert update["price"] == 2 * PRICE
     assert update["cards_per_booster"] is None
     assert update["cards_added"] == 1
-    assert update["fee_paid"] == 0
-    assert ledger.balances.get_balance(ledger_db, owner, config.XCP) == owner_xcp
+    assert update["fee_paid"] == 30 * CARD_FEE
+    assert ledger.balances.get_balance(ledger_db, owner, config.XCP) == owner_xcp - 30 * CARD_FEE
     # the 30 added cards are counted for the gas fee
     assert last_row(ledger_db, "transaction_count")["count"] == 30
     row = ledger.fairboosters.get_fairbooster(ledger_db, "BOOSTER")
@@ -661,7 +677,7 @@ def test_update(ledger_db, defaults):
     assert row["cards_image_extension"] == "svg"
     assert row["card_count"] == 4
     assert row["paid_capacity"] == 60
-    assert row["fee_paid"] == ASSET_FEE
+    assert row["fee_paid"] == ASSET_FEE + 60 * CARD_FEE
     assert [
         c["card_id"] for c in ledger.fairboosters.get_fairbooster_cards(ledger_db, "BOOSTER")
     ] == [
@@ -1031,24 +1047,26 @@ def test_compose_fees(ledger_db, defaults, apiv2_client):
     result = compose.compose_fairbooster(
         ledger_db, owner, "BOOSTER", **creation, **construct_params
     )
-    assert result["xcp_fee"] == ASSET_FEE
-    assert compose.get_fairbooster_estimate_xcp_fee(ledger_db, owner, "BOOSTER", 10, 3) == ASSET_FEE
+    fee = ASSET_FEE + 30 * CARD_FEE
+    assert result["xcp_fee"] == fee
+    assert compose.get_fairbooster_estimate_xcp_fee(ledger_db, owner, "BOOSTER", 10, 3) == fee
     assert (
-        compose.get_fairbooster_estimate_xcp_fee(ledger_db, owner, "A95428956661682178", 10, 3) == 0
+        compose.get_fairbooster_estimate_xcp_fee(ledger_db, owner, "A95428956661682178", 10, 3)
+        == 30 * CARD_FEE
     )
     response = apiv2_client.get(
         f"/v2/addresses/{owner}/compose/fairbooster/estimatexcpfees"
         "?asset=BOOSTER&max_boosters=10&cards_per_booster=3"
     )
     assert response.status_code == 200
-    assert response.json["result"] == ASSET_FEE
+    assert response.json["result"] == fee
 
     # an update pays the gas fee of the cards above the paid capacity
     create(ledger_db, defaults)
     result = compose.compose_updatefairbooster(
         ledger_db, owner, "BOOSTER", max_boosters=20, **construct_params
     )
-    assert result["xcp_fee"] == 0
+    assert result["xcp_fee"] == 30 * CARD_FEE
     assert compose.get_updatefairbooster_estimate_xcp_fee(ledger_db, owner, "BOOSTER") == 0
     assert (
         compose.get_updatefairbooster_estimate_xcp_fee(
@@ -1067,7 +1085,7 @@ def test_compose_fees(ledger_db, defaults, apiv2_client):
         "?asset=BOOSTER&max_boosters=20"
     )
     assert response.status_code == 200
-    assert response.json["result"] == 0
+    assert response.json["result"] == 30 * CARD_FEE
 
 
 def test_compose_pending_asset_guard(ledger_db, defaults):

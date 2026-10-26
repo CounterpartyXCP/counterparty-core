@@ -11,8 +11,8 @@ and locked quantity and description, issued to the buyer.
 Creating a fairbooster costs `ASSET_FEE` when its asset is a named one (a
 numeric asset is free, as with `issuance`, and the fee is recorded the same way:
 as the `fee_paid` of its issuance), plus a gas fee
-(`gas.get_transaction_fee_for_count`, transaction id `ID`) for each card it can
-sell: its capacity, the cards of the boosters sold plus `cards_per_booster` for
+(`gas.get_transaction_fee_for_count`, transaction id `ID`, from 0.001 to 0.1 XCP)
+for each card it can sell: its capacity, the cards of the boosters sold plus `cards_per_booster` for
 each booster left. Raising that capacity later with `updatefairbooster` pays
 the gas fee of the added cards. Every parameter except the name and the
 existing cards can be updated, and cards can be added.

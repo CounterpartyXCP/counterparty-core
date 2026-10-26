@@ -753,7 +753,7 @@ def compose_fairbooster(
     **construct_params,
 ):
     """
-    Composes a transaction to create a fairbooster: boosters of trading cards sold for XCP. Each card drawn from a booster becomes an asset `<asset>.<card_id>.<card_name>.<serial>` with a supply of 1, locked. Creating a fairbooster costs 0.5 XCP when `asset` is a named asset (a numeric asset is free), plus a gas fee for each card it can sell (`max_boosters` * `cards_per_booster`): free while few cards are sold network-wide, it rises with the average number of cards sold per block over the last 2016 blocks.
+    Composes a transaction to create a fairbooster: boosters of trading cards sold for XCP. Each card drawn from a booster becomes an asset `<asset>.<card_id>.<card_name>.<serial>` with a supply of 1, locked. Creating a fairbooster costs 0.5 XCP when `asset` is a named asset (a numeric asset is free), plus a gas fee for each card it can sell (`max_boosters` * `cards_per_booster`): 0.001 XCP per card while few cards are sold network-wide, it rises with the average number of cards sold per block over the last 2016 blocks, up to 0.1 XCP per card.
     :param address: The address that will create the fairbooster and receive the payments (e.g. $ADDRESS_1)
     :param asset: The name of the fairbooster, a free named or numeric asset created with a supply of 1, locked (e.g. BOOSTERTEST)
     :param price: The price of a booster in XCP (in satoshis, hence integer) (e.g. 10000000)
