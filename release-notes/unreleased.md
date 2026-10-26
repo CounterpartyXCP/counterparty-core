@@ -3,14 +3,19 @@
 ## Protocol
 
 - Add Fairboosters (`fairboosters`): boosters of trading cards sold for XCP.
-  A `fairbooster` (message 130) creates a free named asset, with a supply of 1
-  and locked, and a list of cards, each with an id, a name, the hash of its
-  image, a draw weight and a supply (0 for unlimited). It also sets a
-  description, an image URL, the price of a booster, the maximum number of
+  A `fairbooster` (message 130) creates a free named or numeric asset, with a
+  supply of 1 and locked, and a list of cards, each with an id, a name, the
+  hash of its image, a draw weight and a supply (0 for unlimited). It also sets
+  a description, an image URL, the price of a booster, the maximum number of
   boosters, the number of cards per booster, and the base URL and extension of
   the card images (`<base_url>/<id>.<extension>`). Creating a fairbooster costs
-  0.001 XCP per card it can sell (`max_boosters * cards_per_booster`), which is
-  destroyed.
+  0.5 XCP for a named asset (a numeric one is free, as with an issuance), plus
+  a gas fee for each card it can sell (`max_boosters * cards_per_booster`).
+  The gas fee (`fee_parameters` 130, counted in cards) prices each card at the
+  average number of cards per block it brings the last 2016 blocks to: free up
+  to about 45, 0.5 XCP at 55, about 1 XCP from 60 to 100, then growing. A large
+  capacity therefore pays for the usage it creates, whether it is bought in one
+  transaction or in several. Both fees are destroyed.
 - `buybooster` (message 132) buys one booster. The price goes to the owner of
   the fairbooster (the issuer of its asset), and the cards are drawn in the next
   block. Each card is picked with a probability proportional to its weight
@@ -20,12 +25,13 @@
   `<fairbooster>.<card_id>.<card_name>.<serial>` (spaces in the name become
   `_`), with a supply of 1, locked quantity and description, issued to the
   buyer. A purchase is refused when every booster is sold or when the cards
-  left, after those of the pending purchases, cannot fill a booster.
+  left, after those of the pending purchases, cannot fill a booster; the
+  fairbooster is then `closed` until an update reopens it.
 - `updatefairbooster` (message 131) lets the owner change every parameter but
-  the name, and add cards. Existing cards cannot change. Raising
-  `max_boosters * cards_per_booster` above what was already paid for costs
-  0.001 XCP per added card, and `max_boosters` cannot go below the number of
-  boosters sold.
+  the name, and add cards. Existing cards cannot change. Raising the capacity
+  (the cards of the boosters sold plus `cards_per_booster` for each booster
+  left) above what was already paid for pays the gas fee of the added cards,
+  and `max_boosters` cannot go below the number of boosters sold.
 - From the same activation, the subassets of a fairbooster can only be created
   by its draws, and the three messages get their own `transaction_type`.
 

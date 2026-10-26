@@ -1,9 +1,9 @@
 """`updatefairbooster`: the owner of a fairbooster (the issuer of its asset)
 changes its parameters and/or adds cards. The name and the existing cards
-cannot change. Raising the capacity (`max_boosters * cards_per_booster`) above
-what was already paid for costs `fairbooster.FEE_PER_CARD` per added card;
-lowering it refunds nothing, and `max_boosters` cannot go below the number of
-boosters sold."""
+cannot change. Raising the capacity (`fairbooster.capacity`: the cards of the
+boosters sold plus `cards_per_booster` for each booster left) above what was
+already paid for pays the gas fee of the added cards; lowering it refunds
+nothing, and `max_boosters` cannot go below the number of boosters sold."""
 
 import logging
 import struct
@@ -28,6 +28,7 @@ def validate(db, source, asset, params, cards, block_index=None):
     """Returns `(problems, fee, capacity)`."""
     if not protocol.enabled("fairboosters", block_index=block_index):
         return ["fairboosters are not enabled"], 0, 0
+    block_index = block_index or CurrentState().current_block_index()
     if not isinstance(asset, str) or asset == "":
         return ["invalid fairbooster name"], 0, 0
     fairbooster = ledger.fairboosters.get_fairbooster(db, asset)
@@ -53,14 +54,23 @@ def validate(db, source, asset, params, cards, block_index=None):
     max_boosters = params.get("max_boosters", fairbooster["max_boosters"])
     cards_per_booster = params.get("cards_per_booster", fairbooster["cards_per_booster"])
     if max_boosters < fairbooster["boosters_sold"]:
-        problems.append(
-            f"`max_boosters` must be >= the number of boosters sold ({fairbooster['boosters_sold']})"
+        return (
+            [
+                "`max_boosters` must be >= the number of boosters sold "
+                f"({fairbooster['boosters_sold']})"
+            ],
+            0,
+            0,
         )
-    balance = ledger.balances.get_balance(db, source, config.XCP)
-    capacity_problems, capacity, fee = fairbooster_mod.validate_capacity(
-        max_boosters, cards_per_booster, fairbooster["paid_capacity"], balance
+    capacity = fairbooster_mod.capacity(
+        max_boosters, cards_per_booster, fairbooster["boosters_sold"], fairbooster["cards_sold"]
     )
-    problems += capacity_problems
+    balance = ledger.balances.get_balance(db, source, config.XCP)
+    problems, fee = fairbooster_mod.validate_capacity(
+        db, block_index, capacity, fairbooster["paid_capacity"], balance
+    )
+    if problems:
+        return problems, 0, 0
     return problems, fee, capacity
 
 
@@ -158,12 +168,17 @@ def parse(db, tx, message):
 
     if fee > 0:
         gas.pay_fee(db, tx, tx["source"], fee, "fairbooster update fee")
+    if capacity > fairbooster["paid_capacity"]:
+        gas.increment_counter(
+            db, fairbooster_mod.ID, tx["block_index"], count=capacity - fairbooster["paid_capacity"]
+        )
+    fairbooster_mod.insert_cards(db, tx, asset, cards)
     update_data = {key: value for key, value in params.items() if value is not None}
     update_data["card_count"] = fairbooster["card_count"] + len(cards)
     update_data["paid_capacity"] = max(capacity, fairbooster["paid_capacity"])
     update_data["fee_paid"] = fairbooster["fee_paid"] + fee
-    max_boosters = update_data.get("max_boosters", fairbooster["max_boosters"])
-    update_data["status"] = "open" if fairbooster["boosters_sold"] < max_boosters else "closed"
+    update_data["status"] = fairbooster_mod.get_status(
+        {**fairbooster, **update_data}, ledger.fairboosters.get_card_supply(db, asset)
+    )
     ledger.fairboosters.update_fairbooster(db, fairbooster["tx_hash"], update_data)
-    fairbooster_mod.insert_cards(db, tx, asset, cards)
     logger.info("Fairbooster %s updated by %s.", asset, tx["source"])

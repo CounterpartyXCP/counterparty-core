@@ -1,3 +1,4 @@
+import functools
 import logging
 import math
 from decimal import Decimal as D
@@ -107,6 +108,46 @@ def get_transaction_fee(db, transaction_id, block_index):
 
     fee = calculate_fee(x, a, b, base_fee, k)
     return int(fee * config.UNIT)
+
+
+@functools.lru_cache(maxsize=4096)
+def get_unit_fee(x, a, b, base_fee, k):
+    """`get_transaction_fee` for an average of `x` transactions per block."""
+    return int(calculate_fee(x, a, b, base_fee, k) * config.UNIT)
+
+
+def get_transaction_fee_for_count(db, transaction_id, block_index, count, limit=config.MAX_INT):
+    """The fee of `count` more units of `transaction_id` in `block_index`. Each
+    unit is priced like `get_transaction_fee`, at the average it brings the
+    period to once the units before it are counted: those of the last period,
+    those already counted in this block and the previous units of `count`. A
+    bulk purchase therefore pays for the usage it creates, whether it is made
+    in one transaction or split across several of the same block. Returns None
+    when the fee exceeds `limit`."""
+    fee_params = protocol.get_value_by_block_index("fee_parameters", block_index)
+    if fee_params is None or count <= 0:
+        return 0
+
+    a = int(fee_params[str(transaction_id)]["fee_lower_threshold"])
+    b = int(fee_params[str(transaction_id)]["fee_upper_threshold"])
+    base_fee = int(fee_params[str(transaction_id)]["base_fee"])
+    k = int(fee_params[str(transaction_id)]["fee_sigmoid_k"])
+
+    position = get_transaction_count_for_last_period(db, transaction_id, block_index)
+    position += get_transaction_count_by_block(db, transaction_id, block_index)
+    end = position + count
+    fee = 0
+    # the average changes every PERIOD_DURATION units: price them by slice.
+    # Above the upper threshold the unit fee grows faster than linearly, so
+    # `limit` bounds the number of slices.
+    while position < end:
+        slice_end = min(end, (position // PERIOD_DURATION + 1) * PERIOD_DURATION)
+        unit_fee = get_unit_fee(position // PERIOD_DURATION, a, b, base_fee, k)
+        fee += (slice_end - position) * unit_fee
+        if fee > limit:
+            return None
+        position = slice_end
+    return fee
 
 
 def calculate_fee(x: int, a: int, b: int, base_fee: int, k: int):

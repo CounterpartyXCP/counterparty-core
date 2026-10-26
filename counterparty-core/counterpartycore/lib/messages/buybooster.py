@@ -16,8 +16,7 @@ FORMAT = ">Q"
 LENGTH = 8
 
 
-def validate(db, source, asset, pending_block_index, block_index=None):
-    """`pending_block_index` is the block whose purchases are not drawn yet."""
+def validate(db, source, asset, block_index=None):
     if not protocol.enabled("fairboosters", block_index=block_index):
         return ["fairboosters are not enabled"]
     fairbooster = ledger.fairboosters.get_fairbooster(db, asset) if asset else None
@@ -29,19 +28,16 @@ def validate(db, source, asset, pending_block_index, block_index=None):
         problems.append("all boosters are sold")
     if ledger.balances.get_balance(db, source, config.XCP) < fairbooster["price"]:
         problems.append("insufficient XCP balance")
-    cards = ledger.fairboosters.get_fairbooster_cards(db, asset)
-    remaining = fairbooster_mod.remaining_supply(
-        cards, ledger.fairboosters.get_drawn_cards(db, asset)
-    )
-    if remaining is not None:
-        remaining -= ledger.fairboosters.get_pending_card_count(db, asset, pending_block_index)
-        if remaining < fairbooster["cards_per_booster"]:
-            problems.append("not enough cards left to fill a booster")
+    # `cards_sold` counts the cards drawn and those of the purchases not drawn
+    # yet: the cards of a pending purchase are reserved
+    supply = ledger.fairboosters.get_card_supply(db, asset)
+    if supply is not None and supply - fairbooster["cards_sold"] < fairbooster["cards_per_booster"]:
+        problems.append("not enough cards left to fill a booster")
     return problems
 
 
 def compose(db, source: str, asset: str, skip_validation: bool = False):
-    problems = validate(db, source, asset, ledger.blocks.last_db_index(db))
+    problems = validate(db, source, asset)
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
     data = struct.pack(config.SHORT_TXTYPE_FORMAT, ID)
@@ -66,9 +62,7 @@ def parse(db, tx, message):
     if asset == "":
         problems = ["could not unpack"]
     else:
-        problems = validate(
-            db, tx["source"], asset, tx["block_index"], block_index=tx["block_index"]
-        )
+        problems = validate(db, tx["source"], asset, block_index=tx["block_index"])
 
     if problems:
         status = "invalid: " + "; ".join(problems)
@@ -112,14 +106,13 @@ def parse(db, tx, message):
         "status": "valid",
     }
     ledger.events.insert_record(db, "fairbooster_purchases", bindings, "NEW_FAIRBOOSTER_PURCHASE")
-    boosters_sold = fairbooster["boosters_sold"] + 1
-    ledger.fairboosters.update_fairbooster(
-        db,
-        fairbooster["tx_hash"],
-        {
-            "boosters_sold": boosters_sold,
-            "status": "open" if boosters_sold < fairbooster["max_boosters"] else "closed",
-        },
+    update_data = {
+        "boosters_sold": fairbooster["boosters_sold"] + 1,
+        "cards_sold": fairbooster["cards_sold"] + fairbooster["cards_per_booster"],
+    }
+    update_data["status"] = fairbooster_mod.get_status(
+        {**fairbooster, **update_data}, ledger.fairboosters.get_card_supply(db, asset)
     )
+    ledger.fairboosters.update_fairbooster(db, fairbooster["tx_hash"], update_data)
     ledger.blocks.set_transaction_status(db, tx["tx_index"], True)
     logger.info("Booster of %s bought by %s for %s XCP.", asset, tx["source"], price)

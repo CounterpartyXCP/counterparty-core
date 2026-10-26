@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS fairboosters(
     cards_image_extension TEXT,
     card_count INTEGER,
     boosters_sold INTEGER,
+    cards_sold INTEGER,
     paid_capacity INTEGER,
     fee_paid INTEGER,
     status TEXT
@@ -101,7 +102,8 @@ CREATE TABLE IF NOT EXISTS fairbooster_draws(
     asset INTEGER
 );
 CREATE INDEX IF NOT EXISTS fairbooster_draws_tx_hash_idx ON fairbooster_draws (tx_hash);
-CREATE INDEX IF NOT EXISTS fairbooster_draws_fairbooster_card_id_idx ON fairbooster_draws (fairbooster, card_id);
+-- covers `ledger.fairboosters.get_drawn_cards`
+CREATE INDEX IF NOT EXISTS fairbooster_draws_fairbooster_card_id_serial_idx ON fairbooster_draws (fairbooster, card_id, serial);
 CREATE INDEX IF NOT EXISTS fairbooster_draws_source_idx ON fairbooster_draws (source);
 CREATE INDEX IF NOT EXISTS fairbooster_draws_asset_idx ON fairbooster_draws (asset);
 CREATE INDEX IF NOT EXISTS fairbooster_draws_block_index_idx ON fairbooster_draws (block_index);

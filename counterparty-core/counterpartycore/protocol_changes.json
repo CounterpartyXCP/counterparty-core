@@ -1070,6 +1070,12 @@
                         "fee_upper_threshold": 15,
                         "base_fee": 1,
                         "fee_sigmoid_k": 1
+                    },
+                    "130": {
+                        "fee_lower_threshold": 10,
+                        "fee_upper_threshold": 100,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
                     }
                 }
             }
@@ -1109,6 +1115,12 @@
                         "fee_upper_threshold": 15,
                         "base_fee": 1,
                         "fee_sigmoid_k": 1
+                    },
+                    "130": {
+                        "fee_lower_threshold": 10,
+                        "fee_upper_threshold": 100,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
                     }
                 }
             }
@@ -1145,6 +1157,12 @@
                         "fee_upper_threshold": 15,
                         "base_fee": 1,
                         "fee_sigmoid_k": 1
+                    },
+                    "130": {
+                        "fee_lower_threshold": 10,
+                        "fee_upper_threshold": 100,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
                     }
                 }
             }
@@ -1179,6 +1197,12 @@
                     "121": {
                         "fee_lower_threshold": 3,
                         "fee_upper_threshold": 15,
+                        "base_fee": 1,
+                        "fee_sigmoid_k": 1
+                    },
+                    "130": {
+                        "fee_lower_threshold": 10,
+                        "fee_upper_threshold": 100,
                         "base_fee": 1,
                         "fee_sigmoid_k": 1
                     }
@@ -1541,7 +1565,7 @@
         "signet_block_index": 999999
     },
     "fairboosters": {
-        "_comment": "Fairboosters: boosters of trading cards sold for XCP (messages 130 fairbooster, 131 updatefairbooster, 132 buybooster). The cards of a booster are drawn in the block that follows its purchase, seeded by that block's hash (see fairbooster.draw_boosters), and each drawn card becomes a locked subasset of supply 1. From the same height, subassets of a fairbooster asset can only be created by its draws, and the three message types get their own `transaction_type`. Placeholder heights until the release that ships it is scheduled. Enforced by the Python parser only.",
+        "_comment": "Fairboosters: boosters of trading cards sold for XCP (messages 130 fairbooster, 131 updatefairbooster, 132 buybooster). Creating one costs 0.5 XCP for a named asset (a numeric one is free) plus the gas fee (fee_parameters 130) of each card it can sell; raising that capacity with an update pays the gas fee of the added cards. The cards of a booster are drawn in the block that follows its purchase, seeded by that block's hash (see fairbooster.draw_boosters), and each drawn card becomes a locked subasset of supply 1. From the same height, subassets of a fairbooster asset can only be created by its draws, and the three message types get their own `transaction_type`. Placeholder heights until the release that ships it is scheduled. Enforced by the Python parser only.",
         "minimum_version_major": 11,
         "minimum_version_minor": 5,
         "minimum_version_revision": 0,

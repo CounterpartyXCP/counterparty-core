@@ -203,3 +203,47 @@ def test_get_transaction_fee_no_fee_params(ledger_db, monkeypatch):
 
     # Should return 0 when fee_params is None
     assert gas.get_transaction_fee(ledger_db, TRANSACTION_ID, 1000000) == 0
+
+
+def test_get_transaction_fee_for_count(ledger_db, monkeypatch):
+    block_index = 4000000
+    # nothing counted: the first units are free (average <= fee_lower_threshold)
+    assert gas.get_transaction_fee_for_count(ledger_db, TRANSACTION_ID, block_index, 0) == 0
+    assert gas.get_transaction_fee_for_count(ledger_db, TRANSACTION_ID, block_index, 2016) == 0
+    # each slice of 2016 units is priced at the average it brings the period to
+    unit_fee_4 = FEE_BY_TX_COUNT_PER_PERIOD["4"]
+    unit_fee_5 = FEE_BY_TX_COUNT_PER_PERIOD["5"]
+    assert (
+        gas.get_transaction_fee_for_count(ledger_db, TRANSACTION_ID, block_index, 2016 * 5)
+        == 2016 * unit_fee_4
+    )
+    assert (
+        gas.get_transaction_fee_for_count(ledger_db, TRANSACTION_ID, block_index, 2016 * 5 + 10)
+        == 2016 * unit_fee_4 + 10 * unit_fee_5
+    )
+    # the units already counted in the block are priced first: splitting a bulk
+    # purchase across the transactions of a block changes nothing
+    gas.increment_counter(ledger_db, TRANSACTION_ID, block_index, count=2016 * 4)
+    assert (
+        gas.get_transaction_fee_for_count(ledger_db, TRANSACTION_ID, block_index, 2016)
+        == 2016 * unit_fee_4
+    )
+    # and so are those of the last period: a single unit costs what
+    # get_transaction_fee charges
+    assert gas.get_transaction_fee_for_count(
+        ledger_db, TRANSACTION_ID, block_index + 1, 1
+    ) == gas.get_transaction_fee(ledger_db, TRANSACTION_ID, block_index + 1)
+    # above `limit`, None
+    assert (
+        gas.get_transaction_fee_for_count(
+            ledger_db, TRANSACTION_ID, block_index, 2016, limit=2016 * unit_fee_4 - 1
+        )
+        is None
+    )
+    assert gas.get_transaction_fee_for_count(ledger_db, TRANSACTION_ID, block_index, 2**70) is None
+
+    monkeypatch.setattr(
+        "counterpartycore.lib.messages.gas.protocol.get_value_by_block_index",
+        lambda *args: None,
+    )
+    assert gas.get_transaction_fee_for_count(ledger_db, TRANSACTION_ID, block_index, 2**70) == 0

@@ -58,20 +58,23 @@ def get_drawn_cards(db, asset):
     return {row["card_id"]: (row["drawn"], row["last_serial"]) for row in cursor.fetchall()}
 
 
-def get_pending_card_count(db, asset, block_index):
-    """The number of cards bought from the fairbooster `asset` in `block_index`:
-    they are drawn in the next block, so they are not in `fairbooster_draws`
-    yet."""
+def get_card_supply(db, asset):
+    """The number of copies of the cards of the fairbooster `asset`, None when
+    one card is unlimited. `fairbooster.validate_cards` keeps the sum within
+    `config.MAX_INT`."""
     cursor = db.cursor()
     cursor.execute(
         """
-        SELECT COALESCE(SUM(card_count), 0) AS card_count
-        FROM fairbooster_purchases
-        WHERE fairbooster = ? AND block_index = ? AND status = ?
+        SELECT MIN(max_supply) AS min_supply, SUM(max_supply) AS supply
+        FROM fairbooster_cards
+        WHERE fairbooster = ?
         """,
-        (database.asset_index_from_name(db, asset), block_index, "valid"),
+        (database.asset_index_from_name(db, asset),),
     )
-    return cursor.fetchone()["card_count"]
+    row = cursor.fetchone()
+    if row["min_supply"] is None or row["min_supply"] == 0:
+        return None
+    return row["supply"]
 
 
 def get_purchases_to_draw(db, block_index):

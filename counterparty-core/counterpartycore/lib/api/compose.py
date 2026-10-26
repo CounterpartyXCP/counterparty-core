@@ -753,9 +753,9 @@ def compose_fairbooster(
     **construct_params,
 ):
     """
-    Composes a transaction to create a fairbooster: boosters of trading cards sold for XCP. Each card drawn from a booster becomes an asset `<asset>.<card_id>.<card_name>.<serial>` with a supply of 1, locked. Creating a fairbooster costs 0.001 XCP per card it can sell (`max_boosters` * `cards_per_booster`).
+    Composes a transaction to create a fairbooster: boosters of trading cards sold for XCP. Each card drawn from a booster becomes an asset `<asset>.<card_id>.<card_name>.<serial>` with a supply of 1, locked. Creating a fairbooster costs 0.5 XCP when `asset` is a named asset (a numeric asset is free), plus a gas fee for each card it can sell (`max_boosters` * `cards_per_booster`): free while few cards are sold network-wide, it rises with the average number of cards sold per block over the last 2016 blocks.
     :param address: The address that will create the fairbooster and receive the payments (e.g. $ADDRESS_1)
-    :param asset: The name of the fairbooster, a free named asset created with a supply of 1, locked (e.g. BOOSTERTEST)
+    :param asset: The name of the fairbooster, a free named or numeric asset created with a supply of 1, locked (e.g. BOOSTERTEST)
     :param price: The price of a booster in XCP (in satoshis, hence integer) (e.g. 10000000)
     :param max_boosters: The maximum number of boosters that can be sold (e.g. 100)
     :param cards_per_booster: The number of cards in a booster (e.g. 3)
@@ -795,7 +795,7 @@ def compose_updatefairbooster(
     **construct_params,
 ):
     """
-    Composes a transaction to update a fairbooster and/or add cards to it. Only the owner of the fairbooster asset can update it; omitted parameters are left unchanged. Raising `max_boosters` * `cards_per_booster` above what was already paid for costs 0.001 XCP per added card.
+    Composes a transaction to update a fairbooster and/or add cards to it. Only the owner of the fairbooster asset can update it; omitted parameters are left unchanged. Raising the capacity (the cards of the boosters sold plus `cards_per_booster` for each booster left) above what was already paid for pays the gas fee of the added cards.
     :param address: The owner of the fairbooster (e.g. $ADDRESS_1)
     :param asset: The name of the fairbooster (e.g. BOOSTERTEST)
     :param description: The new description of the fairbooster
