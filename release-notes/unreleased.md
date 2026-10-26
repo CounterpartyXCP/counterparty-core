@@ -16,10 +16,10 @@
   0.001 XCP (`min_unit_fee`) and 0.1 XCP (`max_unit_fee`): 0.001 XCP up to
   about 45, 0.05 XCP at 55, and 0.1 XCP from about 60. A large capacity
   therefore pays for the usage it creates, whether it is bought in one
-  transaction or in several, and never more than 0.1 XCP per card. Both fees are destroyed: the asset fee as the
-  `fee_paid` of the issuance, like an issuance fee, and the gas fee as a
-  destruction. A name that an active fairminter earmarked as its `lp_asset`
-  cannot be used.
+  transaction or in several, and never more than 0.1 XCP per card. Both fees
+  are destroyed: the asset fee as the `fee_paid` of the issuance, like an
+  issuance fee, and the gas fee as a destruction. A name that an active
+  fairminter earmarked as its `lp_asset` cannot be used.
 - `buybooster` (message 132) buys one booster. It carries the terms the buyer
   accepts: the highest price paid (`max_price`), the number of cards of a
   booster and the number of cards of the fairbooster. An update of the
