@@ -20,6 +20,7 @@ from counterpartycore.lib.api.routes import ALL_ROUTES, ROUTES, get_routes
 from counterpartycore.lib.messages import buybooster, dispense, dividend, fairbooster, sweep
 from counterpartycore.lib.parser import blocks
 from counterpartycore.lib.utils import hashcodec, helpers, protocolstatus
+from counterpartycore.test.integrations.regtest import genapidoc
 from counterpartycore.test.mocks.counterpartydbs import ProtocolChangesDisabled
 
 
@@ -176,10 +177,16 @@ def test_openapi_documents_the_composition_conflict():
 
     # Exactly the guarded operations: `compose_fairmint` and the other compose
     # routes do not call the guard and must not advertise a 409. The committed
-    # spec is regenerated at release time, so a route added since is not in it.
+    # spec is regenerated at release time, so a route added since is not in it
+    # yet: the generator must then declare its 409 (`ERROR_RESPONSES`).
     documented = {name for name, path in guarded.items() if path in spec["paths"]}
     assert {"compose_issuance", "compose_fairminter"} <= documented
     assert declared == documented
+    assert set(genapidoc.ERROR_RESPONSES) == set(guarded)
+    assert all(
+        responses == {"409": genapidoc.CONFLICT_RESPONSE}
+        for responses in genapidoc.ERROR_RESPONSES.values()
+    )
 
 
 def test_compose_conflict_guard_callers_are_documented():
@@ -195,6 +202,7 @@ def test_compose_conflict_guard_callers_are_documented():
         if "_compose_with_pending_asset_guard(" in stripped and not stripped.startswith("def "):
             callers.add(current)
     assert callers == {"compose_issuance", "compose_fairminter", "compose_fairbooster"}
+    assert callers == set(genapidoc.ERROR_RESPONSES)
 
 
 def test_openapi_prefers_the_packaged_resource(monkeypatch, tmp_path):

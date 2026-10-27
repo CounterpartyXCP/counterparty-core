@@ -4909,6 +4909,23 @@ def prepare_fairboosters_where(status, other_conditions=None):
     return prepare_where_status(status, FairboostersStatus, other_conditions=other_conditions)
 
 
+# The owner of a fairbooster is the current issuer of its asset (who receives
+# the payments and can update it): ownership moves with the asset, not with the
+# fairbooster, so it is read from `assets_info` (whose `issuer` is the first one).
+SELECT_FAIRBOOSTER = (
+    "*, (SELECT owner FROM assets_info WHERE assets_info.asset = fairboosters.asset) AS owner"
+)
+# A drawn card with the name and image hash of its card.
+SELECT_FAIRBOOSTER_DRAW = (
+    "*, (SELECT c.name FROM fairbooster_cards c "
+    "WHERE c.fairbooster = fairbooster_draws.fairbooster "
+    "AND c.card_id = fairbooster_draws.card_id) AS card_name, "
+    "(SELECT c.image_hash FROM fairbooster_cards c "
+    "WHERE c.fairbooster = fairbooster_draws.fairbooster "
+    "AND c.card_id = fairbooster_draws.card_id) AS image_hash"
+)
+
+
 def get_all_fairboosters(
     state_db,
     status: FairboostersStatus = "all",
@@ -4917,7 +4934,7 @@ def get_all_fairboosters(
     offset: int = None,
 ):
     """
-    Returns all fairboosters
+    Returns all fairboosters, with their current `owner`
     :param str status: The status of the fairboosters to return
     :param int cursor: The last index of the fairboosters to return
     :param int limit: The maximum number of fairboosters to return (e.g. 5)
@@ -4925,16 +4942,22 @@ def get_all_fairboosters(
     """
     where = prepare_fairboosters_where(status)
     return select_rows(
-        state_db, "fairboosters", where=where, last_cursor=cursor, limit=limit, offset=offset
+        state_db,
+        "fairboosters",
+        where=where,
+        select=SELECT_FAIRBOOSTER,
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
     )
 
 
 def get_fairbooster(state_db, asset: str):
     """
-    Returns a fairbooster by its name
+    Returns a fairbooster by its name, with its current `owner`
     :param str asset: The name of the fairbooster to return (e.g. BOOSTERTEST)
     """
-    return select_row(state_db, "fairboosters", where={"asset": asset})
+    return select_row(state_db, "fairboosters", where={"asset": asset}, select=SELECT_FAIRBOOSTER)
 
 
 def get_fairboosters_by_address(
@@ -4946,7 +4969,7 @@ def get_fairboosters_by_address(
     offset: int = None,
 ):
     """
-    Returns the fairboosters created by an address
+    Returns the fairboosters created by an address (their `source`), with their current `owner`: the issuer of the fairbooster asset, who receives the payments, which changes when the asset is transferred
     :param str address: The address of the creator of the fairboosters (e.g. $ADDRESS_1)
     :param str status: The status of the fairboosters to return
     :param int cursor: The last index of the fairboosters to return
@@ -4955,7 +4978,13 @@ def get_fairboosters_by_address(
     """
     where = prepare_fairboosters_where(status, {"source": address})
     return select_rows(
-        state_db, "fairboosters", where=where, last_cursor=cursor, limit=limit, offset=offset
+        state_db,
+        "fairboosters",
+        where=where,
+        select=SELECT_FAIRBOOSTER,
+        last_cursor=cursor,
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -4978,7 +5007,7 @@ def get_fairbooster_cards(
             "*, COALESCE((SELECT d.copy_number FROM fairbooster_draws d "
             "WHERE d.fairbooster = fairbooster_cards.fairbooster "
             "AND d.card_id = fairbooster_cards.card_id "
-            "ORDER BY d.serial DESC LIMIT 1), 0) AS drawn"
+            "ORDER BY d.copy_number DESC LIMIT 1), 0) AS drawn"
         ),
         order="ASC",
         last_cursor=cursor,
@@ -5031,7 +5060,7 @@ def get_fairbooster_draws(
     ledger_db, asset: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
-    Returns the cards drawn from a fairbooster, one per card asset
+    Returns the cards drawn from a fairbooster, one per card asset, with the name and image hash of the card
     :param str asset: The name of the fairbooster (e.g. BOOSTERTEST)
     :param int cursor: The last index of the draws to return
     :param int limit: The maximum number of draws to return (e.g. 5)
@@ -5041,6 +5070,7 @@ def get_fairbooster_draws(
         ledger_db,
         "fairbooster_draws",
         where={"fairbooster": asset},
+        select=SELECT_FAIRBOOSTER_DRAW,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -5059,7 +5089,7 @@ def get_fairbooster_draws_by_purchase(
     ledger_db, tx_hash: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
-    Returns the cards drawn for a booster purchase
+    Returns the cards drawn for a booster purchase, with the name and image hash of each card
     :param str tx_hash: The hash of the purchase (e.g. $LAST_BOOSTER_PURCHASE_TX_HASH)
     :param int cursor: The last index of the draws to return
     :param int limit: The maximum number of draws to return (e.g. 5)
@@ -5069,6 +5099,7 @@ def get_fairbooster_draws_by_purchase(
         ledger_db,
         "fairbooster_draws",
         where={"tx_hash": tx_hash},
+        select=SELECT_FAIRBOOSTER_DRAW,
         last_cursor=cursor,
         limit=limit,
         offset=offset,
@@ -5099,7 +5130,7 @@ def get_fairbooster_draws_by_address(
     ledger_db, address: str, cursor: int = None, limit: int = 100, offset: int = None
 ):
     """
-    Returns the cards drawn for an address
+    Returns the cards drawn for an address, with the name and image hash of each card
     :param str address: The address of the buyer (e.g. $ADDRESS_2)
     :param int cursor: The last index of the draws to return
     :param int limit: The maximum number of draws to return (e.g. 5)
@@ -5109,6 +5140,7 @@ def get_fairbooster_draws_by_address(
         ledger_db,
         "fairbooster_draws",
         where={"source": address},
+        select=SELECT_FAIRBOOSTER_DRAW,
         last_cursor=cursor,
         limit=limit,
         offset=offset,

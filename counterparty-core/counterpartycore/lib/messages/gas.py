@@ -123,7 +123,9 @@ def get_unit_fee(x, a, b, base_fee, k, min_fee=0, max_fee=None):
     return min_fee + int((max_fee - min_fee) * share)
 
 
-def get_transaction_fee_for_count(db, transaction_id, block_index, count, limit=config.MAX_INT):
+def get_transaction_fee_for_count(
+    db, transaction_id, block_index, count, limit=config.MAX_INT, ahead=0
+):
     """The fee of `count` more units of `transaction_id` in `block_index`. Each
     unit is priced like `get_transaction_fee`, at the average it brings the
     period to once the units before it are counted: those of the last period,
@@ -131,8 +133,10 @@ def get_transaction_fee_for_count(db, transaction_id, block_index, count, limit=
     bulk purchase therefore pays for the usage it creates, whether it is made
     in one transaction or split across several of the same block. The
     optional `min_unit_fee` and `max_unit_fee` fee parameters bound the price
-    of a unit (see `get_unit_fee`). Returns None when the fee exceeds
-    `limit`."""
+    of a unit (see `get_unit_fee`). With `ahead`, that many more units are
+    counted before `count`: the fee once the usage has grown by `ahead`, to
+    bound the fee of a transaction that others may precede. Returns None when
+    the fee exceeds `limit`."""
     fee_params = protocol.get_value_by_block_index("fee_parameters", block_index)
     if fee_params is None or count <= 0:
         return 0
@@ -147,20 +151,21 @@ def get_transaction_fee_for_count(db, transaction_id, block_index, count, limit=
 
     position = get_transaction_count_for_last_period(db, transaction_id, block_index)
     position += get_transaction_count_by_block(db, transaction_id, block_index)
+    position += ahead
     end = position + count
     fee = 0
     # The average changes every PERIOD_DURATION units: price them by slice.
-    # Above the upper threshold the unit fee either grows faster than
-    # linearly, so that `limit` bounds the number of slices, or is capped at
-    # `max_fee`, the price of every unit left since the curve only grows.
+    # The unit fee only grows, so the units left cost at least the current one
+    # each: the loop stops as soon as that lower bound exceeds `limit`, however
+    # many units there are. Past `max_fee`, every unit left pays it: one step.
     while position < end:
-        slice_end = min(end, (position // PERIOD_DURATION + 1) * PERIOD_DURATION)
         unit_fee = get_unit_fee(position // PERIOD_DURATION, a, b, base_fee, k, min_fee, max_fee)
+        if fee + (end - position) * unit_fee > limit:
+            return None
+        slice_end = min(end, (position // PERIOD_DURATION + 1) * PERIOD_DURATION)
         if max_fee is not None and unit_fee >= max_fee:
             slice_end = end
         fee += (slice_end - position) * unit_fee
-        if fee > limit:
-            return None
         position = slice_end
     return fee
 

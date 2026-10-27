@@ -241,6 +241,19 @@ def test_get_transaction_fee_for_count(ledger_db, monkeypatch):
         is None
     )
     assert gas.get_transaction_fee_for_count(ledger_db, TRANSACTION_ID, block_index, 2**70) is None
+    # `ahead` units counted before `count`: the fee once the usage has grown
+    # by that much (the units of the block are already counted)
+    assert (
+        gas.get_transaction_fee_for_count(ledger_db, TRANSACTION_ID, block_index, 2016, ahead=2016)
+        == 2016 * unit_fee_5
+    )
+
+    def fee(count, ahead=0):
+        return gas.get_transaction_fee_for_count(
+            ledger_db, TRANSACTION_ID, block_index, count, ahead=ahead
+        )
+
+    assert fee(2016 * 5) == fee(2016 * 4) + fee(2016, ahead=2016 * 4)
 
     monkeypatch.setattr(
         "counterpartycore.lib.messages.gas.protocol.get_value_by_block_index",

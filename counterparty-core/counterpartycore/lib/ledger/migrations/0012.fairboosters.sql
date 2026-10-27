@@ -3,9 +3,10 @@
 -- directly: BLOB(32) hashes, `asset_index` asset columns, `address_id` address
 -- columns.
 
--- One row per version of a fairbooster (creation, update, sale): the current
+-- One row per state of a fairbooster (creation, update, sale): the current
 -- state is the latest row of its `tx_hash`. `asset` is the fairbooster asset,
--- the parent of every card asset.
+-- the parent of every card asset. `version` counts the updates applied: a
+-- purchase names the version it accepts.
 CREATE TABLE IF NOT EXISTS fairboosters(
     tx_index INTEGER,
     tx_hash BLOB,
@@ -20,6 +21,7 @@ CREATE TABLE IF NOT EXISTS fairboosters(
     cards_base_url TEXT,
     cards_image_extension TEXT,
     card_count INTEGER,
+    version INTEGER,
     boosters_sold INTEGER,
     cards_sold INTEGER,
     paid_capacity INTEGER,
@@ -71,16 +73,20 @@ CREATE INDEX IF NOT EXISTS fairbooster_updates_source_idx ON fairbooster_updates
 CREATE INDEX IF NOT EXISTS fairbooster_updates_block_index_idx ON fairbooster_updates (block_index);
 
 -- `buybooster` transactions. The cards of a valid purchase are drawn in the
--- next block (`fairbooster_draws`); `card_count` is the number of cards of the
--- booster when it was bought.
+-- next block (`fairbooster_draws`): `cards_per_booster` of them, described by
+-- the card image URL (`cards_base_url`, `cards_image_extension`) of the
+-- fairbooster when the booster was bought, at its `version`.
 CREATE TABLE IF NOT EXISTS fairbooster_purchases(
     tx_index INTEGER,
     tx_hash BLOB,
     block_index INTEGER,
     source INTEGER,
     fairbooster INTEGER,
+    version INTEGER,
     paid_quantity INTEGER,
-    card_count INTEGER,
+    cards_per_booster INTEGER,
+    cards_base_url TEXT,
+    cards_image_extension TEXT,
     status TEXT
 );
 CREATE INDEX IF NOT EXISTS fairbooster_purchases_tx_hash_idx ON fairbooster_purchases (tx_hash);
@@ -89,10 +95,9 @@ CREATE INDEX IF NOT EXISTS fairbooster_purchases_source_idx ON fairbooster_purch
 CREATE INDEX IF NOT EXISTS fairbooster_purchases_block_index_status_idx ON fairbooster_purchases (block_index, status);
 
 -- One row per drawn card: `asset` is the card asset created for it
--- (`<fairbooster>.<card_id>.<name>.<serial>`, supply 1, locked), `tx_index`/
--- `tx_hash` the purchase, `block_index` the block that drew it. `copy_number`
--- counts the copies of the card drawn so far, this one included: the serial
--- unless a serial was skipped (`fairbooster.next_free_serial`).
+-- (`<fairbooster>.<card_id>.<name>.<copy_number>`, supply 1, locked),
+-- `tx_index`/`tx_hash` the purchase, `block_index` the block that drew it.
+-- `copy_number` counts the copies of the card drawn so far, this one included.
 CREATE TABLE IF NOT EXISTS fairbooster_draws(
     tx_index INTEGER,
     tx_hash BLOB,
@@ -101,13 +106,12 @@ CREATE TABLE IF NOT EXISTS fairbooster_draws(
     fairbooster INTEGER,
     card_id INTEGER,
     copy_number INTEGER,
-    serial INTEGER,
     asset INTEGER
 );
 CREATE INDEX IF NOT EXISTS fairbooster_draws_tx_hash_idx ON fairbooster_draws (tx_hash);
 -- the last draw of a card, for `ledger.fairboosters.get_drawn_cards` and the
 -- `drawn` count of the API
-CREATE INDEX IF NOT EXISTS fairbooster_draws_fairbooster_card_id_serial_idx ON fairbooster_draws (fairbooster, card_id, serial);
+CREATE INDEX IF NOT EXISTS fairbooster_draws_fairbooster_card_id_copy_number_idx ON fairbooster_draws (fairbooster, card_id, copy_number);
 CREATE INDEX IF NOT EXISTS fairbooster_draws_source_idx ON fairbooster_draws (source);
 CREATE INDEX IF NOT EXISTS fairbooster_draws_asset_idx ON fairbooster_draws (asset);
 CREATE INDEX IF NOT EXISTS fairbooster_draws_block_index_idx ON fairbooster_draws (block_index);

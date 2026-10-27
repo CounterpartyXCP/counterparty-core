@@ -2,20 +2,26 @@
 
 A fairbooster is created with its own asset (`<name>`, supply 1, locked) and a
 list of cards. Each card has an id, a name, the hash of its image, a draw weight
-and a supply (0: unlimited). A `buybooster` pays the fairbooster's price to the
-owner of its asset; in the next block, `cards_per_booster` cards are drawn among
-the cards the fairbooster had when the booster was bought, and each one becomes
-an asset of its own, `<name>.<card_id>.<card_name>.<serial>`, with a supply of 1
-and locked quantity and description, issued to the buyer.
+and a supply (0: unlimited), and together they can fill a booster. A
+`buybooster` pays the fairbooster's price to the owner of its asset; in the next
+block, `cards_per_booster` cards are drawn among the cards the fairbooster had
+when the booster was bought, and each one becomes an asset of its own,
+`<name>.<card_id>.<card_name>.<serial>` (the serial numbers the copies of the
+card), with a supply of 1 and locked quantity and description, issued to the
+buyer.
 
 Creating a fairbooster costs `ASSET_FEE` when its asset is a named one (a
 numeric asset is free, as with `issuance`, and the fee is recorded the same way:
 as the `fee_paid` of its issuance), plus a gas fee
 (`gas.get_transaction_fee_for_count`, transaction id `ID`, from 0.001 to 0.1 XCP)
-for each card it can sell: its capacity, the cards of the boosters sold plus `cards_per_booster` for
-each booster left. Raising that capacity later with `updatefairbooster` pays
-the gas fee of the added cards. Every parameter except the name and the
-existing cards can be updated, and cards can be added.
+for each card it can sell: its capacity, the cards of the boosters sold plus
+`cards_per_booster` for each booster left. Raising that capacity later with
+`updatefairbooster` pays the gas fee of the added cards. Both messages carry
+the highest fee their sender pays (`max_xcp_fee`): the gas fee follows the
+network-wide usage, which other transactions can raise before they are
+confirmed. Every parameter except the name and the existing cards can be
+updated, and cards can be added: each update increments the `version` of the
+fairbooster, which a purchase names (see `buybooster`).
 
 The miner of the block that draws a booster could withhold that block to draw
 again, at the cost of its reward.
@@ -50,6 +56,12 @@ IMAGE_HASH_LENGTH = 32
 IMAGE_EXTENSION_PATTERN = re.compile(r"[A-Za-z0-9]{1,16}")
 # Card asset names end with a serial number: room for the largest one.
 MAX_SERIAL = "9" * len(str(config.MAX_INT))
+# Bounds on the text a fairbooster stores, in characters. The fairbooster row is
+# copied by every update and purchase, and the card image URL (`cards_base_url`
+# and `cards_image_extension`) becomes the description of every drawn card: a
+# purchase of a few bytes must not write an unbounded amount of data.
+MAX_DESCRIPTION_LENGTH = 4096
+MAX_URL_LENGTH = 256
 
 # The parameters `updatefairbooster` can change, by wire key.
 PARAMETERS = (
@@ -120,12 +132,19 @@ def validate_parameters(params, creation):
     """Check fairbooster parameters (`PARAMETERS` keys). On an update, a
     missing or None parameter is left unchanged."""
     problems = []
-    for name in ("description", "image_url", "cards_base_url", "cards_image_extension"):
+    for name, maximum in (
+        ("description", MAX_DESCRIPTION_LENGTH),
+        ("image_url", MAX_URL_LENGTH),
+        ("cards_base_url", MAX_URL_LENGTH),
+        ("cards_image_extension", None),
+    ):
         value = params.get(name)
         if value is None and not creation:
             continue
         if not isinstance(value, str):
             problems.append(f"`{name}` must be a string")
+        elif maximum is not None and len(value) > maximum:
+            problems.append(f"`{name}` must be at most {maximum} characters")
     if isinstance(params.get("cards_base_url"), str) and params["cards_base_url"] == "":
         problems.append("`cards_base_url` must not be empty")
     extension = params.get("cards_image_extension")
@@ -216,23 +235,69 @@ def capacity(max_boosters, cards_per_booster, boosters_sold=0, cards_sold=0):
     return cards_sold + (max_boosters - boosters_sold) * cards_per_booster
 
 
-def capacity_fee(db, block_index, added_capacity, limit=config.MAX_INT):
-    """The gas fee of `added_capacity` cards, or None above `limit`."""
-    return gas.get_transaction_fee_for_count(db, ID, block_index, added_capacity, limit=limit)
+def capacity_fee(db, block_index, added_capacity, limit=config.MAX_INT, ahead=0):
+    """The gas fee of `added_capacity` cards, or None above `limit`. With
+    `ahead`, the fee once that many more cards are sold (see
+    `default_max_xcp_fee`)."""
+    return gas.get_transaction_fee_for_count(
+        db, ID, block_index, added_capacity, limit=limit, ahead=ahead
+    )
 
 
-def validate_capacity(db, block_index, new_capacity, paid_capacity, balance, other_fee=0):
-    """Check that `new_capacity` is representable and that `balance` pays
-    `other_fee` plus the gas fee of the cards above `paid_capacity`. Returns
-    `(problems, fee)`, `fee` being the gas fee."""
+def default_max_xcp_fee(get_fee, *args):
+    """The default `max_xcp_fee` of a composed creation or update: its fee
+    (`get_fee(*args, ahead=...)`) if `gas.PERIOD_DURATION` more cards were
+    sold before it is confirmed. That is the step of the fee curve: the unit
+    fee changes every `gas.PERIOD_DURATION` cards, so the transaction stays
+    valid when the ones confirmed before it sell up to one more slice of
+    cards, whatever the slope of the curve there. 0 when the fee cannot be
+    computed (the transaction is invalid anyway)."""
+    try:
+        fee = get_fee(*args, ahead=gas.PERIOD_DURATION)
+    except (TypeError, AttributeError):  # malformed parameters: invalid anyway
+        return 0
+    return 0 if fee is None else fee
+
+
+def validate_booster_size(cards_per_booster, supply):
+    """A booster must be fillable by the cards: `supply` copies (None when a
+    card is unlimited) for `cards_per_booster` cards."""
+    if supply is not None and supply < cards_per_booster:
+        return [f"the card supply ({supply}) cannot fill a booster of {cards_per_booster} cards"]
+    return []
+
+
+def validate_max_xcp_fee(max_xcp_fee):
+    if not is_int(max_xcp_fee):
+        return ["`max_xcp_fee` must be an integer"]
+    if not 0 <= max_xcp_fee <= config.MAX_INT:
+        return [f"`max_xcp_fee` must be between 0 and {config.MAX_INT}"]
+    return []
+
+
+def validate_capacity(
+    db, block_index, new_capacity, paid_capacity, balance, max_xcp_fee, other_fee=0
+):
+    """Check that `new_capacity` is representable and that `other_fee` plus the
+    gas fee of the cards above `paid_capacity` is at most `max_xcp_fee` and is
+    paid by `balance`. Returns `(problems, fee)`, `fee` being the gas fee."""
     if new_capacity > config.MAX_INT:
         return ["`max_boosters` * `cards_per_booster` exceeds maximum value"], 0
-    limit = balance - other_fee
-    fee = None
-    if limit >= 0:
-        fee = capacity_fee(db, block_index, new_capacity - paid_capacity, limit=limit)
+    # The gas fee only grows with the capacity, and is capped per card: the
+    # whole fee is computed in a few steps, then compared with both bounds.
+    fee = capacity_fee(
+        db, block_index, new_capacity - paid_capacity, limit=config.MAX_INT - other_fee
+    )
     if fee is None:
-        return ["insufficient XCP balance to pay the fee"], 0
+        return ["the fee exceeds maximum value"], 0
+    total_fee = other_fee + fee
+    problems = []
+    if total_fee > max_xcp_fee:
+        problems.append(f"the fee ({total_fee}) is above `max_xcp_fee` ({max_xcp_fee})")
+    if total_fee > balance:
+        problems.append("insufficient XCP balance to pay the fee")
+    if problems:
+        return problems, 0
     return [], fee
 
 
@@ -254,13 +319,14 @@ def card_supply(cards):
     return None if 0 in supplies else sum(supplies)
 
 
-def get_fee(db, asset, max_boosters, cards_per_booster, block_index):
+def get_fee(db, asset, max_boosters, cards_per_booster, block_index, ahead=0):
     """The XCP fee of creating the fairbooster `asset`: its asset fee plus the
-    gas fee of its capacity. None when it exceeds `config.MAX_INT`."""
+    gas fee of its capacity (`ahead`: see `capacity_fee`). None when it
+    exceeds `config.MAX_INT`."""
     new_capacity = capacity(max_boosters, cards_per_booster)
     if new_capacity > config.MAX_INT:
         return None
-    fee = capacity_fee(db, block_index, new_capacity)
+    fee = capacity_fee(db, block_index, new_capacity, ahead=ahead)
     if fee is None:
         return None
     return asset_fee(asset) + fee
@@ -273,7 +339,7 @@ def earmarked_lp_asset(db, asset):
     return ledger.issuances.get_active_fairminter_by_lp_asset(db, asset) is not None
 
 
-def validate(db, source, asset, params, cards, block_index=None):
+def validate(db, source, asset, params, cards, max_xcp_fee, block_index=None):
     """Returns `(problems, fee)`, `fee` being the gas fee of the capacity."""
     problems = []
     if not protocol.enabled("fairboosters", block_index=block_index):
@@ -299,6 +365,10 @@ def validate(db, source, asset, params, cards, block_index=None):
     if cards == []:
         problems.append("a fairbooster needs at least one card")
     problems += validate_cards(asset, cards)
+    problems += validate_max_xcp_fee(max_xcp_fee)
+    if problems:
+        return problems, 0
+    problems = validate_booster_size(params["cards_per_booster"], card_supply(cards))
     if problems:
         return problems, 0
 
@@ -309,6 +379,7 @@ def validate(db, source, asset, params, cards, block_index=None):
         capacity(params["max_boosters"], params["cards_per_booster"]),
         0,
         balance,
+        max_xcp_fee,
         other_fee=asset_fee(asset),
     )
 
@@ -325,8 +396,10 @@ def compose(
     cards: str,
     description: str = "",
     image_url: str = "",
+    max_xcp_fee: int = None,
     skip_validation: bool = False,
 ):
+    """`max_xcp_fee` defaults to `default_max_xcp_fee`."""
     cards = parse_cards(cards)
     params = {
         "description": description,
@@ -337,8 +410,13 @@ def compose(
         "cards_base_url": cards_base_url,
         "cards_image_extension": (cards_image_extension or "").lstrip("."),
     }
+    block_index = CurrentState().current_block_index()
+    if max_xcp_fee is None:
+        max_xcp_fee = default_max_xcp_fee(
+            get_fee, db, asset, max_boosters, cards_per_booster, block_index
+        )
     problems, _fee = validate(
-        db, source, asset, params, cards, block_index=CurrentState().current_block_index()
+        db, source, asset, params, cards, max_xcp_fee, block_index=block_index
     )
     if problems and not skip_validation:
         raise exceptions.ComposeError(problems)
@@ -347,7 +425,7 @@ def compose(
     data += cbor2.dumps(
         [ledger.issuances.generate_asset_id(asset)]
         + [params[name] for name in PARAMETERS]
-        + [cards]
+        + [cards, max_xcp_fee]
     )
     return (source, [], data)
 
@@ -355,16 +433,28 @@ def compose(
 def unpack(message, return_dict=False):
     try:
         fields = cbor2.loads(message)
-        if not isinstance(fields, list) or len(fields) != len(PARAMETERS) + 2:
+        # asset id, the parameters, cards, max_xcp_fee
+        if not isinstance(fields, list) or len(fields) != len(PARAMETERS) + 3:
             raise exceptions.UnpackError("invalid fairbooster message")
         asset = ledger.issuances.generate_asset_name(fields[0])
-        params = dict(zip(PARAMETERS, fields[1:-1], strict=True))
-        cards = fields[-1]
+        params = dict(zip(PARAMETERS, fields[1:-2], strict=True))
+        cards, max_xcp_fee = fields[-2], fields[-1]
     except Exception:  # pylint: disable=broad-exception-caught
-        asset, params, cards = "", {}, []
+        asset, params, cards, max_xcp_fee = "", {}, [], 0
     if return_dict:
-        return {"asset": asset, **params, "cards": cards_to_dicts(cards)}
-    return asset, params, cards
+        return {
+            "asset": asset,
+            **params,
+            "cards": cards_to_dicts(cards),
+            "max_xcp_fee": readable_amount(max_xcp_fee),
+        }
+    return asset, params, cards, max_xcp_fee
+
+
+def readable_amount(value):
+    """An XCP amount of a decoded message for the API, which normalizes it:
+    None unless it is an integer (the message is then invalid anyway)."""
+    return value if is_int(value) else None
 
 
 def cards_to_dicts(cards):
@@ -463,12 +553,12 @@ def issue_locked_asset(
 
 
 def parse(db, tx, message):
-    asset, params, cards = unpack(message)
+    asset, params, cards, max_xcp_fee = unpack(message)
     if asset == "":
         problems, fee = ["could not unpack"], 0
     else:
         problems, fee = validate(
-            db, tx["source"], asset, params, cards, block_index=tx["block_index"]
+            db, tx["source"], asset, params, cards, max_xcp_fee, block_index=tx["block_index"]
         )
 
     if problems:
@@ -517,6 +607,7 @@ def parse(db, tx, message):
         "asset": asset,
         **params,
         "card_count": len(cards),
+        "version": 0,
         "boosters_sold": 0,
         "cards_sold": 0,
         "paid_capacity": new_capacity,
@@ -537,7 +628,7 @@ class DrawTable:
     added. A Fenwick tree holds the weights, an exhausted card weighing 0, so
     that picking a card and taking an exhausted one out of the draw are
     O(log n): a block can drain thousands of cards of supply 1. `drawn` is
-    `{card_id: (copies, last serial)}`, kept up to date by `draw`."""
+    `{card_id: copies drawn}`, kept up to date by `draw`."""
 
     def __init__(self, cards, drawn):
         self.cards = cards
@@ -552,8 +643,7 @@ class DrawTable:
                 self.tree[parent] += self.tree[position]
 
     def exhausted(self, card):
-        copies = self.drawn.get(card["card_id"], (0, 0))[0]
-        return 0 < card["max_supply"] <= copies
+        return 0 < card["max_supply"] <= self.drawn.get(card["card_id"], 0)
 
     def _remove(self, position, weight):
         while position < len(self.tree):
@@ -588,8 +678,8 @@ class DrawTable:
         its weight among those that are not exhausted, from `sha256(block_hash
         || tx_hash || i)` read as a 256-bit integer, so that the modulo bias is
         negligible: unknown when the booster is bought, identical on every
-        node. Returns the drawn cards as `(card, copies, serial)`, `copies`
-        counting this one."""
+        node. Returns the drawn cards as `(card, copies)`, `copies` counting
+        this one: the serial of the card asset."""
         card_count = len(self.cards) if card_count is None else card_count
         seed_prefix = bytes.fromhex(block_hash) + bytes.fromhex(tx_hash)
         result = []
@@ -604,11 +694,11 @@ class DrawTable:
             digest = hashlib.sha256(seed_prefix + i.to_bytes(4, "big")).digest()
             index = self.find(int.from_bytes(digest, "big") % total_weight)
             card = self.cards[index]
-            copies, last_serial = self.drawn.get(card["card_id"], (0, 0))
-            self.drawn[card["card_id"]] = (copies + 1, last_serial + 1)
+            copies = self.drawn.get(card["card_id"], 0) + 1
+            self.drawn[card["card_id"]] = copies
             if self.exhausted(card):
                 self._remove(index + 1, card["weight"])
-            result.append((card, copies + 1, last_serial + 1))
+            result.append((card, copies))
         return result
 
 
@@ -621,9 +711,12 @@ def card_asset_name(db, longname):
     )
 
 
-def issue_card(db, purchase, fairbooster, card, copies, serial, msg_index, block_index):
-    """Create the asset of a drawn card and credit it to the buyer."""
-    longname = card_asset_longname(fairbooster["asset"], card["card_id"], card["name"], serial)
+def issue_card(db, purchase, card, copies, msg_index, block_index):
+    """Create the asset of the `copies`-th copy of a drawn card and credit it
+    to the buyer. Its description is the card image URL as it was when the
+    booster was bought."""
+    fairbooster_asset = purchase["fairbooster"]
+    longname = card_asset_longname(fairbooster_asset, card["card_id"], card["name"], copies)
     card_asset = card_asset_name(db, longname)
     issue_locked_asset(
         db,
@@ -632,7 +725,7 @@ def issue_card(db, purchase, fairbooster, card, copies, serial, msg_index, block
         card_asset,
         purchase["source"],
         card_image_url(
-            fairbooster["cards_base_url"], card["card_id"], fairbooster["cards_image_extension"]
+            purchase["cards_base_url"], card["card_id"], purchase["cards_image_extension"]
         ),
         "fairbooster_draw",
         "fairbooster draw",
@@ -648,31 +741,21 @@ def issue_card(db, purchase, fairbooster, card, copies, serial, msg_index, block
             "tx_hash": purchase["tx_hash"],
             "block_index": block_index,
             "source": purchase["source"],
-            "fairbooster": fairbooster["asset"],
+            "fairbooster": fairbooster_asset,
             "card_id": card["card_id"],
             "copy_number": copies,
-            "serial": serial,
             "asset": card_asset,
         },
         "NEW_FAIRBOOSTER_DRAW",
     )
 
 
-def next_free_serial(db, fairbooster_asset, card, serial):
-    """`serial`, or the next one whose card asset name is free. Subassets of a
-    fairbooster can only be created by its draws, so this is a safety net."""
-    while ledger.issuances.get_assets_by_longname(
-        db, card_asset_longname(fairbooster_asset, card["card_id"], card["name"], serial)
-    ):
-        serial += 1
-    return serial
-
-
 def draw_boosters(db, block_index):
     """Draw the cards of every booster bought in the previous block, seeded by
     this block's hash. A booster is drawn among the cards of its fairbooster
-    when it was bought: a later transaction of its block cannot add cards to
-    its draw."""
+    when it was bought, and its cards are described by the card image URL of
+    that time (kept by the purchase): a later transaction of its block cannot
+    change its draw nor its cards."""
     if block_index == config.MEMPOOL_BLOCK_INDEX:
         return
     if not protocol.enabled("fairboosters", block_index=block_index):
@@ -681,8 +764,8 @@ def draw_boosters(db, block_index):
     if not purchases:
         return
     block_hash = ledger.blocks.get_block_hash(db, block_index)
-    # No transaction is parsed while the boosters are drawn: each fairbooster,
-    # its cards and their draw table are loaded once per block and kept up to
+    # No transaction is parsed while the boosters are drawn: the cards of each
+    # fairbooster and their draw table are loaded once per block and kept up to
     # date in memory.
     loaded = {}
     for purchase in purchases:
@@ -690,25 +773,22 @@ def draw_boosters(db, block_index):
         if fairbooster_asset not in loaded:
             cards = ledger.fairboosters.get_fairbooster_cards(db, fairbooster_asset)
             loaded[fairbooster_asset] = (
-                ledger.fairboosters.get_fairbooster(db, fairbooster_asset),
                 DrawTable(cards, ledger.fairboosters.get_drawn_cards(db, fairbooster_asset)),
                 [card["tx_index"] for card in cards],
             )
-        fairbooster, table, card_tx_indexes = loaded[fairbooster_asset]
+        table, card_tx_indexes = loaded[fairbooster_asset]
         # the cards are in the order they were added: those of the purchase are
         # the ones added by an earlier transaction
         card_count = bisect.bisect_left(card_tx_indexes, purchase["tx_index"])
-        draws = table.draw(block_hash, purchase["tx_hash"], purchase["card_count"], card_count)
-        for msg_index, (card, copies, drawn_serial) in enumerate(draws):
-            serial = next_free_serial(db, fairbooster["asset"], card, drawn_serial)
-            # keep the highest serial, as `get_drawn_cards` would read it
-            last_copies, last_serial = table.drawn[card["card_id"]]
-            table.drawn[card["card_id"]] = (last_copies, max(last_serial, serial))
-            issue_card(db, purchase, fairbooster, card, copies, serial, msg_index, block_index)
+        draws = table.draw(
+            block_hash, purchase["tx_hash"], purchase["cards_per_booster"], card_count
+        )
+        for msg_index, (card, copies) in enumerate(draws):
+            issue_card(db, purchase, card, copies, msg_index, block_index)
         logger.info(
             "%s card(s) of %s drawn for %s (booster %s)",
-            purchase["card_count"],
-            fairbooster["asset"],
+            purchase["cards_per_booster"],
+            fairbooster_asset,
             purchase["source"],
             purchase["tx_hash"],
         )

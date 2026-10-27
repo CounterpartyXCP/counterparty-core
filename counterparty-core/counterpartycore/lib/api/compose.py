@@ -750,20 +750,22 @@ def compose_fairbooster(
     cards: str,
     description: str = "",
     image_url: str = "",
+    max_xcp_fee: int = None,
     **construct_params,
 ):
     """
-    Composes a transaction to create a fairbooster: boosters of trading cards sold for XCP. Each card drawn from a booster becomes an asset `<asset>.<card_id>.<card_name>.<serial>` with a supply of 1, locked. Creating a fairbooster costs 0.5 XCP when `asset` is a named asset (a numeric asset is free), plus a gas fee for each card it can sell (`max_boosters` * `cards_per_booster`): 0.001 XCP per card while few cards are sold network-wide, it rises with the average number of cards sold per block over the last 2016 blocks, up to 0.1 XCP per card.
+    Composes a transaction to create a fairbooster: boosters of trading cards sold for XCP. Each card drawn from a booster becomes an asset `<asset>.<card_id>.<card_name>.<serial>` with a supply of 1, locked, described by its image URL. Creating a fairbooster costs 0.5 XCP when `asset` is a named asset (a numeric asset is free), plus a gas fee for each card it can sell (`max_boosters` * `cards_per_booster`): 0.001 XCP per card while few cards are sold network-wide, it rises with the average number of cards sold per block over the last 2016 blocks, up to 0.1 XCP per card. The transaction is invalid if the fee is above `max_xcp_fee` when it is confirmed.
     :param address: The address that will create the fairbooster and receive the payments (e.g. $ADDRESS_1)
     :param asset: The name of the fairbooster, a free named or numeric asset created with a supply of 1, locked (e.g. BOOSTERTEST)
     :param price: The price of a booster in XCP (in satoshis, hence integer) (e.g. 10000000)
     :param max_boosters: The maximum number of boosters that can be sold (e.g. 100)
     :param cards_per_booster: The number of cards in a booster (e.g. 3)
-    :param cards_base_url: The base URL of the card images: the image of a card is `<cards_base_url>/<card_id>.<cards_image_extension>` (e.g. https://www.example.com/booster/images/)
+    :param cards_base_url: The base URL of the card images, at most 256 characters: the image of a card is `<cards_base_url>/<card_id>.<cards_image_extension>` (e.g. https://www.example.com/booster/images/)
     :param cards_image_extension: The extension of the card images (e.g. png)
     :param cards: The cards, as `<id>:<name>:<image_hash>:<weight>:<supply>` separated by commas. `id` is a unique integer, `name` may contain spaces (they become `_` in the card asset names), `image_hash` is the unique SHA-256 of the card image (hex), `weight` the relative draw probability and `supply` the maximum number of copies (0 for unlimited) (e.g. 1:Common Card:9b2a0c0e1d7b5cd9a8c1f1f2e7d1c4a0b3c3d1e2f4a5b6c7d8e9f0a1b2c3d4e5:10:0,2:Rare Card:1f3e5d7c9b0a2c4e6f8d0b2a4c6e8f0a1b3d5f7e9c0a2b4d6f8e0c1a3b5d7f9e:1:10)
-    :param description: The description of the fairbooster (e.g. My first fairbooster)
-    :param image_url: The URL of the fairbooster image (e.g. https://www.example.com/booster/booster.png)
+    :param description: The description of the fairbooster, at most 4096 characters (e.g. My first fairbooster)
+    :param image_url: The URL of the fairbooster image, at most 256 characters (e.g. https://www.example.com/booster/booster.png)
+    :param max_xcp_fee: The highest XCP fee paid for the creation (in satoshis, hence integer); if omitted, the fee once 2016 more cards are sold network-wide, the step of the fee curve
     """
     params = {
         "source": address,
@@ -776,6 +778,7 @@ def compose_fairbooster(
         "cards": cards,
         "description": description,
         "image_url": image_url,
+        "max_xcp_fee": max_xcp_fee,
     }
     return _add_xcp_fee(
         _compose_with_pending_asset_guard(db, "fairbooster", params, asset, construct_params),
@@ -816,20 +819,22 @@ def compose_updatefairbooster(
     cards_base_url: str = None,
     cards_image_extension: str = None,
     cards: str = None,
+    max_xcp_fee: int = None,
     **construct_params,
 ):
     """
-    Composes a transaction to update a fairbooster and/or add cards to it. Only the owner of the fairbooster asset can update it; omitted parameters are left unchanged. Raising the capacity (the cards of the boosters sold plus `cards_per_booster` for each booster left) above what was already paid for pays the gas fee of the added cards.
+    Composes a transaction to update a fairbooster and/or add cards to it. Only the owner of the fairbooster asset can update it; omitted parameters are left unchanged. Raising the capacity (the cards of the boosters sold plus `cards_per_booster` for each booster left) above what was already paid for pays the gas fee of the added cards. The transaction is invalid if that fee is above `max_xcp_fee` when it is confirmed.
     :param address: The owner of the fairbooster (e.g. $ADDRESS_1)
     :param asset: The name of the fairbooster (e.g. BOOSTERTEST)
-    :param description: The new description of the fairbooster
-    :param image_url: The new URL of the fairbooster image
+    :param description: The new description of the fairbooster, at most 4096 characters
+    :param image_url: The new URL of the fairbooster image, at most 256 characters
     :param price: The new price of a booster in XCP (in satoshis, hence integer) (e.g. 20000000)
     :param max_boosters: The new maximum number of boosters, at least the number of boosters sold
     :param cards_per_booster: The new number of cards in a booster
-    :param cards_base_url: The new base URL of the card images
+    :param cards_base_url: The new base URL of the card images, at most 256 characters; the boosters bought before keep the previous one
     :param cards_image_extension: The new extension of the card images
     :param cards: Cards to add, in the same format as for `compose/fairbooster`
+    :param max_xcp_fee: The highest XCP fee paid for the update (in satoshis, hence integer); if omitted, the fee once 2016 more cards are sold network-wide, the step of the fee curve
     """
     params = {
         "source": address,
@@ -842,6 +847,7 @@ def compose_updatefairbooster(
         "cards_base_url": cards_base_url,
         "cards_image_extension": cards_image_extension,
         "cards": cards,
+        "max_xcp_fee": max_xcp_fee,
     }
     return _add_xcp_fee(
         composer.compose_transaction(db, "updatefairbooster", params, construct_params),
@@ -870,26 +876,16 @@ def compose_buybooster(
     db,
     address: str,
     asset: str,
-    max_price: int = None,
-    cards_per_booster: int = None,
-    card_count: int = None,
+    version: int = None,
     **construct_params,
 ):
     """
-    Composes a transaction to buy one booster of a fairbooster. The price is paid to the owner of the fairbooster, and the cards are drawn and credited in the next block, among the cards the fairbooster has when the booster is bought. The transaction carries the terms of the purchase, by default the current ones of the fairbooster: it is invalid if the fairbooster is updated before it is confirmed with a higher price, another number of cards per booster or new cards.
+    Composes a transaction to buy one booster of a fairbooster. The price is paid to the owner of the fairbooster, and the cards are drawn and credited in the next block, among the cards the fairbooster has when the booster is bought and with the card image URL it has then. The transaction names the version of the fairbooster the buyer accepts (its `version`, incremented by each update), by default the current one: it is invalid if the fairbooster is updated before it is confirmed.
     :param address: The address that will buy the booster (e.g. $ADDRESS_2)
     :param asset: The name of the fairbooster (e.g. BOOSTERTEST)
-    :param max_price: The highest price paid for the booster, in XCP (in satoshis, hence integer); the current price if omitted
-    :param cards_per_booster: The number of cards of the booster; the current one if omitted
-    :param card_count: The number of cards of the fairbooster (its `card_count`); the current one if omitted
+    :param version: The version of the fairbooster the purchase accepts; the current one if omitted
     """
-    params = {
-        "source": address,
-        "asset": asset,
-        "max_price": max_price,
-        "cards_per_booster": cards_per_booster,
-        "card_count": card_count,
-    }
+    params = {"source": address, "asset": asset, "version": version}
     return composer.compose_transaction(db, "buybooster", params, construct_params)
 
 

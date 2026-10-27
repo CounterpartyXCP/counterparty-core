@@ -13,7 +13,13 @@ import pytest
 from bitcoinutils.transactions import Transaction
 from counterpartycore.lib import config, exceptions, ledger
 from counterpartycore.lib.api import apiwatcher, compose, composer, queries
-from counterpartycore.lib.messages import buybooster, fairbooster, fairminter, updatefairbooster
+from counterpartycore.lib.messages import (
+    buybooster,
+    fairbooster,
+    fairminter,
+    gas,
+    updatefairbooster,
+)
 from counterpartycore.lib.parser import check, deserialize
 from counterpartycore.lib.utils import assetnames, hashcodec
 from counterpartycore.test.mocks import bitcoind as bitcoind_mock_module
@@ -98,27 +104,27 @@ def creation_params(**overrides):
     return params
 
 
-def validate(ledger_db, defaults, asset="BOOSTER", cards=None, **overrides):
+def validate(
+    ledger_db, defaults, asset="BOOSTER", cards=None, max_xcp_fee=config.MAX_INT, **overrides
+):
     problems, _fee = fairbooster.validate(
         ledger_db,
         defaults["addresses"][0],
         asset,
         creation_params(**overrides),
         wire_cards() if cards is None else cards,
+        max_xcp_fee,
     )
     return problems
 
 
-def validate_buy(ledger_db, source, asset, **terms):
-    """`buybooster.validate` with the current terms of the fairbooster, but
-    for `terms`."""
-    row = ledger.fairboosters.get_fairbooster(ledger_db, asset)
-    current = {
-        "max_price": row["price"] if row else 0,
-        "cards_per_booster": row["cards_per_booster"] if row else 1,
-        "card_count": row["card_count"] if row else 1,
-    }
-    return buybooster.validate(ledger_db, source, asset, **(current | terms))
+def validate_buy(ledger_db, source, asset, version=None):
+    """The problems of `buybooster.validate`, at the current version of the
+    fairbooster unless `version` is given."""
+    if version is None:
+        row = ledger.fairboosters.get_fairbooster(ledger_db, asset)
+        version = row["version"] if row else 0
+    return buybooster.validate(ledger_db, source, asset, version)[0]
 
 
 def create(ledger_db, defaults, asset="BOOSTER", cards=CARDS, **overrides):
@@ -193,13 +199,41 @@ def test_validate(ledger_db, defaults):
         "`cards_image_extension` must be 1 to 16 letters or digits"
     ]
     assert validate(ledger_db, defaults, description=None) == ["`description` must be a string"]
+    # the text a fairbooster stores is bounded: the card image URL becomes the
+    # description of every drawn card
+    assert validate(ledger_db, defaults, description="d" * fairbooster.MAX_DESCRIPTION_LENGTH) == []
+    assert validate(
+        ledger_db, defaults, description="d" * (fairbooster.MAX_DESCRIPTION_LENGTH + 1)
+    ) == [f"`description` must be at most {fairbooster.MAX_DESCRIPTION_LENGTH} characters"]
+    long_url = "https://example.com/" + "u" * fairbooster.MAX_URL_LENGTH
+    assert validate(ledger_db, defaults, image_url=long_url) == [
+        f"`image_url` must be at most {fairbooster.MAX_URL_LENGTH} characters"
+    ]
+    assert validate(ledger_db, defaults, cards_base_url=long_url) == [
+        f"`cards_base_url` must be at most {fairbooster.MAX_URL_LENGTH} characters"
+    ]
+    assert validate(ledger_db, defaults, cards_base_url="u" * fairbooster.MAX_URL_LENGTH) == []
     assert validate(ledger_db, defaults, max_boosters=config.MAX_INT) == [
         "`max_boosters` * `cards_per_booster` exceeds maximum value"
     ]
-    # the gas fee of a huge capacity cannot be paid
+    # the gas fee of a huge capacity cannot be represented
     assert validate(ledger_db, defaults, max_boosters=config.MAX_INT // 3) == [
+        "the fee exceeds maximum value"
+    ]
+    # nor paid
+    assert validate(ledger_db, defaults, max_boosters=10**9) == [
         "insufficient XCP balance to pay the fee"
     ]
+    # the creator bounds the fee: the asset fee and the gas fee
+    fee = ASSET_FEE + 30 * CARD_FEE
+    assert validate(ledger_db, defaults, max_xcp_fee=fee) == []
+    assert validate(ledger_db, defaults, max_xcp_fee=fee - 1) == [
+        f"the fee ({fee}) is above `max_xcp_fee` ({fee - 1})"
+    ]
+    assert validate(ledger_db, defaults, max_xcp_fee=-1) == [
+        f"`max_xcp_fee` must be between 0 and {config.MAX_INT}"
+    ]
+    assert validate(ledger_db, defaults, max_xcp_fee="1") == ["`max_xcp_fee` must be an integer"]
     # a named asset pays ASSET_FEE, a numeric one is free
     assert fairbooster.asset_fee("BOOSTER") == ASSET_FEE
     assert fairbooster.asset_fee("A95428956661682178") == 0
@@ -216,15 +250,21 @@ def test_validate(ledger_db, defaults):
     assert 10**8 * CARD_FEE < big_fee < 10**8 * MAX_CARD_FEE
     # the fee is returned with the problems
     assert fairbooster.validate(
-        ledger_db, defaults["addresses"][0], "BOOSTER", creation_params(), wire_cards()
+        ledger_db, defaults["addresses"][0], "BOOSTER", creation_params(), wire_cards(), fee
     ) == ([], 30 * CARD_FEE)
-    balance = ASSET_FEE + 30 * CARD_FEE
-    assert fairbooster.validate_capacity(ledger_db, block_index, 30, 0, balance, ASSET_FEE) == (
-        [],
-        30 * CARD_FEE,
-    )
-    assert fairbooster.validate_capacity(ledger_db, block_index, 30, 0, balance - 1, ASSET_FEE) == (
-        ["insufficient XCP balance to pay the fee"],
+
+    def validate_capacity(balance, max_xcp_fee):
+        return fairbooster.validate_capacity(
+            ledger_db, block_index, 30, 0, balance, max_xcp_fee, other_fee=ASSET_FEE
+        )
+
+    assert validate_capacity(fee, fee) == ([], 30 * CARD_FEE)
+    assert validate_capacity(fee - 1, fee) == (["insufficient XCP balance to pay the fee"], 0)
+    assert validate_capacity(fee - 1, fee - 1) == (
+        [
+            f"the fee ({fee}) is above `max_xcp_fee` ({fee - 1})",
+            "insufficient XCP balance to pay the fee",
+        ],
         0,
     )
 
@@ -278,6 +318,24 @@ def test_validate(ledger_db, defaults):
     assert validate(
         ledger_db, defaults, cards=wire_cards(f"1:A:{HASH_1}:1:{big}, 2:B:{HASH_2}:1:{big}")
     ) == ["total card supply exceeds maximum value"]
+    # the cards must fill a booster: a fairbooster that cannot sell one would
+    # be created closed, its fees paid for nothing
+    assert validate(
+        ledger_db, defaults, cards=wire_cards(f"1:A:{HASH_1}:1:2"), cards_per_booster=3
+    ) == ["the card supply (2) cannot fill a booster of 3 cards"]
+    assert (
+        validate(ledger_db, defaults, cards=wire_cards(f"1:A:{HASH_1}:1:3"), cards_per_booster=3)
+        == []
+    )
+    assert (
+        validate(
+            ledger_db,
+            defaults,
+            cards=wire_cards(f"1:A:{HASH_1}:1:2, 2:B:{HASH_2}:1:0"),
+            cards_per_booster=3,
+        )
+        == []
+    )
 
 
 def test_compose_unpack(ledger_db, defaults):
@@ -292,6 +350,7 @@ def test_compose_unpack(ledger_db, defaults):
     assert destinations == []
     assert data[0] == fairbooster.ID
     unpacked = fairbooster.unpack(data[1:], return_dict=True)
+    # `max_xcp_fee` defaults to the current fee
     assert unpacked == {
         "asset": "BOOSTER",
         **creation_params(),
@@ -312,8 +371,19 @@ def test_compose_unpack(ledger_db, defaults):
             },
             {"card_id": 3, "name": "Legend", "image_hash": HASH_3, "weight": 5, "max_supply": 1},
         ],
+        "max_xcp_fee": ASSET_FEE + 30 * CARD_FEE,
     }
-    assert fairbooster.unpack(b"garbage") == ("", {}, [])
+    assert fairbooster.unpack(b"garbage") == ("", {}, [], 0)
+    _source, _destinations, data = fairbooster.compose(
+        ledger_db,
+        defaults["addresses"][0],
+        "BOOSTER",
+        cards=CARDS,
+        max_xcp_fee=7,
+        **creation_params(),
+        skip_validation=True,
+    )
+    assert fairbooster.unpack(data[1:])[3] == 7
     assert compose.unpack(ledger_db, data.hex(), 100000000)["message_type"] == "fairbooster"
 
     with pytest.raises(exceptions.ComposeError, match="already exists"):
@@ -324,40 +394,39 @@ def test_compose_unpack(ledger_db, defaults):
     _source, _destinations, data = updatefairbooster.compose(
         ledger_db, defaults["addresses"][0], "BOOSTER", price=5, skip_validation=True
     )
-    assert updatefairbooster.unpack(data[1:]) == ("BOOSTER", {"price": 5}, [])
-    assert updatefairbooster.unpack(b"garbage") == ("", {}, [])
+    # no fairbooster yet: no fee
+    assert updatefairbooster.unpack(data[1:]) == ("BOOSTER", {"price": 5}, [], 0)
+    assert updatefairbooster.unpack(data[1:], return_dict=True) == {
+        "asset": "BOOSTER",
+        "price": 5,
+        "cards": [],
+        "max_xcp_fee": 0,
+    }
+    assert updatefairbooster.unpack(b"garbage") == ("", {}, [], 0)
+    # the API normalizes the XCP amounts of a decoded message: a crafted
+    # non-integer `max_xcp_fee` is shown as null
+    for module, fields in (
+        (fairbooster, [BOOSTER_ID, *creation_params().values(), [], "x"]),
+        (updatefairbooster, [BOOSTER_ID, {}, [], "x"]),
+    ):
+        message = cbor2.dumps(fields)
+        assert module.unpack(message)[-1] == "x"
+        assert module.unpack(message, return_dict=True)["max_xcp_fee"] is None
 
     _source, _destinations, data = buybooster.compose(
-        ledger_db,
-        defaults["addresses"][1],
-        "BOOSTER",
-        max_price=PRICE,
-        cards_per_booster=3,
-        card_count=2,
-        skip_validation=True,
+        ledger_db, defaults["addresses"][1], "BOOSTER", version=2, skip_validation=True
     )
     assert len(data) == 1 + buybooster.LENGTH
-    assert buybooster.unpack(data[1:]) == ("BOOSTER", PRICE, 3, 2)
-    assert buybooster.unpack(data[1:], return_dict=True) == {
-        "asset": "BOOSTER",
-        "max_price": PRICE,
-        "cards_per_booster": 3,
-        "card_count": 2,
-    }
+    assert buybooster.unpack(data[1:]) == ("BOOSTER", 2)
+    assert buybooster.unpack(data[1:], return_dict=True) == {"asset": "BOOSTER", "version": 2}
     assert compose.unpack(ledger_db, data.hex(), 100000000)["message_type"] == "buybooster"
-    assert buybooster.unpack(b"garbage") == ("", 0, 0, 0)
-    # the terms of a purchase of an unknown fairbooster have no default
+    assert buybooster.unpack(b"garbage") == ("", 0)
+    # the version of a purchase of an unknown fairbooster has no default
     with pytest.raises(exceptions.ComposeError, match="cannot be encoded"):
         buybooster.compose(ledger_db, defaults["addresses"][1], "BOOSTER", skip_validation=True)
     with pytest.raises(exceptions.ComposeError, match="cannot be encoded"):
         buybooster.compose(
-            ledger_db,
-            defaults["addresses"][1],
-            "BOOSTER",
-            max_price=-1,
-            cards_per_booster=3,
-            card_count=2,
-            skip_validation=True,
+            ledger_db, defaults["addresses"][1], "BOOSTER", version=-1, skip_validation=True
         )
 
 
@@ -372,18 +441,18 @@ def test_draw_cards():
     def draw(cards, count, drawn=None, block_hash=block_hash, card_count=None):
         table = fairbooster.DrawTable(cards, drawn if drawn is not None else {})
         return [
-            (card["card_id"], serial)
-            for card, _copies, serial in table.draw(block_hash, tx_hash, count, card_count)
+            (card["card_id"], copies)
+            for card, copies in table.draw(block_hash, tx_hash, count, card_count)
         ]
 
     drawn = draw(cards, 100)
     assert len(drawn) == 100
     # the capped card leaves the draw once exhausted
-    assert [serial for card_id, serial in drawn if card_id == 2] == [1, 2]
-    # serials number the copies of each card
+    assert [copies for card_id, copies in drawn if card_id == 2] == [1, 2]
+    # the copies of each card are numbered from 1: the serials of its assets
     for card_id in (1, 3):
-        serials = [serial for drawn_id, serial in drawn if drawn_id == card_id]
-        assert serials == list(range(1, len(serials) + 1))
+        copies = [copies for drawn_id, copies in drawn if drawn_id == card_id]
+        assert copies == list(range(1, len(copies) + 1))
     # deterministic: same seed, same draws; another seed, other draws
     assert draw(cards, 100) == drawn
     assert draw(cards, 100, block_hash="cc" * 32) != drawn
@@ -392,21 +461,18 @@ def test_draw_cards():
     position = int.from_bytes(digest, "big") % 4
     expected_first = 1 if position < 1 else 2 if position < 2 else 3
     assert draw(cards, 1) == [(expected_first, 1)]
-    # copies drawn before continue the serials and count against the supply
-    assert draw(cards[1:2], 1, drawn={2: (1, 1)}) == [(2, 2)]
+    # copies drawn before continue the numbering and count against the supply
+    assert draw(cards[1:2], 1, drawn={2: 1}) == [(2, 2)]
     with pytest.raises(exceptions.ParseTransactionError, match="no card left to draw"):
-        draw(cards[1:2], 1, drawn={2: (2, 2)})
+        draw(cards[1:2], 1, drawn={2: 2})
     # a booster can be restricted to the first cards
-    assert {card_id for card_id, _serial in draw(cards, 50, card_count=1)} == {1}
+    assert {card_id for card_id, _copies in draw(cards, 50, card_count=1)} == {1}
     with pytest.raises(exceptions.ParseTransactionError, match="no card left to draw"):
         draw(cards, 1, card_count=0)
-    # copies count every draw of a card, this one included
-    table = fairbooster.DrawTable(cards[1:2], {2: (1, 7)})
-    assert [
-        (card["card_id"], copies, serial)
-        for card, copies, serial in table.draw(block_hash, tx_hash, 1)
-    ] == [(2, 2, 8)]
-    assert table.drawn == {2: (2, 8)}
+    # the table keeps the copies drawn of each card, this one included
+    table = fairbooster.DrawTable(cards[1:2], {2: 1})
+    assert table.draw(block_hash, tx_hash, 1) == [(cards[1], 2)]
+    assert table.drawn == {2: 2}
     assert fairbooster.card_supply(wire_cards()) is None
     assert fairbooster.card_supply(wire_cards(f"1:A:{HASH_1}:1:2, 2:B:{HASH_2}:1:3")) == 5
 
@@ -421,6 +487,7 @@ def test_create_buy_and_draw(ledger_db, defaults):
     assert row["status"] == "open"
     assert row["source"] == owner
     assert row["card_count"] == 3
+    assert row["version"] == 0
     assert row["boosters_sold"] == 0
     assert row["cards_sold"] == 0
     assert row["paid_capacity"] == 30
@@ -474,8 +541,12 @@ def test_create_buy_and_draw(ledger_db, defaults):
     purchase = last_row(ledger_db, "fairbooster_purchases")
     assert purchase["status"] == "valid"
     assert purchase["fairbooster"] == "BOOSTER"
+    assert purchase["version"] == 0
     assert purchase["paid_quantity"] == PRICE
-    assert purchase["card_count"] == 3
+    assert purchase["cards_per_booster"] == 3
+    # the card image URL the cards of the booster will have
+    assert purchase["cards_base_url"] == "https://example.com/cards/"
+    assert purchase["cards_image_extension"] == "png"
     assert ledger.balances.get_balance(ledger_db, buyer, config.XCP) == buyer_xcp - PRICE
     assert ledger.balances.get_balance(ledger_db, owner, config.XCP) == owner_xcp + PRICE
     assert ledger.fairboosters.get_fairbooster(ledger_db, "BOOSTER")["boosters_sold"] == 1
@@ -495,7 +566,7 @@ def test_create_buy_and_draw(ledger_db, defaults):
         assert draw["fairbooster"] == "BOOSTER"
         card_asset = ledger.issuances.get_asset(ledger_db, draw["asset"])
         assert card_asset["asset_longname"] == (
-            f"BOOSTER.{draw['card_id']}.{names[draw['card_id']]}.{draw['serial']}"
+            f"BOOSTER.{draw['card_id']}.{names[draw['card_id']]}.{draw['copy_number']}"
         )
         assert card_asset["asset"].startswith("A")
         assert card_asset["supply"] == 1
@@ -508,22 +579,26 @@ def test_create_buy_and_draw(ledger_db, defaults):
         assert card_asset["msg_index"] == msg_index
         assert card_asset["tx_hash"] == purchase["tx_hash"]
         assert ledger.balances.get_balance(ledger_db, buyer, draw["asset"]) == 1
-    # serials number the copies of each card
+    # the copies of each card are numbered from 1: the serials of its assets
     for card_id in {d["card_id"] for d in draws}:
-        serials = [d["serial"] for d in draws if d["card_id"] == card_id]
-        assert serials == list(range(1, len(serials) + 1))
-    assert all(d["copy_number"] == d["serial"] for d in draws)
+        copies = [d["copy_number"] for d in draws if d["card_id"] == card_id]
+        assert copies == list(range(1, len(copies) + 1))
     drawn = ledger.fairboosters.get_drawn_cards(ledger_db, "BOOSTER")
-    assert sum(copies for copies, _serial in drawn.values()) == 3
-    for card_id, (copies, last_serial) in drawn.items():
-        assert copies == last_serial == len([d for d in draws if d["card_id"] == card_id])
+    assert sum(drawn.values()) == 3
+    for card_id, copies in drawn.items():
+        assert copies == len([d for d in draws if d["card_id"] == card_id])
     check.asset_conservation(ledger_db)
 
     # the API
     cards_api = queries.get_fairbooster_cards(ledger_db, "BOOSTER").result
     assert sum(card["drawn"] for card in cards_api) == 3
     assert [card["card_id"] for card in cards_api] == [1, 2, 3]
-    assert len(queries.get_fairbooster_draws(ledger_db, "BOOSTER").result) == 3
+    draws_api = queries.get_fairbooster_draws(ledger_db, "BOOSTER").result
+    assert len(draws_api) == 3
+    # each draw names its card and the hash of its image
+    hashes = {c["card_id"]: (c["name"], c["image_hash"]) for c in cards}
+    for draw in draws_api:
+        assert (draw["card_name"], draw["image_hash"]) == hashes[draw["card_id"]]
     assert (
         len(queries.get_fairbooster_draws_by_purchase(ledger_db, purchase["tx_hash"]).result) == 3
     )
@@ -570,6 +645,21 @@ def test_buy_validation(ledger_db, defaults):
     draws = rows(ledger_db, "SELECT * FROM fairbooster_draws")
     assert sorted(d["card_id"] for d in draws) == [1, 2, 2, 2]
 
+    # the cards must still fill a booster when `cards_per_booster` changes:
+    # the 4 copies, including those drawn, for a booster of 5
+    def validate_update(params, cards=""):
+        return updatefairbooster.validate(
+            ledger_db, owner, "BOOSTER", params, wire_cards(cards), config.MAX_INT
+        )[0]
+
+    assert validate_update({"cards_per_booster": 5}) == [
+        "the card supply (4) cannot fill a booster of 5 cards"
+    ]
+    assert validate_update({"cards_per_booster": 5}, f"3:C:{HASH_3}:1:1") == []
+    assert validate_update({"cards_per_booster": 5}, f"3:C:{HASH_3}:1:0") == []
+    assert validate_update({"cards_per_booster": 4}) == []
+    assert validate_update({"price": 1}) == []
+
     # adding a card makes room for another booster and reopens the fairbooster
     send(
         ledger_db,
@@ -606,42 +696,66 @@ def test_update(ledger_db, defaults):
     owner, other = defaults["addresses"][0], defaults["addresses"][1]
     create(ledger_db, defaults)
 
-    def validate_update(source=owner, cards=None, **params):
+    def validate_update(source=owner, cards=None, max_xcp_fee=config.MAX_INT, **params):
         return updatefairbooster.validate(
-            ledger_db, source, "BOOSTER", params, wire_cards(cards) if cards else []
+            ledger_db, source, "BOOSTER", params, wire_cards(cards) if cards else [], max_xcp_fee
         )[0]
+
+    def validate_capacity(params, max_xcp_fee=config.MAX_INT):
+        """`(problems, fee, capacity)`"""
+        return updatefairbooster.validate(ledger_db, owner, "BOOSTER", params, [], max_xcp_fee)[:3]
 
     assert validate_update(price=1) == []
     assert validate_update() == ["nothing to update"]
     assert validate_update(source=other, price=1) == [
         f"fairbooster `BOOSTER` is not owned by `{other}`"
     ]
-    assert updatefairbooster.validate(ledger_db, owner, "NOPE", {"price": 1}, [])[0] == [
-        "fairbooster `NOPE` not found"
-    ]
+    assert updatefairbooster.validate(ledger_db, owner, "NOPE", {"price": 1}, [], 0) == (
+        ["fairbooster `NOPE` not found"],
+        0,
+        0,
+        None,
+    )
+    # the fairbooster is returned with the problems, for the parser
+    assert validate_capacity({"max_boosters": 20})[0] == []
+    assert (
+        updatefairbooster.validate(
+            ledger_db, owner, "BOOSTER", {"max_boosters": 20}, [], config.MAX_INT
+        )[3]["asset"]
+        == "BOOSTER"
+    )
     assert validate_update(price=-1) == [f"`price` must be between 0 and {config.MAX_INT}"]
     assert validate_update(cards=f"1:Again:{'44' * 32}:1:0") == ["card 1: duplicate id"]
     assert validate_update(cards=f"4:Again:{HASH_1}:1:0") == ["card 4: duplicate image_hash"]
     assert validate_update(cards=f"4:New:{'44' * 32}:1:0") == []
-    assert updatefairbooster.validate(ledger_db, owner, "BOOSTER", {"name": "X"}, [])[0] == [
-        "invalid parameters"
+    assert validate_capacity({"name": "X"})[0] == ["invalid parameters"]
+    assert validate_update(price=1, max_xcp_fee=-1) == [
+        f"`max_xcp_fee` must be between 0 and {config.MAX_INT}"
+    ]
+    assert validate_update(cards_base_url="u" * (fairbooster.MAX_URL_LENGTH + 1)) == [
+        f"`cards_base_url` must be at most {fairbooster.MAX_URL_LENGTH} characters"
     ]
 
     # raising the capacity pays the gas fee of the added cards only, 0.001 XCP
     # each while few cards are sold
-    assert updatefairbooster.validate(ledger_db, owner, "BOOSTER", {"max_boosters": 20}, []) == (
-        [],
-        30 * CARD_FEE,
-        60,
-    )
-    assert updatefairbooster.validate(ledger_db, owner, "BOOSTER", {"max_boosters": 5}, []) == (
-        [],
+    assert validate_capacity({"max_boosters": 20}) == ([], 30 * CARD_FEE, 60)
+    assert validate_capacity({"max_boosters": 5}, max_xcp_fee=0) == ([], 0, 15)
+    # the owner bounds the fee
+    assert validate_capacity({"max_boosters": 20}, max_xcp_fee=30 * CARD_FEE - 1) == (
+        [f"the fee ({30 * CARD_FEE}) is above `max_xcp_fee` ({30 * CARD_FEE - 1})"],
         0,
-        15,
+        0,
     )
-    assert updatefairbooster.validate(
-        ledger_db, owner, "BOOSTER", {"max_boosters": config.MAX_INT // 3}, []
-    ) == (["insufficient XCP balance to pay the fee"], 0, 0)
+    assert validate_capacity({"max_boosters": config.MAX_INT // 3}) == (
+        ["the fee exceeds maximum value"],
+        0,
+        0,
+    )
+    assert validate_capacity({"max_boosters": 10**9}) == (
+        ["insufficient XCP balance to pay the fee"],
+        0,
+        0,
+    )
 
     owner_xcp = ledger.balances.get_balance(ledger_db, owner, config.XCP)
     send(
@@ -676,6 +790,7 @@ def test_update(ledger_db, defaults):
     assert row["cards_base_url"] == "ipfs://cards"
     assert row["cards_image_extension"] == "svg"
     assert row["card_count"] == 4
+    assert row["version"] == 1
     assert row["paid_capacity"] == 60
     assert row["fee_paid"] == ASSET_FEE + 60 * CARD_FEE
     assert [
@@ -689,11 +804,7 @@ def test_update(ledger_db, defaults):
 
     # lowering then raising the capacity back is free up to what was paid
     send(ledger_db, "updatefairbooster", {"source": owner, "asset": "BOOSTER", "max_boosters": 1})
-    assert updatefairbooster.validate(ledger_db, owner, "BOOSTER", {"max_boosters": 20}, []) == (
-        [],
-        0,
-        60,
-    )
+    assert validate_capacity({"max_boosters": 20}, max_xcp_fee=0) == ([], 0, 60)
 
     # max_boosters cannot go below the boosters sold
     send(ledger_db, "updatefairbooster", {"source": owner, "asset": "BOOSTER", "max_boosters": 3})
@@ -751,7 +862,9 @@ def test_capacity_counts_the_cards_sold(ledger_db, defaults):
     send(ledger_db, "buybooster", {"source": buyer, "asset": "BOOSTER"})
     mine_empty_block(ledger_db)
     params = {"max_boosters": 10, "cards_per_booster": 1}
-    problems, _fee, capacity = updatefairbooster.validate(ledger_db, owner, "BOOSTER", params, [])
+    problems, _fee, capacity, _fairbooster = updatefairbooster.validate(
+        ledger_db, owner, "BOOSTER", params, [], config.MAX_INT
+    )
     assert (problems, capacity) == ([], 10 + 9)
     send(ledger_db, "updatefairbooster", {"source": owner, "asset": "BOOSTER", **params})
     assert ledger.fairboosters.get_fairbooster(ledger_db, "BOOSTER")["paid_capacity"] == 19
@@ -787,12 +900,12 @@ def test_draws_of_one_block(ledger_db, defaults):
     mine_empty_block(ledger_db)
     draws = rows(ledger_db, "SELECT * FROM fairbooster_draws ORDER BY rowid")
     assert [d["tx_index"] for d in draws] == [p["tx_index"] for p in purchases for _ in range(2)]
-    # the supply of card 1 holds and the serials of each card follow each
-    # other across the purchases
+    # the supply of card 1 holds and the copies of each card are numbered
+    # across the purchases
     assert len([d for d in draws if d["card_id"] == 1]) <= 3
     for card_id in (1, 2):
-        serials = [d["serial"] for d in draws if d["card_id"] == card_id]
-        assert serials == list(range(1, len(serials) + 1))
+        copies = [d["copy_number"] for d in draws if d["card_id"] == card_id]
+        assert copies == list(range(1, len(copies) + 1))
     check.asset_conservation(ledger_db)
 
 
@@ -871,22 +984,31 @@ def test_lp_asset_earmarks(ledger_db, defaults, blockchain_mock, monkeypatch):
 
 
 def test_purchase_terms(ledger_db, defaults):
-    """A purchase carries the terms it accepts: an update that reaches the chain
-    first makes it invalid instead of changing what the buyer pays or gets."""
+    """A purchase names the version of the fairbooster it accepts: an update
+    that reaches the chain first makes it invalid instead of changing what the
+    buyer pays or gets."""
     owner, buyer = defaults["addresses"][0], defaults["addresses"][1]
     create(ledger_db, defaults)
-    # a price below `max_price` is fine
-    assert validate_buy(ledger_db, buyer, "BOOSTER", max_price=PRICE + 1) == []
-    assert validate_buy(ledger_db, buyer, "BOOSTER", max_price=PRICE - 1) == [
-        f"the price of a booster ({PRICE}) is above `max_price` ({PRICE - 1})"
+    assert ledger.fairboosters.get_fairbooster(ledger_db, "BOOSTER")["version"] == 0
+    assert validate_buy(ledger_db, buyer, "BOOSTER", version=0) == []
+    assert validate_buy(ledger_db, buyer, "BOOSTER", version=1) == [
+        "the fairbooster is at version 0, not 1"
     ]
-    assert validate_buy(ledger_db, buyer, "BOOSTER", cards_per_booster=4) == [
-        "`cards_per_booster` is 3, not 4"
+    assert validate_buy(ledger_db, buyer, "BOOSTER", version="0") == [
+        "`version` must be an integer"
     ]
-    assert validate_buy(ledger_db, buyer, "BOOSTER", card_count=4) == ["`card_count` is 3, not 4"]
-    assert validate_buy(ledger_db, buyer, "BOOSTER", max_price="1") == [
-        "`max_price`, `cards_per_booster` and `card_count` must be integers"
-    ]
+    # the fairbooster and the supply of its cards are returned, for the parser
+    problems, row, supply = buybooster.validate(ledger_db, buyer, "BOOSTER", 1)
+    assert (problems, row["asset"], supply) == (
+        ["the fairbooster is at version 0, not 1"],
+        "BOOSTER",
+        None,
+    )
+    assert buybooster.validate(ledger_db, buyer, "NOPE", 0) == (
+        ["fairbooster `NOPE` not found"],
+        None,
+        None,
+    )
 
     # the owner raises the price in the block of a purchase, before it
     buyer_xcp = ledger.balances.get_balance(ledger_db, buyer, config.XCP)
@@ -899,21 +1021,22 @@ def test_purchase_terms(ledger_db, defaults):
     mine(ledger_db, [update, purchase])
     assert last_row(ledger_db, "fairbooster_updates")["status"] == "valid"
     assert last_row(ledger_db, "fairbooster_purchases")["status"] == (
-        f"invalid: the price of a booster ({100 * PRICE}) is above `max_price` ({PRICE})"
+        "invalid: the fairbooster is at version 1, not 0"
     )
     assert ledger.balances.get_balance(ledger_db, buyer, config.XCP) == buyer_xcp
     assert ledger.fairboosters.get_fairbooster(ledger_db, "BOOSTER")["boosters_sold"] == 0
 
-    # ... or lowers the number of cards of a booster in an earlier block
+    # ... or changes the card image URL in an earlier block: the cards of the
+    # booster would be described by it
     purchase = sign(ledger_db, "buybooster", {"source": buyer, "asset": "BOOSTER"})
     send(
         ledger_db,
         "updatefairbooster",
-        {"source": owner, "asset": "BOOSTER", "cards_per_booster": 1},
+        {"source": owner, "asset": "BOOSTER", "cards_base_url": "https://elsewhere.example/"},
     )
     mine(ledger_db, [purchase])
     assert last_row(ledger_db, "fairbooster_purchases")["status"] == (
-        "invalid: `cards_per_booster` is 1, not 3"
+        "invalid: the fairbooster is at version 2, not 1"
     )
 
     # ... or dilutes the cards
@@ -925,9 +1048,19 @@ def test_purchase_terms(ledger_db, defaults):
     )
     mine(ledger_db, [purchase])
     assert last_row(ledger_db, "fairbooster_purchases")["status"] == (
-        "invalid: `card_count` is 4, not 3"
+        "invalid: the fairbooster is at version 3, not 2"
     )
     assert ledger.balances.get_balance(ledger_db, buyer, config.XCP) == buyer_xcp
+
+    # a purchase composed after the updates accepts them
+    send(ledger_db, "buybooster", {"source": buyer, "asset": "BOOSTER"})
+    purchase = last_row(ledger_db, "fairbooster_purchases")
+    assert (purchase["status"], purchase["version"], purchase["paid_quantity"]) == (
+        "valid",
+        3,
+        100 * PRICE,
+    )
+    assert purchase["cards_base_url"] == "https://elsewhere.example/"
 
 
 def test_cards_added_after_a_purchase_are_not_drawn(ledger_db, defaults):
@@ -957,6 +1090,124 @@ def test_cards_added_after_a_purchase_are_not_drawn(ledger_db, defaults):
     check.asset_conservation(ledger_db)
 
 
+def test_cards_keep_the_image_url_of_their_purchase(ledger_db, defaults):
+    """The cards of a booster are described by the card image URL of the
+    fairbooster when the booster was bought, even when a later transaction of
+    its block changes it."""
+    owner, buyer = defaults["addresses"][0], defaults["addresses"][1]
+    create(ledger_db, defaults, cards=f"1:Common:{HASH_1}:1:0", cards_per_booster=2, price=0)
+    purchase = sign(ledger_db, "buybooster", {"source": buyer, "asset": "BOOSTER"})
+    update = sign(
+        ledger_db,
+        "updatefairbooster",
+        {
+            "source": owner,
+            "asset": "BOOSTER",
+            "cards_base_url": "https://elsewhere.example/",
+            "cards_image_extension": "gif",
+        },
+    )
+    mine(ledger_db, [purchase, update])
+    assert last_row(ledger_db, "fairbooster_updates")["status"] == "valid"
+    mine_empty_block(ledger_db)
+    draws = rows(ledger_db, "SELECT * FROM fairbooster_draws ORDER BY rowid")
+    assert len(draws) == 2
+    for draw in draws:
+        description = ledger.issuances.get_asset(ledger_db, draw["asset"])["description"]
+        assert description == "https://example.com/cards/1.png"
+
+    # the next booster gets the new URL
+    send(ledger_db, "buybooster", {"source": buyer, "asset": "BOOSTER"})
+    mine_empty_block(ledger_db)
+    draw = rows(ledger_db, "SELECT * FROM fairbooster_draws ORDER BY rowid DESC LIMIT 1")[0]
+    description = ledger.issuances.get_asset(ledger_db, draw["asset"])["description"]
+    assert description == "https://elsewhere.example/1.gif"
+
+
+def test_max_xcp_fee(ledger_db, defaults):
+    """A creation or an update whose fee rose above its `max_xcp_fee` before it was
+    confirmed is invalid and pays nothing."""
+    owner = defaults["addresses"][0]
+    owner_xcp = ledger.balances.get_balance(ledger_db, owner, config.XCP)
+    fee = ASSET_FEE + 30 * CARD_FEE
+    send(
+        ledger_db,
+        "fairbooster",
+        {
+            "source": owner,
+            "asset": "BOOSTER",
+            "cards": CARDS,
+            "max_xcp_fee": fee - 1,
+            "skip_validation": True,
+            **creation_params(),
+        },
+    )
+    assert last_row(ledger_db, "fairboosters")["status"] == (
+        f"invalid: the fee ({fee}) is above `max_xcp_fee` ({fee - 1})"
+    )
+    assert ledger.fairboosters.get_fairbooster(ledger_db, "BOOSTER") is None
+    assert ledger.balances.get_balance(ledger_db, owner, config.XCP) == owner_xcp
+
+    create(ledger_db, defaults)
+    owner_xcp = ledger.balances.get_balance(ledger_db, owner, config.XCP)
+    send(
+        ledger_db,
+        "updatefairbooster",
+        {
+            "source": owner,
+            "asset": "BOOSTER",
+            "max_boosters": 20,
+            "max_xcp_fee": 30 * CARD_FEE - 1,
+            "skip_validation": True,
+        },
+    )
+    update = last_row(ledger_db, "fairbooster_updates")
+    assert update["status"] == (
+        f"invalid: the fee ({30 * CARD_FEE}) is above `max_xcp_fee` ({30 * CARD_FEE - 1})"
+    )
+    assert update["fee_paid"] == 0
+    assert ledger.balances.get_balance(ledger_db, owner, config.XCP) == owner_xcp
+    assert ledger.fairboosters.get_fairbooster(ledger_db, "BOOSTER")["max_boosters"] == 10
+    # by default, the fee once one more slice of 2016 cards is sold
+    # network-wide, the step of the fee curve: the transaction stays valid
+    # when the ones confirmed before it raise the fee by one step
+    send(ledger_db, "updatefairbooster", {"source": owner, "asset": "BOOSTER", "max_boosters": 20})
+    assert last_row(ledger_db, "fairbooster_updates")["status"] == "valid"
+    assert ledger.balances.get_balance(ledger_db, owner, config.XCP) == owner_xcp - 30 * CARD_FEE
+
+    def unit_fee(x):
+        return gas.get_unit_fee(x, 10, 100, 1, 1, CARD_FEE, MAX_CARD_FEE)
+
+    # 52 slices of cards sold in the block: the next card is priced at x=52,
+    # and a slice later at x=53, more than twice as much
+    block_index = ledger.currentstate.CurrentState().current_block_index()
+    gas.increment_counter(ledger_db, fairbooster.ID, block_index, count=52 * gas.PERIOD_DURATION)
+    assert unit_fee(53) > 2 * unit_fee(52)
+    assert fairbooster.get_fee(ledger_db, "BOOSTER", 10, 3, block_index) == (
+        ASSET_FEE + 30 * unit_fee(52)
+    )
+    _source, _destinations, data = fairbooster.compose(
+        ledger_db, owner, "BOOSTER", cards=CARDS, **creation_params(), skip_validation=True
+    )
+    assert fairbooster.unpack(data[1:])[3] == ASSET_FEE + 30 * unit_fee(53)
+    # an update: the 30 cards it adds to the capacity
+    assert updatefairbooster.get_fee(ledger_db, "BOOSTER", max_boosters=30) == 30 * unit_fee(52)
+    _source, _destinations, data = updatefairbooster.compose(
+        ledger_db, owner, "BOOSTER", max_boosters=30, skip_validation=True
+    )
+    assert updatefairbooster.unpack(data[1:])[3] == 30 * unit_fee(53)
+    # 0 when the fee cannot be computed: the transaction is invalid anyway
+    assert (
+        fairbooster.default_max_xcp_fee(fairbooster.get_fee, ledger_db, "BOOSTER", "x", 3, 1) == 0
+    )
+    assert (
+        fairbooster.default_max_xcp_fee(
+            fairbooster.get_fee, ledger_db, "BOOSTER", config.MAX_INT, 3, block_index
+        )
+        == 0
+    )
+
+
 def reference_draw(block_hash, tx_hash, cards, drawn, count):
     """The definition of a draw, which `DrawTable` computes in O(log n): the
     table of the cards left is rebuilt before each card."""
@@ -966,15 +1217,14 @@ def reference_draw(block_hash, tx_hash, cards, drawn, count):
         candidates = [
             card
             for card in cards
-            if card["max_supply"] == 0 or drawn.get(card["card_id"], (0, 0))[0] < card["max_supply"]
+            if card["max_supply"] == 0 or drawn.get(card["card_id"], 0) < card["max_supply"]
         ]
         cumulative = list(itertools.accumulate(card["weight"] for card in candidates))
         digest = hashlib.sha256(seed_prefix + i.to_bytes(4, "big")).digest()
         position = int.from_bytes(digest, "big") % cumulative[-1]
         card = candidates[bisect.bisect_right(cumulative, position)]
-        copies, last_serial = drawn.get(card["card_id"], (0, 0))
-        drawn[card["card_id"]] = (copies + 1, last_serial + 1)
-        result.append((card["card_id"], last_serial + 1))
+        drawn[card["card_id"]] = drawn.get(card["card_id"], 0) + 1
+        result.append((card["card_id"], drawn[card["card_id"]]))
     return result
 
 
@@ -998,15 +1248,13 @@ def test_draw_table_matches_the_reference(cards_spec, count, block_hash):
         cards.append({"card_id": card_id, "weight": weight, "max_supply": max_supply})
         if drawn_copies:
             # some cards drawn before, up to their supply
-            copies = min(drawn_copies, max_supply) if max_supply else drawn_copies
-            drawn[card_id] = (copies, copies)
-    left = [card["max_supply"] - drawn.get(card["card_id"], (0, 0))[0] for card in cards]
+            drawn[card_id] = min(drawn_copies, max_supply) if max_supply else drawn_copies
+    left = [card["max_supply"] - drawn.get(card["card_id"], 0) for card in cards]
     if all(card["max_supply"] for card in cards):
         count = min(count, sum(left))
     table = fairbooster.DrawTable(cards, dict(drawn))
     result = [
-        (card["card_id"], serial)
-        for card, _copies, serial in table.draw(block_hash.hex(), "bb" * 32, count)
+        (card["card_id"], copies) for card, copies in table.draw(block_hash.hex(), "bb" * 32, count)
     ]
     expected_drawn = dict(drawn)
     assert result == reference_draw(block_hash.hex(), "bb" * 32, cards, expected_drawn, count)
@@ -1019,7 +1267,7 @@ def test_draw_table_drains_a_large_deck():
     cards = [{"card_id": i, "weight": 1 + i % 7, "max_supply": 1} for i in range(10000)]
     table = fairbooster.DrawTable(cards, {})
     drawn = table.draw("aa" * 32, "bb" * 32, 10000)
-    assert sorted(card["card_id"] for card, _copies, _serial in drawn) == list(range(10000))
+    assert sorted(card["card_id"] for card, _copies in drawn) == list(range(10000))
     assert table.total_weight(len(cards)) == 0
 
 
@@ -1123,6 +1371,27 @@ def test_address_events(ledger_db, state_db, defaults):
     assert {"NEW_FAIRBOOSTER", "NEW_FAIRBOOSTER_UPDATE"} <= events(owner)
     assert {"NEW_FAIRBOOSTER_PURCHASE", "NEW_FAIRBOOSTER_DRAW"} <= events(buyer)
 
+    # the State DB API gives the current owner, the issuer of the fairbooster
+    # asset, which moves with the asset
+    assert queries.get_fairbooster(state_db, "BOOSTER").result["owner"] == owner
+    send(
+        ledger_db,
+        "issuance",
+        {
+            "source": owner,
+            "asset": "BOOSTER",
+            "quantity": 0,
+            "divisible": False,
+            "transfer_destination": buyer,
+        },
+    )
+    apiwatcher.catch_up(ledger_db, state_db)
+    row = queries.get_fairbooster(state_db, "BOOSTER").result
+    assert (row["source"], row["owner"]) == (owner, buyer)
+    assert [r["owner"] for r in queries.get_all_fairboosters(state_db).result] == [buyer]
+    by_creator = queries.get_fairboosters_by_address(state_db, owner).result
+    assert [(r["asset"], r["owner"]) for r in by_creator] == [("BOOSTER", buyer)]
+
 
 # CBOR-shaped fuzz: any decoded value may reach validate() and the invalid-record
 # bindings, and none may raise (an exception in parse() halts every node).
@@ -1158,10 +1427,14 @@ def assert_parse_does_not_raise(module, ledger_db, tx, message):
     asset_ids,
     st.lists(any_value, min_size=7, max_size=7),
     st.one_of(st.lists(any_card, max_size=3), any_value),
+    any_value,
 )
-def test_fuzz_fairbooster_parse(ledger_db, blockchain_mock, defaults, asset_id, params, cards):
+def test_fuzz_fairbooster_parse(
+    ledger_db, blockchain_mock, defaults, asset_id, params, cards, max_xcp_fee
+):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    assert_parse_does_not_raise(fairbooster, ledger_db, tx, cbor2.dumps([asset_id, *params, cards]))
+    message = cbor2.dumps([asset_id, *params, cards, max_xcp_fee])
+    assert_parse_does_not_raise(fairbooster, ledger_db, tx, message)
 
 
 @settings(
@@ -1171,12 +1444,13 @@ def test_fuzz_fairbooster_parse(ledger_db, blockchain_mock, defaults, asset_id, 
     asset_ids,
     st.one_of(st.dictionaries(map_keys, any_value, max_size=4), any_value),
     st.one_of(st.lists(any_card, max_size=3), any_value),
+    any_value,
 )
 def test_fuzz_updatefairbooster_parse(
-    ledger_db, blockchain_mock, defaults, asset_id, params, cards
+    ledger_db, blockchain_mock, defaults, asset_id, params, cards, max_xcp_fee
 ):
     tx = blockchain_mock.dummy_tx(ledger_db, defaults["addresses"][0])
-    message = cbor2.dumps([asset_id, params, cards])
+    message = cbor2.dumps([asset_id, params, cards, max_xcp_fee])
     assert_parse_does_not_raise(updatefairbooster, ledger_db, tx, message)
 
 
@@ -1188,9 +1462,7 @@ def test_fuzz_updatefairbooster_parse(
         st.binary(max_size=24),
         st.tuples(
             st.one_of(st.just(BOOSTER_ID), st.just(DIVISIBLE_ID), st.integers(0, 2**64 - 1)),
-            st.integers(0, 2**64 - 1),
-            st.integers(0, 2**16 - 1),
-            st.integers(0, 2**16 - 1),
+            st.integers(0, 2**32 - 1),
         ).map(lambda fields: struct.pack(buybooster.FORMAT, *fields)),
     )
 )

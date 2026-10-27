@@ -65,6 +65,7 @@ SCENARIO = [
                     "cards_base_url": "https://example.com/boostertest/",
                     "cards_image_extension": "png",
                     "card_count": 2,
+                    "version": 0,
                     "boosters_sold": 0,
                     "cards_sold": 0,
                     "paid_capacity": 6,
@@ -72,6 +73,7 @@ SCENARIO = [
                     # its 6 cards while few cards are sold
                     "fee_paid": 50600000,
                     "status": "open",
+                    "owner": "$ADDRESS_1",
                 },
             },
             {
@@ -139,6 +141,21 @@ SCENARIO = [
         "expected_error": ["asset `BOOSTERTEST` already exists"],
     },
     {
+        "title": "The cards of a fairbooster must fill a booster",
+        "transaction": "fairbooster",
+        "source": "$ADDRESS_1",
+        "params": {
+            "asset": "BOOSTERSMALL",
+            "price": 1,
+            "max_boosters": 1,
+            "cards_per_booster": 2,
+            "cards_base_url": "https://example.com/",
+            "cards_image_extension": "png",
+            "cards": f"1:Card:{EARTH_GOLEM_HASH}:1:1",
+        },
+        "expected_error": ["the card supply (1) cannot fill a booster of 2 cards"],
+    },
+    {
         "title": "The subassets of a fairbooster are reserved for its cards",
         "transaction": "issuance",
         "source": "$ADDRESS_1",
@@ -150,14 +167,14 @@ SCENARIO = [
         "expected_error": ["subassets of a fairbooster are reserved for its cards"],
     },
     {
-        "title": "A purchase states the highest price it pays",
+        "title": "A purchase names the version of the fairbooster it accepts",
         "transaction": "buybooster",
         "source": "$ADDRESS_2",
         "params": {
             "asset": "BOOSTERTEST",
-            "max_price": 999,
+            "version": 1,
         },
-        "expected_error": ["the price of a booster (1000) is above `max_price` (999)"],
+        "expected_error": ["the fairbooster is at version 0, not 1"],
     },
     {
         "title": "Buy a BOOSTERTEST booster (drawn in the next block)",
@@ -165,9 +182,7 @@ SCENARIO = [
         "source": "$ADDRESS_2",
         "params": {
             "asset": "BOOSTERTEST",
-            "max_price": 1000,
-            "cards_per_booster": 2,
-            "card_count": 2,
+            "version": 0,
         },
         "set_variables": {
             "BOOSTER_1_TX_HASH": "$TX_HASH",
@@ -181,8 +196,12 @@ SCENARIO = [
                     "block_index": "$BLOCK_INDEX",
                     "source": "$ADDRESS_2",
                     "fairbooster": "BOOSTERTEST",
+                    "version": 0,
                     "paid_quantity": 1000,
-                    "card_count": 2,
+                    "cards_per_booster": 2,
+                    # the card image URL of the cards of this booster
+                    "cards_base_url": "https://example.com/boostertest/",
+                    "cards_image_extension": "png",
                     "status": "valid",
                 },
             },
@@ -250,6 +269,18 @@ SCENARIO = [
         "expected_error": ["card 3: duplicate image_hash"],
     },
     {
+        "title": "An update states the highest fee it pays",
+        "transaction": "updatefairbooster",
+        "source": "$ADDRESS_1",
+        "params": {
+            "asset": "BOOSTERTEST",
+            "max_boosters": 4,
+            "max_xcp_fee": 199999,
+        },
+        # 0.001 XCP for each of the 2 cards added to the capacity
+        "expected_error": ["the fee (200000) is above `max_xcp_fee` (199999)"],
+    },
+    {
         "title": "Add an unlimited card and raise the price and the number of boosters",
         "transaction": "updatefairbooster",
         "source": "$ADDRESS_1",
@@ -276,12 +307,14 @@ SCENARIO = [
                     "cards_base_url": "https://example.com/boostertest/",
                     "cards_image_extension": "png",
                     "card_count": 3,
+                    "version": 1,
                     "boosters_sold": 1,
                     "cards_sold": 2,
                     "paid_capacity": 8,
                     # and 0.001 XCP for each of the 2 cards added to the capacity
                     "fee_paid": 50800000,
                     "status": "open",
+                    "owner": "$ADDRESS_1",
                 },
             },
             {
@@ -335,11 +368,13 @@ SCENARIO = [
                     "cards_base_url": "https://example.com/boostertest/",
                     "cards_image_extension": "png",
                     "card_count": 3,
+                    "version": 1,
                     "boosters_sold": 2,
                     "cards_sold": 4,
                     "paid_capacity": 8,
                     "fee_paid": 50800000,
                     "status": "open",
+                    "owner": "$ADDRESS_1",
                 },
             },
         ],

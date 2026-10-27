@@ -86,6 +86,8 @@ const KNOWN_QUANTITY_FIELDS: &[&str] = &[
     // UTXO an `attach`/`movetoutxo` targets is otherwise silently unconverted
     // with no warning at all.
     "utxo_value",
+    // Not a root match: the highest XCP fee of a fairbooster creation/update.
+    "max_xcp_fee",
     // `mpma` sends a comma-separated `quantities` list, converted per-element by
     // each asset's divisibility (see `convert_mpma_quantities`). `"quantities"`
     // (plural) contains none of the AMOUNT_ROOTS, so it is listed here so that
@@ -177,6 +179,12 @@ fn denomination(transaction_name: &str, param: &str) -> Option<Denomination> {
         // any other BTC-denominated field, not governed by `asset`'s divisibility.
         ("attach", "utxo_value") => Denomination::Btc,
         ("movetoutxo", "utxo_value") => Denomination::Btc,
+        // Fairboosters: the price of a booster and the highest fee of a
+        // creation/update are XCP amounts.
+        ("fairbooster", "price") => Denomination::AlwaysDivisible,
+        ("fairbooster", "max_xcp_fee") => Denomination::AlwaysDivisible,
+        ("updatefairbooster", "price") => Denomination::AlwaysDivisible,
+        ("updatefairbooster", "max_xcp_fee") => Denomination::AlwaysDivisible,
         _ => return None,
     };
     Some(denom)
@@ -545,6 +553,19 @@ mod tests {
             denomination("poolwithdraw", "min_quantity_a"),
             Some(Denomination::Asset("asset_a"))
         );
+        // Fairbooster prices and fees are XCP amounts.
+        for (transaction, param) in [
+            ("fairbooster", "price"),
+            ("fairbooster", "max_xcp_fee"),
+            ("updatefairbooster", "price"),
+            ("updatefairbooster", "max_xcp_fee"),
+        ] {
+            assert_eq!(
+                denomination(transaction, param),
+                Some(Denomination::AlwaysDivisible)
+            );
+        }
+        assert!(looks_like_amount("max_xcp_fee"));
     }
 
     #[test]

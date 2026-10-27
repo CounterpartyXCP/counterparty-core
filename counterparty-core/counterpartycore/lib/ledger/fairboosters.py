@@ -44,24 +44,24 @@ def get_fairbooster_cards(db, asset):
 
 
 def get_drawn_cards(db, asset):
-    """`{card_id: (copies drawn, highest serial)}` for the fairbooster `asset`,
-    read from the last draw of each card (its `copy_number` and `serial` only
-    grow): one index lookup per card, whatever the number of draws."""
+    """`{card_id: copies drawn}` for the fairbooster `asset`, read from the
+    last draw of each card (its `copy_number` only grows): one index lookup
+    per card, whatever the number of draws."""
     cursor = db.cursor()
     cursor.execute(
         """
-        SELECT d.card_id, d.copy_number, d.serial
+        SELECT d.card_id, d.copy_number
         FROM fairbooster_cards c
         JOIN fairbooster_draws d ON d.rowid = (
             SELECT rowid FROM fairbooster_draws
             WHERE fairbooster = c.fairbooster AND card_id = c.card_id
-            ORDER BY serial DESC LIMIT 1
+            ORDER BY copy_number DESC LIMIT 1
         )
         WHERE c.fairbooster = ?
         """,
         (database.asset_index_from_name(db, asset),),
     )
-    return {row["card_id"]: (row["copy_number"], row["serial"]) for row in cursor.fetchall()}
+    return {row["card_id"]: row["copy_number"] for row in cursor.fetchall()}
 
 
 def get_card_supply(db, asset):
@@ -84,7 +84,8 @@ def get_card_supply(db, asset):
 
 
 def get_purchases_to_draw(db, block_index):
-    """The valid purchases of `block_index`, in transaction order."""
+    """The valid purchases of `block_index`, in transaction order, with the
+    card image URL each one keeps."""
     cursor = db.cursor()
     cursor.execute(
         """

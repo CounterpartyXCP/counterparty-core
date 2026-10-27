@@ -218,8 +218,8 @@ def inject_normalized_quantities(result_list):
         "commission": {"asset_field": "asset_info", "divisible": None},
         "paid_quantity": {"asset_field": "asset_info", "divisible": None},
         "pool_quantity": {"asset_field": "asset_info", "divisible": None},
-        # buybooster: the highest XCP price of a booster
-        "max_price": {"asset_field": None, "divisible": True},
+        # fairbooster / updatefairbooster: the highest XCP fee paid
+        "max_xcp_fee": {"asset_field": None, "divisible": True},
         "give_price": {"asset_field": "give_asset_info", "divisible": None},
         "get_price": {"asset_field": "get_asset_info", "divisible": None},
         "forward_price": {"asset_field": "forward_asset_info", "divisible": None},
@@ -405,7 +405,7 @@ def inject_normalized_quantities(result_list):
                     item["dispenser"], field_name, asset_info
                 )
 
-        if "card_count" in item and "paid_quantity" in item:
+        if "cards_per_booster" in item and "paid_quantity" in item:
             # booster purchases: the price paid is an XCP quantity
             item = inject_normalized_quantity(item, "paid_quantity", {"divisible": True})
 
