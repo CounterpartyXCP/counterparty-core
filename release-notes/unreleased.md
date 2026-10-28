@@ -17,10 +17,10 @@
   a gas fee for each card it can sell (`max_boosters * cards_per_booster`).
   The gas fee (`fee_parameters` 130, counted in cards) prices each card at the
   average number of cards per block it brings the last 2016 blocks to, between
-  0.001 XCP (`min_unit_fee`) and 0.1 XCP (`max_unit_fee`): 0.001 XCP up to
-  about 45, 0.05 XCP at 55, and 0.1 XCP from about 60. A large capacity
+  0.001 XCP (`min_unit_fee`) and 0.01 XCP (`max_unit_fee`): 0.001 XCP up to
+  about 45, 0.0055 XCP at 55, and 0.01 XCP from about 60. A large capacity
   therefore pays for the usage it creates, whether it is bought in one
-  transaction or in several, and never more than 0.1 XCP per card. The message
+  transaction or in several, and never more than 0.01 XCP per card. The message
   carries the highest fee its sender pays (`max_xcp_fee`): a creation whose
   fee rose above it before it was confirmed is invalid. Both fees
   are destroyed: the asset fee as the `fee_paid` of the issuance, like an

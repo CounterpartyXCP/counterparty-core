@@ -265,7 +265,7 @@ def test_get_transaction_fee_for_count(ledger_db, monkeypatch):
 def test_get_transaction_fee_for_count_bounded(ledger_db):
     """`min_unit_fee` and `max_unit_fee` (fairboosters, 130) bound the price of
     a unit: the curve is rescaled between them and capped at `max_unit_fee`."""
-    min_fee, max_fee = 100000, 10000000
+    min_fee, max_fee = 100000, 1000000
 
     def unit_fee(x):
         return gas.get_unit_fee(x, 10, 100, 1, 1, min_fee, max_fee)

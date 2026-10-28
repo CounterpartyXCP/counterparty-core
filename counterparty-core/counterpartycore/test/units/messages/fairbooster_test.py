@@ -35,7 +35,7 @@ CARDS = f"1:Common Card:{HASH_1}:70:0, 2:Rare Card:{HASH_2}:25:5, 3:Legend:{HASH
 ASSET_FEE = fairbooster.ASSET_FEE
 # the gas fee of a card while few cards are sold: `min_unit_fee` (0.001 XCP)
 CARD_FEE = 100000
-MAX_CARD_FEE = 10000000
+MAX_CARD_FEE = 1000000
 BOOSTER_ID = 481982037  # generate_asset_id("BOOSTER")
 DIVISIBLE_ID = 697326324582  # generate_asset_id("DIVISIBLE")
 PRICE = 1000
@@ -244,7 +244,7 @@ def test_validate(ledger_db, defaults):
     )
     assert fairbooster.get_fee(ledger_db, "A95428956661682178", 10, 3, block_index) == 30 * CARD_FEE
     assert fairbooster.get_fee(ledger_db, "BOOSTER", config.MAX_INT, 3, block_index) is None
-    # and never more than 0.1 XCP
+    # and never more than 0.01 XCP
     assert fairbooster.get_fee(ledger_db, "BOOSTER", config.MAX_INT // 3, 3, block_index) is None
     big_fee = fairbooster.get_fee(ledger_db, "A95428956661682178", 10**6, 100, block_index)
     assert 10**8 * CARD_FEE < big_fee < 10**8 * MAX_CARD_FEE
@@ -1179,10 +1179,10 @@ def test_max_xcp_fee(ledger_db, defaults):
         return gas.get_unit_fee(x, 10, 100, 1, 1, CARD_FEE, MAX_CARD_FEE)
 
     # 52 slices of cards sold in the block: the next card is priced at x=52,
-    # and a slice later at x=53, more than twice as much
+    # and a slice later at x=53, about half as much again
     block_index = ledger.currentstate.CurrentState().current_block_index()
     gas.increment_counter(ledger_db, fairbooster.ID, block_index, count=52 * gas.PERIOD_DURATION)
-    assert unit_fee(53) > 2 * unit_fee(52)
+    assert unit_fee(53) > unit_fee(52) * 14 // 10
     assert fairbooster.get_fee(ledger_db, "BOOSTER", 10, 3, block_index) == (
         ASSET_FEE + 30 * unit_fee(52)
     )
