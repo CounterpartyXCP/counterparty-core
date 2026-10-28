@@ -287,14 +287,14 @@ def test_validate(ledger_db, defaults):
     assert validate(ledger_db, defaults, cards=wire_cards(f"1:Bad#Name:{HASH_1}:1:0")) == [
         "card 1: invalid card asset name: subasset name contains invalid character:"
     ]
-    assert validate(ledger_db, defaults, cards=wire_cards(f"1:a..b:{HASH_1}:1:0")) == [
-        "card 1: invalid card asset name: subasset name contains consecutive periods"
+    assert validate(ledger_db, defaults, cards=wire_cards(f"1:a.b:{HASH_1}:1:0")) == [
+        "card 1: name must not contain `:`, `,` or `.`"
     ]
     assert validate(ledger_db, defaults, cards=[[1, " A", bytes.fromhex(HASH_1), 1, 0]]) == [
         "card 1: name must be a non-empty string without surrounding spaces"
     ]
     assert validate(ledger_db, defaults, cards=[[1, "A:B", bytes.fromhex(HASH_1), 1, 0]]) == [
-        "card 1: name must not contain `:` or `,`"
+        "card 1: name must not contain `:`, `,` or `.`"
     ]
     assert validate(ledger_db, defaults, cards=[[1, "A" * 230, bytes.fromhex(HASH_1), 1, 0]]) == [
         "card 1: invalid card asset name: subasset name too long"

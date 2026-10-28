@@ -193,8 +193,10 @@ def validate_cards(fairbooster_asset, cards, existing_cards=()):
         card_ids.add(card_id)
         if not isinstance(name, str) or name == "" or name != name.strip():
             problems.append(f"{label}: name must be a non-empty string without surrounding spaces")
-        elif ":" in name or "," in name:
-            problems.append(f"{label}: name must not contain `:` or `,`")
+        elif ":" in name or "," in name or "." in name:
+            # `:` and `,` delimit the cards of a compose; `.` would blur the
+            # `<fairbooster>.<card_id>.<name>.<serial>` form of the card assets
+            problems.append(f"{label}: name must not contain `:`, `,` or `.`")
         else:
             try:
                 assetnames.validate_subasset_longname(
@@ -244,16 +246,16 @@ def capacity_fee(db, block_index, added_capacity, limit=config.MAX_INT, ahead=0)
     )
 
 
-def default_max_xcp_fee(get_fee, *args):
+def default_max_xcp_fee(fee_getter, *args):
     """The default `max_xcp_fee` of a composed creation or update: its fee
-    (`get_fee(*args, ahead=...)`) if `gas.PERIOD_DURATION` more cards were
+    (`fee_getter(*args, ahead=...)`) if `gas.PERIOD_DURATION` more cards were
     sold before it is confirmed. That is the step of the fee curve: the unit
     fee changes every `gas.PERIOD_DURATION` cards, so the transaction stays
     valid when the ones confirmed before it sell up to one more slice of
     cards, whatever the slope of the curve there. 0 when the fee cannot be
     computed (the transaction is invalid anyway)."""
     try:
-        fee = get_fee(*args, ahead=gas.PERIOD_DURATION)
+        fee = fee_getter(*args, ahead=gas.PERIOD_DURATION)
     except (TypeError, AttributeError):  # malformed parameters: invalid anyway
         return 0
     return 0 if fee is None else fee

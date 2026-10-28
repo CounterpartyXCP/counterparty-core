@@ -40,7 +40,8 @@
   unpredictable for the buyer and the same on every node. Every drawn card
   becomes an asset of its own,
   `<fairbooster>.<card_id>.<card_name>.<serial>` (spaces in the name become
-  `_`, the serial numbers the copies of the card), with a supply of 1, locked
+  `_`, and a name cannot contain `.`; the serial numbers the copies of the
+  card), with a supply of 1, locked
   quantity and description, issued to the buyer; its numeric asset name skips
   the names earmarked as an `lp_asset`. A purchase is refused when every
   booster is sold or when the cards left, after those of the pending
