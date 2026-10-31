@@ -7,13 +7,14 @@ import os
 import tempfile
 import threading
 import time
+from pathlib import Path
 from unittest import mock
 
 import pytest
 import zmq
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.parser import follow
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import helpers, protocolstatus
 
 # ============================================================================
 # Fixtures
@@ -270,25 +271,40 @@ class TestBlockchainWatcher:
         assert watcher.raw_tx_cache == {}
         assert watcher.hash_by_sequence == {}
 
-    def test_check_software_version_if_needed_checks(self, watcher_setup):
-        """Test check_software_version_if_needed performs check"""
-        watcher, db, mock_bitcoind, mock_cs = watcher_setup
-        watcher.last_software_version_check_time = 0
+    def test_handle_does_not_fetch_remote_versions(self, watcher_setup):
+        watcher, _db, _backend, _state = watcher_setup
+        watcher.stop_event.set()
+        with mock.patch("counterpartycore.lib.parser.check.software_version") as fetch:
+            asyncio.run(watcher.handle())
+            fetch.assert_not_called()
 
-        with mock.patch("counterpartycore.lib.parser.check.software_version") as mock_check:
-            mock_check.return_value = True
-            watcher.check_software_version_if_needed()
-            mock_check.assert_called_once()
-            assert watcher.last_software_version_check_time > 0
+    def test_handle_stops_cleanly_at_upgrade_boundary(self, watcher_setup, monkeypatch):
+        watcher, _db, _backend, state = watcher_setup
+        state.current_block_count.return_value = 100
+        protocolstatus.current().publish(
+            [{"change_name": "upgrade", "version": [12, 0, 0], "activation_height": 100}]
+        )
+        stop, report = mock.MagicMock(), mock.MagicMock()
+        monkeypatch.setattr(watcher, "stop", stop)
+        monkeypatch.setattr(follow, "capture_exception", report)
 
-    def test_check_software_version_if_needed_skips(self, watcher_setup):
-        """Test check_software_version_if_needed skips when recent"""
-        watcher, db, mock_bitcoind, mock_cs = watcher_setup
-        watcher.last_software_version_check_time = time.time()
+        asyncio.run(watcher.handle())
 
-        with mock.patch("counterpartycore.lib.parser.check.software_version") as mock_check:
-            watcher.check_software_version_if_needed()
-            mock_check.assert_not_called()
+        assert isinstance(watcher.upgrade_error, exceptions.VersionUpdateRequiredError)
+        stop.assert_called_once()
+        report.assert_not_called()
+
+    def test_start_propagates_upgrade_after_closing_event_loop(self, watcher_setup):
+        watcher, _db, _backend, state = watcher_setup
+        watcher.loop = asyncio.new_event_loop()
+        state.current_block_count.return_value = 100
+        protocolstatus.current().publish(
+            [{"change_name": "upgrade", "version": [12, 0, 0], "activation_height": 100}]
+        )
+        with pytest.raises(exceptions.VersionUpdateRequiredError):
+            watcher.start()
+        assert watcher.loop.is_closed()
+        assert watcher.stop_event.is_set()
 
     def test_receive_hashtx(self, watcher_setup):
         """Test receive_hashtx stores hash by sequence"""
@@ -876,19 +892,19 @@ class TestNotSupportedTransactionsCache:
         cache.add(["tx1", "tx2", "tx3"])
         cache.add(["tx4", "tx5"])
 
-        assert cache._ordered_txs == ["tx3", "tx4", "tx5"]
-        assert cache.not_suppported_txs == {"tx3", "tx4", "tx5"}
+        assert cache._ordered_txs == ["tx4", "tx5"]
+        assert cache.not_suppported_txs == {"tx4", "tx5"}
         assert cache.is_not_supported("tx1") is False
 
         # The compacted file matches the in-memory state
         cache_path = os.path.join(temp_cache_dir, "not_supported_tx_cache.regtest.txt")
         with open(cache_path, "r", encoding="utf-8") as f:
-            assert [line.strip() for line in f] == ["tx3", "tx4", "tx5"]
+            assert [line.strip() for line in f] == ["tx4", "tx5"]
 
     def test_restore_trims_to_max_size(
         self, reset_not_supported_cache, temp_cache_dir, monkeypatch
     ):
-        """Test restore keeps only the most recent MAX_SIZE entries"""
+        """Restore leaves headroom rather than restarting at the cap."""
         monkeypatch.setattr(follow.NotSupportedTransactionsCache, "MAX_SIZE", 2)
         cache_path = os.path.join(temp_cache_dir, "not_supported_tx_cache.regtest.txt")
         with open(cache_path, "w", encoding="utf-8") as f:
@@ -896,10 +912,129 @@ class TestNotSupportedTransactionsCache:
 
         cache = follow.NotSupportedTransactionsCache()
 
-        assert cache._ordered_txs == ["tx2", "tx3"]
+        assert cache._ordered_txs == ["tx3"]
         # The oversized file is compacted on restore
         with open(cache_path, "r", encoding="utf-8") as f:
-            assert [line.strip() for line in f] == ["tx2", "tx3"]
+            assert [line.strip() for line in f] == ["tx3"]
+
+    def test_repeated_overflow_batches_leave_headroom(
+        self, reset_not_supported_cache, temp_cache_dir, monkeypatch
+    ):
+        monkeypatch.setattr(follow.NotSupportedTransactionsCache, "MAX_SIZE", 20)
+        cache = follow.NotSupportedTransactionsCache()
+        cache.add([f"tx{i}" for i in range(20)])
+
+        with mock.patch.object(cache, "backup", wraps=cache.backup) as backup:
+            for i in range(20, 30):
+                cache.add([f"tx{i}"])
+                assert len(cache._ordered_txs) <= 20
+            # Each compaction retains 18 entries, allowing two appends before
+            # the next overflow. Previously all ten additions rewrote the file.
+            assert backup.call_count == 4
+
+        expected = [f"tx{i}" for i in range(12, 30)]
+        assert cache._ordered_txs == expected
+        assert cache.not_suppported_txs == set(expected)
+        assert Path(cache.cache_path).read_text().splitlines() == expected
+
+    @pytest.mark.parametrize("size", [20, 25])
+    def test_full_restore_allows_appends(
+        self, reset_not_supported_cache, temp_cache_dir, monkeypatch, size
+    ):
+        monkeypatch.setattr(follow.NotSupportedTransactionsCache, "MAX_SIZE", 20)
+        path = Path(temp_cache_dir) / "not_supported_tx_cache.regtest.txt"
+        # Include a duplicate and a legacy missing final newline.
+        path.write_text("tx0\n" + "\n".join(f"tx{i}" for i in range(size)))
+        cache = follow.NotSupportedTransactionsCache()
+        expected = [f"tx{i}" for i in range(size - 18, size)]
+        assert cache._ordered_txs == expected
+
+        with mock.patch.object(cache, "backup", wraps=cache.backup) as backup:
+            cache.add(["new1", "new2"])
+            backup.assert_not_called()
+        expected += ["new1", "new2"]
+        assert cache.not_suppported_txs == set(expected)
+        assert path.read_text().splitlines() == expected
+
+    @pytest.mark.parametrize("limit", [1, 3, 20])
+    def test_oversized_batch_remains_bounded(
+        self, reset_not_supported_cache, temp_cache_dir, monkeypatch, limit
+    ):
+        monkeypatch.setattr(follow.NotSupportedTransactionsCache, "MAX_SIZE", limit)
+        cache = follow.NotSupportedTransactionsCache()
+        transactions = [f"tx{i}" for i in range(100)]
+        cache.add(transactions + transactions)
+        expected = transactions[-max(1, limit * 9 // 10) :]
+        assert cache._ordered_txs == expected
+        assert cache.not_suppported_txs == set(expected)
+        assert Path(cache.cache_path).read_text().splitlines() == expected
+
+    def test_duplicate_only_at_cap_does_not_write(
+        self, reset_not_supported_cache, temp_cache_dir, monkeypatch
+    ):
+        monkeypatch.setattr(follow.NotSupportedTransactionsCache, "MAX_SIZE", 3)
+        cache = follow.NotSupportedTransactionsCache()
+        cache.add(["tx1", "tx2", "tx3"])
+        with mock.patch("builtins.open") as opened, mock.patch.object(cache, "backup") as backup:
+            cache.add(["tx1", "tx2", "tx3"])
+            opened.assert_not_called()
+            backup.assert_not_called()
+
+    def test_compaction_replaces_complete_file(
+        self, reset_not_supported_cache, temp_cache_dir, monkeypatch
+    ):
+        monkeypatch.setattr(follow.NotSupportedTransactionsCache, "MAX_SIZE", 3)
+        cache = follow.NotSupportedTransactionsCache()
+        cache.add(["tx1", "tx2", "tx3"])
+        path = Path(cache.cache_path)
+        original = path.read_bytes()
+        replace = os.replace
+
+        def checked_replace(source, destination):
+            assert Path(source).parent == path.parent
+            assert Path(destination) == path
+            assert path.read_bytes() == original
+            assert Path(source).read_text() == "tx3\ntx4\n"
+            replace(source, destination)
+
+        with mock.patch.object(follow.os, "replace", side_effect=checked_replace) as replaced:
+            cache.add(["tx4"])
+            replaced.assert_called_once()
+        assert path.read_text() == "tx3\ntx4\n"
+        assert list(path.parent.iterdir()) == [path]
+
+    @pytest.mark.parametrize("failure", ["write", "replace"])
+    def test_failed_backup_preserves_file_and_removes_temporary(
+        self, reset_not_supported_cache, temp_cache_dir, monkeypatch, failure
+    ):
+        cache = follow.NotSupportedTransactionsCache()
+        cache.add(["tx1", "tx2"])
+        path = Path(cache.cache_path)
+        original = path.read_bytes()
+
+        if failure == "write":
+            named_temporary_file = tempfile.NamedTemporaryFile
+
+            def failing_temporary_file(*args, **kwargs):
+                temporary = named_temporary_file(*args, **kwargs)
+
+                def fail_after_one_line(lines):
+                    temporary.write(next(iter(lines)))
+                    raise OSError("simulated write failure")
+
+                temporary.writelines = fail_after_one_line
+                return temporary
+
+            monkeypatch.setattr(follow.tempfile, "NamedTemporaryFile", failing_temporary_file)
+        else:
+            monkeypatch.setattr(
+                follow.os, "replace", mock.Mock(side_effect=OSError("simulated replace failure"))
+            )
+
+        with pytest.raises(OSError, match=f"simulated {failure} failure"):
+            cache.backup()
+        assert path.read_bytes() == original
+        assert list(path.parent.iterdir()) == [path]
 
     def test_add_appends_to_legacy_file(self, reset_not_supported_cache, temp_cache_dir):
         """Test appending after restoring a legacy file without trailing newline"""
