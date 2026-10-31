@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         test-path: ["units"]
-        os: ["ubuntu-22.04", "macos-14"]
+        os: ["ubuntu-22.04", "macos-15"]
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     uses: ./.github/workflows/pytest_action.yml
     with:
