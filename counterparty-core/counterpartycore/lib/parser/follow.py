@@ -18,8 +18,8 @@ from counterpartycore.lib import (
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.monitors import sentry
 from counterpartycore.lib.monitors.telemetry.oneshot import TelemetryOneShot
-from counterpartycore.lib.parser import blocks, check, deserialize, mempool
-from counterpartycore.lib.utils import hashcodec, helpers
+from counterpartycore.lib.parser import blocks, deserialize, mempool
+from counterpartycore.lib.utils import hashcodec, helpers, protocolstatus
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -98,7 +98,8 @@ class BlockchainWatcher:
         self.raw_tx_cache = {}
         self.hash_by_sequence = {}
         self.last_block_check_time = 0
-        self.last_software_version_check_time = 0
+        self.upgrade_error = None
+        self.last_protocol_check_time = 0
         self.last_mempool_parsing_time = 0
         # catch up and clean mempool before starting
         self.stop_event = threading.Event()
@@ -152,12 +153,6 @@ class BlockchainWatcher:
         self.zmq_sub_socket_rawblock.setsockopt(zmq.RCVTIMEO, ZMQ_TIMEOUT)
         self.zmq_sub_socket_rawblock.setsockopt_string(zmq.SUBSCRIBE, "rawblock")
         self.zmq_sub_socket_rawblock.connect(self.zmq_rawblock_address)
-
-    def check_software_version_if_needed(self):
-        if time.time() - self.last_software_version_check_time > 60 * 60 * 24:
-            checked = check.software_version()
-            if checked:
-                self.last_software_version_check_time = time.time()
 
     def receive_rawblock(self, body):
         # parse blocks as they come in
@@ -222,6 +217,10 @@ class BlockchainWatcher:
                     TelemetryOneShot().submit()
         except exceptions.ParseTransactionError:
             # Consensus halt; let the outer handler stop the watcher.
+            raise
+        except exceptions.VersionUpdateRequiredError:
+            # A deliberate upgrade barrier is handled by the main loop, not
+            # reported as a broken parser/message or retried on the next block.
             raise
         except Exception as e:  # pylint: disable=broad-except
             # Operational failures (malformed rawblock, transient telemetry/RPC
@@ -329,6 +328,8 @@ class BlockchainWatcher:
             return
         try:
             self.receive_message(topic, body, seq)
+        except exceptions.VersionUpdateRequiredError:
+            raise
         except Exception as e:  # pylint: disable=broad-except
             # A shutdown interrupt (stop() -> RawMempoolParser.stop() ->
             # db.interrupt() on the connection shared with this watcher)
@@ -367,11 +368,20 @@ class BlockchainWatcher:
         return False
 
     async def handle(self):
-        self.check_software_version_if_needed()
         late_since = None
 
         while not self.stop_event.is_set():
             try:
+                # Blocks are guarded in parse_new_block(); this only parks the
+                # watcher once the tip reaches a barrier. Throttled because the
+                # --no-mempool loop spins and every check takes a shared lock.
+                if time.time() - self.last_protocol_check_time >= 1:
+                    self.last_protocol_check_time = time.time()
+                    height = (
+                        CurrentState().current_block_count() or CurrentState().current_block_index()
+                    )
+                    if height is not None:
+                        protocolstatus.require_supported(height)
                 if not config.NO_MEMPOOL:
                     if len(RAW_MEMPOOL) > 0:
                         mempool_block = RAW_MEMPOOL.pop(0)
@@ -426,6 +436,10 @@ class BlockchainWatcher:
 
                 # Yield control to the event loop to allow other tasks to run
                 await asyncio.sleep(0)
+            except exceptions.VersionUpdateRequiredError as error:
+                self.upgrade_error = error
+                self.stop()
+                break
             except asyncio.CancelledError:
                 logger.debug("BlockchainWatcher.handle() was cancelled.")
                 break  # Exit the loop if the task is cancelled
@@ -450,6 +464,8 @@ class BlockchainWatcher:
             self.loop.run_forever()
         finally:
             self.loop.close()
+        if self.upgrade_error is not None:
+            raise self.upgrade_error
 
     def stop(self):
         # Protect entire shutdown from KeyboardInterrupt

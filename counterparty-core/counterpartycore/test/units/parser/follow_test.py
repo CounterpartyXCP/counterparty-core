@@ -13,7 +13,7 @@ import pytest
 import zmq
 from counterpartycore.lib import config, exceptions
 from counterpartycore.lib.parser import follow
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import helpers, protocolstatus
 
 # ============================================================================
 # Fixtures
@@ -270,25 +270,40 @@ class TestBlockchainWatcher:
         assert watcher.raw_tx_cache == {}
         assert watcher.hash_by_sequence == {}
 
-    def test_check_software_version_if_needed_checks(self, watcher_setup):
-        """Test check_software_version_if_needed performs check"""
-        watcher, db, mock_bitcoind, mock_cs = watcher_setup
-        watcher.last_software_version_check_time = 0
+    def test_handle_does_not_fetch_remote_versions(self, watcher_setup):
+        watcher, _db, _backend, _state = watcher_setup
+        watcher.stop_event.set()
+        with mock.patch("counterpartycore.lib.parser.check.software_version") as fetch:
+            asyncio.run(watcher.handle())
+            fetch.assert_not_called()
 
-        with mock.patch("counterpartycore.lib.parser.check.software_version") as mock_check:
-            mock_check.return_value = True
-            watcher.check_software_version_if_needed()
-            mock_check.assert_called_once()
-            assert watcher.last_software_version_check_time > 0
+    def test_handle_stops_cleanly_at_upgrade_boundary(self, watcher_setup, monkeypatch):
+        watcher, _db, _backend, state = watcher_setup
+        state.current_block_count.return_value = 100
+        protocolstatus.current().publish(
+            [{"change_name": "upgrade", "version": [12, 0, 0], "activation_height": 100}]
+        )
+        stop, report = mock.MagicMock(), mock.MagicMock()
+        monkeypatch.setattr(watcher, "stop", stop)
+        monkeypatch.setattr(follow, "capture_exception", report)
 
-    def test_check_software_version_if_needed_skips(self, watcher_setup):
-        """Test check_software_version_if_needed skips when recent"""
-        watcher, db, mock_bitcoind, mock_cs = watcher_setup
-        watcher.last_software_version_check_time = time.time()
+        asyncio.run(watcher.handle())
 
-        with mock.patch("counterpartycore.lib.parser.check.software_version") as mock_check:
-            watcher.check_software_version_if_needed()
-            mock_check.assert_not_called()
+        assert isinstance(watcher.upgrade_error, exceptions.VersionUpdateRequiredError)
+        stop.assert_called_once()
+        report.assert_not_called()
+
+    def test_start_propagates_upgrade_after_closing_event_loop(self, watcher_setup):
+        watcher, _db, _backend, state = watcher_setup
+        watcher.loop = asyncio.new_event_loop()
+        state.current_block_count.return_value = 100
+        protocolstatus.current().publish(
+            [{"change_name": "upgrade", "version": [12, 0, 0], "activation_height": 100}]
+        )
+        with pytest.raises(exceptions.VersionUpdateRequiredError):
+            watcher.start()
+        assert watcher.loop.is_closed()
+        assert watcher.stop_event.is_set()
 
     def test_receive_hashtx(self, watcher_setup):
         """Test receive_hashtx stores hash by sequence"""
