@@ -858,7 +858,9 @@ def run_apiserver(
 
         # The worker pool now exists, so the sampler can report its gauges.
         if health_server is not None:
-            health_server.attach_dispatcher(wsgi_server.get_task_dispatcher())
+            health_server.attach_dispatcher(
+                wsgi_server.get_task_dispatcher(), wsgi_server.get_admission_metrics
+            )
 
         logger.info("Starting Parent Process Checker thread...")
         parent_checker = ParentProcessChecker(wsgi_server, stop_event, parent_pid, shutdown_budget)

@@ -27,6 +27,17 @@
 
 ## API
 
+- Add best-effort Waitress connection-admission counts to the isolated
+  `/healthz/metrics` endpoint and existing minute-spaced `WORKER_STATS` logs.
+  Accepted channels and unique socket-map occupancy distinguish admission
+  pressure from busy workers. Sampled peaks reset after each statistics log;
+  sub-second episodes may be missed. The connection limit is the common
+  configured threshold, not multiplied capacity for multiple listeners.
+  `accepting_listeners` and `overflow_listeners` are observed flags;
+  `at_limit_listeners` is a separate count/limit comparison. Unsupported,
+  changing or unavailable introspection reports `null`, not zero. No client
+  details are collected and no health/recovery or connection settings change.
+
 - Return MPMA decoding failures, including malformed address tables and
   recipient indexes past the end of the table, through the existing
   `message_data.error` response (HTTP 200) of `/v2/transactions/unpack` and

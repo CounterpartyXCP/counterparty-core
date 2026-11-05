@@ -17,7 +17,7 @@ from gunicorn.errors import AppImportError, HaltServer
 from werkzeug.serving import make_server
 
 from counterpartycore.lib import config
-from counterpartycore.lib.api import parsedevents
+from counterpartycore.lib.api import admission, parsedevents
 from counterpartycore.lib.cli import log
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import database, helpers
@@ -450,3 +450,8 @@ class WSGIApplication:
         # Returns the underlying server's worker-thread pool for health metrics,
         # or None when the backend has no introspectable in-process pool.
         return self.server.get_task_dispatcher()
+
+    def get_admission_metrics(self):
+        if isinstance(self.server, WaitressApplication):
+            return admission.sample(self.server.server)
+        return None

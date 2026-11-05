@@ -12,11 +12,13 @@ import socket
 import threading
 import time
 from collections import deque
+from dataclasses import asdict, replace
 from unittest.mock import MagicMock
 
 import pytest
 from counterpartycore.lib import config
 from counterpartycore.lib.api import apiwatcher, healthz_server
+from counterpartycore.lib.api.admission import AdmissionMetrics
 from counterpartycore.lib.api.healthz_server import (
     HealthCheckServer,
     HealthRequestHandler,
@@ -379,6 +381,78 @@ def test_http_metrics_shape_with_workers(ready_server):
     assert body["readiness"]["ready"] is True
     assert "health_handler" in body
     assert "uptime_seconds" in body["process"]
+    assert body["admission"] is None
+
+
+def test_admission_pressure_is_observational_and_peaks_reset_on_stats_log(monkeypatch):
+    metrics = AdmissionMetrics(1, 98, 100, 100, 1, 1, 1)
+    sampler = make_sampler(FakeDispatcher(total=20))
+    sampler.admission_provider = lambda: metrics
+    sampler._last_stats_log = time.monotonic()
+    log = MagicMock()
+    monkeypatch.setattr(healthz_server.logger, "info", log)
+    sampler._tick()
+    snapshot = sampler.current_snapshot()
+    assert snapshot.ready is True  # not a new readiness/restart predicate
+    assert snapshot.workers.busy == snapshot.workers.queue_depth == 0
+    assert snapshot.admission.peak_socket_map_entries == 100
+    metrics = replace(
+        metrics,
+        accepted_channels=0,
+        socket_map_entries=2,
+        overflow_listeners=0,
+        at_limit_listeners=0,
+    )
+    sampler._tick()
+    assert sampler.current_snapshot().admission.peak_accepted_channels == 98
+    assert sampler.current_snapshot().admission.overflow_observed is True
+    log.assert_not_called()
+    sampler._last_stats_log = 0
+    sampler._tick()
+    assert log.call_count == 1
+    assert log.call_args.args[-1]["peak_socket_map_entries"] == 100
+    sampler._tick()
+    assert sampler.current_snapshot().admission.peak_socket_map_entries == 2
+    assert sampler.current_snapshot().admission.overflow_observed is False
+    assert log.call_count == 1
+
+
+def test_admission_provider_failure_preserves_health_and_reports_unknown():
+    sampler = make_sampler(FakeDispatcher())
+
+    def unavailable():
+        raise AttributeError("changed surface")
+
+    sampler.admission_provider = unavailable
+    sampler._tick()
+    assert sampler.current_snapshot().ready is True
+    assert sampler.current_snapshot().admission is None
+
+
+def test_http_metrics_serialize_admission_snapshot_without_resampling():
+    metrics = AdmissionMetrics(1, 98, 100, 100, 1, 1, 1)
+    snapshot = replace(_ready_snapshot(), admission=metrics)
+    fx = _HttpServerFixture(FakeSampler(snapshot))
+    try:
+        code, body = fx.get("/healthz/metrics")
+        assert code == 200
+        assert body["admission"] == asdict(metrics)
+    finally:
+        fx.close()
+
+
+def test_admission_provider_attaches_before_or_after_sampler_start():
+    server = HealthCheckServer("127.0.0.1", 0)
+
+    def provider():
+        return AdmissionMetrics(1, 0, 2, 100, 1, 0, 0)
+
+    server.attach_dispatcher(None, provider)
+    assert server.admission_provider is provider
+    server.sampler = make_sampler()
+    server.attach_dispatcher(None, provider)
+    server.sampler._tick()
+    assert server.sampler.current_snapshot().admission.socket_map_entries == 2
 
 
 def test_http_metrics_workers_null_on_gunicorn():
