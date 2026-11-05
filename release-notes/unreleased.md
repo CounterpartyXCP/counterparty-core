@@ -47,6 +47,10 @@
 
 ## Codebase
 
+- Update the Rust client and native extension's Tokio locks to 1.53.3 and
+  replace the client's yanked async-executor 1.14.0 with 1.14.1. This addresses
+  the published Tokio I/O-safety advisory without adding audit exceptions.
+
 - Bump `quinn-proto` to 0.11.19 and `rustls` to 0.23.46 in `counterparty-client`
   (RUSTSEC-2026-0338 to -0342, RUSTSEC-2026-0346 to -0349), and triage the
   unmaintained `unsafe-libyaml` and standalone `zbus` crates in the audit
