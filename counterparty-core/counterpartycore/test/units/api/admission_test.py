@@ -2,6 +2,7 @@
 
 import json
 import socket
+import threading
 from contextlib import contextmanager
 from dataclasses import asdict
 from types import SimpleNamespace
@@ -11,6 +12,7 @@ import pytest
 from counterpartycore.lib.api import admission, wsgi
 from waitress import server as waitress_server
 from waitress import wasyncore
+from waitress.task import ThreadedTaskDispatcher
 
 
 @contextmanager
@@ -18,6 +20,17 @@ def listener(count=1, connection_limit=100):
     sockets = []
     server = None
     socket_map = {}
+    dispatcher = ThreadedTaskDispatcher()
+    worker_idle = threading.Event()
+    original_wait = dispatcher.queue_cv.wait
+
+    def observe_idle(*args, **kwargs):
+        # Waitress decrements active_count immediately before this wait, under
+        # dispatcher.lock. Observe that transition, not a fixed startup delay.
+        worker_idle.set()
+        return original_wait(*args, **kwargs)
+
+    dispatcher.queue_cv.wait = observe_idle
     try:
         for _ in range(count):
             sock = socket.socket()
@@ -29,11 +42,15 @@ def listener(count=1, connection_limit=100):
             map=socket_map,
             threads=1,
             connection_limit=connection_limit,
+            _dispatcher=dispatcher,
         )
+        dispatcher.set_thread_count(1)
+        assert worker_idle.wait(5), "Waitress worker did not reach its idle wait"
+        with dispatcher.lock:
+            assert dispatcher.active_count == 0
         yield server
     finally:
-        if server is not None:
-            server.task_dispatcher.shutdown()
+        dispatcher.shutdown()
         wasyncore.close_all(socket_map)
         for sock in sockets:
             sock.close()
@@ -65,6 +82,50 @@ def test_real_idle_workers_can_have_connection_admission_pressure():
         finally:
             for client in clients:
                 client.close()
+
+
+def test_fixture_waits_for_a_delayed_worker_instead_of_assuming_immediate_idle(monkeypatch):
+    queued, entered, leave = threading.Event(), threading.Event(), threading.Event()
+    pending, errors = [], []
+
+    def defer_start(self, target, thread_no):
+        pending.append((target, thread_no))
+        queued.set()
+
+    monkeypatch.setattr(ThreadedTaskDispatcher, "start_new_thread", defer_start)
+
+    def exercise_fixture():
+        try:
+            with listener() as server:
+                assert server.task_dispatcher.active_count == 0
+                entered.set()
+                assert leave.wait(5)
+        except BaseException as error:
+            errors.append(error)
+
+    fixture_thread = threading.Thread(target=exercise_fixture)
+    fixture_thread.start()
+    worker = None
+    try:
+        assert queued.wait(5)
+        assert not entered.is_set()  # real worker has deliberately not started
+        target, thread_no = pending[0]
+        worker = threading.Thread(target=target, args=(thread_no,), daemon=True)
+        worker.start()
+        assert entered.wait(5)
+        assert not errors
+    finally:
+        leave.set()
+        # Even an assertion failure must release the fixture's deferred worker.
+        if worker is None and pending:
+            target, thread_no = pending[0]
+            worker = threading.Thread(target=target, args=(thread_no,), daemon=True)
+            worker.start()
+        fixture_thread.join(10)
+        if worker is not None:
+            worker.join(5)
+    assert not fixture_thread.is_alive()
+    assert not errors
 
 
 def test_shared_multi_listener_map_is_not_double_counted():
