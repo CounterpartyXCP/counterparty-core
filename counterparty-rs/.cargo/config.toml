@@ -1,0 +1,6 @@
+[env]
+# librocksdb-sys 0.16 (RocksDB 8.10) uses uint64_t in headers that do not
+# include <cstdint>. That builds with GCC 13 (Ubuntu 24.04) but not with
+# GCC 15 (Ubuntu 26.04, which ubuntu-latest is moving to).
+# A CXXFLAGS already set in the environment takes precedence over this.
+CXXFLAGS = "-include cstdint"
