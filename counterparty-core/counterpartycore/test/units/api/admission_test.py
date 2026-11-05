@@ -16,12 +16,13 @@ from waitress.task import ThreadedTaskDispatcher
 
 
 @contextmanager
-def listener(count=1, connection_limit=100):
+def listener(count=1, connection_limit=100, worker_idle=None):
     sockets = []
     server = None
     socket_map = {}
     dispatcher = ThreadedTaskDispatcher()
-    worker_idle = threading.Event()
+    if worker_idle is None:
+        worker_idle = threading.Event()
     original_wait = dispatcher.queue_cv.wait
 
     def observe_idle(*args, **kwargs):
@@ -86,7 +87,13 @@ def test_real_idle_workers_can_have_connection_admission_pressure():
 
 def test_fixture_waits_for_a_delayed_worker_instead_of_assuming_immediate_idle(monkeypatch):
     queued, entered, leave = threading.Event(), threading.Event(), threading.Event()
+    waiting_for_idle = threading.Event()
     pending, errors = [], []
+
+    class ObservedIdle(threading.Event):
+        def wait(self, timeout=None):
+            waiting_for_idle.set()
+            return super().wait(timeout)
 
     def defer_start(self, target, thread_no):
         pending.append((target, thread_no))
@@ -96,7 +103,7 @@ def test_fixture_waits_for_a_delayed_worker_instead_of_assuming_immediate_idle(m
 
     def exercise_fixture():
         try:
-            with listener() as server:
+            with listener(worker_idle=ObservedIdle()) as server:
                 assert server.task_dispatcher.active_count == 0
                 entered.set()
                 assert leave.wait(5)
@@ -108,6 +115,7 @@ def test_fixture_waits_for_a_delayed_worker_instead_of_assuming_immediate_idle(m
     worker = None
     try:
         assert queued.wait(5)
+        assert waiting_for_idle.wait(5)
         assert not entered.is_set()  # real worker has deliberately not started
         target, thread_no = pending[0]
         worker = threading.Thread(target=target, args=(thread_no,), daemon=True)
