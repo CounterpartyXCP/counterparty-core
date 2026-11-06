@@ -28,6 +28,7 @@ from counterpartycore.lib.api import (
     healthz_server,
     parsedevents,
     queries,
+    route_activity,
     staterollback,
     verbose,
     wsgi,
@@ -48,6 +49,7 @@ multiprocessing.set_start_method("spawn", force=True)
 
 logger = logging.getLogger(config.LOGGER_NAME)
 auth = HTTPBasicAuth()
+ACTIVE_ROUTES = route_activity.RouteActivity()
 
 
 def get_openapi_filepath():
@@ -448,6 +450,10 @@ def handle_route(**kwargs):
     # on this worker thread for the whole request and disarmed in the finally below,
     # so one request cannot generate unbounded Bitcoin RPC work.
     bitcoind.begin_api_rpc_accounting(config.API_MAX_BACKEND_RPC_CALLS)
+    # The registered rule is a bounded template (e.g. /v2/assets/<asset>), not
+    # the caller's URL or query string. This has no effect on request admission.
+    active_rule = request.url_rule.rule if request.url_rule else None
+    ACTIVE_ROUTES.begin(active_rule)
     try:
         if request.method == "OPTIONS":
             return handle_options()
@@ -591,6 +597,7 @@ def handle_route(**kwargs):
         logger.error("Error in API: %s", e)
         return return_result(500, error=error)
     finally:
+        ACTIVE_ROUTES.end(active_rule)
         # Always disarm the RPC budget on this worker thread (Waitress reuses
         # threads across requests) and log the fan-out for tuning API_MAX_BACKEND_RPC_CALLS.
         rpc_calls = bitcoind.end_api_rpc_accounting()
@@ -822,6 +829,7 @@ def run_apiserver(
                 mempool_progress_provider=(lambda: mempool_progress.value)
                 if mempool_progress is not None
                 else None,
+                route_activity_provider=ACTIVE_ROUTES.summary,
             )
             health_server.start()
 

@@ -12,7 +12,7 @@ import socket
 import threading
 import time
 from collections import deque
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from counterpartycore.lib import config
@@ -49,6 +49,7 @@ def make_sampler(
     api_only=False,
     saturation_grace=5,
     serving=True,
+    route_activity_provider=None,
 ):
     return HealthSampler(
         dispatcher=dispatcher,
@@ -58,6 +59,7 @@ def make_sampler(
         block_time_provider=lambda: block_time,
         api_only_provider=lambda: api_only,
         serving_provider=lambda: serving,
+        route_activity_provider=route_activity_provider,
     )
 
 
@@ -196,6 +198,41 @@ def test_saturation_beyond_grace_reports_degraded():
     assert snap.saturation_seconds >= 5
     assert snap.ready is False
     assert snap.reason == "saturated"
+
+
+def test_saturation_warning_includes_active_route_templates_once():
+    disp = FakeDispatcher(total=2, busy=2, queue_len=3)
+    snapshots = []
+
+    def route_snapshot():
+        snapshots.append(True)
+        return (("/v2/addresses/<address>/balances", 2),)
+
+    sampler = make_sampler(
+        dispatcher=disp, saturation_grace=5, route_activity_provider=route_snapshot
+    )
+    with patch.object(healthz_server.logger, "warning") as warning:
+        sampler._tick()
+        sampler._saturated_since = time.monotonic() - 10
+        sampler._tick()
+        sampler._tick()
+    assert len(snapshots) == 1
+    assert warning.call_count == 1
+    assert warning.call_args.args[-1] == (("/v2/addresses/<address>/balances", 2),)
+
+
+def test_failed_route_snapshot_does_not_change_readiness():
+    def unavailable():
+        raise RuntimeError("snapshot unavailable")
+
+    disp = FakeDispatcher(total=2, busy=2, queue_len=3)
+    sampler = make_sampler(dispatcher=disp, saturation_grace=5, route_activity_provider=unavailable)
+    with patch.object(healthz_server.logger, "warning") as warning:
+        sampler._tick()
+        sampler._saturated_since = time.monotonic() - 10
+        sampler._tick()
+    assert sampler.current_snapshot().reason == "saturated"
+    assert warning.call_args.args[-1] is None
 
 
 def test_saturation_resets_when_pool_drains():
