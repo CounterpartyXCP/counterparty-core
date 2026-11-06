@@ -20,6 +20,15 @@ from counterpartycore.lib import config
 
 # Working directory for the test (separate from cache)
 DATA_DIR = os.path.join(os.path.expanduser("~/.cache"), "counterparty-test-data")
+# Initial snapshots and old caches can be weeks behind. This recovery budget
+# never replaces the strict ordinary 20-minute catchup or retries its failure.
+FIXTURE_RECOVERY_TIMEOUT_MINUTES = 105
+
+
+def _tip_catchup_timeout(network, verified_tip=False):
+    if network in ("signet", "testnet4") and not verified_tip:
+        return FIXTURE_RECOVERY_TIMEOUT_MINUTES
+    return 20
 
 
 def prepare(network, use_existing_data=False):
@@ -39,8 +48,8 @@ def prepare(network, use_existing_data=False):
         sh.mkdir("-p", DATA_DIR)
 
     # The optional `BACKEND_API_KEY` env var (set in CI as a GHA secret)
-    # is read directly by `initialise_config` to lift the public proxy's
-    # per-IP 120 req/min rate-limit to the premium 1000 req/min bucket.
+    # is read directly by `initialise_config`. Actual authorization/rate limits
+    # belong to the endpoint; tests must not assume an elevated quota.
     # We deliberately do NOT pass it on the command line: doing so would
     # echo the secret through `sh`/`subprocess` stdout and trigger CodeQL
     # "clear-text logging of sensitive information" alerts.
@@ -272,6 +281,8 @@ def _run_with_cache(network):
     # Load expected hashes
     cache_data = cache_manager.load_hashes(network)
     expected_hashes = cache_data["hashes"]
+    verified_tip = cache_manager.is_tip_catchup_verified(cache_data)
+    tip_timeout = _tip_catchup_timeout(network, verified_tip)
 
     # Get the last block we need to verify (last block in cached hashes)
     last_expected_block = expected_hashes[-1]["block_index"]
@@ -301,12 +312,13 @@ def _run_with_cache(network):
 
     # Only advance the fixture after its original consensus hashes pass. Do not
     # save the old replay tip again or publish a failed catchup as a fresh cache.
-    print("Catching up to chain tip...")
-    catchup(server_args, api_url)
+    phase = "warm fixture" if verified_tip else "legacy fixture recovery"
+    print(f"Catching up to chain tip ({phase}, maximum {tip_timeout} minutes)...")
+    catchup(server_args, api_url, timeout_minutes=tip_timeout)
 
     # Update the cache only after reaching the current chain tip.
     print("Updating cache with new state...")
-    cache_manager.save_cache(network, db_path)
+    cache_manager.save_cache(network, db_path, tip_catchup_verified=True)
 
     # Cleanup working directory
     cleanup()
@@ -321,12 +333,14 @@ def _run_without_cache(network):
     # Bootstrap from GCS
     bootstrap(sh_counterparty_server, network)
 
-    # Catchup to chain tip
-    catchup(server_args, api_url)
+    # A cold official snapshot may need the same bounded recovery as a legacy cache.
+    tip_timeout = _tip_catchup_timeout(network)
+    print(f"Catching up initial fixture (maximum {tip_timeout} minutes)...")
+    catchup(server_args, api_url, timeout_minutes=tip_timeout)
 
     # Save cache for next run
     print("Saving cache for future runs...")
-    cache_manager.save_cache(network, db_path)
+    cache_manager.save_cache(network, db_path, tip_catchup_verified=True)
 
     # Cleanup working directory
     cleanup()
