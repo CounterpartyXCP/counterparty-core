@@ -141,3 +141,168 @@ def test_timeout_preserves_existing_kill_escalation(polling):
         catchup(polling)
     assert polling.killpg.call_args_list == [call(9001, signal.SIGTERM), call(9001, signal.SIGKILL)]
     assert polling.process.wait.call_args_list == [call(timeout=15), call()]
+
+
+@pytest.fixture
+def cached_run(monkeypatch):
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "integrations"))
+    module = importlib.import_module("reparsetest")
+    expected = [
+        {"block_index": 101, "ledger_hash": "original-first"},
+        {"block_index": 200, "ledger_hash": "original-last"},
+    ]
+    state = SimpleNamespace(
+        module=module,
+        expected=expected,
+        events=[],
+        state_db_ready=False,
+        height=200,
+        saved_heights=[],
+    )
+
+    def build_state_db(action):
+        assert action == "build-state-db"
+        state.state_db_ready = True
+        state.events.append("build-state-db")
+
+    def rollback_cached(command, block_index):
+        assert command is state.command
+        assert state.state_db_ready, "Rollback requires the restored State DB's tables"
+        assert block_index == expected[0]["block_index"]
+        state.height = block_index - 1
+        state.events.append("rollback")
+
+    def catchup_cached(args, api_url, min_block_index=None):
+        assert args == ["--signet"]
+        assert api_url == "http://fixture.invalid/v2/"
+        if min_block_index is not None:
+            assert min_block_index == expected[-1]["block_index"]
+            state.height = min_block_index
+            state.events.append("replay")
+        else:
+            # A real server start also creates the State DB. Model that so the
+            # old ordering fails on discarded progress, not a missing mock side effect.
+            state.state_db_ready = True
+            state.height = 300
+            state.events.append("tip")
+
+    def verify_hashes(db_path, hashes):
+        assert db_path == "fixture.db"
+        assert hashes is expected
+        assert state.height == expected[-1]["block_index"]
+        state.events.append("verify")
+
+    def save_cache(network, db_path):
+        assert (network, db_path) == ("signet", "fixture.db")
+        state.saved_heights.append(state.height)
+        state.events.append("save")
+
+    state.command = Mock(side_effect=build_state_db)
+    state.catchup = Mock(side_effect=catchup_cached)
+    state.verify = Mock(side_effect=verify_hashes)
+    state.cache = Mock(
+        restore_db_from_cache=Mock(side_effect=lambda *_: state.events.append("restore")),
+        load_hashes=Mock(return_value={"hashes": expected}),
+        get_rollback_block_index=Mock(return_value=101),
+        verify_hashes=state.verify,
+        save_cache=Mock(side_effect=save_cache),
+    )
+    monkeypatch.setattr(module, "cache_manager", state.cache)
+    monkeypatch.setattr(
+        module,
+        "prepare",
+        Mock(
+            return_value=(state.command, ["--signet"], "fixture.db", "http://fixture.invalid/v2/")
+        ),
+    )
+    monkeypatch.setattr(module, "rollback", Mock(side_effect=rollback_cached))
+    monkeypatch.setattr(module, "catchup", state.catchup)
+    monkeypatch.setattr(module, "cleanup", Mock(side_effect=lambda: state.events.append("cleanup")))
+    return state
+
+
+def test_cached_run_verifies_original_hashes_then_saves_advanced_tip(cached_run):
+    cached_run.module._run_with_cache("signet")
+    assert cached_run.events == [
+        "restore",
+        "build-state-db",
+        "rollback",
+        "replay",
+        "verify",
+        "tip",
+        "save",
+        "cleanup",
+    ]
+    cached_run.command.assert_called_once_with("build-state-db")
+    cached_run.module.prepare.assert_called_once_with("signet", use_existing_data=True)
+    assert cached_run.catchup.call_args_list == [
+        call(["--signet"], "http://fixture.invalid/v2/", min_block_index=200),
+        call(["--signet"], "http://fixture.invalid/v2/"),
+    ]
+    assert cached_run.expected == [
+        {"block_index": 101, "ledger_hash": "original-first"},
+        {"block_index": 200, "ledger_hash": "original-last"},
+    ]
+    assert cached_run.saved_heights == [300]
+
+
+@pytest.mark.parametrize(
+    "phase,error_type",
+    [
+        ("build", RuntimeError),
+        ("replay", TimeoutError),
+        ("verify", AssertionError),
+        ("tip", TimeoutError),
+    ],
+)
+def test_cached_run_never_saves_failed_preparation_verification_or_catchup(
+    cached_run, phase, error_type
+):
+    failure = error_type(f"fixture {phase} failed")
+    if phase == "build":
+        cached_run.command.side_effect = failure
+    elif phase == "verify":
+        cached_run.verify.side_effect = failure
+    else:
+        original_catchup = cached_run.catchup.side_effect
+
+        def catchup_or_fail(*args, **kwargs):
+            is_replay = kwargs.get("min_block_index") is not None
+            if (phase == "replay") == is_replay:
+                raise failure
+            return original_catchup(*args, **kwargs)
+
+        cached_run.catchup.side_effect = catchup_or_fail
+
+    with pytest.raises(error_type, match=f"fixture {phase} failed"):
+        cached_run.module._run_with_cache("signet")
+    cached_run.cache.save_cache.assert_not_called()
+    assert cached_run.saved_heights == []
+    if phase in {"build", "replay", "verify"}:
+        assert "tip" not in cached_run.events
+
+
+def test_failed_integration_cannot_publish_a_new_cache_key():
+    workflow = Path(__file__).resolve().parents[4] / ".github/workflows/pytest_action.yml"
+    cache_step = workflow.read_text().split("- name: Save integration cache\n", 1)[1]
+    cache_step = cache_step.split("\n      - ", 1)[0]
+    assert "if: success() && inputs.integration_cache_network != ''" in cache_step
+    assert "always()" not in cache_step
+
+
+@pytest.mark.parametrize("network", ["signet", "testnet4"])
+def test_state_db_build_uses_the_prepared_network_and_cache_paths(monkeypatch, network):
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "integrations"))
+    module = importlib.import_module("reparsetest")
+    prepared_command = Mock()
+    command_factory = Mock(bake=Mock(return_value=prepared_command))
+    monkeypatch.setattr(module.sh, "counterparty_server", command_factory)
+    command, server_args, _, _ = module.prepare(network, use_existing_data=True)
+    command("build-state-db")
+    prepared_command.assert_called_once_with("build-state-db")
+    command_factory.bake.assert_called_once_with(
+        *server_args, _out=module.sys.stdout, _err_to_out=True
+    )
+    assert f"--{network}" in server_args
+    for flag in ("--data-dir", "--cache-dir"):
+        assert server_args[server_args.index(flag) + 1] == module.DATA_DIR

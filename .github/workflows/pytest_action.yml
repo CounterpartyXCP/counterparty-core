@@ -129,7 +129,7 @@ jobs:
           path: openapi.json
 
       - name: Save integration cache
-        if: always() && inputs.integration_cache_network != ''
+        if: success() && inputs.integration_cache_network != ''
         uses: actions/cache/save@v4
         with:
           path: ~/.cache/counterparty-integration-cache/${{ inputs.integration_cache_network }}

@@ -243,10 +243,10 @@ def bootstrap_reparse_rollback_and_catchup(network):
 
     Flow with cache:
         1. Restore DB from cache
-        2. Catchup to tip (should be quick - just a few blocks)
-        3. Rollback 100 blocks
+        2. Build the local State DB
+        3. Rollback the cached hash range
         4. Catchup and verify all hashes match cached values
-        5. Update cache with new state
+        5. Catchup to tip and save the advanced cache
 
     Flow without cache (first run):
         1. Bootstrap from GCS
@@ -279,9 +279,10 @@ def _run_with_cache(network):
     # Prepare the server command (don't clear data dir)
     sh_counterparty_server, server_args, db_path, api_url = prepare(network, use_existing_data=True)
 
-    # First catchup - bring DB up to current chain tip
-    print("Catching up to chain tip...")
-    catchup(server_args, api_url)
+    # Cache restoration removes the State DB. Rollback needs its tables, but
+    # catching up to today's tip first would discard that work on rollback.
+    print("Building State DB for cached rollback...")
+    sh_counterparty_server("build-state-db")
 
     # Get rollback target (first block in cached hashes)
     rollback_block = cache_manager.get_rollback_block_index(expected_hashes)
@@ -289,7 +290,7 @@ def _run_with_cache(network):
     # Rollback to the start of our cached hash range
     rollback(sh_counterparty_server, rollback_block)
 
-    # Catchup again - this should re-parse all the cached blocks
+    # Re-parse all the cached blocks before advancing beyond their hash range.
     # Use min_block_index to ensure we wait for all expected blocks to be parsed
     # (server_ready can be unreliable when backend is rate-limited)
     print("Catching up and verifying hashes...")
@@ -298,7 +299,12 @@ def _run_with_cache(network):
     # Verify all hashes match
     cache_manager.verify_hashes(db_path, expected_hashes)
 
-    # Update the cache with new state
+    # Only advance the fixture after its original consensus hashes pass. Do not
+    # save the old replay tip again or publish a failed catchup as a fresh cache.
+    print("Catching up to chain tip...")
+    catchup(server_args, api_url)
+
+    # Update the cache only after reaching the current chain tip.
     print("Updating cache with new state...")
     cache_manager.save_cache(network, db_path)
 
