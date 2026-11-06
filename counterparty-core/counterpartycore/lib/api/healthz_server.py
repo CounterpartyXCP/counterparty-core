@@ -37,7 +37,7 @@ from typing import Optional
 from counterpartycore.lib import config
 from counterpartycore.lib.api import apiwatcher, dbstatus, parsedevents
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.utils import database, helpers, parserhealth
+from counterpartycore.lib.utils import database, helpers, parserhealth, protocolstatus
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -71,6 +71,7 @@ class HealthSnapshot:
     # pod is healthy and working, but must not receive traffic yet.
     rebuild: Optional[dbstatus.RebuildProgress] = None
     mempool_progress_at: Optional[float] = None
+    protocol_status: Optional[dict] = None
 
 
 def _instrument_dispatcher(dispatcher):
@@ -121,6 +122,7 @@ class HealthSampler(threading.Thread):
         api_only_provider=None,
         serving_provider=None,
         mempool_progress_provider=None,
+        route_activity_provider=None,
     ):
         super().__init__(name="HealthSampler", daemon=True)
         self.dispatcher = dispatcher
@@ -173,6 +175,7 @@ class HealthSampler(threading.Thread):
         # lifecycle signal (the tests, and any embedder) behaves as before.
         self._serving_provider = serving_provider or (lambda: True)
         self._mempool_progress_provider = mempool_progress_provider or (lambda: 0)
+        self._route_activity_provider = route_activity_provider
 
         self.stop_event = threading.Event()
         self._snapshot = HealthSnapshot(
@@ -295,6 +298,12 @@ class HealthSampler(threading.Thread):
                 # an `--api-only` node, where `_compute_caught_up` reports ready
                 # unconditionally, that would otherwise be never.
                 caught_up, ledger_reason = False, "watcher_stopped"
+        protocol_height = max(
+            last_parsed or 0, backend_height or 0, CurrentState().current_block_count() or 0
+        )
+        protocol_info = protocolstatus.summary(protocol_height)
+        if protocolstatus.error(protocol_info):
+            caught_up, ledger_reason = False, protocolstatus.error(protocol_info)
         ready = caught_up and not over_saturated
         if ready:
             reason = None
@@ -315,9 +324,15 @@ class HealthSampler(threading.Thread):
             rebuild=rebuild,
             mempool_progress_at=(
                 self._mempool_progress_provider()
-                if rebuild is None and self._is_serving() and not self._api_only_provider()
+                if rebuild is None
+                and self._is_serving()
+                and not self._api_only_provider()
+                # A deliberately parked parser cannot advance its heartbeat;
+                # restarting an incompatible binary will not repair it.
+                and protocol_info["status"] != "incompatible"
                 else None
             ),
+            protocol_status=protocol_info,
         )
         self._maybe_log_worker_stats(now, workers, saturation_seconds)
 
@@ -379,13 +394,20 @@ class HealthSampler(threading.Thread):
             busy = workers.busy if workers else "?"
             total = workers.total if workers else "?"
             queue_depth = workers.queue_depth if workers else "?"
+            active_routes = None
+            if self._route_activity_provider is not None:
+                try:
+                    active_routes = self._route_activity_provider()
+                except Exception as e:  # pylint: disable=broad-except
+                    logger.debug("healthz: active-route snapshot unavailable: %s", e)
             logger.warning(
                 "API worker pool saturated for %.1fs (busy=%s/%s queue=%s) - "
-                "readiness reporting degraded to shed load",
+                "readiness reporting degraded to shed load; active_routes=%s",
                 saturation_seconds,
                 busy,
                 total,
                 queue_depth,
+                active_routes,
             )
             self._saturation_warned = True
         elif not over_saturated and self._saturated_since is None:
@@ -515,8 +537,13 @@ class HealthRequestHandler(BaseHTTPRequestHandler):
     def _readiness(self):
         snap = self.server.sampler.current_snapshot()
         if snap.ready:
-            return 200, {"status": "ready"}
+            body = {"status": "ready"}
+            if snap.protocol_status is not None:
+                body["protocol_status"] = snap.protocol_status
+            return 200, body
         body = {"status": "degraded", "reason": snap.reason}
+        if snap.protocol_status is not None:
+            body["protocol_status"] = snap.protocol_status
         if snap.rebuild is not None:
             body["rebuild"] = snap.rebuild.as_dict()
         if snap.backend_height is not None:
@@ -596,6 +623,7 @@ class HealthCheckServer:
         stop_event=None,
         serving_provider=None,
         mempool_progress_provider=None,
+        route_activity_provider=None,
     ):
         self.host = host
         self.port = port
@@ -605,6 +633,7 @@ class HealthCheckServer:
         # serve requests; see `HealthSampler.__init__` (issue #3504).
         self.serving_provider = serving_provider
         self.mempool_progress_provider = mempool_progress_provider
+        self.route_activity_provider = route_activity_provider
         # stop_event is accepted for symmetry with the other server threads; the health server
         # is a daemon and is torn down explicitly via stop(), so it is not otherwise used.
         self.stop_event = stop_event
@@ -638,6 +667,7 @@ class HealthCheckServer:
                 saturation_grace=self.saturation_grace,
                 serving_provider=self.serving_provider,
                 mempool_progress_provider=self.mempool_progress_provider,
+                route_activity_provider=self.route_activity_provider,
             )
             self.sampler.start()
 

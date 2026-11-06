@@ -205,28 +205,7 @@ def parse(db, tx, message):
                 fee_payer = source
             else:
                 fee_payer = recipient
-            # debit fee from the fee payer
-            ledger.events.debit(
-                db,
-                fee_payer,
-                config.XCP,
-                fee,
-                tx["tx_index"],
-                action=f"{action} fee",
-                event=tx["tx_hash"],
-            )
-            # destroy fee
-            destroy_bindings = {
-                "tx_index": tx["tx_index"],
-                "tx_hash": tx["tx_hash"],
-                "block_index": tx["block_index"],
-                "source": tx["source"],
-                "asset": config.XCP,
-                "quantity": fee,
-                "tag": f"{action} fee",
-                "status": "valid",
-            }
-            ledger.events.insert_record(db, "destructions", destroy_bindings, "ASSET_DESTRUCTION")
+            gas.pay_fee(db, tx, fee_payer, fee, f"{action} fee")
         # debit asset from source and credit to recipient
         ledger.events.debit(
             db, source, asset, quantity, tx["tx_index"], action=action, event=tx["tx_hash"]

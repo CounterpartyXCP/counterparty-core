@@ -17,4 +17,18 @@ ignore = [
     # (0.8.17) is unreachable while rust_decimal (latest: 1.42.1) pins rkyv 0.7;
     # drop this ignore when rust_decimal moves to rkyv 0.8. See deny.toml.
     "RUSTSEC-2026-0235",
+    # unsafe-libyaml 0.2.11 (archived upstream) is serde_yaml_ng's libyaml
+    # backend. The client only *emits* YAML from its own JSON values for display
+    # (helpers.rs `serde_yaml_ng::to_string`) and never parses untrusted YAML.
+    # No maintained drop-in replacement exists yet; serde_yaml_ng 0.10.0 is the
+    # latest release.
+    "RUSTSEC-2024-0449",
+    # zbus_names, zvariant and zvariant_derive were folded into zbus 6.0.0 and
+    # are now flagged unmaintained. They come from keyring's Linux
+    # secret-service backend (keyring -> zbus-secret-service-keyring-store ->
+    # secret-service -> zbus 5); no secret-service release supports zbus 6 yet.
+    # No security impact; drop these when keyring's backend moves to zbus 6.
+    "RUSTSEC-2026-0370",
+    "RUSTSEC-2026-0371",
+    "RUSTSEC-2026-0372",
 ]
