@@ -182,11 +182,13 @@ def catchup(server_args, api_url, timeout_minutes=20, min_block_index=None):
 
     try:
         ready = False
-        start_time = time.time()
-        error = None
+        deadline = time.monotonic() + 60 * timeout_minutes
         while not ready:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(f"Timeout: server not ready after {timeout_minutes} minutes")
             try:
-                response = requests.get(api_url, timeout=5).json()
+                response = requests.get(api_url, timeout=min(5, remaining)).json()
                 server_ready = response["result"]["server_ready"]
                 counterparty_height = response["result"].get("counterparty_height")
 
@@ -198,22 +200,21 @@ def catchup(server_args, api_url, timeout_minutes=20, min_block_index=None):
                         print(
                             f"Waiting for block {min_block_index} (current: {counterparty_height})..."
                         )
-                        time.sleep(1)
                 else:
                     # Original behavior: just wait for server_ready
                     if server_ready:
                         ready = True
                     else:
                         print("Waiting for server to be ready...")
-                        time.sleep(1)
-            except Exception:
-                if time.time() - start_time > 60 * timeout_minutes:
-                    error = f"Timeout: server not ready after {timeout_minutes} minutes"
-                    break
-                time.sleep(1)
-
-        if error:
-            raise Exception(error)
+            except Exception as error:
+                # Startup/network/JSON failures remain retryable, but successful
+                # unready responses must consume the same fixed time budget.
+                print(f"Waiting for API response ({type(error).__name__})...")
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(f"Timeout: server not ready after {timeout_minutes} minutes")
+            if not ready:
+                time.sleep(min(1, remaining))
 
         print("Server is ready!")
     finally:
