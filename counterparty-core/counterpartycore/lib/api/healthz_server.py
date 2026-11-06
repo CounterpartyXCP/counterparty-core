@@ -125,6 +125,7 @@ class HealthSampler(threading.Thread):
         serving_provider=None,
         mempool_progress_provider=None,
         admission_provider=None,
+        route_activity_provider=None,
     ):
         super().__init__(name="HealthSampler", daemon=True)
         self.dispatcher = dispatcher
@@ -180,6 +181,7 @@ class HealthSampler(threading.Thread):
         self.admission_provider = admission_provider
         self._admission_peak_channels = self._admission_peak_entries = 0
         self._admission_overflow_observed = False
+        self._route_activity_provider = route_activity_provider
 
         self.stop_event = threading.Event()
         self._snapshot = HealthSnapshot(
@@ -420,13 +422,20 @@ class HealthSampler(threading.Thread):
             busy = workers.busy if workers else "?"
             total = workers.total if workers else "?"
             queue_depth = workers.queue_depth if workers else "?"
+            active_routes = None
+            if self._route_activity_provider is not None:
+                try:
+                    active_routes = self._route_activity_provider()
+                except Exception as e:  # pylint: disable=broad-except
+                    logger.debug("healthz: active-route snapshot unavailable: %s", e)
             logger.warning(
                 "API worker pool saturated for %.1fs (busy=%s/%s queue=%s) - "
-                "readiness reporting degraded to shed load",
+                "readiness reporting degraded to shed load; active_routes=%s",
                 saturation_seconds,
                 busy,
                 total,
                 queue_depth,
+                active_routes,
             )
             self._saturation_warned = True
         elif not over_saturated and self._saturated_since is None:
@@ -646,6 +655,7 @@ class HealthCheckServer:
         stop_event=None,
         serving_provider=None,
         mempool_progress_provider=None,
+        route_activity_provider=None,
     ):
         self.host = host
         self.port = port
@@ -656,6 +666,7 @@ class HealthCheckServer:
         # serve requests; see `HealthSampler.__init__` (issue #3504).
         self.serving_provider = serving_provider
         self.mempool_progress_provider = mempool_progress_provider
+        self.route_activity_provider = route_activity_provider
         # stop_event is accepted for symmetry with the other server threads; the health server
         # is a daemon and is torn down explicitly via stop(), so it is not otherwise used.
         self.stop_event = stop_event
@@ -694,6 +705,7 @@ class HealthCheckServer:
                 serving_provider=self.serving_provider,
                 mempool_progress_provider=self.mempool_progress_provider,
                 admission_provider=self.admission_provider,
+                route_activity_provider=self.route_activity_provider,
             )
             self.sampler.start()
 
