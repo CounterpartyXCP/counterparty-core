@@ -54,6 +54,13 @@ UPGRADE_ACTIONS = {
         # them, instead of silently keeping a divergent ledger. RELEASE STEP:
         # keep these heights equal to the ones in protocol_changes.json.
         "11.5.0": [("rollback", 969320)],
+        # Nodes that rebuilt the UTXO balances cache (restart, rollback or
+        # reorg) after the attach at block 973405 lost the phantom UTXO it
+        # left in the cache and stopped recording the chain of `utxomove`
+        # transactions that spends it, forking `txlist_hash` from block 973438
+        # (first spend at 973417). The cache is now rebuilt from the recorded
+        # `utxos_info`; re-parse the chain so that every node converges.
+        "11.6.0": [("rollback", 973417)],
     },
     "testnet3": {
         "10.3.0": [("reparse", 0)],
