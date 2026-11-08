@@ -15,6 +15,7 @@ from counterpartycore.lib.utils import hashcodec
 
 # Number of block hashes to store in cache
 HASH_COUNT = 100
+TIP_CATCHUP_VERIFIED_VERSION = 1
 
 # Default cache directory
 DEFAULT_CACHE_DIR = os.path.join(os.path.expanduser("~/.cache"), "counterparty-integration-cache")
@@ -47,6 +48,16 @@ def get_hashes_path(network):
     return os.path.join(get_network_cache_dir(network), "hashes.json")
 
 
+def is_tip_catchup_verified(cache_data):
+    """Distinguish advancing fixtures from legacy copies without discarding goldens."""
+    if "tip_catchup_verified" not in cache_data:
+        return False
+    marker = cache_data["tip_catchup_verified"]
+    if type(marker) is not int or marker != TIP_CATCHUP_VERIFIED_VERSION:
+        raise ValueError(f"Unsupported integration cache tip verification marker: {marker!r}")
+    return True
+
+
 def cache_exists(network):
     """Check if a valid cache exists for the given network.
 
@@ -58,7 +69,7 @@ def cache_exists(network):
     """
     db_path = get_cached_db_path(network)
     hashes_path = get_hashes_path(network)
-    if not (os.path.exists(db_path) and os.path.exists(hashes_path)):
+    if not os.path.exists(hashes_path):
         return False
 
     try:
@@ -69,12 +80,17 @@ def cache_exists(network):
         _discard_corrupted_cache(network)
         return False
 
+    # An unknown flow marker is not corruption or permission to bootstrap anew:
+    # reject it before any fallback could discard its original golden hashes.
+    if isinstance(data, dict):
+        is_tip_catchup_verified(data)
+
     if not isinstance(data, dict) or not isinstance(data.get("hashes"), list) or not data["hashes"]:
         print("Cache hashes file is malformed; treating cache as missing.")
         _discard_corrupted_cache(network)
         return False
 
-    return True
+    return os.path.exists(db_path)
 
 
 def _discard_corrupted_cache(network):
@@ -142,13 +158,14 @@ def get_last_block_index(db_path):
         db.close()
 
 
-def save_hashes(network, db_path):
+def save_hashes(network, db_path, *, tip_catchup_verified=False):
     """
     Save the last N block hashes to a JSON file.
 
     Args:
         network: The network name (signet, testnet4, mainnet)
         db_path: Path to the database file
+        tip_catchup_verified: Set only after the caller reaches the full chain tip
     """
     network_cache_dir = get_network_cache_dir(network)
     os.makedirs(network_cache_dir, exist_ok=True)
@@ -163,6 +180,8 @@ def save_hashes(network, db_path):
         "hash_count": len(hashes),
         "hashes": hashes,
     }
+    if tip_catchup_verified is True:
+        data["tip_catchup_verified"] = TIP_CATCHUP_VERIFIED_VERSION
 
     hashes_path = get_hashes_path(network)
     # Write atomically: dump to a temp file in the same directory, then rename.
@@ -324,16 +343,17 @@ def restore_db_from_cache(network, target_dir):
     return target_db_path
 
 
-def save_cache(network, db_path):
+def save_cache(network, db_path, *, tip_catchup_verified=False):
     """
     Save both the database and hashes to the cache.
 
     Args:
         network: The network name
         db_path: Path to the database file
+        tip_catchup_verified: Set only after the caller reaches the full chain tip
     """
     save_db_to_cache(network, db_path)
-    save_hashes(network, db_path)
+    save_hashes(network, db_path, tip_catchup_verified=tip_catchup_verified)
     print(f"Cache saved for {network}")
 
 
