@@ -67,8 +67,7 @@ component_management:
       paths:
         - counterparty-core/**
 
-comment:
-  layout: "reach, diff, flags, components, files"
+comment: false
 
 # The CLI entrypoint (argument wiring + interactive stdin prompts) lives in
 # `src/lib.rs` and the thin `src/bin/*` wrappers; it is exercised end-to-end by
