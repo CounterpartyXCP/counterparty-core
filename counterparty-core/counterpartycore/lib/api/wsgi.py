@@ -17,7 +17,7 @@ from gunicorn.errors import AppImportError, HaltServer
 from werkzeug.serving import make_server
 
 from counterpartycore.lib import config
-from counterpartycore.lib.api import parsedevents
+from counterpartycore.lib.api import admission, parsedevents
 from counterpartycore.lib.cli import log
 from counterpartycore.lib.ledger.currentstate import CurrentState
 from counterpartycore.lib.utils import database, helpers
@@ -358,6 +358,10 @@ class GunicornApplication(gunicorn.app.base.BaseApplication):  # pylint: disable
         # pool to introspect from the master, so worker metrics are unavailable.
         return None
 
+    def get_admission_metrics(self):
+        # The listening sockets belong to the arbiter, not this process.
+        return None
+
 
 class WerkzeugApplication:
     def __init__(self, app, args=None):
@@ -384,6 +388,10 @@ class WerkzeugApplication:
 
     def get_task_dispatcher(self):
         # Werkzeug uses a per-request thread model with no introspectable pool.
+        return None
+
+    def get_admission_metrics(self):
+        # No connection-limit admission to observe.
         return None
 
 
@@ -425,6 +433,9 @@ class WaitressApplication:
         # Exposing it lets the isolated health server report saturation metrics.
         return self.server.task_dispatcher
 
+    def get_admission_metrics(self):
+        return admission.sample(self.server)
+
 
 class WSGIApplication:
     def __init__(self, app, args=None):
@@ -450,3 +461,8 @@ class WSGIApplication:
         # Returns the underlying server's worker-thread pool for health metrics,
         # or None when the backend has no introspectable in-process pool.
         return self.server.get_task_dispatcher()
+
+    def get_admission_metrics(self):
+        # Connection-admission counts for health metrics, or None when the
+        # backend has no in-process listener to introspect.
+        return self.server.get_admission_metrics()

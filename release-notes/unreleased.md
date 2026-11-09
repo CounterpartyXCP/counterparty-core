@@ -27,6 +27,11 @@
 
 ## API
 
+- Report Waitress connection admission (accepted connections, socket-map
+  occupancy against the connection limit, overflow state and per-minute peaks)
+  in `/healthz/metrics` and the `WORKER_STATS` log, to tell admission pressure
+  apart from busy workers. Diagnostics only: readiness and liveness are unchanged.
+
 - Return MPMA decoding failures, including malformed address tables and
   recipient indexes past the end of the table, through the existing
   `message_data.error` response (HTTP 200) of `/v2/transactions/unpack` and
