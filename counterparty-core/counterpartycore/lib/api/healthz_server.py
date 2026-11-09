@@ -361,7 +361,9 @@ class HealthSampler(threading.Thread):
                 peak_socket_map_entries=self._admission_peak_entries,
                 overflow_observed=self._admission_overflow_observed,
             )
-        except Exception:  # unavailable is not zero, and never a readiness failure
+        except Exception as e:  # pylint: disable=broad-except
+            # Unavailable is not zero, and never a readiness failure.
+            logger.debug("healthz: admission metrics unavailable: %s", e)
             return None
 
     def _is_serving(self):
