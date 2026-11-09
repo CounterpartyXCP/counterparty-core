@@ -447,23 +447,29 @@ def test_admission_pressure_is_observational_and_peaks_reset_on_stats_log(monkey
     sampler._last_stats_log = 0
     sampler._tick()
     assert log.call_count == 1
-    assert log.call_args.args[-1]["peak_socket_map_entries"] == 100
+    assert log.call_args.args[-1] == (
+        "listeners=1 channels=0 sockets=2/100 peak_channels=98 peak_sockets=100 "
+        "accepting=1 overflow=0 at_limit=0 overflow_seen=1"
+    )
     sampler._tick()
     assert sampler.current_snapshot().admission.peak_socket_map_entries == 2
     assert sampler.current_snapshot().admission.overflow_observed is False
     assert log.call_count == 1
 
 
-def test_admission_provider_failure_preserves_health_and_reports_unknown():
+def test_admission_provider_failure_preserves_health_and_reports_unknown(monkeypatch):
     sampler = make_sampler(FakeDispatcher())
 
     def unavailable():
         raise AttributeError("changed surface")
 
     sampler.admission_provider = unavailable
+    log = MagicMock()
+    monkeypatch.setattr(healthz_server.logger, "info", log)
     sampler._tick()
     assert sampler.current_snapshot().ready is True
     assert sampler.current_snapshot().admission is None
+    assert log.call_args.args[-1] == "admission=unknown"
 
 
 def test_http_metrics_serialize_admission_snapshot_without_resampling():
@@ -479,11 +485,13 @@ def test_http_metrics_serialize_admission_snapshot_without_resampling():
 
 
 def test_admission_provider_attaches_before_or_after_sampler_start():
-    server = HealthCheckServer("127.0.0.1", 0)
-
     def provider():
         return AdmissionMetrics(1, 0, 2, 100, 1, 0, 0)
 
+    assert HealthCheckServer("127.0.0.1", 0, admission_provider=provider).admission_provider is (
+        provider
+    )
+    server = HealthCheckServer("127.0.0.1", 0)
     server.attach_dispatcher(None, provider)
     assert server.admission_provider is provider
     server.sampler = make_sampler()

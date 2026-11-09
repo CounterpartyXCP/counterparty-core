@@ -496,16 +496,34 @@ class HealthSampler(threading.Thread):
             return
         self._last_stats_log = now
         logger.info(
-            "WORKER_STATS busy=%d/%d idle=%d queue=%d saturated_for=%.1fs admission=%s",
+            "WORKER_STATS busy=%d/%d idle=%d queue=%d saturated_for=%.1fs %s",
             workers.busy,
             workers.total,
             workers.idle,
             workers.queue_depth,
             saturation_seconds,
-            asdict(self._snapshot.admission) if self._snapshot.admission is not None else None,
+            _admission_log_fields(self._snapshot.admission),
         )
         self._admission_peak_channels = self._admission_peak_entries = 0
         self._admission_overflow_observed = False
+
+
+def _admission_log_fields(admission):
+    """Render admission metrics as ``key=value`` fields, like the rest of the
+    WORKER_STATS line, so log pipelines can parse them."""
+    if admission is None:
+        return "admission=unknown"
+    return (
+        f"listeners={admission.listeners} "
+        f"channels={admission.accepted_channels} "
+        f"sockets={admission.socket_map_entries}/{admission.connection_limit} "
+        f"peak_channels={admission.peak_accepted_channels} "
+        f"peak_sockets={admission.peak_socket_map_entries} "
+        f"accepting={admission.accepting_listeners} "
+        f"overflow={admission.overflow_listeners} "
+        f"at_limit={admission.at_limit_listeners} "
+        f"overflow_seen={int(admission.overflow_observed)}"
+    )
 
 
 def _latency_stats(samples):
@@ -658,11 +676,12 @@ class HealthCheckServer:
         serving_provider=None,
         mempool_progress_provider=None,
         route_activity_provider=None,
+        admission_provider=None,
     ):
         self.host = host
         self.port = port
         self.dispatcher = dispatcher
-        self.admission_provider = None
+        self.admission_provider = admission_provider
         self.saturation_grace = saturation_grace
         # Readiness stays false until this reports that the public API can
         # serve requests; see `HealthSampler.__init__` (issue #3504).

@@ -1,8 +1,8 @@
 """Pinned Waitress fixtures use only ephemeral loopback sockets, no backend."""
 
 import json
+import select
 import socket
-import threading
 from contextlib import contextmanager
 from dataclasses import asdict
 from types import SimpleNamespace
@@ -16,40 +16,25 @@ from waitress.task import ThreadedTaskDispatcher
 
 
 @contextmanager
-def listener(count=1, connection_limit=100, worker_idle=None):
+def listener(count=1, connection_limit=100):
     sockets = []
-    server = None
     socket_map = {}
+    # No worker thread is started: admission is read from the socket map alone,
+    # so the pool has no busy worker and no queued task by construction, without
+    # racing a worker's startup.
     dispatcher = ThreadedTaskDispatcher()
-    if worker_idle is None:
-        worker_idle = threading.Event()
-    original_wait = dispatcher.queue_cv.wait
-
-    def observe_idle(*args, **kwargs):
-        # Waitress decrements active_count immediately before this wait, under
-        # dispatcher.lock. Observe that transition, not a fixed startup delay.
-        worker_idle.set()
-        return original_wait(*args, **kwargs)
-
-    dispatcher.queue_cv.wait = observe_idle
     try:
         for _ in range(count):
             sock = socket.socket()
             sockets.append(sock)
             sock.bind(("127.0.0.1", 0))
-        server = waitress_server.create_server(
+        yield waitress_server.create_server(
             lambda environ, start_response: [],
             sockets=sockets,
             map=socket_map,
-            threads=1,
             connection_limit=connection_limit,
             _dispatcher=dispatcher,
         )
-        dispatcher.set_thread_count(1)
-        assert worker_idle.wait(5), "Waitress worker did not reach its idle wait"
-        with dispatcher.lock:
-            assert dispatcher.active_count == 0
-        yield server
     finally:
         dispatcher.shutdown()
         wasyncore.close_all(socket_map)
@@ -57,7 +42,7 @@ def listener(count=1, connection_limit=100, worker_idle=None):
             sock.close()
 
 
-def test_real_idle_workers_can_have_connection_admission_pressure():
+def test_admission_pressure_without_busy_workers_or_queued_tasks():
     clients = []
     with listener(connection_limit=4) as server:
         try:
@@ -67,6 +52,10 @@ def test_real_idle_workers_can_have_connection_admission_pressure():
             for _ in range(2):
                 client = socket.create_connection(server.socket.getsockname(), timeout=1)
                 clients.append(client)
+                # On macOS a loopback connection can reach the accept queue only
+                # after connect() returns; a non-blocking accept() would then
+                # get EAGAIN and silently create no channel.
+                assert select.select([server.socket], [], [], 5)[0], "nothing to accept"
                 server.handle_accept()
             metrics = admission.sample(server)
             assert metrics.accepted_channels == 2
@@ -83,57 +72,6 @@ def test_real_idle_workers_can_have_connection_admission_pressure():
         finally:
             for client in clients:
                 client.close()
-
-
-def test_fixture_waits_for_a_delayed_worker_instead_of_assuming_immediate_idle(monkeypatch):
-    queued, entered, leave = threading.Event(), threading.Event(), threading.Event()
-    waiting_for_idle = threading.Event()
-    pending, errors = [], []
-
-    class ObservedIdle(threading.Event):
-        def wait(self, timeout=None):
-            waiting_for_idle.set()
-            return super().wait(timeout)
-
-    def defer_start(self, target, thread_no):
-        pending.append((target, thread_no))
-        queued.set()
-
-    monkeypatch.setattr(ThreadedTaskDispatcher, "start_new_thread", defer_start)
-
-    def exercise_fixture():
-        try:
-            with listener(worker_idle=ObservedIdle()) as server:
-                assert server.task_dispatcher.active_count == 0
-                entered.set()
-                assert leave.wait(5)
-        except BaseException as error:
-            errors.append(error)
-
-    fixture_thread = threading.Thread(target=exercise_fixture)
-    fixture_thread.start()
-    worker = None
-    try:
-        assert queued.wait(5)
-        assert waiting_for_idle.wait(5)
-        assert not entered.is_set()  # real worker has deliberately not started
-        target, thread_no = pending[0]
-        worker = threading.Thread(target=target, args=(thread_no,), daemon=True)
-        worker.start()
-        assert entered.wait(5)
-        assert not errors
-    finally:
-        leave.set()
-        # Even an assertion failure must release the fixture's deferred worker.
-        if worker is None and pending:
-            target, thread_no = pending[0]
-            worker = threading.Thread(target=target, args=(thread_no,), daemon=True)
-            worker.start()
-        fixture_thread.join(10)
-        if worker is not None:
-            worker.join(5)
-    assert not fixture_thread.is_alive()
-    assert not errors
 
 
 def test_shared_multi_listener_map_is_not_double_counted():
@@ -212,10 +150,11 @@ def test_counts_only_and_no_call_to_readable_or_channel_contents():
         server.active_channels.clear()
 
 
-def test_wsgi_delegates_only_for_waitress():
+def test_wsgi_delegates_admission_to_the_backend():
     wrapper = object.__new__(wsgi.WSGIApplication)
-    wrapper.server = object()
-    assert wrapper.get_admission_metrics() is None
+    for backend_class in (wsgi.GunicornApplication, wsgi.WerkzeugApplication):
+        wrapper.server = object.__new__(backend_class)
+        assert wrapper.get_admission_metrics() is None
     backend = object.__new__(wsgi.WaitressApplication)
     wrapper.server = backend
     with listener() as server:
