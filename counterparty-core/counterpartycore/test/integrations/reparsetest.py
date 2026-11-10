@@ -196,6 +196,12 @@ def catchup(server_args, api_url, timeout_minutes=20, min_block_index=None):
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise TimeoutError(f"Timeout: server not ready after {timeout_minutes} minutes")
+            # A server that has exited will never answer: fail now instead of
+            # polling a dead API until the timeout.
+            if server_process.poll() is not None:
+                raise RuntimeError(
+                    f"Server exited with code {server_process.returncode} before becoming ready"
+                )
             try:
                 response = requests.get(api_url, timeout=min(5, remaining)).json()
                 server_ready = response["result"]["server_ready"]
@@ -228,17 +234,27 @@ def catchup(server_args, api_url, timeout_minutes=20, min_block_index=None):
         print("Server is ready!")
     finally:
         print("Stopping server...")
-        pgid = os.getpgid(server_process.pid)
+        # start_new_session=True makes the server its process group leader, so
+        # the group id is its pid. os.getpgid() would raise once poll() has
+        # reaped an exited server, hiding the error that ended the loop.
+        pgid = server_process.pid
         # Send SIGTERM to the entire process group
-        os.killpg(pgid, signal.SIGTERM)
+        _signal_process_group(pgid, signal.SIGTERM)
         try:
             server_process.wait(timeout=15)
         except subprocess.TimeoutExpired:
             print("Server did not stop gracefully, killing process group...")
             # Send SIGKILL to the entire process group
-            os.killpg(pgid, signal.SIGKILL)
+            _signal_process_group(pgid, signal.SIGKILL)
             server_process.wait()
         print("Server stopped.")
+
+
+def _signal_process_group(pgid, sig):
+    try:
+        os.killpg(pgid, sig)
+    except ProcessLookupError:
+        pass  # every process in the group has already exited
 
 
 def cleanup():

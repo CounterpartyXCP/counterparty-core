@@ -23,7 +23,8 @@ def polling(monkeypatch):
         timeouts=[],
         sleeps=[],
         request_duration=0.0,
-        process=Mock(pid=9001),
+        # poll() returning None: the server is still running.
+        process=Mock(pid=9001, **{"poll.return_value": None}),
         killpg=Mock(),
     )
 
@@ -61,9 +62,7 @@ def polling(monkeypatch):
             TimeoutExpired=subprocess.TimeoutExpired,
         ),
     )
-    monkeypatch.setattr(
-        module, "os", SimpleNamespace(getpgid=lambda pid: 9001, killpg=state.killpg)
-    )
+    monkeypatch.setattr(module, "os", SimpleNamespace(killpg=state.killpg))
     return state
 
 
@@ -142,6 +141,27 @@ def test_timeout_preserves_existing_kill_escalation(polling):
         catchup(polling)
     assert polling.killpg.call_args_list == [call(9001, signal.SIGTERM), call(9001, signal.SIGKILL)]
     assert polling.process.wait.call_args_list == [call(timeout=15), call()]
+
+
+def test_server_exit_fails_fast_instead_of_polling_a_dead_api(polling):
+    """An API startup failure used to leave catchup polling a dead API for the
+    whole recovery budget (105 minutes on signet and testnet4)."""
+    polling.process.poll.side_effect = [None, 1]
+    polling.process.returncode = 1
+    with pytest.raises(RuntimeError, match="exited with code 1 before becoming ready"):
+        catchup(polling)
+    assert polling.timeouts == [3]
+    assert polling.sleeps == [1]
+    polling.killpg.assert_called_once_with(9001, signal.SIGTERM)
+
+
+def test_cleanup_of_an_exited_server_keeps_the_original_error(polling):
+    polling.process.poll.return_value = 1
+    polling.process.returncode = 1
+    polling.killpg.side_effect = ProcessLookupError
+    with pytest.raises(RuntimeError, match="before becoming ready"):
+        catchup(polling)
+    polling.process.wait.assert_called_once_with(timeout=15)
 
 
 @pytest.fixture
