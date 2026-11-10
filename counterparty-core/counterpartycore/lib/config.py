@@ -297,7 +297,7 @@ PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"
 # PROTOCOL_CHANGES_URL = "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/counterparty-core/counterpartycore/protocol_changes.json"
 
 
-BOOTSTRAP_URL_BASE = "https://storage.googleapis.com/counterparty-bootstrap"
+BOOTSTRAP_URL_BASE = "https://bootstrap.counterparty.io"
 # Version tag embedded in the bootstrap snapshot file names (e.g. "v11.4.0").
 # Versioned names let several releases coexist in the bucket. This tag tracks the
 # latest *published* snapshot set, which may lag behind VERSION_STRING when a

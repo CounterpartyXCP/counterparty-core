@@ -312,14 +312,13 @@ def parse(db, tx, message):
     # pay gas fee and increment counter
     fee = gas.get_transaction_fee(db, ID, tx["block_index"])
     if fee > 0:
-        ledger.events.debit(
+        gas.pay_fee(
             db,
+            tx,
             tx["source"],
-            config.XCP,
             fee,
-            tx["tx_index"],
-            action="pool deposit fee",
-            event=tx["tx_hash"],
+            "pool deposit fee",
+            destroy=protocol.enabled("fix_pool_fee_destruction", tx["block_index"]),
         )
     gas.increment_counter(db, ID, tx["block_index"])
 

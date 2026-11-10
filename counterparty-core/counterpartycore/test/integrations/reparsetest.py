@@ -20,6 +20,15 @@ from counterpartycore.lib import config
 
 # Working directory for the test (separate from cache)
 DATA_DIR = os.path.join(os.path.expanduser("~/.cache"), "counterparty-test-data")
+# Initial snapshots and old caches can be weeks behind. This recovery budget
+# never replaces the strict ordinary 20-minute catchup or retries its failure.
+FIXTURE_RECOVERY_TIMEOUT_MINUTES = 105
+
+
+def _tip_catchup_timeout(network, verified_tip=False):
+    if network in ("signet", "testnet4") and not verified_tip:
+        return FIXTURE_RECOVERY_TIMEOUT_MINUTES
+    return 20
 
 
 def prepare(network, use_existing_data=False):
@@ -39,8 +48,8 @@ def prepare(network, use_existing_data=False):
         sh.mkdir("-p", DATA_DIR)
 
     # The optional `BACKEND_API_KEY` env var (set in CI as a GHA secret)
-    # is read directly by `initialise_config` to lift the public proxy's
-    # per-IP 120 req/min rate-limit to the premium 1000 req/min bucket.
+    # is read directly by `initialise_config`. Actual authorization/rate limits
+    # belong to the endpoint; tests must not assume an elevated quota.
     # We deliberately do NOT pass it on the command line: doing so would
     # echo the secret through `sh`/`subprocess` stdout and trigger CodeQL
     # "clear-text logging of sensitive information" alerts.
@@ -182,11 +191,19 @@ def catchup(server_args, api_url, timeout_minutes=20, min_block_index=None):
 
     try:
         ready = False
-        start_time = time.time()
-        error = None
+        deadline = time.monotonic() + 60 * timeout_minutes
         while not ready:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(f"Timeout: server not ready after {timeout_minutes} minutes")
+            # A server that has exited will never answer: fail now instead of
+            # polling a dead API until the timeout.
+            if server_process.poll() is not None:
+                raise RuntimeError(
+                    f"Server exited with code {server_process.returncode} before becoming ready"
+                )
             try:
-                response = requests.get(api_url, timeout=5).json()
+                response = requests.get(api_url, timeout=min(5, remaining)).json()
                 server_ready = response["result"]["server_ready"]
                 counterparty_height = response["result"].get("counterparty_height")
 
@@ -198,37 +215,46 @@ def catchup(server_args, api_url, timeout_minutes=20, min_block_index=None):
                         print(
                             f"Waiting for block {min_block_index} (current: {counterparty_height})..."
                         )
-                        time.sleep(1)
                 else:
                     # Original behavior: just wait for server_ready
                     if server_ready:
                         ready = True
                     else:
                         print("Waiting for server to be ready...")
-                        time.sleep(1)
-            except Exception:
-                if time.time() - start_time > 60 * timeout_minutes:
-                    error = f"Timeout: server not ready after {timeout_minutes} minutes"
-                    break
-                time.sleep(1)
-
-        if error:
-            raise Exception(error)
+            except Exception as error:
+                # Startup/network/JSON failures remain retryable, but successful
+                # unready responses must consume the same fixed time budget.
+                print(f"Waiting for API response ({type(error).__name__})...")
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(f"Timeout: server not ready after {timeout_minutes} minutes")
+            if not ready:
+                time.sleep(min(1, remaining))
 
         print("Server is ready!")
     finally:
         print("Stopping server...")
-        pgid = os.getpgid(server_process.pid)
+        # start_new_session=True makes the server its process group leader, so
+        # the group id is its pid. os.getpgid() would raise once poll() has
+        # reaped an exited server, hiding the error that ended the loop.
+        pgid = server_process.pid
         # Send SIGTERM to the entire process group
-        os.killpg(pgid, signal.SIGTERM)
+        _signal_process_group(pgid, signal.SIGTERM)
         try:
             server_process.wait(timeout=15)
         except subprocess.TimeoutExpired:
             print("Server did not stop gracefully, killing process group...")
             # Send SIGKILL to the entire process group
-            os.killpg(pgid, signal.SIGKILL)
+            _signal_process_group(pgid, signal.SIGKILL)
             server_process.wait()
         print("Server stopped.")
+
+
+def _signal_process_group(pgid, sig):
+    try:
+        os.killpg(pgid, sig)
+    except ProcessLookupError:
+        pass  # every process in the group has already exited
 
 
 def cleanup():
@@ -242,10 +268,10 @@ def bootstrap_reparse_rollback_and_catchup(network):
 
     Flow with cache:
         1. Restore DB from cache
-        2. Catchup to tip (should be quick - just a few blocks)
-        3. Rollback 100 blocks
+        2. Build the local State DB
+        3. Rollback the cached hash range
         4. Catchup and verify all hashes match cached values
-        5. Update cache with new state
+        5. Catchup to tip and save the advanced cache
 
     Flow without cache (first run):
         1. Bootstrap from GCS
@@ -271,6 +297,8 @@ def _run_with_cache(network):
     # Load expected hashes
     cache_data = cache_manager.load_hashes(network)
     expected_hashes = cache_data["hashes"]
+    verified_tip = cache_manager.is_tip_catchup_verified(cache_data)
+    tip_timeout = _tip_catchup_timeout(network, verified_tip)
 
     # Get the last block we need to verify (last block in cached hashes)
     last_expected_block = expected_hashes[-1]["block_index"]
@@ -278,9 +306,10 @@ def _run_with_cache(network):
     # Prepare the server command (don't clear data dir)
     sh_counterparty_server, server_args, db_path, api_url = prepare(network, use_existing_data=True)
 
-    # First catchup - bring DB up to current chain tip
-    print("Catching up to chain tip...")
-    catchup(server_args, api_url)
+    # Cache restoration removes the State DB. Rollback needs its tables, but
+    # catching up to today's tip first would discard that work on rollback.
+    print("Building State DB for cached rollback...")
+    sh_counterparty_server("build-state-db")
 
     # Get rollback target (first block in cached hashes)
     rollback_block = cache_manager.get_rollback_block_index(expected_hashes)
@@ -288,7 +317,7 @@ def _run_with_cache(network):
     # Rollback to the start of our cached hash range
     rollback(sh_counterparty_server, rollback_block)
 
-    # Catchup again - this should re-parse all the cached blocks
+    # Re-parse all the cached blocks before advancing beyond their hash range.
     # Use min_block_index to ensure we wait for all expected blocks to be parsed
     # (server_ready can be unreliable when backend is rate-limited)
     print("Catching up and verifying hashes...")
@@ -297,9 +326,15 @@ def _run_with_cache(network):
     # Verify all hashes match
     cache_manager.verify_hashes(db_path, expected_hashes)
 
-    # Update the cache with new state
+    # Only advance the fixture after its original consensus hashes pass. Do not
+    # save the old replay tip again or publish a failed catchup as a fresh cache.
+    phase = "warm fixture" if verified_tip else "legacy fixture recovery"
+    print(f"Catching up to chain tip ({phase}, maximum {tip_timeout} minutes)...")
+    catchup(server_args, api_url, timeout_minutes=tip_timeout)
+
+    # Update the cache only after reaching the current chain tip.
     print("Updating cache with new state...")
-    cache_manager.save_cache(network, db_path)
+    cache_manager.save_cache(network, db_path, tip_catchup_verified=True)
 
     # Cleanup working directory
     cleanup()
@@ -314,12 +349,14 @@ def _run_without_cache(network):
     # Bootstrap from GCS
     bootstrap(sh_counterparty_server, network)
 
-    # Catchup to chain tip
-    catchup(server_args, api_url)
+    # A cold official snapshot may need the same bounded recovery as a legacy cache.
+    tip_timeout = _tip_catchup_timeout(network)
+    print(f"Catching up initial fixture (maximum {tip_timeout} minutes)...")
+    catchup(server_args, api_url, timeout_minutes=tip_timeout)
 
     # Save cache for next run
     print("Saving cache for future runs...")
-    cache_manager.save_cache(network, db_path)
+    cache_manager.save_cache(network, db_path, tip_catchup_verified=True)
 
     # Cleanup working directory
     cleanup()

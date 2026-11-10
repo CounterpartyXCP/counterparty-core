@@ -10,7 +10,7 @@ from counterpartycore.lib import (
 )
 from counterpartycore.lib.api import composer
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import helpers, protocolstatus
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -61,6 +61,8 @@ def healthz_heavy(db):
 
 
 def healthz(db, check_type: str = "light"):
+    if not protocolstatus.can_serve():
+        return False
     try:
         if check_type == "heavy":
             healthz_light(db)
@@ -84,7 +86,10 @@ def handle_healthz_route(db, check_type: str = "light"):
         msg, code = "Unhealthy", 503
     result = {"result": msg, "success": code == 200}
     if code != 200:
-        result["error"] = msg
+        status = protocolstatus.summary()
+        result["error"] = protocolstatus.error(status) or msg
+        if protocolstatus.error(status):
+            result["protocol_status"] = status
     return flask.Response(helpers.to_json(result), code, mimetype="application/json")
 
 

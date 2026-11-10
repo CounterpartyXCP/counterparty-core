@@ -1529,5 +1529,15 @@
         "testnet3_block_index": 5151805,
         "testnet4_block_index": 154564,
         "signet_block_index": 324359
+    },
+    "fix_pool_fee_destruction": {
+        "_comment": "Pool deposit, pool withdrawal and fairminter pool-creation gas fees record their XCP destruction, as attach and utxo fees always have; below the activation height they are debited without one, which breaks asset conservation. No such fee has been nonzero on mainnet, testnet4 or signet. Enforced by the Python parser only (gas.pay_fee).",
+        "minimum_version_major": 11,
+        "minimum_version_minor": 5,
+        "minimum_version_revision": 0,
+        "block_index": 999999,
+        "testnet3_block_index": 9999999,
+        "testnet4_block_index": 999999,
+        "signet_block_index": 999999
     }
 }
