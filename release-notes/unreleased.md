@@ -50,6 +50,13 @@
   replaced, preserving the previous file if writing or replacement fails.
   The cache format and transaction validation rules are unchanged.
 
+## Reliability
+
+- Shut down instead of hanging forever when the API process stops unexpectedly,
+  for example on `Address already in use` at startup. The main process blocked
+  on a `multiprocessing.Event` that the exited API process could no longer
+  acknowledge; the API stop signal is now a lock-free shared flag.
+
 ## Codebase
 
 - Update the Rust client and native extension's Tokio locks to 1.53.3 and

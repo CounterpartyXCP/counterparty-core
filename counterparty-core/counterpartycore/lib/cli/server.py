@@ -214,7 +214,9 @@ class CounterpartyServer(threading.Thread):
         self.pool_monitor = self._start_pool_monitor()
 
         # API Server v2
-        self.api_stop_event = multiprocessing.Event()
+        # Not a multiprocessing.Event: if the API process exits while one of its
+        # threads waits on it, stop() would block forever in set().
+        self.api_stop_event = helpers.ProcessStopEvent()
         mempool_progress = multiprocessing.Value("d", 0)
         parserhealth.configure(mempool_progress)
         self.apiserver_v2 = api_v2.APIServer(

@@ -1,8 +1,10 @@
 import binascii
+import ctypes
 import decimal
 import hashlib
 import json
 import mimetypes
+import multiprocessing
 import os
 import string
 import threading
@@ -223,6 +225,43 @@ class ShutdownBudget:
     def sub_deadline(self, seconds):
         """A per-component deadline, never later than the aggregate one."""
         return min(self.arm(), time.monotonic() + seconds)
+
+
+class ProcessStopEvent:
+    """A stop signal shared with child processes that no process exit can wedge.
+
+    It stands in for `multiprocessing.Event`, whose `set()` waits, with no
+    timeout, for every thread sleeping in `wait()` to acknowledge its wake-up.
+    A sleeper whose process has exited never does. When the API process stops
+    on a startup error (e.g. `Address already in use`) while its pool monitor
+    sleeps in `wait()`, the main process then blocks forever in `set()` during
+    shutdown. A process killed while holding the event's lock wedges the other
+    side the same way, in either direction.
+
+    The state is one lock-free shared byte: `set()` and `is_set()` never block,
+    and `wait()` polls it.
+    """
+
+    POLL_INTERVAL = 0.05
+
+    def __init__(self):
+        self._flag = multiprocessing.RawValue(ctypes.c_bool, False)
+
+    def set(self):
+        self._flag.value = True
+
+    def is_set(self):
+        return self._flag.value
+
+    def wait(self, timeout=None):
+        """Same contract as `Event.wait()`: True once set, False on timeout."""
+        deadline = None if timeout is None else time.monotonic() + timeout
+        while not self._flag.value:
+            remaining = self.POLL_INTERVAL if deadline is None else deadline - time.monotonic()
+            if remaining <= 0:
+                return False
+            time.sleep(min(self.POLL_INTERVAL, remaining))
+        return True
 
 
 def split_deadline(deadline, fraction):
