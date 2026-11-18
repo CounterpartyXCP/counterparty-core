@@ -86,6 +86,7 @@ Testnet3 block times are too erratic for this estimate to be reliable. The chang
 
 - Bump `pyo3` to 0.29.3 (RUSTSEC-2026-0176, RUSTSEC-2026-0177), `rustls` to 0.23.46 and `rustls-webpki` to 0.103.16 (RUSTSEC-2026-0049, -0098, -0099, -0104, -0285, -0346, -0348, -0349) in `counterparty-rs`.
 - Bump `quinn-proto` to 0.11.19, `rustls` to 0.23.46, `rustls-webpki` to 0.103.16 and `webpki-root-certs` to 1.0.10 in `counterparty-client` (RUSTSEC-2026-0338 to -0342, RUSTSEC-2026-0346 to -0349, RUSTSEC-2026-0382, RUSTSEC-2026-0383), and triage the unmaintained `unsafe-libyaml` and standalone `zbus` crates in the audit configuration.
+- Bump `quinn-udp` to 0.5.16 (RUSTSEC-2026-0538) and `rustix` to 1.1.6 (RUSTSEC-2026-0486) in `counterparty-client`, and `libz-sys` to 1.1.33 (RUSTSEC-2026-0544) in `counterparty-rs`.
 - Bump `tokio` to 1.53.3 in `counterparty-rs` and `counterparty-client` (RUSTSEC-2026-0386), and replace the client's yanked `async-executor` 1.14.0 with 1.14.1.
 - Remove the native extension's unused `bip32` dependency and update the locked `libz-sys`, `zstd-sys` and `anyhow` dependencies to their advisory-fixed versions.
 - Bump `Werkzeug` to 3.1.9 (GHSA-g6x2-hccm-hh4m). The advisory only affects nodes running on Windows.
