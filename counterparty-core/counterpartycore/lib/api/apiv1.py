@@ -33,6 +33,7 @@ from counterpartycore.lib import (
     ledger,
 )
 from counterpartycore.lib.api import composer, healthz
+from counterpartycore.lib.api import protocol as protocol_http
 from counterpartycore.lib.api.apiwatcher import STATE_DB_TABLES
 from counterpartycore.lib.cli.log import init_api_access_log
 from counterpartycore.lib.ledger.currentstate import CurrentState
@@ -60,7 +61,7 @@ from counterpartycore.lib.monitors.telemetry.util import (  # noqa: E402
     is_force_enabled,
 )
 from counterpartycore.lib.parser import deserialize, gettxinfo, messagetype
-from counterpartycore.lib.utils import helpers
+from counterpartycore.lib.utils import helpers, protocolstatus
 from counterpartycore.lib.utils.database import LedgerDBConnectionPool, StateDBConnectionPool
 
 D = decimal.Decimal
@@ -541,6 +542,14 @@ class APIStatusPoller(threading.Thread):
 def create_app():
     app = flask.Flask(__name__)
     auth = HTTPBasicAuth()
+
+    def protocol_error(status):
+        body = {
+            "jsonrpc": "2.0",
+            "id": None,
+            "error": {"code": -32000, "message": protocolstatus.error(status), "data": status},
+        }
+        return flask.Response(helpers.to_json(body), 503, mimetype="application/json")
 
     @auth.get_password
     def get_pw(username):
@@ -1056,6 +1065,8 @@ def create_app():
                 "DNT,X-Mx-ReqToken,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
             )
 
+    protocol_http.install(app, protocol_error, _set_cors_headers)
+
     ##### REST ROUTES #####
 
     @app.route("/healthz", methods=["GET"])
@@ -1072,6 +1083,9 @@ def create_app():
     @conditional_decorator(auth.login_required, hasattr(config, "RPC_PASSWORD"))
     def handle_root(args_path):
         """Handle all paths, decide where to forward the query."""
+        status = protocolstatus.summary()
+        if request.method != "OPTIONS" and protocolstatus.error(status):
+            return protocol_error(status)
         request_path = args_path.lower()
         if (
             request_path == ""

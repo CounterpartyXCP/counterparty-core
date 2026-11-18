@@ -17,7 +17,7 @@ def network_block_index_name():
     the network this node runs on.
 
     Regtest has no entry of its own (every change is enabled from block 0 there),
-    so it keeps reading the mainnet key; see `check.check_change()`.
+    so minimum-version checks keep reading the mainnet key.
     """
     if config.TESTNET3:
         return "testnet3_block_index"

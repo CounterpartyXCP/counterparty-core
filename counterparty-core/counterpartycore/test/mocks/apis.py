@@ -3,6 +3,7 @@ import json
 import pytest
 from counterpartycore.lib import config
 from counterpartycore.lib.api import apiserver, apiv1
+from counterpartycore.lib.utils import protocolstatus
 from counterpartycore.lib.utils.database import LedgerDBConnectionPool, StateDBConnectionPool
 
 
@@ -19,6 +20,10 @@ def apiv1_app():
 
 @pytest.fixture()
 def apiv2_app(ledger_db, state_db, monkeypatch, current_block_index):
+    if protocolstatus.current() is None:
+        state = protocolstatus.ProtocolStatus()
+        state.publish([])
+        protocolstatus.configure(state)
     monkeypatch.setattr(
         "counterpartycore.lib.backend.bitcoind.getblockcount", lambda: current_block_index
     )

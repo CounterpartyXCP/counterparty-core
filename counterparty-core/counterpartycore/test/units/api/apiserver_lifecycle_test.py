@@ -18,7 +18,7 @@ from counterpartycore.lib.api import apiserver, healthz_server
     ],
 )
 def test_run_apiserver_lifecycle_state(
-    monkeypatch, health_enabled, exit_path, expected_state, exit_code
+    monkeypatch, health_enabled, exit_path, expected_state, exit_code, verified_protocol_metadata
 ):
     ready = SimpleNamespace(value=0)
     process = SimpleNamespace(pid=100)
@@ -92,7 +92,16 @@ def test_run_apiserver_lifecycle_state(
     monkeypatch.setattr(apiserver.wsgi, "WSGIApplication", wsgi_factory)
 
     args = {"rebuild_state_db": False, "refresh_state_db": False}
-    call_args = (args, ready, Mock(), SimpleNamespace(value=0), 99, None)
+    call_args = (
+        args,
+        ready,
+        Mock(),
+        SimpleNamespace(value=0),
+        99,
+        None,
+        None,
+        verified_protocol_metadata,
+    )
     if exit_code is None:
         apiserver.run_apiserver(*call_args)
     else:

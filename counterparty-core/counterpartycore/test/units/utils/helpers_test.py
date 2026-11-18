@@ -1,5 +1,7 @@
 import decimal
+import multiprocessing
 import os
+import sys
 import threading
 import time
 from unittest.mock import Mock, patch
@@ -133,6 +135,54 @@ def test_shutdown_budget_arm_is_thread_safe():
         thread.join()
 
     assert len(set(deadlines)) == 1
+
+
+def _exit_while_waiting(stop_event):
+    # The API process on a startup error: its pool monitor sleeps in wait()
+    # when the process exits without setting the event.
+    waiter = threading.Thread(target=stop_event.wait, args=(60,), daemon=True)
+    waiter.start()
+    time.sleep(0.2)
+    sys.exit(1)
+
+
+def test_process_stop_event_set_survives_a_waiter_whose_process_exited():
+    """With multiprocessing.Event, set() blocks forever here: it waits for the
+    dead waiter to acknowledge its wake-up, which hung the node's shutdown."""
+    stop_event = helpers.ProcessStopEvent()
+    child = multiprocessing.get_context("spawn").Process(
+        target=_exit_while_waiting, args=(stop_event,)
+    )
+    child.start()
+    child.join(timeout=30)
+    assert child.exitcode == 1
+
+    setter = threading.Thread(target=stop_event.set, daemon=True)
+    setter.start()
+    setter.join(timeout=5)
+
+    assert not setter.is_alive()
+    assert stop_event.is_set()
+
+
+def test_process_stop_event_wait_times_out_then_wakes_on_set():
+    stop_event = helpers.ProcessStopEvent()
+
+    started_at = time.monotonic()
+    assert stop_event.wait(0.1) is False
+    assert time.monotonic() - started_at >= 0.1
+    assert stop_event.is_set() is False
+
+    timer = threading.Timer(0.1, stop_event.set)
+    timer.start()
+    started_at = time.monotonic()
+    try:
+        assert stop_event.wait(5) is True
+    finally:
+        timer.cancel()
+    assert time.monotonic() - started_at < 1
+    assert stop_event.is_set() is True
+    assert stop_event.wait(0) is True
 
 
 def test_split_deadline_leaves_a_share_for_what_runs_next():

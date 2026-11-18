@@ -33,6 +33,8 @@ jobs:
   pytest:
     name: ${{ inputs.name }}
     runs-on: ${{ inputs.os }}
+    # Bound fixture recovery including setup; all other jobs retain the default 6h.
+    timeout-minutes: ${{ (inputs.integration_cache_network == 'signet' || inputs.integration_cache_network == 'testnet4') && 120 || 360 }}
     if: ${{ !inputs.only_on_develop || github.ref == 'refs/heads/develop' }}
     steps:
       - uses: actions/checkout@v4
@@ -106,11 +108,9 @@ jobs:
           RUSTFLAGS='--cap-lints=warn' cargo +nightly install --path=.
 
       - name: Run tests
-        # `BACKEND_API_KEY` (when defined as a repo/org secret) lifts the
-        # per-IP rate-limit on the public signet/testnet4 RPC proxy from
-        # 120 req/min to the premium 1000 req/min bucket, which is what
-        # the bootstrap+catchup integration tests need to avoid hanging
-        # on 429-induced retry loops in `getrawtransaction`.
+        # Preserve optional endpoint authentication without putting keys in
+        # command-line logs. Effective RPC quotas are owned by the endpoint;
+        # bounded fixture recovery must not assume an elevated rate-limit tier.
         env:
           BACKEND_API_KEY: ${{ secrets.BACKEND_API_KEY }}
         run: |
@@ -129,7 +129,7 @@ jobs:
           path: openapi.json
 
       - name: Save integration cache
-        if: always() && inputs.integration_cache_network != ''
+        if: success() && inputs.integration_cache_network != ''
         uses: actions/cache/save@v4
         with:
           path: ~/.cache/counterparty-integration-cache/${{ inputs.integration_cache_network }}

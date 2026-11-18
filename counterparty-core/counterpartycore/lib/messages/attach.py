@@ -143,31 +143,6 @@ def unpack(message, return_dict=False):
         return "", 0, None
 
 
-def pay_fee(db, tx, source, fee):
-    # debit fee from the fee payer
-    ledger.events.debit(
-        db,
-        source,
-        config.XCP,
-        fee,
-        tx["tx_index"],
-        action="attach to utxo fee",
-        event=tx["tx_hash"],
-    )
-    # destroy fee
-    destroy_bindings = {
-        "tx_index": tx["tx_index"],
-        "tx_hash": tx["tx_hash"],
-        "block_index": tx["block_index"],
-        "source": tx["source"],
-        "asset": config.XCP,
-        "quantity": fee,
-        "tag": "attach to utxo fee",
-        "status": "valid",
-    }
-    ledger.events.insert_record(db, "destructions", destroy_bindings, "ASSET_DESTRUCTION")
-
-
 def parse(db, tx, message):
     (asset, quantity, destination_vout) = unpack(message)
     source = tx["source"]
@@ -230,7 +205,7 @@ def parse(db, tx, message):
     # calculate and pay fee
     fee = gas.get_transaction_fee(db, ID, tx["block_index"])
     if fee > 0:
-        pay_fee(db, tx, source, fee)
+        gas.pay_fee(db, tx, source, fee, "attach to utxo fee")
     # increment gas counter
     gas.increment_counter(db, ID, tx["block_index"])
 
