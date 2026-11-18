@@ -1,5 +1,27 @@
 # Unreleased
 
+## Consensus Determinism
+
+- Rebuild the UTXO balances cache by replaying the recorded `utxos_info` of
+  every parsed transaction, instead of loading the `balances` table plus special
+  cases (`KNOWN_SOURCES` descendants and invalid attaches). While parsing, the
+  first non-OP_RETURN output of every `attach`, and of every transaction
+  spending a cached UTXO, is added to the cache even when no asset reaches that
+  output, and a later spend of such a "phantom" UTXO is recorded as a `utxomove`
+  transaction that moves nothing. A node that restarted, rolled back or handled
+  a reorg in the middle of such a chain rebuilt the cache without the phantom
+  entry and silently stopped recording the chain, so its `txlist_hash` and
+  `messages_hash` diverged from nodes that kept running. On mainnet, the valid
+  `attach` `86a3d0a5…085482` at block 973,405 attached to its third output while
+  its first output entered the cache; its first output was spent at block
+  973,417 and started a chain of ten `utxomove` transactions, seven of which are
+  missing on nodes that restarted after block 973,422. The cache rebuild is now
+  a deterministic function of the Ledger DB, and an automatic rollback to block
+  973,417 (`UPGRADE_ACTIONS` for v11.6.0, mainnet only) re-parses the chain so
+  that every node converges on the freshly synced history. The State DB is
+  rebuilt as part of this rollback. No protocol rule changes and no balance is
+  affected.
+
 ## Protocol
 
 - Record XCP destruction when a nonzero pool deposit, pool withdrawal, or
