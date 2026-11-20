@@ -22,7 +22,10 @@ from counterpartycore.lib import config
 DATA_DIR = os.path.join(os.path.expanduser("~/.cache"), "counterparty-test-data")
 # Initial snapshots and old caches can be weeks behind. This recovery budget
 # never replaces the strict ordinary 20-minute catchup or retries its failure.
-FIXTURE_RECOVERY_TIMEOUT_MINUTES = 105
+# Until master runs this code, its daily caches stay unverified with a hash
+# window stuck near signet 324,200: on 2026-11-20 that is ~7,500 blocks behind
+# the tip, about 126 minutes at the ~60 blocks/min measured on CI.
+FIXTURE_RECOVERY_TIMEOUT_MINUTES = 165
 
 
 def _tip_catchup_timeout(network, verified_tip=False):
