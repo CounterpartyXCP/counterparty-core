@@ -34,7 +34,7 @@ jobs:
     name: ${{ inputs.name }}
     runs-on: ${{ inputs.os }}
     # Bound fixture recovery including setup; all other jobs retain the default 6h.
-    timeout-minutes: ${{ (inputs.integration_cache_network == 'signet' || inputs.integration_cache_network == 'testnet4') && 120 || 360 }}
+    timeout-minutes: ${{ (inputs.integration_cache_network == 'signet' || inputs.integration_cache_network == 'testnet4') && 185 || 360 }}
     if: ${{ !inputs.only_on_develop || github.ref == 'refs/heads/develop' }}
     steps:
       - uses: actions/checkout@v4

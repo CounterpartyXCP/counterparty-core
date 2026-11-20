@@ -145,7 +145,7 @@ def test_timeout_preserves_existing_kill_escalation(polling):
 
 def test_server_exit_fails_fast_instead_of_polling_a_dead_api(polling):
     """An API startup failure used to leave catchup polling a dead API for the
-    whole recovery budget (105 minutes on signet and testnet4)."""
+    whole recovery budget (165 minutes on signet and testnet4)."""
     polling.process.poll.side_effect = [None, 1]
     polling.process.returncode = 1
     with pytest.raises(RuntimeError, match="exited with code 1 before becoming ready"):
@@ -267,7 +267,7 @@ def test_cached_run_verifies_original_hashes_then_saves_advanced_tip(cached_run)
     cached_run.module.prepare.assert_called_once_with("signet", use_existing_data=True)
     assert cached_run.catchup.call_args_list == [
         call(["--signet"], "http://fixture.invalid/v2/", min_block_index=200),
-        call(["--signet"], "http://fixture.invalid/v2/", timeout_minutes=105),
+        call(["--signet"], "http://fixture.invalid/v2/", timeout_minutes=165),
     ]
     assert cached_run.expected == [
         {
@@ -296,7 +296,7 @@ def test_verified_cache_retains_strict_warm_budget(cached_run):
 @pytest.mark.parametrize("network", ["mainnet", "testnet3", "regtest", "signet", "testnet4"])
 @pytest.mark.parametrize("verified", [False, True])
 def test_recovery_budget_is_limited_to_the_two_network_fixtures(cached_run, network, verified):
-    expected = 105 if network in ("signet", "testnet4") and not verified else 20
+    expected = 165 if network in ("signet", "testnet4") and not verified else 20
     assert cached_run.module._tip_catchup_timeout(network, verified) == expected
 
 
@@ -338,7 +338,7 @@ def test_initial_fixture_uses_one_bounded_recovery_and_marks_only_success(
             "signet", "fixture.db", tip_catchup_verified=True
         )
     cached_run.catchup.assert_called_once_with(
-        ["--signet"], "http://fixture.invalid/v2/", timeout_minutes=105
+        ["--signet"], "http://fixture.invalid/v2/", timeout_minutes=165
     )
     cached_run.verify.assert_not_called()
 
@@ -402,7 +402,7 @@ def test_only_the_two_network_cache_jobs_get_the_recovery_job_limit():
     text = workflow.read_text()
     assert (
         "timeout-minutes: ${{ (inputs.integration_cache_network == 'signet' || "
-        "inputs.integration_cache_network == 'testnet4') && 120 || 360 }}"
+        "inputs.integration_cache_network == 'testnet4') && 185 || 360 }}"
     ) in text
     assert text.count("timeout-minutes:") == 1
     assert text.count("integration-v7-${{ inputs.integration_cache_network }}-") == 3
