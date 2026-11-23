@@ -2,6 +2,7 @@
 
 import importlib
 import json
+import re
 import signal
 import subprocess
 from pathlib import Path
@@ -405,7 +406,13 @@ def test_only_the_two_network_cache_jobs_get_the_recovery_job_limit():
         "inputs.integration_cache_network == 'testnet4') && 185 || 360 }}"
     ) in text
     assert text.count("timeout-minutes:") == 1
-    assert text.count("integration-v7-${{ inputs.integration_cache_network }}-") == 3
+    # Restore key, restore-keys prefix and save key must share one cache version,
+    # whatever it is bumped to.
+    cache_key_versions = re.findall(
+        r"integration-v(\d+)-\$\{\{ inputs\.integration_cache_network \}\}-", text
+    )
+    assert len(cache_key_versions) == 3
+    assert len(set(cache_key_versions)) == 1
 
 
 @pytest.fixture
