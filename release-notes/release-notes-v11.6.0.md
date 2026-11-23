@@ -35,7 +35,7 @@ pip install -e .
 counterparty-server start
 ```
 
-The v11.4.0 bootstrap snapshots remain valid and are selected automatically by `counterparty-server bootstrap`. They are now downloaded from `https://bootstrap.counterparty.io`.
+`counterparty-server bootstrap` now downloads new v11.6.0 snapshots from `https://bootstrap.counterparty.io`. They come from a full sync with v11.6.0, so a bootstrapped node needs no rollback or re-parse.
 
 The protocol change activates at the following block heights, the blocks each chain is expected to reach around 2026-12-16:
 
@@ -80,7 +80,8 @@ Testnet3 block times are too erratic for this estimate to be reliable. The chang
 
 ## Bootstrap
 
-- Download signed bootstrap snapshots from `https://bootstrap.counterparty.io` so the storage backend can be migrated without another client URL change. Snapshot filenames, selected snapshot version, and signature verification are unchanged.
+- Download signed bootstrap snapshots from `https://bootstrap.counterparty.io` so the storage backend can be migrated without another client URL change. Snapshot filename format and signature verification are unchanged.
+- Publish new v11.6.0 bootstrap snapshots for mainnet, testnet4 and signet, from a full v11.6.0 sync, and select them by default. They already include the `utxomove` transactions restored by the UTXO balances cache fix.
 
 ## Codebase
 
