@@ -1,8 +1,8 @@
-# Release Notes - Counterparty Core v11.6.0 (2026-10-31)
+# Release Notes - Counterparty Core v11.6.0 (2026-11-24)
 
 This release fixes a mainnet `txlist_hash` and `messages_hash` divergence between nodes that restarted and nodes that kept running, and fixes XCP supply accounting for AMM pool usage fees, which introduces one protocol change. It also makes nodes check for mandatory upgrades continuously and report their protocol compatibility through the API and health checks, returns structured MPMA decoding errors from the API, stops the server from hanging when the API process exits unexpectedly, and updates dependencies for security advisories.
 
-**All node operators must upgrade before mainnet block 980,400, expected around 2026-12-16.** No pool fee has ever been charged on mainnet, testnet4 or signet, so the change is not expected to affect any block, but nodes that have not upgraded by then are no longer guaranteed to agree with the network.
+**All node operators must upgrade before mainnet block 981,400, expected around 2026-12-22.** No pool fee has ever been charged on mainnet, testnet4 or signet, so the change is not expected to affect any block, but nodes that have not upgraded by then are no longer guaranteed to agree with the network.
 
 # Upgrading
 
@@ -37,14 +37,14 @@ counterparty-server start
 
 `counterparty-server bootstrap` now downloads new v11.6.0 snapshots from `https://bootstrap.counterparty.io`. They come from a full sync with v11.6.0, so a bootstrapped node needs no rollback or re-parse.
 
-The protocol change activates at the following block heights, the blocks each chain is expected to reach around 2026-12-16:
+The protocol change activates at the following block heights, the blocks each chain is expected to reach around 2026-12-22:
 
 | Network | `fix_pool_fee_destruction` |
 | --- | ---: |
-| Mainnet | 980,400 |
-| Testnet3 | 5,414,600 |
-| Testnet4 | 167,700 |
-| Signet | 335,500 |
+| Mainnet | 981,400 |
+| Testnet3 | 5,420,600 |
+| Testnet4 | 168,700 |
+| Signet | 336,400 |
 
 Testnet3 block times are too erratic for this estimate to be reliable. The change is enabled from block 0 on regtest.
 
@@ -53,6 +53,7 @@ Testnet3 block times are too erratic for this estimate to be reliable. The chang
 ## Consensus Determinism
 
 - Rebuild the UTXO balances cache by replaying the recorded `utxos_info` of every parsed transaction, instead of loading the `balances` table plus special cases (`KNOWN_SOURCES` descendants and invalid attaches). While parsing, the first non-OP_RETURN output of every `attach`, and of every transaction spending a cached UTXO, is added to the cache even when no asset reaches that output, and a later spend of such a "phantom" UTXO is recorded as a `utxomove` transaction that moves nothing. A node that restarted, rolled back or handled a reorg in the middle of such a chain rebuilt the cache without the phantom entry and silently stopped recording the chain, so its `txlist_hash` and `messages_hash` diverged from nodes that kept running. On mainnet, the valid `attach` `86a3d0a5…085482` at block 973,405 attached to its third output while its first output entered the cache; its first output was spent at block 973,417 and started a chain of ten `utxomove` transactions, seven of which are missing on nodes that restarted after block 973,422. The cache rebuild is now a deterministic function of the Ledger DB, and an automatic rollback to block 973,417 (mainnet only) re-parses the chain so that every node converges on the freshly synced history. No protocol rule changes and no balance is affected.
+- Add checkpoints at mainnet block 977,181, after the restored `utxomove` chain, testnet4 block 162,933 and signet block 332,141. As in v11.5.0, a node whose stored history disagrees with a checkpoint refuses to start and reports recovery guidance.
 
 ## Protocol
 
@@ -69,6 +70,7 @@ Testnet3 block times are too erratic for this estimate to be reliable. The chang
 
 - Return MPMA decoding failures, including malformed address tables and recipient indexes past the end of the table, through the existing `message_data.error` response (HTTP 200) of `/v2/transactions/unpack` and `/v2/transactions/info`, rather than a generic HTTP 503 and unexpected-error reports. Verbose `unpacked_data` reports the specific error instead of the generic "Could not unpack data". Historical data still requires its original `block_index`; omitting it uses the current height's protocol rules. This does not change consensus decoding or accept legacy messages under current rules.
 - Report Waitress connection admission (accepted connections, socket-map occupancy against the connection limit, overflow state and per-minute peaks) in `/healthz/metrics` and the `WORKER_STATS` log, to tell admission pressure apart from busy workers. Diagnostics only: readiness and liveness are unchanged.
+- Include the API routes in flight in the worker-pool saturation warning (`active_routes`, the eight busiest plus a remainder count), to show which endpoints hold the workers. Routes are logged as their registered templates (for example `/v2/assets/<asset>`), never the request URL, query string or client.
 
 ## Mempool
 
@@ -93,9 +95,11 @@ Testnet3 block times are too erratic for this estimate to be reliable. The chang
 - Remove the native extension's unused `bip32` dependency and update the locked `libz-sys`, `zstd-sys` and `anyhow` dependencies to their advisory-fixed versions.
 - Bump `Werkzeug` to 3.1.9 (GHSA-g6x2-hccm-hh4m). The advisory only affects nodes running on Windows.
 - Record the plain host name instead of `socket.getfqdn()` in the migration log. Where the host name does not resolve, as on GitHub's macOS runners, each `getfqdn()` waited about 35 seconds on reverse DNS, once per applied migration, which slowed State DB builds by minutes and the macOS unit tests from about 15 minutes to about 100.
+- Build `counterparty-rs` with GCC 15 (Ubuntu 26.04). The bundled RocksDB 8.10 headers use `uint64_t` without including `<cstdint>`, which GCC 13 tolerated; `counterparty-rs/.cargo/config.toml` now passes `-include cstdint` to the C++ compiler. A `CXXFLAGS` already set in the environment takes precedence.
 
 # Credits
 
 - Ouziel Slama
 - Adam Krellenstein
 - Dan Anderson
+- Zachary Alexander

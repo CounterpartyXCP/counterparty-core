@@ -1531,13 +1531,13 @@
         "signet_block_index": 324359
     },
     "fix_pool_fee_destruction": {
-        "_comment": "Pool deposit, pool withdrawal and fairminter pool-creation gas fees record their XCP destruction, as attach and utxo fees always have; below the activation height they are debited without one, which breaks asset conservation. No such fee has been nonzero on mainnet, testnet4 or signet. Enforced by the Python parser only (gas.pay_fee). The heights are the blocks each chain is expected to reach around 2026-12-16, about four weeks after the v11.6.0 release (testnet3 block times are too erratic to predict).",
+        "_comment": "Pool deposit, pool withdrawal and fairminter pool-creation gas fees record their XCP destruction, as attach and utxo fees always have; below the activation height they are debited without one, which breaks asset conservation. No such fee has been nonzero on mainnet, testnet4 or signet. Enforced by the Python parser only (gas.pay_fee). The heights are the blocks each chain is expected to reach around 2026-12-22, about four weeks after the v11.6.0 release (testnet3 block times are too erratic to predict).",
         "minimum_version_major": 11,
         "minimum_version_minor": 6,
         "minimum_version_revision": 0,
-        "block_index": 980400,
-        "testnet3_block_index": 5414600,
-        "testnet4_block_index": 167700,
-        "signet_block_index": 335500
+        "block_index": 981400,
+        "testnet3_block_index": 5420600,
+        "testnet4_block_index": 168700,
+        "signet_block_index": 336400
     }
 }
