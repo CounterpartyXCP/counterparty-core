@@ -92,6 +92,7 @@ Testnet3 block times are too erratic for this estimate to be reliable. The chang
 - Bump `tokio` to 1.53.3 in `counterparty-rs` and `counterparty-client` (RUSTSEC-2026-0386), and replace the client's yanked `async-executor` 1.14.0 with 1.14.1.
 - Remove the native extension's unused `bip32` dependency and update the locked `libz-sys`, `zstd-sys` and `anyhow` dependencies to their advisory-fixed versions.
 - Bump `Werkzeug` to 3.1.9 (GHSA-g6x2-hccm-hh4m). The advisory only affects nodes running on Windows.
+- Record the plain host name instead of `socket.getfqdn()` in the migration log. Where the host name does not resolve, as on GitHub's macOS runners, each `getfqdn()` waited about 35 seconds on reverse DNS, once per applied migration, which slowed State DB builds by minutes and the macOS unit tests from about 15 minutes to about 100.
 
 # Credits
 
