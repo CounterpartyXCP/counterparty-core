@@ -35,7 +35,7 @@ pip install -e .
 counterparty-server start
 ```
 
-The v11.4.0 bootstrap snapshots remain valid and are selected automatically by `counterparty-server bootstrap`. They are now downloaded from `https://bootstrap.counterparty.io`.
+`counterparty-server bootstrap` now downloads new v11.6.0 snapshots from `https://bootstrap.counterparty.io`. They come from a full sync with v11.6.0, so a bootstrapped node needs no rollback or re-parse.
 
 The protocol change activates at the following block heights, the blocks each chain is expected to reach around 2026-12-16:
 
@@ -80,16 +80,19 @@ Testnet3 block times are too erratic for this estimate to be reliable. The chang
 
 ## Bootstrap
 
-- Download signed bootstrap snapshots from `https://bootstrap.counterparty.io` so the storage backend can be migrated without another client URL change. Snapshot filenames, selected snapshot version, and signature verification are unchanged.
+- Download signed bootstrap snapshots from `https://bootstrap.counterparty.io` so the storage backend can be migrated without another client URL change. Snapshot filename format and signature verification are unchanged.
+- Publish new v11.6.0 bootstrap snapshots for mainnet, testnet4 and signet, from a full v11.6.0 sync, and select them by default. They already include the `utxomove` transactions restored by the UTXO balances cache fix.
 
 ## Codebase
 
 - Bump `pyo3` to 0.29.3 (RUSTSEC-2026-0176, RUSTSEC-2026-0177), `rustls` to 0.23.46 and `rustls-webpki` to 0.103.16 (RUSTSEC-2026-0049, -0098, -0099, -0104, -0285, -0346, -0348, -0349) in `counterparty-rs`.
 - Bump `quinn-proto` to 0.11.19, `rustls` to 0.23.46, `rustls-webpki` to 0.103.16 and `webpki-root-certs` to 1.0.10 in `counterparty-client` (RUSTSEC-2026-0338 to -0342, RUSTSEC-2026-0346 to -0349, RUSTSEC-2026-0382, RUSTSEC-2026-0383), and triage the unmaintained `unsafe-libyaml` and standalone `zbus` crates in the audit configuration.
 - Bump `quinn-udp` to 0.5.16 (RUSTSEC-2026-0538) and `rustix` to 1.1.6 (RUSTSEC-2026-0486) in `counterparty-client`, and `libz-sys` to 1.1.33 (RUSTSEC-2026-0544) in `counterparty-rs`.
+- Bump `url` to 2.5.9 (RUSTSEC-2026-0592) in `counterparty-client`.
 - Bump `tokio` to 1.53.3 in `counterparty-rs` and `counterparty-client` (RUSTSEC-2026-0386), and replace the client's yanked `async-executor` 1.14.0 with 1.14.1.
 - Remove the native extension's unused `bip32` dependency and update the locked `libz-sys`, `zstd-sys` and `anyhow` dependencies to their advisory-fixed versions.
 - Bump `Werkzeug` to 3.1.9 (GHSA-g6x2-hccm-hh4m). The advisory only affects nodes running on Windows.
+- Record the plain host name instead of `socket.getfqdn()` in the migration log. Where the host name does not resolve, as on GitHub's macOS runners, each `getfqdn()` waited about 35 seconds on reverse DNS, once per applied migration, which slowed State DB builds by minutes and the macOS unit tests from about 15 minutes to about 100.
 
 # Credits
 

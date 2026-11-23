@@ -1,11 +1,15 @@
+import getpass
 import logging
 import os
 import re
+import socket
 import threading
 import time
+import uuid
 import weakref
 from collections import OrderedDict
 from contextlib import contextmanager
+from datetime import datetime, timezone
 
 import apsw
 import apsw.bestpractice
@@ -889,13 +893,40 @@ def _wal_size(db_file):
         return 0
 
 
+def _migration_log_data(migration=None, operation="apply"):
+    """Build yoyo's ``_yoyo_log`` row like ``DatabaseBackend.get_log_data``,
+    but record ``socket.gethostname()`` instead of ``socket.getfqdn()``.
+
+    ``getfqdn()`` does a reverse DNS lookup. Where the host name does not
+    resolve (GitHub's macOS runners, many laptops), every call blocks on
+    resolver timeouts, about 35 seconds, and yoyo makes one per applied
+    migration: a State DB build then spends minutes waiting. The host name is
+    only informational, so the plain one is enough.
+    """
+    return {
+        "id": str(uuid.uuid1()),
+        "migration_id": migration.id if migration else None,
+        "migration_hash": migration.hash if migration else None,
+        "username": getpass.getuser(),
+        "hostname": socket.gethostname(),
+        "created_at_utc": datetime.now(timezone.utc).replace(tzinfo=None),
+        "operation": operation,
+    }
+
+
+def get_migration_backend(db_file):
+    backend = get_backend(f"sqlite:///{db_file}")
+    backend.get_log_data = _migration_log_data
+    return backend
+
+
 def apply_outstanding_migration(db_file, migration_dir):
     total_started_at = time.monotonic()
     wal_size_before = _wal_size(db_file)
     logger.info("Checking migrations for %s (WAL: %d bytes)...", db_file, wal_size_before)
 
     phase_started_at = time.monotonic()
-    backend = get_backend(f"sqlite:///{db_file}")
+    backend = get_migration_backend(db_file)
     logger.info(
         "Migration backend opened for %s in %.2fs.",
         db_file,
@@ -951,6 +982,6 @@ def apply_outstanding_migration(db_file, migration_dir):
 
 def rollback_all_migrations(db_file, migration_dir):
     logger.info("Rolling back all migrations from %s...", db_file)
-    backend = get_backend(f"sqlite:///{db_file}")
+    backend = get_migration_backend(db_file)
     migrations = read_migrations(migration_dir)
     backend.rollback_migrations(backend.to_rollback(migrations))
