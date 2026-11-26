@@ -33,6 +33,8 @@ jobs:
   pytest:
     name: ${{ inputs.name }}
     runs-on: ${{ inputs.os }}
+    # Bound fixture recovery including setup; all other jobs retain the default 6h.
+    timeout-minutes: ${{ (inputs.integration_cache_network == 'signet' || inputs.integration_cache_network == 'testnet4') && 185 || 360 }}
     if: ${{ !inputs.only_on_develop || github.ref == 'refs/heads/develop' }}
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +45,10 @@ jobs:
         with:
           path: ~/.cache/counterparty-integration-cache/${{ inputs.integration_cache_network }}
           # Cache key version: increment to invalidate incompatible caches
+          # v8: bootstrap snapshots bumped to v11.6.0. Same reason as v6: a restored
+          # cache short-circuits the bootstrap download, so without a new key the
+          # integration tests would keep running against the v11.4.0-derived DBs and
+          # never exercise the new snapshots.
           # v7: bootstrap snapshots bumped to v11.4.0. Same reason as v6: a restored
           # cache short-circuits the bootstrap download, so without a new key the
           # integration tests would keep running against the v11.3.0-derived DBs and
@@ -65,9 +71,9 @@ jobs:
           # migration 0004 then fails with `no such column: a.asset_index`.
           # v3: compact-hash match tables re-keyed on (tx0_index, tx1_index);
           # the v2 cached DBs carry the old TEXT `id` schema and are incompatible.
-          key: integration-v7-${{ inputs.integration_cache_network }}-${{ github.run_id }}
+          key: integration-v8-${{ inputs.integration_cache_network }}-${{ github.run_id }}
           restore-keys: |
-            integration-v7-${{ inputs.integration_cache_network }}-
+            integration-v8-${{ inputs.integration_cache_network }}-
 
       - name: Set up Python
         uses: actions/setup-python@v3
@@ -106,11 +112,9 @@ jobs:
           RUSTFLAGS='--cap-lints=warn' cargo +nightly install --path=.
 
       - name: Run tests
-        # `BACKEND_API_KEY` (when defined as a repo/org secret) lifts the
-        # per-IP rate-limit on the public signet/testnet4 RPC proxy from
-        # 120 req/min to the premium 1000 req/min bucket, which is what
-        # the bootstrap+catchup integration tests need to avoid hanging
-        # on 429-induced retry loops in `getrawtransaction`.
+        # Preserve optional endpoint authentication without putting keys in
+        # command-line logs. Effective RPC quotas are owned by the endpoint;
+        # bounded fixture recovery must not assume an elevated rate-limit tier.
         env:
           BACKEND_API_KEY: ${{ secrets.BACKEND_API_KEY }}
         run: |
@@ -129,13 +133,13 @@ jobs:
           path: openapi.json
 
       - name: Save integration cache
-        if: always() && inputs.integration_cache_network != ''
+        if: success() && inputs.integration_cache_network != ''
         uses: actions/cache/save@v4
         with:
           path: ~/.cache/counterparty-integration-cache/${{ inputs.integration_cache_network }}
           # Cache key version: increment to invalidate incompatible caches
           # (must match the restore key above).
-          key: integration-v7-${{ inputs.integration_cache_network }}-${{ github.run_id }}
+          key: integration-v8-${{ inputs.integration_cache_network }}-${{ github.run_id }}
 
       - name: Upload coverage
         uses: codecov/codecov-action@v5

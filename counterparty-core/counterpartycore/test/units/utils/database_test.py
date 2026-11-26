@@ -1,6 +1,7 @@
 import gc
 import os
 import queue
+import socket
 import tempfile
 import threading
 import time
@@ -1317,6 +1318,35 @@ def test_apply_outstanding_migration_lock_timeout(temp_db_file):
         mock_backend.break_lock.assert_called_once()
     finally:
         os.rmdir(migration_dir)
+
+
+def test_migrations_record_the_host_name_without_reverse_dns(temp_db_file, tmp_path):
+    """yoyo logs every migration with socket.getfqdn(), a reverse DNS lookup
+    that blocks for about 35 seconds per call where the host name does not
+    resolve (GitHub's macOS runners). Migrations must record the plain host
+    name instead, for both apply and rollback."""
+    migration_dir = tmp_path / "migrations"
+    migration_dir.mkdir()
+    (migration_dir / "0001.create_table.py").write_text(
+        'from yoyo import step\n\nsteps = [step("CREATE TABLE t (x INTEGER)", "DROP TABLE t")]\n'
+    )
+
+    with patch("socket.getfqdn", side_effect=AssertionError("reverse DNS lookup")):
+        apply_outstanding_migration(temp_db_file, str(migration_dir))
+        rollback_all_migrations(temp_db_file, str(migration_dir))
+
+    db = apsw.Connection(temp_db_file)
+    try:
+        rows = list(
+            db.execute("SELECT migration_id, operation, hostname FROM _yoyo_log ORDER BY rowid")
+        )
+    finally:
+        db.close()
+    assert [(migration_id, operation) for migration_id, operation, _ in rows if migration_id] == [
+        ("0001.create_table", "apply"),
+        ("0001.create_table", "rollback"),
+    ]
+    assert {hostname for _, _, hostname in rows} == {socket.gethostname()}
 
 
 def test_apply_outstanding_migration_logs_phase_timings(temp_db_file):

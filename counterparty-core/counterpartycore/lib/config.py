@@ -7,7 +7,7 @@ UNIT = 100000000  # The same across assets.
 
 
 # Semantic Version
-__version__ = "11.5.0"  # for hatch
+__version__ = "11.6.0"  # for hatch
 VERSION_STRING = __version__
 version = VERSION_STRING.split("-", maxsplit=1)[0].split(".")
 VERSION_MAJOR = int(version[0])
@@ -54,6 +54,13 @@ UPGRADE_ACTIONS = {
         # them, instead of silently keeping a divergent ledger. RELEASE STEP:
         # keep these heights equal to the ones in protocol_changes.json.
         "11.5.0": [("rollback", 969320)],
+        # Nodes that rebuilt the UTXO balances cache (restart, rollback or
+        # reorg) after the attach at block 973405 lost the phantom UTXO it
+        # left in the cache and stopped recording the chain of `utxomove`
+        # transactions that spends it, forking `txlist_hash` from block 973438
+        # (first spend at 973417). The cache is now rebuilt from the recorded
+        # `utxos_info`; re-parse the chain so that every node converges.
+        "11.6.0": [("rollback", 973417)],
     },
     "testnet3": {
         "10.3.0": [("reparse", 0)],
@@ -297,13 +304,13 @@ PROTOCOL_CHANGES_URL = "https://counterparty.io/protocol_changes.json"
 # PROTOCOL_CHANGES_URL = "https://raw.githubusercontent.com/CounterpartyXCP/counterparty-core/refs/heads/master/counterparty-core/counterpartycore/protocol_changes.json"
 
 
-BOOTSTRAP_URL_BASE = "https://storage.googleapis.com/counterparty-bootstrap"
-# Version tag embedded in the bootstrap snapshot file names (e.g. "v11.4.0").
+BOOTSTRAP_URL_BASE = "https://bootstrap.counterparty.io"
+# Version tag embedded in the bootstrap snapshot file names (e.g. "v11.6.0").
 # Versioned names let several releases coexist in the bucket. This tag tracks the
 # latest *published* snapshot set, which may lag behind VERSION_STRING when a
 # release needs no new snapshots (no database migration) or when they have not
 # been uploaded yet — bump it when new snapshots are published to the bucket.
-BOOTSTRAP_VERSION = "v11.4.0"
+BOOTSTRAP_VERSION = "v11.6.0"
 
 # Ledger / state database base file names per network (as stored in the bucket).
 # testnet3 is intentionally absent: it is deprecated and no snapshots are produced

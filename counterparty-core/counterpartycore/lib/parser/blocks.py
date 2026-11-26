@@ -51,7 +51,7 @@ from counterpartycore.lib.messages.versions import enhancedsend, mpma
 from counterpartycore.lib.monitors.profiler import Profiler
 from counterpartycore.lib.parser import check, deserialize, messagetype, protocol
 from counterpartycore.lib.parser.gettxinfo import get_tx_info
-from counterpartycore.lib.utils import database, hashcodec, helpers, parserhealth
+from counterpartycore.lib.utils import database, hashcodec, helpers, parserhealth, protocolstatus
 
 D = decimal.Decimal
 logger = logging.getLogger(config.LOGGER_NAME)
@@ -345,6 +345,8 @@ def parse_block(
 
     The unused arguments `ledger_hash` and `txlist_hash` are for the test suite.
     """
+    if block_index != config.MEMPOOL_BLOCK_INDEX:
+        protocolstatus.require_supported(block_index)
     # Timing instrumentation for performance analysis
     block_start = time.perf_counter()
     timings = {}
@@ -847,6 +849,9 @@ def handle_reorg(db):
 
 
 def parse_new_block(db, decoded_block, tx_index=None):
+    # Enforce the cached upgrade requirement before any mutation or height
+    # advance. Metadata refresh never blocks this parsing path on HTTP.
+    protocolstatus.require_supported(decoded_block["block_index"])
     start_time = time.time()
 
     # increment block index

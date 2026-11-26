@@ -123,7 +123,8 @@ def test_api_process_receives_shared_progress(monkeypatch):
     shared = multiprocessing.get_context("spawn").Value("d", 0)
     api = apiserver.APIServer(MagicMock(), MagicMock(), mempool_progress=shared)
     api.start(SimpleNamespace(), None)
-    assert factory.call_args.kwargs["args"][-1] is shared
+    assert factory.call_args.kwargs["args"][-2] is shared
+    assert factory.call_args.kwargs["args"][-1] is None
     assert factory.call_args.kwargs["target"] is apiserver.run_apiserver
 
 

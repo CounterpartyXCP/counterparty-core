@@ -20,7 +20,7 @@ Endpoints (all GET, JSON):
                          when the ledger is behind the backend, or when the worker pool has
                          been saturated past a grace period (load shedding).
 * ``/healthz``         — alias of ``/healthz/ready``.
-* ``/healthz/metrics`` — worker-pool + saturation + handler-latency gauges for alerting.
+* ``/healthz/metrics`` — worker-pool, connection admission, saturation and handler latency.
 """
 
 import contextlib
@@ -30,14 +30,15 @@ import os
 import threading
 import time
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional
 
 from counterpartycore.lib import config
 from counterpartycore.lib.api import apiwatcher, dbstatus, parsedevents
+from counterpartycore.lib.api.admission import AdmissionMetrics
 from counterpartycore.lib.ledger.currentstate import CurrentState
-from counterpartycore.lib.utils import database, helpers, parserhealth
+from counterpartycore.lib.utils import database, helpers, parserhealth, protocolstatus
 
 logger = logging.getLogger(config.LOGGER_NAME)
 
@@ -71,6 +72,8 @@ class HealthSnapshot:
     # pod is healthy and working, but must not receive traffic yet.
     rebuild: Optional[dbstatus.RebuildProgress] = None
     mempool_progress_at: Optional[float] = None
+    protocol_status: Optional[dict] = None
+    admission: Optional[AdmissionMetrics] = None
 
 
 def _instrument_dispatcher(dispatcher):
@@ -121,6 +124,8 @@ class HealthSampler(threading.Thread):
         api_only_provider=None,
         serving_provider=None,
         mempool_progress_provider=None,
+        admission_provider=None,
+        route_activity_provider=None,
     ):
         super().__init__(name="HealthSampler", daemon=True)
         self.dispatcher = dispatcher
@@ -173,6 +178,10 @@ class HealthSampler(threading.Thread):
         # lifecycle signal (the tests, and any embedder) behaves as before.
         self._serving_provider = serving_provider or (lambda: True)
         self._mempool_progress_provider = mempool_progress_provider or (lambda: 0)
+        self.admission_provider = admission_provider
+        self._admission_peak_channels = self._admission_peak_entries = 0
+        self._admission_overflow_observed = False
+        self._route_activity_provider = route_activity_provider
 
         self.stop_event = threading.Event()
         self._snapshot = HealthSnapshot(
@@ -295,6 +304,12 @@ class HealthSampler(threading.Thread):
                 # an `--api-only` node, where `_compute_caught_up` reports ready
                 # unconditionally, that would otherwise be never.
                 caught_up, ledger_reason = False, "watcher_stopped"
+        protocol_height = max(
+            last_parsed or 0, backend_height or 0, CurrentState().current_block_count() or 0
+        )
+        protocol_info = protocolstatus.summary(protocol_height)
+        if protocolstatus.error(protocol_info):
+            caught_up, ledger_reason = False, protocolstatus.error(protocol_info)
         ready = caught_up and not over_saturated
         if ready:
             reason = None
@@ -315,11 +330,41 @@ class HealthSampler(threading.Thread):
             rebuild=rebuild,
             mempool_progress_at=(
                 self._mempool_progress_provider()
-                if rebuild is None and self._is_serving() and not self._api_only_provider()
+                if rebuild is None
+                and self._is_serving()
+                and not self._api_only_provider()
+                # A deliberately parked parser cannot advance its heartbeat;
+                # restarting an incompatible binary will not repair it.
+                and protocol_info["status"] != "incompatible"
                 else None
             ),
+            protocol_status=protocol_info,
+            admission=self._sample_admission(),
         )
         self._maybe_log_worker_stats(now, workers, saturation_seconds)
+
+    def _sample_admission(self):
+        try:
+            metrics = self.admission_provider() if self.admission_provider else None
+            if not isinstance(metrics, AdmissionMetrics):
+                return None
+            self._admission_peak_channels = max(
+                self._admission_peak_channels, metrics.accepted_channels
+            )
+            self._admission_peak_entries = max(
+                self._admission_peak_entries, metrics.socket_map_entries
+            )
+            self._admission_overflow_observed |= metrics.overflow_listeners > 0
+            return replace(
+                metrics,
+                peak_accepted_channels=self._admission_peak_channels,
+                peak_socket_map_entries=self._admission_peak_entries,
+                overflow_observed=self._admission_overflow_observed,
+            )
+        except Exception as e:  # pylint: disable=broad-except
+            # Unavailable is not zero, and never a readiness failure.
+            logger.debug("healthz: admission metrics unavailable: %s", e)
+            return None
 
     def _is_serving(self):
         try:
@@ -379,13 +424,20 @@ class HealthSampler(threading.Thread):
             busy = workers.busy if workers else "?"
             total = workers.total if workers else "?"
             queue_depth = workers.queue_depth if workers else "?"
+            active_routes = None
+            if self._route_activity_provider is not None:
+                try:
+                    active_routes = self._route_activity_provider()
+                except Exception as e:  # pylint: disable=broad-except
+                    logger.debug("healthz: active-route snapshot unavailable: %s", e)
             logger.warning(
                 "API worker pool saturated for %.1fs (busy=%s/%s queue=%s) - "
-                "readiness reporting degraded to shed load",
+                "readiness reporting degraded to shed load; active_routes=%s",
                 saturation_seconds,
                 busy,
                 total,
                 queue_depth,
+                active_routes,
             )
             self._saturation_warned = True
         elif not over_saturated and self._saturated_since is None:
@@ -444,13 +496,34 @@ class HealthSampler(threading.Thread):
             return
         self._last_stats_log = now
         logger.info(
-            "WORKER_STATS busy=%d/%d idle=%d queue=%d saturated_for=%.1fs",
+            "WORKER_STATS busy=%d/%d idle=%d queue=%d saturated_for=%.1fs %s",
             workers.busy,
             workers.total,
             workers.idle,
             workers.queue_depth,
             saturation_seconds,
+            _admission_log_fields(self._snapshot.admission),
         )
+        self._admission_peak_channels = self._admission_peak_entries = 0
+        self._admission_overflow_observed = False
+
+
+def _admission_log_fields(admission):
+    """Render admission metrics as ``key=value`` fields, like the rest of the
+    WORKER_STATS line, so log pipelines can parse them."""
+    if admission is None:
+        return "admission=unknown"
+    return (
+        f"listeners={admission.listeners} "
+        f"channels={admission.accepted_channels} "
+        f"sockets={admission.socket_map_entries}/{admission.connection_limit} "
+        f"peak_channels={admission.peak_accepted_channels} "
+        f"peak_sockets={admission.peak_socket_map_entries} "
+        f"accepting={admission.accepting_listeners} "
+        f"overflow={admission.overflow_listeners} "
+        f"at_limit={admission.at_limit_listeners} "
+        f"overflow_seen={int(admission.overflow_observed)}"
+    )
 
 
 def _latency_stats(samples):
@@ -515,8 +588,13 @@ class HealthRequestHandler(BaseHTTPRequestHandler):
     def _readiness(self):
         snap = self.server.sampler.current_snapshot()
         if snap.ready:
-            return 200, {"status": "ready"}
+            body = {"status": "ready"}
+            if snap.protocol_status is not None:
+                body["protocol_status"] = snap.protocol_status
+            return 200, body
         body = {"status": "degraded", "reason": snap.reason}
+        if snap.protocol_status is not None:
+            body["protocol_status"] = snap.protocol_status
         if snap.rebuild is not None:
             body["rebuild"] = snap.rebuild.as_dict()
         if snap.backend_height is not None:
@@ -544,6 +622,7 @@ class HealthRequestHandler(BaseHTTPRequestHandler):
         return {
             "wsgi_server": getattr(config, "WSGI_SERVER", None),
             "workers": workers,
+            "admission": asdict(snap.admission) if snap.admission is not None else None,
             "saturation": {
                 "saturated": snap.saturated,
                 "duration_seconds": round(snap.saturation_seconds, 1),
@@ -596,15 +675,19 @@ class HealthCheckServer:
         stop_event=None,
         serving_provider=None,
         mempool_progress_provider=None,
+        route_activity_provider=None,
+        admission_provider=None,
     ):
         self.host = host
         self.port = port
         self.dispatcher = dispatcher
+        self.admission_provider = admission_provider
         self.saturation_grace = saturation_grace
         # Readiness stays false until this reports that the public API can
         # serve requests; see `HealthSampler.__init__` (issue #3504).
         self.serving_provider = serving_provider
         self.mempool_progress_provider = mempool_progress_provider
+        self.route_activity_provider = route_activity_provider
         # stop_event is accepted for symmetry with the other server threads; the health server
         # is a daemon and is torn down explicitly via stop(), so it is not otherwise used.
         self.stop_event = stop_event
@@ -615,14 +698,18 @@ class HealthCheckServer:
         self._owner_pid = None
         self.started_at_monotonic = time.monotonic()
 
-    def attach_dispatcher(self, dispatcher):
-        """Give the sampler the WSGI task dispatcher once it exists.
+    def attach_dispatcher(self, dispatcher, admission_provider=None):
+        """Attach the WSGI worker pool and optional read-only admission provider.
 
         The server is started *before* the WSGI server so that probes are
         answered during a State DB rebuild (issue #3485), at which point there
         is no worker pool to introspect yet. Until this is called the pool
-        gauges simply read as unavailable.
+        gauges simply read as unavailable. Admission is sampled only by the
+        existing sampler, never by request handlers or health decisions.
         """
+        self.admission_provider = admission_provider
+        if self.sampler is not None:
+            self.sampler.admission_provider = admission_provider
         if dispatcher is None:
             return
         self.dispatcher = dispatcher
@@ -638,6 +725,8 @@ class HealthCheckServer:
                 saturation_grace=self.saturation_grace,
                 serving_provider=self.serving_provider,
                 mempool_progress_provider=self.mempool_progress_provider,
+                admission_provider=self.admission_provider,
+                route_activity_provider=self.route_activity_provider,
             )
             self.sampler.start()
 
