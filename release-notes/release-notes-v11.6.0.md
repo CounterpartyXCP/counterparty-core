@@ -1,4 +1,4 @@
-# Release Notes - Counterparty Core v11.6.0 (2026-11-24)
+# Release Notes - Counterparty Core v11.6.0 (2026-11-26)
 
 This release fixes a mainnet `txlist_hash` and `messages_hash` divergence between nodes that restarted and nodes that kept running, and fixes XCP supply accounting for AMM pool usage fees, which introduces one protocol change. It also makes nodes check for mandatory upgrades continuously and report their protocol compatibility through the API and health checks, returns structured MPMA decoding errors from the API, stops the server from hanging when the API process exits unexpectedly, and updates dependencies for security advisories.
 
